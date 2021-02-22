@@ -168,43 +168,20 @@ namespace SS3D.Engine.Tiles {
         // The array may only be as long as it needs to be to store all non-null objects.
         public object[] subStates;
 
-        public static TileDefinition NullObject = new TileDefinition { plenum = null, turf = null, fixtures = null, subStates = null };
+        public static TileDefinition NullObject = new TileDefinition { plenum = null, turf = null, subStates = null };
 
-        public static int GetTileFixtureLayerSize()
+      
+        public static int GetTileLayerSize()
         {
-            return Enum.GetValues(typeof(TileFixtureLayers)).Length;
+            return Enum.GetValues(typeof(TileLayers)).Length;
         }
 
-        public static int GetWallFixtureLayerSize()
+        public static int GetFixtureLayerSize()
         {
-            return Enum.GetValues(typeof(WallFixtureLayers)).Length;
+            return Enum.GetValues(typeof(TileLayers)).Length - Fixture.LayerOffset;
         }
 
-        public static int GetFloorFixtureLayerSize()
-        {
-            return Enum.GetValues(typeof(FloorFixtureLayers)).Length;
-        }
-
-        public static int GetAllFixtureLayerSize()
-        {
-            return GetTileFixtureLayerSize() + GetWallFixtureLayerSize() + GetFloorFixtureLayerSize();
-        }
-
-        public static TileFixtureLayers[] GetTileFixtureLayerNames()
-        {
-            return (TileFixtureLayers[])Enum.GetValues(typeof(TileFixtureLayers));
-        }
-
-        public static WallFixtureLayers[] GetWallFixtureLayerNames()
-        {
-            return (WallFixtureLayers[])Enum.GetValues(typeof(WallFixtureLayers));
-        }
-
-        public static FloorFixtureLayers[] GetFloorFixtureLayerNames()
-        {
-            return (FloorFixtureLayers[])Enum.GetValues(typeof(FloorFixtureLayers));
-        }
-
+       
         public static bool operator ==(TileDefinition a, TileDefinition b)
         {
             return a.plenum == b.plenum && a.turf == b.turf && a.fixtures.Equals(b.fixtures) && a.subStates.Equals(b.subStates);
