@@ -387,7 +387,7 @@ namespace SS3D.Engine.Tiles {
                 #endif
 
                 // If the tile doesn't actually have anything, destroy it
-                if (childTile.Tile.plenum == null && childTile.Tile.turf == null && childTile.Tile.fixtures == null) {
+                if (childTile.Tile.plenum == null && childTile.Tile.turf == null && childTile.Tile.fixtures.IsEmpty()) {
                     queuedDestroy.Add(child.gameObject);
                     continue;
                 }
@@ -545,52 +545,14 @@ namespace SS3D.Engine.Tiles {
             // Write turf
             writer.WriteString(definition.turf?.name ?? "");
 
-            // Write all tile fixtures
-            foreach (TileFixtureLayers layer in TileDefinition.GetTileFixtureLayerNames())
+            // Write all fixtures
+            foreach (Fixture fixture in definition.fixtures.GetAllFixtures())
             {
-                Fixture f = definition.fixtures.GetTileFixtureAtLayer(layer);
-                if (f)
-                {
-                    writer.WriteString(f.name ?? "");
-                }
-                else
-                {
-                    writer.WriteString("");
-                }
-
-                
+                writer.WriteString(fixture.name ?? "");
             }
 
-            // Write all wall fixtures
-            foreach (WallFixtureLayers layer in TileDefinition.GetWallFixtureLayerNames())
-            {
-                Fixture f = definition.fixtures.GetWallFixtureAtLayer(layer);
-                if (f)
-                {
-                    writer.WriteString(f.name ?? "");
-                }
-                else
-                {
-                    writer.WriteString("");
-                }
-            }
-
-            // Write all floor fixtures
-            foreach (FloorFixtureLayers layer in TileDefinition.GetFloorFixtureLayerNames())
-            {
-                Fixture f = definition.fixtures.GetFloorFixtureAtLayer(layer);
-                if (f)
-                {
-                    writer.WriteString(f.name ?? "");
-                }
-                else
-                {
-                    writer.WriteString("");
-                }
-            }
 
             // Use C# serializer to serialize the object array, cos the Mirror one isn't powerful enough.
-
             // Can't serialize null values so put a boolean indicating array presence first
             if (definition.subStates == null || definition.subStates.All(obj => obj == null)) {
                 writer.WriteBoolean(false);
@@ -628,47 +590,17 @@ namespace SS3D.Engine.Tiles {
             }
 
             // Read tile fixtures
-            foreach (TileFixtureLayers layer in TileDefinition.GetTileFixtureLayerNames())
+            foreach (TileLayers layer in TileDefinition.GetFixtureLayers())
             {
                 string fixtureName = reader.ReadString();
                 if (!string.IsNullOrEmpty(fixtureName))
                 {
-                    TileFixture tf = (TileFixture)fixtures.FirstOrDefault(fixture => fixture.name == fixtureName);
-
-                    tileDefinition.fixtures.SetTileFixtureAtLayer(tf, layer);
-                    if (tf == null)
+                    Fixture receivedFixture = fixtures.FirstOrDefault(fixture => fixture.name == fixtureName);
+                    if (receivedFixture != null)
                     {
-                        Debug.LogError($"Network recieved fixture with name {fixtureName} could not be found");
+                        tileDefinition.fixtures.SetFixture(receivedFixture, layer);
                     }
-                }
-            }
-
-            // Read wall fixtures
-            foreach (WallFixtureLayers layer in TileDefinition.GetWallFixtureLayerNames())
-            {
-                string fixtureName = reader.ReadString();
-                if (!string.IsNullOrEmpty(fixtureName))
-                {
-                    WallFixture wf = (WallFixture)fixtures.FirstOrDefault(fixture => fixture.name == fixtureName);
-
-                    tileDefinition.fixtures.SetWallFixtureAtLayer(wf, layer);
-                    if (wf == null)
-                    {
-                        Debug.LogError($"Network recieved fixture with name {fixtureName} could not be found");
-                    }
-                }
-            }
-
-            // Read floor fixtures
-            foreach (FloorFixtureLayers layer in TileDefinition.GetFloorFixtureLayerNames())
-            {
-                string fixtureName = reader.ReadString();
-                if (!string.IsNullOrEmpty(fixtureName))
-                {
-                    FloorFixture ff = (FloorFixture)fixtures.FirstOrDefault(fixture => fixture.name == fixtureName);
-
-                    tileDefinition.fixtures.SetFloorFixtureAtLayer(ff, layer);
-                    if (ff == null)
+                    else
                     {
                         Debug.LogError($"Network recieved fixture with name {fixtureName} could not be found");
                     }

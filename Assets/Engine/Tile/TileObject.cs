@@ -26,22 +26,12 @@ namespace SS3D.Engine.Tiles
         }
 
         /**
-         * Passes through an adjacency update to all children in the Tiles fixture layer
+         * Passes through an adjacency update to all children in the fixture layer
          */
-        public void UpdateTileSingleAdjacency(Direction direction, TileDefinition tile, TileFixtureLayers layer)
+        public void UpdateFixtureAdjacency(Direction direction, TileDefinition tile, TileLayers layer)
         {
             int index = (int)layer;
             tileFixtureConnectors[index]?.UpdateSingle(direction, tile);
-        }
-
-
-        /**
-         * Passes through an adjacency update to all children in the Floors fixture layer
-         */
-        public void UpdateFloorSingleAdjacency(Direction direction, TileDefinition tile, FloorFixtureLayers layer)
-        {
-            int index = (int)layer;
-            floorFixtureConnectors[index]?.UpdateSingle(direction, tile);
         }
 
         /**
@@ -53,42 +43,22 @@ namespace SS3D.Engine.Tiles
             plenumConnector?.UpdateSingle(direction, tile);
             turfConnector?.UpdateSingle(direction, tile);
 
-            // Go through Tile fixtures first
-            var tileLayers = TileDefinition.GetTileFixtureLayerNames();
-            foreach (TileFixtureLayers layer in tileLayers)
+            foreach (TileLayers layer in TileDefinition.GetFixtureLayers())
             {
-                UpdateTileSingleAdjacency(direction, tile, layer);
-            }
-
-            // Go through Floor fixtures second
-            var floorLayers = TileDefinition.GetFloorFixtureLayerNames();
-            foreach (FloorFixtureLayers layer in floorLayers)
-            {
-                UpdateFloorSingleAdjacency(direction, tile, layer);
+                UpdateFixtureAdjacency(direction, tile, layer);
             }
         }
 
         /**
          * Passes through an adjacency update to all children
          */
-        public void UpdateAllTileAdjacencies(TileDefinition[] tiles, TileFixtureLayers layer)
+        public void UpdateAllFixtureAdjacencies(TileDefinition[] tiles, TileLayers layer)
         {
             int index = (int)layer;
             AdjacencyConnector ac = tileFixtureConnectors[index];
             if (ac != null)
             {
                 ac.LayerIndex = index;
-                ac?.UpdateAll(tiles);
-            }
-        }
-
-        public void UpdateAllFloorAdjacencies(TileDefinition[] tiles, FloorFixtureLayers layer)
-        {
-            int index = (int)layer;
-            AdjacencyConnector ac = floorFixtureConnectors[index];
-            if (ac != null)
-            {
-                ac.LayerIndex = index + TileDefinition.GetWallFixtureLayerSize() + TileDefinition.GetTileFixtureLayerSize();
                 ac?.UpdateAll(tiles);
             }
         }
@@ -100,17 +70,9 @@ namespace SS3D.Engine.Tiles
             turfConnector?.UpdateAll(tiles);
 
             // Update every tile layer
-            var tileLayers = TileDefinition.GetTileFixtureLayerNames();
-            foreach (TileFixtureLayers layer in tileLayers)
+            foreach (TileLayers layer in TileDefinition.GetFixtureLayers())
             {
-                UpdateAllTileAdjacencies(tiles, layer);
-            }
-
-            // Update every floor layer
-            var floorLayers = TileDefinition.GetFloorFixtureLayerNames();
-            foreach (FloorFixtureLayers layer in floorLayers)
-            {
-                UpdateAllFloorAdjacencies(tiles, layer);
+                UpdateAllFixtureAdjacencies(tiles, layer);
             }
         }
 
@@ -207,7 +169,7 @@ namespace SS3D.Engine.Tiles
             if (newTile.fixtures != tile.fixtures)
             {
                 if (!gameObject.name.Contains("Ghost"))
-                    newTile = FixturesContainer.ValidateFixtures(newTile);
+                    newTile = TileValidator.ValidateFixtures(newTile);
                 CreateFixtures(newTile.fixtures);
             }
 

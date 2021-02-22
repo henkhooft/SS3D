@@ -181,7 +181,22 @@ namespace SS3D.Engine.Tiles {
             return Enum.GetValues(typeof(TileLayers)).Length - Fixture.LayerOffset;
         }
 
-       
+        public static TileLayers[] GetTileLayers()
+        {
+            return (TileLayers[])Enum.GetValues(typeof(TileLayers));
+        }
+
+        public static TileLayers[] GetFixtureLayers()
+        {
+            List<TileLayers> tileLayers = new List<TileLayers>();
+            tileLayers.AddRange((TileLayers[])Enum.GetValues(typeof(TileLayers)));
+            tileLayers.Remove(TileLayers.Plenum);
+            tileLayers.Remove(TileLayers.Turf);
+
+            return tileLayers.ToArray();
+        }
+
+
         public static bool operator ==(TileDefinition a, TileDefinition b)
         {
             return a.plenum == b.plenum && a.turf == b.turf && a.fixtures.Equals(b.fixtures) && a.subStates.Equals(b.subStates);

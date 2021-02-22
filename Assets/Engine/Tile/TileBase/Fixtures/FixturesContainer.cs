@@ -89,11 +89,10 @@ namespace SS3D.Engine.Tiles
 
         public Fixture GetFixtureAtLayer(int layerIndex)
         {
-            TileLayers[] layers = (TileLayers[])Enum.GetValues(typeof(TileLayers));
+            TileLayers[] layers = TileDefinition.GetTileLayers();
             return GetFixtureAtLayer(layers[layerIndex + Fixture.LayerOffset]);
         }
        
-
         public List<Fixture> GetAllFixtures()
         {
             List<Fixture> fixtures = new List<Fixture>();
@@ -104,6 +103,98 @@ namespace SS3D.Engine.Tiles
             }
 
             return fixtures;
+        }
+
+        public void SetFixture(Fixture fixture, TileLayers layer)
+        {
+            switch (layer)
+            {
+                case TileLayers.Disposal:
+                    disposal = (DisposalFixture)fixture;
+                    break;
+                case TileLayers.Pipe1:
+                    pipes[0] = (PipeFixture)fixture;
+                    break;
+                case TileLayers.Pipe2:
+                    pipes[1] = (PipeFixture)fixture;
+                    break;
+                case TileLayers.Pipe3:
+                    pipes[2] = (PipeFixture)fixture;
+                    break;
+                case TileLayers.Wire:
+                    wire = (WireFixture)fixture;
+                    break;
+
+                case TileLayers.HighWallNorth:
+                    highWalls[0] = (HighWallFixture)fixture;
+                    break;
+                case TileLayers.HighWallEast:
+                    highWalls[1] = (HighWallFixture)fixture;
+                    break;
+                case TileLayers.HighWallSouth:
+                    highWalls[2] = (HighWallFixture)fixture;
+                    break;
+                case TileLayers.HighWallWest:
+                    highWalls[3] = (HighWallFixture)fixture;
+                    break;
+
+                case TileLayers.LowWallNorth:
+                    lowWalls[0] = (LowWallFixture)fixture;
+                    break;
+                case TileLayers.LowWallEast:
+                    lowWalls[1] = (LowWallFixture)fixture;
+                    break;
+                case TileLayers.LowWallSouth:
+                    lowWalls[2] = (LowWallFixture)fixture;
+                    break;
+                case TileLayers.LowWallWest:
+                    lowWalls[3] = (LowWallFixture)fixture;
+                    break;
+
+                case TileLayers.FurnitureMain:
+                    furniture[0] = (FurnitureFloorFixture)fixture;
+                    break;
+                case TileLayers.Furniture2:
+                    furniture[1] = (FurnitureFloorFixture)fixture;
+                    break;
+                case TileLayers.Furniture3:
+                    furniture[2] = (FurnitureFloorFixture)fixture;
+                    break;
+                case TileLayers.Furniture4:
+                    furniture[3] = (FurnitureFloorFixture)fixture;
+                    break;
+                case TileLayers.Furniture5:
+                    furniture[4] = (FurnitureFloorFixture)fixture;
+                    break;
+
+                case TileLayers.Overlay1:
+                    overlays[0] = (OverlayFloorFixture)fixture;
+                    break;
+                case TileLayers.Overlay2:
+                    overlays[1] = (OverlayFloorFixture)fixture;
+                    break;
+                case TileLayers.Overlay3:
+                    overlays[2] = (OverlayFloorFixture)fixture;
+                    break;
+
+                case TileLayers.AtmosMachinery:
+                    atmosMachinary = (AtmosMachineryFixture)fixture;
+                    break;
+            }
+        }
+
+        public bool IsEmpty()
+        {
+            return GetAllFixtures().Count == 0;
+        }
+
+        public static bool operator ==(FixturesContainer a, FixturesContainer b)
+        {
+            return a.GetAllFixtures().Equals(b.GetAllFixtures());
+        }
+        public static bool operator !=(FixturesContainer a, FixturesContainer b)
+        {
+            return !(a == b);
         }
     }
 }
