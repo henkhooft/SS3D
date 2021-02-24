@@ -31,7 +31,9 @@ namespace SS3D.Engine.Tiles
                 {
                     fixtures.disposal = null;
                     fixtures.wire = null;
-                    fixtures.pipes = new PipeFixture[3];
+                    fixtures.pipe1 = null;
+                    fixtures.pipe2 = null;
+                    fixtures.pipe3 = null;
 
                     reason += "Lattices do not support any wall/floor fixture.\n";
                 }
@@ -49,8 +51,16 @@ namespace SS3D.Engine.Tiles
                         fixtures.GetFixture(TileLayers.Overlay3) ||
                         fixtures.GetFixture(TileLayers.AtmosMachinery))
                     {
-                        fixtures.furniture = new FurnitureFloorFixture[5];
-                        fixtures.overlays = new OverlayFloorFixture[3];
+                        fixtures.furnitureMain = null;
+                        fixtures.furniture2 = null;
+                        fixtures.furniture3 = null;
+                        fixtures.furniture4 = null;
+                        fixtures.furniture5 = null;
+
+                        fixtures.overlay1 = null;
+                        fixtures.overlay2 = null;
+                        fixtures.overlay3 = null;
+
                         fixtures.atmosMachinary = null;
 
                         reason += "Cannot set a floor fixture on lattice.\n";
@@ -69,8 +79,15 @@ namespace SS3D.Engine.Tiles
                         fixtures.GetFixture(TileLayers.LowWallSouth) ||
                         fixtures.GetFixture(TileLayers.LowWallWest))
                     {
-                        fixtures.highWalls = new HighWallFixture[4];
-                        fixtures.lowWalls = new LowWallFixture[4];
+                        fixtures.highWallNorth = null;
+                        fixtures.highWallEast = null;
+                        fixtures.highWallSouth = null;
+                        fixtures.highWallWest = null;
+
+                        fixtures.lowWallNorth = null;
+                        fixtures.lowWallEast = null;
+                        fixtures.lowWallSouth = null;
+                        fixtures.lowWallWest = null;
 
                         reason += "Cannot set a wall fixture when there is no wall.\n";
                     }
@@ -86,7 +103,10 @@ namespace SS3D.Engine.Tiles
                         fixtures.GetFixture(TileLayers.LowWallSouth) ||
                         fixtures.GetFixture(TileLayers.LowWallWest))
                 {
-                    fixtures.lowWalls = new LowWallFixture[4];
+                    fixtures.lowWallNorth = null;
+                    fixtures.lowWallEast = null;
+                    fixtures.lowWallSouth = null;
+                    fixtures.lowWallWest = null;
 
                     reason += "Glass walls do not allow low wall fixtures.\n";
                 }
@@ -100,7 +120,18 @@ namespace SS3D.Engine.Tiles
                 pipe = tileDefinition.fixtures.GetFixture(pipeLayers[i]);
                 if (pipe != null && !pipe.name.Contains((i+1).ToString()))
                 {
-                    fixtures.pipes[i] = null;
+                    switch (i)
+                    {
+                        case 1:
+                            fixtures.pipe1 = null;
+                            break;
+                        case 2:
+                            fixtures.pipe2 = null;
+                            break;
+                        case 3:
+                            fixtures.pipe3 = null;
+                            break;
+                    }
                 }
             }
             

@@ -292,7 +292,7 @@ namespace SS3D.Engine.Tiles
                     if (shouldWarn)
                     {
 #if UNITY_EDITOR
-                        if (MigrateTileDefinition())
+                        if (MigrateTileDefinition(tile, child))
                         {
                             Debug.Log("Succesfully migrated " + child.name);
                         }
@@ -312,10 +312,6 @@ namespace SS3D.Engine.Tiles
             // FixturesContainer must exist
             if (tile.fixtures != null)
             {
-                if (!tile.fixtures.initalized)
-                {
-                    tile.fixtures.Init();
-                }
 
                 int i = 0;
                 GameObject alternateNameObject;
@@ -415,7 +411,7 @@ namespace SS3D.Engine.Tiles
             }
 
             string layerName = Enum.GetName(typeof(TileLayers), layer).ToLower();
-            fixtures[index].name = "fixture_" + fixtureDefinition.id;
+            fixtures[index].name = layerName.ToLower() + "_" + fixtureDefinition.id;
         }
 
 
@@ -482,10 +478,26 @@ namespace SS3D.Engine.Tiles
         /**
          * Migrates existing fixtures that do not have a fixturelayer set.
          */
-        private bool MigrateTileDefinition()
+        private bool MigrateTileDefinition(TileDefinition tile, GameObject child)
         {
+           // CreateDefinitionFromChild(child)
+
+
             return false;
         }
+
+        private TileDefinition CreateDefinitionFromChild(GameObject child)
+        {
+            // Load assets
+
+            // Match the placed GameObject or prefab
+
+            // Use the old name to guess the correct layer
+
+
+            return new TileDefinition();
+        }
+
 #endif
         [SerializeField]
         private TileDefinition tile = new TileDefinition();

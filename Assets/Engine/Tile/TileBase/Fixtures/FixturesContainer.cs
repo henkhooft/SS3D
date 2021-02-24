@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,28 +13,35 @@ namespace SS3D.Engine.Tiles
     [Serializable]
     public struct FixturesContainer
     {
-        [HideInInspector]
-        public bool initalized;
-
         public WireFixture wire;
         public DisposalFixture disposal;
-        public PipeFixture[] pipes;
-        public HighWallFixture[] highWalls;
-        public LowWallFixture[] lowWalls;
+
+        public PipeFixture pipe1;
+        public PipeFixture pipe2;
+        public PipeFixture pipe3;
+
+        public HighWallFixture highWallNorth;
+        public HighWallFixture highWallEast;
+        public HighWallFixture highWallSouth;
+        public HighWallFixture highWallWest;
+
+        public LowWallFixture lowWallNorth;
+        public LowWallFixture lowWallEast;
+        public LowWallFixture lowWallSouth;
+        public LowWallFixture lowWallWest;
+
         public AtmosMachineryFixture atmosMachinary;
-        public OverlayFloorFixture[] overlays;
-        public FurnitureFloorFixture[] furniture;
 
-        public void Init()
-        {
-            pipes = new PipeFixture[3];
-            highWalls = new HighWallFixture[4];
-            lowWalls = new LowWallFixture[4];
-            overlays = new OverlayFloorFixture[3];
-            furniture = new FurnitureFloorFixture[5];
+        public OverlayFloorFixture overlay1;
+        public OverlayFloorFixture overlay2;
+        public OverlayFloorFixture overlay3;
 
-            initalized = true;
-        }
+        public FurnitureFloorFixture furnitureMain;
+        public FurnitureFloorFixture furniture2;
+        public FurnitureFloorFixture furniture3;
+        public FurnitureFloorFixture furniture4;
+        public FurnitureFloorFixture furniture5;
+
 
         public Fixture GetFixture(TileLayers layer)
         {
@@ -42,49 +50,49 @@ namespace SS3D.Engine.Tiles
                 case TileLayers.Disposal:
                     return disposal;
                 case TileLayers.Pipe1:
-                    return pipes[0];
+                    return pipe1;
                 case TileLayers.Pipe2:
-                    return pipes[1];
+                    return pipe2;
                 case TileLayers.Pipe3:
-                    return pipes[2];
+                    return pipe3;
                 case TileLayers.Wire:
                     return wire;
 
                 case TileLayers.HighWallNorth:
-                    return highWalls[0];
+                    return highWallNorth;
                 case TileLayers.HighWallEast:
-                    return highWalls[1];
+                    return highWallEast;
                 case TileLayers.HighWallSouth:
-                    return highWalls[2];
+                    return highWallSouth;
                 case TileLayers.HighWallWest:
-                    return highWalls[3];
+                    return highWallWest;
 
                 case TileLayers.LowWallNorth:
-                    return lowWalls[0];
+                    return lowWallNorth;
                 case TileLayers.LowWallEast:
-                    return lowWalls[1];
+                    return lowWallEast;
                 case TileLayers.LowWallSouth:
-                    return lowWalls[2];
+                    return lowWallSouth;
                 case TileLayers.LowWallWest:
-                    return lowWalls[3];
+                    return lowWallWest;
 
                 case TileLayers.FurnitureMain:
-                    return furniture[0];
+                    return furnitureMain;
                 case TileLayers.Furniture2:
-                    return furniture[1];
+                    return furniture2;
                 case TileLayers.Furniture3:
-                    return furniture[2];
+                    return furniture3;
                 case TileLayers.Furniture4:
-                    return furniture[3];
+                    return furniture4;
                 case TileLayers.Furniture5:
-                    return furniture[4];
+                    return furniture5;
 
                 case TileLayers.Overlay1:
-                    return overlays[0];
+                    return overlay1;
                 case TileLayers.Overlay2:
-                    return overlays[1];
+                    return overlay2;
                 case TileLayers.Overlay3:
-                    return overlays[2];
+                    return overlay3;
 
                 case TileLayers.AtmosMachinery:
                     return atmosMachinary;
@@ -118,68 +126,68 @@ namespace SS3D.Engine.Tiles
                     disposal = (DisposalFixture)fixture;
                     break;
                 case TileLayers.Pipe1:
-                    pipes[0] = (PipeFixture)fixture;
+                    pipe1 = (PipeFixture)fixture;
                     break;
                 case TileLayers.Pipe2:
-                    pipes[1] = (PipeFixture)fixture;
+                    pipe2 = (PipeFixture)fixture;
                     break;
                 case TileLayers.Pipe3:
-                    pipes[2] = (PipeFixture)fixture;
+                    pipe3 = (PipeFixture)fixture;
                     break;
                 case TileLayers.Wire:
                     wire = (WireFixture)fixture;
                     break;
 
                 case TileLayers.HighWallNorth:
-                    highWalls[0] = (HighWallFixture)fixture;
+                    highWallNorth = (HighWallFixture)fixture;
                     break;
                 case TileLayers.HighWallEast:
-                    highWalls[1] = (HighWallFixture)fixture;
+                    highWallEast = (HighWallFixture)fixture;
                     break;
                 case TileLayers.HighWallSouth:
-                    highWalls[2] = (HighWallFixture)fixture;
+                    highWallSouth = (HighWallFixture)fixture;
                     break;
                 case TileLayers.HighWallWest:
-                    highWalls[3] = (HighWallFixture)fixture;
+                    highWallWest = (HighWallFixture)fixture;
                     break;
 
                 case TileLayers.LowWallNorth:
-                    lowWalls[0] = (LowWallFixture)fixture;
+                    lowWallNorth = (LowWallFixture)fixture;
                     break;
                 case TileLayers.LowWallEast:
-                    lowWalls[1] = (LowWallFixture)fixture;
+                    lowWallEast = (LowWallFixture)fixture;
                     break;
                 case TileLayers.LowWallSouth:
-                    lowWalls[2] = (LowWallFixture)fixture;
+                    lowWallSouth = (LowWallFixture)fixture;
                     break;
                 case TileLayers.LowWallWest:
-                    lowWalls[3] = (LowWallFixture)fixture;
+                    lowWallWest = (LowWallFixture)fixture;
                     break;
 
                 case TileLayers.FurnitureMain:
-                    furniture[0] = (FurnitureFloorFixture)fixture;
+                    furnitureMain = (FurnitureFloorFixture)fixture;
                     break;
                 case TileLayers.Furniture2:
-                    furniture[1] = (FurnitureFloorFixture)fixture;
+                    furniture2 = (FurnitureFloorFixture)fixture;
                     break;
                 case TileLayers.Furniture3:
-                    furniture[2] = (FurnitureFloorFixture)fixture;
+                    furniture3 = (FurnitureFloorFixture)fixture;
                     break;
                 case TileLayers.Furniture4:
-                    furniture[3] = (FurnitureFloorFixture)fixture;
+                    furniture4 = (FurnitureFloorFixture)fixture;
                     break;
                 case TileLayers.Furniture5:
-                    furniture[4] = (FurnitureFloorFixture)fixture;
+                    furniture5 = (FurnitureFloorFixture)fixture;
                     break;
 
                 case TileLayers.Overlay1:
-                    overlays[0] = (OverlayFloorFixture)fixture;
+                    overlay1 = (OverlayFloorFixture)fixture;
                     break;
                 case TileLayers.Overlay2:
-                    overlays[1] = (OverlayFloorFixture)fixture;
+                    overlay2 = (OverlayFloorFixture)fixture;
                     break;
                 case TileLayers.Overlay3:
-                    overlays[2] = (OverlayFloorFixture)fixture;
+                    overlay3 = (OverlayFloorFixture)fixture;
                     break;
 
                 case TileLayers.AtmosMachinery:
@@ -193,9 +201,78 @@ namespace SS3D.Engine.Tiles
             return GetAllFixtures().Count == 0;
         }
 
+        public override bool Equals(object obj)
+        {
+            if (!(obj is FixturesContainer))
+            {
+                return false;
+            }
+
+            var container = (FixturesContainer)obj;
+            return EqualityComparer<WireFixture>.Default.Equals(wire, container.wire) &&
+                   EqualityComparer<DisposalFixture>.Default.Equals(disposal, container.disposal) &&
+                   EqualityComparer<PipeFixture>.Default.Equals(pipe1, container.pipe1) &&
+                   EqualityComparer<PipeFixture>.Default.Equals(pipe2, container.pipe2) &&
+                   EqualityComparer<PipeFixture>.Default.Equals(pipe3, container.pipe3) &&
+                   EqualityComparer<HighWallFixture>.Default.Equals(highWallNorth, container.highWallNorth) &&
+                   EqualityComparer<HighWallFixture>.Default.Equals(highWallEast, container.highWallEast) &&
+                   EqualityComparer<HighWallFixture>.Default.Equals(highWallSouth, container.highWallSouth) &&
+                   EqualityComparer<HighWallFixture>.Default.Equals(highWallWest, container.highWallWest) &&
+                   EqualityComparer<LowWallFixture>.Default.Equals(lowWallNorth, container.lowWallNorth) &&
+                   EqualityComparer<LowWallFixture>.Default.Equals(lowWallEast, container.lowWallEast) &&
+                   EqualityComparer<LowWallFixture>.Default.Equals(lowWallSouth, container.lowWallSouth) &&
+                   EqualityComparer<LowWallFixture>.Default.Equals(lowWallWest, container.lowWallWest) &&
+                   EqualityComparer<AtmosMachineryFixture>.Default.Equals(atmosMachinary, container.atmosMachinary) &&
+                   EqualityComparer<OverlayFloorFixture>.Default.Equals(overlay1, container.overlay1) &&
+                   EqualityComparer<OverlayFloorFixture>.Default.Equals(overlay2, container.overlay2) &&
+                   EqualityComparer<OverlayFloorFixture>.Default.Equals(overlay3, container.overlay3) &&
+                   EqualityComparer<FurnitureFloorFixture>.Default.Equals(furnitureMain, container.furnitureMain) &&
+                   EqualityComparer<FurnitureFloorFixture>.Default.Equals(furniture2, container.furniture2) &&
+                   EqualityComparer<FurnitureFloorFixture>.Default.Equals(furniture3, container.furniture3) &&
+                   EqualityComparer<FurnitureFloorFixture>.Default.Equals(furniture4, container.furniture4) &&
+                   EqualityComparer<FurnitureFloorFixture>.Default.Equals(furniture5, container.furniture5);
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = -1261705589;
+            hashCode = hashCode * -1521134295 + EqualityComparer<WireFixture>.Default.GetHashCode(wire);
+            hashCode = hashCode * -1521134295 + EqualityComparer<DisposalFixture>.Default.GetHashCode(disposal);
+            hashCode = hashCode * -1521134295 + EqualityComparer<PipeFixture>.Default.GetHashCode(pipe1);
+            hashCode = hashCode * -1521134295 + EqualityComparer<PipeFixture>.Default.GetHashCode(pipe2);
+            hashCode = hashCode * -1521134295 + EqualityComparer<PipeFixture>.Default.GetHashCode(pipe3);
+            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture>.Default.GetHashCode(highWallNorth);
+            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture>.Default.GetHashCode(highWallEast);
+            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture>.Default.GetHashCode(highWallSouth);
+            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture>.Default.GetHashCode(highWallWest);
+            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture>.Default.GetHashCode(lowWallNorth);
+            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture>.Default.GetHashCode(lowWallEast);
+            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture>.Default.GetHashCode(lowWallSouth);
+            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture>.Default.GetHashCode(lowWallWest);
+            hashCode = hashCode * -1521134295 + EqualityComparer<AtmosMachineryFixture>.Default.GetHashCode(atmosMachinary);
+            hashCode = hashCode * -1521134295 + EqualityComparer<OverlayFloorFixture>.Default.GetHashCode(overlay1);
+            hashCode = hashCode * -1521134295 + EqualityComparer<OverlayFloorFixture>.Default.GetHashCode(overlay2);
+            hashCode = hashCode * -1521134295 + EqualityComparer<OverlayFloorFixture>.Default.GetHashCode(overlay3);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture>.Default.GetHashCode(furnitureMain);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture>.Default.GetHashCode(furniture2);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture>.Default.GetHashCode(furniture3);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture>.Default.GetHashCode(furniture4);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture>.Default.GetHashCode(furniture5);
+            return hashCode;
+        }
+
         public static bool operator ==(FixturesContainer a, FixturesContainer b)
         {
-            return a.GetAllFixtures().Equals(b.GetAllFixtures());
+            return a.wire == b.wire && a.disposal == b.disposal && 
+                a.pipe1 == b.pipe1 && a.pipe2 == b.pipe2 && a.pipe3 == b.pipe3 &&
+                a.highWallNorth == b.highWallNorth && a.highWallEast == b.highWallEast &&
+                a.highWallSouth == b.highWallSouth && a.highWallWest == b.highWallWest &&
+                a.lowWallNorth == b.lowWallNorth && a.lowWallEast == b.lowWallEast &&
+                a.lowWallSouth == b.lowWallSouth && a.lowWallWest == b.lowWallWest &&
+                a.atmosMachinary == b.atmosMachinary && 
+                a.overlay1 == b.overlay1 && a.overlay2 == b.overlay2 && a.overlay3 == b.overlay3 &&
+                a.furnitureMain == b.furnitureMain && a.furniture2 == b.furniture2 && a.furniture3 == b.furniture3 &&
+                a.furniture4 == b.furniture4 && a.furniture5 == b.furniture5;
         }
 
         public static bool operator !=(FixturesContainer a, FixturesContainer b)
@@ -203,31 +280,5 @@ namespace SS3D.Engine.Tiles
             return !(a == b);
         }
 
-        public override bool Equals(object obj)
-        {
-            return obj is FixturesContainer definition &&
-                   EqualityComparer<WireFixture>.Default.Equals(wire, definition.wire) &&
-                   EqualityComparer<DisposalFixture>.Default.Equals(disposal, definition.disposal) &&
-                   EqualityComparer<PipeFixture[]>.Default.Equals(pipes, definition.pipes) &&
-                   EqualityComparer<HighWallFixture[]>.Default.Equals(highWalls, definition.highWalls) &&
-                   EqualityComparer<LowWallFixture[]>.Default.Equals(lowWalls, definition.lowWalls) &&
-                   EqualityComparer<AtmosMachineryFixture>.Default.Equals(atmosMachinary, definition.atmosMachinary) &&
-                   EqualityComparer<OverlayFloorFixture[]>.Default.Equals(overlays, definition.overlays) &&
-                   EqualityComparer<FurnitureFloorFixture[]>.Default.Equals(furniture, definition.furniture);
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = -1725911380;
-            hashCode = hashCode * -1521134295 + EqualityComparer<WireFixture>.Default.GetHashCode(wire);
-            hashCode = hashCode * -1521134295 + EqualityComparer<DisposalFixture>.Default.GetHashCode(disposal);
-            hashCode = hashCode * -1521134295 + EqualityComparer<PipeFixture[]>.Default.GetHashCode(pipes);
-            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture[]>.Default.GetHashCode(highWalls);
-            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture[]>.Default.GetHashCode(lowWalls);
-            hashCode = hashCode * -1521134295 + EqualityComparer<AtmosMachineryFixture>.Default.GetHashCode(atmosMachinary);
-            hashCode = hashCode * -1521134295 + EqualityComparer<OverlayFloorFixture[]>.Default.GetHashCode(overlays);
-            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture[]>.Default.GetHashCode(furniture);
-            return hashCode;
-        }
     }
 }

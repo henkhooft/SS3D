@@ -40,8 +40,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
         private Rotation lastRotation;
 
 
-        private List<TileBase> assetList = new List<TileBase>();
-        private List<GUIContent> assetIcons = new List<GUIContent>();
+        private TileAssetLoader assetLoader = TileAssetLoader.GetInstance();
         private int assetIndex;
         private string searchString = "";
 
@@ -414,27 +413,6 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
             UpdateTileVisibility();
         }
 
-        private void LoadAssetLayer<T>(string assetName = "") where T : TileBase
-        {
-            assetList.Clear();
-            assetIcons.Clear();
-            string[] guids = AssetDatabase.FindAssets(string.Format("t:{0}", typeof(T)));
-
-            for (int i = 0; i < guids.Length; i++)
-            {
-                string assetPath = AssetDatabase.GUIDToAssetPath(guids[i]);
-                T asset = AssetDatabase.LoadAssetAtPath<T>(assetPath);
-
-                // Case insensitive search for name
-                if (assetName != "" && !asset.name.ToUpper().Contains(assetName.ToUpper()))
-                {
-                    continue;
-                }
-                Texture2D texture = AssetPreview.GetAssetPreview(asset.prefab);
-                assetIcons.Add(new GUIContent(asset.name, texture));
-                assetList.Add(asset);
-            }
-        }
 
         private void UpdateSelectionGrid(TileVisibilityLayers layer, string search)
         {
@@ -446,44 +424,12 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
             style.margin.bottom = 15;
             style.onNormal.background = Texture2D.grayTexture;
 
-            assetIndex = GUILayout.SelectionGrid(assetIndex, assetIcons.ToArray(), 3, style);
+            assetIndex = GUILayout.SelectionGrid(assetIndex, assetLoader.GetAssetIcons().ToArray(), 3, style);
         }
 
         private void LoadTileLayer(TileVisibilityLayers tileLayers, string assetName = "")
         {
-            switch (tileLayers)
-            {
-                case TileVisibilityLayers.Plenum:
-                    LoadAssetLayer<Plenum>(assetName);
-                    break;
-                case TileVisibilityLayers.Turf:
-                    LoadAssetLayer<Turf>(assetName);
-                    break;
-                case TileVisibilityLayers.Wire:
-                    LoadAssetLayer<WireFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.Disposal:
-                    LoadAssetLayer<DisposalFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.Pipe:
-                    LoadAssetLayer<PipeFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.HighWall:
-                    LoadAssetLayer<HighWallFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.LowWall:
-                    LoadAssetLayer<LowWallFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.AtmosMachinery:
-                    LoadAssetLayer<AtmosMachineryFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.Furniture:
-                    LoadAssetLayer<FurnitureFloorFixture>(assetName);
-                    break;
-                case TileVisibilityLayers.Overlay:
-                    LoadAssetLayer<OverlayFloorFixture>(assetName);
-                    break;
-            }
+            assetLoader.LoadTileLayer(tileLayers, assetName);
             lastSelectedTileLayer = selectedTileLayer;
         }
 
@@ -493,7 +439,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
             if (currentDefinition == null)
                 ResetTileDefinition();
             
-            currentDefinition = SetTileItem(currentDefinition, assetList[assetIndex], GetTileOffsetIndex());
+            currentDefinition = SetTileItem(currentDefinition, assetLoader.GetLoadedAssets()[assetIndex], GetTileOffsetIndex());
 
             if (currentTile == null)
                 currentTile = CreateGhostTile(tileManager, currentDefinition);
@@ -507,7 +453,6 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                 fixtures = new FixturesContainer()
             };
 
-            def.fixtures.Init();
             def.subStates = new object[TileDefinition.GetTileLayerSize()];
 
             currentDefinition = def;
@@ -566,6 +511,8 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
 
         private void SetSelectionDefinition()
         {
+            List<TileBase> assetList = assetLoader.GetLoadedAssets();
+
             if (assetList.Count == 0)
                 return;
 
