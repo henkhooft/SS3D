@@ -12,6 +12,9 @@ namespace SS3D.Engine.Tiles
     [Serializable]
     public struct FixturesContainer
     {
+        [HideInInspector]
+        public bool initalized;
+
         public WireFixture wire;
         public DisposalFixture disposal;
         public PipeFixture[] pipes;
@@ -28,9 +31,11 @@ namespace SS3D.Engine.Tiles
             lowWalls = new LowWallFixture[4];
             overlays = new OverlayFloorFixture[3];
             furniture = new FurnitureFloorFixture[5];
+
+            initalized = true;
         }
 
-        public Fixture GetFixtureAtLayer(TileLayers layer)
+        public Fixture GetFixture(TileLayers layer)
         {
             switch (layer)
             {
@@ -87,10 +92,10 @@ namespace SS3D.Engine.Tiles
             return null;
         }
 
-        public Fixture GetFixtureAtLayer(int layerIndex)
+        public Fixture GetFixture(int layerIndex)
         {
             TileLayers[] layers = TileDefinition.GetTileLayers();
-            return GetFixtureAtLayer(layers[layerIndex + Fixture.LayerOffset]);
+            return GetFixture(layers[layerIndex + Fixture.LayerOffset]);
         }
        
         public List<Fixture> GetAllFixtures()
@@ -99,7 +104,7 @@ namespace SS3D.Engine.Tiles
 
             for (int i = 0; i < TileDefinition.GetFixtureLayerSize(); i++)
             {
-                if (GetFixtureAtLayer(i)) fixtures.Add(GetFixtureAtLayer(i));
+                if (GetFixture(i)) fixtures.Add(GetFixture(i));
             }
 
             return fixtures;
@@ -192,9 +197,37 @@ namespace SS3D.Engine.Tiles
         {
             return a.GetAllFixtures().Equals(b.GetAllFixtures());
         }
+
         public static bool operator !=(FixturesContainer a, FixturesContainer b)
         {
             return !(a == b);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is FixturesContainer definition &&
+                   EqualityComparer<WireFixture>.Default.Equals(wire, definition.wire) &&
+                   EqualityComparer<DisposalFixture>.Default.Equals(disposal, definition.disposal) &&
+                   EqualityComparer<PipeFixture[]>.Default.Equals(pipes, definition.pipes) &&
+                   EqualityComparer<HighWallFixture[]>.Default.Equals(highWalls, definition.highWalls) &&
+                   EqualityComparer<LowWallFixture[]>.Default.Equals(lowWalls, definition.lowWalls) &&
+                   EqualityComparer<AtmosMachineryFixture>.Default.Equals(atmosMachinary, definition.atmosMachinary) &&
+                   EqualityComparer<OverlayFloorFixture[]>.Default.Equals(overlays, definition.overlays) &&
+                   EqualityComparer<FurnitureFloorFixture[]>.Default.Equals(furniture, definition.furniture);
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = -1725911380;
+            hashCode = hashCode * -1521134295 + EqualityComparer<WireFixture>.Default.GetHashCode(wire);
+            hashCode = hashCode * -1521134295 + EqualityComparer<DisposalFixture>.Default.GetHashCode(disposal);
+            hashCode = hashCode * -1521134295 + EqualityComparer<PipeFixture[]>.Default.GetHashCode(pipes);
+            hashCode = hashCode * -1521134295 + EqualityComparer<HighWallFixture[]>.Default.GetHashCode(highWalls);
+            hashCode = hashCode * -1521134295 + EqualityComparer<LowWallFixture[]>.Default.GetHashCode(lowWalls);
+            hashCode = hashCode * -1521134295 + EqualityComparer<AtmosMachineryFixture>.Default.GetHashCode(atmosMachinary);
+            hashCode = hashCode * -1521134295 + EqualityComparer<OverlayFloorFixture[]>.Default.GetHashCode(overlays);
+            hashCode = hashCode * -1521134295 + EqualityComparer<FurnitureFloorFixture[]>.Default.GetHashCode(furniture);
+            return hashCode;
         }
     }
 }

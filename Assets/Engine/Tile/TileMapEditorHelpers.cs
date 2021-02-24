@@ -49,27 +49,21 @@ namespace Tile
             }
         }
 
-        public static void DeleteTileLayer(TileManager tileManager, int layerIndex, int x, int y)
+        public static void DeleteTileLayer(TileManager tileManager, TileLayers layer, int x, int y)
         {
             if (tileManager.GetTile(x, y) == null)
                 return;
 
             // Save old definition
             TileDefinition oldDefinition = tileManager.GetTile(x, y).Tile;
-            // Copy object to avoid dupplication between editor and tilemap
-            if (oldDefinition.fixtures != null)
-            {
-                FixturesContainer f = (FixturesContainer)oldDefinition.fixtures.Clone();
-                oldDefinition.fixtures = f;
-            }
 
             // Existing tile found. We try to update the non-null items in the tiledefinition
             List<TileBase> tileBases = GetTileItems(oldDefinition);
             for (int i = 0; i < tileBases.ToArray().Length; i++)
             {
-                if (tileBases[i] != null && i == layerIndex)
+                if (tileBases[i] != null && i == (int)layer)
                 {
-                    oldDefinition = SetTileItem(oldDefinition, null, i);
+                    oldDefinition = SetTileItem(oldDefinition, null, (TileLayers)i);
                 }
             }
 
@@ -86,12 +80,6 @@ namespace Tile
              */
             public static void SetTile(TileManager tileManager, TileDefinition tileDefinition, int x, int y)
         {
-            // Copy object to avoid dupplication between editor and tilemap
-            if (tileDefinition.fixtures != null)
-            {
-                FixturesContainer f = (FixturesContainer)tileDefinition.fixtures.Clone();
-                tileDefinition.fixtures = f;
-            }
 
             if (tileManager.GetTile(x, y) == null)
             {
@@ -106,13 +94,6 @@ namespace Tile
             {
                 // Save old definition
                 TileDefinition oldDefinition = tileManager.GetTile(x, y).Tile;
-                // Copy object to avoid dupplication between editor and tilemap
-                if (oldDefinition.fixtures != null)
-                {
-                    FixturesContainer f = (FixturesContainer)oldDefinition.fixtures.Clone();
-                    oldDefinition.fixtures = f;
-                }
-
 
                 // Existing tile found. We try to update the non-null items in the tiledefinition
                 List<TileBase> tileBases = GetTileItems(tileDefinition);
@@ -120,7 +101,7 @@ namespace Tile
                 {
                     if (tileBases[i] != null)
                     {
-                        oldDefinition = SetTileItem(oldDefinition, tileBases[i], i);
+                        oldDefinition = SetTileItem(oldDefinition, tileBases[i], (TileLayers)i);
                     }
                 }
 
@@ -129,19 +110,16 @@ namespace Tile
             }
         }
 
-        public static void SetFixtureRotation(TileObject tileObject, int fixtureIndex, Rotation rotation)
+        public static void SetFixtureRotation(TileObject tileObject, TileLayers layer, Rotation rotation)
         {
             if (tileObject == null)
                 return;
 
 
-            GameObject fixtureObject = tileObject.GetLayer(fixtureIndex);
+            GameObject fixtureObject = tileObject.GetLayer(layer);
 
             if (fixtureObject != null)
             {
-                
-
-
                 FixtureStateMaintainer maintainer = fixtureObject.GetComponent<FixtureStateMaintainer>();
                 if (maintainer != null)
                 {
@@ -180,23 +158,19 @@ namespace Tile
             return items;
         }
 
-        public static TileDefinition SetTileItem(TileDefinition tileDefinition, TileBase item, int index)
+        public static TileDefinition SetTileItem(TileDefinition tileDefinition, TileBase item, TileLayers layer)
         {
             TileDefinition def = tileDefinition;
 
-            if (index == 0)
+            if (layer == TileLayers.Plenum)
                 def.plenum = (Plenum)item;
-            else if (index == 1)
+            else if (layer == TileLayers.Turf)
                 def.turf = (Turf)item;
             
             // We are a fixture
-            else if (index > 1 && index < (2 + TileDefinition.GetAllFixtureLayerSize()))
-            {
-                def.fixtures.SetFixtureAtIndex((Fixture)item, index - 2);
-            }
             else
             {
-                Debug.LogWarning("Out of range tile item was tried to be set");
+                def.fixtures.SetFixture((Fixture)item, layer - Fixture.LayerOffset);
             }
 
             return def;

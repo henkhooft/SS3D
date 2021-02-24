@@ -23,11 +23,11 @@ namespace SS3D.Engine.Tiles
             if (tileDefinition.plenum.name.Contains("Lattice"))
             {
                 // Remove tile fixtures
-                if (fixtures.GetFixtureAtLayer(TileLayers.Disposal) ||
-                    fixtures.GetFixtureAtLayer(TileLayers.Wire) ||
-                    fixtures.GetFixtureAtLayer(TileLayers.Pipe1) ||
-                    fixtures.GetFixtureAtLayer(TileLayers.Pipe2) ||
-                    fixtures.GetFixtureAtLayer(TileLayers.Pipe3))
+                if (fixtures.GetFixture(TileLayers.Disposal) ||
+                    fixtures.GetFixture(TileLayers.Wire) ||
+                    fixtures.GetFixture(TileLayers.Pipe1) ||
+                    fixtures.GetFixture(TileLayers.Pipe2) ||
+                    fixtures.GetFixture(TileLayers.Pipe3))
                 {
                     fixtures.disposal = null;
                     fixtures.wire = null;
@@ -39,15 +39,15 @@ namespace SS3D.Engine.Tiles
                 // Remove floor fixtures
                 if (tileDefinition.turf == null || tileDefinition.turf.isWall)
                 {
-                    if (fixtures.GetFixtureAtLayer(TileLayers.FurnitureMain) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Furniture2) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Furniture3) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Furniture4) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Furniture5) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Overlay1) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Overlay2) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.Overlay3) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.AtmosMachinery))
+                    if (fixtures.GetFixture(TileLayers.FurnitureMain) ||
+                        fixtures.GetFixture(TileLayers.Furniture2) ||
+                        fixtures.GetFixture(TileLayers.Furniture3) ||
+                        fixtures.GetFixture(TileLayers.Furniture4) ||
+                        fixtures.GetFixture(TileLayers.Furniture5) ||
+                        fixtures.GetFixture(TileLayers.Overlay1) ||
+                        fixtures.GetFixture(TileLayers.Overlay2) ||
+                        fixtures.GetFixture(TileLayers.Overlay3) ||
+                        fixtures.GetFixture(TileLayers.AtmosMachinery))
                     {
                         fixtures.furniture = new FurnitureFloorFixture[5];
                         fixtures.overlays = new OverlayFloorFixture[3];
@@ -60,14 +60,14 @@ namespace SS3D.Engine.Tiles
                 // Remove wall fixtures
                 if (tileDefinition.turf == null || !tileDefinition.turf.isWall)
                 {
-                    if (fixtures.GetFixtureAtLayer(TileLayers.HighWallNorth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.HighWallEast) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.HighWallSouth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.HighWallWest) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallNorth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallEast) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallSouth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallWest))
+                    if (fixtures.GetFixture(TileLayers.HighWallNorth) ||
+                        fixtures.GetFixture(TileLayers.HighWallEast) ||
+                        fixtures.GetFixture(TileLayers.HighWallSouth) ||
+                        fixtures.GetFixture(TileLayers.HighWallWest) ||
+                        fixtures.GetFixture(TileLayers.LowWallNorth) ||
+                        fixtures.GetFixture(TileLayers.LowWallEast) ||
+                        fixtures.GetFixture(TileLayers.LowWallSouth) ||
+                        fixtures.GetFixture(TileLayers.LowWallWest))
                     {
                         fixtures.highWalls = new HighWallFixture[4];
                         fixtures.lowWalls = new LowWallFixture[4];
@@ -81,10 +81,10 @@ namespace SS3D.Engine.Tiles
             // Prevent low wall mounts on glass walls and reinforced glass walls
             if (tileDefinition.turf != null && tileDefinition.turf.isWall && tileDefinition.turf.name.Contains("GlassWall"))
             {
-                if (fixtures.GetFixtureAtLayer(TileLayers.LowWallNorth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallEast) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallSouth) ||
-                        fixtures.GetFixtureAtLayer(TileLayers.LowWallWest))
+                if (fixtures.GetFixture(TileLayers.LowWallNorth) ||
+                        fixtures.GetFixture(TileLayers.LowWallEast) ||
+                        fixtures.GetFixture(TileLayers.LowWallSouth) ||
+                        fixtures.GetFixture(TileLayers.LowWallWest))
                 {
                     fixtures.lowWalls = new LowWallFixture[4];
 
@@ -97,7 +97,7 @@ namespace SS3D.Engine.Tiles
             Fixture pipe;
             for (int i = 0; i < pipeLayers.Length; i++)
             {
-                pipe = tileDefinition.fixtures.GetFixtureAtLayer(pipeLayers[i]);
+                pipe = tileDefinition.fixtures.GetFixture(pipeLayers[i]);
                 if (pipe != null && !pipe.name.Contains((i+1).ToString()))
                 {
                     fixtures.pipes[i] = null;

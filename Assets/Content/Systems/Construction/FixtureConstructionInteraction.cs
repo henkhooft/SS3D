@@ -16,45 +16,17 @@ namespace SS3D.Content.Systems.Construction
         /// If any existing fixture should be overwritten
         /// </summary>
         public bool Overwrite { get; set; }
-        
-        /// <summary>
-        /// The type of the fixture to construct
-        /// </summary>
-        public FixtureType FixtureType { get; set; }
-        
-        public TileFixtureLayers TileLayer
+
+        public TileLayers TileLayer
         {
             get => tileLayer;
             set
             {
                 tileLayer = value;
-                FixtureType = FixtureType.TileFixture;
-            }
-        }
-        
-        public WallFixtureLayers WallLayer
-        {
-            get => wallLayer;
-            set
-            {
-                wallLayer = value;
-                FixtureType = FixtureType.WallFixture;
-            }
-        }
-        
-        public FloorFixtureLayers FloorLayer
-        {
-            get => floorLayer;
-            set
-            {
-                floorLayer = value;
-                FixtureType = FixtureType.FloorFixture;
             }
         }
 
-        private TileFixtureLayers tileLayer;
-        private WallFixtureLayers wallLayer;
-        private FloorFixtureLayers floorLayer;
+        private TileLayers tileLayer;
 
 
         public override string GetName(InteractionEvent interactionEvent)
@@ -86,7 +58,7 @@ namespace SS3D.Content.Systems.Construction
             
             // Required to get the tile to update fixtures
             // TODO: Add flag?
-            definition.fixtures = (FixturesContainer) definition.fixtures.Clone();
+            // definition.fixtures = (FixturesContainer) definition.fixtures;
             
             // Apply change
             tileManager.UpdateTile(TargetTile.transform.position, definition);
@@ -94,35 +66,12 @@ namespace SS3D.Content.Systems.Construction
 
         private Fixture GetFixture(FixturesContainer container)
         {
-            switch (FixtureType)
-            {
-                case FixtureType.TileFixture:
-                    return container.GetTileFixtureAtLayer(tileLayer);
-                case FixtureType.WallFixture:
-                    return container.GetWallFixtureAtLayer(wallLayer);
-                case FixtureType.FloorFixture:
-                    return container.GetFloorFixtureAtLayer(floorLayer);
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return container.GetFixture(tileLayer);
         }
 
         private void SetFixture(FixturesContainer container)
         {
-            switch (FixtureType)
-            {
-                case FixtureType.TileFixture:
-                    container.SetTileFixtureAtLayer((TileFixture) Fixture, tileLayer);
-                    break;
-                case FixtureType.WallFixture:
-                    container.SetWallFixtureAtLayer((WallFixture) Fixture, wallLayer);
-                    break;
-                case FixtureType.FloorFixture:
-                    container.SetFloorFixtureAtLayer((FloorFixture) Fixture, floorLayer);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            container.SetFixture(Fixture, tileLayer);
         }
     }
 }

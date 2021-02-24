@@ -75,7 +75,7 @@ namespace SS3D.Engine.Tiles.Connections
             bool isConnected = (tile.turf && (tile.turf.genericType == type || type == null));
             if (tile.fixtures != null)
             {
-                isConnected = isConnected || (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex) && (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex).genericType == type || type == null));
+                isConnected = isConnected || (tile.fixtures.GetFixture(LayerIndex) && (tile.fixtures.GetFixture(LayerIndex).genericType == type || type == null));
             }
 
             isConnected &= (AdjacencyBitmap.Adjacent(TileState.blockedDirection, direction) == 0);

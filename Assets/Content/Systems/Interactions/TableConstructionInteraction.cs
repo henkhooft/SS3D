@@ -12,7 +12,7 @@ namespace SS3D.Content.Systems.Interactions
         public override string GetName(InteractionEvent interactionEvent)
         {
             TileObject tileObject = (interactionEvent.Target as IGameObjectProvider)?.GameObject?.GetComponentInParent<TileObject>();
-            if (tileObject != null && tileObject.Tile.fixtures.GetFloorFixtureAtLayer(FloorFixtureLayers.FurnitureFixtureMain) == TableToConstruct)
+            if (tileObject != null && tileObject.Tile.fixtures.GetFixture(TileLayers.FurnitureMain) == TableToConstruct)
             {
                 return "Deconstruct";
             }
@@ -43,25 +43,21 @@ namespace SS3D.Content.Systems.Interactions
             var tile = targetTile.Tile;
 
             
-            if (tile.fixtures.GetFloorFixtureAtLayer(FloorFixtureLayers.FurnitureFixtureMain) != null) // If there is a fixture on the place
+            if (tile.fixtures.GetFixture(TileLayers.FurnitureMain) != null) // If there is a fixture on the place
             {
-                if (tile.fixtures.GetFloorFixtureAtLayer(FloorFixtureLayers.FurnitureFixtureMain) == TableToConstruct) // If the fixture is a table
+                if (tile.fixtures.GetFixture(TileLayers.FurnitureMain) == TableToConstruct) // If the fixture is a table
                 {
-                    tile.fixtures.SetFloorFixtureAtLayer(null, FloorFixtureLayers.FurnitureFixtureMain); // Deconstruct
+                    tile.fixtures.SetFixture(null, TileLayers.FurnitureMain); // Deconstruct
                 }
             }
             else // If there is no fixture on place
             {
                 // TODO: Change default rotation to north
-                tile.fixtures.SetFloorFixtureAtLayer(TableToConstruct, FloorFixtureLayers.FurnitureFixtureMain); // Construct
+                tile.fixtures.SetFixture(TableToConstruct, TileLayers.FurnitureMain); // Construct
             }
             
             // TODO: Make an easier way of doing this.
-            tile.subStates = new object[2];
-
-            // Validate if we can actually place the table
-            FixturesContainer.ValidateFixtures(tile);
-            tile.fixtures = (FixturesContainer)tile.fixtures.Clone();
+            // tile.subStates = new object[2];
 
             tileManager.UpdateTile(targetTile.transform.position, tile);
         }

@@ -96,14 +96,14 @@ namespace SS3D.Engine.Tiles.Connections
          */
         private bool UpdateSingleConnection(Direction direction, TileDefinition tile)
         {
-            int index = LayerIndex;
+            int index = LayerIndex - Fixture.LayerOffset;
             if (index == 0)
                 index = 17; // Hardcoded to the FixtureMain layer until I got a better solution for this. Is needed to make Airlocks connect to walls
 
             bool isConnected = (tile.plenum && (tile.plenum.genericType == type || type == null));
             isConnected |= (tile.turf && (tile.turf.genericType == type || type == null));
             if (tile.fixtures != null)
-                isConnected = isConnected || (tile.fixtures.GetFixtureAtLayerIndex(index) && (tile.fixtures.GetFixtureAtLayerIndex(index).genericType == type || type == null));
+                isConnected = isConnected || (tile.fixtures.GetFixture(index) && (tile.fixtures.GetFixture(index).genericType == type || type == null));
             return adjacents.UpdateDirection(direction, isConnected);
         }
 

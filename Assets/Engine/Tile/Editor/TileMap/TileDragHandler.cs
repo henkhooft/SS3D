@@ -143,13 +143,13 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                 {
                     if (DeleteTiles)
                     {
-                        if (SelectedTileLayerIndex == 0)
+                        if (SelectedTileLayer == TileLayers.Plenum)
                         {
                             DeleteTile(tileManager, x, y);
                         }
                         else
                         {
-                            DeleteTileLayer(tileManager, SelectedTileLayerIndex, x, y);
+                            DeleteTileLayer(tileManager, SelectedTileLayer, x, y);
                         }
                     }
                     else
@@ -178,7 +178,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
         private List<TileObject> dragTiles = new List<TileObject>();
 
         public bool DeleteTiles { get; set; }
-        public int SelectedTileLayerIndex { get; set; }
+        public TileLayers SelectedTileLayer { get; set; }
     }
 
 }

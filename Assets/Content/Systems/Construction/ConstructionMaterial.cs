@@ -136,9 +136,6 @@ namespace SS3D.Content.Systems.Construction
                 {
                     Fixture = construction.fixture,
                     TileLayer = construction.tileLayer,
-                    WallLayer = construction.wallLayer,
-                    FloorLayer = construction.floorLayer,
-                    FixtureType = construction.type,
                     LoadingBarPrefab = loadingBarPrefab,
                     Delay = construction.buildTime,
                     ObstacleMask = obstacleMask
@@ -203,10 +200,7 @@ namespace SS3D.Content.Systems.Construction
             
             // Fixture data
             public Fixture fixture;
-            public FixtureType type;
-            public TileFixtureLayers tileLayer;
-            public WallFixtureLayers wallLayer;
-            public FloorFixtureLayers floorLayer;
+            public TileLayers tileLayer;
 
             public ConstructionUiData ToUi(string materialName)
             {

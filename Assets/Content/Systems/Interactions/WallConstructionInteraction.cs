@@ -28,7 +28,7 @@ namespace SS3D.Content.Systems.Interactions
                 return false;
             }
 
-            return !TargetTile.Tile.fixtures.floorFixtureDefinition.IsEmpty();
+            return !TargetTile.Tile.fixtures.IsEmpty();
         }
 
         public override void Cancel(InteractionEvent interactionEvent, InteractionReference reference)
@@ -52,11 +52,10 @@ namespace SS3D.Content.Systems.Interactions
                 tile.turf = WallToConstruct;
 
             // TODO: Change rotation from defaulting to North
-            tile.fixtures.SetFloorFixtureAtLayer(null, FloorFixtureLayers.FurnitureFixtureMain);
-            FixturesContainer.ValidateFixtures(tile);
+            tile.fixtures.SetFixture(null, TileLayers.FurnitureMain);
 
             // TODO: Make an easier way of doing this.
-            tile.subStates = new object[2];
+            // tile.subStates = new object[2];
 
             tileManager.UpdateTile(targetTile.transform.position, tile);
         }

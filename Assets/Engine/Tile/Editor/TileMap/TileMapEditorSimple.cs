@@ -273,7 +273,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                     if (deleteTiles)
                     {
                         dragHandler.DeleteTiles = true;
-                        dragHandler.SelectedTileLayerIndex = GetTileOffsetIndex();
+                        dragHandler.SelectedTileLayer = GetTileOffsetIndex();
                     }
                 }
                 dragHandler.HandleDrag(tilePosition);
@@ -383,7 +383,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                 // Loop each layer
                 for (int i = 0; i < layerVisibility.Length; i++)
                 {
-                    GameObject layerObject = tileObject.GetLayer(i);
+                    GameObject layerObject = tileObject.GetLayer((TileLayers)i);
                     if (layerObject != null)
                     {
                         layerObject.SetActive(layerVisibility[i].visibile);
@@ -475,7 +475,7 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                     LoadAssetLayer<LowWallFixture>(assetName);
                     break;
                 case TileVisibilityLayers.AtmosMachinery:
-                    LoadAssetLayer<PipeFloorFixture>(assetName);
+                    LoadAssetLayer<AtmosMachineryFixture>(assetName);
                     break;
                 case TileVisibilityLayers.Furniture:
                     LoadAssetLayer<FurnitureFloorFixture>(assetName);
@@ -507,7 +507,8 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                 fixtures = new FixturesContainer()
             };
 
-            def.subStates = new object[TileDefinition.GetAllFixtureLayerSize() + 2];
+            def.fixtures.Init();
+            def.subStates = new object[TileDefinition.GetTileLayerSize()];
 
             currentDefinition = def;
         }
@@ -528,9 +529,8 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
                 DestroyImmediate(currentTile);
         }
 
-        private int GetTileOffsetIndex()
+        private TileLayers GetTileOffsetIndex()
         {
-            int offsetTileLayer = -1;
             string layerName = selectedTileLayer.ToString();
 
             // Handle sub layers cases (i.e. pipes, overlays etc)
@@ -558,10 +558,10 @@ namespace SS3D.Engine.Tiles.Editor.TileMap
             for (int i = 0; i < tileLayers.Length; i++)
             {
                 if (tileLayers[i].ToString().Equals(layerName))
-                    offsetTileLayer = i;
+                    return tileLayers[i];
             }
 
-            return offsetTileLayer;
+            return TileLayers.AtmosObject;
         }
 
         private void SetSelectionDefinition()

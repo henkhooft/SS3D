@@ -72,11 +72,11 @@ namespace SS3D.Engine.Tiles.Connections
         {
             bool isGeneric = (tile.turf && (tile.turf.genericType == genericType || genericType == null));
             if (tile.fixtures != null)
-                isGeneric = isGeneric || (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex) && (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex).genericType == genericType || genericType == null));
+                isGeneric = isGeneric || (tile.fixtures.GetFixture(LayerIndex) && (tile.fixtures.GetFixture(LayerIndex).genericType == genericType || genericType == null));
 
             bool isSpecific = (tile.turf && (tile.turf.id == id || id == null));
             if (tile.fixtures != null)
-                isSpecific = isSpecific || (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex) && (tile.fixtures.GetFixtureAtLayerIndex(LayerIndex).id == id || id == null));
+                isSpecific = isSpecific || (tile.fixtures.GetFixture(LayerIndex) && (tile.fixtures.GetFixture(LayerIndex).id == id || id == null));
 
             bool changed = generalAdjacents.UpdateDirection(direction, isGeneric, true);
             changed |= specificAdjacents.UpdateDirection(direction, isSpecific, true);

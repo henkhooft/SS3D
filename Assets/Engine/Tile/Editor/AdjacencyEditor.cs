@@ -77,7 +77,7 @@ namespace SS3D.Engine.Tiles.Editor
                         for (int i = 0; i < neighbourTiles.Length; i++)
                         {
                             // Get fixtures on the same layer
-                            var stateMaintainer = neighbourTiles[i]?.GetLayer(adjacencyConnector.LayerIndex + 2)?.GetComponent<AdjacencyStateMaintainer>();
+                            var stateMaintainer = neighbourTiles[i]?.GetLayer((TileLayers)(adjacencyConnector.LayerIndex + Fixture.LayerOffset))?.GetComponent<AdjacencyStateMaintainer>();
                             if (stateMaintainer == null)
                                 continue;
 
