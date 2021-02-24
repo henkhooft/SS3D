@@ -170,7 +170,7 @@ namespace Tile
             // We are a fixture
             else
             {
-                def.fixtures.SetFixture((Fixture)item, layer - Fixture.LayerOffset);
+                def.fixtures.SetFixture((Fixture)item, layer);
             }
 
             return def;

@@ -104,7 +104,7 @@ namespace SS3D.Engine.Tiles
 
             for (int i = 0; i < TileDefinition.GetFixtureLayerSize(); i++)
             {
-                if (GetFixture(i)) fixtures.Add(GetFixture(i));
+                fixtures.Add(GetFixture(i));
             }
 
             return fixtures;
