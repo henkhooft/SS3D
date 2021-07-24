@@ -2,11 +2,18 @@
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public class AtmosContainer
+    public struct AtmosContainer
     {
-        private float volume = 2.5f;
-        private float temperature = 293f;
+        private float volume;
+        private float temperature;
         private float4 coreGasses;
+
+        public void Setup()
+        {
+            volume = 2.5f;
+            temperature = 293f;
+            coreGasses = 0f;
+        }
 
         public float GetTemperature()
         {

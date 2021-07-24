@@ -1,6 +1,8 @@
 ﻿using SS3D.Engine.Tiles;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Jobs;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Engine.AtmosphericsRework
@@ -16,6 +18,34 @@ namespace SS3D.Engine.AtmosphericsRework
         // Performance markers
         static ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("Atmospherics.Initialize");
         static ProfilerMarker s_StepPerfMarker = new ProfilerMarker("Atmospherics.Step");
+
+        private struct CalculateFluxJob : IJobParallelFor
+        {
+            public NativeArray<AbstractAtmosObject> jobAtmosObjects;
+
+            public void Execute(int index)
+            {
+                if (jobAtmosObjects[index].GetState() == AtmosState.Active)
+                {
+                    jobAtmosObjects[index].CalculateFlux();
+                }
+            }
+        }
+
+        private struct SimulateFluxJob : IJobParallelFor
+        {
+            public NativeArray<AbstractAtmosObject> jobAtmosObjects;
+
+            public void Execute(int index)
+            {
+                if (jobAtmosObjects[index].GetState() == AtmosState.Active ||
+                    jobAtmosObjects[index].GetState() == AtmosState.Semiactive)
+                {
+                    jobAtmosObjects[index].SimulateFlux();
+                }
+            }
+        }
+
 
         private void Start()
         {
@@ -39,6 +69,11 @@ namespace SS3D.Engine.AtmosphericsRework
                     
                 }
             }
+        }
+
+        private void ScheduleAtmosJob()
+        {
+            NativeArray
         }
     }
 }

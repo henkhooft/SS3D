@@ -4,8 +4,14 @@ using UnityEngine;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public class TileAtmosObject: AbstractAtmosObject
+    public class TileAtmosObject
     {
-        
+        private AbstractAtmosObject atmosObject;
+
+        public TileAtmosObject()
+        {
+            atmosObject = new AbstractAtmosObject();
+            atmosObject.Setup();
+        }
     }
 }
