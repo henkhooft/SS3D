@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public class TileAtmosObject
+    public interface IAtmosLoop
     {
-        
+        void Initialize();
+        void Step();
     }
 }
