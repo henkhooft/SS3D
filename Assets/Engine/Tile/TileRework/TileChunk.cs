@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SS3D.Engine.AtmosphericsRework;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -56,6 +57,7 @@ namespace SS3D.Engine.Tiles
         private float tileSize = 1f;
         private Vector3 originPosition;
         private List<TileGrid> tileGridList;
+        private TileAtmosObject[] atmosGridList;
         private TileManager tileManager;
 
         public TileChunk(Vector2Int chunkKey, int width, int height, float tileSize, Vector3 originPosition)
@@ -95,8 +97,21 @@ namespace SS3D.Engine.Tiles
             return grid;
         }
 
+        private void CreateAtmosGrid()
+        {
+            atmosGridList = new TileAtmosObject[width * height];
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    atmosGridList[y * width + x] = new TileAtmosObject();
+                }
+            }
+        }
+
         /// <summary>
-        /// Create empty grids for all layers.
+        /// Create empty grids for all layers and atmos.
         /// </summary>
         private void CreateAllGrids()
         {
@@ -106,6 +121,8 @@ namespace SS3D.Engine.Tiles
             {
                 tileGridList.Add(CreateGrid(layer));
             }
+
+            CreateAtmosGrid();
         }
 
         public int GetWidth()
@@ -255,6 +272,25 @@ namespace SS3D.Engine.Tiles
             Vector2Int vector = new Vector2Int();
             vector = GetXY(worldPosition);
             return GetTileObject(layer, vector.x, vector.y);
+        }
+
+        public TileAtmosObject GetTileAtmosObject(int x, int y)
+        {
+            if (x >= 0 && y >= 0 && x < width && y < height)
+            {
+                return atmosGridList[y * width + x];
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        public TileAtmosObject GetTileAtmosObject(Vector3 worldPosition)
+        {
+            Vector2Int vector = new Vector2Int();
+            vector = GetXY(worldPosition);
+            return GetTileAtmosObject(vector.x, vector.y);
         }
 
         public void TriggerGridObjectChanged(int x, int y)

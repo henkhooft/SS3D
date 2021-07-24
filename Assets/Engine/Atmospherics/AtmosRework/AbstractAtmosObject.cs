@@ -4,7 +4,7 @@ using Unity.Profiling;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public class AbstractAtmosObject
+    public struct AbstractAtmosObject
     {
         private AtmosState state = AtmosState.Active;
         private AtmosContainer container = new AtmosContainer();
@@ -17,11 +17,24 @@ namespace SS3D.Engine.AtmosphericsRework
         private float4 neighbourFlux = 0f;
         private float4 difference = 0f;
 
+        private bool4 neighbourUpdate = false;
+        private float4 neighbourPressure = 0f;
+
         // Performance makers
         static ProfilerMarker s_CalculateFluxPerfMarker = new ProfilerMarker("AtmosObject.CalculateFlux");
         // static ProfilerMarker s_CalculateFluxOnePerfMarker = new ProfilerMarker("AtmosObject.CalculateFlux.One");
         static ProfilerMarker s_SimulateFluxPerfMarker = new ProfilerMarker("AtmosObject.SimulateFlux");
         static ProfilerMarker s_SimlateMixingPerfMarker = new ProfilerMarker("AtmosObject.SimulateMixing");
+
+        public void Setup()
+        {
+            state = AtmosState.Active;
+            container = new AtmosContainer();
+            temperatureSetting = false;
+            neighbours = { null, null, null, null};
+            activeDirection = false;
+        }
+
 
         public AtmosState GetState()
         {
@@ -38,6 +51,16 @@ namespace SS3D.Engine.AtmosphericsRework
             return container;
         }
 
+        public void SetContainer(AtmosContainer container)
+        {
+            this.container = container;
+        }
+
+        public void SetNeighbours(AbstractAtmosObject[] neighbours)
+        {
+            this.neighbours = neighbours;
+        }
+
         public void SetBlocked(bool isBlocked)
         {
             if (isBlocked)
@@ -46,16 +69,25 @@ namespace SS3D.Engine.AtmosphericsRework
                 state = AtmosState.Active;
         }
 
+        public void MakeAir()
+        {
+            container.MakeEmpty();
+
+            container.AddCoreGas(CoreAtmosGasses.Oxygen, 20.79f);
+            container.AddCoreGas(CoreAtmosGasses.Nitrogen, 83.17f);
+            container.SetTemperature(293f); ;
+        }
+
         public void CalculateFlux()
         {
             s_CalculateFluxPerfMarker.Begin();
 
             float pressure = container.GetPressure();
 
-            // for each neighbour
+            /*
             for (int i = 0; i < neighbours.Length; i++)
             {
-                /*
+                
                 if (neighbours[i]?.GetState() != AtmosState.Blocked)
                 {
                     neighbourFlux[i] = math.min(tileFlux[i] * GasConstants.drag + (pressure - neighbours[i].GetContainer().GetPressure()) * GasConstants.dt, 1000f);
@@ -67,18 +99,22 @@ namespace SS3D.Engine.AtmosphericsRework
                         neighbourFlux[i] = 0f;
                     }
                 }
-                */
+                
             }
+            */
 
             /// Testing
-            float4 neighbourPressure = 0f;
-            bool4 neighbourUpdate = false;
             for (int i = 0; i < neighbours.Length; i++)
             {
-                if (neighbours[i].GetState() != AtmosState.Blocked)
+                if (neighbours[i]?.GetState() != AtmosState.Blocked)
                 {
-                    neighbourPressure = neighbours[i].GetContainer().GetPressure();
+                    neighbourPressure[i] = neighbours[i].GetContainer().GetPressure();
                     neighbourUpdate[i] = true;
+                }
+                else
+                {
+                    neighbourPressure[i] = 0f;
+                    neighbourUpdate[i] = false;
                 }
             }
 
@@ -86,18 +122,14 @@ namespace SS3D.Engine.AtmosphericsRework
 
             for (int i = 0; i < neighbours.Length; i++)
             {
-                if (neighbourFlux[i] < 0f)
+                if (neighbourUpdate[i] && neighbourFlux[i] < 0f)
                 {
                     neighbours[i].SetState(AtmosState.Active);
                     neighbourFlux[i] = 0f;
                 }
             }
 
-
-
-
-
-                if (math.any(neighbourFlux > GasConstants.fluxEpsilon))
+            if (math.any(neighbourFlux > GasConstants.fluxEpsilon))
             {
                 float scalingFactor = math.min(1f, pressure / math.csum(neighbourFlux) / GasConstants.dt);
 
