@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public class PipeAtmosObject : AbstractAtmosObject
+    public class PipeAtmosObject : AtmosObject
     {
         
     }

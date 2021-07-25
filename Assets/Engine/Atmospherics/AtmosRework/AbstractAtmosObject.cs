@@ -5,13 +5,13 @@ using Unity.Profiling;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public struct AbstractAtmosObject
+    public struct AtmosObject
     {
         private AtmosState state;
         private AtmosContainer container;
         private bool temperatureSetting;
 
-        private NativeArray<AbstractAtmosObject> neighbours;
+        private NativeArray<AtmosObject> neighbours;
         private bool4 activeDirection;
 
         private float4 tileFlux;
@@ -34,7 +34,7 @@ namespace SS3D.Engine.AtmosphericsRework
 
             state = AtmosState.Active;
             temperatureSetting = false;
-            neighbours = new NativeArray<AbstractAtmosObject>(4, Allocator.Persistent);
+            neighbours = new NativeArray<AtmosObject>(4, Allocator.Persistent);
             activeDirection = false;
             tileFlux = 0f;
             neighbourFlux = 0f;
@@ -64,7 +64,7 @@ namespace SS3D.Engine.AtmosphericsRework
             this.container = container;
         }
 
-        public void SetNeighbours(AbstractAtmosObject[] neighbours)
+        public void SetNeighbours(AtmosObject[] neighbours)
         {
             this.neighbours.CopyFrom(neighbours);
         }
@@ -114,7 +114,7 @@ namespace SS3D.Engine.AtmosphericsRework
             /// Testing
             for (int i = 0; i < neighbours.Length; i++)
             {
-                if ((!neighbours[i].Equals(default(AbstractAtmosObject))) && neighbours[i].GetState() != AtmosState.Blocked)
+                if ((!neighbours[i].Equals(default(AtmosObject))) && neighbours[i].GetState() != AtmosState.Blocked)
                 {
                     neighbourPressure[i] = neighbours[i].GetContainer().GetPressure();
                     neighbourUpdate[i] = true;
@@ -188,7 +188,7 @@ namespace SS3D.Engine.AtmosphericsRework
 
                 for (int i = 0; i < neighbours.Length; i++)
                 {
-                    if ((!neighbours[i].Equals(default(AbstractAtmosObject))) && neighbours[i].GetState() != AtmosState.Vacuum)
+                    if ((!neighbours[i].Equals(default(AtmosObject))) && neighbours[i].GetState() != AtmosState.Vacuum)
                     {
                         neighbours[i].GetContainer().AddCoreGasses(factor);
                     }
@@ -229,7 +229,7 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 for (int i = 0; i < neighbours.Length; i++)
                 {
-                    if ((!neighbours[i].Equals(default(AbstractAtmosObject))) && neighbours[i].GetState() != AtmosState.Blocked)
+                    if ((!neighbours[i].Equals(default(AtmosObject))) && neighbours[i].GetState() != AtmosState.Blocked)
                     {
                         AtmosContainer neighbourContainer = neighbours[i].GetContainer();
                         difference = (container.GetCoreGasses() - neighbourContainer.GetCoreGasses()) * GasConstants.mixRate;

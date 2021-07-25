@@ -293,6 +293,11 @@ namespace SS3D.Engine.Tiles
             return GetTileAtmosObject(vector.x, vector.y);
         }
 
+        public List<TileAtmosObject> GetAllTileAtmosObjects()
+        {
+            return new List<TileAtmosObject>(atmosGridList);
+        }
+
         public void TriggerGridObjectChanged(int x, int y)
         {
             OnGridObjectChanged?.Invoke(this, new OnGridObjectChangedEventArgs { x = x, y = y });

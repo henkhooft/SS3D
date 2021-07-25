@@ -6,12 +6,17 @@ namespace SS3D.Engine.AtmosphericsRework
 {
     public class TileAtmosObject
     {
-        private AbstractAtmosObject atmosObject;
+        private AtmosObject atmosObject;
 
         public TileAtmosObject()
         {
-            atmosObject = new AbstractAtmosObject();
+            atmosObject = new AtmosObject();
             atmosObject.Setup();
+        }
+
+        public AtmosObject GetAtmosObject()
+        {
+            return atmosObject;
         }
     }
 }
