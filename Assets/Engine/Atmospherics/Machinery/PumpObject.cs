@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class PumpObject : PipeGeneric, IAtmosLoop, IInteractionTarget
     {
         public enum PumpType
@@ -123,5 +124,6 @@ namespace SS3D.Engine.Atmospherics
             SetActive(!pumpActive);
         }
     }
+    */
 }
  

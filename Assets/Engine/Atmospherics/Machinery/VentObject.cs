@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class VentObject : MonoBehaviour, IAtmosLoop, IInteractionTarget
     {
         public enum OperatingMode
@@ -30,7 +31,6 @@ namespace SS3D.Engine.Atmospherics
             // Get the animator for our spin animation
             anim = GetComponent<Animator>();
 
-            /*
             // We only check the pipes that are on our own tile
             TileObject tileObject = GetComponentInParent<TileObject>();
             PipeObject[] pipes = tileObject.GetComponentsInChildren<PipeObject>();
@@ -43,13 +43,11 @@ namespace SS3D.Engine.Atmospherics
                     connectedPipe = pipe;
                 }
             }
-            */
         }
 
         public void Step()
         {
             bool ventActive = false;
-            /*
             if (deviceActive)
             {
                 PipeObject input = connectedPipe;
@@ -126,7 +124,6 @@ namespace SS3D.Engine.Atmospherics
                     }
                 }
             }
-            */
 
             // Update the animator
             anim.SetBool("ventActive", ventActive);
@@ -177,4 +174,5 @@ namespace SS3D.Engine.Atmospherics
             }
         }
     }
+    */
 }

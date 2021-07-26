@@ -7,6 +7,7 @@ using UnityEngine.Assertions;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     // This handles ragdolling by atmos wind, which I think should be moved elsewhere
     // makes the player ragdoll when there's strong wind
     [RequireComponent(typeof(HumanRagdoll))]
@@ -74,4 +75,5 @@ namespace SS3D.Engine.Atmospherics
             }
         }
     }
+    */
 }

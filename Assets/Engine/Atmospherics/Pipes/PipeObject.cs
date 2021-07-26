@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class PipeObject : PipeGeneric
     {
         private const float maxPipePressure = 2000f;
@@ -334,4 +335,5 @@ namespace SS3D.Engine.Atmospherics
             }
         }
     }
+    */
 }

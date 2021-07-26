@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class InjectorObject : PipeGeneric, IAtmosLoop
     {
         private TileObject tileNeighbour;
@@ -21,7 +22,6 @@ namespace SS3D.Engine.Atmospherics
 
         public void Step()
         {
-            /*
             if (atmosNeighbour)
             {
                 if (atmosNeighbour.GetTotalMoles() > 0.1f)
@@ -35,7 +35,7 @@ namespace SS3D.Engine.Atmospherics
                     }
                 }
             }
-            */
         }
     }
+    */
 }

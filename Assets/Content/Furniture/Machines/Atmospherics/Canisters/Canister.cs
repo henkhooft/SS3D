@@ -9,6 +9,9 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 namespace SS3D.Content.Furniture.Machines.Atmospherics {
+    /*
+
+    
     // This handles the gas canister process, where we can put only Atmos stuff.
     // This can only store gas (for now), and we have a maximum ammount of gas that can be stored.
     // You can open the valve to release gas and you can also set the release pressure
@@ -124,4 +127,5 @@ namespace SS3D.Content.Furniture.Machines.Atmospherics {
             return;
         }
     }
+    */
 }

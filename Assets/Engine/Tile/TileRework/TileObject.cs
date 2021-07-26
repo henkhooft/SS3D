@@ -22,15 +22,15 @@ namespace SS3D.Engine.Tiles
             public PlacedTileObject.PlacedSaveObject[] placedSaveObjects;
         }
 
-        private TileChunk map;
+        private TileChunk chunk;
         private TileLayer layer;
         private int x;
         private int y;
         public PlacedTileObject[] placedObjects;
 
-        public TileObject(TileChunk map, TileLayer layer, int x, int y, int subLayerSize)
+        public TileObject(TileChunk chunk, TileLayer layer, int x, int y, int subLayerSize)
         {
-            this.map = map;
+            this.chunk = chunk;
             this.layer = layer;
             this.x = x;
             this.y = y;
@@ -45,7 +45,7 @@ namespace SS3D.Engine.Tiles
         public void SetPlacedObject(PlacedTileObject placedObject, int subLayerIndex)
         {
             placedObjects[subLayerIndex] = placedObject;
-            map.TriggerGridObjectChanged(x, y);
+            chunk.TriggerGridObjectChanged(x, y);
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace SS3D.Engine.Tiles
                 placedObjects[subLayerIndex].DestroySelf();
 
             placedObjects[subLayerIndex] = null;
-            map.TriggerGridObjectChanged(x, y);
+            chunk.TriggerGridObjectChanged(x, y);
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace SS3D.Engine.Tiles
             foreach (PlacedTileObject placedObject in placedObjects)
                 placedObject?.DestroySelf();
 
-            map.TriggerGridObjectChanged(x, y);
+            chunk.TriggerGridObjectChanged(x, y);
         }
 
         /// <summary>

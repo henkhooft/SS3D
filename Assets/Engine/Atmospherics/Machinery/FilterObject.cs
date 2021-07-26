@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class FilterObject : PipeGeneric, IAtmosLoop, IInteractionTarget
     {
         public float MaxPressure = 4500f;
@@ -125,4 +126,5 @@ namespace SS3D.Engine.Atmospherics
             SetActive(!filterActive);
         }
     }
+    */
 }

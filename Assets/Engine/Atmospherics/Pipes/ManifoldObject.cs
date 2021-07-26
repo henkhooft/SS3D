@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class ManifoldObject : PipeObject, IAtmosLoop
     {
         public enum ManifoldType
@@ -18,7 +19,6 @@ namespace SS3D.Engine.Atmospherics
         // We initialize via atmosloop as a device, so that we are sure that all pipes are set up
         public void Initialize()
         {
-            /*
             // We only check the pipes that are on our own tile
             TileObject tileObject = GetComponentInParent<TileObject>();
             PipeObject[] pipes = tileObject.GetComponentsInChildren<PipeObject>();
@@ -39,7 +39,6 @@ namespace SS3D.Engine.Atmospherics
 
                 i++;
             }
-            */
         }
 
         // Override as we don't behave like a normal pipe
@@ -53,4 +52,5 @@ namespace SS3D.Engine.Atmospherics
             return;
         }
     }
+    */
 }

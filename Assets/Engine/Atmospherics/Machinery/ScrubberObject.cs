@@ -8,8 +8,10 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class ScrubberObject : MonoBehaviour, IAtmosLoop, IInteractionTarget
     {
+        
         public enum OperatingMode
         {
             Off,
@@ -62,7 +64,6 @@ namespace SS3D.Engine.Atmospherics
             // Get the animator for our spin animation
             anim = GetComponent<Animator>();
 
-            /*
             // We only check the pipes that are on our own tile
             TileObject tileObject = GetComponentInParent<TileObject>();
             PipeObject[] pipes = tileObject.GetComponentsInChildren<PipeObject>();
@@ -77,7 +78,6 @@ namespace SS3D.Engine.Atmospherics
             }
 
             SetAtmosNeighbours();
-            */
         }
 
         public void Step()
@@ -94,7 +94,6 @@ namespace SS3D.Engine.Atmospherics
                     numOfTiles = 5;
                     break;
             }
-            /*
             if (deviceActive)
             {
                 // We loop 1 or 5 times based on the range setting
@@ -172,7 +171,7 @@ namespace SS3D.Engine.Atmospherics
                     }
                 }
             }
-            */
+          
 
             // Update the animator
             anim.SetBool("scrubActive", scrubActive);
@@ -202,8 +201,7 @@ namespace SS3D.Engine.Atmospherics
 
         public void SetAtmosNeighbours()
         {
-            /*
-            int i = 0;
+                        int i = 0;
             foreach (TileObject tile in tileNeighbours)
             {
                 if (tile != null)
@@ -213,7 +211,7 @@ namespace SS3D.Engine.Atmospherics
                 }
                 i++;
             }
-            */
+
         }
 
         public IInteraction[] GenerateInteractionsFromTarget(InteractionEvent interactionEvent)
@@ -249,5 +247,7 @@ namespace SS3D.Engine.Atmospherics
                 siphonActive = false;
             }
         }
+
     }
+*/
 }

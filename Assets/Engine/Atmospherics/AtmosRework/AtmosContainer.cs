@@ -115,5 +115,10 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             return math.csum(coreGasses * GasConstants.coreGasDensity);
         }
+
+        public bool IsEmpty()
+        {
+            return math.all(coreGasses == 0f);
+        }
     }
 }

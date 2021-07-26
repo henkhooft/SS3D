@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class MixerObject : PipeGeneric, IAtmosLoop, IInteractionTarget
     {
         public float InputOneAmount = 50f;
@@ -137,4 +138,5 @@ namespace SS3D.Engine.Atmospherics
             SetActive(!mixerActive);
         }
     }
+    */
 }

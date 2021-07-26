@@ -105,7 +105,7 @@ namespace SS3D.Engine.Tiles
             {
                 for (int y = 0; y < height; y++)
                 {
-                    atmosGridList[y * width + x] = new TileAtmosObject();
+                    atmosGridList[y * width + x] = new TileAtmosObject(this, x, y);
                 }
             }
         }

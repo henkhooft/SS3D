@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public class ValveObject : MonoBehaviour, IInteractionTarget
     {
         public enum ValveType
@@ -53,4 +54,5 @@ namespace SS3D.Engine.Atmospherics
             SetValve(!isEnabled);
         }
     }
+    */
 }

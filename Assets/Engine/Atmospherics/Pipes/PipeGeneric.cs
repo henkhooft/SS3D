@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace SS3D.Engine.Atmospherics
 {
+    /*
     public enum PipeLayer
     {
         L1,
@@ -27,7 +28,6 @@ namespace SS3D.Engine.Atmospherics
 
         public virtual void SetAtmosNeighbours()
         {
-            /*
             int i = 0;
             foreach (TileObject tile in tileNeighbours)
             {
@@ -42,8 +42,8 @@ namespace SS3D.Engine.Atmospherics
                 }
                 i++;
             }
-            */
         }
 
     }
+    */
 }
