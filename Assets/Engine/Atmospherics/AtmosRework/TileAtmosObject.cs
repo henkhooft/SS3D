@@ -28,9 +28,14 @@ namespace SS3D.Engine.AtmosphericsRework
             return atmosObject;
         }
 
+        public void SetAtmosObject(AtmosObject atmosObject)
+        {
+            this.atmosObject = atmosObject;
+        }
+
         public void LoadNeighbours()
         {
-            // Set neighbours
+            // Get neighbours
             AtmosObject[] neighbours = new AtmosObject[4];
             for (Direction direction = Direction.North; direction <= Direction.NorthWest; direction += 2)
             {
@@ -41,12 +46,13 @@ namespace SS3D.Engine.AtmosphericsRework
                     neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject.GetAtmosObject();
             }
 
+
             for (int i = 0; i < neighbours.Length; i++)
             {
                 AtmosObjectInfo info = new AtmosObjectInfo()
                 {
-                    state = neighbours[i].GetState(),
-                    container = neighbours[i].GetContainer(),
+                    state = neighbours[i].atmosObject.state,
+                    container = neighbours[i].atmosObject.container,
                 };
                 
                 if (!info.container.IsEmpty())
@@ -70,8 +76,8 @@ namespace SS3D.Engine.AtmosphericsRework
             for (int i = 0; i < neighbours.Length; i++)
             {
                 AtmosObjectInfo info = atmosObject.GetNeighbour(i);
-                neighbours[i].SetState(info.state);
-                neighbours[i].SetContainer(info.container);
+                neighbours[i].atmosObject.state = info.state;
+                neighbours[i].atmosObject.container = info.container;
             }
         }
 
@@ -81,14 +87,13 @@ namespace SS3D.Engine.AtmosphericsRework
 
             // Set to default air mixture
             // atmosObject.MakeAir();
-
-            atmosObject.MakeRandom();
+            atmosObject.atmosObject.container.MakeRandom();
 
             // Set blocked or vacuum if there is a wall or there is no plenum
             if (chunk.GetTileObject(TileLayer.Plenum, x, y).IsEmpty(0))
             {
-                atmosObject.MakeEmpty();
-                atmosObject.SetState(AtmosState.Blocked);
+                atmosObject.atmosObject.container.MakeEmpty();
+                atmosObject.atmosObject.state = AtmosState.Blocked;
 
                 // atmosObject.state = AtmosState.Inactive;
             }
@@ -96,7 +101,7 @@ namespace SS3D.Engine.AtmosphericsRework
             if (!chunk.GetTileObject(TileLayer.Turf, x, y).IsEmpty(0) &&
                 chunk.GetTileObject(TileLayer.Turf, x, y).GetPlacedObject(0).GetGenericType().Contains("wall"))
             {
-                atmosObject.SetState(AtmosState.Blocked);
+                atmosObject.atmosObject.state = AtmosState.Blocked;
             }
         }
 

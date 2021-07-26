@@ -5,13 +5,7 @@ using Unity.Profiling;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public struct AtmosObjectInfo
-    {
-        public AtmosState state;
-        public AtmosContainer container;
-    }
-
-    public struct AtmosObject
+    public struct AtmosObjectf
     {
         public AtmosState state;
         private AtmosContainer container;

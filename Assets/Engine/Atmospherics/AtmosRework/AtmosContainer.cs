@@ -120,5 +120,25 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             return math.all(coreGasses == 0f);
         }
+
+        public void MakeAir()
+        {
+            MakeEmpty();
+
+            AddCoreGas(CoreAtmosGasses.Oxygen, 20.79f);
+            AddCoreGas(CoreAtmosGasses.Nitrogen, 83.17f);
+            SetTemperature(293f); ;
+        }
+
+        public void MakeRandom()
+        {
+            MakeEmpty();
+
+            for (int i = 0; i < 4; i++)
+            {
+                AddCoreGas((CoreAtmosGasses)i, UnityEngine.Random.Range(0, 300f));
+            }
+            SetTemperature(UnityEngine.Random.Range(0, 300f));
+        }
     }
 }

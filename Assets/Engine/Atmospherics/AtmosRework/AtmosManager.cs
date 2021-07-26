@@ -26,27 +26,29 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private struct CalculateFluxJob : IJobParallelFor
         {
-            public NativeArray<AtmosObject> jobAtmosObjects;
+            public NativeArray<AtmosObject> buffer;
+            // public NativeArray<AtmosObject> output;
 
             public void Execute(int index)
             {
-                if (jobAtmosObjects[index].GetState() == AtmosState.Active)
+                if (buffer[index].atmosObject.state == AtmosState.Active)
                 {
-                    jobAtmosObjects[index].CalculateFlux();
+                    buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
                 }
             }
         }
 
         private struct SimulateFluxJob : IJobParallelFor
         {
-            public NativeArray<AtmosObject> jobAtmosObjects;
+            public NativeArray<AtmosObject> buffer;
+            // public NativeArray<AtmosObject> output;
 
             public void Execute(int index)
             {
-                if (jobAtmosObjects[index].GetState() == AtmosState.Active ||
-                    jobAtmosObjects[index].GetState() == AtmosState.Semiactive)
+                if (buffer[index].atmosObject.state == AtmosState.Active ||
+                    buffer[index].atmosObject.state == AtmosState.Semiactive)
                 {
-                    jobAtmosObjects[index].SimulateFlux();
+                    buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
                 }
             }
         }
@@ -73,6 +75,12 @@ namespace SS3D.Engine.AtmosphericsRework
                 int counter = RunAtmosJob();
                 Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
                 lastStep = Time.fixedTime + UpdateRate;
+
+                for (int i = 0; i < atmosObjects.Length; i++)
+                {
+                    if (atmosObjects[i].atmosObject.container.GetPressure() > 0f)
+                        Debug.Log($"State: {atmosObjects[i].atmosObject.state} Pressure for tile " + i + " : " + atmosObjects[i].atmosObject.container.GetPressure());
+                }
             }
         }
 
@@ -124,22 +132,31 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             s_StepPerfMarker.Begin();
 
+            // NativeArray<AtmosObject> input = new NativeArray<AtmosObject>(atmosTileObjects.Count, Allocator.TempJob);
+            // NativeArray<AtmosObject> output = new NativeArray<AtmosObject>(atmosTileObjects.Count, Allocator.TempJob);
+
             int counter = 0;
 
             // Step 0: Fill neighbour structs
-            for (int i = 0; i < atmosTileObjects.Count; i++)
+            for (int i = 0; i < atmosObjects.Length; i++)
             {
-                if (atmosTileObjects[i].GetAtmosObject().GetState() == AtmosState.Active)
+                if (atmosObjects[i].atmosObject.state == AtmosState.Active)
                 {
-                    atmosTileObjects[i].LoadNeighbours();
                     counter++;
                 }
+
+                atmosTileObjects[i].LoadNeighbours();
+                atmosObjects[i] = atmosTileObjects[i].GetAtmosObject();
+                // jobContainer[i] = atmosTileObjects[i].GetAtmosObject();
             }
+
+
 
             // Step 1: Calculate flux
             CalculateFluxJob calculateJob = new CalculateFluxJob()
             {
-                jobAtmosObjects = atmosObjects
+                buffer = atmosObjects,
+                // output = atmosObjects
             };
 
             // Schedule flux calculation job with one item per processing batch
@@ -149,7 +166,8 @@ namespace SS3D.Engine.AtmosphericsRework
             // Step 2: Simulate
             SimulateFluxJob simulateJob = new SimulateFluxJob()
             {
-                jobAtmosObjects = atmosObjects
+                buffer = atmosObjects,
+                // output = atmosObjects
             };
 
             // Schedule simulation job and pass the handle of the first job as a dependency
@@ -160,13 +178,16 @@ namespace SS3D.Engine.AtmosphericsRework
             // Because we passed the first job as a dependency, only wait for the completion of the second job
             // simulateHandle.Complete();
 
-            for (int i = 0; i < atmosTileObjects.Count; i++)
+            // Step 3: Write back results
+            for (int i = 0; i < atmosObjects.Length; i++)
             {
-                if (atmosTileObjects[i].GetAtmosObject().GetState() == AtmosState.Active)
-                    atmosTileObjects[i].SetNeighbours();
+                atmosTileObjects[i].SetAtmosObject(atmosObjects[i]);
+                atmosTileObjects[i].SetNeighbours();
             }
 
             s_StepPerfMarker.End();
+
+            // jobContainer.Dispose();
 
             return counter;
         }
@@ -187,7 +208,7 @@ namespace SS3D.Engine.AtmosphericsRework
             for (int i = 0; i < atmosTileObjects.Count; i++)
             {
                 Vector3 position = atmosTileObjects[i].GetWorldPosition();
-                float pressure = atmosTileObjects[i].GetAtmosObject().GetContainer().GetPressure() / 160f;
+                float pressure = atmosTileObjects[i].GetAtmosObject().atmosObject.container.GetPressure() / 160f;
 
                 if (pressure > 0f)
                 {
