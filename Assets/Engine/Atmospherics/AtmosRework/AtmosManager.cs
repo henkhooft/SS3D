@@ -76,11 +76,13 @@ namespace SS3D.Engine.AtmosphericsRework
                 Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
                 lastStep = Time.fixedTime + UpdateRate;
 
+                /*
                 for (int i = 0; i < atmosObjects.Length; i++)
                 {
                     if (atmosObjects[i].atmosObject.container.GetPressure() > 0f)
                         Debug.Log($"State: {atmosObjects[i].atmosObject.state} Pressure for tile " + i + " : " + atmosObjects[i].atmosObject.container.GetPressure());
                 }
+                */
             }
         }
 

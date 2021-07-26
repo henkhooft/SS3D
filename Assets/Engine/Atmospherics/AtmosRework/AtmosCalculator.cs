@@ -149,6 +149,13 @@ namespace SS3D.Engine.AtmosphericsRework
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
                         // AtmosContainer neighbourContainer = GetNeighbour(i).container;
                         atmos.difference = (atmos.atmosObject.container.GetCoreGasses() - neighbour.container.GetCoreGasses()) * GasConstants.mixRate;
+
+                        for (int j = 0; j < 4; j++)
+                        {
+                            if (atmos.difference[j] < 0f) atmos.difference[j] = 0f;
+                        }
+
+
                         if (math.any(atmos.difference > GasConstants.minMoleTransfer))
                         {
                             // Increase neighbouring tiles moles and decrease ours
@@ -219,17 +226,20 @@ namespace SS3D.Engine.AtmosphericsRework
 
                 for (int i = 0; i < 4; i++)
                 {
-                    if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Vacuum)
+                    if (atmos.tileFlux[i] > 0f)
                     {
-                        AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
-                        neighbour.container.AddCoreGasses(factor);
-                        atmos.SetNeighbours(neighbour, i);
+                        if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Vacuum)
+                        {
+                            AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
+                            neighbour.container.AddCoreGasses(factor);
+                            atmos.SetNeighbours(neighbour, i);
+                        }
+                        else
+                        {
+                            atmos.activeDirection[i] = false;
+                        }
+                        atmos.atmosObject.container.RemoveCoreGasses(factor);
                     }
-                    else
-                    {
-                        atmos.activeDirection[i] = false;
-                    }
-                    atmos.atmosObject.container.RemoveCoreGasses(factor);
                 }
             }
 
