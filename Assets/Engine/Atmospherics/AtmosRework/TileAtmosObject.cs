@@ -36,23 +36,29 @@ namespace SS3D.Engine.AtmosphericsRework
         public void LoadNeighbours()
         {
             // Get neighbours
-            AtmosObject[] neighbours = new AtmosObject[4];
+            TileAtmosObject[] neighbours = new TileAtmosObject[4];
             for (Direction direction = Direction.North; direction <= Direction.NorthWest; direction += 2)
             {
                 var vector = TileHelper.ToCardinalVector(direction);
 
                 TileAtmosObject tileAtmosObject = chunk.GetTileAtmosObject(x + vector.Item1, y + vector.Item2);
                 if (tileAtmosObject != null)
-                    neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject.GetAtmosObject();
+                    neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject;
             }
 
 
             for (int i = 0; i < neighbours.Length; i++)
             {
+                if (neighbours[i] == null)
+                {
+                    atmosObject.SetNeighbours(new AtmosObjectInfo(), i);
+                    continue;
+                }
+
                 AtmosObjectInfo info = new AtmosObjectInfo()
                 {
-                    state = neighbours[i].atmosObject.state,
-                    container = neighbours[i].atmosObject.container,
+                    state = neighbours[i].atmosObject.atmosObject.state,
+                    container = neighbours[i].atmosObject.atmosObject.container,
                 };
                 
                 if (!info.container.IsEmpty())
@@ -60,24 +66,33 @@ namespace SS3D.Engine.AtmosphericsRework
             }
         }
 
+
         public void SetNeighbours()
         {
-            // Set neighbours
-            AtmosObject[] neighbours = new AtmosObject[4];
+            TileAtmosObject[] neighbours = new TileAtmosObject[4];
             for (Direction direction = Direction.North; direction <= Direction.NorthWest; direction += 2)
             {
                 var vector = TileHelper.ToCardinalVector(direction);
 
                 TileAtmosObject tileAtmosObject = chunk.GetTileAtmosObject(x + vector.Item1, y + vector.Item2);
                 if (tileAtmosObject != null)
-                    neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject.GetAtmosObject();
+                    neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject;
             }
 
             for (int i = 0; i < neighbours.Length; i++)
             {
+                if (neighbours[i] == null)
+                {
+                    atmosObject.SetNeighbours(new AtmosObjectInfo(), i);
+                    continue;
+                }
+
                 AtmosObjectInfo info = atmosObject.GetNeighbour(i);
-                neighbours[i].atmosObject.state = info.state;
-                neighbours[i].atmosObject.container = info.container;
+                AtmosObject neighbourObject = neighbours[i].GetAtmosObject();
+                neighbourObject.atmosObject.state = info.state;
+                neighbourObject.atmosObject.container = info.container;
+
+                neighbours[i].SetAtmosObject(neighbourObject);
             }
         }
 
@@ -87,7 +102,7 @@ namespace SS3D.Engine.AtmosphericsRework
 
             // Set to default air mixture
             // atmosObject.MakeAir();
-            atmosObject.atmosObject.container.MakeRandom();
+            
 
             // Set blocked or vacuum if there is a wall or there is no plenum
             if (chunk.GetTileObject(TileLayer.Plenum, x, y).IsEmpty(0))
@@ -96,6 +111,10 @@ namespace SS3D.Engine.AtmosphericsRework
                 atmosObject.atmosObject.state = AtmosState.Blocked;
 
                 // atmosObject.state = AtmosState.Inactive;
+            }
+            else
+            {
+                atmosObject.atmosObject.container.MakeRandom();
             }
 
             if (!chunk.GetTileObject(TileLayer.Turf, x, y).IsEmpty(0) &&

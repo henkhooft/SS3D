@@ -41,7 +41,7 @@ namespace SS3D.Engine.AtmosphericsRework
         public const float minimumWind = 1f;        // Minimum wind required to move items
 
         public const float maxMoleTransfer = 2f;    // The maximum amount of moles that machines can move per atmos step
-        public const float minMoleTransfer = 0.1f;  // The minimum amount of moles that are transfered for every step
+        public const float minMoleTransfer = 0.5f;  // The minimum amount of moles that are transfered for every step
 
         public static float4 coreSpecificHeat = new float4(
             2f,     // Oxygen

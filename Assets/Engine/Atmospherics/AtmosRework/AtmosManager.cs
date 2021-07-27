@@ -72,9 +72,21 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             if (Time.fixedTime >= lastStep)
             {
-                int counter = RunAtmosJob();
+                // int counter = RunAtmosJob();
+                int counter = RunAtmosLoop();
+
                 Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
                 lastStep = Time.fixedTime + UpdateRate;
+
+                
+                float total = 0f;
+                for (int i = 0; i < atmosObjects.Length; i++)
+                {
+                    total += atmosObjects[i].GetTotalGas();
+                }
+
+                Debug.Log("Total amount of gas is: " + total);
+                
 
                 /*
                 for (int i = 0; i < atmosObjects.Length; i++)
@@ -152,8 +164,6 @@ namespace SS3D.Engine.AtmosphericsRework
                 // jobContainer[i] = atmosTileObjects[i].GetAtmosObject();
             }
 
-
-
             // Step 1: Calculate flux
             CalculateFluxJob calculateJob = new CalculateFluxJob()
             {
@@ -190,6 +200,98 @@ namespace SS3D.Engine.AtmosphericsRework
             s_StepPerfMarker.End();
 
             // jobContainer.Dispose();
+
+            return counter;
+        }
+
+        public int RunAtmosLoop()
+        {
+            int counter = 0;
+
+            //float total = 0f;
+            //for (int i = 0; i < atmosObjects.Length; i++)
+            //{
+            //    total += atmosObjects[i].GetTotalGas();
+            //}
+
+            //Debug.Log("Step 1: gas is: " + total);
+
+            // Step 0: Fill neighbour structs
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                if (atmosObjects[i].atmosObject.state == AtmosState.Active || atmosObjects[i].atmosObject.state == AtmosState.Semiactive)
+                {
+                    // atmosTileObjects[i].LoadNeighbours();
+                    // atmosObjects[i] = atmosTileObjects[i].GetAtmosObject();
+                    counter++;
+                }
+            }
+
+            //total = 0f;
+            //for (int i = 0; i < atmosObjects.Length; i++)
+            //{
+            //    total += atmosObjects[i].GetTotalGas();
+            //}
+
+            //Debug.Log("Step 2: gas is: " + total);
+
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                if (atmosObjects[i].atmosObject.state == AtmosState.Active)
+                {
+                    atmosTileObjects[i].LoadNeighbours();
+                    atmosObjects[i] = atmosTileObjects[i].GetAtmosObject();
+                    atmosObjects[i] = AtmosCalculator.CalculateFlux(atmosObjects[i]);
+                    atmosTileObjects[i].SetAtmosObject(atmosObjects[i]);
+                    atmosTileObjects[i].SetNeighbours();
+                }
+            }
+
+            //total = 0f;
+            //for (int i = 0; i < atmosobjects.length; i++)
+            //{
+            //    total += atmosobjects[i].gettotalgas();
+            //}
+
+            //debug.log("step 3: gas is: " + total);
+
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                if (atmosObjects[i].atmosObject.state == AtmosState.Active ||
+                    atmosObjects[i].atmosObject.state == AtmosState.Semiactive)
+                {
+                    atmosTileObjects[i].LoadNeighbours();
+                    atmosObjects[i] = atmosTileObjects[i].GetAtmosObject();
+                    atmosObjects[i] = AtmosCalculator.SimulateFlux(atmosObjects[i]);
+                    atmosTileObjects[i].SetAtmosObject(atmosObjects[i]);
+                    atmosTileObjects[i].SetNeighbours();
+                }
+            }
+
+            //total = 0f;
+            //for (int i = 0; i < atmosObjects.Length; i++)
+            //{
+            //    total += atmosObjects[i].GetTotalGas();
+            //}
+
+            //Debug.Log("Step 4: gas is: " + total);
+
+            /*
+            // Step 3: Write back results
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                atmosTileObjects[i].SetAtmosObject(atmosObjects[i]);
+                atmosTileObjects[i].SetNeighbours();
+            }
+            */
+
+            //total = 0f;
+            //for (int i = 0; i < atmosObjects.Length; i++)
+            //{
+            //    total += atmosObjects[i].GetTotalGas();
+            //}
+
+            //Debug.Log("Step 5: gas is: " + total);
 
             return counter;
         }

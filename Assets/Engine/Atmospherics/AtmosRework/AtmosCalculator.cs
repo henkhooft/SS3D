@@ -36,6 +36,19 @@ namespace SS3D.Engine.AtmosphericsRework
             atmosObject.container.Setup();
         }
 
+        /// Testing
+        public float GetTotalGas()
+        {
+            float gasAmount = 0f;
+            gasAmount += math.csum(atmosObject.container.GetCoreGasses());
+            gasAmount += math.csum(neighbour1.container.GetCoreGasses());
+            gasAmount += math.csum(neighbour2.container.GetCoreGasses());
+            gasAmount += math.csum(neighbour3.container.GetCoreGasses());
+            gasAmount += math.csum(neighbour4.container.GetCoreGasses());
+
+            return gasAmount;
+        }
+
         public AtmosObjectInfo GetNeighbour(int index)
         {
             switch (index)
@@ -83,6 +96,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public static AtmosObject CalculateFlux(AtmosObject atmos)
         {
+            float total = atmos.GetTotalGas();
+
             s_CalculateFluxPerfMarker.Begin();
 
             float pressure = atmos.atmosObject.container.GetPressure();
@@ -131,12 +146,18 @@ namespace SS3D.Engine.AtmosphericsRework
 
             s_CalculateFluxPerfMarker.End();
 
+            // Sanity check to see if gas is missing
+            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
+
+
             return atmos;
         }
 
         private static AtmosObject SimulateMixing(AtmosObject atmos)
         {
             s_SimlateMixingPerfMarker.Begin();
+
+            float total = atmos.GetTotalGas();
 
             atmos.difference = 0f;
             bool mixed = false;
@@ -194,11 +215,17 @@ namespace SS3D.Engine.AtmosphericsRework
 
             s_SimlateMixingPerfMarker.End();
 
+            // Sanity check to see if gas is missing
+            float newTotal = atmos.GetTotalGas();
+            Debug.Assert(math.abs(total - newTotal) < 0.1);
+
             return atmos;
         }
 
         public static AtmosObject SimulateFlux(AtmosObject atmos)
         {
+            float total = atmos.GetTotalGas();
+
             s_SimulateFluxPerfMarker.Begin();
 
             if (atmos.atmosObject.state == AtmosState.Active)
@@ -212,11 +239,14 @@ namespace SS3D.Engine.AtmosphericsRework
 
             s_SimulateFluxPerfMarker.End();
 
+            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
+
             return atmos;
         }
 
         private static AtmosObject SimulateFluxActive(AtmosObject atmos)
         {
+            float total = atmos.GetTotalGas();
             float pressure = atmos.atmosObject.container.GetPressure();
 
             // for each neighbour
@@ -242,6 +272,9 @@ namespace SS3D.Engine.AtmosphericsRework
                     }
                 }
             }
+
+            // Sanity check to see if gas is missing
+            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
 
             return atmos;
         }
