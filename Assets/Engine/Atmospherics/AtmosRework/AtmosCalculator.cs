@@ -10,6 +10,7 @@ namespace SS3D.Engine.AtmosphericsRework
     {
         public AtmosState state;
         public AtmosContainer container;
+        public int bufferIndex;
     }
 
     public struct AtmosObject
@@ -64,6 +65,42 @@ namespace SS3D.Engine.AtmosphericsRework
             }
 
             return default;
+        }
+
+        public int GetNeighbourIndex(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return neighbour1.bufferIndex;
+                case 1:
+                    return neighbour2.bufferIndex;
+                case 2:
+                    return neighbour3.bufferIndex;
+                case 3:
+                    return neighbour4.bufferIndex;
+            }
+
+            return default;
+        }
+
+        public void SetNeighbourIndex(int index, int bufferIndex)
+        {
+            switch (index)
+            {
+                case 0:
+                    neighbour1.bufferIndex = bufferIndex;
+                    break;
+                case 1:
+                    neighbour2.bufferIndex = bufferIndex;
+                    break;
+                case 2:
+                    neighbour3.bufferIndex = bufferIndex;
+                    break;
+                case 3:
+                    neighbour4.bufferIndex = bufferIndex;
+                    break;
+            }
         }
 
         public void SetNeighbours(AtmosObjectInfo info, int index)
