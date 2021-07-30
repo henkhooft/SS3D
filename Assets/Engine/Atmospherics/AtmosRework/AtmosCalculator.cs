@@ -46,7 +46,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 };
 
                 info.container.Setup();
-                SetNeighbours(info, i);
+                SetNeighbour(info, i);
             }
         }
 
@@ -116,7 +116,7 @@ namespace SS3D.Engine.AtmosphericsRework
             }
         }
 
-        public void SetNeighbours(AtmosObjectInfo info, int index)
+        public void SetNeighbour(AtmosObjectInfo info, int index)
         {
             switch (index)
             {
@@ -178,7 +178,7 @@ namespace SS3D.Engine.AtmosphericsRework
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
                         neighbour.state = AtmosState.Active;
                         atmos.neighbourFlux[i] = 0f;
-                        atmos.SetNeighbours(neighbour, i);
+                        atmos.SetNeighbour(neighbour, i);
                     }
                 }
 
@@ -262,7 +262,7 @@ namespace SS3D.Engine.AtmosphericsRework
                                 // SetNeighbours(neighbour, i);
                             }
 
-                            atmos.SetNeighbours(neighbour, i);
+                            atmos.SetNeighbour(neighbour, i);
                         }
                     }
                 }
@@ -326,7 +326,7 @@ namespace SS3D.Engine.AtmosphericsRework
                         {
                             AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
                             neighbour.container.AddCoreGasses(factor);
-                            atmos.SetNeighbours(neighbour, i);
+                            atmos.SetNeighbour(neighbour, i);
                         }
                         else
                         {
