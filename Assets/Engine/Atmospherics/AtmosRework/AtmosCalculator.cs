@@ -35,6 +35,19 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             atmosObject.container = new AtmosContainer();
             atmosObject.container.Setup();
+
+            for (int i = 0; i < 4; i++)
+            {
+                AtmosObjectInfo info = new AtmosObjectInfo
+                {
+                    bufferIndex = -1,
+                    container = new AtmosContainer(),
+                    state = AtmosState.Blocked
+                };
+
+                info.container.Setup();
+                SetNeighbours(info, i);
+            }
         }
 
         /// Testing
@@ -121,6 +134,18 @@ namespace SS3D.Engine.AtmosphericsRework
                     break;
             }
         }
+
+        public override string ToString()
+        {
+            string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + "\n";
+            for (int i = 0; i < 4; i++)
+            {
+                AtmosObjectInfo info = GetNeighbour(i);
+                text += "neighbour" + i + ": " + "State: " + info.state + ", Pressure: " + info.container.GetPressure() + "\n";
+            }
+
+            return text;
+        }
     }
 
     public static class AtmosCalculator
@@ -147,7 +172,6 @@ namespace SS3D.Engine.AtmosphericsRework
                     atmos.neighbourPressure[i] = atmos.GetNeighbour(i).container.GetPressure();
                     atmos.neighbourFlux[i] = math.min(atmos.tileFlux[i] * GasConstants.drag + (pressure - atmos.neighbourPressure[i]) * GasConstants.dt, 1000f);
                     atmos.activeDirection[i] = true;
-
 
                     if (atmos.neighbourFlux[i] < 0f)
                     {
@@ -286,6 +310,9 @@ namespace SS3D.Engine.AtmosphericsRework
             float total = atmos.GetTotalGas();
             float pressure = atmos.atmosObject.container.GetPressure();
 
+            if (pressure <= 0.1f)
+                Debug.LogWarning("Pressure is too low to simulate flux");
+
             // for each neighbour
             if (math.any(atmos.tileFlux > 0f))
             {
@@ -295,7 +322,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 {
                     if (atmos.tileFlux[i] > 0f)
                     {
-                        if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Vacuum)
+                        if (atmos.GetNeighbour(i).state != AtmosState.Vacuum)
                         {
                             AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
                             neighbour.container.AddCoreGasses(factor);
@@ -311,7 +338,10 @@ namespace SS3D.Engine.AtmosphericsRework
             }
 
             // Sanity check to see if gas is missing
+            float newTotal = atmos.GetTotalGas();
             Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
+            if (math.abs(total - newTotal) > 0.1)
+                Debug.LogError("Input/Output doesn't match");
 
             return atmos;
         }

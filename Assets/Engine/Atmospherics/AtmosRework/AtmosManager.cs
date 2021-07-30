@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
@@ -23,129 +24,124 @@ namespace SS3D.Engine.AtmosphericsRework
         static ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("Atmospherics.Initialize");
         static ProfilerMarker s_StepPerfMarker = new ProfilerMarker("Atmospherics.Step");
 
-        private struct CalculateFluxJob : IJobParallelFor
+        private struct CalculateFluxJob : IJob
         {
             public NativeArray<AtmosObject> buffer;
             // public NativeArray<AtmosObject> output;
 
-            public void Execute(int index)
+            public void Execute()
             {
-
-                if (buffer[index].atmosObject.state == AtmosState.Active)
+                for (int index = 0; index < buffer.Length; index++)
                 {
-                    // Load neighbour
-                    for (int i = 0; i < 4; i++)
+                    if (buffer[index].atmosObject.state == AtmosState.Active)
                     {
-                        int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-
-                        if (neighbourIndex != -1)
+                        // Load neighbour
+                        for (int i = 0; i < 4; i++)
                         {
-                            AtmosObjectInfo info = new AtmosObjectInfo()
+                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
+
+                            if (neighbourIndex != -1)
                             {
-                                state = buffer[neighbourIndex].atmosObject.state,
-                                container = buffer[neighbourIndex].atmosObject.container,
-                            };
+                                if (buffer[index].GetNeighbour(i).container.GetTemperature() <= 0.1)
+                                {
+                                    Debug.LogError("Neighbour temperature 0");
+                                }
 
-                            buffer[index].SetNeighbours(info, i);
+                                AtmosObjectInfo info = new AtmosObjectInfo()
+                                {
+                                    state = buffer[neighbourIndex].atmosObject.state,
+                                    container = buffer[neighbourIndex].atmosObject.container,
+                                };
+
+                                buffer[index].SetNeighbours(info, i);
+                            }
                         }
-                    }
 
+                        // Do actual work
+                        buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
 
-
-                    // Do actual work
-                    buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
-
-                    // Set neighbour
-                    for (int i = 0; i < 4; i++)
-                    {
-                        AtmosObjectInfo info = buffer[index].GetNeighbour(i);
-                        int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-                        if (neighbourIndex != -1)
+                        bool noneFound = true;
+                        // Set neighbour
+                        for (int i = 0; i < 4; i++)
                         {
-                            AtmosObject neighbourObject = buffer[neighbourIndex];
+                            
+                            AtmosObjectInfo info = buffer[index].GetNeighbour(i);
+                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
+                            if (neighbourIndex != -1)
+                            {
+                                noneFound = false;
+                                AtmosObject neighbourObject = buffer[neighbourIndex];
 
-                            neighbourObject.atmosObject.state = info.state;
-                            neighbourObject.atmosObject.container = info.container;
+                                neighbourObject.atmosObject.state = info.state;
+                                neighbourObject.atmosObject.container = info.container;
 
-                            buffer[neighbourIndex] = neighbourObject;
+                                buffer[neighbourIndex] = neighbourObject;
+                            }
                         }
 
-                        // neighbours[i].SetAtmosObject(neighbourObject);
-
-                        /*
-                        AtmosObjectInfo info = atmosObject.GetNeighbour(i);
-                        AtmosObject neighbourObject = neighbours[i].GetAtmosObject();
-                        neighbourObject.atmosObject.state = info.state;
-                        neighbourObject.atmosObject.container = info.container;
-
-                        neighbours[i].SetAtmosObject(neighbourObject);
-                        */
-
+                        if (noneFound)
+                            Debug.LogError("No neighbours found for a tile");
                     }
                 }
-
             }
         }
 
-        private struct SimulateFluxJob : IJobParallelFor
+        private struct SimulateFluxJob : IJob
         {
             public NativeArray<AtmosObject> buffer;
             // public NativeArray<AtmosObject> output;
 
-            public void Execute(int index)
+            public void Execute()
             {
-
-                if (buffer[index].atmosObject.state == AtmosState.Active || buffer[index].atmosObject.state == AtmosState.Semiactive)
+                for (int index = 0; index < buffer.Length; index++)
                 {
-                    // Load neighbour
-                    for (int i = 0; i < 4; i++)
+                    if (buffer[index].atmosObject.state == AtmosState.Active || buffer[index].atmosObject.state == AtmosState.Semiactive)
                     {
-                        int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-                        if (neighbourIndex != -1)
+                        // Load neighbour
+                        for (int i = 0; i < 4; i++)
                         {
-                            AtmosObjectInfo info = new AtmosObjectInfo()
+                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
+                            if (neighbourIndex != -1)
                             {
-                                state = buffer[neighbourIndex].atmosObject.state,
-                                container = buffer[neighbourIndex].atmosObject.container,
-                            };
+                                AtmosObjectInfo info = new AtmosObjectInfo()
+                                {
+                                    state = buffer[neighbourIndex].atmosObject.state,
+                                    container = buffer[neighbourIndex].atmosObject.container,
+                                };
 
-                            buffer[index].SetNeighbours(info, i);
+                                buffer[index].SetNeighbours(info, i);
+                            }
                         }
-                    }
 
 
-                    // Do actual work
-                    buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
+                        // Do actual work
+                        buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
 
-                    // Set neighbour
-                    for (int i = 0; i < 4; i++)
-                    {
-                        AtmosObjectInfo info = buffer[index].GetNeighbour(i);
-                        int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-                        if (neighbourIndex != -1)
+                        // Set neighbour
+                        for (int i = 0; i < 4; i++)
                         {
-                            AtmosObject neighbourObject = buffer[neighbourIndex];
+                            AtmosObjectInfo info = buffer[index].GetNeighbour(i);
+                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
+                            if (neighbourIndex != -1)
+                            {
+                                AtmosObject neighbourObject = buffer[neighbourIndex];
 
-                            neighbourObject.atmosObject.state = info.state;
-                            neighbourObject.atmosObject.container = info.container;
+                                neighbourObject.atmosObject.state = info.state;
+                                neighbourObject.atmosObject.container = info.container;
 
-                            buffer[neighbourIndex] = neighbourObject;
+                                buffer[neighbourIndex] = neighbourObject;
+                            }
                         }
-
-                        // neighbours[i].SetAtmosObject(neighbourObject);
-
-                        /*
-                        AtmosObjectInfo info = atmosObject.GetNeighbour(i);
-                        AtmosObject neighbourObject = neighbours[i].GetAtmosObject();
-                        neighbourObject.atmosObject.state = info.state;
-                        neighbourObject.atmosObject.container = info.container;
-
-                        neighbours[i].SetAtmosObject(neighbourObject);
-                        */
-
                     }
                 }
+            }
+        }
 
+        private void PrintAtmosList()
+        {
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                Debug.Log(atmosObjects[i].ToString());
             }
         }
 
@@ -168,21 +164,16 @@ namespace SS3D.Engine.AtmosphericsRework
         {
             if (Time.fixedTime >= lastStep)
             {
+                // PrintAtmosInformation();
+                PrintAtmosList();
+
                 int counter = RunAtmosJob();
                 // int counter = RunAtmosLoop();
 
                 Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
                 lastStep = Time.fixedTime + UpdateRate;
 
-                
-                float total = 0f;
-                for (int i = 0; i < atmosObjects.Length; i++)
-                {
-                    total += atmosObjects[i].GetTotalGas();
-                }
-
-                Debug.Log("Total amount of gas is: " + total);
-
+                PrintAtmosInformation();
 
                 bool debugEachTile = true;
                 if (debugEachTile)
@@ -194,6 +185,22 @@ namespace SS3D.Engine.AtmosphericsRework
                     }
                 }
             }
+        }
+
+        private void PrintAtmosInformation()
+        {
+            float total = 0f;
+            int nonEmptyTiles = 0;
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                if (atmosObjects[i].GetTotalGas() > 0f)
+                    nonEmptyTiles++;
+
+                total += atmosObjects[i].GetTotalGas();
+            }
+
+            Debug.Log("Total amount of gas is: " + total);
+            Debug.Log("Amount of tiles with gas is: " + nonEmptyTiles);
         }
 
         private void Initialize()
@@ -239,9 +246,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
             LoadNeighboursToArray();
 
-            
-
             Debug.Log($"AtmosManager: Finished initializing {atmosObjects.Length} tiles");
+
+            PrintAtmosList();
         }
 
         private void LoadNeighboursToArray()
@@ -274,12 +281,21 @@ namespace SS3D.Engine.AtmosphericsRework
                     // Get corresponding atmos object
                     AtmosObject atmosObject = atmosObjects[tileIndex];
 
+                    if(atmosObject.atmosObject.container.GetVolume() <= 0.1)
+                    {
+                        Debug.LogError("Zero volume tile found");
+                    }
+
+                    if (atmosObject.atmosObject.container.GetTemperature() <= 0.1)
+                    {
+                        Debug.LogError("Neighbour temperature 0");
+                    }
+
                     // Set index for object
                     atmosObject.SetNeighbourIndex(neighbourIndex, foundIndex);
 
                     // Write back info into native array
                     atmosObjects[tileIndex] = atmosObject;
-
 
                 }
             }
@@ -331,8 +347,9 @@ namespace SS3D.Engine.AtmosphericsRework
             };
 
             // Schedule flux calculation job with one item per processing batch
-            // JobHandle calculateHandle = calculateJob.Schedule(atmosObjects.Length, 1);
-            calculateJob.Run(atmosObjects.Length);
+            JobHandle calculateHandle = calculateJob.Schedule();
+
+            //calculateJob.Run();
 
             /*
             for (int i = 0; i < atmosObjects.Length; i++)
@@ -352,7 +369,7 @@ namespace SS3D.Engine.AtmosphericsRework
             };
 
             // Schedule simulation job and pass the handle of the first job as a dependency
-            // JobHandle simulateHandle = simulateJob.Schedule(atmosObjects.Length, 1, calculateHandle);
+            JobHandle simulateHandle = simulateJob.Schedule(calculateHandle);
 
             /*
             for (int i = 0; i < atmosObjects.Length; i++)
@@ -366,10 +383,10 @@ namespace SS3D.Engine.AtmosphericsRework
             }
             */
 
-            simulateJob.Run(atmosObjects.Length);
+            // simulateJob.Run();
 
             // Because we passed the first job as a dependency, only wait for the completion of the second job
-            // simulateHandle.Complete();
+            simulateHandle.Complete();
 
             /*
             // Step 3: Write back results
@@ -383,6 +400,21 @@ namespace SS3D.Engine.AtmosphericsRework
                 }
             }
             */
+
+            // Write results back
+            for (int i = 0; i < atmosObjects.Length; i++)
+            {
+                if (atmosObjects[i].GetTotalGas() > 0)
+                    Debug.Log("Has container or neighbour with non-null amounts of gas");
+
+                if (math.any(atmosObjects[i].atmosObject.container.GetCoreGasses() > 0))
+                    Debug.Log("Has container or neighbour with non-null amounts of gas");
+
+
+                if (atmosObjects[i].atmosObject.container.GetPressure() > 0)
+                    Debug.Log("Has container with non-null pressure");
+                tileAtmosObjects[i].SetAtmosObject(atmosObjects[i]);
+            }
 
             s_StepPerfMarker.End();
 
@@ -503,8 +535,9 @@ namespace SS3D.Engine.AtmosphericsRework
                 if (pressure > 0f)
                 {
                     Gizmos.DrawWireCube(position, new Vector3(0.8f, pressure, 0.8f));
-                    
                 }
+                else
+                    Gizmos.DrawWireCube(position, new Vector3(0.8f, 0.1f, 0.8f));
             }
         }
     }

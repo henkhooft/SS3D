@@ -1,4 +1,5 @@
 ﻿using Unity.Mathematics;
+using UnityEngine;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
@@ -54,6 +55,9 @@ namespace SS3D.Engine.AtmosphericsRework
         public void AddCoreGasses(float4 amount)
         {
             coreGasses = math.max(coreGasses + amount, 0f);
+
+            if (temperature <= 0.1f)
+                Debug.LogError("Temperatur set at 0");
         }
 
         public void RemoveCoreGas(CoreAtmosGasses gas, float amount)
@@ -73,7 +77,7 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public void MakeEmpty()
         {
-            coreGasses = 0f;
+            Setup();
         }
 
         public void AddHeat(float temp)
@@ -94,12 +98,20 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public float GetPressure()
         {
-            return GetTotalMoles() * GasConstants.gasConstant * temperature / volume / 1000f;
+            float pressure = GetTotalMoles() * GasConstants.gasConstant * temperature / volume / 1000f;
+            if (float.IsNaN(pressure))
+                return 0f;
+            else
+                return pressure;
         }
 
         public float GetPartialPressure(CoreAtmosGasses gas)
         {
-            return (coreGasses[(int)gas] * GasConstants.gasConstant * temperature) / volume / 1000f;
+            float pressure = (coreGasses[(int)gas] * GasConstants.gasConstant * temperature) / volume / 1000f;
+            if (float.IsNaN(pressure))
+                return 0f;
+            else
+                return pressure;
         }
 
         public float GetSpecificHeat()
