@@ -7,14 +7,16 @@ namespace SS3D.Engine.AtmosphericsRework
 {
     public class TileAtmosObject
     {
-        Unity.Mathematics.Random random;
+        private TileAtmosObject[] neighbours;
         private AtmosObject atmosObject;
+        private TileMap map;
         private TileChunk chunk;
         private int x;
         private int y;
 
-        public TileAtmosObject(TileChunk chunk, int x, int y)
+        public TileAtmosObject(TileMap map, TileChunk chunk, int x, int y)
         {
+            this.map = map;
             this.chunk = chunk;
             this.x = x;
             this.y = y;
@@ -41,32 +43,20 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 var vector = TileHelper.ToCardinalVector(direction);
 
-                TileAtmosObject tileAtmosObject = chunk.GetTileAtmosObject(x + vector.Item1, y + vector.Item2);
+                TileAtmosObject tileAtmosObject = map.GetTileAtmosObject(chunk.GetWorldPosition(x + vector.Item1, y + vector.Item2));
                 if (tileAtmosObject != null)
                     neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject;
             }
 
-
-            for (int i = 0; i < neighbours.Length; i++)
-            {
-                if (neighbours[i] == null)
-                {
-                    atmosObject.SetNeighbours(new AtmosObjectInfo(), i);
-                    continue;
-                }
-
-                AtmosObjectInfo info = new AtmosObjectInfo()
-                {
-                    state = neighbours[i].atmosObject.atmosObject.state,
-                    container = neighbours[i].atmosObject.atmosObject.container,
-                };
-                
-                if (!info.container.IsEmpty())
-                    atmosObject.SetNeighbours(info, i);
-            }
+            this.neighbours = neighbours;
         }
 
+        public TileAtmosObject[] GetNeighbours()
+        {
+            return neighbours;
+        }
 
+        /*
         public void SetNeighbours()
         {
             TileAtmosObject[] neighbours = new TileAtmosObject[4];
@@ -95,6 +85,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 neighbours[i].SetAtmosObject(neighbourObject);
             }
         }
+        */
 
         public void Initialize()
         {

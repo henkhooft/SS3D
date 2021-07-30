@@ -58,10 +58,11 @@ namespace SS3D.Engine.Tiles
         private Vector3 originPosition;
         private List<TileGrid> tileGridList;
         private TileAtmosObject[] atmosGridList;
-        private TileManager tileManager;
+        private TileMap map;
 
-        public TileChunk(Vector2Int chunkKey, int width, int height, float tileSize, Vector3 originPosition)
+        public TileChunk(TileMap map, Vector2Int chunkKey, int width, int height, float tileSize, Vector3 originPosition)
         {
+            this.map = map;
             this.chunkKey = chunkKey;
             this.width = width;
             this.height = height;
@@ -69,7 +70,6 @@ namespace SS3D.Engine.Tiles
             this.originPosition = originPosition;
 
             CreateAllGrids();
-            tileManager = TileManager.Instance;
         }
 
         /// <summary>
@@ -105,7 +105,7 @@ namespace SS3D.Engine.Tiles
             {
                 for (int y = 0; y < height; y++)
                 {
-                    atmosGridList[y * width + x] = new TileAtmosObject(this, x, y);
+                    atmosGridList[y * width + x] = new TileAtmosObject(map, this, x, y);
                 }
             }
         }

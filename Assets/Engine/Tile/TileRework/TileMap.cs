@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SS3D.Engine.AtmosphericsRework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -98,7 +99,7 @@ namespace SS3D.Engine.Tiles
         /// <returns></returns>
         private TileChunk CreateChunk(Vector2Int chunkKey, Vector3 origin)
         {
-            TileChunk chunk = new TileChunk(chunkKey, CHUNK_SIZE, CHUNK_SIZE, TILE_SIZE, origin);
+            TileChunk chunk = new TileChunk(this, chunkKey, CHUNK_SIZE, CHUNK_SIZE, TILE_SIZE, origin);
             return chunk;
         }
 
@@ -376,6 +377,12 @@ namespace SS3D.Engine.Tiles
         {
             TileChunk chunk = GetOrCreateChunk(worldPosition);
             return chunk.GetTileObject(layer, worldPosition);
+        }
+
+        public TileAtmosObject GetTileAtmosObject(Vector3 worldPosition)
+        {
+            TileChunk chunk = GetOrCreateChunk(worldPosition);
+            return chunk.GetTileAtmosObject(worldPosition);
         }
 
         public void UpdateAdjacencies(TileLayer layer, Vector3 worldPosition)
