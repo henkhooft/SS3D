@@ -6,8 +6,10 @@ using UnityEngine;
 
 public class TestAtmos : MonoBehaviour
 {
-    List<AtmosObject> atmosObjects;
-    int numberOfObjects = 2;
+    public bool showDebug = true;
+
+    private List<AtmosObject> atmosObjects;
+    private int numberOfObjects = 2;
     public float UpdateRate = 1f;
     private float lastStep;
 
@@ -24,7 +26,8 @@ public class TestAtmos : MonoBehaviour
         {
             int counter = RunAtmosLoop();
 
-            Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
+            if (showDebug)
+                Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
             lastStep = Time.fixedTime + UpdateRate;
         }
     }
@@ -34,13 +37,14 @@ public class TestAtmos : MonoBehaviour
         AtmosObject newAtmosObject1 = new AtmosObject();
         newAtmosObject1.Setup();
         newAtmosObject1.atmosObject.container.MakeAir();
-        // newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 100f);
-        // newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 100f);
+        newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 300f);
+        newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 10f);
+        newAtmosObject1.atmosObject.container.SetTemperature(500);
 
         AtmosObject newAtmosObject2 = new AtmosObject();
         newAtmosObject2.Setup();
-        newAtmosObject2.atmosObject.container.MakeEmpty();
-        // newAtmosObject2.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 100f);
+        newAtmosObject2.atmosObject.container.MakeAir();
+        newAtmosObject2.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 100f);
 
         newAtmosObject1.SetNeighbour(newAtmosObject2.atmosObject, 0);
         newAtmosObject2.SetNeighbour(newAtmosObject1.atmosObject, 0);
@@ -51,9 +55,12 @@ public class TestAtmos : MonoBehaviour
 
     private int RunAtmosLoop()
     {
-        for (int i = 0; i < atmosObjects.Count; i++)
+        if (showDebug)
         {
-            Debug.Log(atmosObjects[i].ToString());
+            for (int i = 0; i < atmosObjects.Count; i++)
+            {
+                Debug.Log(atmosObjects[i].ToString());
+            }
         }
 
         int counter = 0;

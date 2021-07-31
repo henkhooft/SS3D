@@ -35,7 +35,7 @@ namespace SS3D.Engine.AtmosphericsRework
         public const float thermalBase = 0.024f;    // * volume | Rate of temperature equalization
         public const float mixRate = 0.1f;          // Rate of gas mixing
         public const float fluxEpsilon = 0.050f;    // Minimum pressure difference to simulate
-        public const float thermalEpsilon = 0.01f;  // Minimum temperature difference to simulate
+        public const float thermalEpsilon = 0.5f;   // Minimum temperature difference to simulate
 
         public const float windFactor = 0.2f;       // How much force will any wind apply
         public const float minimumWind = 1f;        // Minimum wind required to move items
