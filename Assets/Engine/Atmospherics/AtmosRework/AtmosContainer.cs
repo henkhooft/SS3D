@@ -11,8 +11,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public void Setup()
         {
-            volume = 2.5f;
-            temperature = 293f;
+            volume = 2.5f;          // One tile size
+            temperature = 293f;     // Room temperature in Kelvin
             coreGasses = 0f;
         }
 
@@ -32,6 +32,15 @@ namespace SS3D.Engine.AtmosphericsRework
             return volume;
         }
 
+        /// <summary>
+        /// Returns the realistic volume in the container by substracting the molecular volume from
+        /// the ideal volume.
+        /// 
+        /// In simpler terms, at big qantities of gas (moles), the size of the molecules start playing
+        /// a role and reduce the effective size of a container. Thus increasing pressure.
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public float GetRealVolume()
         {
             return volume - math.csum(coreGasses * GasConstants.coreGasDensity * math.pow(10, -6));
@@ -115,7 +124,16 @@ namespace SS3D.Engine.AtmosphericsRework
         }
 
         /// <summary>
-        /// Returns the real pressure based on Van der Waals equation of state.
+        /// Returns the real pressure based on Van der Waals equation of state. Essentially this is the
+        /// ideal gas law but it takes intermolecular interactions into account and accounts for the real 
+        /// volume that gas molecules take up.
+        /// 
+        /// P = Pressure in kPa
+        /// a = Constant that differs per gas
+        /// n = Number of moles
+        /// V = volume
+        /// R = Universal gas constant
+        /// b = Volume that is occupied by one mole of the molecules.
         /// 
         /// P = a(n^2 / V^2) + nRT / (V - nb)
         /// 
@@ -137,6 +155,11 @@ namespace SS3D.Engine.AtmosphericsRework
                 return 0f;
             else
                 return pressure;
+        }
+
+        public float4 GetAllPartialPressures()
+        {
+            return coreGasses * GasConstants.gasConstant * temperature / volume / 1000f;
         }
 
         public float GetSpecificHeat()
@@ -163,6 +186,15 @@ namespace SS3D.Engine.AtmosphericsRework
         public float GetKineticEnergy()
         {
             return 1.5f * math.csum(coreGasses) * GasConstants.gasConstant * temperature;
+        }
+
+        /// <summary>
+        /// Returns the compressibility factor: How much does a gas deviate from the ideal gas law.
+        /// </summary>
+        /// <returns></returns>
+        public float GetCompressionFactor()
+        {
+            return GetRealVolume() / volume;
         }
 
         public bool IsEmpty()
