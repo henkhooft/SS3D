@@ -32,6 +32,11 @@ namespace SS3D.Engine.AtmosphericsRework
             return volume;
         }
 
+        public float GetRealVolume()
+        {
+            return volume - math.csum(coreGasses * GasConstants.coreGasDensity * math.pow(10, -6));
+        }
+
         public void SetVolume(float volume)
         {
             this.volume = volume;
@@ -96,6 +101,10 @@ namespace SS3D.Engine.AtmosphericsRework
             return math.csum(coreGasses);
         }
 
+        /// <summary>
+        /// Returns the pressure based on the ideal gas law
+        /// </summary>
+        /// <returns></returns>
         public float GetPressure()
         {
             float pressure = GetTotalMoles() * GasConstants.gasConstant * temperature / volume / 1000f;
@@ -103,6 +112,22 @@ namespace SS3D.Engine.AtmosphericsRework
                 return 0f;
             else
                 return pressure;
+        }
+
+        /// <summary>
+        /// Returns the real pressure based on Van der Waals equation of state.
+        /// 
+        /// P = a(n^2 / V^2) + nRT / (V - nb)
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public float GetRealPressure()
+        {
+            float4 particialPressures = coreGasses * GasConstants.gasConstant * temperature / 
+                GetRealVolume() / 1000f +
+                100 * (GasConstants.interMolecularInteraction * math.pow(coreGasses, 2)) / math.pow(volume * 1000, 2);
+
+            return math.csum(particialPressures);
         }
 
         public float GetPartialPressure(CoreAtmosGasses gas)
@@ -126,6 +151,18 @@ namespace SS3D.Engine.AtmosphericsRework
         public float GetMass()
         {
             return math.csum(coreGasses * GasConstants.coreGasDensity);
+        }
+
+        /// <summary>
+        /// Returns the amount of kinetic energy that the gasses inside the container have.
+        /// 
+        /// E = (3/2)nRT
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public float GetKineticEnergy()
+        {
+            return 1.5f * math.csum(coreGasses) * GasConstants.gasConstant * temperature;
         }
 
         public bool IsEmpty()

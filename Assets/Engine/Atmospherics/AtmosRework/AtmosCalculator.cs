@@ -137,7 +137,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public override string ToString()
         {
-            string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + "\n";
+            string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + 
+                "Gasses:" + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
+            text += "Flux:" + tileFlux + "\n";
             for (int i = 0; i < 4; i++)
             {
                 AtmosObjectInfo info = GetNeighbour(i);
@@ -163,7 +165,7 @@ namespace SS3D.Engine.AtmosphericsRework
             s_CalculateFluxPerfMarker.Begin();
 
             float pressure = atmos.atmosObject.container.GetPressure();
-            // tileFlux = 0f;
+            atmos.tileFlux = 0f;
 
             for (int i = 0; i < 4; i++)
             {
@@ -186,9 +188,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
             if (math.any(atmos.neighbourFlux > GasConstants.fluxEpsilon))
             {
-                float scalingFactor = math.min(1f, pressure / math.csum(atmos.neighbourFlux) / GasConstants.dt);
+                // float scalingFactor = math.min(1f, pressure / math.csum(atmos.neighbourFlux) / GasConstants.dt);
 
-                atmos.neighbourFlux *= scalingFactor;
+                // atmos.neighbourFlux *= scalingFactor;
                 atmos.tileFlux = atmos.neighbourFlux;
             }
             else
@@ -316,6 +318,34 @@ namespace SS3D.Engine.AtmosphericsRework
             // for each neighbour
             if (math.any(atmos.tileFlux > 0f))
             {
+                for (int i = 0; i < 4; i++)
+                {
+                    float4 molesToTransfer = atmos.tileFlux[i] * 1000f * atmos.atmosObject.container.GetVolume() / 
+                        (atmos.atmosObject.container.GetTemperature() * GasConstants.gasConstant);
+
+                    // Cannot transfer more gasses then there are, but always transfer a minimum.
+                    molesToTransfer = math.min(molesToTransfer, atmos.atmosObject.container.GetCoreGasses());
+
+                    for (int j = 0; j < GasConstants.numOfGases; j++)
+                    {
+                        if (molesToTransfer[i] > 0f)
+                            molesToTransfer[i] = math.max(molesToTransfer[i], GasConstants.minMoleTransfer);
+                    }
+
+                    if (atmos.GetNeighbour(i).state != AtmosState.Vacuum)
+                    {
+                        AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
+                        neighbour.container.AddCoreGasses(molesToTransfer);
+                        atmos.SetNeighbour(neighbour, i);
+                    }
+                    else
+                    {
+                        atmos.activeDirection[i] = false;
+                    }
+
+                    atmos.atmosObject.container.RemoveCoreGasses(molesToTransfer);
+                }
+                /*
                 float4 factor = atmos.atmosObject.container.GetCoreGasses() * (atmos.tileFlux / pressure);
 
                 for (int i = 0; i < 4; i++)
@@ -335,6 +365,7 @@ namespace SS3D.Engine.AtmosphericsRework
                         atmos.atmosObject.container.RemoveCoreGasses(factor);
                     }
                 }
+                */
             }
 
             // Sanity check to see if gas is missing

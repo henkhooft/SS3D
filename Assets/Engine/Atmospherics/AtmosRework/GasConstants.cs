@@ -34,7 +34,7 @@ namespace SS3D.Engine.AtmosphericsRework
         public const float drag = 0.95f;            // Fluid drag, slows down flux so that gases don't infinitely slosh
         public const float thermalBase = 0.024f;    // * volume | Rate of temperature equalization
         public const float mixRate = 0.1f;          // Rate of gas mixing
-        public const float fluxEpsilon = 0.025f;    // Minimum pressure difference to simulate
+        public const float fluxEpsilon = 0.050f;    // Minimum pressure difference to simulate
         public const float thermalEpsilon = 0.01f;  // Minimum temperature difference to simulate
 
         public const float windFactor = 0.2f;       // How much force will any wind apply
@@ -47,13 +47,20 @@ namespace SS3D.Engine.AtmosphericsRework
             2f,     // Oxygen
             20f,    // Nitrogen
             3f,     // Carbon Dioxide
-            10f);   // plasma
+            10f);   // Plasma
 
         public static float4 coreGasDensity = new float4(
-            32f,     // Oxygen
+            32f,    // Oxygen
             28f,    // Nitrogen
-            44f,     // Carbon Dioxide
-            78f);   // plasma
+            44f,    // Carbon Dioxide
+            78f);   // Plasma
+
+        public static float4 interMolecularInteraction = new float4(
+            1.382f, // Oxygen
+            1.370f, // Nitrogen
+            3.658f, // Carbon Dioxide
+            5.353f  // Plasma
+            );
 
         public static int numOfGases = Enum.GetNames(typeof(AtmosState)).Length;
     }

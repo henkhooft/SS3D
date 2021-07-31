@@ -33,8 +33,8 @@ public class TestAtmos : MonoBehaviour
     {
         AtmosObject newAtmosObject1 = new AtmosObject();
         newAtmosObject1.Setup();
-        newAtmosObject1.atmosObject.container.MakeRandom();
-        // newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 100f);
+        // newAtmosObject1.atmosObject.container.MakeRandom();
+        newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 10f);
 
         AtmosObject newAtmosObject2 = new AtmosObject();
         newAtmosObject2.Setup();
