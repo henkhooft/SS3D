@@ -202,7 +202,7 @@ namespace SS3D.Engine.AtmosphericsRework
                     atmos.temperatureSetting = false;
             }
 
-            if (atmos.atmosObject.state == AtmosState.Semiactive || atmos.atmosObject.state == AtmosState.Active)
+            if (atmos.atmosObject.state == AtmosState.Semiactive)
             {
                 atmos = SimulateMixing(atmos);
             }
@@ -218,8 +218,6 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private static AtmosObject SimulateMixing(AtmosObject atmos)
         {
-            return atmos;
-
             s_SimlateMixingPerfMarker.Begin();
 
             float total = atmos.GetTotalGas();
@@ -233,8 +231,8 @@ namespace SS3D.Engine.AtmosphericsRework
                     if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Blocked)
                     {
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
-                        float4 molesToTransfer = GasConstants.dt * (atmos.atmosObject.container.GetAllPartialPressures() - neighbour.container.GetAllPartialPressures()) *
-                            1000f * atmos.atmosObject.container.GetVolume() / (atmos.atmosObject.container.GetTemperature() * GasConstants.gasConstant);
+                        float4 molesToTransfer = GasConstants.gasDiffusionRate * (atmos.atmosObject.container.GetAllPartialPressures() - neighbour.container.GetAllPartialPressures()) *
+                            1000f * atmos.atmosObject.container.GetVolume() / (atmos.atmosObject.container.GetTemperature());
 
                         if (math.any(molesToTransfer > GasConstants.minMoleTransfer))
                         {
@@ -242,6 +240,8 @@ namespace SS3D.Engine.AtmosphericsRework
                             {
                                 if (molesToTransfer[j] > 0f)
                                     molesToTransfer[j] = math.max(molesToTransfer[j], GasConstants.minMoleTransfer);
+                                else if (molesToTransfer[j] < 0)
+                                    molesToTransfer[j] = 0f;
                             }
 
                             neighbour.container.AddCoreGasses(molesToTransfer);
@@ -260,6 +260,8 @@ namespace SS3D.Engine.AtmosphericsRework
                         }
 
                         atmos.SetNeighbour(neighbour, i);
+
+
 
 
                         /*

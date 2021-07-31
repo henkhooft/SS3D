@@ -62,6 +62,11 @@ namespace SS3D.Engine.AtmosphericsRework
             5.353f  // Plasma
             );
 
+        /// <summary>
+        /// Diffusion rate is dependant on molecular density. Heavier gasses diffuse slower.
+        /// </summary>
+        public static float4 gasDiffusionRate = 4f / coreGasDensity;
+
         public static int numOfGases = Enum.GetNames(typeof(AtmosState)).Length;
     }
 }
