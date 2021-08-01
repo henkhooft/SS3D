@@ -1,5 +1,6 @@
 ﻿using SS3D.Engine.Tiles;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -11,6 +12,7 @@ namespace SS3D.Engine.AtmosphericsRework
 {
     public class AtmosManager : MonoBehaviour
     {
+        public bool showUpdate = true;
         public bool showDebug = false;
 
         public float UpdateRate = 0.1f;
@@ -25,79 +27,13 @@ namespace SS3D.Engine.AtmosphericsRework
         static ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("Atmospherics.Initialize");
         static ProfilerMarker s_StepPerfMarker = new ProfilerMarker("Atmospherics.Step");
 
-        /*
-        private struct CalculateFluxJob : IJob
-        {
-            public NativeArray<AtmosObject> buffer;
 
-            // <summary>
-            /// Set the internal neighbour state based on the neighbour
-            /// </summary>
-            /// <param name="index"></param>
-            private void LoadNeighbour(int ownIndex, int neighbourIndex, int neighbourOffset)
-            {
-                AtmosObjectInfo info = new AtmosObjectInfo()
-                {
-                    state = buffer[neighbourIndex].atmosObject.state,
-                    container = buffer[neighbourIndex].atmosObject.container,
-                };
-
-                AtmosObject writeObject = buffer[ownIndex];
-                writeObject.SetNeighbour(info, neighbourOffset);
-                buffer[ownIndex] = writeObject;
-            }
-
-            /// <summary>
-            /// Modify the neighbour based on the internal update
-            /// </summary>
-            /// <param name="index"></param>
-            private void SetNeighbour(int ownIndex, int neighbourIndex, int neighbourOffset)
-            {
-                AtmosObject writeObject = buffer[neighbourIndex];
-                writeObject.atmosObject = buffer[ownIndex].GetNeighbour(neighbourOffset);
-                buffer[neighbourIndex] = writeObject;
-            }
-
-            public void Execute()
-            {
-                for (int index = 0; index < buffer.Length; index++)
-                {
-                    if (buffer[index].atmosObject.state == AtmosState.Active)
-                    {
-                        // Load neighbour
-                        for (int i = 0; i < 4; i++)
-                        {
-                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-
-                            if (neighbourIndex != -1)
-                            {
-                                LoadNeighbour(index, neighbourIndex, i);
-                            }
-                        }
-
-                        // Do actual work
-                        // buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
-
-                        // Set neighbour
-                        for (int i = 0; i < 4; i++)
-                        {
-                            int neighbourIndex = buffer[index].GetNeighbourIndex(i);
-                            if (neighbourIndex != -1)
-                            {
-                                LoadNeighbour(index, neighbourIndex, i);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        */
-
+        // [BurstCompile(CompileSynchronously = true)]
         private struct SimulateFluxJob : IJob
         {
             public NativeArray<AtmosObject> buffer;
 
-            // <summary>
+            /// <summary>
             /// Set the internal neighbour state based on the neighbour
             /// </summary>
             /// <param name="index"></param>
@@ -192,7 +128,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
                 int counter = RunAtmosJob();
 
-                Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
+                if (showUpdate)
+                    Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + counter + " active atmos objects. Fixed update rate: " + UpdateRate);
                 lastStep = Time.fixedTime + UpdateRate;
 
                 // PrintAtmosInformation();
@@ -256,12 +193,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
             // Construct native array for use in jobs
             atmosObjects = new NativeArray<AtmosObject>(atmosObjectList.ToArray(), Allocator.Persistent);
-
             LoadNeighboursToArray();
 
             Debug.Log($"AtmosManager: Finished initializing {atmosObjects.Length} tiles");
-
-            // PrintAtmosList();
         }
 
         private void LoadNeighboursToArray()
@@ -296,28 +230,13 @@ namespace SS3D.Engine.AtmosphericsRework
             s_StepPerfMarker.Begin();
             int counter = 0;
 
-            /*
-            // Step 1: Calculate flux
-            CalculateFluxJob calculateJob = new CalculateFluxJob()
-            {
-                buffer = atmosObjects,
-            };
-
-            // Schedule flux calculation job with one item per processing batch
-            JobHandle calculateHandle = calculateJob.Schedule();
-            calculateHandle.Complete();
-            */
-
-            // Step 2: Simulate
+            // Step 1: Simulate
             SimulateFluxJob simulateJob = new SimulateFluxJob()
             {
                 buffer = atmosObjects,
             };
 
-            // Schedule simulation job and pass the handle of the first job as a dependency
             JobHandle simulateHandle = simulateJob.Schedule();
-
-            // Because we passed the first job as a dependency, only wait for the completion of the second job
             simulateHandle.Complete();
 
             // Write results back

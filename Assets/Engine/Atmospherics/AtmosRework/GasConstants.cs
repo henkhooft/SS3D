@@ -28,6 +28,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
     public static class GasConstants
     {
+        public const bool useRealisticGasLaw = true;
+
         // Gas constants
         public const float dt = 0.1f;               // Delta time
         public const float gasConstant = 8.314f;    // Universal gas constant
@@ -44,19 +46,19 @@ namespace SS3D.Engine.AtmosphericsRework
         public const float maxMoleTransfer = 2f;    // The maximum amount of moles that machines can move per atmos step
         public const float minMoleTransfer = 0.5f;  // The minimum amount of moles that are transfered for every step
 
-        public static float4 coreSpecificHeat = new float4(
+        public static readonly float4 coreSpecificHeat = new float4(
             2f,     // Oxygen
             20f,    // Nitrogen
             3f,     // Carbon Dioxide
             10f);   // Plasma
 
-        public static float4 coreGasDensity = new float4(
+        public static readonly float4 coreGasDensity = new float4(
             32f,    // Oxygen
             28f,    // Nitrogen
             44f,    // Carbon Dioxide
             78f);   // Plasma
 
-        public static float4 interMolecularInteraction = new float4(
+        public static readonly float4 interMolecularInteraction = new float4(
             1.382f, // Oxygen
             1.370f, // Nitrogen
             3.658f, // Carbon Dioxide
@@ -66,8 +68,8 @@ namespace SS3D.Engine.AtmosphericsRework
         /// <summary>
         /// Diffusion rate is dependant on molecular density. Heavier gasses diffuse slower.
         /// </summary>
-        public static float4 gasDiffusionRate = 4f / coreGasDensity;
+        public static readonly float4 gasDiffusionRate = 4f / coreGasDensity;
 
-        public static int numOfGases = Enum.GetNames(typeof(AtmosState)).Length;
+        // public static int numOfGases = Enum.GetNames(typeof(AtmosState)).Length;
     }
 }

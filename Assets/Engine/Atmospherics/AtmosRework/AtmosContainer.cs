@@ -69,9 +69,6 @@ namespace SS3D.Engine.AtmosphericsRework
         public void AddCoreGasses(float4 amount)
         {
             coreGasses = math.max(coreGasses + amount, 0f);
-
-            if (temperature <= 0.1f)
-                Debug.LogError("Temperatur set at 0");
         }
 
         public void RemoveCoreGas(CoreAtmosGasses gas, float amount)
@@ -117,7 +114,7 @@ namespace SS3D.Engine.AtmosphericsRework
         public float GetPressure()
         {
             float pressure = GetTotalMoles() * GasConstants.gasConstant * temperature / volume / 1000f;
-            if (float.IsNaN(pressure))
+            if (math.isnan(pressure))
                 return 0f;
             else
                 return pressure;
@@ -141,11 +138,18 @@ namespace SS3D.Engine.AtmosphericsRework
         /// <returns></returns>
         public float GetRealPressure()
         {
-            float4 particialPressures = coreGasses * GasConstants.gasConstant * temperature / 
+            float pressure = math.csum(GetAllRealPartialPressures());
+            if (math.isnan(pressure))
+                return 0f;
+            else
+                return pressure;
+        }
+
+        public float4 GetAllRealPartialPressures()
+        {
+            return coreGasses * GasConstants.gasConstant * temperature /
                 GetRealVolume() / 1000f +
                 100 * (GasConstants.interMolecularInteraction * math.pow(coreGasses, 2)) / math.pow(volume * 1000, 2);
-
-            return math.csum(particialPressures);
         }
 
         public float GetPartialPressure(CoreAtmosGasses gas)
@@ -217,9 +221,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
             for (int i = 0; i < 4; i++)
             {
-                AddCoreGas((CoreAtmosGasses)i, UnityEngine.Random.Range(0, 300f));
+                AddCoreGas((CoreAtmosGasses)i, UnityEngine.Random.Range(0, 800f));
             }
-            // SetTemperature(UnityEngine.Random.Range(0, 300f));
+            SetTemperature(UnityEngine.Random.Range(0, 1000f));
         }
     }
 }
