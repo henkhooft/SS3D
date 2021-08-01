@@ -138,12 +138,13 @@ namespace SS3D.Engine.AtmosphericsRework
         public override string ToString()
         {
             string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + 
-                "Gasses:" + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
-            text += "Flux:" + tileFlux + ", Temperature: "+ (atmosObject.container.GetTemperature() - 273) + " Celcius" + ", Compressibility factor: " + atmosObject.container.GetCompressionFactor() + "\n";
+                ", Gasses:" + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
+            text += "Flux:" + tileFlux + ", Temperature: "+ atmosObject.container.GetTemperature() + " Kelvin" + ", Compressibility factor: " + atmosObject.container.GetCompressionFactor() + "\n";
             for (int i = 0; i < 4; i++)
             {
                 AtmosObjectInfo info = GetNeighbour(i);
-                text += "neighbour" + i + ": " + "State: " + info.state + ", Pressure: " + info.container.GetPressure() + "\n";
+                text += "neighbour" + i + ": " + "State: " + info.state + ", Pressure: " + info.container.GetPressure() + 
+                    ", Temperature: "+ info.container.GetTemperature() + "\n";
             }
 
             return text;
@@ -202,10 +203,13 @@ namespace SS3D.Engine.AtmosphericsRework
                     atmos.temperatureSetting = false;
             }
 
-            if (atmos.atmosObject.state == AtmosState.Semiactive)
+            /*
+            if (atmos.atmosObject.state == AtmosState.Active || 
+                atmos.atmosObject.state == AtmosState.Semiactive)
             {
                 atmos = SimulateMixing(atmos);
             }
+            */
 
             s_CalculateFluxPerfMarker.End();
 
@@ -231,8 +235,13 @@ namespace SS3D.Engine.AtmosphericsRework
                     if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Blocked)
                     {
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
-                        float4 molesToTransfer = GasConstants.gasDiffusionRate * (atmos.atmosObject.container.GetAllPartialPressures() - neighbour.container.GetAllPartialPressures()) *
-                            1000f * atmos.atmosObject.container.GetVolume() / (atmos.atmosObject.container.GetTemperature());
+                        // float4 molesToTransfer = GasConstants.gasDiffusionRate * ((atmos.atmosObject.container.GetAllPartialPressures() - neighbour.container.GetAllPartialPressures()) *
+                        //     1000f * atmos.atmosObject.container.GetVolume() / (atmos.atmosObject.container.GetTemperature()));
+
+                        float4 molesToTransfer = (atmos.atmosObject.container.GetCoreGasses() - atmos.GetNeighbour(i).container.GetCoreGasses())
+                            * GasConstants.gasDiffusionRate;
+
+
 
                         if (math.any(molesToTransfer > GasConstants.minMoleTransfer))
                         {
@@ -249,6 +258,7 @@ namespace SS3D.Engine.AtmosphericsRework
                             mixed = true;
                         }
 
+                        /*
                         // Remain active if there is still a pressure difference
                         if (math.abs(neighbour.container.GetPressure() - atmos.atmosObject.container.GetPressure()) > GasConstants.minMoleTransfer)
                         {
@@ -258,6 +268,7 @@ namespace SS3D.Engine.AtmosphericsRework
                         {
                             neighbour.state = AtmosState.Semiactive;
                         }
+                        */
 
                         atmos.SetNeighbour(neighbour, i);
                     }
@@ -289,13 +300,13 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 atmos = SimulateFluxActive(atmos);
             }
-            else if (atmos.atmosObject.state == AtmosState.Semiactive)
+
+            if (atmos.atmosObject.state == AtmosState.Semiactive ||
+                atmos.atmosObject.state == AtmosState.Active)
             {
                 atmos = SimulateMixing(atmos);
+                atmos = SimulateTemperature(atmos);
             }
-
-            // TODO: temperature equalization
-            atmos = SimulateTemperature(atmos);
 
             s_SimulateFluxPerfMarker.End();
 
@@ -355,28 +366,29 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private static AtmosObject SimulateTemperature(AtmosObject atmos)
         {
-            float4 temperatureDifference = 0f;
+            float4 temperatureFlux = 0f;
             for (int i = 0; i < 4; i++)
             {
                 if (atmos.activeDirection[i] == true)
                 {
-                    temperatureDifference[i] = (atmos.atmosObject.container.GetTemperature() - atmos.GetNeighbour(i).container.GetTemperature()) *
+                    float difference = (atmos.atmosObject.container.GetTemperature() - atmos.GetNeighbour(i).container.GetTemperature());
+                    temperatureFlux[i] = (atmos.atmosObject.container.GetTemperature() - atmos.GetNeighbour(i).container.GetTemperature()) *
                         GasConstants.thermalBase * atmos.atmosObject.container.GetVolume();
 
-                    if (temperatureDifference[i] > GasConstants.thermalEpsilon)
+                    if (difference > GasConstants.thermalEpsilon)
                     {
                         // Set neighbour
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
-                        neighbour.container.SetTemperature(neighbour.container.GetTemperature() + temperatureDifference[i]);
+                        neighbour.container.SetTemperature(neighbour.container.GetTemperature() + temperatureFlux[i]);
                         atmos.SetNeighbour(neighbour, i);
 
                         // Set self
-                        atmos.atmosObject.container.SetTemperature(atmos.atmosObject.container.GetTemperature() - temperatureDifference[i]);
+                        atmos.atmosObject.container.SetTemperature(atmos.atmosObject.container.GetTemperature() - temperatureFlux[i]);
                         atmos.temperatureSetting = true;
                     }
                 }
             }
-
+            
             return atmos;
         }
     }
