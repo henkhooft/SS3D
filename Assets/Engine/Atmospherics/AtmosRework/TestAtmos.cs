@@ -172,7 +172,7 @@ public class TestAtmos : MonoBehaviour
             switch (atmosObjects[i].atmosObject.state)
             {
                 case AtmosState.Active: state = new Color(0, 0, 0, 0); break;
-                case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.8f); break;
+                case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.4f); break;
                 case AtmosState.Inactive: state = new Color(0, 0, 0, 0.8f); break;
                 default: state = new Color(0, 0, 0, 1); break;
             }

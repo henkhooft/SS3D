@@ -11,6 +11,7 @@ namespace SS3D.Engine.AtmosphericsRework
 {
     public class AtmosManager : MonoBehaviour
     {
+        public bool showDebug = false;
 
         public float UpdateRate = 0.1f;
         private float lastStep;
@@ -106,6 +107,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 {
                     state = buffer[neighbourIndex].atmosObject.state,
                     container = buffer[neighbourIndex].atmosObject.container,
+                    bufferIndex = neighbourIndex,
                 };
 
                 AtmosObject writeObject = buffer[ownIndex];
@@ -150,7 +152,7 @@ namespace SS3D.Engine.AtmosphericsRework
                             int neighbourIndex = buffer[index].GetNeighbourIndex(i);
                             if (neighbourIndex != -1)
                             {
-                                LoadNeighbour(index, neighbourIndex, i);
+                                SetNeighbour(index, neighbourIndex, i);
                             }
                         }
                     }
@@ -321,6 +323,12 @@ namespace SS3D.Engine.AtmosphericsRework
             // Write results back
             for (int i = 0; i < atmosObjects.Length; i++)
             {
+                if (showDebug)
+                {
+                    if (atmosObjects[i].atmosObject.state == AtmosState.Active || atmosObjects[i].atmosObject.state == AtmosState.Semiactive)
+                        Debug.Log(atmosObjects[i].ToString());
+                }
+
                 tileAtmosObjects[i].SetAtmosObject(atmosObjects[i]);
                 if (atmosObjects[i].atmosObject.state == AtmosState.Active)
                     counter++;
@@ -344,7 +352,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 switch (atmosObjects[i].atmosObject.state)
                 {
                     case AtmosState.Active: state = new Color(0, 0, 0, 0); break;
-                    case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.8f); break;
+                    case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.4f); break;
                     case AtmosState.Inactive: state = new Color(0, 0, 0, 0.8f); break;
                     default: state = new Color(0, 0, 0, 1); break;
                 }

@@ -229,15 +229,12 @@ namespace SS3D.Engine.AtmosphericsRework
                 atmos = SimulateFluxActive(atmos);
             }
 
-            
             if (atmos.atmosObject.state == AtmosState.Semiactive ||
                 atmos.atmosObject.state == AtmosState.Active)
             {
                 atmos = SimulateMixing(atmos);
                 atmos = SimulateTemperature(atmos);
             }
-            
-
 
             s_SimulateFluxPerfMarker.End();
 
@@ -288,7 +285,7 @@ namespace SS3D.Engine.AtmosphericsRework
                     */
 
                     // We need to pass the minimum threshold
-                    if (math.any(molesToTransfer > GasConstants.fluxEpsilon))
+                    if (math.any(molesToTransfer > GasConstants.fluxEpsilon) || (pressure - neighbourPressure) > GasConstants.pressureEpsilon)
                     {
                         if (atmos.GetNeighbour(i).state != AtmosState.Vacuum)
                         {
@@ -312,7 +309,6 @@ namespace SS3D.Engine.AtmosphericsRework
                         atmos.temperatureSetting = false;
                 }
             }
-
 
             // Sanity check to see if gas is missing
             float newTotal = atmos.GetTotalGas();
@@ -345,12 +341,12 @@ namespace SS3D.Engine.AtmosphericsRework
 
 
 
-                        if (math.any(molesToTransfer > GasConstants.minMoleTransfer))
+                        if (math.any(molesToTransfer > GasConstants.fluxEpsilon))
                         {
                             for (int j = 0; j < 4; j++)
                             {
                                 if (molesToTransfer[j] > 0f)
-                                    molesToTransfer[j] = math.max(molesToTransfer[j], GasConstants.minMoleTransfer);
+                                    molesToTransfer[j] = math.max(molesToTransfer[j], GasConstants.fluxEpsilon);
                                 else if (molesToTransfer[j] < 0)
                                     molesToTransfer[j] = 0f;
                             }
@@ -368,7 +364,8 @@ namespace SS3D.Engine.AtmosphericsRework
                         }
                         else
                         {
-                            neighbour.state = AtmosState.Semiactive;
+                            // neighbour.state = AtmosState.Semiactive;
+
                         }
 
                         atmos.SetNeighbour(neighbour, i);
