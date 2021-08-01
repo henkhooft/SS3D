@@ -24,12 +24,11 @@ namespace SS3D.Engine.AtmosphericsRework
         public bool temperatureSetting;
         public bool4 activeDirection;
 
-        public float4 tileFlux;
-        public float4 neighbourFlux;
-        public float4 partialPressureDifference;
+        // public float4 tileFlux;
+        // public float4 partialPressureDifference;
 
-        public bool4 neighbourUpdate;
-        public float4 neighbourPressure;
+        // public bool4 neighbourUpdate;
+        // public float4 neighbourPressure;
 
         public void Setup()
         {
@@ -138,8 +137,8 @@ namespace SS3D.Engine.AtmosphericsRework
         public override string ToString()
         {
             string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + 
-                ", Gasses:" + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
-            text += "Flux:" + tileFlux + ", Temperature: "+ atmosObject.container.GetTemperature() + " Kelvin" + ", Compressibility factor: " + atmosObject.container.GetCompressionFactor() + "\n";
+                ", Gasses: " + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
+            text += "Temperature: "+ atmosObject.container.GetTemperature() + " Kelvin" + ", Compressibility factor: " + atmosObject.container.GetCompressionFactor() + "\n";
             for (int i = 0; i < 4; i++)
             {
                 AtmosObjectInfo info = GetNeighbour(i);
@@ -158,8 +157,8 @@ namespace SS3D.Engine.AtmosphericsRework
         static ProfilerMarker s_SimulateFluxPerfMarker = new ProfilerMarker("AtmosObject.SimulateFlux");
         static ProfilerMarker s_SimlateMixingPerfMarker = new ProfilerMarker("AtmosObject.SimulateMixing");
 
-
-        public static AtmosObject CalculateFlux(AtmosObject atmos)
+        /*
+        private static AtmosObject CalculateFlux(AtmosObject atmos)
         {
             float total = atmos.GetTotalGas();
 
@@ -167,34 +166,38 @@ namespace SS3D.Engine.AtmosphericsRework
 
             float pressure = atmos.atmosObject.container.GetPressure();
             atmos.tileFlux = 0f;
+            float4 pressureDifference = 0f;
 
+            // Determine pressure difference between us and our neighbours
             for (int i = 0; i < 4; i++)
             {
                 if ((!atmos.GetNeighbour(i).Equals(default(AtmosObjectInfo))) && atmos.GetNeighbour(i).state != AtmosState.Blocked)
                 {
-                    atmos.neighbourPressure[i] = atmos.GetNeighbour(i).container.GetPressure();
-                    atmos.neighbourFlux[i] = math.min(atmos.tileFlux[i] * GasConstants.drag + (pressure - atmos.neighbourPressure[i]) * GasConstants.dt, 1000f);
+                    float neighbourPressure = atmos.GetNeighbour(i).container.GetPressure();
+                    pressureDifference[i] = (pressure - neighbourPressure);
                     atmos.activeDirection[i] = true;
 
-                    if (atmos.neighbourFlux[i] < 0f)
+                    // Just make our neighbour active if we have a negative pressure difference.
+                    if (pressureDifference[i] < 0f)
                     {
+                        pressureDifference[i] = 0f;
+
                         AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
                         neighbour.state = AtmosState.Active;
-                        atmos.neighbourFlux[i] = 0f;
                         atmos.SetNeighbour(neighbour, i);
                     }
                 }
-
             }
 
-            if (math.any(atmos.neighbourFlux > GasConstants.fluxEpsilon))
-            {
-                // float scalingFactor = math.min(1f, pressure / math.csum(atmos.neighbourFlux) / GasConstants.dt);
+            // Determine the amount of moles to be transfered to equalize
+            atmos.tileFlux = pressureDifference * 1000f * atmos.atmosObject.container.GetVolume() /
+                        (atmos.atmosObject.container.GetTemperature() * GasConstants.gasConstant);
 
-                // atmos.neighbourFlux *= scalingFactor;
-                atmos.tileFlux = atmos.neighbourFlux;
-            }
-            else
+            // We are not transfering all moles at once. So multiply by delta time.
+            atmos.tileFlux *= GasConstants.dt;
+
+            // We need to pass the minimum threshold
+            if (!math.any(atmos.tileFlux > GasConstants.fluxEpsilon))
             {
                 atmos.tileFlux = 0f;
                 if (!atmos.temperatureSetting)
@@ -203,19 +206,119 @@ namespace SS3D.Engine.AtmosphericsRework
                     atmos.temperatureSetting = false;
             }
 
-            /*
-            if (atmos.atmosObject.state == AtmosState.Active || 
-                atmos.atmosObject.state == AtmosState.Semiactive)
-            {
-                atmos = SimulateMixing(atmos);
-            }
-            */
-
             s_CalculateFluxPerfMarker.End();
 
             // Sanity check to see if gas is missing
             Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
 
+            return atmos;
+        }
+        */
+
+        
+
+        public static AtmosObject SimulateFlux(AtmosObject atmos)
+        {
+            float total = atmos.GetTotalGas();
+
+            s_SimulateFluxPerfMarker.Begin();
+
+            if (atmos.atmosObject.state == AtmosState.Active)
+            {
+                // atmos = CalculateFlux(atmos);
+                atmos = SimulateFluxActive(atmos);
+            }
+
+            
+            if (atmos.atmosObject.state == AtmosState.Semiactive ||
+                atmos.atmosObject.state == AtmosState.Active)
+            {
+                atmos = SimulateMixing(atmos);
+                atmos = SimulateTemperature(atmos);
+            }
+            
+
+
+            s_SimulateFluxPerfMarker.End();
+
+            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
+
+            return atmos;
+        }
+
+        private static AtmosObject SimulateFluxActive(AtmosObject atmos)
+        {
+            float total = atmos.GetTotalGas();
+
+            float pressure = atmos.atmosObject.container.GetPressure();
+            for (int i = 0; i < 4; i++)
+            {
+                if (atmos.GetNeighbour(i).state == AtmosState.Blocked)
+                    continue;
+
+                float neighbourPressure = atmos.GetNeighbour(i).container.GetPressure();
+                if ((pressure - neighbourPressure) > GasConstants.pressureEpsilon)
+                {
+                    atmos.activeDirection[i] = true;
+
+                    // Use partial pressures to determine how much of each gas to move.
+                    float4 partialPressureDifference = atmos.atmosObject.container.GetAllPartialPressures() - atmos.GetNeighbour(i).container.GetAllPartialPressures();
+
+                    // Determine the amount of moles by applying the ideal gas law.
+                    float4 molesToTransfer = partialPressureDifference * 1000f * atmos.atmosObject.container.GetVolume() / 
+                        (atmos.atmosObject.container.GetTemperature() * GasConstants.gasConstant);
+
+                    // Cannot transfer all moles at once
+                    molesToTransfer *= GasConstants.dt;
+
+                    // Cannot transfer more gasses then there are and no one below zero.
+                    molesToTransfer = math.clamp(molesToTransfer, 0, atmos.atmosObject.container.GetCoreGasses());
+
+
+                    /*
+                    // Ensure a minimum and no below zero transfers.
+                    for (int j = 0; j < GasConstants.numOfGases; j++)
+                    {
+                        if (molesToTransfer[i] > 0f)
+                            molesToTransfer[i] = math.max(molesToTransfer[i], GasConstants.minMoleTransfer);
+
+                        if (molesToTransfer[i] < 0f)
+                            molesToTransfer[i] = 0f;
+                    }
+                    */
+
+                    // We need to pass the minimum threshold
+                    if (math.any(molesToTransfer > GasConstants.fluxEpsilon))
+                    {
+                        if (atmos.GetNeighbour(i).state != AtmosState.Vacuum)
+                        {
+                            AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
+                            neighbour.container.AddCoreGasses(molesToTransfer);
+                            atmos.SetNeighbour(neighbour, i);
+                        }
+                        else
+                        {
+                            atmos.activeDirection[i] = false;
+                        }
+
+                        atmos.atmosObject.container.RemoveCoreGasses(molesToTransfer);
+                    }
+                }
+                else
+                {
+                    if (!atmos.temperatureSetting)
+                        atmos.atmosObject.state = AtmosState.Semiactive;
+                    else
+                        atmos.temperatureSetting = false;
+                }
+            }
+
+
+            // Sanity check to see if gas is missing
+            float newTotal = atmos.GetTotalGas();
+            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
+            if (math.abs(total - newTotal) > 0.1)
+                Debug.LogError("Input/Output doesn't match");
 
             return atmos;
         }
@@ -226,7 +329,6 @@ namespace SS3D.Engine.AtmosphericsRework
 
             float total = atmos.GetTotalGas();
 
-            atmos.partialPressureDifference = 0f;
             bool mixed = false;
             if (math.any(atmos.atmosObject.container.GetCoreGasses() > 0f))
             {
@@ -258,9 +360,9 @@ namespace SS3D.Engine.AtmosphericsRework
                             mixed = true;
                         }
 
-                        /*
+                        
                         // Remain active if there is still a pressure difference
-                        if (math.abs(neighbour.container.GetPressure() - atmos.atmosObject.container.GetPressure()) > GasConstants.minMoleTransfer)
+                        if (math.abs(neighbour.container.GetPressure() - atmos.atmosObject.container.GetPressure()) > GasConstants.pressureEpsilon)
                         {
                             neighbour.state = AtmosState.Active;
                         }
@@ -268,7 +370,6 @@ namespace SS3D.Engine.AtmosphericsRework
                         {
                             neighbour.state = AtmosState.Semiactive;
                         }
-                        */
 
                         atmos.SetNeighbour(neighbour, i);
                     }
@@ -286,80 +387,6 @@ namespace SS3D.Engine.AtmosphericsRework
             // Sanity check to see if gas is missing
             float newTotal = atmos.GetTotalGas();
             Debug.Assert(math.abs(total - newTotal) < 0.1);
-
-            return atmos;
-        }
-
-        public static AtmosObject SimulateFlux(AtmosObject atmos)
-        {
-            float total = atmos.GetTotalGas();
-
-            s_SimulateFluxPerfMarker.Begin();
-
-            if (atmos.atmosObject.state == AtmosState.Active)
-            {
-                atmos = SimulateFluxActive(atmos);
-            }
-
-            if (atmos.atmosObject.state == AtmosState.Semiactive ||
-                atmos.atmosObject.state == AtmosState.Active)
-            {
-                atmos = SimulateMixing(atmos);
-                atmos = SimulateTemperature(atmos);
-            }
-
-            s_SimulateFluxPerfMarker.End();
-
-            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
-
-            return atmos;
-        }
-
-        private static AtmosObject SimulateFluxActive(AtmosObject atmos)
-        {
-            float total = atmos.GetTotalGas();
-            float pressure = atmos.atmosObject.container.GetPressure();
-
-            if (pressure <= 0.1f)
-                Debug.LogWarning("Pressure is too low to simulate flux");
-
-            // for each neighbour
-            if (math.any(atmos.tileFlux > 0f))
-            {
-                for (int i = 0; i < 4; i++)
-                {
-                    float4 molesToTransfer = atmos.tileFlux[i] * 1000f * atmos.atmosObject.container.GetVolume() / 
-                        (atmos.atmosObject.container.GetTemperature() * GasConstants.gasConstant);
-
-                    // Cannot transfer more gasses then there are, but always transfer a minimum.
-                    molesToTransfer = math.min(molesToTransfer, atmos.atmosObject.container.GetCoreGasses());
-
-                    for (int j = 0; j < GasConstants.numOfGases; j++)
-                    {
-                        if (molesToTransfer[i] > 0f)
-                            molesToTransfer[i] = math.max(molesToTransfer[i], GasConstants.minMoleTransfer);
-                    }
-
-                    if (atmos.GetNeighbour(i).state != AtmosState.Vacuum)
-                    {
-                        AtmosObjectInfo neighbour = atmos.GetNeighbour(i);
-                        neighbour.container.AddCoreGasses(molesToTransfer);
-                        atmos.SetNeighbour(neighbour, i);
-                    }
-                    else
-                    {
-                        atmos.activeDirection[i] = false;
-                    }
-
-                    atmos.atmosObject.container.RemoveCoreGasses(molesToTransfer);
-                }
-            }
-
-            // Sanity check to see if gas is missing
-            float newTotal = atmos.GetTotalGas();
-            Debug.Assert(math.abs(total - atmos.GetTotalGas()) < 0.1);
-            if (math.abs(total - newTotal) > 0.1)
-                Debug.LogError("Input/Output doesn't match");
 
             return atmos;
         }

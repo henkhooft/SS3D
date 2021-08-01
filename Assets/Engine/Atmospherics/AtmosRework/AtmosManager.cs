@@ -24,6 +24,7 @@ namespace SS3D.Engine.AtmosphericsRework
         static ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("Atmospherics.Initialize");
         static ProfilerMarker s_StepPerfMarker = new ProfilerMarker("Atmospherics.Step");
 
+        /*
         private struct CalculateFluxJob : IJob
         {
             public NativeArray<AtmosObject> buffer;
@@ -74,7 +75,7 @@ namespace SS3D.Engine.AtmosphericsRework
                         }
 
                         // Do actual work
-                        buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
+                        // buffer[index] = AtmosCalculator.CalculateFlux(buffer[index]);
 
                         // Set neighbour
                         for (int i = 0; i < 4; i++)
@@ -89,6 +90,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 }
             }
         }
+        */
 
         private struct SimulateFluxJob : IJob
         {
@@ -292,6 +294,7 @@ namespace SS3D.Engine.AtmosphericsRework
             s_StepPerfMarker.Begin();
             int counter = 0;
 
+            /*
             // Step 1: Calculate flux
             CalculateFluxJob calculateJob = new CalculateFluxJob()
             {
@@ -300,6 +303,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
             // Schedule flux calculation job with one item per processing batch
             JobHandle calculateHandle = calculateJob.Schedule();
+            calculateHandle.Complete();
+            */
 
             // Step 2: Simulate
             SimulateFluxJob simulateJob = new SimulateFluxJob()
@@ -308,8 +313,7 @@ namespace SS3D.Engine.AtmosphericsRework
             };
 
             // Schedule simulation job and pass the handle of the first job as a dependency
-            JobHandle simulateHandle = simulateJob.Schedule(calculateHandle);
-
+            JobHandle simulateHandle = simulateJob.Schedule();
 
             // Because we passed the first job as a dependency, only wait for the completion of the second job
             simulateHandle.Complete();
@@ -346,7 +350,7 @@ namespace SS3D.Engine.AtmosphericsRework
                 }
 
                 Vector3 position = tileAtmosObjects[i].GetWorldPosition();
-                float pressure = tileAtmosObjects[i].GetAtmosObject().atmosObject.container.GetPressure() / 160f;
+                float pressure = atmosObjects[i].atmosObject.container.GetPressure() / 160f;
 
                 if (pressure > 0f)
                 {

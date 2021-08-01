@@ -5,6 +5,7 @@ using Unity.Profiling;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
+    /*
     public struct AtmosObjectf
     {
         public AtmosState state;
@@ -180,7 +181,6 @@ namespace SS3D.Engine.AtmosphericsRework
             }
 
             /// Testing
-            /*
             for (int i = 0; i < 4; i++)
             {
                 if ((!GetNeighbour(i).Equals(default(AtmosObjectInfo))) && GetNeighbour(i).state != AtmosState.Blocked)
@@ -206,7 +206,6 @@ namespace SS3D.Engine.AtmosphericsRework
                     neighbourFlux[i] = 0f;
                 }
             }
-            */
 
 
             if (math.any(neighbourFlux > GasConstants.fluxEpsilon))
@@ -347,4 +346,5 @@ namespace SS3D.Engine.AtmosphericsRework
             s_SimlateMixingPerfMarker.End();
         }
     }
+    */
 }

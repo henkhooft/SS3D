@@ -36,15 +36,15 @@ public class TestAtmos : MonoBehaviour
     {
         AtmosObject newAtmosObject1 = new AtmosObject();
         newAtmosObject1.Setup();
-        newAtmosObject1.atmosObject.container.MakeAir();
-        newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 300f);
-        newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 10f);
-        newAtmosObject1.atmosObject.container.SetTemperature(500);
+        newAtmosObject1.atmosObject.container.MakeRandom();
+        // newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Oxygen, 300f);
+        // newAtmosObject1.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 10f);
+        // newAtmosObject1.atmosObject.container.SetTemperature(500);
 
         AtmosObject newAtmosObject2 = new AtmosObject();
         newAtmosObject2.Setup();
-        newAtmosObject2.atmosObject.container.MakeAir();
-        newAtmosObject2.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 100f);
+        newAtmosObject2.atmosObject.container.MakeRandom();
+        // newAtmosObject2.atmosObject.container.AddCoreGas(CoreAtmosGasses.Nitrogen, 100f);
 
         newAtmosObject1.SetNeighbour(newAtmosObject2.atmosObject, 0);
         newAtmosObject2.SetNeighbour(newAtmosObject1.atmosObject, 0);
@@ -65,6 +65,7 @@ public class TestAtmos : MonoBehaviour
 
         int counter = 0;
 
+        /*
         for (int i = 0; i < atmosObjects.Count; i++)
         {
             LoadNeighbour(i);
@@ -77,6 +78,7 @@ public class TestAtmos : MonoBehaviour
             }
             SetNeighbour(i);
         }
+        */
 
         for (int i = 0; i < atmosObjects.Count; i++)
         {
