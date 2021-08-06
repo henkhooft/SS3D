@@ -20,6 +20,10 @@ namespace SS3D.Engine.AtmosphericsRework
         public AtmosObjectInfo neighbour2;
         public AtmosObjectInfo neighbour3;
         public AtmosObjectInfo neighbour4;
+        public AtmosObjectInfo neighbour5;
+        public AtmosObjectInfo neighbour6;
+        public AtmosObjectInfo neighbour7;
+        public AtmosObjectInfo neighbour8;
 
         public bool temperatureSetting;
         public bool4 activeDirection;
@@ -29,7 +33,7 @@ namespace SS3D.Engine.AtmosphericsRework
             atmosObject.container = new AtmosContainer();
             atmosObject.container.Setup();
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 8; i++)
             {
                 AtmosObjectInfo info = new AtmosObjectInfo
                 {
@@ -68,6 +72,14 @@ namespace SS3D.Engine.AtmosphericsRework
                     return neighbour3;
                 case 3:
                     return neighbour4;
+                case 4:
+                    return neighbour5;
+                case 5:
+                    return neighbour6;
+                case 6:
+                    return neighbour7;
+                case 7:
+                    return neighbour8;
             }
 
             return default;
@@ -85,6 +97,14 @@ namespace SS3D.Engine.AtmosphericsRework
                     return neighbour3.bufferIndex;
                 case 3:
                     return neighbour4.bufferIndex;
+                case 4:
+                    return neighbour5.bufferIndex;
+                case 5:
+                    return neighbour6.bufferIndex;
+                case 6:
+                    return neighbour7.bufferIndex;
+                case 7:
+                    return neighbour8.bufferIndex;
             }
 
             return default;
@@ -106,6 +126,18 @@ namespace SS3D.Engine.AtmosphericsRework
                 case 3:
                     neighbour4.bufferIndex = bufferIndex;
                     break;
+                case 4:
+                    neighbour5.bufferIndex = bufferIndex;
+                    break;
+                case 5:
+                    neighbour6.bufferIndex = bufferIndex;
+                    break;
+                case 6:
+                    neighbour7.bufferIndex = bufferIndex;
+                    break;
+                case 7:
+                    neighbour8.bufferIndex = bufferIndex;
+                    break;
             }
         }
 
@@ -125,6 +157,18 @@ namespace SS3D.Engine.AtmosphericsRework
                 case 3:
                     neighbour4 = info;
                     break;
+                case 4:
+                    neighbour5 = info;
+                    break;
+                case 5:
+                    neighbour6 = info;
+                    break;
+                case 6:
+                    neighbour7 = info;
+                    break;
+                case 7:
+                    neighbour8 = info;
+                    break;
             }
         }
 
@@ -133,7 +177,7 @@ namespace SS3D.Engine.AtmosphericsRework
             string text = "State: " + atmosObject.state + ", Pressure: " + atmosObject.container.GetPressure() + 
                 ", Gasses: " + atmosObject.container.GetCoreGasses() + ", RealPressure: "+ atmosObject.container.GetRealPressure() + "\n";
             text += "Temperature: "+ atmosObject.container.GetTemperature() + " Kelvin" + ", Compressibility factor: " + atmosObject.container.GetCompressionFactor() + "\n";
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 8; i++)
             {
                 AtmosObjectInfo info = GetNeighbour(i);
                 text += "neighbour" + i + ": " + "State: " + info.state + ", Pressure: " + info.container.GetPressure() + 
@@ -171,7 +215,7 @@ namespace SS3D.Engine.AtmosphericsRework
             else
                 pressure = atmos.atmosObject.container.GetPressure();
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 8; i++)
             {
                 if (atmos.GetNeighbour(i).state == AtmosState.Blocked)
                     continue;
@@ -242,7 +286,7 @@ namespace SS3D.Engine.AtmosphericsRework
             bool mixed = false;
             if (math.any(atmos.atmosObject.container.GetCoreGasses() > 0f))
             {
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 8; i++)
                 {
                     if (atmos.GetNeighbour(i).state != AtmosState.Blocked)
                     {

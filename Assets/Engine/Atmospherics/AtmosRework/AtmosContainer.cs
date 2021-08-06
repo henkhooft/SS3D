@@ -221,9 +221,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
             for (int i = 0; i < 4; i++)
             {
-                AddCoreGas((CoreAtmosGasses)i, UnityEngine.Random.Range(0, 800f));
+                AddCoreGas((CoreAtmosGasses)i, UnityEngine.Random.Range(0, 300f));
             }
-            SetTemperature(UnityEngine.Random.Range(0, 1000f));
+            // SetTemperature(UnityEngine.Random.Range(0, 1000f));
         }
     }
 }

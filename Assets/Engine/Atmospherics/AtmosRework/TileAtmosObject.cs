@@ -56,37 +56,6 @@ namespace SS3D.Engine.AtmosphericsRework
             return neighbours;
         }
 
-        /*
-        public void SetNeighbours()
-        {
-            TileAtmosObject[] neighbours = new TileAtmosObject[4];
-            for (Direction direction = Direction.North; direction <= Direction.NorthWest; direction += 2)
-            {
-                var vector = TileHelper.ToCardinalVector(direction);
-
-                TileAtmosObject tileAtmosObject = chunk.GetTileAtmosObject(x + vector.Item1, y + vector.Item2);
-                if (tileAtmosObject != null)
-                    neighbours[TileHelper.GetDirectionIndex(direction)] = tileAtmosObject;
-            }
-
-            for (int i = 0; i < neighbours.Length; i++)
-            {
-                if (neighbours[i] == null)
-                {
-                    atmosObject.SetNeighbours(new AtmosObjectInfo(), i);
-                    continue;
-                }
-
-                AtmosObjectInfo info = atmosObject.GetNeighbour(i);
-                AtmosObject neighbourObject = neighbours[i].GetAtmosObject();
-                neighbourObject.atmosObject.state = info.state;
-                neighbourObject.atmosObject.container = info.container;
-
-                neighbours[i].SetAtmosObject(neighbourObject);
-            }
-        }
-        */
-
         public void Initialize()
         {
             LoadNeighbours();
@@ -114,14 +83,6 @@ namespace SS3D.Engine.AtmosphericsRework
                 atmosObject.atmosObject.container.MakeEmpty();
                 atmosObject.atmosObject.state = AtmosState.Blocked;
             }
-
-            if (atmosObject.atmosObject.container.GetTemperature() <= 0.1f)
-            {
-                Debug.Log("Warning, temperature initialized at zero");
-            }
-
-
-            Debug.Assert(atmosObject.atmosObject.container.GetTemperature() >= 0.1f);
         }
 
         public Vector3 GetWorldPosition()

@@ -7,6 +7,8 @@ namespace SS3D.Engine.AtmosphericsRework
     public interface IAtmosLoop
     {
         void Initialize();
-        void Step();
+        // void Step();
+        void SetAtmosObject(AtmosObject atmos);
+        AtmosObject GetAtmosObject();
     }
 }

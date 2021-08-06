@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using SS3D.Engine.Tiles.Connections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,14 +7,33 @@ namespace SS3D.Engine.AtmosphericsRework
 {
     public class PipeAtmosObject : MonoBehaviour, IAtmosLoop
     {
+        private AtmosObject atmosObject;
+        private MultiAdjacencyConnector connector;
+
+        public AtmosObject GetAtmosObject()
+        {
+            return atmosObject;
+        }
+
+        public void SetAtmosObject(AtmosObject atmos)
+        {
+            atmosObject = atmos;
+        }
+
         public void Initialize()
         {
             throw new System.NotImplementedException();
         }
 
-        public void Step()
+        private void LoadNeighbours()
         {
-            throw new System.NotImplementedException();
+            
         }
+
+        
+        //private IAtmosLoop[] GetNeighbours()
+        //{
+
+        //}
     }
 }
