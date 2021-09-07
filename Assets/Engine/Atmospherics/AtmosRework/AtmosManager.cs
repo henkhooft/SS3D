@@ -151,7 +151,8 @@ namespace SS3D.Engine.AtmosphericsRework
                 for (int i = 0; i < atmosMap.atmosTiles.Count; i++)
                 {
                     Color state;
-                    switch (atmosMap.atmosTiles[i].GetAtmosObject().atmosObject.state)
+                    AtmosState tileState = atmosMap.atmosTiles[i].GetAtmosObject().atmosObject.state;
+                    switch (tileState)
                     {
                         case AtmosState.Active: state = new Color(0, 0, 0, 0); break;
                         case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.4f); break;
@@ -162,9 +163,19 @@ namespace SS3D.Engine.AtmosphericsRework
                     Vector3 position = atmosMap.atmosTiles[i].GetWorldPosition();
                     float pressure = atmosMap.nativeAtmosTiles[i].atmosObject.container.GetPressure() / 160f;
 
-                    if (pressure > 0f)
+                    if (tileState == AtmosState.Active || tileState == AtmosState.Semiactive || tileState == AtmosState.Inactive)
                     {
                         Gizmos.color = Color.white - state;
+                        Gizmos.DrawCube(position, new Vector3(0.8f, pressure, 0.8f));
+                    }
+                    else if (tileState == AtmosState.Blocked)
+                    {
+                        Gizmos.color = Color.black;
+                        Gizmos.DrawCube(position, new Vector3(0.8f, 2.5f, 0.8f));
+                    }
+                    else if (tileState == AtmosState.Vacuum)
+                    {
+                        Gizmos.color = Color.blue;
                         Gizmos.DrawCube(position, new Vector3(0.8f, pressure, 0.8f));
                     }
                 }

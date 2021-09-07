@@ -23,6 +23,7 @@ namespace SS3D.Engine.AtmosphericsRework
             nativeAtmosTiles = new NativeArray<AtmosObject>(atmosTiles.Count, Allocator.Persistent);
             nativeAtmosDevices = new NativeArray<AtmosObject>(atmosDevices.Count, Allocator.Persistent);
 
+            LoadNativeArrays();
             LoadNeighboursToArray();
         }
 
@@ -47,6 +48,21 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 atmosDevices[i].SetAtmosObject(nativeAtmosDevices[i]);
             }
+        }
+
+        private void LoadNativeArrays()
+        {
+            for (int i = 0; i < atmosTiles.Count; i++)
+            {
+                nativeAtmosTiles[i] = atmosTiles[i].GetAtmosObject();
+            }
+
+            /*
+            for (int i = 0; i < atmosDevices.Count; i++)
+            {
+                nativeAtmosDevices[i] = atmosDevices[i];
+            }
+            */
         }
 
         private void LoadNeighboursToArray()

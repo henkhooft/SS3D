@@ -68,7 +68,7 @@ namespace SS3D.Engine.AtmosphericsRework
             if (chunk.GetTileObject(TileLayer.Plenum, x, y).IsEmpty(0))
             {
                 atmosObject.atmosObject.container.MakeEmpty();
-                atmosObject.atmosObject.state = AtmosState.Blocked;
+                atmosObject.atmosObject.state = AtmosState.Vacuum;
 
                 // atmosObject.state = AtmosState.Inactive;
             }
@@ -80,7 +80,7 @@ namespace SS3D.Engine.AtmosphericsRework
             if (!chunk.GetTileObject(TileLayer.Turf, x, y).IsEmpty(0) &&
                 chunk.GetTileObject(TileLayer.Turf, x, y).GetPlacedObject(0).GetGenericType().Contains("wall"))
             {
-                atmosObject.atmosObject.container.MakeEmpty();
+                atmosObject.atmosObject.container.MakeAir();
                 atmosObject.atmosObject.state = AtmosState.Blocked;
             }
         }

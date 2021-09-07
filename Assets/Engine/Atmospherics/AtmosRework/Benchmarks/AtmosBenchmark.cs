@@ -204,7 +204,7 @@ public class AtmosBenchmark : MonoBehaviour
                     counterArray[0] = counter;
 
                     // Load neighbour
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 4; i++)
                     {
                         int neighbourIndex = buffer[index].GetNeighbourIndex(i);
 
@@ -218,7 +218,7 @@ public class AtmosBenchmark : MonoBehaviour
                     buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
 
                     // Set neighbour
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 4; i++)
                     {
                         int neighbourIndex = buffer[index].GetNeighbourIndex(i);
                         if (neighbourIndex != -1)
