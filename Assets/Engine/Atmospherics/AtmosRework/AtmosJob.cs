@@ -6,15 +6,15 @@ using Unity.Jobs;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
-    public struct AtmosMap
+    public struct AtmosJob
     {
-        public TileMap map;
+        public AtmosMap map;
         public List<TileAtmosObject> atmosTiles;
         public List<IAtmosLoop> atmosDevices;
         public NativeArray<AtmosObject> nativeAtmosTiles;
         public NativeArray<AtmosObject> nativeAtmosDevices;
 
-        public AtmosMap(TileMap map, List<TileAtmosObject> atmosTiles, List<IAtmosLoop> atmosDevices)
+        public AtmosJob(AtmosMap map, List<TileAtmosObject> atmosTiles, List<IAtmosLoop> atmosDevices)
         {
             this.map = map;
             this.atmosTiles = atmosTiles;

@@ -44,7 +44,7 @@ namespace SS3D.Engine.AtmosphericsRework
         }
 
         /// Testing
-        public float GetTotalGas()
+        public float GetTotalGasInNeighbours()
         {
             float gasAmount = 0f;
             gasAmount += math.csum(atmosObject.container.GetCoreGasses());
@@ -126,6 +126,16 @@ namespace SS3D.Engine.AtmosphericsRework
                     neighbour4 = info;
                     break;
             }
+        }
+
+        public bool IsEmpty()
+        {
+            return atmosObject.container.IsEmpty();
+        }
+
+        public bool IsAir()
+        {
+            return atmosObject.container.IsAir();
         }
 
         public override string ToString()

@@ -206,6 +206,17 @@ namespace SS3D.Engine.AtmosphericsRework
             return math.all(coreGasses == 0f);
         }
 
+        public bool IsAir()
+        {
+            float oxygen = GetCoreGas(CoreAtmosGasses.Oxygen);
+            float nitrogen = GetCoreGas(CoreAtmosGasses.Nitrogen);
+
+            bool oxyDiff = math.abs(oxygen - 20.79f) < 0.1f;
+            bool nitroDiff = math.abs(nitrogen - 83.17f) < 0.1f;
+
+            return oxyDiff && nitroDiff;
+        }
+
         public void MakeAir()
         {
             MakeEmpty();

@@ -100,6 +100,7 @@ namespace SS3D.Engine.Tiles
         private TileChunk CreateChunk(Vector2Int chunkKey, Vector3 origin)
         {
             TileChunk chunk = new TileChunk(this, chunkKey, CHUNK_SIZE, CHUNK_SIZE, TILE_SIZE, origin);
+
             return chunk;
         }
 
@@ -141,7 +142,7 @@ namespace SS3D.Engine.Tiles
         }
 
         /// <summary>
-        /// Returns chunk based the world position. Will create a new chunk if it doesn't exist.
+        /// Returns the tile chunk based the world position. Will create a new chunk if it doesn't exist.
         /// </summary>
         /// <param name="worldPosition"></param>
         /// <returns></returns>
@@ -379,12 +380,6 @@ namespace SS3D.Engine.Tiles
             return chunk.GetTileObject(layer, worldPosition);
         }
 
-        public TileAtmosObject GetTileAtmosObject(Vector3 worldPosition)
-        {
-            TileChunk chunk = GetOrCreateChunk(worldPosition);
-            return chunk.GetTileAtmosObject(worldPosition);
-        }
-
         public void UpdateAdjacencies(TileLayer layer, Vector3 worldPosition)
         {
             var adjacentObjects = new PlacedTileObject[8];
@@ -462,7 +457,7 @@ namespace SS3D.Engine.Tiles
         /// <returns></returns>
         public MapSaveObject Save()
         {
-            List<TileChunk.ChunkSaveObject> chunkObjectSaveList = new List<TileChunk.ChunkSaveObject>();
+            List<AbstractChunk.ChunkSaveObject> chunkObjectSaveList = new List<AbstractChunk.ChunkSaveObject>();
 
             foreach (TileChunk chunk in chunks.Values)
             {
@@ -489,11 +484,14 @@ namespace SS3D.Engine.Tiles
 
             IsMain = saveObject.isMain;
 
+            if (saveObject.saveObjectList == null)
+                return;
+
             // Loop through every chunk in map
             foreach (var chunk in saveObject.saveObjectList)
             {
                 // Loop through every tile object in chunk
-                foreach (var tileObjectSaveObject in chunk.tileObjectSaveObjectArray)
+                foreach (var tileObjectSaveObject in chunk.saveArray)
                 {
                     TileLayer layer = tileObjectSaveObject.layer;
                     for (int subLayerIndex = 0; subLayerIndex < TileHelper.GetSubLayerSize(layer); subLayerIndex++)
