@@ -42,12 +42,12 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private TileAtmosObject[] neighbours;
         private AtmosObject atmosObject;
-        private TileMap map;
+        private AtmosMap map;
         private AtmosChunk chunk;
         private int x;
         private int y;
 
-        public TileAtmosObject(TileMap map, AtmosChunk chunk, int x, int y)
+        public TileAtmosObject(AtmosMap map, AtmosChunk chunk, int x, int y)
         {
             this.map = map;
             this.chunk = chunk;
@@ -89,35 +89,39 @@ namespace SS3D.Engine.AtmosphericsRework
             return neighbours;
         }
 
-        public void Initialize()
+        public void Initialize(TileMap tileMap)
         {
             LoadNeighbours();
 
-            // Set to default air mixture
-            // atmosObject.MakeAir();
             
+            // atmosObject.atmosObject.container.MakeAir();
+            // atmosObject.atmosObject.container.MakeRandom();
 
-            /*
+
             // Set blocked or vacuum if there is a wall or there is no plenum
-            if (map.GetTileObject(TileLayer.Plenum, chunk.get).IsEmpty(0))
+            TileObject tile = tileMap.GetTileObject(TileLayer.Plenum, GetWorldPosition());
+            if (!tile.IsCompletelyEmpty() &&
+                tile.GetPlacedObject(0).name.Contains("Plenum"))
             {
-                atmosObject.atmosObject.container.MakeEmpty();
-                atmosObject.atmosObject.state = AtmosState.Vacuum;
-
-                // atmosObject.state = AtmosState.Inactive;
+                // Set to default air mixture
+                atmosObject.atmosObject.container.MakeAir();
+                // atmosObject.atmosObject.container.MakeRandom();
             }
             else
             {
-                atmosObject.atmosObject.container.MakeRandom();
+                atmosObject.atmosObject.container.MakeEmpty();
+                atmosObject.atmosObject.state = AtmosState.Vacuum;
             }
 
-            if (!chunk.GetTileObject(TileLayer.Turf, x, y).IsEmpty(0) &&
-                chunk.GetTileObject(TileLayer.Turf, x, y).GetPlacedObject(0).GetGenericType().Contains("wall"))
+            // Set blocked with a wall
+            if (!tileMap.GetTileObject(TileLayer.Turf, GetWorldPosition()).IsEmpty(0) &&
+                tileMap.GetTileObject(TileLayer.Turf, GetWorldPosition())
+                .GetPlacedObject(0).GetGenericType().Contains("wall"))
             {
                 atmosObject.atmosObject.container.MakeAir();
                 atmosObject.atmosObject.state = AtmosState.Blocked;
             }
-            */
+            
         }
 
         public Vector3 GetWorldPosition()

@@ -33,6 +33,63 @@ namespace SS3D.Engine.AtmosphericsRework
             nativeAtmosDevices.Dispose();
         }
 
+        public int CountActive()
+        {
+            int counter = 0;
+
+            if (nativeAtmosTiles == null || nativeAtmosDevices == null)
+                return counter;
+
+            foreach (var atmosObject in nativeAtmosTiles)
+            {
+                if (atmosObject.atmosObject.state == AtmosState.Active ||
+                    atmosObject.atmosObject.state == AtmosState.Semiactive)
+                    counter++;
+            }
+
+
+            return counter;
+        }
+
+        // Testing
+        public void AddGasTest()
+        {
+
+            foreach (var tile in atmosTiles)
+            {
+                var atmosObject = tile.GetAtmosObject();
+                atmosObject.AddGas(CoreAtmosGasses.Nitrogen, 20f);
+
+                tile.SetAtmosObject(atmosObject);
+            }
+
+            LoadNativeArrays();
+
+            /*
+            for (int i = 0; i < nativeAtmosTiles.Length; i++)
+            {
+                AtmosObject atmosObject = nativeAtmosTiles[i];
+                atmosObject.AddGas(CoreAtmosGasses.Nitrogen, 50);
+                nativeAtmosTiles[i] = atmosObject;
+            }
+
+            
+            foreach (var tile in nativeAtmosTiles)
+            {
+                tile.AddGas(CoreAtmosGasses.Nitrogen, 50);
+            }
+            */
+
+            // WriteResultsToList();
+        }
+
+        /// <summary>
+        /// Refreshes the calculation array. Must be called when gas is added/removed from the system.
+        /// </summary>
+        public void Refresh()
+        {
+            LoadNativeArrays();
+        }
 
         /// <summary>
         /// Writes back the results from the NativeContainers to the lists.
@@ -170,6 +227,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
                     // Do actual work
                     buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
+
+                    var atmosObject = buffer[index];
 
                     // Set neighbour
                     for (int i = 0; i < 4; i++)

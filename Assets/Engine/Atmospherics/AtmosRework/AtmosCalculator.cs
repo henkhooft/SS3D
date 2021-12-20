@@ -128,6 +128,19 @@ namespace SS3D.Engine.AtmosphericsRework
             }
         }
 
+        public void AddGas(CoreAtmosGasses gas, float amount)
+        {
+            atmosObject.container.AddCoreGas(gas, amount);
+            atmosObject.state = AtmosState.Active;
+        }
+
+        public void RemoveGas(CoreAtmosGasses gas, float amount)
+        {
+            atmosObject.container.RemoveCoreGas(gas, amount);
+            atmosObject.state = AtmosState.Active;
+        }
+
+
         public bool IsEmpty()
         {
             return atmosObject.container.IsEmpty();

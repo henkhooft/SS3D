@@ -12,13 +12,14 @@ namespace SS3D.Engine.AtmosphericsRework
     public class AtmosManager : MonoBehaviour
     {
         public bool showUpdate = true;
-        public float UpdateRate = 0.1f;
+        public float UpdateRate = 0.5f;
        
         private TileManager tileManager;
         private List<AtmosMap> atmosMaps;
         private List<AtmosJob> atmosJobs;
         private List<JobHandle> jobHandles;
         private float lastStep;
+        private bool initCompleted = false;
 
         // Performance markers
         static ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("Atmospherics.Initialize");
@@ -43,6 +44,8 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private void Awake()
         {
+            initCompleted = false;
+
             if (_instance != null && _instance != this)
             {
                 Debug.LogWarning("Duplicate AtmosManager found. Deleting the last instance");
@@ -60,10 +63,27 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 map.Clear();
             }
+
+            atmosMaps.Clear();
+
+            foreach (AtmosJob job in atmosJobs)
+            {
+                job.Destroy();
+            }
+
+            atmosJobs.Clear();
         }
 
         private void Update()
         {
+#if UNITY_EDITOR
+            if (!EditorApplication.isPlaying)
+                return;
+#endif
+
+            if (!initCompleted)
+                return;
+
             if (Time.fixedTime >= lastStep)
             {
                 int tileCounter = StepAtmos();
@@ -76,28 +96,38 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private void CreateAtmosMaps()
         {
+            int chunkCounter = 0;
             atmosMaps.Clear();
 
             // Create identical atmos chunks for each tile chunk
             var tileMaps = tileManager.GetTileMaps();
             foreach (var map in tileMaps)
             {
-                AtmosMap atmosMap = new AtmosMap(map.GetName());
+                AtmosMap atmosMap = new AtmosMap(map, map.GetName());
 
                 var tileChunks = map.GetChunks();
                 foreach (var chunk in tileChunks)
                 {
                     atmosMap.CreateChunkFromTileChunk(chunk.GetKey(), chunk.GetOrigin());
+                    chunkCounter++;
                 }
 
                 atmosMaps.Add(atmosMap);
             }
+
+            Debug.Log("AtmosManager: recreated " + chunkCounter + " chunks from the tilemap");
         }
 
         private void Initialize()
         {
-            if (!tileManager || tileManager.GetTileMaps().Count == 0)
+            if (tileManager == null || tileManager.GetTileMaps().Count == 0)
                 Debug.LogError("AtmosManager couldn't find the tilemanager or map.");
+
+            if (atmosJobs != null)
+            {
+                atmosJobs.ForEach(job => job.Destroy());
+                atmosJobs.Clear();
+            }
 
             s_PreparePerfMarker.Begin();
 
@@ -107,7 +137,6 @@ namespace SS3D.Engine.AtmosphericsRework
                 Debug.Log("AtmosManager: Initializing tiles");
 
 
-            atmosJobs.Clear();
             int initCounter = 0;
             foreach (AtmosMap map in atmosMaps)
             {
@@ -119,14 +148,11 @@ namespace SS3D.Engine.AtmosphericsRework
                     var tileAtmosObjects = chunk.GetAllTileAtmosObjects();
 
                     // Initialize the atmos tiles. Cannot be done in the tilemap as it may still be creating tiles.
-                    tileAtmosObjects.ForEach(tile => tile.Initialize());
+                    tileAtmosObjects.ForEach(tile => tile.Initialize(map.GetLinkedTileMap()));
                     tiles.AddRange(tileAtmosObjects);
                 }
 
                 devices.AddRange(tileManager.GetComponentsInChildren<IAtmosLoop>());
-
-                // AtmosMap atmosMap = new AtmosMap(map, tiles, devices);
-                // atmosMaps.Add(atmosMap);
 
                 AtmosJob atmosJob = new AtmosJob(map, tiles, devices);
                 atmosJobs.Add(atmosJob);
@@ -137,9 +163,17 @@ namespace SS3D.Engine.AtmosphericsRework
             if (showUpdate)
                 Debug.Log($"AtmosManager: Finished initializing {initCounter} tiles");
 
+            initCompleted = true;
         }
 
-        
+        [ContextMenu("Force refresh")]
+        private void ForceRefresh()
+        {
+            foreach (var job in atmosJobs)
+            {
+                job.AddGasTest();
+            }
+        }
 
         private int StepAtmos()
         {
@@ -150,6 +184,8 @@ namespace SS3D.Engine.AtmosphericsRework
             jobHandles.Clear();
             foreach (AtmosJob atmosJob in atmosJobs)
             {
+                atmosJob.AddGasTest();
+
 
                 // Step 1: Simulate tiles
                 SimulateFluxJob simulateTilesJob = new SimulateFluxJob()
@@ -157,15 +193,13 @@ namespace SS3D.Engine.AtmosphericsRework
                     buffer = atmosJob.nativeAtmosTiles,
                 };
 
-                counter += atmosJob.nativeAtmosTiles.Length;
-
                 // Step 2: Simulate atmos devices and pipes
                 SimulateFluxJob simulateDevicesJob = new SimulateFluxJob()
                 {
                     buffer = atmosJob.nativeAtmosDevices,
                 };
 
-                counter += atmosJob.nativeAtmosDevices.Length;
+                counter += atmosJob.CountActive();
 
                 JobHandle simulateTilesHandle = simulateTilesJob.Schedule();
                 JobHandle simulateDevicesHandle = simulateDevicesJob.Schedule();
@@ -191,12 +225,29 @@ namespace SS3D.Engine.AtmosphericsRework
             return counter;
         }
 
+        public TileAtmosObject GetAtmosTile(Vector3 worldPosition)
+        {
+            foreach (var map in atmosMaps)
+            {
+                var atmosTile = map.GetTileAtmosObject(worldPosition);
+                if (atmosTile != null)
+                    return atmosTile;
+            }
+
+            return null;
+        }
+
         private void OnDrawGizmos()
         {
-#if UNITY_EDITOR
-            if (!EditorApplication.isPlaying)
+            float gizmoSize = 0.2f;
+
+            //#if UNITY_EDITOR
+            //            if (!EditorApplication.isPlaying)
+            //                return;
+            //#endif
+
+            if (atmosJobs == null)
                 return;
-#endif
 
             foreach (AtmosJob job in atmosJobs)
             {
@@ -219,17 +270,17 @@ namespace SS3D.Engine.AtmosphericsRework
                     if (tileState == AtmosState.Active || tileState == AtmosState.Semiactive || tileState == AtmosState.Inactive)
                     {
                         Gizmos.color = Color.white - state;
-                        Gizmos.DrawCube(position, new Vector3(0.8f, pressure, 0.8f));
+                        Gizmos.DrawWireCube(position + new Vector3(0, pressure, 0), new Vector3(gizmoSize, pressure * 2, gizmoSize));
                     }
                     else if (tileState == AtmosState.Blocked)
                     {
                         Gizmos.color = Color.black;
-                        Gizmos.DrawCube(position, new Vector3(0.8f, 2.5f, 0.8f));
+                        Gizmos.DrawWireCube(position + new Vector3(0, 2.5f / 2f, 0), new Vector3(gizmoSize, 2.5f, gizmoSize));
                     }
                     else if (tileState == AtmosState.Vacuum)
                     {
                         Gizmos.color = Color.blue;
-                        Gizmos.DrawCube(position, new Vector3(0.8f, pressure, 0.8f));
+                        Gizmos.DrawWireCube(position, new Vector3(1, pressure, 1));
                     }
                 }
             }

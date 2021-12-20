@@ -73,10 +73,15 @@ public class AtmosEditor : EditorWindow
         if (!addGas)
             return;
 
+        // Ensure the user can't use other scene controls whilst this one is active.
+        HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+
         // Convert mouse position to world position by finding point where y = 0.
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
         Vector3 position = ray.origin - (ray.origin.y / ray.direction.y) * ray.direction;
         Vector3 snappedPosition = TileHelper.GetClosestPosition(position);
+
+        DisplayVisualHelp(snappedPosition);
 
         if ((Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseDrag) && Event.current.button == 0
             && (EditorApplication.timeSinceStartup - lastPlacementTime > 0.5
@@ -85,7 +90,32 @@ public class AtmosEditor : EditorWindow
             lastPlacementTime = EditorApplication.timeSinceStartup;
             lastPlacement = snappedPosition;
 
-            // atmosManager.AddGas(gassSelection, )
+            TileAtmosObject atmosTile = atmosManager.GetAtmosTile(snappedPosition);
+            if (atmosTile != null)
+            {
+                atmosTile.GetAtmosObject().AddGas(gassSelection, 20f);
+            }
         }
+
+        else if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
+        {
+            addGas = false;
+        }
+    }
+
+    private void DisplayVisualHelp(Vector3 cell)
+    {
+        Handles.color = Color.yellow;
+
+        Vector3 cellPosition = cell;
+        // Vertices of our square
+        Vector3 cube_1 = cellPosition + new Vector3(.5f, 0f, .5f);
+        Vector3 cube_2 = cellPosition + new Vector3(.5f, 0f, -.5f);
+        Vector3 cube_3 = cellPosition + new Vector3(-.5f, 0f, -.5f);
+        Vector3 cube_4 = cellPosition + new Vector3(-.5f, 0f, .5f);
+
+        Vector3[] lines = { cube_1, cube_2, cube_2, cube_3, cube_3, cube_4, cube_4, cube_1 };
+        Handles.DrawLines(lines);
+
     }
 }

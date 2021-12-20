@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using SS3D.Engine.Tiles;
 
 namespace SS3D.Engine.AtmosphericsRework
 {
@@ -21,19 +22,34 @@ namespace SS3D.Engine.AtmosphericsRework
         private Dictionary<Vector2Int, AtmosChunk> atmosChunks;
         public int ChunkCount { get => atmosChunks.Count; }
 
+        private TileMap tileMap;
         private string mapName;
         private AtmosManager atmosManager;
 
-        public AtmosMap(string name)
+        public AtmosMap(TileMap tileMap, string name)
         {
             atmosChunks = new Dictionary<Vector2Int, AtmosChunk>();
             atmosManager = AtmosManager.Instance;
             mapName = name;
+            this.tileMap = tileMap;
         }
 
         public TileAtmosObject GetTileAtmosObject(Vector3 worldPosition)
         {
+            /*
             AtmosChunk chunk = GetOrCreateAtmosChunk(worldPosition);
+            return chunk.GetTileAtmosObject(worldPosition);
+            */
+
+            Vector2Int key = GetKey(worldPosition);
+            AtmosChunk chunk;
+
+            // 
+            if (!atmosChunks.TryGetValue(key, out chunk))
+            {
+                return null;
+            }
+
             return chunk.GetTileAtmosObject(worldPosition);
         }
 
@@ -50,6 +66,11 @@ namespace SS3D.Engine.AtmosphericsRework
         public void CreateChunkFromTileChunk(Vector2Int chunkKey, Vector3 origin)
         {
             atmosChunks[chunkKey] = CreateChunk(chunkKey, origin);
+        }
+
+        public TileMap GetLinkedTileMap()
+        {
+            return tileMap;
         }
 
         /// <summary>
