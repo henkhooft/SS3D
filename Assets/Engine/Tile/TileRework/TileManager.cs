@@ -85,6 +85,9 @@ namespace SS3D.Engine.Tiles
                 UpdateAllAdjacencies();
                 IsInitialized = true;
 
+                // Hack for now to force objects to be visible at runtime
+                gameObject.SetActiveRecursively(true);
+
                 TileManagerLoaded?.Invoke();
             }
         }

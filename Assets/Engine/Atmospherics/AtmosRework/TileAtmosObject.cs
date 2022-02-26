@@ -111,6 +111,7 @@ namespace SS3D.Engine.AtmosphericsRework
             {
                 atmosObject.atmosObject.container.MakeEmpty();
                 atmosObject.atmosObject.state = AtmosState.Vacuum;
+                atmosObject.atmosObject.container.SetTemperature(173); // -100 C for space
             }
 
             // Set blocked with a wall

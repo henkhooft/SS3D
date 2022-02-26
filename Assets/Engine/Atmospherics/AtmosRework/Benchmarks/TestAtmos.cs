@@ -80,6 +80,7 @@ public class TestAtmos : MonoBehaviour
         }
         */
 
+        /*
         for (int i = 0; i < atmosObjects.Count; i++)
         {
             LoadNeighbour(i);
@@ -91,6 +92,7 @@ public class TestAtmos : MonoBehaviour
             }
             SetNeighbour(i);
         }
+        */
 
         return counter;
     }

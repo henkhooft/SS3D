@@ -11,7 +11,7 @@ namespace SS3D.Engine.AtmosphericsRework
     [ExecuteAlways]
     public class AtmosManager : MonoBehaviour
     {
-        public bool showUpdate = true;
+        public bool ShowUpdate = true;
         public float UpdateRate = 0.5f;
        
         private TileManager tileManager;
@@ -59,6 +59,9 @@ namespace SS3D.Engine.AtmosphericsRework
 
         private void OnDestroy()
         {
+            if (atmosMaps == null || atmosJobs == null)
+                return;
+
             foreach (AtmosMap map in atmosMaps)
             {
                 map.Clear();
@@ -84,13 +87,14 @@ namespace SS3D.Engine.AtmosphericsRework
             if (!initCompleted)
                 return;
 
-            if (Time.fixedTime >= lastStep)
+            if (Time.fixedTime >= lastStep + UpdateRate)
             {
-                int tileCounter = StepAtmos();
+                float dt = Time.fixedTime - lastStep;
+                int tileCounter = StepAtmos(dt);
 
-                if (showUpdate)
-                    Debug.Log("Atmos loop took: " + (Time.fixedTime - lastStep) + " seconds, simulating " + tileCounter + " active atmos objects. Fixed update rate: " + UpdateRate);
-                lastStep = Time.fixedTime + UpdateRate;
+                if (ShowUpdate)
+                    Debug.Log("Atmos loop took: " + (dt - UpdateRate) + " seconds, simulating " + tileCounter + " active atmos objects. Fixed update rate: " + UpdateRate);
+                lastStep = Time.fixedTime;
             }
         }
 
@@ -121,7 +125,10 @@ namespace SS3D.Engine.AtmosphericsRework
         private void Initialize()
         {
             if (tileManager == null || tileManager.GetTileMaps().Count == 0)
+            {
                 Debug.LogError("AtmosManager couldn't find the tilemanager or map.");
+                return;
+            }
 
             if (atmosJobs != null)
             {
@@ -133,7 +140,7 @@ namespace SS3D.Engine.AtmosphericsRework
 
             CreateAtmosMaps();
 
-            if (showUpdate)
+            if (ShowUpdate)
                 Debug.Log("AtmosManager: Initializing tiles");
 
 
@@ -160,22 +167,74 @@ namespace SS3D.Engine.AtmosphericsRework
                 initCounter += tiles.Count; 
             }
 
-            if (showUpdate)
+            if (ShowUpdate)
                 Debug.Log($"AtmosManager: Finished initializing {initCounter} tiles");
 
             initCompleted = true;
         }
 
-        [ContextMenu("Force refresh")]
-        private void ForceRefresh()
+        public void AddGas(Vector3 worldPosition, CoreAtmosGasses gas, float amount)
         {
-            foreach (var job in atmosJobs)
+
+            var tile = GetAtmosTile(worldPosition);
+            if (tile != null)
             {
-                job.AddGasTest();
+                // Update the gas amount. Keep in mind that this is a value type.
+                var atmosObject = tile.GetAtmosObject();
+                atmosObject.AddGas(gas, amount);
+                tile.SetAtmosObject(atmosObject);
+
+                // Indicate a refresh for the AtmosJob. TODO: Optimize to not loop everything
+                atmosJobs.ForEach(job => job.Refresh());
             }
         }
 
-        private int StepAtmos()
+        public void RemoveGas(Vector3 worldPosition, CoreAtmosGasses gas, float amount)
+        {
+            var tile = GetAtmosTile(worldPosition);
+            if (tile != null)
+            {
+                // Update the gas amount. Keep in mind that this is a value type.
+                var atmosObject = tile.GetAtmosObject();
+                atmosObject.RemoveGas(gas, amount);
+                tile.SetAtmosObject(atmosObject);
+
+                // Indicate a refresh for the AtmosJob. TODO: Optimize to not loop everything
+                atmosJobs.ForEach(job => job.Refresh());
+            }
+        }
+
+        public void AddHeat(Vector3 worldPosition, float amount)
+        {
+            var tile = GetAtmosTile(worldPosition);
+            if (tile != null)
+            {
+                // Update the gas amount. Keep in mind that this is a value type.
+                var atmosObject = tile.GetAtmosObject();
+                atmosObject.AddHeat(amount);
+                tile.SetAtmosObject(atmosObject);
+
+                // Indicate a refresh for the AtmosJob. TODO: Optimize to not loop everything
+                atmosJobs.ForEach(job => job.Refresh());
+            }
+        }
+
+        public void RemoveHeat(Vector3 worldPosition, float amount)
+        {
+            var tile = GetAtmosTile(worldPosition);
+            if (tile != null)
+            {
+                // Update the gas amount. Keep in mind that this is a value type.
+                var atmosObject = tile.GetAtmosObject();
+                atmosObject.RemoveHeat(amount);
+                tile.SetAtmosObject(atmosObject);
+
+                // Indicate a refresh for the AtmosJob. TODO: Optimize to not loop everything
+                atmosJobs.ForEach(job => job.Refresh());
+            }
+        }
+
+        private int StepAtmos(float deltaTime)
         {
             s_StepPerfMarker.Begin();
             int counter = 0;
@@ -184,20 +243,22 @@ namespace SS3D.Engine.AtmosphericsRework
             jobHandles.Clear();
             foreach (AtmosJob atmosJob in atmosJobs)
             {
-                atmosJob.AddGasTest();
+                // atmosJob.AddGasTest();
 
 
                 // Step 1: Simulate tiles
                 SimulateFluxJob simulateTilesJob = new SimulateFluxJob()
                 {
                     buffer = atmosJob.nativeAtmosTiles,
+                    dt = deltaTime
                 };
 
                 // Step 2: Simulate atmos devices and pipes
                 SimulateFluxJob simulateDevicesJob = new SimulateFluxJob()
                 {
                     buffer = atmosJob.nativeAtmosDevices,
-                };
+                    dt = deltaTime
+        };
 
                 counter += atmosJob.CountActive();
 
@@ -237,6 +298,12 @@ namespace SS3D.Engine.AtmosphericsRework
             return null;
         }
 
+        public List<AtmosJob> GetAtmosJobs()
+        {
+            return atmosJobs;
+        }
+
+        /*
         private void OnDrawGizmos()
         {
             float gizmoSize = 0.2f;
@@ -259,7 +326,7 @@ namespace SS3D.Engine.AtmosphericsRework
                     switch (tileState)
                     {
                         case AtmosState.Active: state = new Color(0, 0, 0, 0); break;
-                        case AtmosState.Semiactive: state = new Color(0, 0, 0, 0.4f); break;
+                        case AtmosState.Semiactive: state = new Color(0, 1, 0, 0.4f); break;
                         case AtmosState.Inactive: state = new Color(0, 0, 0, 0.8f); break;
                         default: state = new Color(0, 0, 0, 1); break;
                     }
@@ -285,5 +352,6 @@ namespace SS3D.Engine.AtmosphericsRework
                 }
             }
         }
+        */
     }
 }

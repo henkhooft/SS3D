@@ -31,13 +31,13 @@ namespace SS3D.Engine.AtmosphericsRework
         public const bool useRealisticGasLaw = true;
 
         // Gas constants
-        public const float dt = 0.1f;               // Delta time
+        public const float simSpeed = 0.2f;         // Simulation speed
         public const float gasConstant = 8.314f;    // Universal gas constant
-        // public const float drag = 0.95f;            // Fluid drag, slows down flux so that gases don't infinitely slosh
+        // public const float drag = 0.95f;         // Fluid drag, slows down flux so that gases don't infinitely slosh
         public const float thermalBase = 0.024f;    // * volume | Rate of temperature equalization
-        // public const float mixRate = 0.1f;          // Rate of gas mixing
+        // public const float mixRate = 0.1f;       // Rate of gas mixing
         public const float fluxEpsilon = 0.050f;    // Minimum flux difference to simulate
-        public const float pressureEpsilon = 0.5f;
+        public const float pressureEpsilon = 1.0f;
         public const float thermalEpsilon = 0.5f;   // Minimum temperature difference to simulate
 
         public const float windFactor = 0.2f;       // How much force will any wind apply

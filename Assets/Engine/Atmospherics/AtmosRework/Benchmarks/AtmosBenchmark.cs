@@ -195,6 +195,7 @@ public class AtmosBenchmark : MonoBehaviour
 
         public void Execute()
         {
+            /*
             for (int index = 0; index < buffer.Length; index++)
             {
                 if (buffer[index].atmosObject.state == AtmosState.Active || buffer[index].atmosObject.state == AtmosState.Semiactive)
@@ -228,6 +229,7 @@ public class AtmosBenchmark : MonoBehaviour
                     }
                 }
             }
+            */
         }
     }
 }

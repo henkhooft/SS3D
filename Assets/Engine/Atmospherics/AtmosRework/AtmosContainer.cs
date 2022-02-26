@@ -93,12 +93,12 @@ namespace SS3D.Engine.AtmosphericsRework
 
         public void AddHeat(float temp)
         {
-            temperature += math.max(temp - temperature, 0f) / GetSpecificHeat() * (100 / GetTotalMoles()) * GasConstants.dt;
+            temperature += math.max(temp - temperature, 0f) / GetSpecificHeat() * (100 / GetTotalMoles()) * GasConstants.thermalBase;
         }
 
         public void RemoveHeat(float temp)
         {
-            temperature -= math.max(temp - temperature, 0f) / GetSpecificHeat() * (100 / GetTotalMoles()) * GasConstants.dt;
+            temperature -= math.max(temp - temperature, 0f) / GetSpecificHeat() * (100 / GetTotalMoles()) * GasConstants.thermalBase;
             temperature = math.max(temperature, 0f);
         }
 

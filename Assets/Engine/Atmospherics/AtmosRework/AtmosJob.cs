@@ -178,6 +178,7 @@ namespace SS3D.Engine.AtmosphericsRework
     struct SimulateFluxJob : IJob
     {
         public NativeArray<AtmosObject> buffer;
+        public float dt;
 
         /// <summary>
         /// Set the internal neighbour state based on the neighbour
@@ -226,7 +227,7 @@ namespace SS3D.Engine.AtmosphericsRework
                     }
 
                     // Do actual work
-                    buffer[index] = AtmosCalculator.SimulateFlux(buffer[index]);
+                    buffer[index] = AtmosCalculator.SimulateFlux(buffer[index], dt);
 
                     var atmosObject = buffer[index];
 

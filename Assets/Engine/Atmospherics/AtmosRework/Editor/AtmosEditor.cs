@@ -3,17 +3,48 @@ using SS3D.Engine.Tiles;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 
 public class AtmosEditor : EditorWindow
 {
+    private enum GasEditorOption
+    {
+        AddGas,
+        RemoveGas,
+        AddHeat,
+        RemoveHeat
+    }
+
+    public enum ViewType
+    {
+        Pressure,
+        Content,
+        Temperature,
+        Wind
+    }
+
+
     private TileManager tileManager;
     private AtmosManager atmosManager;
-    // private AtmosManager.ViewType drawView;
 
+    private ViewType viewOption = ViewType.Pressure;
+    private bool showGizmos = true;
+    private bool showTiles = true;
+    private bool showPipes = false;
+    private bool showInvisible = true;
+    private bool showWalls = true;
+    private bool showVacuum = false;
+    private bool showLog = true;
     private CoreAtmosGasses gassSelection;
-    private bool addGas = false;
+    private GasEditorOption selectedOption;
+    private float updateRate = 0.5f;
+
+    private bool interactEnabled = false;
+    private float selectedAmount = 20f;
+    private float gizmoSize = 0.2f;
+
     private Vector3 lastPlacement;
     private double lastPlacementTime;
 
@@ -55,13 +86,48 @@ public class AtmosEditor : EditorWindow
         if (tileManager == null || atmosManager == null)
             return;
 
+        EditorGUILayout.Space();
+        GUILayout.Label("View Settings", EditorStyles.boldLabel);
+        showGizmos = EditorGUILayout.BeginToggleGroup("Draw debug:", showGizmos);
+        showTiles = EditorGUILayout.Toggle("Show tiles: ", showTiles);
+        showPipes = EditorGUILayout.Toggle("Show pipes: ", showPipes);
+        showInvisible = EditorGUILayout.Toggle("Show invisible: ", showInvisible);
+        showWalls = EditorGUILayout.Toggle("Show walls: ", showWalls);
+        showVacuum = EditorGUILayout.Toggle("Show vacuum: ", showVacuum);
+        EditorGUILayout.EndToggleGroup();
+
+        EditorGUILayout.Space();
+        EditorGUI.BeginChangeCheck();
+        showLog = EditorGUILayout.Toggle("Show messages: ", showLog);
+        if (EditorGUI.EndChangeCheck())
+        {
+            atmosManager.ShowUpdate = showLog;
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.PrefixLabel("Draw View:");
+        viewOption = (ViewType)EditorGUILayout.EnumPopup(viewOption);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.PrefixLabel("Update rate:");
+        EditorGUI.BeginChangeCheck();
+        updateRate = EditorGUILayout.Slider(updateRate, 0.01f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            atmosManager.UpdateRate = updateRate;
+        }
+
+
+        selectedOption = (GasEditorOption)EditorGUILayout.EnumPopup(selectedOption);
         EditorGUILayout.PrefixLabel("Insert gas:");
         gassSelection = (CoreAtmosGasses)EditorGUILayout.EnumPopup(gassSelection);
+
+        selectedAmount = EditorGUILayout.Slider(selectedAmount, 1, 1000);
 
         if (GUILayout.Button("Add gas"))
         {
             Debug.Log("Click to add gas. Press escape to stop");
-            addGas = true;
+            interactEnabled = true;
         }
     }
 
@@ -70,7 +136,10 @@ public class AtmosEditor : EditorWindow
         if (tileManager == null || atmosManager == null)
             return;
 
-        if (!addGas)
+        if (showGizmos)
+            DisplayGizmos();
+
+        if (!interactEnabled)
             return;
 
         // Ensure the user can't use other scene controls whilst this one is active.
@@ -84,22 +153,34 @@ public class AtmosEditor : EditorWindow
         DisplayVisualHelp(snappedPosition);
 
         if ((Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseDrag) && Event.current.button == 0
-            && (EditorApplication.timeSinceStartup - lastPlacementTime > 0.5
+            && (EditorApplication.timeSinceStartup - lastPlacementTime > 0.1
             || lastPlacement != snappedPosition))
         {
             lastPlacementTime = EditorApplication.timeSinceStartup;
             lastPlacement = snappedPosition;
 
-            TileAtmosObject atmosTile = atmosManager.GetAtmosTile(snappedPosition);
-            if (atmosTile != null)
+            switch (selectedOption)
             {
-                atmosTile.GetAtmosObject().AddGas(gassSelection, 20f);
+                case GasEditorOption.AddGas:
+                    atmosManager.AddGas(snappedPosition, gassSelection, selectedAmount);
+                    break;
+                case GasEditorOption.RemoveGas:
+                    atmosManager.RemoveGas(snappedPosition, gassSelection, selectedAmount);
+                    break;
+                case GasEditorOption.AddHeat:
+                    atmosManager.AddHeat(snappedPosition, selectedAmount);
+                    break;
+                case GasEditorOption.RemoveHeat:
+                    atmosManager.RemoveHeat(snappedPosition, selectedAmount);
+                    break;
             }
+
+            
         }
 
         else if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
         {
-            addGas = false;
+            interactEnabled = false;
         }
     }
 
@@ -116,6 +197,119 @@ public class AtmosEditor : EditorWindow
 
         Vector3[] lines = { cube_1, cube_2, cube_2, cube_3, cube_3, cube_4, cube_4, cube_1 };
         Handles.DrawLines(lines);
+
+    }
+
+    private void DisplayGizmos()
+    {
+        if (atmosManager == null)
+            return;
+
+        var atmosJobs = atmosManager.GetAtmosJobs();
+
+        foreach (AtmosJob job in atmosJobs)
+        {
+            for (int i = 0; i < job.atmosTiles.Count; i++)
+            {
+                Vector3 position = job.atmosTiles[i].GetWorldPosition();
+                AtmosObject atmosObject = job.atmosTiles[i].GetAtmosObject();
+
+                Color stateColor;
+                AtmosState tileState = atmosObject.atmosObject.state;
+                switch (tileState)
+                {
+                    case AtmosState.Active: stateColor = new Color(0, 0, 0, 0); break;
+                    case AtmosState.Semiactive: stateColor = new Color(0, 0, 0, 0.5f); break;
+                    case AtmosState.Inactive: stateColor = new Color(0, 0, 0, 0.8f); break;
+                    default: stateColor = new Color(0, 0, 0, 0); break;
+                }
+
+                switch (viewOption)
+                {
+                    case ViewType.Pressure:
+                        DrawPressureGizmo(atmosObject, position, stateColor);
+                        break;
+                    case ViewType.Content:
+                        DrawContentGizmo(atmosObject, position, stateColor);
+                        break;
+                    case ViewType.Temperature:
+                        DrawTemperatureGizmo(atmosObject, position, stateColor);
+                        break;
+                    case ViewType.Wind:
+                        DrawWindGizmo(atmosObject, position);
+                        break;
+                }
+                
+            }
+        }
+    }
+
+    private void DrawPressureGizmo(AtmosObject atmosObject, Vector3 position, Color stateColor)
+    {
+        float pressureScale = 0.02f;
+        float pressure = atmosObject.atmosObject.container.GetPressure() * pressureScale;
+        AtmosState tileState = atmosObject.atmosObject.state;
+
+        if (tileState == AtmosState.Active || tileState == AtmosState.Semiactive || tileState == AtmosState.Inactive)
+        {
+            if (showTiles)
+            {
+                Handles.color = Color.white - stateColor;
+                float colorLerpValue = pressure / 100f;
+                Handles.DrawWireCube(position + new Vector3(0, pressure / 2, 0), new Vector3(gizmoSize, pressure, gizmoSize));
+            }
+        }
+        else if (tileState == AtmosState.Blocked && showWalls)
+        {
+            Handles.color = Color.black;
+            Handles.DrawWireCube(position + new Vector3(0, 2.5f / 2f, 0), new Vector3(gizmoSize, 2.5f, gizmoSize));
+        }
+        else if (tileState == AtmosState.Vacuum && showVacuum)
+        {
+            Handles.color = Color.blue;
+            Handles.DrawWireCube(position, new Vector3(1, pressure, 1));
+        }
+    }
+
+    private void DrawContentGizmo(AtmosObject atmosObject, Vector3 position, Color stateColor)
+    {
+        float contentScale = 0.05f;
+        float offset = 0f;
+        Color[] colors = new Color[] { Color.yellow, Color.white, Color.gray, Color.magenta };
+        float4 moles = atmosObject.atmosObject.container.GetCoreGasses() * contentScale;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            if (moles[i] > 0f)
+            {
+                Handles.color = colors[i] - stateColor;
+                if (showInvisible || i == 3) // Only draw plasma
+                {
+                    Handles.DrawWireCube(position + new Vector3(0, moles[i] / 2f + offset, 0),
+                        new Vector3(gizmoSize, moles[i], gizmoSize));
+                    offset += moles[i];
+                }
+            }
+        }
+    }
+
+    private void DrawWindGizmo(AtmosObject atmosObject, Vector3 position)
+    {
+        Vector2 velocity = atmosObject.atmosObject.velocity.normalized;
+
+        Handles.color = Color.white;
+        Handles.DrawSolidDisc(position, Vector3.up, gizmoSize / 4f);
+        Handles.DrawLine(position, position + new Vector3(velocity.x, 0, velocity.y));
+
+    }
+
+    private void DrawTemperatureGizmo(AtmosObject atmosObject, Vector3 position, Color stateColor)
+    {
+        float temperature = atmosObject.atmosObject.container.GetTemperature(); // In Celcius
+        float colorLerpValue = temperature / 773f;
+
+        Handles.color = Color.Lerp(Color.blue, Color.red, colorLerpValue) - stateColor;
+        Handles.DrawSolidDisc(position, Vector3.up, gizmoSize / 2f);
 
     }
 }
