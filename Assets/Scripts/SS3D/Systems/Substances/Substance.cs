@@ -1,14 +1,21 @@
-﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
-namespace SS3D.Substances
+namespace SS3D.Systems.Substances
 {
-    [Serializable]
-    [CreateAssetMenu(menuName = "SS3D/Substances/Substance")]
     public class Substance : ScriptableObject
     {
-        public SubstanceType Type;
-        public Color Color;
-        public float MillilitersPerMole;
+        // Generic parameters
+        public string nameString;
+
+        // Visual parameters
+        public Color color;
+
+        // Chemical parameters
+        public float molarMass;
+        public float specificHeatCapacity;
+        public float density;
+        public float maxSoluability;
     }
 }
