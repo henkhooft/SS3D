@@ -7,6 +7,7 @@ namespace SS3D.Systems.Substances
     [System.Flags]
     public enum SubstanceAttributes
     {
+        None,
         Alcoholic,
         Odorless,
         Flamable,
