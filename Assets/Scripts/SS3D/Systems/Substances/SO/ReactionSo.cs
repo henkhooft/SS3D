@@ -12,17 +12,24 @@ namespace SS3D.Systems.Substances
         public float reactionRatio;
     }
 
+    [Serializable]
+    public class CatalystDescription
+    {
+        public SubstanceSo substance;
+        public float reactionRateRatio;
+    }
+
     [CreateAssetMenu(fileName = "ReactionSo", menuName = "Substances/ReactionSO", order = 0)]
     public class ReactionSo : ScriptableObject
     {
         public ReactionDescription[] inputs;
         public ReactionDescription[] outputs;
 
-        public ReactionCondition[] conditions;
+        public ReactionCondition conditions;
+        public CatalystDescription catalyst;
         public ReactionEffect[] effects;
 
         public float energyProduced;
         public float reactionRate;
-
     }
 }

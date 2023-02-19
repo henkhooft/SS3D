@@ -21,9 +21,9 @@ namespace SS3D.Systems.Substances
         public float density;
         public float maxSoluability;
 
-        public float AntoineConstantA;
-        public float AntoineConstantB;
-        public float AntoineConstantC;
+        public float antoineConstantA;
+        public float antoineConstantB;
+        public float antoineConstantC;
 
         /*
         [BurstCompile]

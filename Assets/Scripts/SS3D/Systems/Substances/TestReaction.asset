@@ -12,6 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70a5d50076d883641b73024234db873e, type: 3}
   m_Name: TestReaction
   m_EditorClassIdentifier: 
-  conditions: []
+  inputs:
+  - substance: {fileID: 11400000, guid: 26620ac457533174eb91d0d73c5b3e92, type: 2}
+    reactionRatio: 1
+  - substance: {fileID: 11400000, guid: 7b7bb67b244db924c88058c7a6657505, type: 2}
+    reactionRatio: 2
+  outputs:
+  - substance: {fileID: 11400000, guid: 26620ac457533174eb91d0d73c5b3e92, type: 2}
+    reactionRatio: 1
+  conditions:
+  - minimumTemperature: 0
+    maximumTemperature: 300
+    minimumPH: 1
+    maximumPH: 12
   energyProduced: 0
   reactionRate: 0
