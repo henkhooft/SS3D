@@ -8,6 +8,7 @@ namespace SS3D.Systems.Substances
     {
         // Generic parameters
         public string nameString;
+        public SubstanceAttributes attributes;
 
         // Visual parameters
         public Color color;
@@ -17,5 +18,9 @@ namespace SS3D.Systems.Substances
         public float specificHeatCapacity;
         public float density;
         public float maxSoluability;
+
+        public float AntoineConstantA;
+        public float AntoineConstantB;
+        public float AntoineConstantC;
     }
 }
