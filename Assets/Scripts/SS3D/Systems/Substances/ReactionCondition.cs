@@ -8,30 +8,28 @@ namespace SS3D.Systems.Substances
     [Serializable]
     public class ReactionCondition
     {
-        public float temperatureMinimum;
-        public float temperatureIdeal;
-        public float temperatureMaximum;
+        public enum ReactionConditionType
+        {
+            TemperatureCondition,
+            PHCondition,
+            PressureCondition,
+            ConcentrationCondition
+        }
 
-        public float PhMinimum;
-        public float PhIdeal;
-        public float PhMaximum;
-
-        public float pressureMinimum;
-        public float pressureIdeal;
-        public float pressureMaximum;
-
-        public float concentrationMinimum;
-        public float concentrationMaximum;
+        public ReactionConditionType condition;
+        public float minimumValue;
+        public float maximumValue;
+        public float idealValue;
 
 
         public float GetEfficiency(float value)
         {
-            if (temperatureMinimum > value || temperatureMaximum > value)
+            if (minimumValue > value || maximumValue > value)
                 return 0f;
-            else if (value < temperatureIdeal)
-                return (value - temperatureIdeal) / (temperatureIdeal - temperatureMinimum);
-            else if (value <= temperatureIdeal)
-                return (temperatureMaximum - value) / (temperatureMaximum - temperatureIdeal);
+            else if (value < idealValue)
+                return (value - idealValue) / (idealValue - minimumValue);
+            else if (value <= idealValue)
+                return (maximumValue - value) / (maximumValue - idealValue);
 
             return 0f;
         }

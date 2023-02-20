@@ -25,7 +25,7 @@ namespace SS3D.Systems.Substances
         public ReactionDescription[] inputs;
         public ReactionDescription[] outputs;
 
-        public ReactionCondition conditions;
+        public ReactionCondition[] conditions;
         public CatalystDescription catalyst;
         public ReactionEffect[] effects;
 
