@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Ethanol
   m_EditorClassIdentifier: 
   nameString: ethanol
-  attributes: 3
+  attributes: 0
   color: {r: 0, g: 0, b: 0, a: 0}
   molarMass: 0
   specificHeatCapacity: 0
   density: 0
   maxSoluability: 0
-  AntoineConstantA: 0
-  AntoineConstantB: 0
-  AntoineConstantC: 0
+  antoineConstantA: 0
+  antoineConstantB: 0
+  antoineConstantC: 0

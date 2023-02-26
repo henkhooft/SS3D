@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ae05c1cdb6b54444a04c5318272153d, type: 3}
+  m_Name: TestMixture
+  m_EditorClassIdentifier: 
+  substances:
+  - {fileID: 11400000, guid: 7b7bb67b244db924c88058c7a6657505, type: 2}
+  - {fileID: 11400000, guid: 26620ac457533174eb91d0d73c5b3e92, type: 2}
+  temperature: 0

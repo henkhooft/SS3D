@@ -5,23 +5,23 @@ using UnityEngine;
 
 namespace SS3D.Systems.Substances
 {
-    [Serializable]
-    public class ReactionDescription
-    {
-        public SubstanceSo substance;
-        public float reactionRatio;
-    }
-
-    [Serializable]
-    public class CatalystDescription
-    {
-        public SubstanceSo substance;
-        public float reactionRateRatio;
-    }
-
     [CreateAssetMenu(fileName = "ReactionSo", menuName = "Substances/ReactionSO", order = 0)]
     public class ReactionSo : ScriptableObject
     {
+        [Serializable]
+        public struct ReactionDescription
+        {
+            public SubstanceSo substance;
+            public float reactionRatio;
+        }
+
+        [Serializable]
+        public struct CatalystDescription
+        {
+            public SubstanceSo substance;
+            public float reactionRateRatio;
+        }
+
         public ReactionDescription[] inputs;
         public ReactionDescription[] outputs;
 
