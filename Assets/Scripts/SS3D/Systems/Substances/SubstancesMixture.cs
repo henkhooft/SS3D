@@ -7,11 +7,19 @@ namespace SS3D.Systems.Substances
 {
     public struct SubstancesMixture
     {
+        public enum SubstancesMixtureState
+        { 
+            Inactive,
+            Active  // If active, run reaction logic
+        }
+
+        public SubstancesMixtureState state;
         public NativeArray<Substance> substances;
         public float temperature;
 
         public SubstancesMixture(int size, Allocator allocator)
         {
+            state = SubstancesMixtureState.Inactive;
             substances = new NativeArray<Substance>(size, allocator);
             temperature = 0;
         }
