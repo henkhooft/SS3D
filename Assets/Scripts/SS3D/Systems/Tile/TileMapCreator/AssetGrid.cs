@@ -4,7 +4,6 @@ using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.TileMapCreator;
-using SS3D.Systems.Tile.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,8 +51,8 @@ public class AssetGrid : Actor
     public void Setup()
     {
         AddHandle(UpdateEvent.AddListener(HandleUpdate));
-        _tileSystem= SubSystems.Get<TileSubSystem>();
-        LoadObjectGrid(new[] { TileLayer.Plenum }, false);
+        _tileSystem = SubSystems.Get<TileSubSystem>();
+        LoadCurrentCategory();
     }
 
     private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
@@ -70,7 +69,7 @@ public class AssetGrid : Actor
         foreach (GenericObjectSo asset in _objectDatabase)
         {
             if (!asset.name.Contains(text, StringComparison.OrdinalIgnoreCase)) continue;
-            Instantiate(_slotPrefab, _contentRoot.transform, true).GetComponent<ConstructionSlot>().Setup(asset);
+            Instantiate(_slotPrefab, _contentRoot.transform).GetComponent<ConstructionSlot>().Setup(asset);
         }
     }
 
@@ -90,14 +89,14 @@ public class AssetGrid : Actor
                 case false when asset is TileObjectSo so && !allowedLayers.Contains(so.layer):
                     continue;
             }
-            Instantiate(_slotPrefab, _contentRoot.transform, true).GetComponent<ConstructionSlot>().Setup(asset);
+            Instantiate(_slotPrefab, _contentRoot.transform).GetComponent<ConstructionSlot>().Setup(asset);
         }
     }
 
     /// <summary>
     /// Change the currently displayed tiles/items when a new layer is selected in the drop down menu.
     /// </summary>
-    private void OnDropDownChange()
+    private void LoadCurrentCategory()
     {
         int index = _layerPlacementDropdown.value;
         bool isItems = false;
