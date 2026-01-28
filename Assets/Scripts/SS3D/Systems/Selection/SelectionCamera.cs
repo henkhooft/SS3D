@@ -52,38 +52,44 @@ namespace SS3D.Systems.Selection
         /// </summary>
         private Camera _playerCamera;
 
+        /// <summary>
+        /// The input subsystem for subscribing to toggling debug mode
+        /// </summary>
+        private InputSubSystem _inputSystem;
+
         protected override void OnStart()
         {
             _system = SubSystems.Get<SelectionSubSystem>();
+            _inputSystem = SubSystems.Get<InputSubSystem>();
             _camera = GetComponent<Camera>();
             _playerCamera = transform.parent.GetComponent<Camera>();
             _camera.SetReplacementShader(_shader, "");
 
             GenerateRenderTexture();
             GenerateReadbackTexture();
+            
+            _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
         }
 
         protected override void OnEnabled()
         {
             base.OnEnabled();
             
-            InputSubSystem inputSystem = SubSystems.Get<InputSubSystem>();
+            _inputSystem = SubSystems.Get<InputSubSystem>();
 
-            if (inputSystem)
+            if (_inputSystem)
             {
-                inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
+                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
             }
         }
 
         protected override void OnDisabled()
         {
             base.OnDisabled();
-            
-            InputSubSystem inputSystem = SubSystems.Get<InputSubSystem>();
 
-            if (inputSystem)
+            if (_inputSystem)
             {
-                inputSystem.Inputs.Other.ToggleSelectionDebug.performed -= ToggleDebugMode;
+                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed -= ToggleDebugMode;
             }
         }
 
@@ -130,7 +136,7 @@ namespace SS3D.Systems.Selection
             }
             else
             {
-                _readbackTexture.ReadPixels(new Rect(pos.x, Screen.height-pos.y-1, 1, 1), 0, 0, false);
+                _readbackTexture.ReadPixels(new Rect(pos.x, Screen.height - pos.y - 1, 1, 1), 0, 0, false);
                 col = _readbackTexture.GetPixel(0, 0);
             }
 
