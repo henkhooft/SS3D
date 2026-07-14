@@ -117,6 +117,8 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_document == null || _document.rootVisualElement == null)
                 return;
 
+            _document.rootVisualElement.pickingMode = PickingMode.Ignore;
+
             _overlayRoot = _document.rootVisualElement.Q<VisualElement>("overlay-root") ??
                            _document.rootVisualElement;
             _overlayRoot.pickingMode = PickingMode.Ignore;
@@ -192,7 +194,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
                 SetMouseOverUI(false);
-                _inputSystem.ToggleAction(_controls.Place, true);
                 SetGameplayInputBlocked(true);
                 _gameplayHud.SetVisible(false);
                 RpcRequestUndoState(LocalConnection);
@@ -418,9 +419,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _mouseOverUI = over;
             _view?.SetMouseOverUI(over);
             _inputSystem.ToggleBinding("<Mouse>/scroll/y", !over);
-
-            if (!_hologramManager.IsDragging)
-                _inputSystem.ToggleAction(_controls.Place, !over);
         }
 
         private void EnableDocument()

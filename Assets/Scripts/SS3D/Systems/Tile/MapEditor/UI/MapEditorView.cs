@@ -129,7 +129,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (_root?.panel == null)
                 return false;
 
-            VisualElement picked = _root.panel.Pick(screenPosition);
+            Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(_root.panel, screenPosition);
+            VisualElement picked = _root.panel.Pick(panelPosition);
+            if (picked == null)
+                return false;
+
             return IsInteractivePick(picked);
         }
 

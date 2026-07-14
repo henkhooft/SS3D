@@ -9,7 +9,6 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.MapEditor;
-using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Utils;
 using System;
 using System.Collections.Generic;
@@ -47,6 +46,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// </summary>
         public bool IsDragging => _isDragging;
         private bool _isDragging;
+        private bool _placePressActive;
         private GenericObjectSo _selectedObject;
         /// <summary>
         /// List of build ghosts currently displaying in game.
@@ -92,8 +92,6 @@ namespace SS3D.Systems.Tile.TileMapCreator
             base.OnEnabled();
 
 #if !UNITY_SERVER
-            _controls.Place.started += HandlePlaceStarted;
-            _controls.Place.performed += HandlePlacePerformed;
             _controls.Replace.performed += HandleReplace;
             _controls.Replace.canceled += HandleReplace;
             _controls.Rotate.performed += HandleRotate;
@@ -105,17 +103,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
             base.OnDisabled();
 
 #if !UNITY_SERVER
-            _controls.Place.started -= HandlePlaceStarted;
-            _controls.Place.performed -= HandlePlacePerformed;
             _controls.Replace.performed -= HandleReplace;
             _controls.Replace.canceled -= HandleReplace;
             _controls.Rotate.performed -= HandleRotate;
 #endif
+            _placePressActive = false;
+            _isDragging = false;
         }
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
-            if (_mapEditor == null || _mapEditor.CurrentTool != MapEditorTool.Edit)
+            if (_mapEditor == null || !_mapEditor.IsActive || _mapEditor.CurrentTool != MapEditorTool.Edit)
                 return;
 
             if (_holograms.Count == 1)
@@ -173,6 +171,44 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 }
             }
             _lastSnappedPosition = position;
+
+            HandlePlacementInput();
+        }
+
+        private void HandlePlacementInput()
+        {
+            Mouse mouse = Mouse.current;
+            if (mouse == null)
+                return;
+
+            if (_mapEditor.MouseOverUI)
+            {
+                if (mouse.leftButton.wasReleasedThisFrame)
+                {
+                    _placePressActive = false;
+                    _isDragging = false;
+                }
+
+                return;
+            }
+
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                _placePressActive = true;
+
+                if (!_isPlacingItem)
+                {
+                    _isDragging = true;
+                    _dragStartPostion = TileHelper.GetPointedPosition(true);
+                }
+            }
+
+            if (mouse.leftButton.wasReleasedThisFrame && _placePressActive)
+            {
+                _placePressActive = false;
+                _isDragging = false;
+                PerformPlaceOrDelete();
+            }
         }
 
         /// <summary>
@@ -227,31 +263,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
             SetNextRotation();
         }
 
-        /// <summary>
-        /// This is called when the player start dragging hologramss.
-        /// </summary>
-        private void HandlePlaceStarted(InputAction.CallbackContext context)
+        private void PerformPlaceOrDelete()
         {
-            // Dragging is disabled for items
-            if (_isPlacingItem)
-                return;
-
-            _isDragging = true;
-            _dragStartPostion = TileHelper.GetPointedPosition(true);
-        }
-
-        /// <summary>
-        /// Method called when the tile objects are placed or deleted.
-        /// </summary>
-        private void HandlePlacePerformed(InputAction.CallbackContext context)
-        {
-            _isDragging = false;
-
-            // While the pointer is over the menu the MapEditorSubSystem already suppresses Place,
-            // so this handler does not fire there and no manual toggle is needed.
-            if (_mapEditor == null || _mapEditor.CurrentTool != MapEditorTool.Edit)
-                return;
-
             if (!_mapEditor.IsDeleting)
             {
                 PlaceOnHolograms();
@@ -264,9 +277,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             DestroyHolograms();
 
             if (_selectedObject == null)
-            {
                 return;
-            }
 
             CreateHologram(_selectedObject.PrefabAsset, TileHelper.GetPointedPosition(!_isPlacingItem));
         }
@@ -288,42 +299,34 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// </summary>
         private void PlaceOnHolograms()
         {
-            if (_mapEditor == null)
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            if (tileSystem == null || _selectedObject == null)
                 return;
 
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
-            List<MapEditorCommandDto> commands = new();
 
-            if (_holograms.Count == 0 && _selectedObject != null)
+            if (_holograms.Count == 0)
             {
                 Vector3 position = TileHelper.GetPointedPosition(!_isPlacingItem);
-                commands.Add(CreatePlacementCommand(position, _lastRegisteredDirection, isReplacing));
+                tileSystem.RpcPlaceObject(_selectedObject.NameString, position, _lastRegisteredDirection, isReplacing);
+                return;
             }
 
             foreach (ConstructionHologram buildGhost in _holograms)
             {
-                commands.Add(CreatePlacementCommand(buildGhost.TargetPosition, buildGhost.Direction, isReplacing));
+                tileSystem.RpcPlaceObject(_selectedObject.NameString, buildGhost.TargetPosition, buildGhost.Direction, isReplacing);
             }
-
-            if (commands.Count > 0)
-                _mapEditor.SubmitCommands(commands.ToArray());
         }
-
-        private MapEditorCommandDto CreatePlacementCommand(Vector3 position, Direction direction, bool replaceExisting) =>
-            new()
-            {
-                Kind = _isPlacingItem ? MapEditorCommandKind.PlaceItem : MapEditorCommandKind.PlaceTile,
-                AssetName = _selectedObject.NameString,
-                Position = position,
-                Direction = direction,
-                ReplaceExisting = replaceExisting,
-            };
 
         /// <summary>
         /// Delete all objects, that are at the same locations as existing holograms.
         /// </summary>
         private void DeleteOnHolograms()
         {
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            if (tileSystem == null)
+                return;
+
             if (_isPlacingItem)
             {
                 FindAndDeleteItem();
@@ -332,19 +335,11 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             if (_holograms.Count > 0 && _selectedObject != null)
             {
-                List<MapEditorCommandDto> commands = new();
                 foreach (ConstructionHologram hologram in _holograms)
                 {
-                    commands.Add(new MapEditorCommandDto
-                    {
-                        Kind = MapEditorCommandKind.ClearTile,
-                        AssetName = _selectedObject.NameString,
-                        Position = hologram.TargetPosition,
-                        Direction = hologram.Direction,
-                    });
+                    tileSystem.RpcClearTileObject(_selectedObject.NameString, hologram.TargetPosition, hologram.Direction);
                 }
 
-                _mapEditor?.SubmitCommands(commands.ToArray());
                 return;
             }
 
@@ -353,40 +348,27 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void EraseAtPointer()
         {
-            if (_mapEditor == null)
-                return;
-
-            Vector3 position = TileHelper.GetPointedPosition(true);
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            TileMap map = tileSystem.CurrentMap;
+            TileMap map = tileSystem?.CurrentMap;
             if (map == null)
                 return;
 
-            List<MapEditorCommandDto> commands = new();
-            if (map.TryGetTileLocations(position, out ITileLocation[] locations))
+            Vector3 position = TileHelper.GetPointedPosition(true);
+            if (!map.TryGetTileLocations(position, out ITileLocation[] locations))
+                return;
+
+            bool clearedAny = false;
+            foreach (ITileLocation location in locations)
             {
-                foreach (ITileLocation location in locations)
+                foreach (PlacedTileObject placed in location.GetAllPlacedObject())
                 {
-                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
-                    {
-                        commands.Add(new MapEditorCommandDto
-                        {
-                            Kind = MapEditorCommandKind.ClearTile,
-                            AssetName = placed.NameString,
-                            Position = position,
-                            Direction = placed.Direction,
-                        });
-                    }
+                    tileSystem.RpcClearTileObject(placed.NameString, position, placed.Direction);
+                    clearedAny = true;
                 }
             }
 
-            if (commands.Count > 0)
-            {
-                _mapEditor.SubmitCommands(commands.ToArray());
-                return;
-            }
-
-            FindAndDeleteItem();
+            if (!clearedAny)
+                FindAndDeleteItem();
         }
 
         /// <summary>
@@ -515,15 +497,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 PlacedItemObject placedItem = hitInfo.collider.gameObject.GetComponent<PlacedItemObject>();
                 if (placedItem != null)
                 {
-                    _mapEditor?.SubmitCommands(new[]
-                    {
-                        new MapEditorCommandDto
-                        {
-                            Kind = MapEditorCommandKind.ClearItem,
-                            AssetName = placedItem.NameString,
-                            Position = placedItem.gameObject.transform.position,
-                        },
-                    });
+                    SubSystems.Get<TileSubSystem>()?.RpcClearItemObject(
+                        placedItem.NameString,
+                        placedItem.gameObject.transform.position);
                 }
             }
         }

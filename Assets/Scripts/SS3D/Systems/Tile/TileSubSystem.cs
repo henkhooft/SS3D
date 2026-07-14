@@ -176,12 +176,13 @@ namespace SS3D.Systems.Tile
         public GenericObjectSo GetAsset(ObjectAssetReference asset) => Loader.GetAsset(asset);
 
         [Server]
-        private bool PlaceObject(GenericObjectSo genericObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
+        private bool PlaceObject(GenericObjectSo genericObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting,
+            bool skipBuildCheck = false)
         {
 	        switch (genericObjectSo)
 	        {
 		        case TileObjectSo so:
-			        return _constructionService.TryPlaceTile(so, placePosition, dir, replaceExisting).Success;
+			        return _constructionService.TryPlaceTile(so, placePosition, dir, replaceExisting, skipBuildCheck).Success;
 		        case ItemObjectSo so:
 			        return _constructionService.TryPlaceItem(so, placePosition,
                         Quaternion.Euler(0, TileHelper.GetRotationAngle(dir), 0)).Success;
@@ -202,7 +203,7 @@ namespace SS3D.Systems.Tile
                 return;
 
             GenericObjectSo tileObjectSo = GetAsset(genericObjectSoName);
-            PlaceObject(tileObjectSo, placePosition, dir, replaceExisting);
+            PlaceObject(tileObjectSo, placePosition, dir, replaceExisting, skipBuildCheck: true);
         }
 
         /// <summary>
