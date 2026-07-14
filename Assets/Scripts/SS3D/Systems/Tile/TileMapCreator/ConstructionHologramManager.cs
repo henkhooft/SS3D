@@ -359,17 +359,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
             {
                 foreach (ITileLocation location in locations)
                 {
-                    if (location.IsEmpty())
-                        continue;
-
-                    PlacedTileObject placed = location.PlacedObject;
-                    commands.Add(new MapEditorCommandDto
+                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
                     {
-                        Kind = MapEditorCommandKind.ClearTile,
-                        AssetName = placed.NameString,
-                        Position = position,
-                        Direction = placed.Direction,
-                    });
+                        commands.Add(new MapEditorCommandDto
+                        {
+                            Kind = MapEditorCommandKind.ClearTile,
+                            AssetName = placed.NameString,
+                            Position = position,
+                            Direction = placed.Direction,
+                        });
+                    }
                 }
             }
 

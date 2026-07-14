@@ -280,15 +280,14 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 foreach (ITileLocation location in locations)
                 {
-                    if (location.IsEmpty())
-                        continue;
-
-                    PlacedTileObject placed = location.PlacedObject;
-                    GenericObjectSo asset = _tileSystem.GetAsset(placed.NameString);
-                    _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = placed.NameString }, asset);
-                    _viewModel.ShowToast($"Selected {placed.NameString} on {placed.Layer}");
-                    _toastTimer = 1.6f;
-                    return;
+                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
+                    {
+                        GenericObjectSo asset = _tileSystem.GetAsset(placed.NameString);
+                        _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = placed.NameString }, asset);
+                        _viewModel.ShowToast($"Selected {placed.NameString} on {placed.Layer}");
+                        _toastTimer = 1.6f;
+                        return;
+                    }
                 }
             }
 
@@ -328,17 +327,16 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 foreach (ITileLocation location in locations)
                 {
-                    if (location.IsEmpty())
-                        continue;
-
-                    PlacedTileObject placed = location.PlacedObject;
-                    _moveSource = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
-                    _moveAssetName = placed.NameString;
-                    _moveDirection = placed.Direction;
-                    _moveIsItem = false;
-                    _viewModel.ShowToast($"Moving {placed.NameString} — click destination");
-                    _toastTimer = 2f;
-                    return;
+                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
+                    {
+                        _moveSource = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
+                        _moveAssetName = placed.NameString;
+                        _moveDirection = placed.Direction;
+                        _moveIsItem = false;
+                        _viewModel.ShowToast($"Moving {placed.NameString} — click destination");
+                        _toastTimer = 2f;
+                        return;
+                    }
                 }
             }
 
@@ -500,15 +498,8 @@ namespace SS3D.Systems.Tile.MapEditor
             _toastTimer = 1.6f;
         }
 
-        private static IMapEditorCommand FromDto(MapEditorCommandDto dto)
-        {
-            if (dto.Kind == MapEditorCommandKind.Compound && dto.Children != null)
-            {
-                IMapEditorCommand[] children = Array.ConvertAll(dto.Children, FromDto);
-                return new CompoundCommand(children);
-            }
-
-            return dto.Kind switch
+        private static IMapEditorCommand FromDto(MapEditorCommandDto dto) =>
+            dto.Kind switch
             {
                 MapEditorCommandKind.PlaceTile =>
                     new PlaceTileCommand(dto.AssetName, dto.Position, dto.Direction, dto.ReplaceExisting),
@@ -522,6 +513,5 @@ namespace SS3D.Systems.Tile.MapEditor
                     new MoveTileCommand(dto.AssetName, dto.PreviousPosition, dto.Position, dto.Direction),
                 _ => new PlaceTileCommand(dto.AssetName, dto.Position, dto.Direction, dto.ReplaceExisting),
             };
-        }
     }
 }

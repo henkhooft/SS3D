@@ -24,7 +24,6 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         public Direction Direction;
         public Direction PreviousDirection;
         public bool ReplaceExisting;
-        public MapEditorCommandDto[] Children;
     }
 
     [Serializable]

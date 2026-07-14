@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.Connections;
 using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
@@ -47,7 +48,7 @@ namespace SS3D.Tests.EditMode
             };
 
             MapEditorCatalog catalog = new();
-            catalog.Build(System.Array.Empty<Data.AssetDatabases.GenericObjectSo>(), catalogSo);
+            catalog.Build(System.Array.Empty<GenericObjectSo>(), catalogSo);
 
             int matches = 0;
             foreach (MapEditorCatalogEntry _ in catalog.Query(MapEditorMode.Upper, MapEditorSubcategory.Flooring, "plating"))

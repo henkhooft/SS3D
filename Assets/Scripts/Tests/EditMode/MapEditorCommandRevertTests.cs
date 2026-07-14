@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor.Commands;
 
 namespace SS3D.Tests.EditMode

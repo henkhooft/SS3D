@@ -177,15 +177,18 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
 
         public void Revert(MapEditorCommandContext ctx) => Move(ctx, _to, _from);
 
-        private static void Move(MapEditorCommandContext ctx, Vector3 from, Vector3 to)
+        private void Move(MapEditorCommandContext ctx, Vector3 from, Vector3 to)
         {
             GenericObjectSo asset = ctx.ResolveAsset(_assetName);
             if (asset is not TileObjectSo tile)
                 return;
 
-            Direction direction = Direction.North;
-            if (ctx.Map.TryGetTileLocation(tile.layer, from, out ITileLocation location) && location.PlacedObject != null)
-                direction = location.PlacedObject.Direction;
+            Direction direction = _direction;
+            if (ctx.Map.TryGetTileLocation(tile.layer, from, out ITileLocation location)
+                && location.TryGetPlacedObject(out PlacedTileObject placed))
+            {
+                direction = placed.Direction;
+            }
 
             ctx.Construction.TryClearTile(from, tile.layer, direction);
             ctx.Construction.TryPlaceTile(tile, to, direction, replaceExisting: false);
@@ -202,7 +205,6 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             new()
             {
                 Kind = MapEditorCommandKind.Compound,
-                Children = System.Array.ConvertAll(_children, c => c.ToDto()),
             };
 
         public void Apply(MapEditorCommandContext ctx)

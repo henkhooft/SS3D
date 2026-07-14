@@ -1,11 +1,12 @@
 #if UNITY_EDITOR
-using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityAssetDatabase = UnityEditor.AssetDatabase;
 
 namespace SS3D.Editor.MapEditor
 {
@@ -19,18 +20,18 @@ namespace SS3D.Editor.MapEditor
         [MenuItem("SS3D/Map Editor/Regenerate Catalog")]
         public static void RegenerateCatalog()
         {
-            MapEditorCatalogSo catalog = AssetDatabase.LoadAssetAtPath<MapEditorCatalogSo>(DefaultCatalogPath);
+            MapEditorCatalogSo catalog = UnityAssetDatabase.LoadAssetAtPath<MapEditorCatalogSo>(DefaultCatalogPath);
             if (catalog == null)
             {
                 catalog = ScriptableObject.CreateInstance<MapEditorCatalogSo>();
                 string dir = Path.GetDirectoryName(DefaultCatalogPath);
-                if (!string.IsNullOrEmpty(dir) && !AssetDatabase.IsValidFolder(dir))
+                if (!string.IsNullOrEmpty(dir) && !UnityAssetDatabase.IsValidFolder(dir))
                 {
                     Directory.CreateDirectory(Path.Combine(Application.dataPath, "..", dir).Replace('\\', '/'));
-                    AssetDatabase.Refresh();
+                    UnityAssetDatabase.Refresh();
                 }
 
-                AssetDatabase.CreateAsset(catalog, DefaultCatalogPath);
+                UnityAssetDatabase.CreateAsset(catalog, DefaultCatalogPath);
             }
 
             GenericObjectSo[] assets = Resources.LoadAll<GenericObjectSo>("");
@@ -43,7 +44,7 @@ namespace SS3D.Editor.MapEditor
 
             catalog.Entries = entries;
             EditorUtility.SetDirty(catalog);
-            AssetDatabase.SaveAssets();
+            UnityAssetDatabase.SaveAssets();
             Debug.Log($"Map editor catalog regenerated with {entries.Count} entries at {DefaultCatalogPath}.");
         }
     }

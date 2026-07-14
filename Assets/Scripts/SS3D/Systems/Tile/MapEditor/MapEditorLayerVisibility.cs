@@ -16,14 +16,7 @@ namespace SS3D.Systems.Tile.MapEditor
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Items, showUpper);
 
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Plenums, showLower);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Disposals, showLower);
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.WiresAndPipes, showLower || showPiping);
-
-            if (showPiping && !showLower)
-            {
-                // Piping-only view still shows pipe layers; underfloor wires stay dimmed via partial group logic.
-                TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.WiresAndPipes, true);
-            }
         }
 
         public static void Activate() => TileLayerVisibilityService.Activate();
