@@ -4,12 +4,24 @@ using UnityEngine;
 namespace SS3D.Systems.Tile.MapEditor
 {
     /// <summary>
-    /// Hides sibling UI under <see cref="PlayerCanvas"/> while the map editor is active.
+    /// Hides in-game HUD roots while the map editor is active.
+    /// The editor is reparented out of <c>Player Canvas</c> so that canvas can be disabled.
     /// </summary>
     internal sealed class MapEditorGameplayHud
     {
+        private static readonly string[] SuppressedRootNames =
+        {
+            "PlayerCanvas",
+            "Player Canvas",
+            "IngameDebugConsole",
+            "BandwithDisplayDebug",
+        };
+
         private readonly Transform _editorRoot;
         private readonly List<(GameObject gameObject, bool wasActive)> _suppressed = new();
+
+        private Transform _originalParent;
+        private int _originalSiblingIndex;
 
         public MapEditorGameplayHud(Transform editorRoot)
         {
@@ -28,16 +40,16 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             Restore();
 
-            Transform canvasRoot = FindPlayerCanvasRoot();
-            if (canvasRoot == null)
-                return;
+            _originalParent = _editorRoot.parent;
+            _originalSiblingIndex = _editorRoot.GetSiblingIndex();
+            _editorRoot.SetParent(null, false);
 
-            foreach (Transform child in canvasRoot)
+            foreach (string name in SuppressedRootNames)
             {
-                if (IsEditorHierarchy(child))
+                GameObject go = GameObject.Find(name);
+                if (go == null || IsEditorHierarchy(go.transform))
                     continue;
 
-                GameObject go = child.gameObject;
                 _suppressed.Add((go, go.activeSelf));
                 go.SetActive(false);
             }
@@ -52,20 +64,13 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             _suppressed.Clear();
-        }
 
-        private Transform FindPlayerCanvasRoot()
-        {
-            Transform current = _editorRoot;
-            while (current != null)
+            if (_originalParent != null)
             {
-                if (current.name == "PlayerCanvas")
-                    return current;
-
-                current = current.parent;
+                _editorRoot.SetParent(_originalParent, false);
+                _editorRoot.SetSiblingIndex(_originalSiblingIndex);
+                _originalParent = null;
             }
-
-            return null;
         }
 
         private bool IsEditorHierarchy(Transform candidate) =>

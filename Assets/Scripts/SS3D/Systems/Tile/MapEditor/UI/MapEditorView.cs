@@ -378,16 +378,21 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                               string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
                 slot.EnableInClassList("map-editor-slot--active", active);
 
+                VisualElement iconFrame = new();
+                iconFrame.AddToClassList("map-editor-slot__icon-frame");
+
                 VisualElement icon = new();
                 icon.AddToClassList("map-editor-slot__icon");
                 if (entry.IsEraser)
                 {
-                    icon.style.backgroundColor = new StyleColor(new Color(0.7f, 0.2f, 0.2f));
+                    icon.AddToClassList("map-editor-slot__icon--eraser");
                 }
                 else if (asset?.icon != null)
                 {
                     icon.style.backgroundImage = new StyleBackground(asset.icon);
                 }
+
+                iconFrame.Add(icon);
 
                 Label label = new(entry.IsEraser ? "Eraser" : entry.AssetName)
                 {
@@ -395,7 +400,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 };
                 label.AddToClassList("map-editor-slot__label");
 
-                slot.Add(icon);
+                slot.Add(iconFrame);
                 slot.Add(label);
                 _grid.Add(slot);
             }
@@ -566,12 +571,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             tab.AddToClassList("map-editor-mode-tab");
             tab.userData = mode;
 
+            VisualElement surface = new();
+            surface.AddToClassList("map-editor-mode-tab__surface");
+            surface.pickingMode = PickingMode.Ignore;
+
             VisualElement icon = CreateIconElement(_icons?.GetModeIcon(mode));
             icon.AddToClassList("map-editor-mode-tab__icon");
             Label label = new(MapEditorCatalog.GetModeLabel(mode));
             label.AddToClassList("map-editor-mode-tab__label");
-            tab.Add(icon);
-            tab.Add(label);
+            surface.Add(icon);
+            surface.Add(label);
+            tab.Add(surface);
             return tab;
         }
 
@@ -581,12 +591,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             tab.AddToClassList("map-editor-subcat-tab");
             tab.EnableInClassList("map-editor-subcat-tab--active", subcategory == _vm.CurrentSubcategory);
 
+            VisualElement surface = new();
+            surface.AddToClassList("map-editor-subcat-tab__surface");
+            surface.pickingMode = PickingMode.Ignore;
+
             VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(subcategory));
             icon.AddToClassList("map-editor-subcat-tab__icon");
             Label label = new(MapEditorCatalog.GetSubcategoryLabel(subcategory));
             label.AddToClassList("map-editor-subcat-tab__label");
-            tab.Add(icon);
-            tab.Add(label);
+            surface.Add(icon);
+            surface.Add(label);
+            tab.Add(surface);
             return tab;
         }
 
