@@ -36,8 +36,10 @@ namespace SS3D.Systems.Tile.MapEditor
                     Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.Flooring, "floor", "plating"),
                 TileLayer.Turf =>
                     Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.Turfs, "turf"),
-                TileLayer.Plenum or TileLayer.FurnitureBase when tile.genericType == TileObjectGenericType.Plenum =>
-                    Entry(asset.NameString, MapEditorMode.Lower, MapEditorSubcategory.BaseTiles, "plenum", "lattice"),
+                TileLayer.Plenum when tile.genericType == TileObjectGenericType.Plenum =>
+                    Entry(asset.NameString, MapEditorMode.Lower, MapEditorSubcategory.BaseTiles, "plenum"),
+                TileLayer.Plenum =>
+                    Entry(asset.NameString, MapEditorMode.Lower, MapEditorSubcategory.BaseTiles, "lattice", "catwalk", "base"),
                 TileLayer.FurnitureBase or TileLayer.FurnitureTop =>
                     Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.TileObjects, "furniture"),
                 TileLayer.WallMountLow or TileLayer.WallMountHigh =>

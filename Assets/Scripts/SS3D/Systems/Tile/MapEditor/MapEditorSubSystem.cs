@@ -80,13 +80,19 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _inputSystem.ToggleAction(_controls.ToggleMenu, true);
             _controls.ToggleMenu.performed += HandleToggleMenu;
-
-            if (IsServer && _tileSystem?.CurrentMap != null && _tileSystem.Loader != null)
-                _commandService.Bind(_tileSystem.CurrentMap, _tileSystem.Loader,
-                    new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService));
+            EnsureCommandServiceBound();
 
             if (Camera.main != null)
                 _cameraFollow = Camera.main.GetComponent<CameraFollow>();
+        }
+
+        private void EnsureCommandServiceBound()
+        {
+            if (!IsServer || _tileSystem?.CurrentMap == null || _tileSystem.Loader == null)
+                return;
+
+            _commandService.Bind(_tileSystem.CurrentMap, _tileSystem.Loader,
+                new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService));
         }
 
         protected override void OnEnabled()
@@ -131,12 +137,14 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.SaveAsRequested += OnSaveAsRequested;
             _view.LoadMapRequested += OnLoadMapRequested;
             _view.DeleteMapRequested += OnDeleteMapRequested;
+            _view.NewMapRequested += OnNewMapRequested;
+            _view.MapListRefreshRequested += RefreshMapList;
             _view.ResetViewRequested += OnResetViewRequested;
             _view.HideUIRequested += OnHideUiRequested;
             _view.ShowUIRequested += OnShowUiRequested;
             _view.GridSnapChanged += OnGridSnapChanged;
             _view.DebugOverlayChanged += OnDebugOverlayChanged;
-            _view.LayerVisibilityChanged += OnLayerVisibilityChanged;
+            _view.LayerCategoryVisibilityChanged += OnLayerCategoryVisibilityChanged;
             _view.ModeSelected += OnModeSelected;
             _view.SubcategorySelected += OnSubcategorySelected;
             _view.SearchChanged += OnSearchChanged;
@@ -168,11 +176,10 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 EnableDocument();
                 RebuildCatalog();
+                EnsureCommandServiceBound();
+                _viewModel.EnsureLayerDefaults();
                 MapEditorLayerVisibility.Activate();
-                MapEditorLayerVisibility.Apply(
-                    _viewModel.ShowUpperLayers,
-                    _viewModel.ShowLowerLayers,
-                    _viewModel.ShowPipingLayers);
+                MapEditorLayerVisibility.Apply(_viewModel);
 
                 _inputSystem.ToggleActionMap(_controls, true, new[] { _controls.ToggleMenu });
                 _inputSystem.ToggleCollisions(_controls, false);
@@ -292,9 +299,11 @@ namespace SS3D.Systems.Tile.MapEditor
                     _viewModel.ClearToast();
             }
 
-            if (_viewModel.OpenPopover == "maps" && IsServer)
-                _view?.PopulateMapList(_persistence.ListMaps());
+            if (_viewModel.OpenPopover == "maps")
+                RefreshMapList();
         }
+
+        private void RefreshMapList() => _view?.PopulateMapList(_persistence.ListMaps());
 
         private void HandleSelectClick()
         {
@@ -463,12 +472,14 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.SaveAsRequested -= OnSaveAsRequested;
             _view.LoadMapRequested -= OnLoadMapRequested;
             _view.DeleteMapRequested -= OnDeleteMapRequested;
+            _view.NewMapRequested -= OnNewMapRequested;
+            _view.MapListRefreshRequested -= RefreshMapList;
             _view.ResetViewRequested -= OnResetViewRequested;
             _view.HideUIRequested -= OnHideUiRequested;
             _view.ShowUIRequested -= OnShowUiRequested;
             _view.GridSnapChanged -= OnGridSnapChanged;
             _view.DebugOverlayChanged -= OnDebugOverlayChanged;
-            _view.LayerVisibilityChanged -= OnLayerVisibilityChanged;
+            _view.LayerCategoryVisibilityChanged -= OnLayerCategoryVisibilityChanged;
             _view.ModeSelected -= OnModeSelected;
             _view.SubcategorySelected -= OnSubcategorySelected;
             _view.SearchChanged -= OnSearchChanged;
@@ -486,6 +497,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnLoadMapRequested(string name) => RpcLoadMap(name, LocalConnection);
 
         private void OnDeleteMapRequested(string name) => RpcDeleteMap(name, LocalConnection);
+
+        private void OnNewMapRequested() => RpcNewMap(LocalConnection);
 
         private void OnResetViewRequested() => _session.ResetPosition();
 
@@ -511,12 +524,10 @@ namespace SS3D.Systems.Tile.MapEditor
 #endif
         }
 
-        private void OnLayerVisibilityChanged(bool upper, bool lower, bool piping)
+        private void OnLayerCategoryVisibilityChanged(TileLayerCategory category, bool visible)
         {
-            _viewModel.ShowUpperLayers = upper;
-            _viewModel.ShowLowerLayers = lower;
-            _viewModel.ShowPipingLayers = piping;
-            MapEditorLayerVisibility.Apply(upper, lower, piping);
+            _viewModel.SetLayerCategoryVisible(category, visible);
+            MapEditorLayerVisibility.Apply(_viewModel);
         }
 
         private void OnModeSelected(MapEditorMode mode) => _viewModel.SetMode(mode);
@@ -537,6 +548,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _persistence.Save(mapName, overwrite);
             TargetToast(conn, $"Saved {mapName}.");
+            TargetRefreshMapList(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -559,7 +571,27 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _persistence.Delete(mapName);
             TargetToast(conn, $"Deleted {mapName}.");
+            TargetRefreshMapList(conn);
         }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void RpcNewMap(NetworkConnection conn = null)
+        {
+            if (!MapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            if (_tileSystem?.CurrentMap == null)
+                return;
+
+            _tileSystem.CurrentMap.Clear();
+            _commandService.ClearHistory();
+            _hologramManager.DestroyHolograms();
+            TargetSyncUndoState(conn, 0, 0);
+            TargetToast(conn, "Started a new empty map.");
+        }
+
+        [TargetRpc]
+        private void TargetRefreshMapList(NetworkConnection conn) => RefreshMapList();
 
         public void SubmitCommands(MapEditorCommandDto[] commands) =>
             RpcExecuteCommands(commands, LocalConnection);
@@ -567,6 +599,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcExecuteCommands(MapEditorCommandDto[] commands, NetworkConnection conn = null)
         {
+            EnsureCommandServiceBound();
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 

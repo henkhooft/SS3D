@@ -402,11 +402,9 @@
 }
 
 .map-editor-toggle-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 6px;
-    padding-bottom: 6px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    color: var(--ss3d-text-primary);
 }
 
 .map-editor-toggle-label {

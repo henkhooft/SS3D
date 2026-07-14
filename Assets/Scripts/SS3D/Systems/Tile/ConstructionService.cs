@@ -18,13 +18,14 @@ namespace SS3D.Systems.Tile
             _query = query;
         }
 
-        public PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting)
+        public PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting,
+            bool skipBuildCheck = false)
         {
             if (_map == null || tileObject == null)
                 return PlaceResult.Failed;
 
             Vector3 gridPosition = TileHelper.GetClosestPosition(worldPosition);
-            if (!_map.PlaceTileObject(tileObject, gridPosition, direction, skipBuildCheck: false, replaceExisting,
+            if (!_map.PlaceTileObject(tileObject, gridPosition, direction, skipBuildCheck, replaceExisting,
                     skipAdjacency: false, out GameObject instance))
             {
                 return PlaceResult.Failed;

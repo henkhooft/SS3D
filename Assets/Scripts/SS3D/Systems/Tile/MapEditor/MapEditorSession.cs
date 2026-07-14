@@ -103,7 +103,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             float scroll = Mouse.current?.scroll.ReadValue().y ?? 0f;
             if (Mathf.Abs(scroll) > 0.01f)
-                _distance = Mathf.Clamp(_distance - scroll * 0.05f, 5f, 80f);
+                _distance = Mathf.Clamp(_distance - scroll * 0.25f, 5f, 80f);
 
             ApplyCamera();
         }

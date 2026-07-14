@@ -1,3 +1,4 @@
+using SS3D.Systems.Tile.MapEditor.UI;
 using SS3D.Systems.Tile.TileMapCreator;
 
 namespace SS3D.Systems.Tile.MapEditor
@@ -7,16 +8,13 @@ namespace SS3D.Systems.Tile.MapEditor
     /// </summary>
     public static class MapEditorLayerVisibility
     {
-        public static void Apply(bool showUpper, bool showLower, bool showPiping)
+        public static void Apply(MapEditorViewModel viewModel)
         {
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Turfs, showUpper);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Furniture, showUpper);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.WallMounts, showUpper);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Overlays, showUpper);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Items, showUpper);
+            if (viewModel == null)
+                return;
 
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Plenums, showLower);
-            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.WiresAndPipes, showLower || showPiping);
+            foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
+                TileLayerVisibilityService.SetGroupVisible(category, viewModel.IsLayerCategoryVisible(category));
         }
 
         public static void Activate() => TileLayerVisibilityService.Activate();

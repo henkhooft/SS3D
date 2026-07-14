@@ -1,4 +1,6 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.MapEditor.Persistence;
+using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -71,7 +73,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public event Action ShowUIRequested;
         public event Action<bool> GridSnapChanged;
         public event Action<bool> DebugOverlayChanged;
-        public event Action<bool, bool, bool> LayerVisibilityChanged;
+        public event Action NewMapRequested;
+        public event Action MapListRefreshRequested;
+        public event Action<TileLayerCategory, bool> LayerCategoryVisibilityChanged;
         public event Action<MapEditorMode> ModeSelected;
         public event Action<MapEditorSubcategory> SubcategorySelected;
         public event Action<MapEditorCatalogEntry, GenericObjectSo> AssetSelected;
@@ -471,7 +475,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             anchor.Add(popover);
             _activePopover = popover;
+
+            if (_vm.OpenPopover == "maps")
+                RequestMapListRefresh();
         }
+
+        public void RequestMapListRefresh() => MapListRefreshRequested?.Invoke();
 
         private static string GetPopoverTitle(string key) =>
             key switch
@@ -490,21 +499,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     BuildMapsPopover(container);
                     break;
                 case "layers":
-                    AddToggleRow(container, "Show Upper", _vm.ShowUpperLayers, v =>
+                    _vm.EnsureLayerDefaults();
+                    foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
                     {
-                        _vm.ShowUpperLayers = v;
-                        LayerVisibilityChanged?.Invoke(_vm.ShowUpperLayers, _vm.ShowLowerLayers, _vm.ShowPipingLayers);
-                    });
-                    AddToggleRow(container, "Show Lower", _vm.ShowLowerLayers, v =>
-                    {
-                        _vm.ShowLowerLayers = v;
-                        LayerVisibilityChanged?.Invoke(_vm.ShowUpperLayers, _vm.ShowLowerLayers, _vm.ShowPipingLayers);
-                    });
-                    AddToggleRow(container, "Show Piping", _vm.ShowPipingLayers, v =>
-                    {
-                        _vm.ShowPipingLayers = v;
-                        LayerVisibilityChanged?.Invoke(_vm.ShowUpperLayers, _vm.ShowLowerLayers, _vm.ShowPipingLayers);
-                    });
+                        AddToggleRow(container, TileLayerCategoryMapping.GetDisplayName(category),
+                            _vm.IsLayerCategoryVisible(category),
+                            v => LayerCategoryVisibilityChanged?.Invoke(category, v));
+                    }
+
                     break;
                 case "settings":
                     AddToggleRow(container, "Grid Snap", _vm.GridSnap, v =>
@@ -523,6 +525,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void BuildMapsPopover(VisualElement container)
         {
+            Button newMapBtn = new(() => NewMapRequested?.Invoke()) { text = "New Map" };
+            newMapBtn.AddToClassList("map-editor-action-btn");
+            newMapBtn.style.marginBottom = 8;
+            container.Add(newMapBtn);
+
             _saveAsField = new TextField("Save as…") { value = string.Empty };
             _saveAsField.AddToClassList("map-editor-save-field");
             Button saveBtn = new(() =>
@@ -682,18 +689,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static void AddToggleRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
         {
-            VisualElement row = new();
-            row.AddToClassList("map-editor-toggle-row");
-            Label lbl = new(label);
-            lbl.AddToClassList("map-editor-toggle-label");
-            Button toggle = new(() => onChanged(!value))
-            {
-                text = value ? "ON" : "OFF",
-            };
-            toggle.AddToClassList("map-editor-action-btn");
-            row.Add(lbl);
-            row.Add(toggle);
-            parent.Add(row);
+            Toggle toggle = new(label) { value = value };
+            toggle.AddToClassList("map-editor-toggle-row");
+            toggle.RegisterValueChangedCallback(evt => onChanged(evt.newValue));
+            parent.Add(toggle);
         }
     }
 }

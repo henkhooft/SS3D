@@ -8,7 +8,8 @@ namespace SS3D.Systems.Tile
     /// </summary>
     public interface IConstructionService
     {
-        PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting);
+        PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting,
+            bool skipBuildCheck = false);
 
         PlaceResult TryPlaceItem(ItemObjectSo itemObject, Vector3 worldPosition, Quaternion rotation, GameObject existingItem = null);
 

@@ -294,22 +294,30 @@ namespace SS3D.Systems.Tile.TileMapCreator
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
             List<MapEditorCommandDto> commands = new();
 
-            foreach (ConstructionHologram buildGhost in _holograms)
+            if (_holograms.Count == 0 && _selectedObject != null)
             {
-                commands.Add(new MapEditorCommandDto
-                {
-                    Kind = _isPlacingItem
-                        ? MapEditorCommandKind.PlaceItem
-                        : MapEditorCommandKind.PlaceTile,
-                    AssetName = _selectedObject.NameString,
-                    Position = buildGhost.TargetPosition,
-                    Direction = buildGhost.Direction,
-                    ReplaceExisting = isReplacing,
-                });
+                Vector3 position = TileHelper.GetPointedPosition(!_isPlacingItem);
+                commands.Add(CreatePlacementCommand(position, _lastRegisteredDirection, isReplacing));
             }
 
-            _mapEditor.SubmitCommands(commands.ToArray());
+            foreach (ConstructionHologram buildGhost in _holograms)
+            {
+                commands.Add(CreatePlacementCommand(buildGhost.TargetPosition, buildGhost.Direction, isReplacing));
+            }
+
+            if (commands.Count > 0)
+                _mapEditor.SubmitCommands(commands.ToArray());
         }
+
+        private MapEditorCommandDto CreatePlacementCommand(Vector3 position, Direction direction, bool replaceExisting) =>
+            new()
+            {
+                Kind = _isPlacingItem ? MapEditorCommandKind.PlaceItem : MapEditorCommandKind.PlaceTile,
+                AssetName = _selectedObject.NameString,
+                Position = position,
+                Direction = direction,
+                ReplaceExisting = replaceExisting,
+            };
 
         /// <summary>
         /// Delete all objects, that are at the same locations as existing holograms.

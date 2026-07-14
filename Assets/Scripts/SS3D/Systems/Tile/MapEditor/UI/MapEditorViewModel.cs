@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
 
@@ -19,9 +20,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public bool HideUI { get; set; }
         public bool GridSnap { get; set; } = true;
         public bool DebugOverlay { get; set; }
-        public bool ShowUpperLayers { get; set; } = true;
-        public bool ShowLowerLayers { get; set; } = true;
-        public bool ShowPipingLayers { get; set; }
         public int UndoDepth { get; set; }
         public int RedoDepth { get; set; }
         public string SelectedObjectHint { get; set; } = "Select the Edit tool to place this object";
@@ -31,7 +29,27 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public MapEditorSaveTarget SaveTarget { get; set; } = MapEditorSaveTarget.LocalTemplate;
         public MapEditorPlacementMode PlacementMode { get; set; } = MapEditorPlacementMode.Normal;
 
+        private readonly Dictionary<TileLayerCategory, bool> _layerCategoryVisibility = new();
+
         public event Action StateChanged;
+
+        public void EnsureLayerDefaults()
+        {
+            foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
+            {
+                if (!_layerCategoryVisibility.ContainsKey(category))
+                    _layerCategoryVisibility[category] = true;
+            }
+        }
+
+        public bool IsLayerCategoryVisible(TileLayerCategory category) =>
+            !_layerCategoryVisibility.TryGetValue(category, out bool visible) || visible;
+
+        public void SetLayerCategoryVisible(TileLayerCategory category, bool visible)
+        {
+            _layerCategoryVisibility[category] = visible;
+            NotifyChanged();
+        }
 
         public void NotifyChanged() => StateChanged?.Invoke();
 
