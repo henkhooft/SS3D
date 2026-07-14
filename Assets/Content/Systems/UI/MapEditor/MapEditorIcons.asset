@@ -9,43 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4a8c2f1e9b3d4a5c8e7f6d5c4b3a2910, type: 3}
+  m_Script: {fileID: 11500000, guid: 4a8c2f1e9b3d4a5c8e7f6d5c4b3a2910, type: 2}
   m_Name: MapEditorIcons
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.MapEditor.MapEditorIconsSo
-  _select: {fileID: 21300000, guid: 11b8010647e92ecf39ddb5fb0cde3a69, type: 3}
-  _edit: {fileID: 21300000, guid: 553e0547c4004ee78be7b9f0f3ac50cc, type: 3}
-  _move: {fileID: 21300000, guid: 163ed1c39dd762c2d822e1caaf8588ab, type: 3}
-  _undo: {fileID: 21300000, guid: e638eaaca57d6e4a994bb4c1b2948bfa, type: 3}
-  _redo: {fileID: 21300000, guid: 86877d27e52a22bb4a66921420dddcdc, type: 3}
-  _quicksave: {fileID: 21300000, guid: c104a8f3574252acc96e1f3ee76eff9f, type: 3}
-  _openMap: {fileID: 21300000, guid: 2831ed2fcccdcd4bd9ffc78ad7b58fd9, type: 3}
-  _resetView: {fileID: 21300000, guid: d31720133640fcb69ba8280f437d3604, type: 3}
-  _layers: {fileID: 21300000, guid: cafd8d3b2f88cf4bea0930fdc13715ca, type: 3}
-  _eye: {fileID: 21300000, guid: c976270affa8812dca12a35dfeaeff09, type: 3}
-  _eyeOff: {fileID: 21300000, guid: 17a636453a053b198884db32de5a49a1, type: 3}
-  _settings: {fileID: 21300000, guid: 398a6c000b1b5093b95316638e304697, type: 3}
-  _exit: {fileID: 21300000, guid: 386a6aa028fa311fd9d070a27a56513e, type: 3}
-  _search: {fileID: 21300000, guid: d70ffe1f311e42b2889afd11c40698e3, type: 3}
-  _showUi: {fileID: 21300000, guid: c976270affa8812dca12a35dfeaeff09, type: 3}
-  _modeUpper: {fileID: 21300000, guid: 8f558bcd25e9bb0bdb602c2af9772bae, type: 3}
-  _modeLower: {fileID: 21300000, guid: e20910bcbbd55e966ab1dbd1d8e8b831, type: 3}
-  _modeItems: {fileID: 21300000, guid: 24ff5059ad89c2ecbad3e25870315422, type: 3}
-  _modeScripting: {fileID: 21300000, guid: fc0d6dc846701aac0a4cb066e9606da3, type: 3}
-  _subFlooring: {fileID: 21300000, guid: b283acbdb5ef8765abfe93020b831074, type: 3}
-  _subTurfs: {fileID: 21300000, guid: 18b91027d3249d92cad2a21dd1777f9f, type: 3}
-  _subWalls: {fileID: 21300000, guid: f41719b2e21f79717b1523a6fcf2e019, type: 3}
-  _subDoors: {fileID: 21300000, guid: 31d0491be0f35a5cc96228dac04e96bf, type: 3}
-  _subTileObjects: {fileID: 21300000, guid: 24ff5059ad89c2ecbad3e25870315422, type: 3}
-  _subWallAttachments: {fileID: 21300000, guid: f1a782d2d0c7b6968b0a5eb75ecb0404, type: 3}
-  _subPiping: {fileID: 21300000, guid: 60b39984bc325dd6aaf68485b598aa88, type: 3}
-  _subDisposals: {fileID: 21300000, guid: 25e1634414ba3e2a1b2cfb327b7206fd, type: 3}
-  _subBaseTiles: {fileID: 21300000, guid: d5ad53b71a0a76447b5cd89753e89305, type: 3}
-  _subFoodDrink: {fileID: 21300000, guid: 24ff5059ad89c2ecbad3e25870315422, type: 3}
-  _subTools: {fileID: 21300000, guid: 398a6c000b1b5093b95316638e304697, type: 3}
-  _subMedical: {fileID: 21300000, guid: 24ff5059ad89c2ecbad3e25870315422, type: 3}
-  _subSecurity: {fileID: 21300000, guid: 5809a465616dc1adda2487b0a0fd3d05, type: 3}
-  _subMisc: {fileID: 21300000, guid: 3a9fcb007f444e2cf80b4faf93bbc907, type: 3}
-  _subAtmospherics: {fileID: 21300000, guid: 60b39984bc325dd6aaf68485b598aa88, type: 3}
-  _subSpawnPlacements: {fileID: 21300000, guid: f1a782d2d0c7b6968b0a5eb75ecb0404, type: 3}
-  _subRandomSpawners: {fileID: 21300000, guid: a85a36885b9e1fc87905faf48512b7e6, type: 3}
-  _subTriggers: {fileID: 21300000, guid: d4143fe05ecd71be3b980575f22e33e1, type: 3}

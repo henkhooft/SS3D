@@ -621,7 +621,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return strip;
         }
 
-        private static Button CreateIconButton(Sprite icon, string tooltip, Action onClick)
+        private static Button CreateIconButton(VectorImage icon, string tooltip, Action onClick)
         {
             Button btn = new(onClick);
             btn.AddToClassList("map-editor-icon-btn");
@@ -633,12 +633,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return btn;
         }
 
-        private static VisualElement CreateIconElement(Sprite icon)
+        private static VisualElement CreateIconElement(VectorImage icon)
         {
-            VisualElement iconElement = new();
+            VisualElement element = new() { pickingMode = PickingMode.Ignore };
+            element.AddToClassList("map-editor-vector-icon");
             if (icon != null)
-                iconElement.style.backgroundImage = new StyleBackground(icon);
-            return iconElement;
+                element.style.backgroundImage = new StyleBackground(icon);
+            return element;
         }
 
         private static void AddSeparator(VisualElement parent)
