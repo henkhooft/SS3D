@@ -31,9 +31,11 @@ namespace SS3D.Systems.Tile.MapEditor
         [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _styleSheet;
         [SerializeField] private MapEditorCatalogSo _catalogAsset;
+        [SerializeField] private MapEditorIconsSo _icons;
         [SerializeField] private ConstructionHologramManager _hologramManager;
 
         private readonly MapEditorViewModel _viewModel = new();
+        private MapEditorGameplayHud _gameplayHud;
         private readonly MapEditorCatalog _catalog = new();
         private readonly MapEditorSession _session = new();
         private readonly MapEditorCommandService _commandService = new();
@@ -65,8 +67,6 @@ namespace SS3D.Systems.Tile.MapEditor
             base.OnAwake();
             if (_document == null)
                 _document = GetComponent<UIDocument>();
-
-            ShutdownDocument();
         }
 
         protected override void OnStart()
@@ -76,6 +76,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _tileSystem = SubSystems.Get<TileSubSystem>();
             _controls = _inputSystem.Inputs.TileCreator;
             _persistence = new MapEditorLocalPersistence(_tileSystem);
+            _gameplayHud = new MapEditorGameplayHud(transform);
 
             _inputSystem.ToggleAction(_controls.ToggleMenu, true);
             _controls.ToggleMenu.performed += HandleToggleMenu;
@@ -98,8 +99,10 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             _controls.ToggleMenu.performed -= HandleToggleMenu;
             SetGameplayInputBlocked(false);
-            _view?.Destroy();
-            ShutdownDocument();
+            _gameplayHud?.SetVisible(true);
+            TeardownView();
+            if (_document != null)
+                _document.enabled = false;
             base.OnDestroyed();
         }
 
@@ -111,44 +114,35 @@ namespace SS3D.Systems.Tile.MapEditor
             _overlayRoot = _document.rootVisualElement.Q<VisualElement>("overlay-root") ??
                            _document.rootVisualElement;
 
-            _view = new MapEditorView(_styleSheet, _viewModel, _catalog, _tileSystem.Loader);
+            _view = new MapEditorView(_styleSheet, _icons, _viewModel, _catalog, _tileSystem.Loader);
             _view.Build(_overlayRoot);
+            WireViewEvents(_overlayRoot);
+            RebuildCatalog();
+        }
 
+        private void WireViewEvents(VisualElement overlayRoot)
+        {
             _view.ExitRequested += RequestExit;
-            _view.ToolSelected += tool => _viewModel.SetTool(tool);
-            _view.UndoRequested += () => RpcUndo(LocalConnection);
-            _view.RedoRequested += () => RpcRedo(LocalConnection);
+            _view.ToolSelected += OnToolSelected;
+            _view.UndoRequested += OnUndoRequested;
+            _view.RedoRequested += OnRedoRequested;
             _view.QuicksaveRequested += HandleQuicksave;
-            _view.SaveAsRequested += name => RpcSaveMap(name, false, LocalConnection);
-            _view.LoadMapRequested += name => RpcLoadMap(name, LocalConnection);
-            _view.DeleteMapRequested += name => RpcDeleteMap(name, LocalConnection);
-            _view.ResetViewRequested += () => _session.ResetPosition();
-            _view.HideUIRequested += () => { _viewModel.HideUI = true; _viewModel.NotifyChanged(); };
-            _view.ShowUIRequested += () => { _viewModel.HideUI = false; _viewModel.NotifyChanged(); };
-            _view.GridSnapChanged += v => _viewModel.GridSnap = v;
-            _view.DebugOverlayChanged += v =>
-            {
-                _viewModel.DebugOverlay = v;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                AreaDevSettings.ShowAreaGizmos = v;
-#endif
-            };
-            _view.LayerVisibilityChanged += (upper, lower, piping) =>
-            {
-                _viewModel.ShowUpperLayers = upper;
-                _viewModel.ShowLowerLayers = lower;
-                _viewModel.ShowPipingLayers = piping;
-                MapEditorLayerVisibility.Apply(upper, lower, piping);
-            };
-            _view.ModeSelected += mode => _viewModel.SetMode(mode);
-            _view.SubcategorySelected += sub => _viewModel.SetSubcategory(sub);
-            _view.SearchChanged += text => { _viewModel.SearchText = text; _viewModel.NotifyChanged(); };
+            _view.SaveAsRequested += OnSaveAsRequested;
+            _view.LoadMapRequested += OnLoadMapRequested;
+            _view.DeleteMapRequested += OnDeleteMapRequested;
+            _view.ResetViewRequested += OnResetViewRequested;
+            _view.HideUIRequested += OnHideUiRequested;
+            _view.ShowUIRequested += OnShowUiRequested;
+            _view.GridSnapChanged += OnGridSnapChanged;
+            _view.DebugOverlayChanged += OnDebugOverlayChanged;
+            _view.LayerVisibilityChanged += OnLayerVisibilityChanged;
+            _view.ModeSelected += OnModeSelected;
+            _view.SubcategorySelected += OnSubcategorySelected;
+            _view.SearchChanged += OnSearchChanged;
             _view.AssetSelected += HandleAssetSelected;
 
-            _overlayRoot.RegisterCallback<PointerEnterEvent>(_ => SetMouseOverUI(true));
-            _overlayRoot.RegisterCallback<PointerLeaveEvent>(_ => SetMouseOverUI(false));
-
-            RebuildCatalog();
+            overlayRoot.RegisterCallback<PointerEnterEvent>(OnOverlayPointerEnter);
+            overlayRoot.RegisterCallback<PointerLeaveEvent>(OnOverlayPointerLeave);
         }
 
         private void RebuildCatalog()
@@ -193,10 +187,12 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
                 SetGameplayInputBlocked(true);
+                _gameplayHud.SetVisible(false);
                 RpcRequestUndoState(LocalConnection);
             }
             else
             {
+                _gameplayHud.SetVisible(true);
                 _hologramManager.DestroyHolograms();
                 _hologramManager.enabled = false;
                 _session.Exit();
@@ -414,17 +410,122 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!_document.enabled)
                 _document.enabled = true;
 
-            if (_view == null)
+            if (_view == null || _view.Root?.panel == null)
+            {
+                TeardownView();
                 BuildView();
-            else
-                _viewModel.NotifyChanged();
+            }
+
+            if (_view?.Root != null)
+                _view.Root.style.display = DisplayStyle.Flex;
+
+            _viewModel.NotifyChanged();
         }
 
         private void ShutdownDocument()
         {
-            if (_document != null)
-                _document.enabled = false;
+            if (_view?.Root != null)
+                _view.Root.style.display = DisplayStyle.None;
         }
+
+        private void TeardownView()
+        {
+            if (_view == null)
+                return;
+
+            UnwireViewEvents();
+            _view.Destroy();
+            _view = null;
+        }
+
+        private void UnwireViewEvents()
+        {
+            if (_view == null)
+                return;
+
+            _view.ExitRequested -= RequestExit;
+            _view.ToolSelected -= OnToolSelected;
+            _view.UndoRequested -= OnUndoRequested;
+            _view.RedoRequested -= OnRedoRequested;
+            _view.QuicksaveRequested -= HandleQuicksave;
+            _view.SaveAsRequested -= OnSaveAsRequested;
+            _view.LoadMapRequested -= OnLoadMapRequested;
+            _view.DeleteMapRequested -= OnDeleteMapRequested;
+            _view.ResetViewRequested -= OnResetViewRequested;
+            _view.HideUIRequested -= OnHideUiRequested;
+            _view.ShowUIRequested -= OnShowUiRequested;
+            _view.GridSnapChanged -= OnGridSnapChanged;
+            _view.DebugOverlayChanged -= OnDebugOverlayChanged;
+            _view.LayerVisibilityChanged -= OnLayerVisibilityChanged;
+            _view.ModeSelected -= OnModeSelected;
+            _view.SubcategorySelected -= OnSubcategorySelected;
+            _view.SearchChanged -= OnSearchChanged;
+            _view.AssetSelected -= HandleAssetSelected;
+
+            if (_overlayRoot != null)
+            {
+                _overlayRoot.UnregisterCallback<PointerEnterEvent>(OnOverlayPointerEnter);
+                _overlayRoot.UnregisterCallback<PointerLeaveEvent>(OnOverlayPointerLeave);
+            }
+        }
+
+        private void OnToolSelected(MapEditorTool tool) => _viewModel.SetTool(tool);
+
+        private void OnUndoRequested() => RpcUndo(LocalConnection);
+
+        private void OnRedoRequested() => RpcRedo(LocalConnection);
+
+        private void OnSaveAsRequested(string name) => RpcSaveMap(name, false, LocalConnection);
+
+        private void OnLoadMapRequested(string name) => RpcLoadMap(name, LocalConnection);
+
+        private void OnDeleteMapRequested(string name) => RpcDeleteMap(name, LocalConnection);
+
+        private void OnResetViewRequested() => _session.ResetPosition();
+
+        private void OnHideUiRequested()
+        {
+            _viewModel.HideUI = true;
+            _viewModel.NotifyChanged();
+        }
+
+        private void OnShowUiRequested()
+        {
+            _viewModel.HideUI = false;
+            _viewModel.NotifyChanged();
+        }
+
+        private void OnGridSnapChanged(bool value) => _viewModel.GridSnap = value;
+
+        private void OnDebugOverlayChanged(bool value)
+        {
+            _viewModel.DebugOverlay = value;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AreaDevSettings.ShowAreaGizmos = value;
+#endif
+        }
+
+        private void OnLayerVisibilityChanged(bool upper, bool lower, bool piping)
+        {
+            _viewModel.ShowUpperLayers = upper;
+            _viewModel.ShowLowerLayers = lower;
+            _viewModel.ShowPipingLayers = piping;
+            MapEditorLayerVisibility.Apply(upper, lower, piping);
+        }
+
+        private void OnModeSelected(MapEditorMode mode) => _viewModel.SetMode(mode);
+
+        private void OnSubcategorySelected(MapEditorSubcategory sub) => _viewModel.SetSubcategory(sub);
+
+        private void OnSearchChanged(string text)
+        {
+            _viewModel.SearchText = text;
+            _viewModel.NotifyChanged();
+        }
+
+        private void OnOverlayPointerEnter(PointerEnterEvent _) => SetMouseOverUI(true);
+
+        private void OnOverlayPointerLeave(PointerLeaveEvent _) => SetMouseOverUI(false);
 
         [ServerRpc(RequireOwnership = false)]
         private void RpcSaveMap(string mapName, bool overwrite, NetworkConnection conn = null)

@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8011223344556677893}
   - component: {fileID: 8011223344556677894}
   m_Layer: 0
-  m_Name: MapEditor
+  m_Name: MapEditorCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -47,9 +47,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7e8d9c0b1a243658697890abcdef010, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 8011223344556677893}
+  _networkObjectCache: {fileID: 8011223344556677893}
   _document: {fileID: 8011223344556677892}
   _styleSheet: {fileID: 7433441132597879392, guid: b2c3d4e5f6a7482190abcdef98765432, type: 3}
   _catalogAsset: {fileID: 0}
+  _icons: {fileID: 11400000, guid: 9e4d7c2b1a0f4e8d9c6b5a4f3e2d1c0b, type: 2}
   _hologramManager: {fileID: 8011223344556677894}
 --- !u!114 &8011223344556677892
 MonoBehaviour:
@@ -91,7 +95,7 @@ MonoBehaviour:
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 10563085811852987953
   <IsNested>k__BackingField: 0
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}

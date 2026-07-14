@@ -12,6 +12,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     public sealed class MapEditorView
     {
         private readonly StyleSheet _styleSheet;
+        private readonly MapEditorIconsSo _icons;
         private readonly MapEditorViewModel _vm;
         private readonly MapEditorCatalog _catalog;
         private readonly TileResourceLoader _loader;
@@ -43,11 +44,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public MapEditorView(
             StyleSheet styleSheet,
+            MapEditorIconsSo icons,
             MapEditorViewModel viewModel,
             MapEditorCatalog catalog,
             TileResourceLoader loader)
         {
             _styleSheet = styleSheet;
+            _icons = icons;
             _vm = viewModel;
             _catalog = catalog;
             _loader = loader;
@@ -119,8 +122,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private void BuildExitButton()
         {
             VisualElement region = CreateRegion("map-editor-region--top-left");
-            Button exit = new(() => ExitRequested?.Invoke()) { text = "Exit" };
+            Button exit = new(() => ExitRequested?.Invoke());
             exit.AddToClassList("map-editor-exit-btn");
+            exit.AddToClassList("map-editor-exit-btn--labeled");
+            exit.tooltip = "Exit";
+
+            VisualElement icon = CreateIconElement(_icons?.Exit);
+            icon.AddToClassList("map-editor-icon-btn__icon");
+            Label label = new("Exit");
+            label.AddToClassList("map-editor-exit-btn__label");
+            exit.Add(icon);
+            exit.Add(label);
             region.Add(exit);
             _hudLayer.Add(region);
         }
@@ -131,22 +143,22 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _toolsPopoverAnchor = region;
 
             _toolsToolbar = CreateToolbarStrip();
-            AddToolButton(_toolsToolbar, MapEditorTool.Select, "Sel");
-            AddToolButton(_toolsToolbar, MapEditorTool.Edit, "Edt");
-            AddToolButton(_toolsToolbar, MapEditorTool.Move, "Mov");
+            AddToolButton(_toolsToolbar, MapEditorTool.Select, "Select");
+            AddToolButton(_toolsToolbar, MapEditorTool.Edit, "Edit");
+            AddToolButton(_toolsToolbar, MapEditorTool.Move, "Move");
             AddSeparator(_toolsToolbar);
 
-            Button undo = CreateIconButton("Undo", () => UndoRequested?.Invoke());
+            Button undo = CreateIconButton(_icons?.Undo, "Undo", () => UndoRequested?.Invoke());
             undo.name = "undo-btn";
             _toolsToolbar.Add(undo);
 
-            Button redo = CreateIconButton("Redo", () => RedoRequested?.Invoke());
+            Button redo = CreateIconButton(_icons?.Redo, "Redo", () => RedoRequested?.Invoke());
             redo.name = "redo-btn";
             _toolsToolbar.Add(redo);
             AddSeparator(_toolsToolbar);
 
-            _toolsToolbar.Add(CreateIconButton("Save", () => QuicksaveRequested?.Invoke()));
-            _toolsToolbar.Add(CreateIconButton("Maps", ToggleMapsPopover));
+            _toolsToolbar.Add(CreateIconButton(_icons?.Quicksave, "Quicksave", () => QuicksaveRequested?.Invoke()));
+            _toolsToolbar.Add(CreateIconButton(_icons?.OpenMap, "Map selection", ToggleMapsPopover));
 
             region.Add(_toolsToolbar);
             _hudLayer.Add(region);
@@ -158,10 +170,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _viewPopoverAnchor = region;
 
             _viewToolbar = CreateToolbarStrip();
-            _viewToolbar.Add(CreateIconButton("Reset", () => ResetViewRequested?.Invoke()));
-            _viewToolbar.Add(CreateIconButton("Layers", () => TogglePopover("layers")));
-            _viewToolbar.Add(CreateIconButton("Hide", () => HideUIRequested?.Invoke()));
-            _viewToolbar.Add(CreateIconButton("Set", () => TogglePopover("settings")));
+            _viewToolbar.Add(CreateIconButton(_icons?.ResetView, "Reset position", () => ResetViewRequested?.Invoke()));
+            _viewToolbar.Add(CreateIconButton(_icons?.Layers, "Layer view mode", () => TogglePopover("layers")));
+            _viewToolbar.Add(CreateIconButton(_icons?.EyeOff, "Hide UI", () => HideUIRequested?.Invoke()));
+            _viewToolbar.Add(CreateIconButton(_icons?.Settings, "Map editor settings", () => TogglePopover("settings")));
 
             region.Add(_viewToolbar);
             _hudLayer.Add(region);
@@ -206,12 +218,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _modeRail.AddToClassList("map-editor-mode-rail");
             foreach (MapEditorMode mode in Enum.GetValues(typeof(MapEditorMode)))
             {
-                Button tab = new(() => ModeSelected?.Invoke(mode))
-                {
-                    text = MapEditorCatalog.GetModeLabel(mode),
-                };
-                tab.AddToClassList("map-editor-mode-tab");
-                tab.userData = mode;
+                Button tab = CreateModeTab(mode);
                 _modeButtons[mode] = tab;
                 _modeRail.Add(tab);
             }
@@ -234,7 +241,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _searchField = new TextField { value = string.Empty };
             _searchField.AddToClassList("map-editor-search-field");
             _searchField.RegisterValueChangedCallback(evt => SearchChanged?.Invoke(evt.newValue));
-            search.Add(new Label("⌕") { style = { color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) } });
+            VisualElement searchIcon = CreateIconElement(_icons?.Search);
+            searchIcon.AddToClassList("map-editor-search-icon");
+            search.Add(searchIcon);
             search.Add(_searchField);
 
             header.Add(_subcatRow);
@@ -257,7 +266,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void BuildRevealButton()
         {
-            Button reveal = CreateIconButton("Show", () => ShowUIRequested?.Invoke());
+            Button reveal = CreateIconButton(_icons?.ShowUi, "Show UI", () => ShowUIRequested?.Invoke());
             reveal.AddToClassList("map-editor-reveal-btn");
             reveal.name = "reveal-ui-btn";
             reveal.style.display = DisplayStyle.None;
@@ -326,12 +335,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(_vm.CurrentMode);
             foreach (MapEditorSubcategory sub in subs)
             {
-                Button tab = new(() => SubcategorySelected?.Invoke(sub))
-                {
-                    text = MapEditorCatalog.GetSubcategoryLabel(sub),
-                };
-                tab.AddToClassList("map-editor-subcat-tab");
-                tab.EnableInClassList("map-editor-subcat-tab--active", sub == _vm.CurrentSubcategory);
+                Button tab = CreateSubcategoryTab(sub);
                 _subcatButtons[sub] = tab;
                 _subcatRow.Add(tab);
             }
@@ -549,11 +553,41 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
         }
 
-        private void AddToolButton(VisualElement parent, MapEditorTool tool, string label)
+        private void AddToolButton(VisualElement parent, MapEditorTool tool, string tooltip)
         {
-            Button btn = CreateIconButton(label, () => ToolSelected?.Invoke(tool));
+            Button btn = CreateIconButton(_icons?.GetToolIcon(tool), tooltip, () => ToolSelected?.Invoke(tool));
             _toolButtons[tool] = btn;
             parent.Add(btn);
+        }
+
+        private Button CreateModeTab(MapEditorMode mode)
+        {
+            Button tab = new(() => ModeSelected?.Invoke(mode));
+            tab.AddToClassList("map-editor-mode-tab");
+            tab.userData = mode;
+
+            VisualElement icon = CreateIconElement(_icons?.GetModeIcon(mode));
+            icon.AddToClassList("map-editor-mode-tab__icon");
+            Label label = new(MapEditorCatalog.GetModeLabel(mode));
+            label.AddToClassList("map-editor-mode-tab__label");
+            tab.Add(icon);
+            tab.Add(label);
+            return tab;
+        }
+
+        private Button CreateSubcategoryTab(MapEditorSubcategory subcategory)
+        {
+            Button tab = new(() => SubcategorySelected?.Invoke(subcategory));
+            tab.AddToClassList("map-editor-subcat-tab");
+            tab.EnableInClassList("map-editor-subcat-tab--active", subcategory == _vm.CurrentSubcategory);
+
+            VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(subcategory));
+            icon.AddToClassList("map-editor-subcat-tab__icon");
+            Label label = new(MapEditorCatalog.GetSubcategoryLabel(subcategory));
+            label.AddToClassList("map-editor-subcat-tab__label");
+            tab.Add(icon);
+            tab.Add(label);
+            return tab;
         }
 
         private static VisualElement CreateRegion(string className)
@@ -572,11 +606,24 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return strip;
         }
 
-        private static Button CreateIconButton(string label, Action onClick)
+        private static Button CreateIconButton(Sprite icon, string tooltip, Action onClick)
         {
-            Button btn = new(onClick) { text = label };
+            Button btn = new(onClick);
             btn.AddToClassList("map-editor-icon-btn");
+            btn.tooltip = tooltip;
+
+            VisualElement iconElement = CreateIconElement(icon);
+            iconElement.AddToClassList("map-editor-icon-btn__icon");
+            btn.Add(iconElement);
             return btn;
+        }
+
+        private static VisualElement CreateIconElement(Sprite icon)
+        {
+            VisualElement iconElement = new();
+            if (icon != null)
+                iconElement.style.backgroundImage = new StyleBackground(icon);
+            return iconElement;
         }
 
         private static void AddSeparator(VisualElement parent)

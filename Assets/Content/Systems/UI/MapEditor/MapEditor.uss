@@ -27,7 +27,6 @@
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-md);
     padding: 6px;
-    box-shadow: var(--ss3d-shadow-window);
 }
 
 .map-editor-toolbar-strip > * {
@@ -45,6 +44,68 @@
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-sm);
     color: var(--ss3d-text-primary);
+    -unity-text-align: middle-center;
+    font-size: 0;
+}
+
+.map-editor-icon-btn__icon {
+    width: 19px;
+    height: 19px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.map-editor-exit-btn--labeled {
+    width: auto;
+    min-width: 38px;
+    height: 36px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.map-editor-exit-btn--labeled .map-editor-icon-btn__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+.map-editor-exit-btn__label {
+    font-size: 12px;
+    color: var(--ss3d-text-primary);
+}
+
+.map-editor-mode-tab__icon {
+    width: 18px;
+    height: 18px;
+    margin-bottom: 4px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.map-editor-mode-tab__label {
+    font-size: 11px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.map-editor-subcat-tab__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.map-editor-subcat-tab__label {
+    font-size: 12px;
+}
+
+.map-editor-search-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.55;
 }
 
 .map-editor-icon-btn:hover {
@@ -99,7 +160,6 @@
     border-width: 1px;
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-md);
-    box-shadow: var(--ss3d-shadow-window);
     padding: 12px;
 }
 
@@ -119,7 +179,6 @@
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-md);
     padding: 8px;
-    box-shadow: var(--ss3d-shadow-window);
 }
 
 .map-editor-mode-tab {
@@ -337,7 +396,6 @@
     padding: 10px 18px;
     color: var(--ss3d-text-primary);
     font-size: 13px;
-    box-shadow: var(--ss3d-shadow-panel);
 }
 
 .map-editor-reveal-btn {
