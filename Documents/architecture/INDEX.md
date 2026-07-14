@@ -131,6 +131,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
+| [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |
 | [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
 | [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; blend/timing polish remains) |
