@@ -113,14 +113,15 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _overlayRoot = _document.rootVisualElement.Q<VisualElement>("overlay-root") ??
                            _document.rootVisualElement;
+            _overlayRoot.pickingMode = PickingMode.Ignore;
 
             _view = new MapEditorView(_styleSheet, _icons, _viewModel, _catalog, _tileSystem.Loader);
             _view.Build(_overlayRoot);
-            WireViewEvents(_overlayRoot);
+            WireViewEvents();
             RebuildCatalog();
         }
 
-        private void WireViewEvents(VisualElement overlayRoot)
+        private void WireViewEvents()
         {
             _view.ExitRequested += RequestExit;
             _view.ToolSelected += OnToolSelected;
@@ -140,9 +141,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.SubcategorySelected += OnSubcategorySelected;
             _view.SearchChanged += OnSearchChanged;
             _view.AssetSelected += HandleAssetSelected;
-
-            overlayRoot.RegisterCallback<PointerEnterEvent>(OnOverlayPointerEnter);
-            overlayRoot.RegisterCallback<PointerLeaveEvent>(OnOverlayPointerLeave);
         }
 
         private void RebuildCatalog()
@@ -186,6 +184,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
+                SetMouseOverUI(false);
+                _inputSystem.ToggleAction(_controls.Place, true);
                 SetGameplayInputBlocked(true);
                 _gameplayHud.SetVisible(false);
                 RpcRequestUndoState(LocalConnection);
@@ -262,6 +262,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
             if (_session.IsActive)
                 _session.Update(updateEvent.DeltaTime);
+
+            UpdateMouseOverUI();
 
             if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
                 HandleSelectClick();
@@ -392,6 +394,16 @@ namespace SS3D.Systems.Tile.MapEditor
             _moveAssetName = null;
         }
 
+        private void UpdateMouseOverUI()
+        {
+            if (_view == null)
+                return;
+
+            bool over = _view.IsPointerOverInteractiveUI(Mouse.current?.position.ReadValue() ?? Input.mousePosition);
+            if (over != _mouseOverUI)
+                SetMouseOverUI(over);
+        }
+
         private void SetMouseOverUI(bool over)
         {
             _mouseOverUI = over;
@@ -461,12 +473,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.SubcategorySelected -= OnSubcategorySelected;
             _view.SearchChanged -= OnSearchChanged;
             _view.AssetSelected -= HandleAssetSelected;
-
-            if (_overlayRoot != null)
-            {
-                _overlayRoot.UnregisterCallback<PointerEnterEvent>(OnOverlayPointerEnter);
-                _overlayRoot.UnregisterCallback<PointerLeaveEvent>(OnOverlayPointerLeave);
-            }
         }
 
         private void OnToolSelected(MapEditorTool tool) => _viewModel.SetTool(tool);
@@ -522,10 +528,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.SearchText = text;
             _viewModel.NotifyChanged();
         }
-
-        private void OnOverlayPointerEnter(PointerEnterEvent _) => SetMouseOverUI(true);
-
-        private void OnOverlayPointerLeave(PointerLeaveEvent _) => SetMouseOverUI(false);
 
         [ServerRpc(RequireOwnership = false)]
         private void RpcSaveMap(string mapName, bool overwrite, NetworkConnection conn = null)

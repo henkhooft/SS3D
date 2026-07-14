@@ -58,6 +58,18 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
+        public void Infer_OverlayObject_MapsToUpperOverlays()
+        {
+            TileObjectSo overlay = ScriptableObject.CreateInstance<TileObjectSo>();
+            overlay.layer = TileLayer.Overlays;
+
+            MapEditorCatalogEntry entry = MapEditorCatalogHeuristics.Infer(overlay);
+
+            Assert.AreEqual(MapEditorMode.Upper, entry.Mode);
+            Assert.AreEqual(MapEditorSubcategory.Overlays, entry.Subcategory);
+        }
+
+        [Test]
         public void ScriptingSubcategories_AreMarkedUnavailable()
         {
             Assert.IsTrue(MapEditorCatalog.IsScriptingSubcategory(MapEditorSubcategory.SpawnPlacements));

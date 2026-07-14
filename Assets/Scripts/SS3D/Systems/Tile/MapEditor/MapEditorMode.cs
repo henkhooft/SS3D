@@ -43,5 +43,6 @@ namespace SS3D.Systems.Tile.MapEditor
         Triggers,
 
         Uncategorized,
+        Overlays = 19,
     }
 }

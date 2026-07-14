@@ -50,7 +50,7 @@ namespace SS3D.Systems.Tile.MapEditor
                     when tile.genericType == TileObjectGenericType.Pipe =>
                     Entry(asset.NameString, MapEditorMode.Lower, MapEditorSubcategory.Piping, "pipe"),
                 TileLayer.Overlays =>
-                    Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.Flooring, "overlay"),
+                    Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.Overlays, "overlay"),
                 _ => Uncategorized(asset.NameString),
             };
         }

@@ -1,0 +1,960 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b7298e7e03755bb0944c2bfe16fbae2, type: 3}
+  m_Name: MapEditorCatalog
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.MapEditor.MapEditorCatalogSo
+  Entries:
+  - AssetName: __eraser__
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - eraser
+    - delete
+    - clear
+    IsEraser: 1
+  - AssetName: AirAlarm
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: APC
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: AtmosPipesL1
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    IsEraser: 0
+  - AssetName: AtmosPipesL2
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    IsEraser: 0
+  - AssetName: AtmosPipesL3
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    IsEraser: 0
+  - AssetName: AtmosPipesL4
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    IsEraser: 0
+  - AssetName: Backpack
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: BikeHorn
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Blender
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Boombox
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: BrutePatch
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: BurnPatch
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Cables
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - wire
+    - cable
+    IsEraser: 0
+  - AssetName: Catwalk
+    Mode: 0
+    Subcategory: 18
+    SearchTags:
+    - uncategorized
+    IsEraser: 0
+  - AssetName: ChemicalDispenser
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: CivillianAirlock
+    Mode: 0
+    Subcategory: 3
+    SearchTags:
+    - door
+    IsEraser: 0
+  - AssetName: Crowbar
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Cryotube
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: DinnerBooth
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: DisposalBin
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: DisposalOutlet
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: DisposalPipes
+    Mode: 1
+    Subcategory: 7
+    SearchTags:
+    - disposal
+    IsEraser: 0
+  - AssetName: DonkPocket
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Doodad
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: ElectricalCable
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: ElectricalWire
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: FacewearGasMask
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: FancyCarpetRed
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: FireAlarm
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: FlashlightBlue
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: FloorTile
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: FuelTank
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: GasPump
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Gibber
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: GlassReinforcedSheet
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: GlassShard
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: GlassSheet
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: GloveInsulated
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Hatchet
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Headset
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: HeadsetSecurity
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: HealthScanner
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: IDCard
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: JukeboxBlueGreen
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: JumpsuitBotany
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: JumpsuitEngineer
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: JumpsuitGrey
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: JumpsuitSecurity
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: KitchenKnife
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Lattice
+    Mode: 0
+    Subcategory: 18
+    SearchTags:
+    - uncategorized
+    IsEraser: 0
+  - AssetName: LightBulbFixture
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: LightSwitch
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: LightTubeFixture
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: Locker
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: LockerSecure
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: MachineFrame
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: MatterBin
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: MedicalPatch
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Medkit
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: MicroLaser
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Microwave
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Mirror
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: Mug
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Multitool
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: NuclearAuthenticationDisk
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: NukeCart
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: OfficeChair
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: OfficeChairBlue
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: OfficeChairGrey
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: OxygenTank
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: PacManGenerator
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: PDA
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Plant0
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Plant7
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: PlasmaTank
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: PlasticChair
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: PlasticChairBlue
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: PlasticChairGrey
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Plenum
+    Mode: 1
+    Subcategory: 8
+    SearchTags:
+    - plenum
+    - lattice
+    IsEraser: 0
+  - AssetName: Poster
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: PosterHorizontal
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: PosterVertical
+    Mode: 0
+    Subcategory: 5
+    SearchTags:
+    - wall mount
+    IsEraser: 0
+  - AssetName: PowerCell
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: PowerCellAdmin
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: PowerCellCharger
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: ScrewdriverBlue
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Scrubber
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SecurityAirlock
+    Mode: 0
+    Subcategory: 3
+    SearchTags:
+    - door
+    IsEraser: 0
+  - AssetName: SecurityIDCard
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SecurityLocker
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SecurityPDA
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: ShoeHiTops
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: ShoeJackboots
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Sink
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SleeperBed
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SlotMachine
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SMES
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SodaCanBeepsSoda
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanBeepyLime
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanCannedAir
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanCannedLaughter
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanCola
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanDukePurpleTea
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SodaCanTonic
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SolarPanel
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SolarTrackingBeacon
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: SteelGirder
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - wall
+    IsEraser: 0
+  - AssetName: SteelGirderUnbolted
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SteelReinforcedSheet
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SteelRod
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SteelSheet
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: SteelWall
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - wall
+    IsEraser: 0
+  - AssetName: SteelWallReinforced
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - wall
+    IsEraser: 0
+  - AssetName: SteelWindow
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - wall
+    IsEraser: 0
+  - AssetName: SteelWindowReinforced
+    Mode: 0
+    Subcategory: 2
+    SearchTags:
+    - wall
+    IsEraser: 0
+  - AssetName: Sunglasses
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: TableBoozeDispenser
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TableFrameSteel
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TableFrameWood
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TableGlass
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TablePoker
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TableSteel
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TableWood
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: TileBar
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileDirt1
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileGrass
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileGrey
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileGreyDark
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileKitchen
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileOverlayBlue
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TileOverlayBrown
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TileOverlayGreen
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TileOverlayOrange
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TileOverlayPurple
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TileOverlayRed
+    Mode: 0
+    Subcategory: 19
+    SearchTags:
+    - overlay
+    IsEraser: 0
+  - AssetName: TilePlating
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileReinforced
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileWhite
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: TileWood
+    Mode: 0
+    Subcategory: 0
+    SearchTags:
+    - floor
+    - plating
+    IsEraser: 0
+  - AssetName: Toolbelt
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: ToolboxBlue
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: TruckerCap
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: VendorHotDrinks
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: VendorRobustSoftdrinks
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: VendorSecTech
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: VendorYouTool
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Vent
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: WaterCooler
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: WaterTank
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - furniture
+    IsEraser: 0
+  - AssetName: Welder
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Wirecutters
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: WoodLog
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: WoodPlank
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0
+  - AssetName: Wrench
+    Mode: 2
+    Subcategory: 13
+    SearchTags:
+    - item
+    IsEraser: 0

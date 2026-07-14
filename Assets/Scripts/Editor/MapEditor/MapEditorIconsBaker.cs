@@ -79,6 +79,7 @@ namespace SS3D.Editor.MapEditor
             ("_modeScripting", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.ModeScripting),
             ("_subFlooring", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubFlooring),
             ("_subTurfs", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubTurfs),
+            ("_subOverlays", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubOverlays),
             ("_subWalls", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubWalls),
             ("_subDoors", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubDoors),
             ("_subTileObjects", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubTileObjects),

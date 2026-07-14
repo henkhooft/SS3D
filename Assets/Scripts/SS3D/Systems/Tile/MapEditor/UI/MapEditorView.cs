@@ -2,6 +2,7 @@ using SS3D.Data.AssetDatabases;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace SS3D.Systems.Tile.MapEditor.UI
@@ -80,14 +81,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public void Build(VisualElement parent)
         {
-            _root = new VisualElement { name = "map-editor-root" };
+            _root = new VisualElement { name = "map-editor-root", pickingMode = PickingMode.Ignore };
             _root.AddToClassList("map-editor-root");
             _root.style.flexGrow = 1;
 
             if (_styleSheet != null)
                 _root.styleSheets.Add(_styleSheet);
 
-            _hudLayer = new VisualElement { name = "hud-layer" };
+            _hudLayer = new VisualElement { name = "hud-layer", pickingMode = PickingMode.Ignore };
             _hudLayer.style.position = Position.Absolute;
             _hudLayer.style.left = 0;
             _hudLayer.style.top = 0;
@@ -101,7 +102,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             BuildBottomDock();
             BuildRevealButton();
 
-            _toast = new Label { name = "toast" };
+            _toast = new Label { name = "toast", pickingMode = PickingMode.Ignore };
             _toast.AddToClassList("map-editor-toast");
             _toast.style.display = DisplayStyle.None;
             _root.Add(_toast);
@@ -118,6 +119,26 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         }
 
         public void SetMouseOverUI(bool over) => _root?.EnableInClassList("map-editor-mouse-over", over);
+
+        public bool IsPointerOverInteractiveUI(Vector2 screenPosition)
+        {
+            if (_root?.panel == null)
+                return false;
+
+            VisualElement picked = _root.panel.Pick(screenPosition);
+            return IsInteractivePick(picked);
+        }
+
+        private static bool IsInteractivePick(VisualElement element)
+        {
+            for (VisualElement current = element; current != null; current = current.parent)
+            {
+                if (current.pickingMode == PickingMode.Position)
+                    return true;
+            }
+
+            return false;
+        }
 
         private void BuildExitButton()
         {
@@ -607,7 +628,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static VisualElement CreateRegion(string className)
         {
-            VisualElement region = new();
+            VisualElement region = new() { pickingMode = PickingMode.Position };
             region.AddToClassList("map-editor-region");
             region.AddToClassList(className);
             return region;

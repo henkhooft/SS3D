@@ -32,6 +32,7 @@ namespace SS3D.Systems.Tile.MapEditor
             public const string ModeScripting = "Assets/Art/Icons/external icons/delapouite/plain-arrow.svg";
             public const string SubFlooring = "Assets/Art/Icons/external icons/delapouite/domino-tiles.svg";
             public const string SubTurfs = "Assets/Art/Icons/external icons/lorc/mountains.svg";
+            public const string SubOverlays = "Assets/Art/Icons/external icons/delapouite/stack.svg";
             public const string SubWalls = "Assets/Art/Icons/external icons/delapouite/square.svg";
             public const string SubDoors = "Assets/Art/Icons/external icons/delapouite/door.svg";
             public const string SubTileObjects = "Assets/Art/Icons/external icons/delapouite/cube.svg";
@@ -71,6 +72,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [SerializeField] private VectorImage _modeScripting;
         [SerializeField] private VectorImage _subFlooring;
         [SerializeField] private VectorImage _subTurfs;
+        [SerializeField] private VectorImage _subOverlays;
         [SerializeField] private VectorImage _subWalls;
         [SerializeField] private VectorImage _subDoors;
         [SerializeField] private VectorImage _subTileObjects;
@@ -112,6 +114,7 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 MapEditorSubcategory.Flooring => Resolve(_subFlooring, Paths.SubFlooring),
                 MapEditorSubcategory.Turfs => Resolve(_subTurfs, Paths.SubTurfs),
+                MapEditorSubcategory.Overlays => Resolve(_subOverlays, Paths.SubOverlays),
                 MapEditorSubcategory.Walls => Resolve(_subWalls, Paths.SubWalls),
                 MapEditorSubcategory.Doors => Resolve(_subDoors, Paths.SubDoors),
                 MapEditorSubcategory.TileObjects => Resolve(_subTileObjects, Paths.SubTileObjects),

@@ -82,8 +82,9 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 MapEditorMode.Upper => new[]
                 {
-                    MapEditorSubcategory.Flooring, MapEditorSubcategory.Turfs, MapEditorSubcategory.Walls,
-                    MapEditorSubcategory.Doors, MapEditorSubcategory.TileObjects, MapEditorSubcategory.WallAttachments,
+                    MapEditorSubcategory.Flooring, MapEditorSubcategory.Turfs, MapEditorSubcategory.Overlays,
+                    MapEditorSubcategory.Walls, MapEditorSubcategory.Doors, MapEditorSubcategory.TileObjects,
+                    MapEditorSubcategory.WallAttachments,
                 },
                 MapEditorMode.Lower => new[]
                 {
@@ -108,7 +109,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorMode.Upper => "Upper",
                 MapEditorMode.Lower => "Lower",
                 MapEditorMode.Items => "Items",
-                MapEditorMode.Scripting => "Scripting & Placements",
+                MapEditorMode.Scripting => "Scripting",
                 _ => mode.ToString(),
             };
 
@@ -117,6 +118,7 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 MapEditorSubcategory.Flooring => "Flooring",
                 MapEditorSubcategory.Turfs => "Turfs",
+                MapEditorSubcategory.Overlays => "Overlays",
                 MapEditorSubcategory.Walls => "Walls",
                 MapEditorSubcategory.Doors => "Doors",
                 MapEditorSubcategory.TileObjects => "Tile Objects",
