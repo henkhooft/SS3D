@@ -80,25 +80,25 @@ namespace SS3D.Systems.Tile.MapEditor
         public static MapEditorSubcategory[] GetSubcategories(MapEditorMode mode) =>
             mode switch
             {
-                MapEditorMode.Upper =>
-                [
+                MapEditorMode.Upper => new[]
+                {
                     MapEditorSubcategory.Flooring, MapEditorSubcategory.Turfs, MapEditorSubcategory.Walls,
                     MapEditorSubcategory.Doors, MapEditorSubcategory.TileObjects, MapEditorSubcategory.WallAttachments,
-                ],
-                MapEditorMode.Lower =>
-                [
+                },
+                MapEditorMode.Lower => new[]
+                {
                     MapEditorSubcategory.Piping, MapEditorSubcategory.Disposals, MapEditorSubcategory.BaseTiles,
-                ],
-                MapEditorMode.Items =>
-                [
+                },
+                MapEditorMode.Items => new[]
+                {
                     MapEditorSubcategory.FoodDrink, MapEditorSubcategory.Tools, MapEditorSubcategory.Medical,
                     MapEditorSubcategory.Security, MapEditorSubcategory.Misc,
-                ],
-                MapEditorMode.Scripting =>
-                [
+                },
+                MapEditorMode.Scripting => new[]
+                {
                     MapEditorSubcategory.Atmospherics, MapEditorSubcategory.SpawnPlacements,
                     MapEditorSubcategory.RandomSpawners, MapEditorSubcategory.Triggers,
-                ],
+                },
                 _ => Array.Empty<MapEditorSubcategory>(),
             };
 

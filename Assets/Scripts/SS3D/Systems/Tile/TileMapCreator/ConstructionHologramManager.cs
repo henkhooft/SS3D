@@ -7,6 +7,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
+using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Utils;
