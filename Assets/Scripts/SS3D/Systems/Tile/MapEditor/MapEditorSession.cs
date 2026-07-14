@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace SS3D.Systems.Tile.MapEditor
 {
@@ -68,26 +69,41 @@ namespace SS3D.Systems.Tile.MapEditor
 
             float moveSpeed = 15f * deltaTime;
             float rotateSpeed = 120f * deltaTime;
+            Keyboard keyboard = Keyboard.current;
 
-            if (Input.GetKey(KeyCode.W))
-                _focus += _camera.transform.forward * moveSpeed;
-            if (Input.GetKey(KeyCode.S))
-                _focus -= _camera.transform.forward * moveSpeed;
-            if (Input.GetKey(KeyCode.A))
-                _focus -= _camera.transform.right * moveSpeed;
-            if (Input.GetKey(KeyCode.D))
-                _focus += _camera.transform.right * moveSpeed;
+            Vector3 forward = _camera.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude > 0.0001f)
+                forward.Normalize();
 
-            if (Input.GetMouseButton(2))
+            Vector3 right = _camera.transform.right;
+            right.y = 0f;
+            if (right.sqrMagnitude > 0.0001f)
+                right.Normalize();
+
+            if (keyboard != null)
             {
-                _yaw += Input.GetAxis("Mouse X") * rotateSpeed;
-                _pitch -= Input.GetAxis("Mouse Y") * rotateSpeed;
+                if (keyboard.wKey.isPressed)
+                    _focus += forward * moveSpeed;
+                if (keyboard.sKey.isPressed)
+                    _focus -= forward * moveSpeed;
+                if (keyboard.aKey.isPressed)
+                    _focus -= right * moveSpeed;
+                if (keyboard.dKey.isPressed)
+                    _focus += right * moveSpeed;
+            }
+
+            if (Mouse.current != null && Mouse.current.middleButton.isPressed)
+            {
+                Vector2 delta = Mouse.current.delta.ReadValue();
+                _yaw += delta.x * rotateSpeed * 0.05f;
+                _pitch -= delta.y * rotateSpeed * 0.05f;
                 _pitch = Mathf.Clamp(_pitch, 10f, 85f);
             }
 
-            float scroll = Input.mouseScrollDelta.y;
+            float scroll = Mouse.current?.scroll.ReadValue().y ?? 0f;
             if (Mathf.Abs(scroll) > 0.01f)
-                _distance = Mathf.Clamp(_distance - scroll * 2f, 5f, 80f);
+                _distance = Mathf.Clamp(_distance - scroll * 0.05f, 5f, 80f);
 
             ApplyCamera();
         }

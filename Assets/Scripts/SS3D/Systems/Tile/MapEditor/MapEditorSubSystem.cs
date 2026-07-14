@@ -8,6 +8,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Systems.Area;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Screens;
 using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Systems.Tile.MapEditor.Persistence;
 using SS3D.Systems.Tile.MapEditor.UI;
@@ -42,6 +43,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private InputSubSystem _inputSystem;
         private Controls.TileCreatorActions _controls;
         private TileSubSystem _tileSystem;
+        private CameraFollow _cameraFollow;
+        private bool _gameplayInputBlocked;
         private VisualElement _overlayRoot;
         private bool _active;
         private bool _mouseOverUI;
@@ -81,7 +84,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 _commandService.Bind(_tileSystem.CurrentMap, _tileSystem.Loader,
                     new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService));
 
-            BuildView();
+            if (Camera.main != null)
+                _cameraFollow = Camera.main.GetComponent<CameraFollow>();
         }
 
         protected override void OnEnabled()
@@ -93,6 +97,7 @@ namespace SS3D.Systems.Tile.MapEditor
         protected override void OnDestroyed()
         {
             _controls.ToggleMenu.performed -= HandleToggleMenu;
+            SetGameplayInputBlocked(false);
             _view?.Destroy();
             ShutdownDocument();
             base.OnDestroyed();
@@ -187,6 +192,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
+                SetGameplayInputBlocked(true);
                 RpcRequestUndoState(LocalConnection);
             }
             else
@@ -195,9 +201,32 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = false;
                 _session.Exit();
                 MapEditorLayerVisibility.Deactivate();
+                SetGameplayInputBlocked(false);
                 _inputSystem.ToggleActionMap(_controls, false, new[] { _controls.ToggleMenu });
                 _inputSystem.ToggleCollisions(_controls, true);
                 ShutdownDocument();
+            }
+        }
+
+        private void SetGameplayInputBlocked(bool blocked)
+        {
+            if (blocked && !_gameplayInputBlocked)
+            {
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, false);
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, false);
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Hotkeys, false);
+                if (_cameraFollow != null)
+                    _cameraFollow.enabled = false;
+                _gameplayInputBlocked = true;
+            }
+            else if (!blocked && _gameplayInputBlocked)
+            {
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, true);
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, true);
+                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Hotkeys, true);
+                if (_cameraFollow != null)
+                    _cameraFollow.enabled = true;
+                _gameplayInputBlocked = false;
             }
         }
 
@@ -379,8 +408,16 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void EnableDocument()
         {
-            if (_document != null)
+            if (_document == null)
+                return;
+
+            if (!_document.enabled)
                 _document.enabled = true;
+
+            if (_view == null)
+                BuildView();
+            else
+                _viewModel.NotifyChanged();
         }
 
         private void ShutdownDocument()
