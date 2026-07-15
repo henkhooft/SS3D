@@ -1,10 +1,30 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.FloorVisuals;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SS3D.Systems.Tile.MapEditor
 {
+    /// <summary>
+    /// Stable catalog keys for <see cref="FloorDecalDefinition"/> entries in the object library.
+    /// </summary>
+    public static class MapEditorFloorDecalCatalog
+    {
+        public const string Prefix = "floor-decal:";
+
+        public static string Encode(ushort id) => $"{Prefix}{id}";
+
+        public static bool TryDecode(string assetName, out ushort id)
+        {
+            id = 0;
+            if (string.IsNullOrEmpty(assetName) || !assetName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return ushort.TryParse(assetName.AsSpan(Prefix.Length), out id);
+        }
+    }
+
     /// <summary>
     /// Runtime catalog built from <see cref="MapEditorCatalogSo"/> and live tile assets.
     /// </summary>
@@ -43,6 +63,32 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorCatalogEntry generated = MapEditorCatalogHeuristics.Infer(asset);
                 _entries.Add(generated);
                 _byAssetName[asset.NameString] = generated;
+            }
+
+            AppendFloorDecals(mapped);
+        }
+
+        private void AppendFloorDecals(HashSet<string> mapped)
+        {
+            FloorDecalCatalog catalog = FloorDecalCatalog.Get();
+            foreach (FloorDecalDefinition definition in catalog.Definitions)
+            {
+                if (definition == null || definition.Id == 0)
+                    continue;
+
+                string assetName = MapEditorFloorDecalCatalog.Encode(definition.Id);
+                if (mapped.Contains(assetName))
+                    continue;
+
+                var entry = new MapEditorCatalogEntry
+                {
+                    AssetName = assetName,
+                    Mode = MapEditorMode.Upper,
+                    Subcategory = MapEditorSubcategory.Overlays,
+                    SearchTags = new[] { "overlay", "decal", definition.DisplayName },
+                };
+                _entries.Add(entry);
+                _byAssetName[assetName] = entry;
             }
         }
 

@@ -58,15 +58,16 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
-        public void Infer_OverlayObject_MapsToUpperOverlays()
+        public void Build_IncludesFloorDecalsUnderOverlays()
         {
-            TileObjectSo overlay = ScriptableObject.CreateInstance<TileObjectSo>();
-            overlay.layer = TileLayer.Overlays;
+            MapEditorCatalog catalog = new();
+            catalog.Build(System.Array.Empty<GenericObjectSo>(), null);
 
-            MapEditorCatalogEntry entry = MapEditorCatalogHeuristics.Infer(overlay);
+            int matches = 0;
+            foreach (MapEditorCatalogEntry _ in catalog.Query(MapEditorMode.Upper, MapEditorSubcategory.Overlays, null))
+                matches++;
 
-            Assert.AreEqual(MapEditorMode.Upper, entry.Mode);
-            Assert.AreEqual(MapEditorSubcategory.Overlays, entry.Subcategory);
+            Assert.Greater(matches, 0);
         }
 
         [Test]

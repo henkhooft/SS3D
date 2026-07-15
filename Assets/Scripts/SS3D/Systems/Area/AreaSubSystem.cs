@@ -21,7 +21,11 @@ namespace SS3D.Systems.Area
 
         public event Action<AreaId, bool> OnAreaLightingSwitchChanged;
 
+        public event Action OnAreaVisualsDirty;
+
         public bool IsSetUp { get; private set; }
+
+        public AreaFloorVisualCache FloorVisualCache { get; } = new();
 
         private readonly AreaRegistry _registry = new();
         private readonly List<IAreaApcOrigin> _registeredApcs = new();
@@ -47,15 +51,26 @@ namespace SS3D.Systems.Area
                 CompleteSetup(tileSubSystem);
         }
 
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (!IsServer)
+                FloorVisualCache.OnDirty += HandleFloorVisualCacheDirty;
+        }
+
         protected override void OnDestroyed()
         {
             if (SubSystems.TryGet(out TileSubSystem tileSubSystem))
                 tileSubSystem.OnMapCreated -= HandleTileMapCreated;
 
+            FloorVisualCache.OnDirty -= HandleFloorVisualCacheDirty;
             UnsubscribeElectricityTicks();
             SubSystems.Get<TileSubSystem>()?.UnregisterTileMutationObserver(this);
             base.OnDestroyed();
         }
+
+        private void HandleFloorVisualCacheDirty() => OnAreaVisualsDirty?.Invoke();
 
         private void HandleTileMapCreated()
         {
@@ -211,6 +226,7 @@ namespace SS3D.Systems.Area
                 UpdateOverlapWarnings();
                 TryCompleteTemplateRestore();
                 InvalidateElectricityConsumerIndex();
+                NotifyAreaVisualsChanged();
                 return;
             }
 
@@ -236,6 +252,7 @@ namespace SS3D.Systems.Area
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -255,6 +272,7 @@ namespace SS3D.Systems.Area
             apc.SetMultipleApcsInArea(false);
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -291,6 +309,7 @@ namespace SS3D.Systems.Area
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -321,6 +340,7 @@ namespace SS3D.Systems.Area
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -349,6 +369,7 @@ namespace SS3D.Systems.Area
 
             record.HasDepartmentalLightTint = true;
             record.DepartmentalLightTint = tint;
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -381,6 +402,8 @@ namespace SS3D.Systems.Area
 
             record.HasDepartmentalLightTint = false;
             record.DepartmentalLightTint = default;
+            if (IsServer)
+                NotifyAreaVisualsChanged();
         }
 
         public SavedAreaRecord[] BuildSavedAreaRecords()
@@ -454,6 +477,7 @@ namespace SS3D.Systems.Area
             LinkRegisteredApcsDuringTemplateRestore();
             UpdateAreaLightingStates();
             TryCompleteTemplateRestore();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -728,6 +752,101 @@ namespace SS3D.Systems.Area
             {
                 electricitySubSystem.InvalidateAreaConsumerIndex();
             }
+        }
+
+        [Server]
+        private void NotifyAreaVisualsChanged()
+        {
+            if (_map == null)
+                return;
+
+            var tintList = new List<(ushort areaId, bool hasTint, Color tint)>();
+            foreach (AreaRecord record in _registry.GetAllAreas())
+            {
+                tintList.Add((
+                    record.Id.Value,
+                    record.HasDepartmentalLightTint,
+                    record.DepartmentalLightTint));
+            }
+
+            var chunkList = new List<(Vector2Int chunkKey, ushort[] areaIds)>();
+            var rpcChunks = new List<SyncedChunkAreaIds>();
+            foreach (TileChunk chunk in _map.GetAllChunks())
+            {
+                ushort[] areaIds = chunk.CopyAreaIds();
+                if (areaIds == null)
+                    continue;
+
+                Vector2Int chunkKey = _map.GetKey(chunk.GetWorldPosition(0, 0));
+                chunkList.Add((chunkKey, areaIds));
+                rpcChunks.Add(new SyncedChunkAreaIds
+                {
+                    chunkKeyX = chunkKey.x,
+                    chunkKeyY = chunkKey.y,
+                    areaIds = areaIds,
+                });
+            }
+
+            FloorVisualCache.ReplaceAll(tintList, chunkList);
+            OnAreaVisualsDirty?.Invoke();
+
+            var rpcTints = new SyncedAreaTint[tintList.Count];
+            for (int i = 0; i < tintList.Count; i++)
+            {
+                (ushort areaId, bool hasTint, Color tint) = tintList[i];
+                rpcTints[i] = new SyncedAreaTint
+                {
+                    areaId = areaId,
+                    hasTint = hasTint,
+                    tint = tint,
+                };
+            }
+
+            RpcSyncAreaFloorVisuals(rpcTints, rpcChunks.ToArray());
+        }
+
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncAreaFloorVisuals(SyncedAreaTint[] tints, SyncedChunkAreaIds[] chunks)
+        {
+            if (IsServer)
+                return;
+
+            var tintList = new List<(ushort areaId, bool hasTint, Color tint)>();
+            if (tints != null)
+            {
+                foreach (SyncedAreaTint tint in tints)
+                    tintList.Add((tint.areaId, tint.hasTint, tint.tint));
+            }
+
+            var chunkList = new List<(Vector2Int chunkKey, ushort[] areaIds)>();
+            if (chunks != null)
+            {
+                foreach (SyncedChunkAreaIds chunk in chunks)
+                {
+                    chunkList.Add((
+                        new Vector2Int(chunk.chunkKeyX, chunk.chunkKeyY),
+                        chunk.areaIds));
+                }
+            }
+
+            FloorVisualCache.ReplaceAll(tintList, chunkList);
+            OnAreaVisualsDirty?.Invoke();
+        }
+
+        [Serializable]
+        private struct SyncedAreaTint
+        {
+            public ushort areaId;
+            public bool hasTint;
+            public Color tint;
+        }
+
+        [Serializable]
+        private struct SyncedChunkAreaIds
+        {
+            public int chunkKeyX;
+            public int chunkKeyY;
+            public ushort[] areaIds;
         }
     }
 }

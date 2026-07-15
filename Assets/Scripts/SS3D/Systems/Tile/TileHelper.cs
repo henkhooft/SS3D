@@ -373,8 +373,6 @@ namespace SS3D.Systems.Tile
                     return new SingleTileLocation(layer, x, y);
                 case TileLayer.FurnitureTop:
                     return new SingleTileLocation(layer, x, y);
-                case TileLayer.Overlays:
-                    return new SingleTileLocation(layer, x, y);
                 default:
                     Log.Error(typeof(TileHelper), "no objects defined for layer {layer}, add a case to this switch.", Logs.Generic, layer);
                     return null;

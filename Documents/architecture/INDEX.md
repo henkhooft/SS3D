@@ -132,6 +132,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |
+| [2026-07_tile-overlay-replacement](2026-07_tile-overlay-replacement.md) | shipped |
 | [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
 | [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; blend/timing polish remains) |
@@ -158,6 +159,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [areas_implementation_plan_c0639343.plan.md](../plans/areas_implementation_plan_c0639343.plan.md) | APC-seeded areas, flood-fill, power/lighting follow-ups |
 | [electricity_kwh_foundation_917ccdbc.plan.md](../plans/electricity_kwh_foundation_917ccdbc.plan.md) | kWh storage, priority shedding, HV cable grid rules |
 | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) | Layered persistence framework; Phase 1a/1b shipped, Phase 2 round snapshots pending |
+| [tile_overlay_replacement.plan.md](../plans/tile_overlay_replacement.plan.md) | Area floor stripes + sparse floor decals; Overlays layer removed |
 | [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation |
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
 | [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Combat build-out on health/animation/screen-fx/atmos foundations (pending) |

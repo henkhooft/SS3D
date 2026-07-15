@@ -3594,7 +3594,7 @@ MonoBehaviour:
     - m_Text: Wires and pipes
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Overlays
+    - m_Text: Floor decals
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: Items

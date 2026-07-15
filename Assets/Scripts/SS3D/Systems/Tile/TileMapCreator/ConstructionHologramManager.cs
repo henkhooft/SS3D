@@ -8,6 +8,7 @@ using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Utils;
 using System;
@@ -54,6 +55,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// <summary>True when LMB went down over UI — never commit that gesture.</summary>
         private bool _pressStartedOverUi;
         private GenericObjectSo _selectedObject;
+        private FloorDecalDefinition _selectedFloorDecal;
         /// <summary>
         /// List of build ghosts currently displaying in game.
         /// </summary>
@@ -75,6 +77,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         public void SetSelectedObject(GenericObjectSo genericObjectSo)
         {
             CancelPlacementGesture(resetHolograms: false);
+            _selectedFloorDecal = null;
             _isPlacingItem = genericObjectSo switch
             {
                 TileObjectSo => false,
@@ -95,6 +98,15 @@ namespace SS3D.Systems.Tile.TileMapCreator
             bool snapToTile = !_isPlacingItem && (forceTileSnap || _mapEditor == null || _mapEditor.GridSnapEnabled);
             Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
             return TileHelper.GetPointedPosition(snapToTile, camera);
+        }
+
+        public void SetSelectedFloorDecal(FloorDecalDefinition definition)
+        {
+            _selectedFloorDecal = definition;
+            _selectedObject = null;
+            _isPlacingItem = false;
+            DestroyHolograms();
+            CreateFloorDecalHologram(TileHelper.GetPointedPosition(true));
         }
 
         protected override void OnAwake()
@@ -137,7 +149,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_mapEditor == null || !_mapEditor.IsActive || !IsActiveTool(_mapEditor.CurrentTool))
             {
                 if (_placePressActive || _isDragging)
-                    CancelPlacementGesture(resetHolograms: _selectedObject != null);
+                    CancelPlacementGesture(resetHolograms: _selectedObject != null || _selectedFloorDecal != null);
                 return;
             }
 
@@ -175,7 +187,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
 
             bool squareDrag = _controls.SquareDrag.IsPressed();
-            if (_isDragging && _selectedObject != null &&
+            if (_isDragging && (_selectedObject != null || _selectedFloorDecal != null) &&
                 (!_hasDragEndTile || cursorTile != _lastDragEndTile || squareDrag != _lastSquareDrag))
             {
                 _lastDragEndTile = cursorTile;
@@ -251,6 +263,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 pooled.SetActive = true;
                 return pooled;
             }
+
+            if (_selectedFloorDecal != null)
+                return CreateFloorDecalHologram(Vector3.zero, addToActive: false);
 
             return CreateHologram(_selectedObject.PrefabAsset, Vector3.zero, addToActive: false);
         }
@@ -355,6 +370,13 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void ResetHologramsToCursor()
         {
+            if (_selectedFloorDecal != null)
+            {
+                DestroyHolograms();
+                CreateFloorDecalHologram(GetPlacementPoint(forceTileSnap: true));
+                return;
+            }
+
             if (_selectedObject == null)
             {
                 DestroyHolograms();
@@ -376,6 +398,28 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 RefreshHologram(hologram);
             }
             _lastRegisteredDirection = _holograms.First().Direction;
+        }
+
+        public ConstructionHologram CreateFloorDecalHologram(Vector3 position, bool addToActive = true)
+        {
+            Material material = _selectedFloorDecal.MaterialOverride != null
+                ? new Material(_selectedFloorDecal.MaterialOverride)
+                : FloorVisualMesh.CreateCutoutMaterial(
+                    _selectedFloorDecal.Texture != null
+                        ? _selectedFloorDecal.Texture
+                        : FloorVisualMesh.GetStripeCornerTexture(),
+                    _selectedFloorDecal.Tint);
+
+            GameObject tileObject = FloorVisualMesh.CreateQuadObject(
+                "FloorDecalHologram",
+                null,
+                position,
+                material);
+            ConstructionHologram hologram = new(tileObject, position, _lastRegisteredDirection, FloorVisualMesh.SurfaceLift);
+            if (addToActive)
+                _holograms.Add(hologram);
+            RefreshHologram(hologram);
+            return hologram;
         }
 
         /// <summary>
@@ -433,6 +477,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             DestroyHolograms();
 
+            if (_selectedFloorDecal != null)
+            {
+                CreateFloorDecalHologram(TileHelper.GetPointedPosition(true));
+                return;
+            }
+
             if (_selectedObject == null)
                 return;
 
@@ -457,7 +507,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private void PlaceOnHolograms()
         {
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            if (tileSystem == null || _selectedObject == null)
+            if (tileSystem == null || (_selectedObject == null && _selectedFloorDecal == null))
                 return;
 
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
@@ -465,12 +515,21 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_holograms.Count == 0)
             {
                 Vector3 position = GetPlacementPoint();
-                tileSystem.RpcPlaceObject(_selectedObject.NameString, position, _lastRegisteredDirection, isReplacing);
+                if (_selectedFloorDecal != null)
+                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, position);
+                else
+                    tileSystem.RpcPlaceObject(_selectedObject.NameString, position, _lastRegisteredDirection, isReplacing);
                 return;
             }
 
             foreach (ConstructionHologram buildGhost in _holograms)
             {
+                if (_selectedFloorDecal != null)
+                {
+                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, buildGhost.TargetPosition);
+                    continue;
+                }
+
                 tileSystem.RpcPlaceObject(_selectedObject.NameString, buildGhost.TargetPosition, buildGhost.Direction, isReplacing);
             }
         }
@@ -483,6 +542,14 @@ namespace SS3D.Systems.Tile.TileMapCreator
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
             if (tileSystem == null)
                 return;
+
+            if (_selectedFloorDecal != null)
+            {
+                foreach (ConstructionHologram hologram in _holograms)
+                    tileSystem.RpcClearFloorDecal(hologram.TargetPosition);
+
+                return;
+            }
 
             if (_isPlacingItem)
             {
@@ -538,6 +605,11 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_mapEditor != null && _mapEditor.IsDeleting)
             {
                 hologram.ChangeHologramColor(ConstructionMode.Delete);
+                return;
+            }
+            if (_selectedFloorDecal != null)
+            {
+                hologram.ChangeHologramColor(ConstructionMode.Valid);
                 return;
             }
 

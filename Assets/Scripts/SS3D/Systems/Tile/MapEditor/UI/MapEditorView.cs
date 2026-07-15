@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
@@ -546,10 +547,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private Button BuildSlot(MapEditorCatalogEntry entry)
         {
             GenericObjectSo asset = entry.IsEraser ? null : _loader.GetAsset(entry.AssetName);
+            FloorDecalDefinition floorDecal = null;
+            if (!entry.IsEraser &&
+                MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId))
+            {
+                FloorDecalCatalog.Get().TryGet(decalId, out floorDecal);
+            }
+
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
             slot.AddToClassList("map-editor-slot");
             if (!entry.IsEraser)
-                slot.tooltip = entry.AssetName;
+                slot.tooltip = floorDecal != null ? floorDecal.DisplayName : entry.AssetName;
             bool active = _vm.SelectedEntry != null &&
                           string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
             slot.EnableInClassList("map-editor-slot--active", active);
@@ -563,6 +571,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             {
                 icon.AddToClassList("map-editor-slot__icon--eraser");
             }
+            else if (floorDecal?.Texture != null)
+            {
+                icon.style.backgroundImage = new StyleBackground(floorDecal.Texture);
+            }
             else if (asset?.icon != null)
             {
                 icon.style.backgroundImage = new StyleBackground(asset.icon);
@@ -570,7 +582,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             iconFrame.Add(icon);
 
-            Label label = new(entry.IsEraser ? "Eraser" : entry.AssetName)
+            string labelText = entry.IsEraser
+                ? "Eraser"
+                : floorDecal != null ? floorDecal.DisplayName : entry.AssetName;
+            Label label = new(labelText)
             {
                 pickingMode = PickingMode.Ignore,
             };

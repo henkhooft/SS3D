@@ -10,6 +10,7 @@ using SS3D.Systems.Area;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Tile.MapEditor.Commands;
+using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
 using SS3D.Systems.Tile.MapEditor.UI;
 using SS3D.Systems.Tile.TileMapCreator;
@@ -309,6 +310,14 @@ namespace SS3D.Systems.Tile.MapEditor
             if (entry.IsEraser)
             {
                 _hologramManager.ClearSelection();
+                return;
+            }
+
+            if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId) &&
+                FloorDecalCatalog.Get().TryGet(decalId, out FloorDecalDefinition definition) &&
+                _viewModel.CurrentTool == MapEditorTool.Edit)
+            {
+                _hologramManager.SetSelectedFloorDecal(definition);
                 return;
             }
 

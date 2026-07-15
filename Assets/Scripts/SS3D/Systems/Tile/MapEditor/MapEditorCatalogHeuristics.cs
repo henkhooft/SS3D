@@ -51,8 +51,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 TileLayer.PipeLeft or TileLayer.PipeRight or TileLayer.PipeSurface or TileLayer.PipeMiddle
                     when tile.genericType == TileObjectGenericType.Pipe =>
                     Entry(asset.NameString, MapEditorMode.Lower, MapEditorSubcategory.Piping, "pipe"),
-                TileLayer.Overlays =>
-                    Entry(asset.NameString, MapEditorMode.Upper, MapEditorSubcategory.Overlays, "overlay"),
                 _ => Uncategorized(asset.NameString),
             };
         }

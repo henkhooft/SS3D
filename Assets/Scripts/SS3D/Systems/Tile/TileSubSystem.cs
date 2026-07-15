@@ -8,6 +8,7 @@ using SS3D.Data.Management;
 using SS3D.Data.Persistence;
 using SS3D.Logging;
 using SS3D.Systems.Persistence;
+using SS3D.Systems.Tile.FloorVisuals;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -235,6 +236,91 @@ namespace SS3D.Systems.Tile
             _constructionService.TryClearItem(placePosition, itemObjectSo);
         }
 
+        /// <summary>
+        /// TileMap Creator place floor-decal RPC. Requires administrator. Writes sparse ushort id, not a PlacedTileObject.
+        /// </summary>
+        [Client]
+        [ServerRpc(RequireOwnership = false)]
+        public void RpcSetFloorDecal(ushort decalId, Vector3 placePosition, NetworkConnection conn = null)
+        {
+            if (!TileMapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            if (_currentMap == null)
+                return;
+
+            if (_currentMap.TrySetFloorDecal(placePosition, decalId))
+                SyncFloorDecalsToClients();
+        }
+
+        [Client]
+        [ServerRpc(RequireOwnership = false)]
+        public void RpcClearFloorDecal(Vector3 placePosition, NetworkConnection conn = null)
+        {
+            if (!TileMapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            if (_currentMap == null)
+                return;
+
+            if (_currentMap.TryClearFloorDecal(placePosition))
+                SyncFloorDecalsToClients();
+        }
+
+        [Server]
+        public void SyncFloorDecalsToClients()
+        {
+            if (_currentMap == null)
+                return;
+
+            var chunks = new List<SyncedFloorDecalChunk>();
+            foreach (TileChunk chunk in _currentMap.GetAllChunks())
+            {
+                ushort[] ids = chunk.CopyFloorDecalIds();
+                if (ids == null)
+                    continue;
+
+                Vector2Int key = _currentMap.GetKey(chunk.GetWorldPosition(0, 0));
+                chunks.Add(new SyncedFloorDecalChunk
+                {
+                    chunkKeyX = key.x,
+                    chunkKeyY = key.y,
+                    floorDecalIds = ids,
+                });
+            }
+
+            RpcSyncFloorDecals(chunks.ToArray());
+        }
+
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncFloorDecals(SyncedFloorDecalChunk[] chunks)
+        {
+            FloorDecalView view = FindFirstObjectByType<FloorDecalView>();
+            if (view == null)
+                return;
+
+            var list = new List<(Vector2Int chunkKey, ushort[] decalIds)>();
+            if (chunks != null)
+            {
+                foreach (SyncedFloorDecalChunk chunk in chunks)
+                {
+                    list.Add((
+                        new Vector2Int(chunk.chunkKeyX, chunk.chunkKeyY),
+                        chunk.floorDecalIds));
+                }
+            }
+
+            view.ReplaceClientChunks(list);
+        }
+
+        [Serializable]
+        private struct SyncedFloorDecalChunk
+        {
+            public int chunkKeyX;
+            public int chunkKeyY;
+            public ushort[] floorDecalIds;
+        }
+
         [Server]
         public bool CanBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
         {
@@ -264,11 +350,13 @@ namespace SS3D.Systems.Tile
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
                 persistenceSubSystem.LoadMostRecentStationTemplate();
+                SyncFloorDecalsToClients();
                 return;
             }
 
 	        SavedTileMap mapSave = LocalStorage.LoadMostRecentObject<SavedTileMap>(legacySavePath);
             _currentMap.Load(mapSave);
+            SyncFloorDecalsToClients();
         }
 
         [Server]
@@ -279,11 +367,13 @@ namespace SS3D.Systems.Tile
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
                 persistenceSubSystem.LoadStationTemplate(mapName);
+                SyncFloorDecalsToClients();
                 return;
             }
 
             SavedTileMap mapSave = LocalStorage.LoadObject<SavedTileMap>(legacySavePath + "/" + mapName);
             _currentMap.Load(mapSave);
+            SyncFloorDecalsToClients();
         }
 
         [Server]

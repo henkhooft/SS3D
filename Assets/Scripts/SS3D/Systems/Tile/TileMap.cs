@@ -221,6 +221,42 @@ namespace SS3D.Systems.Tile
             return true;
         }
 
+        public bool TryGetFloorDecalId(Vector3 worldPosition, out ushort decalId)
+        {
+            decalId = 0;
+            TileChunk chunk = GetChunk(worldPosition);
+            if (chunk == null)
+                return false;
+
+            Vector2Int local = chunk.GetXY(worldPosition);
+            decalId = chunk.GetFloorDecalId(local.x, local.y);
+            return true;
+        }
+
+        public bool TrySetFloorDecal(Vector3 worldPosition, ushort decalId)
+        {
+            if (!HasPlenumAt(worldPosition))
+                return false;
+
+            TileChunk chunk = GetOrCreateChunk(worldPosition);
+            Vector2Int local = chunk.GetXY(worldPosition);
+            chunk.SetFloorDecalId(local.x, local.y, decalId);
+            OnFloorDecalsChanged?.Invoke(GetKey(worldPosition));
+            return true;
+        }
+
+        public bool TryClearFloorDecal(Vector3 worldPosition) => TrySetFloorDecal(worldPosition, 0);
+
+        public event Action<Vector2Int> OnFloorDecalsChanged;
+
+        private bool HasPlenumAt(Vector3 worldPosition)
+        {
+            if (!TryGetTileLocation(TileLayer.Plenum, worldPosition, out ITileLocation plenumLocation))
+                return false;
+
+            return !plenumLocation.IsFullyEmpty();
+        }
+
         public void ClearAllAreaIds()
         {
             foreach (TileChunk chunk in _chunks.Values)
@@ -614,6 +650,8 @@ namespace SS3D.Systems.Tile
                 TileChunk chunk = GetOrCreateChunk(savedChunk.originPosition);
                 if (savedChunk.areaIds != null)
                     chunk.SetAreaIds(savedChunk.areaIds);
+                if (savedChunk.floorDecalIds != null)
+                    chunk.SetFloorDecalIds(savedChunk.floorDecalIds);
 
                 if (tileSystem == null)
                     continue;
@@ -624,7 +662,16 @@ namespace SS3D.Systems.Tile
                 {
                     foreach (SavedPlacedTileObject savedObject in savedTile.GetPlacedObjects())
                     {
-                        TileObjectSo toBePlaced = (TileObjectSo)tileSystem.GetAsset(savedObject.tileObjectSOName);
+                        TileObjectSo toBePlaced = tileSystem.GetAsset(savedObject.tileObjectSOName) as TileObjectSo;
+                        if (toBePlaced == null)
+                        {
+                            Log.Warning(this,
+                                "Skipping unknown or removed tile asset '{assetName}' while loading map",
+                                Logs.Generic,
+                                savedObject.tileObjectSOName);
+                            continue;
+                        }
+
                         Vector3 placePosition = chunk.GetWorldPosition(savedTile.Location.x, savedTile.Location.y);
 
                         // Skipping build check here to allow loading tile objects in a non-valid order
