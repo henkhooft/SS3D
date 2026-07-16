@@ -7061,6 +7061,7 @@ GameObject:
   - component: {fileID: 9100001005}
   - component: {fileID: 9100001006}
   - component: {fileID: 9100001007}
+  - component: {fileID: 6291981120501433297}
   m_Layer: 11
   m_Name: Human
   m_TagString: Player
@@ -7762,6 +7763,21 @@ MonoBehaviour:
   _torsoLookWeight: 0.45
   _lookDistance: 4
   _blockedStandUpHeadroom: 1.2
+--- !u!114 &6291981120501433297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6415765038646171405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c4db2a51da74fdab2d6b2d4a98ec58a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Comms.LocalSpeechEmitter
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 2930813178971533500}
+  _networkObjectCache: {fileID: 0}
 --- !u!1 &6418095482179841189
 GameObject:
   m_ObjectHideFlags: 0
