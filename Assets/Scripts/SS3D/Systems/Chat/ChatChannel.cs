@@ -1,6 +1,7 @@
 ﻿using SS3D.Permissions;
 using SS3D.Systems;
 using SS3D.Systems.Entities;
+using SS3D.Core;
 using System;
 using UnityEngine;
 
@@ -55,15 +56,14 @@ namespace SS3D.Engine.Chat
                 return "";
             }
 
-            string senderName;
-            if (UseCharacterName)
+            string senderName = player.Ckey;
+            if (UseCharacterName && SubSystems.TryGet(out EntitySubSystem entitySystem))
             {
-                // TODO: replace {player.Ckey} with the character name
-                senderName = player.Ckey;
-            }
-            else
-            {
-                senderName = player.Ckey;
+                Entity entity = entitySystem.GetSpawnedEntity(player);
+                if (entity != null && !string.IsNullOrEmpty(entity.CharacterName))
+                {
+                    senderName = entity.CharacterName;
+                }
             }
             
             if (!string.IsNullOrEmpty(Abbreviation))

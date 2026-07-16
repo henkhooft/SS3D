@@ -2,6 +2,7 @@
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Rounds;
@@ -97,8 +98,25 @@ namespace SS3D.Systems.Lobby.UI
             }
         }
 
+        private void HandleReadyButtonPressed(bool pressed)
+        {
+            PlayerSubSystem playerSystem = SubSystems.Get<PlayerSubSystem>();
+
+            if (pressed)
+            {
+                EnsureCharacterSheetSubmitted();
+            }
+
+            string ckey = playerSystem.GetCkey(LocalConnection);
+            ChangePlayerReadyMessage playerReadyMessage = new(ckey, pressed);
+
+            ClientManager.Broadcast(playerReadyMessage);
+        }
+
         private void HandleEmbarkButtonPressed(bool pressed)
         {
+            EnsureCharacterSheetSubmitted();
+
             PlayerSubSystem playerSystem = SubSystems.Get<PlayerSubSystem>();
             EntitySubSystem entitySystem = SubSystems.Get<EntitySubSystem>();
 
@@ -106,14 +124,12 @@ namespace SS3D.Systems.Lobby.UI
             entitySystem.CmdSpawnLatePlayer(player);
         }
 
-        private void HandleReadyButtonPressed(bool pressed)
+        private static void EnsureCharacterSheetSubmitted()
         {
-            PlayerSubSystem playerSystem = SubSystems.Get<PlayerSubSystem>();
-
-            string ckey = playerSystem.GetCkey(LocalConnection);
-            ChangePlayerReadyMessage playerReadyMessage = new(ckey, pressed);
-
-            ClientManager.Broadcast(playerReadyMessage);
+            if (SubSystems.TryGet(out CharacterSubSystem characterSystem))
+            {
+                characterSystem.EnsureLocalSheetSubmitted();
+            }
         }
     }
 }

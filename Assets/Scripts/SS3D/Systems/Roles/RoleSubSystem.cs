@@ -174,11 +174,10 @@ namespace SS3D.Systems.Roles
             IDCard idCard = (IDCard)idCardItem;
 
             CrewRecord crewRecord = idAccess.CreateCrewRecord(
-                entity.Ckey,
+                string.IsNullOrEmpty(entity.CharacterName) ? entity.Ckey : entity.CharacterName,
                 role.Name,
                 IdAccessSubSystem.DepartmentForRole(role.Name),
                 role.StartingAccess);
-
             idAccess.BindIdCard(idCard, crewRecord.Id);
 
             Item pdaItem = SpawnItemInSlot(role.PDAAsset, true, container);

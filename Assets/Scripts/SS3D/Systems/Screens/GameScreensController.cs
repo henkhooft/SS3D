@@ -100,22 +100,6 @@ namespace SS3D.Systems.Screens
         }
 
 
-        private void UpdateScreen()
-        {
-            switch (_spawnedState)
-            {
-                case PlayerSpawnedState.IsNotSpawned:
-                case PlayerSpawnedState.AwaitingConfirmationOfSpawn:
-                    GameScreens.SwitchTo(ScreenType.Lobby);
-                    break;
-                case PlayerSpawnedState.ConfirmedSpawned:
-                    GameScreens.SwitchTo(ScreenType.None);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
         /// <summary>
         /// Prevents the player from leaving the menu screen.
         /// </summary>
@@ -124,7 +108,7 @@ namespace SS3D.Systems.Screens
             _blockSwitchToNone = true;
             _spawnedState = PlayerSpawnedState.IsNotSpawned;
 
-            UpdateScreen();
+            GameScreens.SwitchTo(ScreenType.Lobby);
         }
 
         /// <summary>
@@ -152,6 +136,28 @@ namespace SS3D.Systems.Screens
             }
 
             UpdateScreen();
+        }
+
+        private void UpdateScreen()
+        {
+            switch (_spawnedState)
+            {
+                case PlayerSpawnedState.IsNotSpawned:
+                case PlayerSpawnedState.AwaitingConfirmationOfSpawn:
+                    // Allow CharacterCustomizer while unspawned; do not snap back to Lobby.
+                    if (GameScreens.ActiveScreen == ScreenType.CharacterCustomizer)
+                    {
+                        return;
+                    }
+
+                    GameScreens.SwitchTo(ScreenType.Lobby);
+                    break;
+                case PlayerSpawnedState.ConfirmedSpawned:
+                    GameScreens.SwitchTo(ScreenType.None);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         /// <summary>

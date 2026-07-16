@@ -1,14 +1,11 @@
 ﻿using System;
-using Coimbra;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Entities.Events;
-using SS3D.Systems.Entities.Humanoid;
-using SS3D.Systems.Health;
-using SS3D.Systems.Interactions;
-using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Networking;
 using UnityEngine;
 
@@ -30,11 +27,37 @@ namespace SS3D.Systems.Entities
         [SyncVar(OnChange = nameof(SyncMind))]
         private Mind _mind = Mind.Empty;
 
+        [SyncVar]
+        private string _characterName = string.Empty;
+
+        [SyncVar]
+        private int _hairStyleId;
+
+        [SyncVar]
+        private int _beardStyleId;
+
+        [SyncVar]
+        private int _skinToneIndex;
+
+        [SyncVar]
+        private int _hairColorIndex;
+
+        [SyncVar(OnChange = nameof(SyncHasAppearance))]
+        private bool _hasAppearance;
+
         public Mind Mind
         {
             get => _mind;
             set => _mind = value;
         }
+
+        /// <summary>
+        /// Display name from the session character sheet. Falls back to ckey when unset.
+        /// </summary>
+        public string CharacterName =>
+            string.IsNullOrEmpty(_characterName)
+                ? (_mind != null && _mind.player != null ? _mind.player.Ckey : string.Empty)
+                : _characterName;
 
         public string Ckey => _mind.player.Ckey;
 
@@ -48,6 +71,16 @@ namespace SS3D.Systems.Entities
             base.OnStart();
 
             OnSpawn();
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (_hasAppearance)
+            {
+                ApplyAppearanceLocal();
+            }
         }
 
         private void Update()
@@ -105,9 +138,6 @@ namespace SS3D.Systems.Entities
         /// <summary>
         /// Called by FishNet when the value of _mind is synced.
         /// </summary>
-        /// <param name="oldMind">Value before sync</param>
-        /// <param name="newMind">Value after sync</param>
-        /// <param name="asServer">Is the sync is being called as the server (host and server only)</param>
         public void SyncMind(Mind oldMind, Mind newMind, bool asServer)
         {
             if (!asServer && IsHost)
@@ -119,16 +149,76 @@ namespace SS3D.Systems.Entities
             InvokeLocalPlayerObjectChanged();
         }
 
+        public void SyncHasAppearance(bool oldValue, bool newValue, bool asServer)
+        {
+            if (!asServer && IsHost)
+            {
+                return;
+            }
+
+            if (!newValue)
+            {
+                return;
+            }
+
+            ApplyAppearanceLocal();
+        }
+
         /// <summary>
         /// Updates the mind of this entity.
         /// </summary>
-        /// <param name="mind">The new mind.</param>
         [Server]
         public void SetMind(Mind mind)
         {
             this._mind = mind;
             if(mind == null) return;
             GiveOwnership(mind.Owner);
+        }
+
+        [Server]
+        public void SetCharacterName(string characterName)
+        {
+            _characterName = string.IsNullOrWhiteSpace(characterName)
+                ? string.Empty
+                : characterName.Trim();
+        }
+
+        /// <summary>
+        /// Stores sheet fields for network sync and applies appearance on the server.
+        /// Clients re-apply when <see cref="_hasAppearance"/> syncs.
+        /// </summary>
+        [Server]
+        public void ApplyCharacterSheet(CharacterSheet sheet, AppearanceCatalog catalog)
+        {
+            CharacterSheet validated = sheet.Validated(catalog);
+            _characterName = validated.Name;
+            _hairStyleId = validated.HairStyleId;
+            _beardStyleId = validated.BeardStyleId;
+            _skinToneIndex = validated.SkinToneIndex;
+            _hairColorIndex = validated.HairColorIndex;
+            _hasAppearance = true;
+
+            HumanoidAppearanceApplier.Apply(gameObject, validated, catalog);
+        }
+
+        private void ApplyAppearanceLocal()
+        {
+            AppearanceCatalog catalog = null;
+            if (SubSystems.TryGet(out CharacterSubSystem characterSystem))
+            {
+                catalog = characterSystem.Catalog;
+            }
+
+            CharacterSheet sheet = new()
+            {
+                Name = _characterName,
+                HairStyleId = _hairStyleId,
+                BeardStyleId = _beardStyleId,
+                SkinToneIndex = _skinToneIndex,
+                HairColorIndex = _hairColorIndex,
+            };
+
+            HumanoidAppearanceApplier.Apply(gameObject, sheet, catalog);
         }
 
 		public virtual void Kill()

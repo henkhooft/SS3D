@@ -11,6 +11,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
 using SS3D.Engine.Chat;
 using SS3D.Logging;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
@@ -189,9 +190,9 @@ namespace SS3D.Systems.Entities
                 SpawnPlayer(player);
                 ChatSubSystem chatSystem = SubSystems.Get<ChatSubSystem>();
                 ChatChannels chatChannels = ScriptableSettings.GetOrFind<ChatChannels>();
-                
-                // TODO: replace with character name and role
-                chatSystem.SendServerMessage(chatChannels.stationAlertsChannel, $"{player.Ckey}, assistant, has joined the ship");
+                Entity entity = GetSpawnedEntity(player);
+                string characterName = entity != null ? entity.CharacterName : player.Ckey;
+                chatSystem.SendServerMessage(chatChannels.stationAlertsChannel, $"{characterName}, assistant, has joined the ship");
             }
         }
 
@@ -202,6 +203,15 @@ namespace SS3D.Systems.Entities
         [Server]
         private void SpawnPlayer(Player player)
         {
+            CharacterSheet sheet = CharacterSheet.CreateDefault(player.Ckey);
+            AppearanceCatalog catalog = null;
+
+            if (SubSystems.TryGet(out CharacterSubSystem characterSystem) && characterSystem != null)
+            {
+                sheet = characterSystem.GetOrDefault(player);
+                catalog = characterSystem.Catalog;
+            }
+
             MindSubSystem mindSystem = SubSystems.Get<MindSubSystem>();
             mindSystem.TryCreateMind(player, out Mind createdMind);
 
@@ -210,6 +220,7 @@ namespace SS3D.Systems.Entities
 
             createdMind.SetPlayer(player);
             entity.SetMind(createdMind);
+            entity.ApplyCharacterSheet(sheet, catalog);
 
             player.Owner.SetFirstObject(entity.NetworkObject);
 
