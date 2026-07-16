@@ -31,6 +31,10 @@ namespace SS3D.Systems.Comms
         [ServerRpc]
         public void CmdSpeak(string text)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused. FishNet's codegen means this only
+            // prints where the RPC body actually executes (server/host), not on the calling client.
+            Debug.Log($"[CommsDebug] CmdSpeak executing server-side for {gameObject.name}: \"{text}\"");
+
             SubSystems.Get<CommsSubSystem>().HandleSpeakRequest(this, text);
         }
 
