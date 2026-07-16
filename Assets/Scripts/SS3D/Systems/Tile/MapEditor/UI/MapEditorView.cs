@@ -73,6 +73,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public event Action ShowUIRequested;
         public event Action<bool> GridSnapChanged;
         public event Action<bool> DebugOverlayChanged;
+        public event Action<float, float, float> CameraSettingsChanged;
         public event Action NewMapRequested;
         public event Action MapListRefreshRequested;
         public event Action<TileLayerCategory, bool> LayerCategoryVisibilityChanged;
@@ -201,7 +202,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _viewToolbar = CreateToolbarStrip();
             _viewToolbar.Add(CreateIconButton(_icons?.ResetView, "Reset position", () => ResetViewRequested?.Invoke()));
             _viewToolbar.Add(CreateIconButton(_icons?.Layers, "Layer view mode", () => TogglePopover("layers")));
-            _viewToolbar.Add(CreateIconButton(_icons?.EyeOff, "Hide UI", () => HideUIRequested?.Invoke()));
+            _viewToolbar.Add(CreateIconButton(_icons?.HideUiIcon, "Hide UI", () => HideUIRequested?.Invoke()));
+            _viewToolbar.Add(CreateIconButton(_icons?.Camera, "Camera options", () => TogglePopover("camera")));
             _viewToolbar.Add(CreateIconButton(_icons?.Settings, "Map editor settings", () => TogglePopover("settings")));
 
             region.Add(_viewToolbar);
@@ -491,6 +493,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             {
                 "maps" => "Map Selection",
                 "layers" => "Layer View Mode",
+                "camera" => "Camera Options",
                 "settings" => "Map Editor Settings",
                 _ => "Panel",
             };
@@ -511,6 +514,23 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                             v => LayerCategoryVisibilityChanged?.Invoke(category, v));
                     }
 
+                    break;
+                case "camera":
+                    AddSliderRow(container, "Field of View", _vm.CameraFov, 50f, 110f, "°", v =>
+                    {
+                        _vm.CameraFov = v;
+                        RaiseCameraSettingsChanged();
+                    });
+                    AddSliderRow(container, "Zoom Speed", _vm.CameraZoomSpeed, 1f, 10f, string.Empty, v =>
+                    {
+                        _vm.CameraZoomSpeed = v;
+                        RaiseCameraSettingsChanged();
+                    });
+                    AddSliderRow(container, "Rotation Speed", _vm.CameraRotationSpeed, 1f, 10f, string.Empty, v =>
+                    {
+                        _vm.CameraRotationSpeed = v;
+                        RaiseCameraSettingsChanged();
+                    });
                     break;
                 case "settings":
                     AddToggleRow(container, "Grid Snap", _vm.GridSnap, v =>
@@ -698,5 +718,41 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toggle.RegisterValueChangedCallback(evt => onChanged(evt.newValue));
             parent.Add(toggle);
         }
+
+        private void RaiseCameraSettingsChanged() =>
+            CameraSettingsChanged?.Invoke(_vm.CameraFov, _vm.CameraZoomSpeed, _vm.CameraRotationSpeed);
+
+        private static void AddSliderRow(VisualElement parent, string label, float value, float min, float max,
+            string unit, Action<float> onChanged)
+        {
+            VisualElement row = new();
+            row.AddToClassList("map-editor-slider-row");
+
+            VisualElement header = new();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.justifyContent = Justify.SpaceBetween;
+
+            Label labelElement = new(label);
+            labelElement.AddToClassList("map-editor-slider-row__label");
+            Label valueElement = new(FormatSliderValue(value, unit));
+            valueElement.AddToClassList("map-editor-slider-row__value");
+
+            header.Add(labelElement);
+            header.Add(valueElement);
+
+            Slider slider = new(min, max) { value = value };
+            slider.AddToClassList("map-editor-slider-row__slider");
+            slider.RegisterValueChangedCallback(evt =>
+            {
+                valueElement.text = FormatSliderValue(evt.newValue, unit);
+                onChanged(evt.newValue);
+            });
+
+            row.Add(header);
+            row.Add(slider);
+            parent.Add(row);
+        }
+
+        private static string FormatSliderValue(float value, string unit) => $"{Mathf.RoundToInt(value)}{unit}";
     }
 }

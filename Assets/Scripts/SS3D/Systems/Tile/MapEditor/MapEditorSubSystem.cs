@@ -146,6 +146,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.ShowUIRequested += OnShowUiRequested;
             _view.GridSnapChanged += OnGridSnapChanged;
             _view.DebugOverlayChanged += OnDebugOverlayChanged;
+            _view.CameraSettingsChanged += OnCameraSettingsChanged;
             _view.LayerCategoryVisibilityChanged += OnLayerCategoryVisibilityChanged;
             _view.ModeSelected += OnModeSelected;
             _view.SubcategorySelected += OnSubcategorySelected;
@@ -193,6 +194,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
+                OnCameraSettingsChanged(_viewModel.CameraFov, _viewModel.CameraZoomSpeed, _viewModel.CameraRotationSpeed);
                 SetMouseOverUI(false);
                 SetGameplayInputBlocked(true);
                 _gameplayHud.SetVisible(false);
@@ -477,6 +479,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.ShowUIRequested -= OnShowUiRequested;
             _view.GridSnapChanged -= OnGridSnapChanged;
             _view.DebugOverlayChanged -= OnDebugOverlayChanged;
+            _view.CameraSettingsChanged -= OnCameraSettingsChanged;
             _view.LayerCategoryVisibilityChanged -= OnLayerCategoryVisibilityChanged;
             _view.ModeSelected -= OnModeSelected;
             _view.SubcategorySelected -= OnSubcategorySelected;
@@ -513,6 +516,19 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         private void OnGridSnapChanged(bool value) => _viewModel.GridSnap = value;
+
+        private void OnCameraSettingsChanged(float fov, float zoomSpeed, float rotationSpeed)
+        {
+            if (Camera.main != null)
+                Camera.main.fieldOfView = fov;
+
+            // Sliders are shown on a 1-10 scale; 5 is the neutral (1x) speed multiplier.
+            if (_cameraFollow != null)
+            {
+                _cameraFollow.ZoomSpeedMultiplier = zoomSpeed / 5f;
+                _cameraFollow.RotationSpeedMultiplier = rotationSpeed / 5f;
+            }
+        }
 
         private void OnDebugOverlayChanged(bool value)
         {

@@ -407,6 +407,25 @@
     color: var(--ss3d-text-primary);
 }
 
+.map-editor-slider-row {
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.map-editor-slider-row__label {
+    color: var(--ss3d-text-secondary);
+    font-size: 13px;
+}
+
+.map-editor-slider-row__value {
+    color: var(--ss3d-text-primary);
+    font-size: 12px;
+}
+
+.map-editor-slider-row__slider {
+    margin-top: 2px;
+}
+
 .map-editor-toggle-label {
     color: var(--ss3d-text-secondary);
     font-size: 13px;

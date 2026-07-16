@@ -82,6 +82,29 @@ namespace SS3D.Systems.Screens
         private const float DistanceScaling = 1.18f;
         private const float HorizontalRotationSensitivity = 150f;
         private const float VerticalRotationSensitivity = 80f;
+
+        /// <summary>
+        /// Multiplier applied on top of <see cref="DistanceAcceleration"/>, adjustable from the map
+        /// editor's camera options popover. 1 is the default speed.
+        /// </summary>
+        public float ZoomSpeedMultiplier
+        {
+            get => _zoomSpeedMultiplier;
+            set => _zoomSpeedMultiplier = Mathf.Clamp(value, 0.2f, 3f);
+        }
+
+        /// <summary>
+        /// Multiplier applied on top of the rotation sensitivities, adjustable from the map editor's
+        /// camera options popover. 1 is the default speed.
+        /// </summary>
+        public float RotationSpeedMultiplier
+        {
+            get => _rotationSpeedMultiplier;
+            set => _rotationSpeedMultiplier = Mathf.Clamp(value, 0.2f, 3f);
+        }
+
+        private float _zoomSpeedMultiplier = 1f;
+        private float _rotationSpeedMultiplier = 1f;
         // Limits
         private const float MinTransitionSpeed = 3f;
         private const float MaxTransitionSpeed = 6f;
@@ -140,7 +163,7 @@ namespace SS3D.Systems.Screens
         
         private void HandleZoom(InputAction.CallbackContext context) 
         {
-           _cameraDistance = Mathf.Clamp(_cameraDistance - context.ReadValue<float>(), MinDistance, MaxDistance); 
+           _cameraDistance = Mathf.Clamp(_cameraDistance - context.ReadValue<float>() * _zoomSpeedMultiplier, MinDistance, MaxDistance);
         }
         
         // There are two button-type actions for snap, because Tap actions don't return values when performed
@@ -170,7 +193,7 @@ namespace SS3D.Systems.Screens
             }
             else
             {
-                _horizontalAngle += value * HorizontalRotationSensitivity;
+                _horizontalAngle += value * HorizontalRotationSensitivity * _rotationSpeedMultiplier;
             }
         }
 
@@ -206,17 +229,17 @@ namespace SS3D.Systems.Screens
         /// </summary>
         private void MoveAroundTarget()
         {
-            _horizontalAngle = (_horizontalAngle + _controls.HorizontalRotation.ReadValue<float>() 
-                * HorizontalRotationSensitivity * Time.deltaTime) % 360;
-            _verticalAngle = Mathf.Clamp(_verticalAngle + _controls.VerticalRotation.ReadValue<float>() 
-                * VerticalRotationSensitivity * Time.deltaTime, MinVerticalAngle, MaxVerticalAngle);
+            _horizontalAngle = (_horizontalAngle + _controls.HorizontalRotation.ReadValue<float>()
+                * HorizontalRotationSensitivity * _rotationSpeedMultiplier * Time.deltaTime) % 360;
+            _verticalAngle = Mathf.Clamp(_verticalAngle + _controls.VerticalRotation.ReadValue<float>()
+                * VerticalRotationSensitivity * _rotationSpeedMultiplier * Time.deltaTime, MinVerticalAngle, MaxVerticalAngle);
             // Smooth the distance and angle before using it
-            _currentHorizontalAngle = Mathf.LerpAngle(_currentHorizontalAngle, _horizontalAngle, 
+            _currentHorizontalAngle = Mathf.LerpAngle(_currentHorizontalAngle, _horizontalAngle,
                 Time.deltaTime * AngleAcceleration);
-            _currentVerticalAngle = Mathf.LerpAngle(_currentVerticalAngle, _verticalAngle, 
+            _currentVerticalAngle = Mathf.LerpAngle(_currentVerticalAngle, _verticalAngle,
                 Time.deltaTime * AngleAcceleration);
-            _currentDistance = Mathf.MoveTowards(_currentDistance, _cameraDistance, 
-                Time.deltaTime * DistanceAcceleration);
+            _currentDistance = Mathf.MoveTowards(_currentDistance, _cameraDistance,
+                Time.deltaTime * DistanceAcceleration * _zoomSpeedMultiplier);
             // The position is determined by the orientation and the distance, where distance has an exponential effect.
             Vector3 relativePosition = Quaternion.Euler(0, _currentHorizontalAngle, _verticalAngle) 
                                        * new Vector3(Mathf.Pow(DistanceScaling, _currentDistance), 0, 0);

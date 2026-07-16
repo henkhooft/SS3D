@@ -20,6 +20,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public bool HideUI { get; set; }
         public bool GridSnap { get; set; } = true;
         public bool DebugOverlay { get; set; }
+        public float CameraFov { get; set; } = 72f;
+        public float CameraZoomSpeed { get; set; } = 5f;
+        public float CameraRotationSpeed { get; set; } = 4f;
         public int UndoDepth { get; set; }
         public int RedoDepth { get; set; }
         public string SelectedObjectHint { get; set; } = "Select the Edit tool to place this object";

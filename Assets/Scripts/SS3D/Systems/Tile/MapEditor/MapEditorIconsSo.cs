@@ -23,29 +23,30 @@ namespace SS3D.Systems.Tile.MapEditor
             public const string Layers = "Assets/Art/Icons/external icons/delapouite/stack.svg";
             public const string Eye = "Assets/Art/Icons/external icons/lorc/eyeball.svg";
             public const string EyeOff = "Assets/Art/Icons/external icons/delapouite/invisible.svg";
+            public const string Camera = "Assets/Art/Icons/external icons/delapouite/photo-camera.svg";
             public const string Settings = "Assets/Art/Icons/external icons/lorc/cog.svg";
             public const string Exit = "Assets/Art/Icons/external icons/delapouite/exit-door.svg";
             public const string Search = "Assets/Art/Icons/external icons/lorc/magnifying-glass.svg";
             public const string ModeUpper = "Assets/Art/Icons/external icons/delapouite/expand.svg";
             public const string ModeLower = "Assets/Art/Icons/external icons/delapouite/contract.svg";
-            public const string ModeItems = "Assets/Art/Icons/external icons/delapouite/cube.svg";
-            public const string ModeScripting = "Assets/Art/Icons/external icons/delapouite/plain-arrow.svg";
+            public const string ModeItems = "Assets/Art/Icons/external icons/delapouite/cardboard-box.svg";
+            public const string ModeScripting = "Assets/Art/Icons/external icons/lorc/scroll-unfurled.svg";
             public const string SubFlooring = "Assets/Art/Icons/external icons/delapouite/domino-tiles.svg";
             public const string SubTurfs = "Assets/Art/Icons/external icons/lorc/mountains.svg";
-            public const string SubOverlays = "Assets/Art/Icons/external icons/delapouite/stack.svg";
+            public const string SubOverlays = "Assets/Art/Icons/external icons/lorc/footprint.svg";
             public const string SubWalls = "Assets/Art/Icons/external icons/delapouite/square.svg";
             public const string SubDoors = "Assets/Art/Icons/external icons/delapouite/door.svg";
             public const string SubTileObjects = "Assets/Art/Icons/external icons/delapouite/cube.svg";
-            public const string SubWallAttachments = "Assets/Art/Icons/external icons/delapouite/pin.svg";
+            public const string SubWallAttachments = "Assets/Art/Icons/external icons/delapouite/wall-light.svg";
             public const string SubPiping = "Assets/Art/Icons/external icons/delapouite/pipes.svg";
             public const string SubDisposals = "Assets/Art/Icons/external icons/delapouite/trash-can.svg";
             public const string SubBaseTiles = "Assets/Art/Icons/external icons/delapouite/plain-square.svg";
-            public const string SubFoodDrink = "Assets/Art/Icons/external icons/delapouite/cube.svg";
+            public const string SubFoodDrink = "Assets/Art/Icons/external icons/delapouite/hot-meal.svg";
             public const string SubTools = "Assets/Art/Icons/external icons/lorc/cog.svg";
-            public const string SubMedical = "Assets/Art/Icons/external icons/delapouite/cube.svg";
+            public const string SubMedical = "Assets/Art/Icons/external icons/lorc/hospital-cross.svg";
             public const string SubSecurity = "Assets/Art/Icons/external icons/lorc/heavy-lightning.svg";
             public const string SubMisc = "Assets/Art/Icons/external icons/delapouite/plain-circle.svg";
-            public const string SubAtmospherics = "Assets/Art/Icons/external icons/delapouite/pipes.svg";
+            public const string SubAtmospherics = "Assets/Art/Icons/external icons/lorc/gas-mask.svg";
             public const string SubSpawnPlacements = "Assets/Art/Icons/external icons/delapouite/pin.svg";
             public const string SubRandomSpawners = "Assets/Art/Icons/external icons/delapouite/rolling-dices.svg";
             public const string SubTriggers = "Assets/Art/Icons/external icons/lorc/focused-lightning.svg";
@@ -63,6 +64,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [SerializeField] private VectorImage _layers;
         [SerializeField] private VectorImage _eye;
         [SerializeField] private VectorImage _eyeOff;
+        [SerializeField] private VectorImage _camera;
         [SerializeField] private VectorImage _settings;
         [SerializeField] private VectorImage _exit;
         [SerializeField] private VectorImage _search;
@@ -142,10 +144,22 @@ namespace SS3D.Systems.Tile.MapEditor
         public VectorImage Layers => Resolve(_layers, Paths.Layers);
         public VectorImage Eye => Resolve(_eye, Paths.Eye);
         public VectorImage EyeOff => Resolve(_eyeOff, Paths.EyeOff);
+        public VectorImage Camera => Resolve(_camera, Paths.Camera);
         public VectorImage Settings => Resolve(_settings, Paths.Settings);
         public VectorImage Exit => Resolve(_exit, Paths.Exit);
         public VectorImage Search => Resolve(_search, Paths.Search);
-        public VectorImage ShowUi => Resolve(_eye, Paths.Eye);
+
+        /// <summary>
+        /// Icon for the "Hide UI" button, visible only while the HUD is showing — an open eye,
+        /// since clicking it hides the (currently visible) UI.
+        /// </summary>
+        public VectorImage HideUiIcon => Resolve(_eye, Paths.Eye);
+
+        /// <summary>
+        /// Icon for the floating reveal button, visible only while the HUD is hidden — a crossed-out
+        /// eye, since clicking it shows the (currently hidden) UI.
+        /// </summary>
+        public VectorImage ShowUi => Resolve(_eyeOff, Paths.EyeOff);
 
         private static VectorImage Resolve(VectorImage baked, string path) =>
             baked != null ? baked : MapEditorIconLoader.Load(path);

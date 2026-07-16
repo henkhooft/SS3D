@@ -70,6 +70,7 @@ namespace SS3D.Editor.MapEditor
             ("_layers", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Layers),
             ("_eye", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Eye),
             ("_eyeOff", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.EyeOff),
+            ("_camera", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Camera),
             ("_settings", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Settings),
             ("_exit", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Exit),
             ("_search", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.Search),
