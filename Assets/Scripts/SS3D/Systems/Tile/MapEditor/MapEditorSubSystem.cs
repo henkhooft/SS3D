@@ -177,6 +177,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             if (active)
             {
+                _viewModel.HideUI = false;
                 EnableDocument();
                 RebuildCatalog();
                 EnsureCommandServiceBound();
