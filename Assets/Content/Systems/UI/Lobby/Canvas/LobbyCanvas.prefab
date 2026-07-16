@@ -7384,7 +7384,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6349697050721758704}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 918273702}
+        m_TargetAssemblyTypeName: SS3D.Systems.Lobby.UI.LobbyCharacterTabView, SS3D.Systems
+        m_MethodName: OpenCustomizer
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &4865072634109833079
 GameObject:
   m_ObjectHideFlags: 0
@@ -8497,4 +8509,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 666ca96c668e40c1b03b13e7f2c2bb6e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _openCustomizerButton: {fileID: 0}
+  _openCustomizerButton: {fileID: 7174890275416467753}
+  _characterNameLabel: {fileID: 3736358312705927468}

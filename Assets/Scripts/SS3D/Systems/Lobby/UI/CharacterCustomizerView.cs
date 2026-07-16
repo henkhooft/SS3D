@@ -1,12 +1,12 @@
+using Coimbra;
 using SS3D.Core;
-using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Screens;
 using SS3D.UI.Buttons;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Coimbra;
+using Actor = SS3D.Core.Behaviours.Actor;
 
 namespace SS3D.Systems.Lobby.UI
 {
@@ -104,19 +104,45 @@ namespace SS3D.Systems.Lobby.UI
 
             if (_previewImage == null)
             {
-                Transform preview = FindChildRecursive(transform, "Character Preview");
-                if (preview != null)
-                {
-                    _previewImage = preview.GetComponent<RawImage>();
-                    if (_previewImage == null)
-                    {
-                        _previewImage = preview.gameObject.AddComponent<RawImage>();
-                        _previewImage.color = Color.white;
-                    }
-                }
+                _previewImage = ResolvePreviewImage();
             }
 
-            _previewBooth.Initialize(_humanPrefab, _catalog, _previewImage);
+            if (_previewBooth != null)
+            {
+                _previewBooth.Initialize(_humanPrefab, _catalog, _previewImage);
+            }
+        }
+
+        private RawImage ResolvePreviewImage()
+        {
+            Transform preview = FindChildRecursive(transform, "Character Preview");
+            if (preview == null)
+            {
+                return null;
+            }
+
+            RawImage rawImage = preview.GetComponent<RawImage>();
+            if (rawImage != null)
+            {
+                rawImage.enabled = true;
+                return rawImage;
+            }
+
+            // Character Preview ships with a UI Image placeholder; RawImage cannot coexist with it.
+            Image placeholder = preview.GetComponent<Image>();
+            if (placeholder != null)
+            {
+                Destroy(placeholder);
+            }
+
+            rawImage = preview.gameObject.AddComponent<RawImage>();
+            if (rawImage != null)
+            {
+                rawImage.color = Color.white;
+                rawImage.enabled = true;
+            }
+
+            return rawImage;
         }
 
         private void EnsureNameField()
@@ -209,9 +235,12 @@ namespace SS3D.Systems.Lobby.UI
 
             if (_optionsContent == null)
             {
-                Transform content = FindChildRecursive(transform, "Content");
-                _optionsContent = content != null ? content : transform;
+                // Prefer the Options slot — never use root "Content" (that holds Header + panels).
+                Transform options = FindChildRecursive(transform, "Options");
+                _optionsContent = options != null ? options : null;
             }
+
+            EnsureOptionsLayout();
 
             if (_backButton != null)
             {
@@ -231,6 +260,32 @@ namespace SS3D.Systems.Lobby.UI
             if (_appearanceTabButton != null)
             {
                 _appearanceTabButton.OnPressedDown += HandleAppearanceTab;
+            }
+        }
+
+        private void EnsureOptionsLayout()
+        {
+            if (_optionsContent == null)
+            {
+                return;
+            }
+
+            if (_optionsContent.GetComponent<VerticalLayoutGroup>() == null)
+            {
+                VerticalLayoutGroup layout = _optionsContent.gameObject.AddComponent<VerticalLayoutGroup>();
+                layout.spacing = 6f;
+                layout.childAlignment = TextAnchor.UpperCenter;
+                layout.childControlWidth = true;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = true;
+                layout.childForceExpandHeight = false;
+                layout.padding = new RectOffset(8, 8, 8, 8);
+            }
+
+            if (_optionsContent.GetComponent<ContentSizeFitter>() == null)
+            {
+                ContentSizeFitter fitter = _optionsContent.gameObject.AddComponent<ContentSizeFitter>();
+                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             }
         }
 
@@ -366,6 +421,7 @@ namespace SS3D.Systems.Lobby.UI
                 return;
             }
 
+            // Only clear generated option buttons — never wipe Header / Side Menu / Preview.
             for (int i = _optionsContent.childCount - 1; i >= 0; i--)
             {
                 _optionsContent.GetChild(i).gameObject.Dispose(true);

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Coimbra;
 using FishNet.Object;
+using FishNet.Observing;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -168,19 +169,27 @@ namespace SS3D.Systems.Entities.Character
 
         private static void StripNetworking(GameObject root)
         {
-            NetworkObject[] networkObjects = root.GetComponentsInChildren<NetworkObject>(true);
-            foreach (NetworkObject networkObject in networkObjects)
-            {
-                Object.DestroyImmediate(networkObject);
-            }
+            // Dependents first (RequireComponent blocks DestroyImmediate otherwise).
+            // NetworkObserver is MonoBehaviour, not NetworkBehaviour.
+            DestroyAll<RagdollPart>(root);
+            DestroyAll<NetworkObserver>(root);
+            DestroyAll<NetworkBehaviour>(root);
+            DestroyAll<NetworkObject>(root);
+        }
 
-            NetworkBehaviour[] behaviours = root.GetComponentsInChildren<NetworkBehaviour>(true);
-            foreach (NetworkBehaviour behaviour in behaviours)
+        private static void DestroyAll<T>(GameObject root) where T : Object
+        {
+            T[] components = root.GetComponentsInChildren<T>(true);
+            for (int i = 0; i < components.Length; i++)
             {
-                if (behaviour != null)
+                T component = components[i];
+                if (component == null)
                 {
-                    Object.DestroyImmediate(behaviour);
+                    continue;
                 }
+
+                // Immediate: dependents must be gone before NetworkObject/NetworkTransform in this frame.
+                Object.DestroyImmediate(component);
             }
         }
 
@@ -195,6 +204,12 @@ namespace SS3D.Systems.Entities.Character
 
                 // Keep renderers' hosts and transforms; disable controllers / audio listeners.
                 if (behaviour is Animator || behaviour is CharacterController || behaviour is AudioListener)
+                {
+                    behaviour.enabled = false;
+                }
+
+                // Networking may linger one frame when destroyed with Destroy(); keep it inert.
+                if (behaviour is NetworkBehaviour || behaviour is NetworkObject)
                 {
                     behaviour.enabled = false;
                 }

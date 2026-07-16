@@ -1,5 +1,4 @@
 using Coimbra;
-using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Character
@@ -69,12 +68,6 @@ namespace SS3D.Systems.Entities.Character
 
         private static Transform FindHead(Transform root)
         {
-            HumanoidRigReferences rig = root.GetComponentInChildren<HumanoidRigReferences>(true);
-            if (rig != null && rig.Head != null)
-            {
-                return rig.Head;
-            }
-
             Transform byName = FindDescendant(root, "head");
             if (byName != null)
             {

@@ -108,6 +108,12 @@ namespace SS3D.Systems.Screens
             _blockSwitchToNone = true;
             _spawnedState = PlayerSpawnedState.IsNotSpawned;
 
+            // Keep the character customizer open while the player is still in the lobby flow.
+            if (GameScreens.ActiveScreen == ScreenType.CharacterCustomizer)
+            {
+                return;
+            }
+
             GameScreens.SwitchTo(ScreenType.Lobby);
         }
 
