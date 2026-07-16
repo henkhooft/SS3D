@@ -1,23 +1,29 @@
-using System.Collections.Generic;
 using Coimbra;
 using FishNet.Object;
 using FishNet.Observing;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_RENDER_PIPELINE_UNIVERSAL
+using UnityEngine.Rendering.Universal;
+#endif
 
 namespace SS3D.Systems.Entities.Character
 {
     /// <summary>
     /// Spawns a local-only humanoid for the customizer RenderTexture preview.
+    /// Uses a dedicated preview layer and world-space booth (same approach as RuntimePreviewGenerator).
     /// </summary>
     public class CharacterPreviewBooth : MonoBehaviour
     {
+        private const int PreviewLayer = 22;
+        private static readonly Vector3 BoothOrigin = new(-250f, -250f, -250f);
+
         [SerializeField] private GameObject _humanPrefab;
         [SerializeField] private Camera _previewCamera;
         [SerializeField] private RawImage _previewImage;
         [SerializeField] private Transform _spawnPoint;
-        [SerializeField] private Vector3 _cameraOffset = new(0f, 1.5f, 2.2f);
-        [SerializeField] private Vector3 _lookAtOffset = new(0f, 1.4f, 0f);
+        [SerializeField] private Vector3 _cameraOffset = new(0f, 1.2f, 2.6f);
+        [SerializeField] private Vector3 _lookAtOffset = new(0f, 1.1f, 0f);
         [SerializeField] private int _textureWidth = 512;
         [SerializeField] private int _textureHeight = 512;
 
@@ -40,10 +46,12 @@ namespace SS3D.Systems.Entities.Character
                 _previewImage = previewImage;
             }
 
+            MoveToWorldSpace();
             EnsureCamera();
             EnsureRenderTexture();
             EnsureDummy();
             FrameCamera();
+            SetActive(true);
         }
 
         public void ApplySheet(CharacterSheet sheet)
@@ -51,6 +59,7 @@ namespace SS3D.Systems.Entities.Character
             if (_dummy == null)
             {
                 EnsureDummy();
+                FrameCamera();
             }
 
             if (_dummy == null)
@@ -76,6 +85,11 @@ namespace SS3D.Systems.Entities.Character
             if (_previewImage != null)
             {
                 _previewImage.enabled = active;
+                if (active && _renderTexture != null)
+                {
+                    _previewImage.texture = _renderTexture;
+                    _previewImage.color = Color.white;
+                }
             }
         }
 
@@ -98,6 +112,18 @@ namespace SS3D.Systems.Entities.Character
             }
         }
 
+        private void MoveToWorldSpace()
+        {
+            if (transform.parent != null)
+            {
+                transform.SetParent(null, false);
+            }
+
+            transform.position = BoothOrigin;
+            transform.rotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+        }
+
         private void EnsureCamera()
         {
             if (_previewCamera != null)
@@ -110,10 +136,34 @@ namespace SS3D.Systems.Entities.Character
             _previewCamera = cameraObject.AddComponent<Camera>();
             _previewCamera.clearFlags = CameraClearFlags.SolidColor;
             _previewCamera.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 1f);
-            _previewCamera.fieldOfView = 35f;
-            _previewCamera.nearClipPlane = 0.1f;
-            _previewCamera.farClipPlane = 50f;
+            _previewCamera.fieldOfView = 28f;
+            _previewCamera.nearClipPlane = 0.05f;
+            _previewCamera.farClipPlane = 40f;
+            _previewCamera.depth = -100f;
+            _previewCamera.cullingMask = 1 << PreviewLayer;
+            _previewCamera.allowHDR = false;
+            _previewCamera.allowMSAA = false;
             _previewCamera.enabled = false;
+
+            ConfigureUrpCamera(_previewCamera);
+
+            AudioListener listener = cameraObject.GetComponent<AudioListener>();
+            if (listener != null)
+            {
+                DestroyImmediate(listener);
+            }
+        }
+
+        private static void ConfigureUrpCamera(Camera camera)
+        {
+#if UNITY_RENDER_PIPELINE_UNIVERSAL
+            UniversalAdditionalCameraData cameraData = camera.GetUniversalAdditionalCameraData();
+            cameraData.renderType = CameraRenderType.Base;
+            cameraData.requiresColorOption = CameraOverrideOption.Off;
+            cameraData.requiresDepthOption = CameraOverrideOption.Off;
+            cameraData.renderShadows = false;
+            cameraData.dithering = false;
+#endif
         }
 
         private void EnsureRenderTexture()
@@ -123,7 +173,7 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            _renderTexture = new RenderTexture(_textureWidth, _textureHeight, 16)
+            _renderTexture = new RenderTexture(_textureWidth, _textureHeight, 16, RenderTextureFormat.ARGB32)
             {
                 name = "CharacterPreviewRT",
                 antiAliasing = 1,
@@ -134,6 +184,7 @@ namespace SS3D.Systems.Entities.Character
             if (_previewImage != null)
             {
                 _previewImage.texture = _renderTexture;
+                _previewImage.color = Color.white;
             }
         }
 
@@ -148,10 +199,12 @@ namespace SS3D.Systems.Entities.Character
             _dummy = Instantiate(_humanPrefab, parent);
             _dummy.name = "CharacterPreviewDummy";
             _dummy.transform.localPosition = Vector3.zero;
-            _dummy.transform.localRotation = Quaternion.identity;
+            _dummy.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            _dummy.transform.localScale = Vector3.one;
 
             StripNetworking(_dummy);
             DisableGameplay(_dummy);
+            SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
 
         private void FrameCamera()
@@ -161,16 +214,59 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            Transform t = _dummy.transform;
-            _previewCamera.transform.position = t.position + t.rotation * _cameraOffset;
-            _previewCamera.transform.LookAt(t.position + _lookAtOffset);
+            Bounds bounds = CalculateBounds(_dummy);
+            Vector3 lookAt = bounds.center;
+            lookAt.y = Mathf.Lerp(bounds.min.y, bounds.max.y, 0.55f);
+
+            float radius = Mathf.Max(bounds.extents.magnitude, 0.75f);
+            float distance = radius / Mathf.Tan(_previewCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            distance = Mathf.Clamp(distance * 1.15f, 1.5f, 8f);
+
+            Vector3 forward = Quaternion.Euler(8f, 180f, 0f) * Vector3.forward;
+            _previewCamera.transform.position = lookAt - forward * distance + Vector3.up * (radius * 0.05f);
+            _previewCamera.transform.LookAt(lookAt);
             _previewCamera.enabled = true;
+        }
+
+        private static Bounds CalculateBounds(GameObject root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            Bounds bounds = new(root.transform.position, Vector3.one * 0.1f);
+            bool initialized = false;
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (!initialized)
+                {
+                    bounds = renderer.bounds;
+                    initialized = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return bounds;
+        }
+
+        private static void SetLayerRecursively(Transform root, int layer)
+        {
+            root.gameObject.layer = layer;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                SetLayerRecursively(root.GetChild(i), layer);
+            }
         }
 
         private static void StripNetworking(GameObject root)
         {
-            // Dependents first (RequireComponent blocks DestroyImmediate otherwise).
-            // NetworkObserver is MonoBehaviour, not NetworkBehaviour.
             DestroyAll<RagdollPart>(root);
             DestroyAll<NetworkObserver>(root);
             DestroyAll<NetworkBehaviour>(root);
@@ -188,7 +284,6 @@ namespace SS3D.Systems.Entities.Character
                     continue;
                 }
 
-                // Immediate: dependents must be gone before NetworkObject/NetworkTransform in this frame.
                 Object.DestroyImmediate(component);
             }
         }
@@ -202,13 +297,19 @@ namespace SS3D.Systems.Entities.Character
                     continue;
                 }
 
-                // Keep renderers' hosts and transforms; disable controllers / audio listeners.
-                if (behaviour is Animator || behaviour is CharacterController || behaviour is AudioListener)
+                // Keep Animator so skinned meshes stay in a valid bind/pose; freeze playback.
+                if (behaviour is Animator animator)
+                {
+                    animator.enabled = true;
+                    animator.speed = 0f;
+                    continue;
+                }
+
+                if (behaviour is CharacterController || behaviour is AudioListener)
                 {
                     behaviour.enabled = false;
                 }
 
-                // Networking may linger one frame when destroyed with Destroy(); keep it inert.
                 if (behaviour is NetworkBehaviour || behaviour is NetworkObject)
                 {
                     behaviour.enabled = false;

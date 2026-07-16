@@ -72,6 +72,12 @@ namespace SS3D.Systems.Lobby.UI
             {
                 _nameField.onValueChanged.RemoveListener(HandleNameChanged);
             }
+
+            if (_previewBooth != null)
+            {
+                Destroy(_previewBooth.gameObject);
+                _previewBooth = null;
+            }
         }
 
         private void ResolveCatalog()
@@ -98,7 +104,7 @@ namespace SS3D.Systems.Lobby.UI
             if (_previewBooth == null)
             {
                 GameObject boothObject = new("CharacterPreviewBooth");
-                boothObject.transform.SetParent(transform, false);
+                // World-space root; CharacterPreviewBooth.Initialize also detaches from the canvas.
                 _previewBooth = boothObject.AddComponent<CharacterPreviewBooth>();
             }
 
@@ -270,24 +276,150 @@ namespace SS3D.Systems.Lobby.UI
                 return;
             }
 
-            if (_optionsContent.GetComponent<VerticalLayoutGroup>() == null)
+            Image panelImage = _optionsContent.GetComponent<Image>();
+            if (panelImage != null)
             {
-                VerticalLayoutGroup layout = _optionsContent.gameObject.AddComponent<VerticalLayoutGroup>();
-                layout.spacing = 6f;
-                layout.childAlignment = TextAnchor.UpperCenter;
-                layout.childControlWidth = true;
-                layout.childControlHeight = true;
-                layout.childForceExpandWidth = true;
-                layout.childForceExpandHeight = false;
-                layout.padding = new RectOffset(8, 8, 8, 8);
+                panelImage.enabled = true;
+                panelImage.color = new Color(0.12f, 0.12f, 0.14f, 0.92f);
+                if (panelImage.sprite == null)
+                {
+                    panelImage.sprite = ResolveUiSprite();
+                }
             }
 
-            if (_optionsContent.GetComponent<ContentSizeFitter>() == null)
+            LayoutElement panelLayout = _optionsContent.GetComponent<LayoutElement>();
+            if (panelLayout != null)
             {
-                ContentSizeFitter fitter = _optionsContent.gameObject.AddComponent<ContentSizeFitter>();
-                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                panelLayout.minWidth = 140f;
+                panelLayout.preferredWidth = 160f;
+                panelLayout.flexibleWidth = 0f;
+                panelLayout.flexibleHeight = 1f;
+            }
+
+            EnsureSideMenuLayout();
+            EnsurePreviewLayout();
+
+            VerticalLayoutGroup layout = _optionsContent.GetComponent<VerticalLayoutGroup>();
+            if (layout == null)
+            {
+                layout = _optionsContent.gameObject.AddComponent<VerticalLayoutGroup>();
+            }
+
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.padding = new RectOffset(8, 8, 8, 8);
+
+            ContentSizeFitter fitter = _optionsContent.GetComponent<ContentSizeFitter>();
+            if (fitter != null)
+            {
+                Destroy(fitter);
             }
         }
+
+        private void EnsureSideMenuLayout()
+        {
+            Transform sideMenu = FindChildRecursive(transform, "Side Menu");
+            if (sideMenu == null)
+            {
+                return;
+            }
+
+            LayoutElement sideLayout = sideMenu.GetComponent<LayoutElement>();
+            if (sideLayout == null)
+            {
+                sideLayout = sideMenu.gameObject.AddComponent<LayoutElement>();
+            }
+
+            sideLayout.minWidth = 120f;
+            sideLayout.preferredWidth = 140f;
+            sideLayout.flexibleWidth = 0f;
+            sideLayout.flexibleHeight = 1f;
+
+            VerticalLayoutGroup vertical = sideMenu.GetComponent<VerticalLayoutGroup>();
+            if (vertical != null)
+            {
+                vertical.childControlWidth = true;
+                vertical.childForceExpandWidth = true;
+                vertical.childControlHeight = true;
+                vertical.childForceExpandHeight = false;
+                vertical.spacing = 8f;
+            }
+
+            TextMeshProUGUI[] labels = sideMenu.GetComponentsInChildren<TextMeshProUGUI>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                labels[i].enableWordWrapping = false;
+                labels[i].overflowMode = TextOverflowModes.Ellipsis;
+                labels[i].alignment = TextAlignmentOptions.Center;
+            }
+
+            for (int i = 0; i < sideMenu.childCount; i++)
+            {
+                Transform child = sideMenu.GetChild(i);
+                LayoutElement childLayout = child.GetComponent<LayoutElement>();
+                if (childLayout == null)
+                {
+                    childLayout = child.gameObject.AddComponent<LayoutElement>();
+                }
+
+                childLayout.minHeight = 36f;
+                childLayout.preferredHeight = 40f;
+                childLayout.flexibleWidth = 1f;
+            }
+        }
+
+        private void EnsurePreviewLayout()
+        {
+            Transform preview = FindChildRecursive(transform, "Character Preview");
+            if (preview == null)
+            {
+                return;
+            }
+
+            LayoutElement previewLayout = preview.GetComponent<LayoutElement>();
+            if (previewLayout == null)
+            {
+                previewLayout = preview.gameObject.AddComponent<LayoutElement>();
+            }
+
+            previewLayout.minWidth = 280f;
+            previewLayout.preferredWidth = -1f;
+            previewLayout.flexibleWidth = 1f;
+            previewLayout.flexibleHeight = 1f;
+        }
+
+        private Sprite ResolveUiSprite()
+        {
+            if (_uiSprite != null)
+            {
+                return _uiSprite;
+            }
+
+            // Prefer a sprite already used by this canvas (Unity 6 has no UI/Skin/UISprite.psd).
+            Image[] images = GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != null && images[i].sprite != null)
+                {
+                    _uiSprite = images[i].sprite;
+                    return _uiSprite;
+                }
+            }
+
+            Texture2D texture = Texture2D.whiteTexture;
+            _uiSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                100f);
+            return _uiSprite;
+        }
+
+        private static Sprite _uiSprite;
 
         private void UnwireButtons()
         {
@@ -512,27 +644,43 @@ namespace SS3D.Systems.Lobby.UI
             }
             else
             {
-                buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button));
+                buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                 buttonObject.transform.SetParent(_optionsContent, false);
+                buttonObject.layer = _optionsContent.gameObject.layer;
 
                 RectTransform rect = buttonObject.GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(0f, 36f);
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.sizeDelta = new Vector2(0f, 40f);
+
+                LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
+                layoutElement.minHeight = 32f;
+                layoutElement.preferredHeight = 32f;
+                layoutElement.flexibleWidth = 1f;
 
                 Image image = buttonObject.GetComponent<Image>();
+                image.sprite = ResolveUiSprite();
+                image.type = Image.Type.Sliced;
                 image.color = new Color(0.22f, 0.22f, 0.26f, 1f);
+                image.raycastTarget = true;
 
                 GameObject textObject = new("Label");
                 textObject.transform.SetParent(buttonObject.transform, false);
+                textObject.layer = buttonObject.layer;
                 RectTransform textRect = textObject.AddComponent<RectTransform>();
                 textRect.anchorMin = Vector2.zero;
                 textRect.anchorMax = Vector2.one;
-                textRect.offsetMin = new Vector2(8f, 0f);
-                textRect.offsetMax = new Vector2(-8f, 0f);
+                textRect.offsetMin = new Vector2(8f, 2f);
+                textRect.offsetMax = new Vector2(-8f, -2f);
                 TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
                 text.text = label;
-                text.fontSize = 16f;
+                text.fontSize = 14f;
                 text.color = Color.white;
                 text.alignment = TextAlignmentOptions.MidlineLeft;
+                text.raycastTarget = false;
+                text.enableWordWrapping = false;
+                text.overflowMode = TextOverflowModes.Ellipsis;
             }
 
             buttonObject.name = label;
@@ -547,6 +695,12 @@ namespace SS3D.Systems.Lobby.UI
             if (button == null)
             {
                 button = buttonObject.AddComponent<Button>();
+            }
+
+            Image targetGraphic = buttonObject.GetComponent<Image>();
+            if (targetGraphic != null)
+            {
+                button.targetGraphic = targetGraphic;
             }
 
             button.onClick.RemoveAllListeners();
