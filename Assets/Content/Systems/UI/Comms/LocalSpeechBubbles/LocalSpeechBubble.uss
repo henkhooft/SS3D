@@ -1,0 +1,49 @@
+@import url("../../Tokens/ss3d-tokens.uss");
+@import url("../../Tokens/ss3d-typography.uss");
+
+.comms-bubble {
+    translate: -50% 0;
+    max-width: 260px;
+    background-color: var(--ss3d-surface-panel);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 6px 12px;
+    align-items: center;
+}
+
+.comms-bubble--clear {
+    opacity: 1;
+}
+
+.comms-bubble--muffled {
+    border-color: var(--ss3d-border-strong);
+}
+
+.comms-bubble__label {
+    white-space: normal;
+    -unity-text-align: middle-center;
+    font-size: 13px;
+    color: var(--ss3d-text-primary);
+}
+
+.comms-bubble--muffled .comms-bubble__label {
+    color: var(--ss3d-text-secondary);
+    letter-spacing: 1px;
+}
+
+.comms-overflow-chip {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background-color: var(--ss3d-surface-inset);
+    border-width: 1px;
+    border-color: var(--ss3d-border-subtle);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 4px 10px;
+}
+
+.comms-overflow-chip__label {
+    font-size: 11px;
+    color: var(--ss3d-text-tertiary);
+}
