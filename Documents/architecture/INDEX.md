@@ -109,7 +109,7 @@ prototyping section, `Status` line for draft/active/superseded only, cross-refs 
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, vendors, jukebox; power-gated behaviors; vending via diegetic machine-interface |
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine and pre-round lobby UI |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
-| Player control | [player-control](systems/player-control.md) | stub | Player subsystem and input routing |
+| Player control | [player-control](systems/player-control.md) | partial | Player subsystem, connect/authorize/disconnect lifecycle, and input routing |
 | Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | stub | Chat, audio, camera controllers |
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending panels; server-side ID access gates (vending ungated) |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays + hit flash; debug/console only until health wires them |

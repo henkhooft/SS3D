@@ -193,6 +193,14 @@ namespace SS3D.Systems.PlayerControl
                 _onlinePlayers.Add(ckey, player);
             }
 
+            // If this player already had a body in the round (e.g. they disconnected and are
+            // rejoining), reconnect them to it instead of leaving it stranded, ownerless, in the world.
+            EntitySubSystem entitySystem = SubSystems.Get<EntitySubSystem>();
+            if (entitySystem.IsPlayerSpawned(player))
+            {
+                entitySystem.TryReclaimEntity(player, conn);
+            }
+
             DespawnUnauthorizedPlayer(conn);
         }
 
@@ -232,11 +240,14 @@ namespace SS3D.Systems.PlayerControl
                 if (player != null)
                 {
                     _onlinePlayers.Remove(player.Ckey);
-                    player.RemoveOwnership();
                     Log.Debug(this, "Invoking the player server left event: {ckey}", Logs.ServerOnly, player.Ckey);
-
-                    return;
                 }
+
+                // conn.Objects is a HashSet with no defined order, and this connection is disconnecting
+                // regardless, so every owned object (Player, spawned Entity/body, held items, etc.) must have
+                // its ownership released here - returning early after the first Player match left whichever
+                // objects hadn't been enumerated yet (frequently the player's own body) still bound to the
+                // now-dead connection.
                 networkIdentity.RemoveOwnership();
             }
         }
