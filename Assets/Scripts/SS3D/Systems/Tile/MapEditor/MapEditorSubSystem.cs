@@ -46,7 +46,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private Controls.TileCreatorActions _controls;
         private TileSubSystem _tileSystem;
         private CameraFollow _cameraFollow;
-        private bool _gameplayInputBlocked;
+        private IInputHandle _mapEditorHandle;
+        private IInputHandle _scrollSuppress;
         private VisualElement _overlayRoot;
         private bool _active;
         private bool _mouseOverUI;
@@ -78,7 +79,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _persistence = new MapEditorLocalPersistence(_tileSystem);
             _gameplayHud = new MapEditorGameplayHud(transform);
 
-            _inputSystem.ToggleAction(_controls.ToggleMenu, true);
+            // TileCreator.ToggleMenu is always enabled by the Global context.
             _controls.ToggleMenu.performed += HandleToggleMenu;
             EnsureCommandServiceBound();
 
@@ -106,6 +107,10 @@ namespace SS3D.Systems.Tile.MapEditor
             _controls.ToggleMenu.performed -= HandleToggleMenu;
             SetGameplayInputBlocked(false);
             _gameplayHud?.SetVisible(true);
+            _mapEditorHandle?.Dispose();
+            _mapEditorHandle = null;
+            _scrollSuppress?.Dispose();
+            _scrollSuppress = null;
             TeardownView();
             if (_document != null)
                 _document.enabled = false;
@@ -185,8 +190,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorLayerVisibility.Activate();
                 MapEditorLayerVisibility.Apply(_viewModel);
 
-                _inputSystem.ToggleActionMap(_controls, true, new[] { _controls.ToggleMenu });
-                _inputSystem.ToggleCollisions(_controls, false);
+                _mapEditorHandle ??= _inputSystem.PushContext(InputContext.MapEditor);
 
                 Vector3 entry = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
                 if (_session.IsActive)
@@ -209,32 +213,20 @@ namespace SS3D.Systems.Tile.MapEditor
                 _session.Exit();
                 MapEditorLayerVisibility.Deactivate();
                 SetGameplayInputBlocked(false);
-                _inputSystem.ToggleActionMap(_controls, false, new[] { _controls.ToggleMenu });
-                _inputSystem.ToggleCollisions(_controls, true);
+                _mapEditorHandle?.Dispose();
+                _mapEditorHandle = null;
                 ShutdownDocument();
             }
         }
 
+        /// <summary>
+        /// Disables the normal follow camera while the Map Editor's own free-fly session is active.
+        /// Movement/Camera/Hotkeys action maps are masked separately by <see cref="InputContext.MapEditor"/>.
+        /// </summary>
         private void SetGameplayInputBlocked(bool blocked)
         {
-            if (blocked && !_gameplayInputBlocked)
-            {
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, false);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, false);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Hotkeys, false);
-                if (_cameraFollow != null)
-                    _cameraFollow.enabled = false;
-                _gameplayInputBlocked = true;
-            }
-            else if (!blocked && _gameplayInputBlocked)
-            {
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, true);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, true);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Hotkeys, true);
-                if (_cameraFollow != null)
-                    _cameraFollow.enabled = true;
-                _gameplayInputBlocked = false;
-            }
+            if (_cameraFollow != null)
+                _cameraFollow.enabled = !blocked;
         }
 
         private void RequestExit()
@@ -421,7 +413,16 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             _mouseOverUI = over;
             _view?.SetMouseOverUI(over);
-            _inputSystem.ToggleBinding("<Mouse>/scroll/y", !over);
+
+            if (over)
+            {
+                _scrollSuppress ??= _inputSystem.SuppressBinding("<Mouse>/scroll/y");
+            }
+            else
+            {
+                _scrollSuppress?.Dispose();
+                _scrollSuppress = null;
+            }
         }
 
         private void EnableDocument()

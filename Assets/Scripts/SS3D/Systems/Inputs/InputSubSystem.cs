@@ -135,6 +135,13 @@ namespace SS3D.Systems.Inputs
                     new[] { movement, camera, tile, other },
                     new[] { consoleOpen, _detailedExamine }),
 
+                // Map Editor: it polls Keyboard/Mouse directly for its own free-fly camera, so
+                // Movement/Camera must be masked here too (unlike TileMenu) to avoid the normal
+                // character/camera fighting it every frame.
+                [InputContext.MapEditor] = new InputContextDefinition(
+                    new[] { tile, other },
+                    new[] { consoleOpen }),
+
                 // Machine panel captures movement/camera; Escape closes via UiCancel (Other masked).
                 [InputContext.MachineUI] = new InputContextDefinition(
                     new[] { hotkeys, interactions },

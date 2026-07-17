@@ -20,6 +20,10 @@ namespace SS3D.Systems.Inputs
         /// <summary>The construction build menu is open (placement input, no world interactions).</summary>
         TileMenu = 20,
 
+        /// <summary>The full-screen Map Editor is open. It drives its own free-fly camera by polling
+        /// devices directly, so unlike <see cref="TileMenu"/> it masks Movement/Camera/Hotkeys too.</summary>
+        MapEditor = 25,
+
         /// <summary>A machine interface panel is open (movement/camera captured by the panel).</summary>
         MachineUI = 30,
 
