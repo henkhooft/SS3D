@@ -4,6 +4,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Systems.Comms.UI;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Inputs;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -65,6 +66,12 @@ namespace SS3D.Systems.Comms
             _listener = new LocalSpeechListener(_config);
             _ranker = new CrowdCapRanker();
 
+            // Bubbles never pick (see LocalSpeechBubbleView - the whole overlay is
+            // PickingMode.Ignore), so this never changes IsPointerOverInterface's answer, but
+            // every runtime UIDocument owner registers per the input-arbitration convention -
+            // see Documents/architecture/2026-07_input-arbitration.md.
+            InputInterface.RegisterDocument(_document);
+
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
         }
 
@@ -93,6 +100,7 @@ namespace SS3D.Systems.Comms
 
         protected override void OnDestroyed()
         {
+            InputInterface.UnregisterDocument(_document);
             _view?.Detach();
             base.OnDestroyed();
         }
