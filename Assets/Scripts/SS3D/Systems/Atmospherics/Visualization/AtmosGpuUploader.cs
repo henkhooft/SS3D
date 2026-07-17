@@ -11,14 +11,9 @@ namespace SS3D.Systems.Atmospherics.Visualization
     /// </summary>
     public sealed class AtmosGpuUploader : IDisposable
     {
-        private const int CompositionGasChannels = 4;
-        private const byte MaskEmpty = 0;
-        private const byte MaskSimulated = 1;
-        private const byte MaskVacuum = 2;
-        private const byte MaskBlocked = 3;
         // Sim burn intensity is cleared every tick; decay the uploaded fire texture slower so
         // flames read longer than a single 0.2s plasma reaction step.
-        private const float VisualFireDecayPerTick = 0.96f;
+        private const float VisualFireDecayPerTick = AtmosVisualMetrics.VisualFireDecayPerTick;
 
         private Texture2D _pressure;
         private Texture2D _temperature;
@@ -83,8 +78,8 @@ namespace SS3D.Systems.Atmospherics.Visualization
                 float visualFire = Mathf.Max(simFire, decayedFire);
                 _visualFireScratch[texel] = visualFire;
                 _fireScratch[texel] = visualFire;
-                _maskScratch[texel] = EncodeMask(meta.State);
-                _compositionScratch[texel] = EncodeComposition(simulation, cellIndex);
+                _maskScratch[texel] = AtmosCellVisualEncoding.EncodeMask(meta.State);
+                _compositionScratch[texel] = AtmosCellVisualEncoding.EncodeComposition(simulation.MolesRead, cellIndex);
             });
 
             WriteFlowGradients(simulation, minX, minZ);
@@ -150,7 +145,7 @@ namespace SS3D.Systems.Atmospherics.Visualization
             simulation.ForEachCell((coord, cellIndex) =>
             {
                 int texel = GetTexelIndex(coord.Grid.x - minX, coord.Grid.y - minZ);
-                if (texel < 0 || _maskScratch[texel] == MaskEmpty)
+                if (texel < 0 || _maskScratch[texel] == AtmosCellVisualEncoding.MaskEmpty)
                     return;
 
                 float pressure = _pressureScratch[texel];
@@ -187,43 +182,6 @@ namespace SS3D.Systems.Atmospherics.Visualization
             return _pressureScratch[texel];
         }
 
-        private Color32 EncodeComposition(AtmosSimulation simulation, int cellIndex)
-        {
-            float totalMoles = 0f;
-            var moles = new float[CompositionGasChannels];
-
-            for (int gasId = 0; gasId < CompositionGasChannels; gasId++)
-            {
-                moles[gasId] = simulation.MolesRead[GasMixture.GetMoleIndex(cellIndex, new GasId((ushort)gasId))];
-                totalMoles += moles[gasId];
-            }
-
-            if (totalMoles <= 1e-6f)
-                return new Color32(0, 0, 0, 0);
-
-            return new Color32(
-                ToByte(moles[0] / totalMoles),
-                ToByte(moles[1] / totalMoles),
-                ToByte(moles[2] / totalMoles),
-                ToByte(moles[3] / totalMoles));
-        }
-
-        private static byte EncodeMask(AtmosCellState state)
-        {
-            return state switch
-            {
-                AtmosCellState.Vacuum => MaskVacuum,
-                AtmosCellState.Blocked => MaskBlocked,
-                AtmosCellState.Active or AtmosCellState.Semiactive or AtmosCellState.Inactive => MaskSimulated,
-                _ => MaskEmpty,
-            };
-        }
-
-        private static byte ToByte(float normalized)
-        {
-            return (byte)Mathf.Clamp(Mathf.RoundToInt(normalized * 255f), 0, 255);
-        }
-
         private int GetTexelIndex(int localX, int localZ)
         {
             if (localX < 0 || localZ < 0 || localX >= _atlasWidth || localZ >= _atlasHeight)
@@ -235,12 +193,12 @@ namespace SS3D.Systems.Atmospherics.Visualization
         private void EnsureAtlas(int width, int height)
         {
             int pixelCount = width * height;
-            EnsureTexture(ref _pressure, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
-            EnsureTexture(ref _temperature, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
-            EnsureTexture(ref _composition, width, height, TextureFormat.RGBA32, FilterMode.Bilinear);
-            EnsureTexture(ref _flow, width, height, TextureFormat.RGFloat, FilterMode.Bilinear);
-            EnsureTexture(ref _fireIntensity, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
-            EnsureTexture(ref _mask, width, height, TextureFormat.R8, FilterMode.Point);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _pressure, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _temperature, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _composition, width, height, TextureFormat.RGBA32, FilterMode.Bilinear);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _flow, width, height, TextureFormat.RGFloat, FilterMode.Bilinear);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _fireIntensity, width, height, TextureFormat.RFloat, FilterMode.Bilinear);
+            AtmosGpuAtlasTextureUtility.EnsureTexture(ref _mask, width, height, TextureFormat.R8, FilterMode.Point);
 
             EnsureScratch(ref _pressureScratch, pixelCount);
             EnsureScratch(ref _temperatureScratch, pixelCount);
@@ -249,31 +207,6 @@ namespace SS3D.Systems.Atmospherics.Visualization
             EnsureScratch(ref _fireScratch, pixelCount);
             EnsureScratch(ref _visualFireScratch, pixelCount);
             EnsureScratch(ref _maskScratch, pixelCount);
-        }
-
-        private static void EnsureTexture(
-            ref Texture2D texture,
-            int width,
-            int height,
-            TextureFormat format,
-            FilterMode filterMode)
-        {
-            if (texture != null && texture.width == width && texture.height == height && texture.format == format)
-            {
-                texture.filterMode = filterMode;
-                texture.wrapMode = TextureWrapMode.Clamp;
-                return;
-            }
-
-            if (texture != null)
-                DestroyObject(texture);
-
-            texture = new Texture2D(width, height, format, mipChain: false, linear: true)
-            {
-                filterMode = filterMode,
-                wrapMode = TextureWrapMode.Clamp,
-                name = $"Atmos{format}",
-            };
         }
 
         private static void EnsureScratch<T>(ref T[] scratch, int length)
@@ -321,29 +254,8 @@ namespace SS3D.Systems.Atmospherics.Visualization
             _mask.Apply(updateMipmaps: false, makeNoLongerReadable: false);
         }
 
-        private static int NextPowerOfTwo(int value)
-        {
-            int power = 1;
-            while (power < value)
-                power <<= 1;
-            return power;
-        }
+        private static int NextPowerOfTwo(int value) => AtmosGpuAtlasTextureUtility.NextPowerOfTwo(value);
 
-        private static void DestroyTexture(ref Texture2D texture)
-        {
-            if (texture == null)
-                return;
-
-            DestroyObject(texture);
-            texture = null;
-        }
-
-        private static void DestroyObject(UnityEngine.Object obj)
-        {
-            if (obj == null)
-                return;
-
-            UnityEngine.Object.DestroyImmediate(obj);
-        }
+        private static void DestroyTexture(ref Texture2D texture) => AtmosGpuAtlasTextureUtility.DestroyTexture(ref texture);
     }
 }

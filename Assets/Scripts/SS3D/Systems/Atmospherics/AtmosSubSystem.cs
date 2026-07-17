@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Logging;
@@ -6,6 +7,7 @@ using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Tile;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics
@@ -25,6 +27,10 @@ namespace SS3D.Systems.Atmospherics
         private GasPipeNetworkRegistry _pipeRegistry;
         private readonly AtmosPortRegistry _portRegistry = new();
         private AtmosVisualizationBridge _visualizationBridge;
+        private AtmosClientVisualizationBridge _clientVisualizationBridge;
+        private AtmosDirtyChunkTracker _dirtyChunkTracker;
+        private AtmosChunkPatchBuilder _patchBuilder;
+        private readonly List<Vector2Int> _dirtyChunkBuffer = new();
         private float _tickTimer;
 
         public GasRegistry GasRegistry => _gasRegistry;
@@ -48,7 +54,25 @@ namespace SS3D.Systems.Atmospherics
             else
                 _visualizationBridge = GetComponent<AtmosVisualizationBridge>();
 
+            _dirtyChunkTracker = new AtmosDirtyChunkTracker();
+            _patchBuilder = new AtmosChunkPatchBuilder();
+
             InitializeWhenMapReady().Forget();
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            // Hosts already get visuals through the server-side AtmosVisualizationBridge above;
+            // only pure clients need to build their own atlas from networked chunk patches.
+            if (IsServer)
+                return;
+
+            if (!TryGetComponent<AtmosClientVisualizationBridge>(out _))
+                _clientVisualizationBridge = gameObject.AddComponent<AtmosClientVisualizationBridge>();
+            else
+                _clientVisualizationBridge = GetComponent<AtmosClientVisualizationBridge>();
         }
 
         private async UniTaskVoid InitializeWhenMapReady()
@@ -151,6 +175,9 @@ namespace SS3D.Systems.Atmospherics
             _pipeSimulation = null;
             _pipeRegistry = null;
             _visualizationBridge = null;
+            _clientVisualizationBridge = null;
+            _dirtyChunkTracker = null;
+            _patchBuilder = null;
             _atmosWorld?.Dispose();
             _atmosWorld = null;
             base.OnDestroyed();
@@ -209,6 +236,38 @@ namespace SS3D.Systems.Atmospherics
             _portRegistry.TickDevices(_pipeSimulation, _simulation, AtmosConstants.TickInterval);
             LastTickMilliseconds = (Time.realtimeSinceStartup - started) * 1000f;
             _visualizationBridge?.PublishSnapshot();
+            BroadcastDirtyChunks();
+        }
+
+        /// <summary>
+        /// Sends each visually-dirty chunk to observing clients so pure clients (which have no
+        /// local <see cref="AtmosSimulation"/>) can build a matching atlas. See
+        /// Documents/architecture/2026-07_atmos-client-visualization-sync.md.
+        /// </summary>
+        private void BroadcastDirtyChunks()
+        {
+            if (_dirtyChunkTracker == null || _patchBuilder == null)
+                return;
+
+            _dirtyChunkTracker.Update(_simulation);
+            _dirtyChunkTracker.ConsumeDirtyChunks(_dirtyChunkBuffer);
+            if (_dirtyChunkBuffer.Count == 0)
+                return;
+
+            foreach (Vector2Int chunkKey in _dirtyChunkBuffer)
+            {
+                if (!_simulation.TryGetChunkIndex(chunkKey, out int chunkIndex))
+                    continue;
+
+                AtmosChunkPatch patch = _patchBuilder.Build(_simulation, chunkIndex, chunkKey);
+                RpcApplyChunkPatch(patch);
+            }
+        }
+
+        [ObserversRpc]
+        private void RpcApplyChunkPatch(AtmosChunkPatch patch)
+        {
+            _clientVisualizationBridge?.ApplyChunkPatch(patch);
         }
 
         public bool TryTransferPipeMoles(
