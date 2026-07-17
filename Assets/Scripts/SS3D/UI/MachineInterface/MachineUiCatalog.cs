@@ -38,6 +38,10 @@ namespace SS3D.UI.MachineInterface
         public VisualTreeAsset VentTemplate { get; init; }
         public StyleSheet VentTemplateStyle { get; init; }
         public StyleSheet[] VentComponentStyles { get; init; }
+
+        public VisualTreeAsset HealthScannerTemplate { get; init; }
+        public StyleSheet HealthScannerTemplateStyle { get; init; }
+        public StyleSheet[] HealthScannerComponentStyles { get; init; }
     }
 
     /// <summary>
@@ -125,6 +129,16 @@ namespace SS3D.UI.MachineInterface
                 ComponentStyles = assets.VentComponentStyles,
                 ShellKind = MachineInterfaceShellKind.DiegeticDevice,
                 CreateBinder = root => new VentInterfaceBinder(root),
+            });
+
+            MachineInterfaceRegistry.RegisterUi(new MachineInterfaceUiRegistration
+            {
+                InterfaceId = MachineInterfaceIds.HealthScanner,
+                Template = assets.HealthScannerTemplate,
+                TemplateStyle = assets.HealthScannerTemplateStyle,
+                ComponentStyles = assets.HealthScannerComponentStyles,
+                ShellKind = MachineInterfaceShellKind.DiegeticDevice,
+                CreateBinder = root => new HealthScannerInterfaceBinder(root),
             });
         }
     }

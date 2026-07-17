@@ -76,6 +76,27 @@ namespace SS3D.UI.MachineInterface
         public const string VentTemplateStyle =
             "Assets/Content/Systems/UI/MachineInterface/Templates/VentUnitInterface.uss";
 
+        public const string HealthScannerTemplate =
+            "Assets/Content/Systems/UI/MachineInterface/Templates/HealthScannerInterface.uxml";
+
+        public const string HealthScannerTemplateStyle =
+            "Assets/Content/Systems/UI/MachineInterface/Templates/HealthScannerInterface.uss";
+
+        public static readonly string[] HealthScannerComponentStyles =
+        {
+            "Assets/Content/Systems/UI/MachineInterface/Components/DiegeticDeviceShell.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/StatusDot.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/ConnectionStatusRow.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/DeviceIdentityBlock.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/GlanceableStatusChip.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/PanelSection.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/StatusBadge.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/AnatomyBodyMap.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/VitalGaugeTile.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/OrganReadoutRow.uss",
+            "Assets/Content/Systems/UI/MachineInterface/Components/DeviceFooter.uss",
+        };
+
         public static readonly string[] ApcComponentStyles =
         {
             "Assets/Content/Systems/UI/MachineInterface/Components/DiegeticDeviceShell.uss",

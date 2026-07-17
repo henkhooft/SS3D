@@ -33,6 +33,9 @@ namespace SS3D.UI.MachineInterface
             Register<VentInterfaceSnapshot>(
                 GetVentInterfaceId,
                 VentInterfaceSnapshotMapper.ToViewModel);
+            Register<HealthScannerInterfaceSnapshot>(
+                GetHealthScannerInterfaceId,
+                HealthScannerInterfaceSnapshotMapper.ToViewModel);
         }
 
         public static void DispatchOpen<TSnapshot>(
@@ -78,6 +81,8 @@ namespace SS3D.UI.MachineInterface
         private static string GetScrubberInterfaceId(ScrubberInterfaceSnapshot snapshot) => snapshot.InterfaceId;
 
         private static string GetVentInterfaceId(VentInterfaceSnapshot snapshot) => snapshot.InterfaceId;
+
+        private static string GetHealthScannerInterfaceId(HealthScannerInterfaceSnapshot snapshot) => snapshot.InterfaceId;
 
         private static void Register<TSnapshot>(
             Func<TSnapshot, string> getInterfaceId,

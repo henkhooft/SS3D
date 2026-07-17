@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/UI/MachineInterface/, Assets/Content/Systems/UI/MachineInterface/
 > Entry points: MachineInterfaceSubSystem, MachineInterfaceHost, MachineInterfaceRegistry, MachineUiAssetCatalog
-> Status: shipped
-> Verified: 624906c2b — 2026-07-18
+> Status: partial (health scanner is a code-only slice — see Pitfalls)
+> Verified: e771c08a — 2026-07-17
 
 # Machine interface UI
 
 ## Overview
 
-UI Toolkit panels for station machines, networked via FishNet snapshots. Templates and styles load from a committed `MachineUiAssetCatalog` (`Resources.Load`) rebuilt from `MachineUiAssetPaths` — not Game.unity SerializeFields. APC and SMES use the diegetic `DiegeticDeviceShell` with full-screen engineering ID access gates; atmospheric devices use an inline ID reader row. Both variants share server-side credential checks and expose idle, scanning, granted, and denied UI states. Vending uses the diegetic shell without an access gate. Shared view-model/binder pattern with `MachineUiCatalog` registration and `IMachineOptimisticControlHandler` for client optimistic controls. Open is server-only via validated interaction (`ServerHandleOpenRequest`); there is no open ServerRpc. Air alarm panels discover real area vents/scrubbers, apply preset modes server-side, and read the turf cell in front of the wall mount. Scrubber panels persist per-gas filter toggles into `ScrubberController` simulation state. Vent target pressure is enforced in `VentController`. Pump panels control `AtmosPumpController` directly — pumps are not area-linked. Diegetic open dims the overlay scrim and softens the 3D world via `ScreenEffectsSubSystem.SetUiBackdropBlur` (UITK chassis stays sharp), with a DOTween bring-up/dismiss (opacity, scale, translate). Close awaits the dismiss tween before disabling the `UIDocument`.
+UI Toolkit panels for station machines, networked via FishNet snapshots. Templates and styles load from a committed `MachineUiAssetCatalog` (`Resources.Load`) rebuilt from `MachineUiAssetPaths` — not Game.unity SerializeFields. APC and SMES use the diegetic `DiegeticDeviceShell` with full-screen engineering ID access gates; atmospheric devices use an inline ID reader row. Both variants share server-side credential checks and expose idle, scanning, granted, and denied UI states. Vending uses the diegetic shell without an access gate. Shared view-model/binder pattern with `MachineUiCatalog` registration and `IMachineOptimisticControlHandler` for client optimistic controls. Open is server-only via validated interaction (`ServerHandleOpenRequest`); there is no open ServerRpc. Air alarm panels discover real area vents/scrubbers, apply preset modes server-side, and read the turf cell in front of the wall mount. Scrubber panels persist per-gas filter toggles into `ScrubberController` simulation state. Vent target pressure is enforced in `VentController`. Pump panels control `AtmosPumpController` directly — pumps are not area-linked. Diegetic open dims the overlay scrim and softens the 3D world via `ScreenEffectsSubSystem.SetUiBackdropBlur` (UITK chassis stays sharp), with a DOTween bring-up/dismiss (opacity, scale, translate). Close awaits the dismiss tween before disabling the `UIDocument`. The health scanner (`HealthScannerController`) is a read-only diegetic device with no ID gate: server-side it finds the nearest `HumanHealthController` within a scan radius and republishes its `Snapshot`/`DebugDetail` (per-zone brute/burn, Brain/Heart/Lung/Liver function %, blood/oxy/toxin pools) into the scanner's own snapshot each tick — see [health](health.md) for the source data and Pitfalls below for what's still missing to actually place this machine.
 
 ## Start here
 
@@ -23,6 +23,8 @@ UI Toolkit panels for station machines, networked via FishNet snapshots. Templat
 - `Assets/Scripts/SS3D/UI/MachineInterface/OpenMachineInterfaceInteraction.cs` — open panel (server-validated only)
 - `Assets/Scripts/SS3D/UI/MachineInterface/Components/DiegeticDeviceShell.cs` — diegetic chassis shell
 - `Assets/Content/Systems/UI/MachineInterface/Tokens/diegetic-tokens.uss` — diegetic design tokens
+- `Assets/Scripts/SS3D/UI/MachineInterface/HealthScannerController.cs` — vitals scan (nearest-subject read of [health](health.md))
+- `Assets/Scripts/SS3D/UI/MachineInterface/Components/AnatomyBodyMap.cs` — interactive body-zone silhouette (hover/pin readout)
 
 ## Extension points
 
@@ -49,11 +51,12 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 - **No UITK backdrop-filter:** USS cannot blur the 3D world behind a panel. Diegetic focus uses a dark overlay scrim plus Dual Kawase fullscreen blur (`UiBackdropBlurRendererFeature` via [screen-effects](screen-effects.md) `SetUiBackdropBlur`); the Screen Space Overlay chassis stays sharp on top. URP Gaussian DoF is too weak for this — do not reintroduce DoF for UI focus.
 - **Close must await dismiss tween:** disabling `UIDocument` mid-DOTween kills the tree. `MachineInterfaceHost.Close(onComplete)` teardowns only after the sequence; SubSystem keeps input blocked / `IsOpen` until then. Starting the close tween must not clear `_pendingCloseComplete` — that skipped `FinishClose` and left `InputContext.MachineUI` stuck (no movement).
 - **Do not hide Main HUD from MI:** chrome visibility is owned by [inventory](inventory.md) `MainHudSubSystem` observing `InterfaceOpened` / `InterfaceClosed` (asmdef is MainHud → MI; reverse would cycle).
+- **Health scanner is code-only, not placeable yet:** `HealthScannerController` + its UXML/USS/components are committed, but `MachineUiAssetCatalog.asset` was never rebuilt (**SS3D → Machine Interface → Rebuild Asset Catalog** requires the Editor — no headless path), so the panel will hit the "missing catalog" trap above until someone runs it in-editor and commits the updated asset. There is also no world prefab yet (`HealthScannerController` + `Selectable` + `MachinePowerConsumer` on a mesh, per the checklist above) and the body-zone diagram uses plain rounded `VisualElement`s, not the Harm silhouette PNGs from the source Claude Design mockup — importing that art into `Assets/Content/Systems/UI/MachineInterface/Textures/` and swapping `AnatomyBodyMap` over to it is an explicit follow-up.
 
 ## Depends on / Used by
 
-- **Depends on:** [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md), [id-access](id-access.md), [interactions-framework](interactions-framework.md), [selection](selection.md), [inventory](inventory.md), [screen-effects](screen-effects.md) (diegetic backdrop blur)
-- **Used by:** `ApcController`, `SmesController`, `VendingMachineController`, `AirAlarmInterfaceController`, `ScrubberInterfaceController`, `VentInterfaceController`, `PumpInterfaceController`; Main HUD observes open/close for suppress
+- **Depends on:** [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md), [health](health.md) (read-only, health scanner), [id-access](id-access.md), [interactions-framework](interactions-framework.md), [selection](selection.md), [inventory](inventory.md), [screen-effects](screen-effects.md) (diegetic backdrop blur)
+- **Used by:** `ApcController`, `SmesController`, `VendingMachineController`, `AirAlarmInterfaceController`, `ScrubberInterfaceController`, `VentInterfaceController`, `PumpInterfaceController`, `HealthScannerController`; Main HUD observes open/close for suppress
 
 ## Related docs
 

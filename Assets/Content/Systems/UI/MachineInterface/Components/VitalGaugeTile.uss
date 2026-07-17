@@ -1,0 +1,52 @@
+
+.vital-gauge-tile {
+    flex-direction: column;
+    padding: 8px 10px;
+    background-color: var(--ss3d-diegetic-inset);
+    border-width: 1px;
+    border-color: var(--ss3d-border-subtle);
+    border-radius: var(--ss3d-radius-sm);
+    margin-bottom: var(--ss3d-space-2);
+}
+
+.vital-gauge-tile__label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--ss3d-text-tertiary);
+    margin-bottom: 4px;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.vital-gauge-tile__track {
+    height: 8px;
+    background-color: var(--ss3d-surface-inset);
+    border-radius: var(--ss3d-radius-sm);
+    border-width: 1px;
+    border-color: var(--ss3d-border-subtle);
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.vital-gauge-tile__fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--ss3d-feedback-success);
+    transition-property: width, background-color;
+    transition-duration: var(--ss3d-duration-slow);
+}
+
+.vital-gauge-tile__fill--warning {
+    background-color: var(--ss3d-feedback-warning);
+}
+
+.vital-gauge-tile__fill--danger {
+    background-color: var(--ss3d-feedback-danger);
+}
+
+.vital-gauge-tile__value {
+    font-size: 14px;
+    color: var(--ss3d-text-primary);
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+}

@@ -1,0 +1,107 @@
+
+.anatomy-body-map {
+    align-items: center;
+    justify-content: center;
+}
+
+.anatomy-body-map__canvas {
+    position: relative;
+    width: 200px;
+    height: 390px;
+}
+
+.anatomy-body-map__silhouette {
+    position: absolute;
+    left: 4px;
+    top: 0;
+    width: 192px;
+    height: 386px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 40px;
+}
+
+.anatomy-body-map__zone {
+    position: absolute;
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    transition-property: background-color;
+    transition-duration: var(--ss3d-duration-medium);
+}
+
+.anatomy-body-map__zone:hover {
+    border-color: var(--ss3d-text-primary);
+}
+
+.anatomy-body-map__zone--severed {
+    border-color: var(--ss3d-feedback-danger);
+    opacity: 0.55;
+}
+
+.anatomy-body-map__zone--head {
+    left: 72px;
+    top: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+}
+
+.anatomy-body-map__zone--chest {
+    left: 54px;
+    top: 62px;
+    width: 92px;
+    height: 110px;
+    border-radius: 14px;
+}
+
+.anatomy-body-map__zone--groin {
+    left: 70px;
+    top: 178px;
+    width: 60px;
+    height: 36px;
+    border-radius: 10px;
+}
+
+.anatomy-body-map__zone--left-arm {
+    left: 162px;
+    top: 66px;
+    width: 30px;
+    height: 150px;
+    border-radius: 14px;
+}
+
+.anatomy-body-map__zone--right-arm {
+    left: 8px;
+    top: 66px;
+    width: 30px;
+    height: 150px;
+    border-radius: 14px;
+}
+
+.anatomy-body-map__zone--left-leg {
+    left: 102px;
+    top: 218px;
+    width: 32px;
+    height: 168px;
+    border-radius: 14px;
+}
+
+.anatomy-body-map__zone--right-leg {
+    left: 66px;
+    top: 218px;
+    width: 32px;
+    height: 168px;
+    border-radius: 14px;
+}
+
+.anatomy-body-map__tooltip {
+    position: absolute;
+    translate: -50% -100%;
+    margin-top: -6px;
+    background-color: var(--ss3d-diegetic-panel-raised);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    padding: 5px 9px;
+    white-space: nowrap;
+    font-size: 10px;
+    color: var(--ss3d-text-primary);
+}

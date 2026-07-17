@@ -1,0 +1,73 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:ss3d="SS3D.UI.MachineInterface.Components" editor-extension-mode="False">
+    <ui:Style src="project://database/Assets/Content/Systems/UI/Tokens/ss3d-tokens.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/Tokens/ss3d-typography.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Tokens/diegetic-tokens.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Tokens/diegetic-tones.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/DiegeticDeviceShell.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/StatusDot.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/ConnectionStatusRow.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/DeviceIdentityBlock.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/GlanceableStatusChip.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/PanelSection.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/StatusBadge.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/AnatomyBodyMap.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/VitalGaugeTile.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/OrganReadoutRow.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Components/DeviceFooter.uss" />
+    <ui:Style src="project://database/Assets/Content/Systems/UI/MachineInterface/Templates/HealthScannerInterface.uss" />
+
+    <ss3d:DiegeticDeviceShell name="device-shell"
+        class="diegetic-device-shell--health-scanner"
+        model-label="VSU-5R · anatomical scan unit"
+        power-ok="true"
+        style="align-self: center; margin-top: 24px;">
+        <ss3d:ConnectionStatusRow name="connection-row"
+            status-text="WIRED · DIAG BED · PORT J1" />
+        <ss3d:DeviceIdentityBlock name="identity"
+            title="VITALS SCAN"
+            subtitle="Full Body · Anatomical Layer Scan" />
+        <ss3d:GlanceableStatusChip name="status-chip" />
+
+        <ui:VisualElement class="panel-section" name="vitals-monitor-section">
+            <ui:VisualElement class="panel-section__clip">
+                <ui:VisualElement class="panel-section__header">
+                    <ui:Label class="panel-section__header-title font-titling" text="Anatomical Vitals Monitor" />
+                </ui:VisualElement>
+                <ui:VisualElement class="panel-section__content">
+                    <ui:VisualElement class="health-scanner-monitor-row">
+                        <ui:VisualElement class="health-scanner-column health-scanner-column--left">
+                            <ss3d:VitalGaugeTile name="blood-gauge" label="Blood Vol." value-text="— / — CC" />
+                            <ss3d:VitalGaugeTile name="cns-gauge" label="CNS" value-text="—" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="health-scanner-column health-scanner-column--center">
+                            <ss3d:AnatomyBodyMap name="body-map" />
+                            <ui:VisualElement class="health-scanner-legend">
+                                <ui:VisualElement class="health-scanner-legend__item">
+                                    <ui:VisualElement class="health-scanner-legend__swatch health-scanner-legend__swatch--warning" />
+                                    <ui:Label class="font-terminal" text="Damage" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="health-scanner-legend__item">
+                                    <ui:VisualElement class="health-scanner-legend__swatch health-scanner-legend__swatch--danger" />
+                                    <ui:Label class="font-terminal" text="Critical / Severed" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:Label class="health-scanner-hint font-terminal" text="Hover or tap a zone for a readout" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="health-scanner-column health-scanner-column--right">
+                            <ss3d:VitalGaugeTile name="toxin-gauge" label="Toxin" value-text="—" />
+                            <ss3d:VitalGaugeTile name="spo2-gauge" label="SpO2" value-text="—" />
+                            <ui:VisualElement class="health-scanner-organ-section">
+                                <ui:Label class="health-scanner-organ-title font-arcade" text="Organ Readout" />
+                                <ui:VisualElement name="organ-list" class="health-scanner-organ-list" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ss3d:DeviceFooter name="footer" text="SS3D Vitals Scan Unit — Model VSU-5R" />
+    </ss3d:DiegeticDeviceShell>
+</ui:UXML>

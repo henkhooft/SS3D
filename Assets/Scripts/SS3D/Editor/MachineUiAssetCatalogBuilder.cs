@@ -119,6 +119,13 @@ namespace SS3D.Editor
                 MachineUiAssetPaths.BuildAtmosComponentStyles(includeAirAlarm: false, includeVent: true),
                 missing);
 
+            VisualTreeAsset healthScannerTemplate =
+                LoadRequired<VisualTreeAsset>(MachineUiAssetPaths.HealthScannerTemplate, missing);
+            StyleSheet healthScannerStyle =
+                LoadRequired<StyleSheet>(MachineUiAssetPaths.HealthScannerTemplateStyle, missing);
+            StyleSheet[] healthScannerComponents =
+                LoadStyleSheets(MachineUiAssetPaths.HealthScannerComponentStyles, missing);
+
             if (missing.Count > 0)
             {
                 error = "Machine UI asset catalog rebuild failed. Missing assets:\n- "
@@ -170,7 +177,10 @@ namespace SS3D.Editor
                 scrubberComponents,
                 ventTemplate,
                 ventStyle,
-                ventComponents);
+                ventComponents,
+                healthScannerTemplate,
+                healthScannerStyle,
+                healthScannerComponents);
 
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();

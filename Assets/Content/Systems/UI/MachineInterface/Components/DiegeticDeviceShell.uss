@@ -171,3 +171,7 @@
 .diegetic-device-shell--pump {
     width: var(--ss3d-diegetic-width-pump);
 }
+
+.diegetic-device-shell--health-scanner {
+    width: var(--ss3d-diegetic-width-health-scanner);
+}

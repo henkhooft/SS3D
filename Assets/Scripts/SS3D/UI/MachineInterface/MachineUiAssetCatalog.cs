@@ -100,6 +100,15 @@ namespace SS3D.UI.MachineInterface
         [SerializeField]
         private StyleSheet[] _ventComponentStyles;
 
+        [SerializeField]
+        private VisualTreeAsset _healthScannerTemplate;
+
+        [SerializeField]
+        private StyleSheet _healthScannerTemplateStyle;
+
+        [SerializeField]
+        private StyleSheet[] _healthScannerComponentStyles;
+
         public PanelSettings PanelSettings => _panelSettings;
         public StyleSheet MachineWindowStyle => _machineWindowStyle;
         public StyleSheet Ss3dTokensStyle => _ss3dTokensStyle;
@@ -134,6 +143,9 @@ namespace SS3D.UI.MachineInterface
                 VentTemplate = _ventTemplate,
                 VentTemplateStyle = _ventTemplateStyle,
                 VentComponentStyles = _ventComponentStyles,
+                HealthScannerTemplate = _healthScannerTemplate,
+                HealthScannerTemplateStyle = _healthScannerTemplateStyle,
+                HealthScannerComponentStyles = _healthScannerComponentStyles,
             };
         }
 
@@ -162,7 +174,8 @@ namespace SS3D.UI.MachineInterface
                 || _gasPumpTemplate == null || _gasPumpTemplateStyle == null
                 || _airAlarmTemplate == null || _airAlarmTemplateStyle == null
                 || _scrubberTemplate == null || _scrubberTemplateStyle == null
-                || _ventTemplate == null || _ventTemplateStyle == null)
+                || _ventTemplate == null || _ventTemplateStyle == null
+                || _healthScannerTemplate == null || _healthScannerTemplateStyle == null)
             {
                 missingField = "machine templates";
                 return false;
@@ -202,7 +215,10 @@ namespace SS3D.UI.MachineInterface
             StyleSheet[] scrubberComponentStyles,
             VisualTreeAsset ventTemplate,
             StyleSheet ventTemplateStyle,
-            StyleSheet[] ventComponentStyles)
+            StyleSheet[] ventComponentStyles,
+            VisualTreeAsset healthScannerTemplate,
+            StyleSheet healthScannerTemplateStyle,
+            StyleSheet[] healthScannerComponentStyles)
         {
             _panelSettings = panelSettings;
             _machineWindowStyle = machineWindowStyle;
@@ -233,6 +249,9 @@ namespace SS3D.UI.MachineInterface
             _ventTemplate = ventTemplate;
             _ventTemplateStyle = ventTemplateStyle;
             _ventComponentStyles = ventComponentStyles;
+            _healthScannerTemplate = healthScannerTemplate;
+            _healthScannerTemplateStyle = healthScannerTemplateStyle;
+            _healthScannerComponentStyles = healthScannerComponentStyles;
         }
 #endif
     }

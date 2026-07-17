@@ -17,5 +17,7 @@ namespace SS3D.UI.MachineInterface
         public const string Scrubber = "atmos.scrubber";
 
         public const string Vent = "atmos.vent";
+
+        public const string HealthScanner = "medical.health-scanner";
     }
 }

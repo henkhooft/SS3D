@@ -1,0 +1,38 @@
+
+.organ-readout-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 0;
+}
+
+.organ-readout-row__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--ss3d-feedback-success);
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.organ-readout-row__dot--warning {
+    background-color: var(--ss3d-feedback-warning);
+}
+
+.organ-readout-row__dot--danger {
+    background-color: var(--ss3d-feedback-danger);
+}
+
+.organ-readout-row__label {
+    font-size: 10px;
+    color: var(--ss3d-text-secondary);
+    flex-grow: 1;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.organ-readout-row__value {
+    font-size: 10px;
+    color: var(--ss3d-text-tertiary);
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+}

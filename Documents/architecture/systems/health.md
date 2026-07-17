@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects wired; vitals HUD Phase 6 remainder)
-> Verified: ab8eff923 — 2026-07-17
+> Verified: e771c08a — 2026-07-17
 
 # Health
 
@@ -9,7 +9,7 @@
 
 Greenfield rewrite per [health_implementation_plan.md](../../plans/health_implementation_plan.md). Phase 1 shipped bleeding, bandage, VFX, and alert chip. Phase 2 wires asset-backed organs into pool math, cardiac arrest, and movement debuffs (`Snapshot.MovementSpeedMultiplier` — consumed by humanoid gait/limp presentation after the develop integration). Phase 3 adds multi-threshold critical state, cardiac arrest → defib window, and chest defibrillation. Phase 4 adds BodyParts raycast zone resolution for melee combat. Phase 5 adds field treatments (burn dressing, splint, O2, CPR, transfusion, antitoxin). Phase 5b adds limb severing (zone `IsSevered`, anatomy hide, world drops, head mind-swap). Bleeding visuals now use tuned particle streams plus URP Decal blood marks (body + floor). Bleed drain uses `BleedingBloodDrainScale = 0.010` with oxy gain / arrest brain drain synced so hypoxia tracks bleed (see plan hemorrhage tuning).
 
-Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`. The atmosphere→oxygen coupling is still open: `HealthSimulation.LungIntake(atmosphereO2)` currently defaults to full O2 and should be fed the occupant's turf O2 ratio. Vitals cluster UITK and examine-self readout remain Phase 6.
+Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`. The atmosphere→oxygen coupling is still open: `HealthSimulation.LungIntake(atmosphereO2)` currently defaults to full O2 and should be fed the occupant's turf O2 ratio. Vitals cluster UITK and examine-self readout remain Phase 6 — a third-party read path now exists via the [machine-interface](machine-interface.md) health scanner (`HealthScannerController` reads `Snapshot`/`DebugDetail` off any nearby `HumanHealthController` as an observer, no new Health-side sync), but that machine is not yet placeable (no rebuilt asset catalog, no prefab) and is not the Phase 6 self-readout.
 
 **Condemned UI:** `StaminaBar` on `PlayerCanvas` is disabled (obsolete chrome pending Main HUD / [stamina.md](../../design/stamina.md) vitals). Domain `StaminaController` remains and must tolerate a missing bar view.
 
@@ -70,7 +70,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 ## Depends on / Used by
 
 - **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md)
-- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp), `Hand` (arm debuff stub)
+- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp), `Hand` (arm debuff stub), [machine-interface](machine-interface.md) `HealthScannerController` (read-only observer of `Snapshot`/`DebugDetail`)
 - **Stamina:** `Assets/Scripts/SS3D/Systems/Stamina/` — bridge Phase 7a
 
 ## Related docs
