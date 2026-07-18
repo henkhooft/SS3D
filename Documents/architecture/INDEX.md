@@ -20,7 +20,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | Domain | Design | Architecture | System map |
 |---|---|---|---|
 | main-hud | [main-hud.md](../design/main-hud.md) — active | [phase1-foundation](2026-07_machine-interface-phase1-foundation.md), [phase2-apc-networking](2026-07_machine-interface-phase2-apc-networking.md), [phase3-smes-generalization](2026-07_machine-interface-phase3-smes-generalization.md), [diegetic-screen-ui-framework](2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md), [screen-space-effects](2026-07_screen-space-effects.md), [mi-path-catalog](2026-07_mi-path-catalog.md) — all shipped (screen-effects health wired; atmos wiring deferred; UiShell still deferred); player HUD overlay is a partial in-branch slice (no dated effort yet) | [inventory](systems/inventory.md) — partial (player HUD); also [machine-interface](systems/machine-interface.md), [screen-effects](systems/screen-effects.md) |
-| comms | [comms.md](../design/comms.md) — active | [phase1-foundation](2026-07_machine-interface-phase1-foundation.md) — shipped (operator feedback conventions only) | [chat-audio-screens](systems/chat-audio-screens.md) — stub |
+| comms | [comms.md](../design/comms.md) — active | none yet (comms.md itself is unimplemented; the legacy always-on `ChatWindow`/`InGameChatWindow` it condemns is still the live system — see [chat-audio-screens](systems/chat-audio-screens.md)) | [chat-audio-screens](systems/chat-audio-screens.md) — stub |
 | area | [area.md](../design/area.md) — active | [area-foundation](2026-07_area-foundation.md) — shipped (partial: APC-seeded variant; live mutation recompute and editor merge/split deferred) | [area](systems/area.md) — partial |
 | hacking-interface | [hacking-interface.md](../design/hacking-interface.md) — active | none yet | none yet |
 | combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/locomotion foundation only; combat.md not implemented) | [combat](systems/combat.md) — stub |
@@ -28,7 +28,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — planned; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired) | [health](systems/health.md) — partial |
 | armor | [armor.md](../design/armor.md) — active | none yet | none yet |
 | inventory-storage | [inventory-storage.md](../design/inventory-storage.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — in-progress (clean-slate: data model + panel + Main HUD equip/drag + stamina 7a + old UI purge shipped; Play Mode verification pending) | [inventory](systems/inventory.md) — partial |
-| examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — shipped |
+| examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — partial (character-examine target type §7 unimplemented) |
 | crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
@@ -45,7 +45,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | atmospherics | [atmospherics.md](../design/atmospherics.md) — active | [atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) — shipped (partial); [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — planned | [atmospherics](systems/atmospherics.md) — partial |
 | chemistry | [chemistry.md](../design/chemistry.md) — active | none yet | [substances](systems/substances.md) — partial |
 | explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | none yet | none yet |
-| construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — shipped |
+| construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
 | creative-mode | [creative-mode.md](../design/creative-mode.md) — active | none yet | none yet |
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | none yet (look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); palette emission sample fix shipped on Simple Toon) | [rendering](systems/rendering.md) — partial |
 | shuttles | [shuttles.md](../design/shuttles.md) — active | none yet | none yet |
@@ -96,8 +96,8 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 |--------|-----|--------|---------|
 | Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial menu, armed interactions, outlines |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
-| Examine | [examine](systems/examine.md) | shipped | Hover/detailed examine; uGUI views condemned pending UITK redesign |
-| Tile / construction | [tile](systems/tile.md) | shipped | Tilemap, adjacency, construction; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys |
+| Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
+| Tile / construction | [tile](systems/tile.md) | partial | Tilemap, adjacency, single-step construction placement; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys; staged build ladder (construction.md §1-2) unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; GPU fog/fire on server/host only — client VFX sync planned; tick GC pitfalls documented (upload/pipes) |
 | Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, lighting state, wall light switches |
 | Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals |
