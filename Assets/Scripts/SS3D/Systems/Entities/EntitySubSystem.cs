@@ -12,6 +12,7 @@ using SS3D.Core.Settings;
 using SS3D.Engine.Chat;
 using SS3D.Logging;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Health;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
@@ -90,7 +91,8 @@ namespace SS3D.Systems.Entities
         /// <returns>Is the player is controlling an entity</returns>
         public bool IsPlayerSpawned(NetworkConnection networkConnection)
         {
-            Entity spawnedPlayer = _spawnedPlayers.Find(entity => entity.Mind?.player?.Owner == networkConnection);
+            Entity spawnedPlayer = _spawnedPlayers.Find(entity =>
+                entity != null && entity.Mind?.player?.Owner == networkConnection);
 
             bool isPlayerSpawned;
 
@@ -130,6 +132,11 @@ namespace SS3D.Systems.Entities
         public override void OnStartClient()
         {
             base.OnStartClient();
+
+            if (!TryGetComponent<HealthDebugController>(out _))
+            {
+                gameObject.AddComponent<HealthDebugController>();
+            }
 
             SyncSpawnedPlayers();
         }

@@ -1,6 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/PlayerControl/
 > Entry points: PlayerSubSystem
 > Status: partial
+> Verified: 5676d2a2 — 2026-07-18
 
 # Player control
 
@@ -20,12 +21,18 @@ Connect/disconnect lifecycle, server-side:
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/PlayerControl/PlayerSubSystem.cs` — player subsystem; `ProcessPlayerJoin`/`ProcessAuthorizePlayer`/`ProcessPlayerDisconnect` own the connect/disconnect lifecycle above.
+- `Assets/Scripts/SS3D/Systems/PlayerControl/UnauthorizedPlayer.cs` — temporary NOB that broadcasts `UserAuthorizationMessage`
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — `TryReclaimEntity` re-links a reconnecting player's `Player` to the body they left behind.
 
 ## Extension points
 
 - Reconnection currently only restores ownership/control of the existing body (`GiveOwnership` + `SetFirstObject` + re-fires the same `RpcInvokeClientSpawned` a fresh spawn uses). It does not model a "disconnected" state on the body in the meantime (no ragdoll, no SSD-style visual indicator, no timeout that eventually kills/despawns an abandoned body) — bodies just sit inert, fully simulated, until reclaimed or the round ends. Any of that is a deliberate follow-up, not an oversight this pass tried to close.
 - No real authentication (`ProcessAuthorizePlayer` trusts the client-supplied ckey wholesale) — flagged in-code as a TODO, out of scope here.
+
+## Pitfalls
+
+- **`OnClientLoadedStartScenes` must gate on `asServer`:** host also fires the client-side (`asServer=false`) callback before `LoadedStartScenes(true)` is set. Spawning there warns and can create a duplicate UnauthorizedPlayer that later fails despawn ("already deinitializing"). Match FishNet `PlayerSpawner`.
+- **Despawn UnauthorizedPlayer carefully:** snapshot `conn.Objects.ToArray()` and skip non-spawned objects before `ServerManager.Despawn` (`IsDeinitializing` is FishNet-internal).
 
 ## Depends on / Used by
 

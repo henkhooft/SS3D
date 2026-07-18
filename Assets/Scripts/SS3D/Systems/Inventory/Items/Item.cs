@@ -49,6 +49,18 @@ namespace SS3D.Systems.Inventory.Items
         [FormerlySerializedAs("Weight")]
         [SerializeField] private float _weight;
 
+        [Tooltip("Physical size tier, checked against a container's MaxSizeClass fit ceiling."), SerializeField]
+        private SizeClass _sizeClass = SizeClass.Normal;
+
+        [Tooltip("If greater than 1, identical items (same source asset) collapse into one stack up to this count."), SerializeField]
+        private int _maxStackSize = 1;
+
+        /// <summary>
+        /// How many units this item instance currently represents. Only meaningful when MaxStackSize > 1.
+        /// </summary>
+        [SyncVar]
+        private int _stackCount = 1;
+
         [FormerlySerializedAs("Traits")]
         [SerializeField] private List<Trait> _startingTraits;
 
@@ -76,7 +88,39 @@ namespace SS3D.Systems.Inventory.Items
         [SyncVar]
         private AttachedContainer _container;
 
-        public string Name => _name;
+        public string Name
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_name))
+                {
+                    return _name;
+                }
+
+                string objectName = gameObject.name;
+                const string cloneSuffix = "(Clone)";
+                if (objectName.EndsWith(cloneSuffix))
+                {
+                    objectName = objectName[..^cloneSuffix.Length].TrimEnd();
+                }
+
+                return objectName;
+            }
+        }
+
+        /// <summary>
+        /// This item's own weight. Does not include the recursive weight of anything stored inside it —
+        /// see AttachedContainer.Weight for that (Documents/design/inventory-storage.md §2, §7).
+        /// </summary>
+        public float Weight => _weight;
+
+        public SizeClass SizeClass => _sizeClass;
+
+        public int MaxStackSize => _maxStackSize;
+
+        public bool IsStackable => _maxStackSize > 1;
+
+        public int StackCount => _stackCount;
 
         public ReadOnlyCollection<Trait> Traits => ((List<Trait>) _traits.Collection).AsReadOnly();
 
@@ -352,12 +396,46 @@ namespace SS3D.Systems.Inventory.Items
             _container = newContainer;
         }
 
+        /// <summary>
+        /// Whether this item and <paramref name="other"/> are the same stackable definition and could
+        /// share one stack. Does not check remaining capacity — see AttachedContainer's merge logic.
+        /// </summary>
+        [ServerOrClient]
+        public bool CanMergeWith(Item other)
+        {
+            return IsStackable
+                && other != null
+                && other.IsStackable
+                && Asset != null
+                && other.Asset != null
+                && Asset.Equals(other.Asset);
+        }
+
+        [Server]
+        public void SetStackCount(int count)
+        {
+            _stackCount = Mathf.Max(1, count);
+        }
+
        
 
         // Generate preview of the same object, but without stored items.
         [ServerOrClient]
         public Sprite GenerateIcon()
         {
+#if UNITY_SERVER
+            // Icon generation renders a camera to produce a preview texture, which is unavailable and
+            // unnecessary on a dedicated server (no shaders are included in the build for it to use).
+            return null;
+#else
+            // Same for headless / -nographics clients (multiplayer harness): NullGfxDevice cannot
+            // run RuntimePreviewGenerator without URP GraphicsBuffer/Blitter exceptions.
+            if (UnityEngine.Application.isBatchMode
+                || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                return null;
+            }
+
             RuntimePreviewGenerator.BackgroundColor = new Color(0, 0, 0, 0);
             RuntimePreviewGenerator.OrthographicMode = true;
             // Find stored items
@@ -404,6 +482,7 @@ namespace SS3D.Systems.Inventory.Items
                 storedItemWithParent.Key.parent = storedItemWithParent.Value;
             }
             return icon;
+#endif
         }
 
         /// <summary>

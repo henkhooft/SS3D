@@ -8,6 +8,8 @@
 
 Dev/admin in-game console commands routed through `CommandsController`. Commands are discovered by reflection from `Command` subclasses. Server commands check `PermissionSubSystem` role before executing.
 
+**Condemned UI:** console panel uGUI — do not extend; move to UITK debug layer when UiShell lands ([agent-first composition](../2026-07_agent-first-composition.md)). Command dispatch is **not** condemned.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/CommandsController.cs` — command dispatch (offline, server, client)
@@ -32,4 +34,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 - [id-access](id-access.md)
 - [screen-effects](screen-effects.md)
+- [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
+- [ui-shell](ui-shell.md)
+- [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md) — `console <command line>` in the harness's automation scripts routes through `CommandsController.ClientProcessCommand`
 - [INDEX.md](../INDEX.md)

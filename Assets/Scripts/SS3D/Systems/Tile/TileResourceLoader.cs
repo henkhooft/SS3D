@@ -40,7 +40,21 @@ namespace SS3D.Systems.Tile
             Catalog.Build(Assets);
             IsInitialized = true;
 
-            StartCoroutine(LoadAssetsWithIcon(tempAssets));
+#if !UNITY_SERVER
+            // Icons are only used by client-side UI (construction/build menus). Generating them
+            // requires rendering a camera through URP; that crashes on NullGfxDevice
+            // (-batchmode -nographics multiplayer harness clients) with GraphicsBuffer/Blitter errors.
+            if (CanGeneratePreviewIcons())
+            {
+                StartCoroutine(LoadAssetsWithIcon(tempAssets));
+            }
+#endif
+        }
+
+        private static bool CanGeneratePreviewIcons()
+        {
+            return !UnityEngine.Application.isBatchMode
+                && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null;
         }
 
         private IEnumerator LoadAssetsWithIcon(GenericObjectSo[] assets)

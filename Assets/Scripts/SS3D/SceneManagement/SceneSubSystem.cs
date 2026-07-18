@@ -6,6 +6,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Data.Generated;
 using SS3D.Logging;
 using System;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityScene = UnityEngine.SceneManagement.Scene;
 using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
@@ -49,8 +50,31 @@ namespace SS3D.SceneManagement
 			}
 
 			UnitySceneManager.SetActiveScene(scene);
+			// Unload is async — disable Intro/Launcher EventSystems immediately so they
+			// do not coexist with Game's EventSystem for one or more frames.
+			DisableEventSystemsInScene(Scenes.Intro);
+			DisableEventSystemsInScene(Scenes.Launcher);
 			UnloadIfLoaded(Scenes.Intro);
 			UnloadIfLoaded(Scenes.Launcher);
+		}
+
+		private static void DisableEventSystemsInScene(string sceneName)
+		{
+			UnityScene loaded = UnitySceneManager.GetSceneByName(sceneName);
+			if (!loaded.IsValid() || !loaded.isLoaded)
+			{
+				return;
+			}
+
+			foreach (GameObject root in loaded.GetRootGameObjects())
+			{
+				UnityEngine.EventSystems.EventSystem[] eventSystems =
+					root.GetComponentsInChildren<UnityEngine.EventSystems.EventSystem>(true);
+				for (int i = 0; i < eventSystems.Length; i++)
+				{
+					eventSystems[i].enabled = false;
+				}
+			}
 		}
 
 		private static void UnloadIfLoaded(string sceneName)
@@ -67,6 +91,16 @@ namespace SS3D.SceneManagement
         /// </summary>
         private void LoadMainScene()
         {
+#if UNITY_SERVER
+            Log.Debug(this, "Loading main scene as Game (dedicated server)", Logs.Important);
+
+            // This call is async and not awaited. Hence the pragma disable.
+            #pragma warning disable CS4014
+            Scene.LoadAsync(Scenes.Game);
+            #pragma warning restore CS4014
+
+            return;
+#else
             ApplicationSettings applicationSettings = ScriptableSettings.GetOrFind<ApplicationSettings>();
 
             bool isUsingCommandLineArgs = false;
@@ -100,6 +134,7 @@ namespace SS3D.SceneManagement
 			#pragma warning disable CS4014
 			Scene.LoadAsync(sceneToLoad);
 			#pragma warning restore CS4014
+#endif
 		}
 	}
 }

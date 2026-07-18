@@ -4,6 +4,7 @@ using SS3D.Systems.Inputs;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using SS3D.Systems.Electricity;
 
 namespace SS3D.UI.MachineInterface
@@ -15,18 +16,33 @@ namespace SS3D.UI.MachineInterface
     {
         public event Action<string, bool> ChannelToggled;
 
+        /// <summary>Fired after a panel successfully opens (Main HUD listens to suppress chrome).</summary>
+        public event Action InterfaceOpened;
+
+        /// <summary>Fired after close animation + teardown complete.</summary>
         public event Action InterfaceClosed;
 
         private IMachineInterfaceViewModel _openModel;
         private string _openInterfaceId;
         private IMachineInterfaceClientBridge _clientBridge;
         private InputSubSystem _inputSystem;
-        private bool _inputBlocked;
+        private IInputHandle _machineHandle;
+        private bool _isClosing;
 
         public bool IsOpen => !string.IsNullOrEmpty(_openInterfaceId);
 
         public void Open(string interfaceId, IMachineInterfaceViewModel viewModel)
         {
+#if UNITY_SERVER
+            // Machine controllers send their "open" RPC as TargetRpc(RunLocally = true), which also runs
+            // this on the server that sent it (needed for host mode, where server and client are the same
+            // process). A dedicated server has no local player to show UI to, so skip it entirely - it
+            // would otherwise try to lay out UI Toolkit text with no shaders available and crash.
+            return;
+#endif
+            // Host.Open tears down any in-flight close without invoking its callback.
+            _isClosing = false;
+
             MachineInterfaceHost host = GetHost();
             if (host == null || !host.Open(interfaceId, viewModel))
             {
@@ -36,6 +52,7 @@ namespace SS3D.UI.MachineInterface
             _openInterfaceId = interfaceId;
             _openModel = viewModel;
             SetGameplayInputBlocked(true);
+            InterfaceOpened?.Invoke();
         }
 
         public void Refresh(IMachineInterfaceViewModel viewModel)
@@ -51,18 +68,21 @@ namespace SS3D.UI.MachineInterface
 
         public void Close()
         {
-            _openInterfaceId = null;
-            _openModel = null;
-            _clientBridge = null;
-
-            MachineInterfaceHost host = GetHost();
-            if (host != null)
+            if (_isClosing)
             {
-                host.Close();
+                return;
             }
 
-            SetGameplayInputBlocked(false);
-            InterfaceClosed?.Invoke();
+            MachineInterfaceHost host = GetHost();
+            if (host == null || !host.IsOpen)
+            {
+                FinishClose();
+                return;
+            }
+
+            _isClosing = true;
+            // Keep _openInterfaceId until teardown so IsOpen stays true (HUD suppress, cancel).
+            host.Close(FinishClose);
         }
 
         public void OpenFromNetwork(
@@ -118,18 +138,7 @@ namespace SS3D.UI.MachineInterface
             }
 
             _clientBridge?.RequestClose();
-            _openInterfaceId = null;
-            _openModel = null;
-            _clientBridge = null;
-
-            MachineInterfaceHost host = GetHost();
-            if (host != null)
-            {
-                host.Close();
-            }
-
-            SetGameplayInputBlocked(false);
-            InterfaceClosed?.Invoke();
+            Close();
         }
 
         public void NotifyBoolControl(byte controlId, bool isOn)
@@ -247,19 +256,11 @@ namespace SS3D.UI.MachineInterface
             }
         }
 
-        protected void Update()
-        {
-            if (!IsOpen || !Input.GetKeyDown(KeyCode.Escape))
-            {
-                return;
-            }
-
-            RequestCloseFromUi(_openInterfaceId);
-        }
-
         protected override void OnDestroyed()
         {
-            SetGameplayInputBlocked(false);
+            MachineInterfaceHost host = GetHost();
+            host?.CloseImmediate();
+            FinishClose();
             base.OnDestroyed();
         }
 
@@ -267,6 +268,16 @@ namespace SS3D.UI.MachineInterface
         {
             SetGameplayInputBlocked(false);
             base.OnDisabled();
+        }
+
+        private void FinishClose()
+        {
+            _isClosing = false;
+            _openInterfaceId = null;
+            _openModel = null;
+            _clientBridge = null;
+            SetGameplayInputBlocked(false);
+            InterfaceClosed?.Invoke();
         }
 
         private static MachineInterfaceHost GetHost()
@@ -285,17 +296,24 @@ namespace SS3D.UI.MachineInterface
                 return;
             }
 
-            if (blocked && !_inputBlocked)
+            if (blocked && _machineHandle == null)
             {
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, false);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, false);
-                _inputBlocked = true;
+                _machineHandle = _inputSystem.PushContext(InputContext.MachineUI);
+                _inputSystem.UiCancel.performed += HandleUiCancel;
             }
-            else if (!blocked && _inputBlocked)
+            else if (!blocked && _machineHandle != null)
             {
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Movement, true);
-                _inputSystem.ToggleActionMap(_inputSystem.Inputs.Camera, true);
-                _inputBlocked = false;
+                _inputSystem.UiCancel.performed -= HandleUiCancel;
+                _machineHandle.Dispose();
+                _machineHandle = null;
+            }
+        }
+
+        private void HandleUiCancel(InputAction.CallbackContext context)
+        {
+            if (IsOpen && !_isClosing)
+            {
+                RequestCloseFromUi(_openInterfaceId);
             }
         }
     }
