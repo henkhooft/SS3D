@@ -158,6 +158,15 @@ namespace SS3D.Systems.Screens
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
+            // Coimbra UpdateEvent keeps firing after enabled=false (same pitfall as
+            // AnimationOrchestrator). Without this guard, ProcessCameraPosition overwrites
+            // MapEditorSession's orbit every frame and hologram picks stay locked to the
+            // follow-camera axes (mouse X = world east/west regardless of editor yaw).
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
             ProcessCameraPosition();
         }
         

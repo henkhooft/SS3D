@@ -47,16 +47,18 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **`Dictionary<TileCoord, T>` / `HashSet<TileCoord>` GC on Mono:** without `IEquatable<TileCoord>` + `GetHashCode`, every lookup boxes via `ValueType.DefaultEquals` (~24 B). Prefer `TryGetPlacedObject` over `GetAllPlacedObject` on hot single-occupancy layers — the latter always allocates a new `List`.
 - **Icon generation under `-batchmode -nographics`:** `TileResourceLoader.LoadAssetsWithIcon` and `Item.GenerateIcon` use `RuntimePreviewGenerator` (camera → URP). On NullGfxDevice that throws GraphicsBuffer/Blitter exceptions and poisons multiplayer smoke-test logs. Both paths skip when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
 - **B does nothing / Map Editor missing:** `TileCreator.ToggleMenu` (`<Keyboard>/b`) is handled by `MapEditorSubSystem` on `MapEditorCanvas`, nested under `PlayerCanvas`. Never GUID-swap a nested PrefabInstance to a different prefab (ConstructionMenu → MapEditorCanvas once did this) — orphan `fileID`s leave Missing Prefab / SceneId-0 NetworkObjects, so the toggle listener never runs. Re-nest in the Editor or rewrite the PrefabInstance against the source's current local IDs. Map Editor is full-screen UITK, not a DynamicPanels "Construction" tab.
+- **Hologram always tracks world east/west:** `CameraFollow.HandleUpdate` still runs via Coimbra `UpdateEvent` after `enabled = false` and was overwriting `MapEditorSession` orbit every frame. Guard with `isActiveAndEnabled`. Map editor must drive/`GetPointedPosition` from `CameraSubSystem.PlayerCamera` (same instance the session orbits). Structural fix: planned [camera ownership](../2026-07_camera-ownership.md) (dedicated manager / contexts — same smell as pre-arbiter input).
+- **Hologram slides while orbiting / WASD skewed:** `MapEditorSession` must (1) orbit a ground focus from screen-center pick, (2) freeze hologram picks while MMB orbiting (`IsOrbiting`) so a moving cursor does not drag the ghost, (3) pan from **yaw-only** basis vectors — never `camera.forward` flattened (steep pitch collapses it and sends WASD sideways).
 
 ## Depends on / Used by
 
-- **Depends on:** [networking-session](networking-session.md) (FishNet AOI), [permissions](permissions.md) (editor admin checks), [persistence](persistence.md) (station template I/O)
+- **Depends on:** [networking-session](networking-session.md) (FishNet AOI), [permissions](permissions.md) (editor admin checks), [persistence](persistence.md) (station template I/O), [chat-audio-screens](chat-audio-screens.md) (player camera; ownership debt)
 - **Used by:** [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md), [furniture](furniture.md), [substances](substances.md), [persistence](persistence.md) (tilemap contributor)
 
 ## Related docs
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
-- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md)
+- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
 - System map: [area](area.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)

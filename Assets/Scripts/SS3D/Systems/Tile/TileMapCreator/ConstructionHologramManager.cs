@@ -72,7 +72,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _selectedObject = genericObjectSo;
 
             DestroyHolograms();
-            CreateHologram(genericObjectSo.PrefabAsset, TileHelper.GetPointedPosition(!_isPlacingItem));
+            CreateHologram(genericObjectSo.PrefabAsset, GetPlacementPoint());
+        }
+
+        /// <summary>
+        /// World point under the cursor for placement. Tiles snap when grid-snap is on (default).
+        /// </summary>
+        private Vector3 GetPlacementPoint(bool forceTileSnap = false)
+        {
+            bool snapToTile = !_isPlacingItem && (forceTileSnap || _mapEditor == null || _mapEditor.GridSnapEnabled);
+            Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
+            return TileHelper.GetPointedPosition(snapToTile, camera);
         }
 
         protected override void OnAwake()
@@ -123,7 +133,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             ActivateGhosts();
 
-            Vector3 position = TileHelper.GetPointedPosition(!_isPlacingItem);
+            // Freeze picks during middle-mouse orbit so a moving cursor does not drag the ghost
+            // while the camera turns around a fixed ground focus.
+            if (_mapEditor.IsOrbiting)
+                return;
+
+            Vector3 position = GetPlacementPoint();
             // Move hologram, that sticks to the mouse. Currently it exists only if player is not dragging.
             if (_holograms.Count == 1)
             {
@@ -199,7 +214,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 if (!_isPlacingItem)
                 {
                     _isDragging = true;
-                    _dragStartPostion = TileHelper.GetPointedPosition(true);
+                    _dragStartPostion = GetPlacementPoint(forceTileSnap: true);
                 }
             }
 
@@ -279,7 +294,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_selectedObject == null)
                 return;
 
-            CreateHologram(_selectedObject.PrefabAsset, TileHelper.GetPointedPosition(!_isPlacingItem));
+            CreateHologram(_selectedObject.PrefabAsset, GetPlacementPoint());
         }
 
         /// <summary>
@@ -307,7 +322,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             if (_holograms.Count == 0)
             {
-                Vector3 position = TileHelper.GetPointedPosition(!_isPlacingItem);
+                Vector3 position = GetPlacementPoint();
                 tileSystem.RpcPlaceObject(_selectedObject.NameString, position, _lastRegisteredDirection, isReplacing);
                 return;
             }
@@ -353,7 +368,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (map == null)
                 return;
 
-            Vector3 position = TileHelper.GetPointedPosition(true);
+            Vector3 position = GetPlacementPoint(forceTileSnap: true);
             if (!map.TryGetTileLocations(position, out ITileLocation[] locations))
                 return;
 
@@ -491,7 +506,14 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// </summary>
         private void FindAndDeleteItem()
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            Vector2 screenPosition = Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition;
+            Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
+            if (camera == null)
+                return;
+
+            Ray ray = camera.ScreenPointToRay(screenPosition);
             if (Physics.Raycast(ray, out RaycastHit hitInfo))
             {
                 PlacedItemObject placedItem = hitInfo.collider.gameObject.GetComponent<PlacedItemObject>();

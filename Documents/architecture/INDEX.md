@@ -20,7 +20,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | Domain | Design | Architecture | System map |
 |---|---|---|---|
 | main-hud | [main-hud.md](../design/main-hud.md) — active | [phase1-foundation](2026-07_machine-interface-phase1-foundation.md), [phase2-apc-networking](2026-07_machine-interface-phase2-apc-networking.md), [phase3-smes-generalization](2026-07_machine-interface-phase3-smes-generalization.md), [diegetic-screen-ui-framework](2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md), [screen-space-effects](2026-07_screen-space-effects.md), [mi-path-catalog](2026-07_mi-path-catalog.md) — all shipped (screen-effects health wired; atmos wiring deferred; UiShell still deferred); player HUD overlay is a partial in-branch slice (no dated effort yet) | [inventory](systems/inventory.md) — partial (player HUD); also [machine-interface](systems/machine-interface.md), [screen-effects](systems/screen-effects.md) |
-| comms | [comms.md](../design/comms.md) — active | [phase1-foundation](2026-07_machine-interface-phase1-foundation.md) — shipped (operator feedback conventions only) | [chat-audio-screens](systems/chat-audio-screens.md) — stub |
+| comms | [comms.md](../design/comms.md) — active | [phase1-foundation](2026-07_machine-interface-phase1-foundation.md) — shipped (operator feedback conventions only); [camera-ownership](2026-07_camera-ownership.md) — planned (screens/camera) | [chat-audio-screens](systems/chat-audio-screens.md) — stub |
 | area | [area.md](../design/area.md) — active | [area-foundation](2026-07_area-foundation.md) — shipped (partial: APC-seeded variant; live mutation recompute and editor merge/split deferred) | [area](systems/area.md) — partial |
 | hacking-interface | [hacking-interface.md](../design/hacking-interface.md) — active | none yet | none yet |
 | combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/locomotion foundation only; combat.md not implemented) | [combat](systems/combat.md) — stub |
@@ -111,7 +111,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | stub | Player subsystem and input routing |
-| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | stub | Chat UI condemned per comms.md; audio/camera controllers |
+| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | stub | Chat UI condemned per comms.md; audio/camera; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending; path catalog; Dual Kawase blur + dim; DOTween bring-up/dismiss |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays; health drives dying/blood/oxy/concussion/unconscious + hit flash; `SetUiBackdropBlur` for machine UI; atmos temp/fire deferred; F2 debug Canvas condemned |
 | ID / access | [id-access](systems/id-access.md) | partial | Crew records, credential checks, doors, machine UI gates, dev console helpers |
@@ -142,6 +142,8 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_body-presentation-authority](2026-07_body-presentation-authority.md) | planned |
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
 | [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch; default build-only Linux→Windows+bats; EditMode/smoke opt-in; Linux zips secondary) |
+| [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
+| [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 
 ## Implementation plans
 

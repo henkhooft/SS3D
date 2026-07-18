@@ -136,15 +136,26 @@ namespace SS3D.Systems.Tile
         /// Get position on the tile grid, that mouse points to.
         /// </summary>
         /// <param name="isTilePosition">If true, position snaps to the center of a tile</param>
-        /// <returns></returns>
-        public static Vector3 GetPointedPosition(bool isTilePosition = false)
+        /// <param name="camera">Camera to pick from; defaults to <see cref="Camera.main"/>.</param>
+        public static Vector3 GetPointedPosition(bool isTilePosition = false, Camera camera = null)
         {
-            if (Camera.main == null)
+            if (camera == null)
+            {
+                camera = Camera.main;
+            }
+
+            if (camera == null)
             {
                 return Vector3.zero;
             }
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            // Prefer Input System mouse; legacy Input.mousePosition can lag or stick when
+            // the project is Input System–primary (activeInputHandler Both/Package).
+            Vector2 screenPosition = UnityEngine.InputSystem.Mouse.current != null
+                ? UnityEngine.InputSystem.Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition;
+
+            Ray ray = camera.ScreenPointToRay(screenPosition);
             if (new Plane(Vector3.up, 0).Raycast(ray, out float distance))
             {
                 Vector3 point = ray.GetPoint(distance);

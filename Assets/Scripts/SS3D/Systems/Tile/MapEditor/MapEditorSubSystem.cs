@@ -46,6 +46,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private Controls.TileCreatorActions _controls;
         private TileSubSystem _tileSystem;
         private CameraFollow _cameraFollow;
+        private Camera _playerCamera;
         private IInputHandle _mapEditorHandle;
         private IInputHandle _scrollSuppress;
         private VisualElement _overlayRoot;
@@ -59,9 +60,11 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public bool IsActive => _active;
         public bool MouseOverUI => _mouseOverUI;
+        public bool IsOrbiting => _session.IsOrbiting;
         public bool IsDeleting => _viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit;
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
         public bool GridSnapEnabled => _viewModel.GridSnap;
+        public Camera PickCamera => _playerCamera != null ? _playerCamera : Camera.main;
 
         protected override void OnAwake()
         {
@@ -83,8 +86,19 @@ namespace SS3D.Systems.Tile.MapEditor
             _controls.ToggleMenu.performed += HandleToggleMenu;
             EnsureCommandServiceBound();
 
-            if (Camera.main != null)
-                _cameraFollow = Camera.main.GetComponent<CameraFollow>();
+            ResolvePlayerCamera();
+        }
+
+        private void ResolvePlayerCamera()
+        {
+            if (SubSystems.TryGet(out CameraSubSystem cameraSystem) && cameraSystem.PlayerCamera != null)
+                _playerCamera = cameraSystem.PlayerCamera.GetComponent<Camera>();
+
+            if (_playerCamera == null)
+                _playerCamera = Camera.main;
+
+            if (_playerCamera != null)
+                _cameraFollow = _playerCamera.GetComponent<CameraFollow>();
         }
 
         private void EnsureCommandServiceBound()
@@ -192,16 +206,22 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 _mapEditorHandle ??= _inputSystem.PushContext(InputContext.MapEditor);
 
-                Vector3 entry = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
+                // Stop CameraFollow BEFORE taking the camera — its UpdateEvent still fires
+                // while disabled unless it early-outs, and it was overwriting orbit every frame.
+                SetGameplayInputBlocked(true);
+
+                if (_playerCamera == null)
+                    ResolvePlayerCamera();
+
+                Vector3 entry = _playerCamera != null ? _playerCamera.transform.position : Vector3.zero;
                 if (_session.IsActive)
                     _session.Exit();
-                _session.Enter(Camera.main, entry);
+                _session.Enter(_playerCamera, entry);
 
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
                 OnCameraSettingsChanged(_viewModel.CameraFov, _viewModel.CameraZoomSpeed, _viewModel.CameraRotationSpeed);
                 SetMouseOverUI(false);
-                SetGameplayInputBlocked(true);
                 _gameplayHud.SetVisible(false);
                 RpcRequestUndoState(LocalConnection);
             }
@@ -266,14 +286,21 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_session.IsActive)
                 _session.Update(updateEvent.DeltaTime);
 
-            UpdateMouseOverUI();
+            // While orbiting, skip UI hover / tool clicks — placement picks are frozen too.
+            if (!_session.IsOrbiting)
+            {
+                UpdateMouseOverUI();
 
-            if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
-                HandleSelectClick();
+                if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                    HandleSelectClick();
 
-            if (_viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
-                HandleMoveInput();
-
+                if (_viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
+                    HandleMoveInput();
+            }
+            else
+            {
+                SetMouseOverUI(false);
+            }
             if (Keyboard.current != null)
             {
                 if (Keyboard.current.f7Key.wasPressedThisFrame)
@@ -303,7 +330,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void HandleSelectClick()
         {
-            Vector3 position = TileHelper.GetPointedPosition(true);
+            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
             TileMap map = _tileSystem.CurrentMap;
             if (map == null)
                 return;
@@ -323,7 +350,12 @@ namespace SS3D.Systems.Tile.MapEditor
                 }
             }
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (PickCamera == null)
+                return;
+
+            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
@@ -350,7 +382,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void TryBeginMove()
         {
-            Vector3 position = TileHelper.GetPointedPosition(true);
+            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
             TileMap map = _tileSystem.CurrentMap;
             if (map == null)
                 return;
@@ -372,7 +404,12 @@ namespace SS3D.Systems.Tile.MapEditor
                 }
             }
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (PickCamera == null)
+                return;
+
+            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
@@ -393,7 +430,7 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_moveSource == null)
                 return;
 
-            Vector3 destination = TileHelper.GetPointedPosition(!_moveIsItem);
+            Vector3 destination = TileHelper.GetPointedPosition(!_moveIsItem, PickCamera);
             RpcMoveObject(_moveAssetName, _moveSource.Value, destination, _moveDirection, _moveIsItem, LocalConnection);
             _moveSource = null;
             _moveAssetName = null;
@@ -521,10 +558,15 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnCameraSettingsChanged(float fov, float zoomSpeed, float rotationSpeed)
         {
-            if (Camera.main != null)
-                Camera.main.fieldOfView = fov;
+            Camera cam = PickCamera;
+            if (cam != null)
+                cam.fieldOfView = fov;
+
+            _session?.SetSpeeds(zoomSpeed, rotationSpeed);
 
             // Sliders are shown on a 1-10 scale; 5 is the neutral (1x) speed multiplier.
+            // CameraFollow is disabled while the map editor is open; keep multipliers in sync
+            // for when the editor closes.
             if (_cameraFollow != null)
             {
                 _cameraFollow.ZoomSpeedMultiplier = zoomSpeed / 5f;
