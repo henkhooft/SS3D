@@ -44,6 +44,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private Vector2Int _dragStartTile;
         private Vector2Int _lastDragEndTile;
         private bool _hasDragEndTile;
+        private bool _lastSquareDrag;
         /// <summary>
         /// Is the player currently dragging ?
         /// </summary>
@@ -173,13 +174,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 }
             }
 
+            bool squareDrag = _controls.SquareDrag.IsPressed();
             if (_isDragging && _selectedObject != null &&
-                (!_hasDragEndTile || cursorTile != _lastDragEndTile))
+                (!_hasDragEndTile || cursorTile != _lastDragEndTile || squareDrag != _lastSquareDrag))
             {
                 _lastDragEndTile = cursorTile;
                 _hasDragEndTile = true;
+                _lastSquareDrag = squareDrag;
 
-                if (_controls.SquareDrag.phase == InputActionPhase.Performed)
+                // Shift (Square Drag): filled rectangle. Default drag: Bresenham line.
+                if (squareDrag)
                     FillSquareDrag(cursorTile, _dragTileBuffer);
                 else
                     FillLineDrag(cursorTile, _dragTileBuffer);
@@ -319,6 +323,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _isDragging = false;
             _pressStartedOverUi = false;
             _hasDragEndTile = false;
+            _lastSquareDrag = false;
 
             if (commit)
             {
@@ -335,6 +340,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _isDragging = false;
             _pressStartedOverUi = false;
             _hasDragEndTile = false;
+            _lastSquareDrag = false;
             if (resetHolograms)
                 ResetHologramsToCursor();
         }

@@ -118,13 +118,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             if (IsEraserSelected && CurrentTool == MapEditorTool.Edit)
             {
-                SelectedObjectHint = "Edit tool active — click a tile to erase";
+                SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to erase";
                 return;
             }
 
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
-                SelectedObjectHint = "Edit tool active — click a tile to place";
+                SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to place";
                 return;
             }
 

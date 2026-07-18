@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: shipped
-> Verified: bbfa2990c — 2026-07-18
+> Verified: 3ef6ed327 — 2026-07-18
 
 # Tile / construction
 
@@ -59,6 +59,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **Placement release canceled over “empty” screen:** `InputInterface` must not use `EventSystem.IsPointerOverGameObject()` with a registered fullscreen UITK document — the panel raycaster hits the whole shell. Use `panel.Pick` (Ignore-aware) + uGUI `GraphicRaycaster` only; see [inputs](inputs.md) Pitfalls.
 - **Drag path worse on vertical/diagonal / camera angle:** the bottom Object Library region used `PickingMode.Position` over a full-width band, so hover reported UI whenever the cursor was in the lower third — vertical mouse motion and camera framing into that band froze drag and blocked click-hold place. Regions are `Ignore`; only library/windows/slots/buttons pick. Do not freeze drag picks on `MouseOverUI`.
 - **Drag path stutters when moving fast:** was Instantiate/Destroy + `RpcSendCanBuild` per hologram per tile step (GC + network hitch). Pool inactive ghosts; skip per-tile validity refresh while dragging; drive path from `Vector2Int` tiles.
+- **Shift+drag rectangle:** `Tile Creator / Square Drag` is Shift (filled array); plain drag stays a Bresenham line. Rebuild when the modifier changes even if the cursor tile does not. Replace-existing is Alt (was Shift).
 - **Drag placement stuck / dead clicks:** `ConstructionHologramManager` must resolve LMB up/down *before* the orbit early-out — otherwise releasing while MMB-orbiting leaves `_placePressActive` stuck. Also recover if the button is up but the press flag is still set. Cancel (don't commit) when a gesture ends over UI, and rebuild a single cursor hologram so multi-tile drag ghosts do not linger.
 
 ## Depends on / Used by
