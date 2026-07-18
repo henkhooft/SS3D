@@ -57,12 +57,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
             ChangeHologramColor(mode);
         }
 
+        private ConstructionMode _appliedMode = (ConstructionMode)(-1);
+
         /// <summary>
         /// Chooses which material to set on the ghost based on which mode we are building.
         /// </summary>
-        /// <param name="mode"></param>
         public void ChangeHologramColor(ConstructionMode mode)
         {
+            if (_appliedMode == mode)
+                return;
+
+            _appliedMode = mode;
             Material ghostMat = null;
 
             string ghostMatName = mode switch

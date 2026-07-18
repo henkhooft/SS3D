@@ -54,6 +54,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// List of build ghosts currently displaying in game.
         /// </summary>
         private List<ConstructionHologram> _holograms = new();
+        /// <summary>Inactive holograms retained across drag resize to avoid Instantiate/Destroy thrash.</summary>
+        private readonly List<ConstructionHologram> _hologramPool = new();
+        private readonly List<Vector3> _dragTileBuffer = new();
         [SerializeField]
         private MapEditorSubSystem _mapEditor;
 
@@ -164,41 +167,75 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             if (_isDragging && (position != _lastSnappedPosition) && (_selectedObject != null))
             {
-                Vector3[] tiles;
                 if (_controls.SquareDrag.phase == InputActionPhase.Performed)
-                {
-                    tiles = SquareDrag(position);
-                }
+                    FillSquareDrag(position, _dragTileBuffer);
                 else
-                {
-                    tiles = LineDrag(position);
-                }
+                    FillLineDrag(position, _dragTileBuffer);
 
-                int difference = _holograms.Count - tiles.Length;
-                if (_holograms.Count > tiles.Length)
-                {
-                    for (int i = 0; i < difference; i++)
-                    {
-                        _holograms[0].Destroy();
-                        _holograms.RemoveAt(0);
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < -difference; i++)
-                    {
-                        CreateHologram(_selectedObject.PrefabAsset, new());
-                    }
-                }
-
-                for (int i = 0; i < tiles.Length; i++)
-                {
-                    _holograms[i].Hologram.transform.position = tiles[i];
-                    _holograms[i].TargetPosition = tiles[i];
-                    RefreshHologram(_holograms[i]);
-                }
+                SyncDragHolograms(_dragTileBuffer);
             }
             _lastSnappedPosition = position;
+        }
+
+        /// <summary>
+        /// Grow/shrink the active hologram list to match drag tiles without per-step Instantiate/Destroy,
+        /// and only refresh validity for holograms whose tile actually changed.
+        /// </summary>
+        private void SyncDragHolograms(List<Vector3> tiles)
+        {
+            while (_holograms.Count < tiles.Count)
+                _holograms.Add(RentHologram());
+
+            while (_holograms.Count > tiles.Count)
+            {
+                ConstructionHologram extra = _holograms[_holograms.Count - 1];
+                _holograms.RemoveAt(_holograms.Count - 1);
+                ReturnHologram(extra);
+            }
+
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                ConstructionHologram hologram = _holograms[i];
+                Vector3 tile = tiles[i];
+                if (hologram.TargetPosition == tile && hologram.ActiveSelf)
+                {
+                    continue;
+                }
+
+                hologram.TargetPosition = tile;
+                hologram.Hologram.transform.position = tile + new Vector3(0f, hologram.PlacementYOffset + 0.1f, 0f);
+                RefreshHologram(hologram);
+            }
+        }
+
+        private ConstructionHologram RentHologram()
+        {
+            if (_hologramPool.Count > 0)
+            {
+                ConstructionHologram pooled = _hologramPool[_hologramPool.Count - 1];
+                _hologramPool.RemoveAt(_hologramPool.Count - 1);
+                pooled.SetActive = true;
+                return pooled;
+            }
+
+            return CreateHologram(_selectedObject.PrefabAsset, Vector3.zero, addToActive: false);
+        }
+
+        private void ReturnHologram(ConstructionHologram hologram)
+        {
+            if (hologram?.Hologram == null)
+                return;
+
+            hologram.SetActive = false;
+            _hologramPool.Add(hologram);
+        }
+
+        private void ClearHologramPool()
+        {
+            for (int i = _hologramPool.Count - 1; i >= 0; i--)
+                _hologramPool[i].Destroy();
+
+            _hologramPool.Clear();
         }
 
         private void HandlePlacementInput()
@@ -303,7 +340,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// <summary>
         /// Instantiate in the correct position and rotation a single hologram.
         /// </summary>
-        public ConstructionHologram CreateHologram(ObjectAssetReference prefabAsset, Vector3 position)
+        /// <param name="addToActive">False when renting into the drag pool path (caller adds).</param>
+        public ConstructionHologram CreateHologram(ObjectAssetReference prefabAsset, Vector3 position, bool addToActive = true)
         {
             GameObject prefab = Assets.Get<GameObject>(prefabAsset);
             GameObject tileObject = Instantiate(prefab);
@@ -314,7 +352,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
             ConstructionHologram hologram = new(tileObject, position, _lastRegisteredDirection, placementYOffset);
             tileObject.transform.rotation = Quaternion.Euler(0, TileHelper.GetRotationAngle(hologram.Direction), 0);
             tileObject.transform.position = hologram.TargetPosition + new Vector3(0, placementYOffset + 0.1f, 0);
-            _holograms.Add(hologram);
+            if (addToActive)
+                _holograms.Add(hologram);
             RefreshHologram(hologram);
             return hologram;
         }
@@ -329,6 +368,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 _holograms[i].Destroy();
             }
             _holograms.Clear();
+            ClearHologramPool();
         }
 
         /// <summary>
@@ -448,23 +488,35 @@ namespace SS3D.Systems.Tile.TileMapCreator
         }
 
         /// <summary>
-        /// Update material of holograms based build (or anything else) mode and holograms position  
+        /// Update material of holograms based build (or anything else) mode and holograms position.
+        /// Uses local <see cref="IConstructionService.TryPreviewTile"/> — never ServerRpc per ghost;
+        /// drag used to spam RpcSendCanBuild and hitch so hard the path looked frozen.
         /// </summary>
         private void RefreshHologram(ConstructionHologram hologram)
         {
             if (_mapEditor != null && _mapEditor.IsDeleting)
             {
                 hologram.ChangeHologramColor(ConstructionMode.Delete);
+                return;
             }
-            else if (_isPlacingItem)
+
+            if (_isPlacingItem || _selectedObject is not TileObjectSo tileObjectSo)
             {
                 hologram.ChangeHologramColor(ConstructionMode.Valid);
+                return;
             }
-            else
+
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            if (tileSystem?.Construction == null)
             {
-                bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
-                RpcSendCanBuild(_selectedObject.NameString, hologram.TargetPosition, hologram.Direction, isReplacing, LocalConnection);
+                hologram.ChangeHologramColor(ConstructionMode.Valid);
+                return;
             }
+
+            bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
+            bool canBuild = tileSystem.Construction
+                .TryPreviewTile(tileObjectSo, hologram.TargetPosition, hologram.Direction, isReplacing).CanBuild;
+            hologram.ChangeHologramColor(canBuild ? ConstructionMode.Valid : ConstructionMode.Invalid);
         }
 
         /// <summary>
@@ -481,45 +533,40 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
         }
 
-        /// <summary>
-        /// Starting from a given position, create holograms along a line defined by dragging. 
-        /// </summary>
-        private Vector3[] LineDrag(Vector3 position)
+        private void FillLineDrag(Vector3 position, List<Vector3> into)
         {
+            into.Clear();
             Vector2 firstPoint = new(_dragStartPostion.x, _dragStartPostion.z);
             Vector2 secondPoint = new(position.x, position.z);
-            Vector3[] tiles = MathUtility.FindTilesOnLine(firstPoint, secondPoint)
-                .Select(x => new Vector3(x.x, position.y, x.y)).ToArray();
-
-            return tiles;
+            Vector2[] line = MathUtility.FindTilesOnLine(firstPoint, secondPoint);
+            for (int i = 0; i < line.Length; i++)
+            {
+                Vector2 tile = line[i];
+                into.Add(new Vector3(tile.x, position.y, tile.y));
+            }
         }
-        /// <summary>
-        /// Create a square of objects holograms.
-        /// </summary>
-        /// <param name="position"> Fist position of the square</param>
-        private Vector3[] SquareDrag(Vector3 position)
+
+        private void FillSquareDrag(Vector3 position, List<Vector3> into)
         {
+            into.Clear();
             int x1 = (int)Math.Min(_dragStartPostion.x, position.x);
             int x2 = (int)Math.Max(_dragStartPostion.x, position.x);
             int y1 = (int)Math.Min(_dragStartPostion.z, position.z);
             int y2 = (int)Math.Max(_dragStartPostion.z, position.z);
 
-            List<Vector3> tiles = new();
-            
             for (int i = y1; i <= y2; i++)
             {
                 for (int j = x1; j <= x2; j++)
                 {
-                    tiles.Add(new (j, position.y, i));
+                    into.Add(new Vector3(j, position.y, i));
                 }
             }
-
-            return tiles.ToArray();
         }
         
         [ServerRpc(RequireOwnership = false)]
         private void RpcSendCanBuild(string tileObjectSoName, Vector3 placePosition, Direction dir, bool replaceExisting, NetworkConnection conn)
         {
+            // Kept for FishNet codegen / older callers; preview is local via RefreshHologram.
             if (!MapEditorPermissions.TryAuthorize(conn))
             {
                 RpcReceiveCanBuild(conn, placePosition, false);
