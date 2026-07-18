@@ -125,30 +125,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public void SetMouseOverUI(bool over) => _root?.EnableInClassList("map-editor-mouse-over", over);
 
-        public bool IsPointerOverInteractiveUI(Vector2 screenPosition)
-        {
-            if (_root?.panel == null)
-                return false;
-
-            Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(_root.panel, screenPosition);
-            VisualElement picked = _root.panel.Pick(panelPosition);
-            if (picked == null)
-                return false;
-
-            return IsInteractivePick(picked);
-        }
-
-        private static bool IsInteractivePick(VisualElement element)
-        {
-            for (VisualElement current = element; current != null; current = current.parent)
-            {
-                if (current.pickingMode == PickingMode.Position)
-                    return true;
-            }
-
-            return false;
-        }
-
         private void BuildExitButton()
         {
             VisualElement region = CreateRegion("map-editor-region--top-left");
@@ -213,21 +189,22 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private void BuildSelectedPanel()
         {
             VisualElement region = CreateRegion("map-editor-region--selected");
-            VisualElement window = CreateWindow("Selected Object");
+            // Display-only — must not steal world placement under / around the hint strip.
+            VisualElement window = CreateWindow("Selected Object", blocksWorldPicks: false);
             _selectedPanel = window;
 
-            VisualElement row = new();
+            VisualElement row = new() { pickingMode = PickingMode.Ignore };
             row.AddToClassList("map-editor-selected-panel");
 
-            _selectedIcon = new VisualElement();
+            _selectedIcon = new VisualElement { pickingMode = PickingMode.Ignore };
             _selectedIcon.AddToClassList("map-editor-selected-icon");
 
-            VisualElement textCol = new();
-            _selectedName = new Label("—");
+            VisualElement textCol = new() { pickingMode = PickingMode.Ignore };
+            _selectedName = new Label("—") { pickingMode = PickingMode.Ignore };
             _selectedName.AddToClassList("map-editor-selected-name");
-            _selectedMeta = new Label("Placement hint");
+            _selectedMeta = new Label("Placement hint") { pickingMode = PickingMode.Ignore };
             _selectedMeta.AddToClassList("map-editor-selected-meta");
-            _selectedHint = new Label();
+            _selectedHint = new Label { pickingMode = PickingMode.Ignore };
             _selectedHint.AddToClassList("map-editor-selected-hint");
 
             textCol.Add(_selectedName);
@@ -245,7 +222,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             VisualElement region = CreateRegion("map-editor-region--bottom");
             region.AddToClassList("map-editor-bottom-row");
 
-            _modeRail = new VisualElement { pickingMode = PickingMode.Ignore };
+            // Position so rail padding blocks world picks; tabs remain the interactive targets.
+            _modeRail = new VisualElement { pickingMode = PickingMode.Position };
             _modeRail.AddToClassList("map-editor-mode-rail");
             foreach (MapEditorMode mode in Enum.GetValues(typeof(MapEditorMode)))
             {
@@ -670,7 +648,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static VisualElement CreateToolbarStrip()
         {
-            VisualElement strip = new();
+            // Ignore the strip chrome for world picks; only buttons/fields should block placement.
+            VisualElement strip = new() { pickingMode = PickingMode.Ignore };
             strip.AddToClassList("map-editor-toolbar-strip");
             strip.style.flexDirection = FlexDirection.Row;
             return strip;
@@ -699,16 +678,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static void AddSeparator(VisualElement parent)
         {
-            VisualElement sep = new();
+            VisualElement sep = new() { pickingMode = PickingMode.Ignore };
             sep.AddToClassList("map-editor-separator");
             parent.Add(sep);
         }
 
-        private static VisualElement CreateWindow(string title)
+        private static VisualElement CreateWindow(string title, bool blocksWorldPicks = true)
         {
-            VisualElement window = new() { pickingMode = PickingMode.Position };
+            VisualElement window = new()
+            {
+                pickingMode = blocksWorldPicks ? PickingMode.Position : PickingMode.Ignore,
+            };
             window.AddToClassList("map-editor-window");
-            Label titleLabel = new(title);
+            Label titleLabel = new(title) { pickingMode = PickingMode.Ignore };
             titleLabel.AddToClassList("map-editor-window__title");
             window.Add(titleLabel);
             return window;

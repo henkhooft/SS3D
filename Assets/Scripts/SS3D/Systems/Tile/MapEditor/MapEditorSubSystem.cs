@@ -69,7 +69,7 @@ namespace SS3D.Systems.Tile.MapEditor
         public bool IsActive => _active;
 
         /// <summary>
-        /// Live pointer-over-UI query via <see cref="InputInterface"/> (registered UITK + uGUI).
+        /// Live pointer-over-UI via <see cref="InputInterface"/> (registered UITK + uGUI).
         /// Cached <see cref="_mouseOverUI"/> is only for scroll suppress / CSS class.
         /// </summary>
         public bool MouseOverUI => _active && InputInterface.IsPointerOverInterface();

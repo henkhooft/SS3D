@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: 56e4cd004 — 2026-07-17
+> Verified: bbfa2990c — 2026-07-18
 
 # Inputs
 
@@ -15,7 +15,7 @@ Central input layer wrapping the Unity Input System. Two responsibilities:
    `InputArbiter` recomputes each action's `enabled` flag from the live request set as the single
    writer, so dead keys, leaked input, and enabled/refcount desync are structurally impossible.
 2. **Pointer authority** — `InputInterface.IsPointerOverInterface()` is the one place that answers
-   "is the pointer over UI", spanning both uGUI (`EventSystem`) and UI Toolkit runtime panels.
+   "is the pointer over UI", spanning uGUI (`GraphicRaycaster`) and UI Toolkit (`panel.Pick`).
    Callers include interaction click gates and selection hover clearing (examine/outlines).
 
 See the effort doc [2026-07_input-arbitration.md](../2026-07_input-arbitration.md) for the model,
@@ -47,6 +47,21 @@ the context table, and the migration from the old refcount API.
 - Never call `InputAction.Enable/Disable` directly; go through a context or suppression handle.
 - A handle must be owned by exactly one object and disposed once; disposing is idempotent and
   order-independent, so out-of-order release across objects is safe.
+
+## Pitfalls
+
+- **`EventSystem.IsPointerOverGameObject()` + UI Toolkit:** the UITK `PanelRaycaster` reports the whole
+  `UIDocument` as a hit, including `PickingMode.Ignore` layout roots. Fullscreen shells (map editor)
+  then look like invisible UI and cancel world placement on mouse-up. `InputInterface` uses
+  `panel.Pick` for UITK (honours Ignore) and only `GraphicRaycaster` hits for uGUI — never the
+  parameterless `IsPointerOverGameObject()` shortcut.
+- **Registered `UIDocument` root steals picks:** the document root defaults to `PickingMode.Position` and
+  often fills the screen (Main HUD). Even with content `display:none` / Ignore children, `panel.Pick`
+  hits the root. `RegisterDocument` forces the root to `Ignore`; content must opt in with Position.
+- **UITK pick Y is top-left, mouse is bottom-left:** before `RuntimePanelUtils.ScreenToPanel` / `panel.Pick`,
+  flip with `y = Screen.height - y` (or use `InputInterface.ScreenToPanel`). Skipping the flip maps the
+  top of the screen onto bottom chrome (map editor Object Library) — an invisible full-width block in the
+  upper half, while the lower UI appears click-through.
 
 ## Tests
 

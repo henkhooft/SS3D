@@ -178,9 +178,10 @@
 }
 
 .map-editor-region--top-left { left: 24px; top: 24px; }
-.map-editor-region--top-center { left: 50%; top: 24px; translate: -50% 0; }
+.map-editor-region--top-center { left: 50%; top: 24px; translate: -50% 0; width: auto; }
 .map-editor-region--top-right { right: 24px; top: 24px; }
-.map-editor-region--selected { left: 50%; top: 108px; translate: -50% 0; }
+/* Explicit width so absolute + left:50% does not stretch to the full hud layer. */
+.map-editor-region--selected { left: 50%; top: 108px; translate: -50% 0; width: 448px; }
 .map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 336px; }
 
 .map-editor-window {
