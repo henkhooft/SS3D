@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: shipped
-> Verified: 8d5428105 — 2026-07-17
+> Verified: 47f084cd3 — 2026-07-18
 
 # Tile / construction
 
@@ -46,6 +46,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 - **`Dictionary<TileCoord, T>` / `HashSet<TileCoord>` GC on Mono:** without `IEquatable<TileCoord>` + `GetHashCode`, every lookup boxes via `ValueType.DefaultEquals` (~24 B). Prefer `TryGetPlacedObject` over `GetAllPlacedObject` on hot single-occupancy layers — the latter always allocates a new `List`.
 - **Icon generation under `-batchmode -nographics`:** `TileResourceLoader.LoadAssetsWithIcon` and `Item.GenerateIcon` use `RuntimePreviewGenerator` (camera → URP). On NullGfxDevice that throws GraphicsBuffer/Blitter exceptions and poisons multiplayer smoke-test logs. Both paths skip when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
+- **B does nothing / Map Editor missing:** `TileCreator.ToggleMenu` (`<Keyboard>/b`) is handled by `MapEditorSubSystem` on `MapEditorCanvas`, nested under `PlayerCanvas`. Never GUID-swap a nested PrefabInstance to a different prefab (ConstructionMenu → MapEditorCanvas once did this) — orphan `fileID`s leave Missing Prefab / SceneId-0 NetworkObjects, so the toggle listener never runs. Re-nest in the Editor or rewrite the PrefabInstance against the source's current local IDs. Map Editor is full-screen UITK, not a DynamicPanels "Construction" tab.
 
 ## Depends on / Used by
 
