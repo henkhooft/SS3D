@@ -1,3 +1,5 @@
+using Coimbra;
+using FishNet;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inventory.Items;
 using System.Collections.Generic;
@@ -13,6 +15,8 @@ namespace SS3D.Systems.Furniture
     /// </summary>
     public class DisposalOutlet : MonoBehaviour, IDisposalElement
     {
+        private const float ClaimProximityMeters = 2f;
+
         [SerializeField]
         [Tooltip("Department.None marks this as the main/untagged outlet — the one with space ejection.")]
         private Department _targetDepartment = Department.None;
@@ -78,7 +82,7 @@ namespace SS3D.Systems.Furniture
 
         private void ResolveUnclaimed(Item item)
         {
-            if (item == null)
+            if (!StillUnclaimedAtOutlet(item))
             {
                 return;
             }
@@ -94,10 +98,43 @@ namespace SS3D.Systems.Furniture
             EjectIntoSpace(item);
         }
 
+        /// <summary>
+        /// True while the arrival is still a world item near this outlet. Picked-up / moved items
+        /// must not be teleported or despawned when the grace window expires.
+        /// </summary>
+        private bool StillUnclaimedAtOutlet(Item item)
+        {
+            if (item == null)
+            {
+                return false;
+            }
+
+            if (item.IsInContainer())
+            {
+                return false;
+            }
+
+            float distance = Vector3.Distance(item.transform.position, transform.position);
+            return distance <= ClaimProximityMeters;
+        }
+
         private void EjectIntoSpace(Item item)
         {
-            Vector3 target = _spaceEjectionPoint != null ? _spaceEjectionPoint.position : transform.position;
-            item.transform.SetPositionAndRotation(target, item.transform.rotation);
+            if (_spaceEjectionPoint != null)
+            {
+                item.transform.SetPositionAndRotation(_spaceEjectionPoint.position, item.transform.rotation);
+            }
+
+            // Honest discard: the item is gone, not quietly left at an offset (design §6).
+            // Item.Delete assumes a container; world arrivals despawn/dispose directly.
+            if (InstanceFinder.ServerManager != null)
+            {
+                InstanceFinder.ServerManager.Despawn(item.GameObject);
+            }
+            else
+            {
+                item.GameObject.Dispose(true);
+            }
         }
 
         private struct PendingArrival

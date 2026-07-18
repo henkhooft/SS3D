@@ -56,6 +56,12 @@ namespace SS3D.Systems.Furniture.Disposal
                 return false;
             }
 
+            Item item = hands.SelectedHand.ItemInHand;
+            if (item == null || !_bin.AcceptsSize(item.SizeClass))
+            {
+                return false;
+            }
+
             if (_bin.AccessGate != null && !HasRequiredAccess(hands))
             {
                 return false;

@@ -20,9 +20,20 @@ namespace SS3D.Systems.Furniture
         [Tooltip("Optional. If present, dropping an item in requires matching access, same pattern as AirLockAccessGate.")]
         private AirLockAccessGate _accessGate;
 
+        [SerializeField]
+        [Tooltip("Largest item SizeClass this chute accepts. Mirrors AttachedContainer MaxSizeClass (inventory-storage.md §4).")]
+        private SizeClass _maxSizeClass = SizeClass.Huge;
+
         public GameObject GameObject => gameObject;
 
         public AirLockAccessGate AccessGate => _accessGate;
+
+        public SizeClass MaxSizeClass => _maxSizeClass;
+
+        /// <summary>
+        /// Size-class chute accept check (design disposal.md §2 / inventory-storage.md §4).
+        /// </summary>
+        public bool AcceptsSize(SizeClass size) => size <= _maxSizeClass;
 
         public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
         {

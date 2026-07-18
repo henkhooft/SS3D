@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Furniture.Disposal;
+using SS3D.Systems.IdAccess;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.Connections;
 using System.Collections.Generic;
@@ -97,6 +99,47 @@ namespace EditorTests.Disposal
 
             Assert.IsTrue(DisposalPipeConnectivity.TryFindRoute(context.Map, link, bin, out List<PlacedTileObject> path));
             Assert.AreEqual(entry, path[path.Count - 1]);
+        }
+
+        [Test]
+        public void DisposalBin_AcceptsSize_HonorsMaxSizeClassCeiling()
+        {
+            DisposalBin bin = CreateDisposalElement<DisposalBin>(new Vector2Int(3, 3));
+            SetPrivateField(bin, "_maxSizeClass", SizeClass.Normal);
+
+            Assert.IsTrue(bin.AcceptsSize(SizeClass.Tiny));
+            Assert.IsTrue(bin.AcceptsSize(SizeClass.Normal));
+            Assert.IsFalse(bin.AcceptsSize(SizeClass.Bulky));
+            Assert.IsFalse(bin.AcceptsSize(SizeClass.Huge));
+        }
+
+        [Test]
+        public void MainOutlet_GraceExpiry_SkipsItemsAlreadyMovedAway()
+        {
+            GameObject outletObject = new GameObject("MainOutlet");
+            _instantiated.Add(outletObject);
+            DisposalOutlet outlet = outletObject.AddComponent<DisposalOutlet>();
+            SetPrivateField(outlet, "_targetDepartment", Department.None);
+            SetPrivateField(outlet, "_graceWindowSeconds", 0.01f);
+
+            GameObject itemObject = new GameObject("PendingItem");
+            _instantiated.Add(itemObject);
+            Item item = itemObject.AddComponent<Item>();
+            itemObject.transform.position = outletObject.transform.position;
+
+            outlet.OnItemArrived(item);
+
+            // Simulate pickup / walk-away: item is no longer near the outlet.
+            itemObject.transform.position = outletObject.transform.position + Vector3.right * 10f;
+
+            MethodInfo resolve = typeof(DisposalOutlet).GetMethod(
+                "ResolveUnclaimed",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(resolve);
+            resolve.Invoke(outlet, new object[] { item });
+
+            Assert.IsNotNull(item);
+            Assert.IsNotNull(item.gameObject);
         }
 
         private PlacedTileObject CreateDisposalPipeAt(Vector2Int worldOrigin)
