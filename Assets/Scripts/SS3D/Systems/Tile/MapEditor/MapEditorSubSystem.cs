@@ -39,6 +39,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private readonly MapEditorCatalog _catalog = new();
         private readonly MapEditorSession _session = new();
         private readonly MapEditorCommandService _commandService = new();
+        private readonly MapEditorLighting _lighting = new();
 
         private MapEditorView _view;
         private IMapEditorPersistence _persistence;
@@ -52,14 +53,27 @@ namespace SS3D.Systems.Tile.MapEditor
         private VisualElement _overlayRoot;
         private bool _active;
         private bool _mouseOverUI;
+        private bool _documentRegistered;
         private float _toastTimer;
         private Vector3? _moveSource;
         private string _moveAssetName;
         private Direction _moveDirection;
         private bool _moveIsItem;
 
+        /// <summary>Fired after the editor opens (Main HUD listens to suppress chrome).</summary>
+        public event Action EditorOpened;
+
+        /// <summary>Fired after the editor closes.</summary>
+        public event Action EditorClosed;
+
         public bool IsActive => _active;
-        public bool MouseOverUI => _mouseOverUI;
+
+        /// <summary>
+        /// Live pointer-over-UI query via <see cref="InputInterface"/> (registered UITK + uGUI).
+        /// Cached <see cref="_mouseOverUI"/> is only for scroll suppress / CSS class.
+        /// </summary>
+        public bool MouseOverUI => _active && InputInterface.IsPointerOverInterface();
+
         public bool IsOrbiting => _session.IsOrbiting;
         public bool IsDeleting => _viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit;
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
@@ -120,14 +134,22 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             _controls.ToggleMenu.performed -= HandleToggleMenu;
             SetGameplayInputBlocked(false);
+            _lighting.Restore();
             _gameplayHud?.SetVisible(true);
             _mapEditorHandle?.Dispose();
             _mapEditorHandle = null;
             _scrollSuppress?.Dispose();
             _scrollSuppress = null;
             TeardownView();
+            UnregisterDocument();
             if (_document != null)
                 _document.enabled = false;
+            if (_active)
+            {
+                _active = false;
+                EditorClosed?.Invoke();
+            }
+
             base.OnDestroyed();
         }
 
@@ -146,6 +168,25 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.Build(_overlayRoot);
             WireViewEvents();
             RebuildCatalog();
+            RegisterDocument();
+        }
+
+        private void RegisterDocument()
+        {
+            if (_documentRegistered || _document == null)
+                return;
+
+            InputInterface.RegisterDocument(_document);
+            _documentRegistered = true;
+        }
+
+        private void UnregisterDocument()
+        {
+            if (!_documentRegistered || _document == null)
+                return;
+
+            InputInterface.UnregisterDocument(_document);
+            _documentRegistered = false;
         }
 
         private void WireViewEvents()
@@ -221,8 +262,10 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = true;
                 _viewModel.SetTool(MapEditorTool.Edit);
                 OnCameraSettingsChanged(_viewModel.CameraFov, _viewModel.CameraZoomSpeed, _viewModel.CameraRotationSpeed);
+                _lighting.Apply();
                 SetMouseOverUI(false);
                 _gameplayHud.SetVisible(false);
+                EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
             }
             else
@@ -231,11 +274,13 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.DestroyHolograms();
                 _hologramManager.enabled = false;
                 _session.Exit();
+                _lighting.Restore();
                 MapEditorLayerVisibility.Deactivate();
                 SetGameplayInputBlocked(false);
                 _mapEditorHandle?.Dispose();
                 _mapEditorHandle = null;
                 ShutdownDocument();
+                EditorClosed?.Invoke();
             }
         }
 
@@ -438,10 +483,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void UpdateMouseOverUI()
         {
-            if (_view == null)
-                return;
-
-            bool over = _view.IsPointerOverInteractiveUI(Mouse.current?.position.ReadValue() ?? Input.mousePosition);
+            bool over = InputInterface.IsPointerOverInterface();
             if (over != _mouseOverUI)
                 SetMouseOverUI(over);
         }
@@ -479,6 +521,7 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_view?.Root != null)
                 _view.Root.style.display = DisplayStyle.Flex;
 
+            RegisterDocument();
             _viewModel.NotifyChanged();
         }
 

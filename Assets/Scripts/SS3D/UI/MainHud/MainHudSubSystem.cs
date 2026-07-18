@@ -11,6 +11,7 @@ using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Tile.MapEditor;
 using SS3D.UI.MachineInterface;
 using SS3D.UI.MainHud.Components;
 using UnityEngine;
@@ -25,8 +26,9 @@ namespace SS3D.UI.MainHud
     /// <para>
     /// Hidden until a local spawned body exists during an in-game round; hidden again when the round leaves
     /// Ongoing/Ending (same spawn/round gate idea as <c>GameScreensController</c>). Also suppressed while a
-    /// diegetic machine panel is open — visibility authority stays here (observes
-    /// <see cref="MachineInterfaceSubSystem"/>); machine UI must not call into Main HUD.
+    /// diegetic machine panel or the map editor is open — visibility authority stays here (observes
+    /// <see cref="MachineInterfaceSubSystem"/> / <see cref="MapEditorSubSystem"/>); those UIs must not call
+    /// into Main HUD.
     /// </para>
     /// <para>
     /// The alert icon stack has no hunger/thirst/restrained/pressure/radiation trackers to bind to yet - it
@@ -77,6 +79,9 @@ namespace SS3D.UI.MainHud
         private bool _machineUiOpen;
         private bool _subscribedToMachineUi;
         private MachineInterfaceSubSystem _machineUi;
+        private bool _mapEditorOpen;
+        private bool _subscribedToMapEditor;
+        private MapEditorSubSystem _mapEditor;
 
         protected override void OnAwake()
         {
@@ -173,12 +178,14 @@ namespace SS3D.UI.MainHud
         {
             base.OnStart();
             EnsureMachineUiSubscription();
+            EnsureMapEditorSubscription();
             TryBindExistingLocalPlayer();
         }
 
         protected override void OnDestroyed()
         {
             UnsubscribeMachineUi();
+            UnsubscribeMapEditor();
             UnbindLocalPlayer();
             _view?.Detach();
             InputInterface.UnregisterDocument(_document);
@@ -188,6 +195,7 @@ namespace SS3D.UI.MainHud
         private void Update()
         {
             EnsureMachineUiSubscription();
+            EnsureMapEditorSubscription();
 
             // Late-joining clients can miss one-shot spawn events (SyncList Complete is ignored in
             // EntitySubSystem; mind may sync before Mind.player is linked). Keep trying until bound.
@@ -392,13 +400,58 @@ namespace SS3D.UI.MainHud
             ApplyVisibility();
         }
 
+        private void EnsureMapEditorSubscription()
+        {
+            if (_subscribedToMapEditor)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out MapEditorSubSystem mapEditor))
+            {
+                return;
+            }
+
+            _mapEditor = mapEditor;
+            _mapEditor.EditorOpened += HandleMapEditorOpened;
+            _mapEditor.EditorClosed += HandleMapEditorClosed;
+            _subscribedToMapEditor = true;
+            _mapEditorOpen = _mapEditor.IsActive;
+            ApplyVisibility();
+        }
+
+        private void UnsubscribeMapEditor()
+        {
+            if (!_subscribedToMapEditor || _mapEditor == null)
+            {
+                return;
+            }
+
+            _mapEditor.EditorOpened -= HandleMapEditorOpened;
+            _mapEditor.EditorClosed -= HandleMapEditorClosed;
+            _mapEditor = null;
+            _subscribedToMapEditor = false;
+        }
+
+        private void HandleMapEditorOpened()
+        {
+            _mapEditorOpen = true;
+            ApplyVisibility();
+        }
+
+        private void HandleMapEditorClosed()
+        {
+            _mapEditorOpen = false;
+            ApplyVisibility();
+        }
+
         /// <summary>
-        /// Single visibility gate: spawn/round eligibility and machine-UI suppress.
+        /// Single visibility gate: spawn/round eligibility and modal suppress (machine UI / map editor).
         /// Call instead of bare show so catch-up cannot re-show chrome over an open panel.
         /// </summary>
         private void ApplyVisibility()
         {
-            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen;
+            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen;
             _view?.SetVisible(shouldShow);
         }
 

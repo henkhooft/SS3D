@@ -40,7 +40,8 @@ namespace SS3D.Rendering.URP
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (_maskMaterial == null || _blurMaterial == null || !VisionRenderContext.Enabled)
+            if (_maskMaterial == null || _blurMaterial == null || !VisionRenderContext.Enabled ||
+                VisionRenderContext.Suppressed)
                 return;
 
             Camera camera = renderingData.cameraData.camera;

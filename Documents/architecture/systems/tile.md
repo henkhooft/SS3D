@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: shipped
-> Verified: 47f084cd3 — 2026-07-18
+> Verified: 0130ebc36 — 2026-07-18
 
 # Tile / construction
 
@@ -49,6 +49,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **B does nothing / Map Editor missing:** `TileCreator.ToggleMenu` (`<Keyboard>/b`) is handled by `MapEditorSubSystem` on `MapEditorCanvas`, nested under `PlayerCanvas`. Never GUID-swap a nested PrefabInstance to a different prefab (ConstructionMenu → MapEditorCanvas once did this) — orphan `fileID`s leave Missing Prefab / SceneId-0 NetworkObjects, so the toggle listener never runs. Re-nest in the Editor or rewrite the PrefabInstance against the source's current local IDs. Map Editor is full-screen UITK, not a DynamicPanels "Construction" tab.
 - **Hologram always tracks world east/west:** `CameraFollow.HandleUpdate` still runs via Coimbra `UpdateEvent` after `enabled = false` and was overwriting `MapEditorSession` orbit every frame. Guard with `isActiveAndEnabled`. Map editor must drive/`GetPointedPosition` from `CameraSubSystem.PlayerCamera` (same instance the session orbits). Structural fix: planned [camera ownership](../2026-07_camera-ownership.md) (dedicated manager / contexts — same smell as pre-arbiter input).
 - **Hologram slides while orbiting / WASD skewed:** `MapEditorSession` must (1) orbit a ground focus from screen-center pick, (2) freeze hologram picks while MMB orbiting (`IsOrbiting`) so a moving cursor does not drag the ghost, (3) pan from **yaw-only** basis vectors — never `camera.forward` flattened (steep pitch collapses it and sends WASD sideways).
+- **Placement through map-editor chrome:** `IMapEditorHost.MouseOverUI` must be a live `InputInterface.IsPointerOverInterface()` query with the editor `UIDocument` registered — do not rely on a home-grown panel walk that can desync from press order. Scroll suppress still tracks the cached hover flag.
+- **Authoring darkness:** Scene lights cannot fullbright Simple Toon (dark rooms stay black; boosting the sun only blows out already-lit spots). `MapEditorLighting` sets shader global `_SS3DAuthoringFullbright` and `VisionRenderContext.Suppressed` for the session.
 
 ## Depends on / Used by
 
