@@ -47,6 +47,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
         public bool IsDragging => _isDragging;
         private bool _isDragging;
         private bool _placePressActive;
+        /// <summary>True when LMB went down over UI — never commit that gesture.</summary>
+        private bool _pressStartedOverUi;
         private GenericObjectSo _selectedObject;
         /// <summary>
         /// List of build ghosts currently displaying in game.
@@ -57,12 +59,14 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         public void ClearSelection()
         {
+            CancelPlacementGesture(resetHolograms: false);
             _selectedObject = null;
             DestroyHolograms();
         }
 
         public void SetSelectedObject(GenericObjectSo genericObjectSo)
         {
+            CancelPlacementGesture(resetHolograms: false);
             _isPlacingItem = genericObjectSo switch
             {
                 TileObjectSo => false,
@@ -117,14 +121,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _controls.Replace.canceled -= HandleReplace;
             _controls.Rotate.performed -= HandleRotate;
 #endif
-            _placePressActive = false;
-            _isDragging = false;
+            CancelPlacementGesture(resetHolograms: false);
         }
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
             if (_mapEditor == null || !_mapEditor.IsActive || _mapEditor.CurrentTool != MapEditorTool.Edit)
+            {
+                if (_placePressActive || _isDragging)
+                    CancelPlacementGesture(resetHolograms: _selectedObject != null);
                 return;
+            }
 
             if (_holograms.Count == 1)
             {
@@ -133,9 +140,15 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             ActivateGhosts();
 
-            // Freeze picks during middle-mouse orbit so a moving cursor does not drag the ghost
-            // while the camera turns around a fixed ground focus.
-            if (_mapEditor.IsOrbiting)
+            // Always resolve LMB up/down first — orbit used to early-return before this and
+            // leave _placePressActive stuck so placement never worked again.
+            HandlePlacementInput();
+
+            // Freeze world picks while orbiting, or while an active drag is over UI chrome
+            // (avoids the preview jumping under panels / committing weird lines).
+            bool freezePicks = _mapEditor.IsOrbiting ||
+                               (_placePressActive && _mapEditor.MouseOverUI);
+            if (freezePicks)
                 return;
 
             Vector3 position = GetPlacementPoint();
@@ -186,8 +199,6 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 }
             }
             _lastSnappedPosition = position;
-
-            HandlePlacementInput();
         }
 
         private void HandlePlacementInput()
@@ -196,19 +207,27 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (mouse == null)
                 return;
 
-            if (_mapEditor.MouseOverUI)
-            {
-                if (mouse.leftButton.wasReleasedThisFrame)
-                {
-                    _placePressActive = false;
-                    _isDragging = false;
-                }
+            bool overUi = _mapEditor.MouseOverUI;
+            bool pressed = mouse.leftButton.isPressed;
+            bool justPressed = mouse.leftButton.wasPressedThisFrame;
+            bool justReleased = mouse.leftButton.wasReleasedThisFrame;
 
+            // Missed-release recovery (orbit / focus loss / UI flicker skipped wasReleasedThisFrame).
+            if (_placePressActive && !pressed && !justReleased)
+            {
+                EndPlacementGesture(commit: false);
                 return;
             }
 
-            if (mouse.leftButton.wasPressedThisFrame)
+            if (justPressed)
             {
+                if (overUi)
+                {
+                    _pressStartedOverUi = true;
+                    return;
+                }
+
+                _pressStartedOverUi = false;
                 _placePressActive = true;
 
                 if (!_isPlacingItem)
@@ -216,14 +235,56 @@ namespace SS3D.Systems.Tile.TileMapCreator
                     _isDragging = true;
                     _dragStartPostion = GetPlacementPoint(forceTileSnap: true);
                 }
+
+                return;
             }
 
-            if (mouse.leftButton.wasReleasedThisFrame && _placePressActive)
+            if (!_placePressActive)
+                return;
+
+            if (!justReleased)
+                return;
+
+            // Commit only if the gesture began and ended off UI. Ending over chrome cancels
+            // without placing (and rebuilds a single cursor hologram).
+            bool commit = !_pressStartedOverUi && !overUi;
+            EndPlacementGesture(commit);
+        }
+
+        private void EndPlacementGesture(bool commit)
+        {
+            _placePressActive = false;
+            _isDragging = false;
+            _pressStartedOverUi = false;
+
+            if (commit)
             {
-                _placePressActive = false;
-                _isDragging = false;
                 PerformPlaceOrDelete();
+                return;
             }
+
+            ResetHologramsToCursor();
+        }
+
+        private void CancelPlacementGesture(bool resetHolograms)
+        {
+            _placePressActive = false;
+            _isDragging = false;
+            _pressStartedOverUi = false;
+            if (resetHolograms)
+                ResetHologramsToCursor();
+        }
+
+        private void ResetHologramsToCursor()
+        {
+            if (_selectedObject == null)
+            {
+                DestroyHolograms();
+                return;
+            }
+
+            DestroyHolograms();
+            CreateHologram(_selectedObject.PrefabAsset, GetPlacementPoint());
         }
 
         /// <summary>
