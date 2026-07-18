@@ -51,11 +51,27 @@ namespace SS3D.Systems.Furniture.Disposal
             _observer = new DisposalPipeObserver(_map, _registry, OnSegmentCut);
             tileSubSystem.RegisterTileMutationObserver(_observer);
 
+            // RebuildAll often runs on an empty map (CurrentMap exists before station template Load).
+            // Re-scan once the template finishes placing tiles.
+            _map.OnMapLoaded += HandleMapLoaded;
+
             Log.Information(this, $"Disposal network started with {_registry.NetworkCount} network(s).");
+        }
+
+        private void HandleMapLoaded(object sender, System.EventArgs args)
+        {
+            if (!IsServer || _registry == null || _map == null)
+                return;
+
+            _registry.RebuildAll(_map);
+            Log.Information(this, $"Disposal network rebuilt after map load with {_registry.NetworkCount} network(s).");
         }
 
         protected override void OnDestroyed()
         {
+            if (_map != null)
+                _map.OnMapLoaded -= HandleMapLoaded;
+
             TileSubSystem tileSubSystem = SubSystems.Get<TileSubSystem>();
             if (_observer != null)
                 tileSubSystem?.UnregisterTileMutationObserver(_observer);
@@ -120,20 +136,52 @@ namespace SS3D.Systems.Furniture.Disposal
         public bool TryEnterNetwork(DisposalBin bin, Item item, Department destinationTag)
         {
             if (_registry == null || _map == null || bin == null || item == null)
+            {
+                Log.Warning(this, "Dispose rejected: disposal subsystem not ready.");
                 return false;
+            }
 
             if (!TryGetPipeBelow(bin, out PlacedTileObject entrySegment))
+            {
+                Log.Warning(this, "Dispose rejected: no disposal pipe under {bin}.", Logs.Generic, bin.name);
                 return false;
+            }
 
             DisposalSegmentKey entryKey = DisposalSegmentKey.From(entrySegment);
             if (!_registry.TryGetNetworkForSegment(entryKey, out DisposalNetworkId networkId, out DisposalNetworkRecord network))
-                return false;
+            {
+                // Pipes may have been placed before the observer registered, or furniture after pipes
+                // without a rebuild — recover by rebuilding around the entry tile.
+                _registry.RebuildAround(_map, entryKey.Coord);
+                if (!_registry.TryGetNetworkForSegment(entryKey, out networkId, out network))
+                {
+                    Log.Warning(this, "Dispose rejected: pipe under {bin} is not in any disposal network.", Logs.Generic, bin.name);
+                    return false;
+                }
+            }
 
             if (!TryResolveDestination(network, destinationTag, out IDisposalElement destination))
-                return false;
+            {
+                // Terminals can be stale if the outlet was placed after the pipe network formed.
+                _registry.RebuildAround(_map, entryKey.Coord);
+                if (!_registry.TryGetNetworkForSegment(entryKey, out networkId, out network)
+                    || !TryResolveDestination(network, destinationTag, out destination))
+                {
+                    Log.Warning(
+                        this,
+                        "Dispose rejected: no outlet on the network for {bin} (tag {tag}). Place a main outlet (Department.None) on a connected pipe.",
+                        Logs.Generic,
+                        bin.name,
+                        destinationTag);
+                    return false;
+                }
+            }
 
             if (!DisposalPipeConnectivity.TryFindRoute(_map, entrySegment, destination, out List<PlacedTileObject> path))
+            {
+                Log.Warning(this, "Dispose rejected: no route from {bin} to outlet {outlet}.", Logs.Generic, bin.name, destination.GameObject.name);
                 return false;
+            }
 
             item.Freeze();
             DisposalCapsule capsule = new(item, destination, networkId, path);

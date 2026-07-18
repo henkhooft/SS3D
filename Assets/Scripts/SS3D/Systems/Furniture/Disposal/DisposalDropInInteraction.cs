@@ -113,7 +113,13 @@ namespace SS3D.Systems.Furniture.Disposal
             }
 
             hands.SelectedHand.Container.RemoveItem(item);
-            _bin.TryEnterDisposalNetwork(item, destination);
+            if (!_bin.TryEnterDisposalNetwork(item, destination))
+            {
+                // Enter failed (no pipe / no outlet / no route) — put the item back so Dispose
+                // does not silently become a Drop.
+                hands.SelectedHand.Container.AddItem(item);
+                return false;
+            }
 
             return false;
         }
