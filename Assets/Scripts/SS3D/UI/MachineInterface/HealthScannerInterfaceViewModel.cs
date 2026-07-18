@@ -1,3 +1,4 @@
+using SS3D.Systems.Health;
 using System.Collections.Generic;
 
 namespace SS3D.UI.MachineInterface
