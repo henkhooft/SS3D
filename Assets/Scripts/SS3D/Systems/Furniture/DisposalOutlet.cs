@@ -15,7 +15,7 @@ namespace SS3D.Systems.Furniture
     /// </summary>
     public class DisposalOutlet : MonoBehaviour, IDisposalElement
     {
-        private const float ClaimProximityMeters = 2f;
+        private const float ClaimProximityMeters = 2.5f;
 
         [SerializeField]
         [Tooltip("Department.None marks this as the main/untagged outlet — the one with space ejection.")]
@@ -24,6 +24,10 @@ namespace SS3D.Systems.Furniture
         [SerializeField]
         [Tooltip("How long an unclaimed item sits at the main outlet before ejection. Balancing value, left unset for now (design doc §12).")]
         private float _graceWindowSeconds = 30f;
+
+        [SerializeField]
+        [Tooltip("How far in front of the outlet (along its facing) arrivals are spat out.")]
+        private float _spitDistance = 0.85f;
 
         [SerializeField]
         private Transform _spaceEjectionPoint;
@@ -70,14 +74,37 @@ namespace SS3D.Systems.Furniture
             }
 
             item.Unfreeze();
-            item.transform.SetPositionAndRotation(transform.position, transform.rotation);
+            SpitItemOut(item);
 
             if (IsMainOutlet)
             {
                 _pendingArrivals.Add(new PendingArrival(item, _graceWindowSeconds));
             }
 
-            // Tagged department outlets: item just sits here for pickup, no timer (§6).
+            // Tagged department outlets: item sits in front of the outlet for pickup, no timer (§6).
+        }
+
+        /// <summary>
+        /// Places the item just in front of the outlet along its facing direction (tile rotation).
+        /// </summary>
+        private void SpitItemOut(Item item)
+        {
+            Vector3 spitPosition = transform.position + GetFacingDirection() * _spitDistance;
+            Quaternion spitRotation = Quaternion.LookRotation(GetFacingDirection(), Vector3.up);
+            item.transform.SetPositionAndRotation(spitPosition, spitRotation);
+        }
+
+        private Vector3 GetFacingDirection()
+        {
+            // Tile objects are yaw-rotated to their Direction; flatten in case of slight pitch.
+            Vector3 facing = transform.forward;
+            facing.y = 0f;
+            if (facing.sqrMagnitude < 0.0001f)
+            {
+                return Vector3.forward;
+            }
+
+            return facing.normalized;
         }
 
         private void ResolveUnclaimed(Item item)

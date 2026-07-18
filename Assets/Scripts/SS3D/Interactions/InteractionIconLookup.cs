@@ -17,6 +17,7 @@ namespace SS3D.Interactions
         public static Sprite Music => Get(InteractionIcons.Honk);
         public static Sprite Open => Get(InteractionIcons.Open);
         public static Sprite Power => Get(InteractionIcons.Power);
+        public static Sprite Recycle => Get(InteractionIcons.Recycle);
         public static Sprite Take => Get(InteractionIcons.Take);
         public static Sprite Transfer => Get(InteractionIcons.Take);
 

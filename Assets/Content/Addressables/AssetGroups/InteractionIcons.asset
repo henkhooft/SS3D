@@ -30,6 +30,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 875cad4822d740c2a65e2c94bceba78b
+    m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Examine.asset
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 88c0c549992b597489791caf4a12f18c
     m_Address: Assets/Content/UI/Interactions/Honk.asset
     m_ReadOnly: 0
@@ -42,11 +47,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e4d142ab75244e24c89d0c2aec36dbed
     m_Address: Assets/Content/UI/Interactions/Discard.asset
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 875cad4822d740c2a65e2c94bceba78b
-    m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Examine.asset
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

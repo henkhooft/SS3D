@@ -29,8 +29,9 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 ## Pitfalls
 
 - **Dispose fails silently if `DisposalSubSystem` missing:** `DisposalBin.TryEnterDisposalNetwork` returns false when `SubSystems.TryGet` misses — register `DisposalSystem` on `Game.unity` (already present on this branch).
+- **Dispose loses to Drop on primary-click:** Dispose defaulted to Priority 0 while Drop is 5. Dispose is now 40 (TagDisposal 20) so chute click prefers Dispose.
 - **Dispose becomes a floor drop:** enter used to `RemoveItem` before routing; on failure the item stayed out of hand. Now it restores to the hand. Root cause of empty networks: observer only rebuilt on **pipe** place — bin/outlet placed after pipes never joined `Terminals`. Fixed to rebuild on disposal furniture place/clear and after `OnMapLoaded`.
-- **Grace eject after pickup:** main outlet must skip items in a container or far from the outlet; otherwise a held item was teleported/despawned on timer expiry.
+- **Outlet arrivals spawn inside the mesh:** arrivals are spat along `transform.forward` by `_spitDistance` (default 0.85m), not at the outlet origin.
 - **`Object.Destroy` on items:** Coimbra forbids it — use FishNet `Despawn` when `ServerManager` exists, else `gameObject.Dispose(true)` (`using Coimbra`).
 - **Pipe place/cut in play:** no player recipes yet; clearing a disposal tile (map editor / `TryClearTile`) is what triggers sabotage spill.
 

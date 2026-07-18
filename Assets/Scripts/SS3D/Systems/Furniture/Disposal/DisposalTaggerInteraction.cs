@@ -35,6 +35,12 @@ namespace SS3D.Systems.Furniture.Disposal
 
         public Sprite GetIcon(InteractionEvent interactionEvent) => null;
 
+        /// <summary>
+        /// Below Dispose (40) so primary-click dumps into the chute; above Drop (5) so tagging
+        /// still beats floor-drop when chosen from the radial.
+        /// </summary>
+        public int Priority => 20;
+
         public bool CanInteract(InteractionEvent interactionEvent)
         {
             if (!InteractionExtensions.RangeCheck(interactionEvent))

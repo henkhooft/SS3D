@@ -9,6 +9,7 @@ namespace SS3D.Data.Generated
         public const string Nuke = "3030468639c4d15459be5f65d30a42df";
         public const string Open = "1f97d7fac1be1b448824c85e156d9746";
         public const string Power = "b22067d36fa963b4bbaf8d6085b0ebc9";
+        public const string Recycle = "31c7b963869e4d519c0f29742c7c68e9";
         public const string Take = "2db953f2ae8f41d4e9842d9144a9e396";
     }
 }

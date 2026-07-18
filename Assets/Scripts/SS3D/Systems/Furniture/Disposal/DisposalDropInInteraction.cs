@@ -1,4 +1,6 @@
 using SS3D.Core;
+using SS3D.Data;
+using SS3D.Data.Generated;
 using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
@@ -28,7 +30,14 @@ namespace SS3D.Systems.Furniture.Disposal
 
         public string GetGenericName() => "Dispose";
 
-        public Sprite GetIcon(InteractionEvent interactionEvent) => null;
+        public Sprite GetIcon(InteractionEvent interactionEvent) =>
+            Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Recycle);
+
+        /// <summary>
+        /// Above <see cref="SS3D.Systems.Inventory.Interactions.DropInteraction"/> (5) so primary-click
+        /// on a chute while holding an item prefers Dispose over Drop.
+        /// </summary>
+        public int Priority => 40;
 
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Combine;
 
