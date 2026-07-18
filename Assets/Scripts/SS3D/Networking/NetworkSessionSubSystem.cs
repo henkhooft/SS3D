@@ -1,4 +1,4 @@
-﻿using Coimbra;
+using Coimbra;
 using Coimbra.Services.Events;
 using FishNet;
 using FishNet.Managing;
@@ -26,31 +26,42 @@ namespace SS3D.Networking
         {
             base.OnAwake();
 
-            ApplicationPreInitializing.AddListener(HandleApplicationPreInitializing);
+#if UNITY_SERVER
+            // Dedicated servers skip the Intro scene (the only place that otherwise calls
+            // StartNetworkSession), so start listening for connections here instead.
+            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+#endif
         }
 
-        private void HandleApplicationPreInitializing(ref EventContext context, in ApplicationPreInitializing applicationInitializing)
+#if UNITY_SERVER
+        private void HandleApplicationInitializing(ref EventContext context, in ApplicationInitializing applicationInitializing)
         {
-            NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
+            StartNetworkSession();
+        }
+#endif
 
-            string path = String.Empty;
-
+        /// <summary>
+        /// Serilog file-sink name for the current <see cref="NetworkSettings.NetworkType"/> /
+        /// ckey. Called from <see cref="CommandLine.CommandLineArgsSubSystem"/> after CLI args
+        /// have mutated those settings — registering this on
+        /// <see cref="ApplicationPreInitializing"/> raced with CLI processing and could pick
+        /// Host's <c>LogHost.json</c> even when <c>-serveronly</c>/<c>-ip=</c> later set
+        /// DedicatedServer/Client (the multiplayer harness then waits forever on
+        /// <c>LogServer.json</c>/<c>LogClient&lt;ckey&gt;.json</c>).
+        /// </summary>
+        public static string GetFileLogName(NetworkSettings networkSettings)
+        {
             switch (networkSettings.NetworkType)
             {
                 case NetworkType.DedicatedServer:
-                    path = "LogServer.json"; 
-                    break;
+                    return "LogServer.json";
                 case NetworkType.Client:
-                    path = "LogClient" + networkSettings.Ckey + ".json";
-                    break;
+                    return "LogClient" + networkSettings.Ckey + ".json";
                 case NetworkType.Host:
-                    path = "LogHost.json";
-                    break;
+                    return "LogHost.json";
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            LogManager.Initialize(path);
         }
 
         /// <summary>
@@ -79,16 +90,16 @@ namespace SS3D.Networking
             {
                 case NetworkType.DedicatedServer:
                     Log.Information(this, "Hosting a new headless server on port {port}", Logs.Important, Port);
-                    networkManager.ServerManager.StartConnection(Port);
+                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
                     break;
                 case NetworkType.Client:
                     Log.Information(this, "Joining server {serverAddress}:{port} as {ckey}", Logs.Important, ServerAddress, Port, ckey);
-                    networkManager.ClientManager.StartConnection(ServerAddress, Port);
+                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
                     break;
                 case NetworkType.Host:
                     Log.Information(this, "Hosting a new server on port {port}", Logs.Important, Port);
-                    networkManager.ServerManager.StartConnection(Port);
-                    networkManager.ClientManager.StartConnection(ServerAddress, Port);
+                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
+                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -98,6 +109,27 @@ namespace SS3D.Networking
             networkSessionStartedEvent.Invoke(this);
         }
 
+        /// <summary>
+        /// Transport.StartConnection() returns false without throwing when it can't start - either the
+        /// connection is already Starting/Started (e.g. something else already called StartConnection
+        /// on this transport), or the underlying socket bind itself failed (e.g. the OS port is already
+        /// bound by another process). This would otherwise fail completely silently, since the "Hosting
+        /// a new headless server" log above is written unconditionally before any of this is known.
+        /// </summary>
+        private void LogIfConnectionFailedToStart(string role, bool started)
+        {
+            if (!started)
+            {
+                Log.Error(this, "Failed to start the {role} connection on port {port}. Either it was already starting/started, or the port is already bound by another process.", Logs.Important, role, Port);
+            }
+        }
+
+        /// <summary>
+        /// UNITY_SERVER also makes FishNet auto-start the transport on Boot.unity's own
+        /// ServerManager (its own StartOnHeadless option) using the scene-configured default port,
+        /// racing with StartNetworkSession here. Stop any such stray connection first so this method
+        /// remains the single source of truth for what actually gets started and on what port.
+        /// </summary>
         private static void StopAutoStartedConnections(NetworkManager networkManager)
         {
             if (networkManager.ClientManager.Started)

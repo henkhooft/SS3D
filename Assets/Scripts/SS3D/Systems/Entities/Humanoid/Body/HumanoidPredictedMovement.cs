@@ -5,8 +5,10 @@ using FishNet.Transporting;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Screens;
+using SS3D.Systems.Stamina;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Actor = SS3D.Core.Behaviours.Actor;
@@ -56,7 +58,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
         [SerializeField] private HumanoidLivingController _livingController;
         [SerializeField] private HumanoidBodyStateMachine _bodyStateMachine;
-        [SerializeField] private FeetController _feetController;
+        [SerializeField] private HumanHealthController _healthController;
+        [SerializeField] private StaminaController _staminaController;
         /// <summary>World units/sec at full run (Speed animator param 1.0).</summary>
         [SerializeField] private float _movementSpeed = 5f;
         /// <summary>Matches HumanoidController walk animator value (0.3) so walk/run stay in sync.</summary>
@@ -72,6 +75,7 @@ namespace SS3D.Systems.Entities.Humanoid
         private Actor _camera;
         private Controls.MovementActions _movementControls;
         private InputSubSystem _inputSystem;
+        private IInputHandle _gameplayHandle;
         private bool _subscribed;
         private bool _tickSubscribed;
         private bool _networkStarted;
@@ -91,9 +95,14 @@ namespace SS3D.Systems.Entities.Humanoid
                 _livingController = GetComponent<HumanoidLivingController>();
             }
 
-            if (_feetController == null)
+            if (_healthController == null)
             {
-                _feetController = GetComponent<FeetController>();
+                _healthController = GetComponent<HumanHealthController>();
+            }
+
+            if (_staminaController == null)
+            {
+                _staminaController = GetComponent<StaminaController>();
             }
         }
 
@@ -190,14 +199,15 @@ namespace SS3D.Systems.Entities.Humanoid
             _inputSystem = SubSystems.Get<InputSubSystem>();
             _camera = SubSystems.Get<CameraSubSystem>().PlayerCamera;
             _movementControls = _inputSystem.Inputs.Movement;
-            _inputSystem.ToggleActionMap(_movementControls, true);
+            _gameplayHandle = _inputSystem.PushContext(InputContext.Gameplay);
             _subscribed = true;
         }
 
         private void UnsubscribeInput()
         {
             if (_inputSystem == null) return;
-            _inputSystem.ToggleActionMap(_movementControls, false);
+            _gameplayHandle?.Dispose();
+            _gameplayHandle = null;
             _subscribed = false;
         }
 
@@ -296,13 +306,16 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             Vector3 moveDirection = GetCameraRelativeDirection(md.Horizontal, md.Vertical);
-            float speedFactor = _feetController != null ? _feetController.FeetHealthFactor : 1f;
+            float speedFactor = _healthController != null ? _healthController.Snapshot.MovementSpeedMultiplier : 1f;
+            float exertionFactor = _staminaController != null
+                ? Mathf.Lerp(1f, 0.55f, _staminaController.ExertionPenalty)
+                : 1f;
             float targetSpeedScale = GetTargetSpeedScale(md.IsRunning, _bodyStateMachine.CombatMode);
             // Match AnimationOrchestrator gait easing — snapping run scale while VelZ still
             // lerps from walk caused a combat walk→run surge then settle.
             _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, targetSpeedScale, tickDelta * _speedScaleLerp);
 
-            float speed = _movementSpeed * speedFactor * _smoothedSpeedScale;
+            float speed = _movementSpeed * speedFactor * exertionFactor * _smoothedSpeedScale;
             float animSpeed = md.IsRunning ? 1f : _walkSpeedFactor;
 
             _characterController.Move(moveDirection * (tickDelta * speed));

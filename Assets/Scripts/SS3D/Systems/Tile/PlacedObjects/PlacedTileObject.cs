@@ -8,6 +8,7 @@ using SS3D.Core;
 using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
+using SS3D.Rendering.URP;
 using SS3D.Systems.Tile.Connections;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
@@ -31,6 +32,12 @@ namespace SS3D.Systems.Tile
         {
             GameObject tileObjectPrefab = Assets.Get<GameObject>(tileObjectSo.PrefabAsset);
             GameObject placedGameObject = Instantiate(tileObjectPrefab);
+
+#if UNITY_SERVER
+            ServerVisualsUtility.DisableRenderingComponents(placedGameObject);
+#endif
+
+            StampWorldDecalReceivers(placedGameObject);
             Vector3 placedPosition = tileObjectSo.GetPlacedWorldPosition(worldPosition);
             placedGameObject.transform.SetPositionAndRotation(placedPosition, Quaternion.Euler(0, TileHelper.GetRotationAngle(dir), 0));
 
@@ -93,6 +100,7 @@ namespace SS3D.Systems.Tile
 
         private IAdjacencyConnector _connector;
         private Vector2Int _worldOrigin;
+        private bool _clientRegistered;
 
         /// <summary>
         /// Returns a list of all grids positions that object occupies.
@@ -136,7 +144,21 @@ namespace SS3D.Systems.Tile
         public override void OnStartClient()
         {
             base.OnStartClient();
+            StampWorldDecalReceivers(gameObject);
             ApplySyncedIdentity();
+        }
+
+        /// <summary>
+        /// OR <see cref="DecalRenderingLayers.ReceiveWorldDecals"/> onto tile renderers so
+        /// floor DecalProjectors can hit tiles without painting characters (Default-only).
+        /// </summary>
+        private static void StampWorldDecalReceivers(GameObject root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                renderers[i].renderingLayerMask = DecalRenderingLayers.WithWorldDecals(renderers[i].renderingLayerMask);
+            }
         }
 
         /// <summary>
@@ -255,6 +277,31 @@ namespace SS3D.Systems.Tile
                 doorConnector.RefreshWallCapsFromSyncedAdjacencies();
 
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+            RegisterWithClientMap();
+        }
+
+        /// <summary>
+        /// On a remote client, insert this object into the client-side tilemap so systems such as vision
+        /// can query occupancy. The server already tracks it, so this is skipped on server/host.
+        /// </summary>
+        private void RegisterWithClientMap()
+        {
+            if (IsServer || _clientRegistered)
+                return;
+
+            _clientRegistered = true;
+            SubSystems.Get<TileSubSystem>()?.NotifyClientPlacedObjectStarted(this);
+        }
+
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+
+            if (IsServer || !_clientRegistered)
+                return;
+
+            _clientRegistered = false;
+            SubSystems.Get<TileSubSystem>()?.NotifyClientPlacedObjectStopped(this);
         }
 
         /// <summary>
