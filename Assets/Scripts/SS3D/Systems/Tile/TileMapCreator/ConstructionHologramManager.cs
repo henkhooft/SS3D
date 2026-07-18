@@ -41,6 +41,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// The snapped position of the mouse, in the middle of a tile, when the player starts dragging with the mouse.
         /// </summary>
         private Vector3 _dragStartPostion;
+        private Vector2Int _dragStartTile;
+        private Vector2Int _lastDragEndTile;
+        private bool _hasDragEndTile;
         /// <summary>
         /// Is the player currently dragging ?
         /// </summary>
@@ -57,6 +60,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// <summary>Inactive holograms retained across drag resize to avoid Instantiate/Destroy thrash.</summary>
         private readonly List<ConstructionHologram> _hologramPool = new();
         private readonly List<Vector3> _dragTileBuffer = new();
+        private readonly List<Vector2> _lineTileBuffer = new();
         [SerializeField]
         private MapEditorSubSystem _mapEditor;
 
@@ -147,44 +151,65 @@ namespace SS3D.Systems.Tile.TileMapCreator
             // leave _placePressActive stuck so placement never worked again.
             HandlePlacementInput();
 
-            // Freeze world picks while orbiting, or while an active drag is over UI chrome
-            // (avoids the preview jumping under panels / committing weird lines).
-            bool freezePicks = _mapEditor.IsOrbiting ||
-                               (_placePressActive && _mapEditor.MouseOverUI);
-            if (freezePicks)
+            // Freeze world picks while orbiting only. Do NOT freeze on MouseOverUI — the bottom
+            // library used to be a full-width Position region, so vertical aiming (and anything
+            // camera-framed over that band) looked like a "stuck" drag. Start/commit still gate on UI.
+            if (_mapEditor.IsOrbiting)
                 return;
 
             Vector3 position = GetPlacementPoint();
+            // Grid tile for drag — ignore float Y / boundary jitter. Vertical mouse motion is
+            // foreshortened under the orbit camera, so Vector3 equality used to rebuild the
+            // Bresenham path nearly every frame while left/right stayed stable.
+            Vector2Int cursorTile = ToTile(position);
+
             // Move hologram, that sticks to the mouse. Currently it exists only if player is not dragging.
-            if (_holograms.Count == 1)
+            if (_holograms.Count == 1 && !_isDragging)
             {
                 _holograms.First().TargetPosition = position;
-                if (position != _lastSnappedPosition)
+                if (cursorTile != ToTile(_lastSnappedPosition))
                 {
                     RefreshHologram(_holograms.First());
                 }
             }
 
-            if (_isDragging && (position != _lastSnappedPosition) && (_selectedObject != null))
+            if (_isDragging && _selectedObject != null &&
+                (!_hasDragEndTile || cursorTile != _lastDragEndTile))
             {
+                _lastDragEndTile = cursorTile;
+                _hasDragEndTile = true;
+
                 if (_controls.SquareDrag.phase == InputActionPhase.Performed)
-                    FillSquareDrag(position, _dragTileBuffer);
+                    FillSquareDrag(cursorTile, _dragTileBuffer);
                 else
-                    FillLineDrag(position, _dragTileBuffer);
+                    FillLineDrag(cursorTile, _dragTileBuffer);
 
                 SyncDragHolograms(_dragTileBuffer);
             }
+
             _lastSnappedPosition = position;
         }
 
+        private static Vector2Int ToTile(Vector3 world) =>
+            new(Mathf.RoundToInt(world.x), Mathf.RoundToInt(world.z));
+
         /// <summary>
-        /// Grow/shrink the active hologram list to match drag tiles without per-step Instantiate/Destroy,
-        /// and only refresh validity for holograms whose tile actually changed.
+        /// Grow/shrink the active hologram list to match drag tiles without per-step Instantiate/Destroy.
+        /// Validity colors are skipped during drag (camera foreshortening reshuffles many tiles);
+        /// colors refresh for the single cursor hologram and after place.
         /// </summary>
         private void SyncDragHolograms(List<Vector3> tiles)
         {
+            ConstructionMode dragMode = _mapEditor != null && _mapEditor.IsDeleting
+                ? ConstructionMode.Delete
+                : ConstructionMode.Valid;
+
             while (_holograms.Count < tiles.Count)
-                _holograms.Add(RentHologram());
+            {
+                ConstructionHologram rented = RentHologram();
+                rented.ChangeHologramColor(dragMode);
+                _holograms.Add(rented);
+            }
 
             while (_holograms.Count > tiles.Count)
             {
@@ -198,13 +223,10 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 ConstructionHologram hologram = _holograms[i];
                 Vector3 tile = tiles[i];
                 if (hologram.TargetPosition == tile && hologram.ActiveSelf)
-                {
                     continue;
-                }
 
                 hologram.TargetPosition = tile;
                 hologram.Hologram.transform.position = tile + new Vector3(0f, hologram.PlacementYOffset + 0.1f, 0f);
-                RefreshHologram(hologram);
             }
         }
 
@@ -271,6 +293,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 {
                     _isDragging = true;
                     _dragStartPostion = GetPlacementPoint(forceTileSnap: true);
+                    _dragStartTile = ToTile(_dragStartPostion);
+                    _lastDragEndTile = _dragStartTile;
+                    _hasDragEndTile = true;
                 }
 
                 return;
@@ -293,6 +318,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _placePressActive = false;
             _isDragging = false;
             _pressStartedOverUi = false;
+            _hasDragEndTile = false;
 
             if (commit)
             {
@@ -308,6 +334,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _placePressActive = false;
             _isDragging = false;
             _pressStartedOverUi = false;
+            _hasDragEndTile = false;
             if (resetHolograms)
                 ResetHologramsToCursor();
         }
@@ -533,32 +560,33 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
         }
 
-        private void FillLineDrag(Vector3 position, List<Vector3> into)
+        private void FillLineDrag(Vector2Int endTile, List<Vector3> into)
         {
             into.Clear();
-            Vector2 firstPoint = new(_dragStartPostion.x, _dragStartPostion.z);
-            Vector2 secondPoint = new(position.x, position.z);
-            Vector2[] line = MathUtility.FindTilesOnLine(firstPoint, secondPoint);
-            for (int i = 0; i < line.Length; i++)
+            MathUtility.FillTilesOnLine(
+                _dragStartTile.x, _dragStartTile.y,
+                endTile.x, endTile.y,
+                _lineTileBuffer);
+            for (int i = 0; i < _lineTileBuffer.Count; i++)
             {
-                Vector2 tile = line[i];
-                into.Add(new Vector3(tile.x, position.y, tile.y));
+                Vector2 tile = _lineTileBuffer[i];
+                into.Add(new Vector3(tile.x, 0f, tile.y));
             }
         }
 
-        private void FillSquareDrag(Vector3 position, List<Vector3> into)
+        private void FillSquareDrag(Vector2Int endTile, List<Vector3> into)
         {
             into.Clear();
-            int x1 = (int)Math.Min(_dragStartPostion.x, position.x);
-            int x2 = (int)Math.Max(_dragStartPostion.x, position.x);
-            int y1 = (int)Math.Min(_dragStartPostion.z, position.z);
-            int y2 = (int)Math.Max(_dragStartPostion.z, position.z);
+            int x1 = Math.Min(_dragStartTile.x, endTile.x);
+            int x2 = Math.Max(_dragStartTile.x, endTile.x);
+            int y1 = Math.Min(_dragStartTile.y, endTile.y);
+            int y2 = Math.Max(_dragStartTile.y, endTile.y);
 
             for (int i = y1; i <= y2; i++)
             {
                 for (int j = x1; j <= x2; j++)
                 {
-                    into.Add(new Vector3(j, position.y, i));
+                    into.Add(new Vector3(j, 0f, i));
                 }
             }
         }

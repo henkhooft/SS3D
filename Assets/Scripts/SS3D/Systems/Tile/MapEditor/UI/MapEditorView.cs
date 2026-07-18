@@ -245,7 +245,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             VisualElement region = CreateRegion("map-editor-region--bottom");
             region.AddToClassList("map-editor-bottom-row");
 
-            _modeRail = new VisualElement();
+            _modeRail = new VisualElement { pickingMode = PickingMode.Ignore };
             _modeRail.AddToClassList("map-editor-mode-rail");
             foreach (MapEditorMode mode in Enum.GetValues(typeof(MapEditorMode)))
             {
@@ -254,7 +254,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 _modeRail.Add(tab);
             }
 
-            VisualElement library = new();
+            VisualElement library = new() { pickingMode = PickingMode.Position };
             library.AddToClassList("map-editor-library");
             VisualElement libWindow = CreateWindow("Object Library");
             _windowTitle = libWindow.Q<Label>(className: "map-editor-window__title");
@@ -659,7 +659,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static VisualElement CreateRegion(string className)
         {
-            VisualElement region = new() { pickingMode = PickingMode.Position };
+            // Ignore — a Position region (esp. the full-width bottom dock) stole world picks for
+            // the entire panel footprint, so vertical mouse motion / camera framing over that band
+            // froze drag placement. Interactive children (buttons, windows, slots) still pick.
+            VisualElement region = new() { pickingMode = PickingMode.Ignore };
             region.AddToClassList("map-editor-region");
             region.AddToClassList(className);
             return region;
@@ -703,7 +706,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private static VisualElement CreateWindow(string title)
         {
-            VisualElement window = new();
+            VisualElement window = new() { pickingMode = PickingMode.Position };
             window.AddToClassList("map-editor-window");
             Label titleLabel = new(title);
             titleLabel.AddToClassList("map-editor-window__title");
