@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -6,6 +6,7 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions.UI;
+using SS3D.UI.Shell;
 using SS3D.Utils;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -15,14 +16,13 @@ using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 namespace SS3D.Systems.Interactions
 {
     /// <summary>
-    /// Controls the UI Toolkit radial interaction menu.
+    /// Controls the UI Toolkit radial interaction menu. Attaches into the shared
+    /// <see cref="UiShellSubSystem"/> overlay layer instead of owning a private UIDocument.
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
     public sealed class RadialInteractionSubSystem : SubSystem
     {
         public event Action<IInteraction> OnInteractionSelected;
 
-        [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _menuStyleSheet;
         [SerializeField] private Sprite _missingIcon;
         [SerializeField] private Sprite _closeIconSprite;
@@ -33,7 +33,6 @@ namespace SS3D.Systems.Interactions
         private InteractionEvent _event;
         private Controls.InteractionsActions _controls;
         private InputSubSystem _inputSystem;
-        private bool _overlayReady;
         private IInputHandle _leftButtonSuppress;
 
         public float MenuHeight => RadialInteractionMenuView.MenuDiameter;
@@ -50,18 +49,8 @@ namespace SS3D.Systems.Interactions
         {
             base.OnAwake();
 
-            if (_document == null)
-            {
-                _document = GetComponent<UIDocument>();
-            }
-
-#if UNITY_EDITOR
-            EnsureEditorAssets();
-#endif
-            ShutdownDocument();
             _inputSystem = SubSystems.Get<InputSubSystem>();
             _controls = _inputSystem.Inputs.Interactions;
-            InputInterface.RegisterDocument(_document);
         }
 
         protected override void OnEnabled()
@@ -81,9 +70,7 @@ namespace SS3D.Systems.Interactions
         protected override void OnDestroyed()
         {
             ReleaseLeftButtonSuppression();
-            InputInterface.UnregisterDocument(_document);
-            _menuView?.Detach();
-            ShutdownDocument();
+            DetachMenuView();
             base.OnDestroyed();
         }
 
@@ -96,7 +83,7 @@ namespace SS3D.Systems.Interactions
         public void ShowInteractionsMenu()
         {
             bool hasInteractions = _event != null && _interactions != null && !_interactions.IsNullOrEmpty();
-            if (!hasInteractions || !EnsureDocumentActive())
+            if (!hasInteractions || !EnsureMenuView())
             {
                 return;
             }
@@ -135,17 +122,12 @@ namespace SS3D.Systems.Interactions
         {
             if (_menuView == null)
             {
-                ShutdownDocument();
                 return;
             }
 
             _menuView.InteractionSelected -= HandleInteractionSelected;
             _menuView.CloseRequested -= HandleCloseRequested;
-            _menuView.Hide(() =>
-            {
-                ResetInteractionsMenu();
-                ShutdownDocument();
-            });
+            _menuView.Hide(ResetInteractionsMenu);
         }
 
         private void ResetInteractionsMenu()
@@ -154,72 +136,47 @@ namespace SS3D.Systems.Interactions
             _event = null;
         }
 
-        private bool EnsureDocumentActive()
+        private bool EnsureMenuView()
         {
-            if (_document == null)
-            {
-                return false;
-            }
-
-            if (!_document.enabled)
-            {
-                _document.enabled = true;
-                _overlayReady = false;
-            }
-
-            return EnsureOverlay();
-        }
-
-        private bool EnsureOverlay()
-        {
-            if (_overlayReady && _menuView != null)
+            if (_menuView != null)
             {
                 return true;
             }
 
-            VisualElement root = _document.rootVisualElement;
-            if (root == null)
+            return AttachMenuView();
+        }
+
+        private bool AttachMenuView()
+        {
+            if (!SubSystems.TryGet(out UiShellSubSystem uiShell) || !uiShell.TryGetLayer(UiLayer.Overlay, out VisualElement layerRoot))
             {
-                Debug.LogError("RadialInteractionSubSystem requires PanelSettings on UIDocument.", this);
+                Debug.LogError("RadialInteractionSubSystem could not find the UiShellSubSystem overlay layer.", this);
                 return false;
             }
 
-            _menuView?.Detach();
+            // UiShellSubSystem's document is shared and outlives this surface (DontDestroyOnLoad) — register is
+            // idempotent and intentionally never unregistered here; unregistering on this surface's teardown
+            // would stop input queries from seeing the document while other surfaces (e.g. armed overlay) still use it.
+            InputInterface.RegisterDocument(uiShell.Document);
+
             _menuView = new RadialInteractionMenuView(_menuStyleSheet, _missingIcon, _closeIconSprite, _maxPetals);
-            _menuView.Attach(root);
+            _menuView.Attach(layerRoot);
             _menuView.InteractionSelected += HandleInteractionSelected;
             _menuView.CloseRequested += HandleCloseRequested;
-            _overlayReady = true;
             return true;
         }
 
-        private void ShutdownDocument()
+        private void DetachMenuView()
         {
-            _overlayReady = false;
-            _menuView?.Detach();
+            if (_menuView == null)
+            {
+                return;
+            }
+
+            _menuView.InteractionSelected -= HandleInteractionSelected;
+            _menuView.CloseRequested -= HandleCloseRequested;
+            _menuView.Detach();
             _menuView = null;
-
-            if (_document != null)
-            {
-                _document.enabled = false;
-            }
         }
-
-#if UNITY_EDITOR
-        private void EnsureEditorAssets()
-        {
-            if (_menuStyleSheet == null)
-            {
-                _menuStyleSheet = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(
-                    "Assets/Content/Systems/UI/Interactions/RadialInteractionMenu/RadialInteractionMenu.uss");
-            }
-
-            if (_document != null && _document.panelSettings == null)
-            {
-                _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(
-                    "Assets/Content/Systems/UI/Interactions/RadialInteractionMenu/HudOverlayPanelSettings.asset");
-            }
-        }
-#endif
     }
 }

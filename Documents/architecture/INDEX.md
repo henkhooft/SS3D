@@ -81,7 +81,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Application | [application](systems/application.md) | stub | App bootstrap and startup; Boot/Game as thin launch pads |
 | Networking (session) | [networking-session](systems/networking-session.md) | partial | FishNet host/join session management; headless dedicated-server build; real multi-process test harness |
 | Scene management | [scene-management](systems/scene-management.md) | stub | Scene loading and switching; not a system composition root |
-| UI shell | [ui-shell](systems/ui-shell.md) | stub | Target UITK composition root; MI + Main HUD path catalogs shipped (duplicated); shared catalog helper + full shell deferred |
+| UI shell | [ui-shell](systems/ui-shell.md) | partial | UITK composition root; `UiShellSubSystem` + shared catalog/animator/binder scaffolding shipped, radial + armed migrated; MI/Main HUD path catalogs still separate (duplicated), migration deferred |
 | Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, and wire identifiers |
 | Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references |
 | Persistence | [persistence](systems/persistence.md) | partial | Contributor-based station templates and server meta (permissions, round history) |
@@ -137,8 +137,9 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; blend/timing polish remains) |
 | [2026-07_screen-space-effects](2026-07_screen-space-effects.md) | shipped (foundation + health wiring; atmos deferred) |
 | [2026-07_headless-dedicated-server](2026-07_headless-dedicated-server.md) | shipped (partial: selection outline, drop interaction against a real client still broken, not root-caused) |
-| [2026-07_agent-first-composition](2026-07_agent-first-composition.md) | shipped (policy); code deferred — bootstrap, UiShell + shared path-catalog helper, prefab tooling; main-HUD UITK slice partial ([inventory](systems/inventory.md)) |
+| [2026-07_agent-first-composition](2026-07_agent-first-composition.md) | shipped (policy); code deferred — subsystem bootstrap, prefab tooling; main-HUD UITK slice partial ([inventory](systems/inventory.md)) |
 | [2026-07_mi-path-catalog](2026-07_mi-path-catalog.md) | shipped (MI path catalog wedge of composition follow-on b; Main HUD later copied the pattern — unify under [ui-shell](systems/ui-shell.md)) |
+| [2026-07_ui-shell-consolidation](2026-07_ui-shell-consolidation.md) | shipped (Phase 0-1: `UiShellSubSystem` + shared scaffolding, radial/armed migration); MI/Main HUD/Storage Panel migration deferred to later phases |
 | [2026-07_body-presentation-authority](2026-07_body-presentation-authority.md) | planned |
 | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) | in-progress (clean-slate + stamina 7a code shipped; Play Mode verification pending) |
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
