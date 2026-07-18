@@ -9,9 +9,9 @@ namespace SS3D.Systems.Furniture
 {
     /// <summary>
     /// Disposal network terminal. The untagged/main outlet (<see cref="TargetDepartment"/> ==
-    /// <see cref="Department.None"/>) ejects unclaimed arrivals into space after a grace window unless
-    /// swept via <see cref="IDisposalSweepable"/> (design doc §6). Tagged department outlets just hold
-    /// arrivals for pickup, no timer.
+    /// <see cref="Department.None"/>) can eject unclaimed arrivals into space after a grace window
+    /// when <see cref="_spaceEjectionPoint"/> or an <see cref="IDisposalSweepable"/> is wired
+    /// (design doc §6). Until then, main-outlet arrivals sit for pickup like tagged outlets.
     /// </summary>
     public class DisposalOutlet : MonoBehaviour, IDisposalElement
     {
@@ -42,7 +42,8 @@ namespace SS3D.Systems.Furniture
 
         private void Update()
         {
-            if (!IsMainOutlet || _pendingArrivals.Count == 0)
+            // Grace / eject is server-authoritative; clients never populate _pendingArrivals.
+            if (!InstanceFinder.IsServer || !IsMainOutlet || _pendingArrivals.Count == 0)
             {
                 return;
             }
@@ -76,12 +77,32 @@ namespace SS3D.Systems.Furniture
             item.Unfreeze();
             SpitItemOut(item);
 
-            if (IsMainOutlet)
+            // Main outlet: schedule space-eject / Cargo sweep after the grace window.
+            // Tagged department outlets: item sits for pickup, no timer (§6).
+            // Skip the timer when nothing can claim or eject yet — otherwise grace expiry
+            // despawned in place and items looked like they vanished after a few seconds.
+            if (IsMainOutlet && CanResolveUnclaimed())
             {
                 _pendingArrivals.Add(new PendingArrival(item, _graceWindowSeconds));
             }
+        }
 
-            // Tagged department outlets: item sits in front of the outlet for pickup, no timer (§6).
+        private bool CanResolveUnclaimed()
+        {
+            if (_spaceEjectionPoint != null)
+            {
+                return true;
+            }
+
+            foreach (IDisposalSweepable sweepable in GetComponents<IDisposalSweepable>())
+            {
+                if (sweepable != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -147,13 +168,17 @@ namespace SS3D.Systems.Furniture
 
         private void EjectIntoSpace(Item item)
         {
-            if (_spaceEjectionPoint != null)
+            // Design §6 wants an honest discard into space. Until a vacuum ejection point
+            // (or Cargo sweep) is wired, do not despawn at the outlet — that reads as the
+            // item disappearing for no reason. Leave it for pickup instead.
+            if (_spaceEjectionPoint == null)
             {
-                item.transform.SetPositionAndRotation(_spaceEjectionPoint.position, item.transform.rotation);
+                return;
             }
 
-            // Honest discard: the item is gone, not quietly left at an offset (design §6).
-            // Item.Delete assumes a container; world arrivals despawn/dispose directly.
+            item.transform.SetPositionAndRotation(_spaceEjectionPoint.position, item.transform.rotation);
+
+            // Off-station: gone from play. Item.Delete assumes a container; despawn/dispose directly.
             if (InstanceFinder.ServerManager != null)
             {
                 InstanceFinder.ServerManager.Despawn(item.GameObject);
