@@ -42,7 +42,7 @@ namespace SS3D.Systems.Comms
         private readonly Dictionary<Entity, List<ActiveSpeech>> _activeSpeeches = new();
         private readonly List<Entity> _shownSpeakers = new();
         private readonly List<Entity> _staleSpeakers = new();
-        private readonly InputTextEntryScope _composeEntry = new(InputContext.ChatEntry);
+        private readonly InputTextEntryScope _composeEntry = new(InputContext.TextEntry);
 
         private LocalSpeechBubbleView _view;
         private VisualElement _attachedRoot;
@@ -97,8 +97,6 @@ namespace SS3D.Systems.Comms
             if (_inputSubSystem != null)
             {
                 _inputSubSystem.OpenLocalSpeechCompose.performed += HandleOpenCompose;
-                _inputSubSystem.Inputs.Other.SendChatMessage.performed += HandleSendCompose;
-                _inputSubSystem.UiCancel.performed += HandleCancelCompose;
             }
 
             EnsureOverlay();
@@ -116,8 +114,6 @@ namespace SS3D.Systems.Comms
             if (_inputSubSystem != null)
             {
                 _inputSubSystem.OpenLocalSpeechCompose.performed -= HandleOpenCompose;
-                _inputSubSystem.Inputs.Other.SendChatMessage.performed -= HandleSendCompose;
-                _inputSubSystem.UiCancel.performed -= HandleCancelCompose;
             }
 
             EndCompose(clearText: true);
@@ -153,26 +149,6 @@ namespace SS3D.Systems.Comms
             }
 
             BeginCompose();
-        }
-
-        private void HandleSendCompose(InputAction.CallbackContext context)
-        {
-            if (!context.performed || !_isComposing)
-            {
-                return;
-            }
-
-            CommitCompose();
-        }
-
-        private void HandleCancelCompose(InputAction.CallbackContext context)
-        {
-            if (!context.performed || !_isComposing)
-            {
-                return;
-            }
-
-            EndCompose(clearText: true);
         }
 
         private void BeginCompose()

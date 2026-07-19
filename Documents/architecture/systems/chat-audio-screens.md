@@ -11,7 +11,7 @@ In-game chat, audio playback, and camera/screen controllers. (Navigation map not
 
 **Condemned UI:** always-on chat window — do not extend or port to UITK; replace per [comms.md](../../design/comms.md) ([agent-first composition](../2026-07_agent-first-composition.md)). The in-game `ToggleChatsButton` on `PlayerCanvas` is disabled (obsolete chrome).
 
-Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (option 1a): soft translucent plate, Gurajada uppercase name on the newest line only, UI-sans dialogue, older stack lines shed name/quotes and fade. Compose (mock 2a / comms.md §5): **T** opens a draft chip at the same head anchor as a finished line — dashed outline + blinking caret, dim secondary text — Enter sends speak, Shift+Enter whisper, Ctrl+Enter shout, Escape cancels.
+Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (option 1a): soft translucent plate, Gurajada uppercase name on the newest line only, UI-sans dialogue, older stack lines shed name/quotes and fade. Compose (mock 2a / comms.md §5): **T** opens a draft chip at the same head anchor as a finished line — dashed outline on the outer plate edge + blinking caret, dim secondary text — Enter sends speak, Shift+Enter whisper, Ctrl+Enter shout, Escape cancels. Typing holds `TextEntry` + `InputInterface` text capture so gameplay input is fully masked.
 
 ## Start here
 
@@ -32,7 +32,7 @@ Scene/prefab placements for the local speech slice are already in `Game.unity` (
 - **Local speech presentation vs design:** in-game local speech follows the Claude Design weighted-chips mock (soft translucent plate, Gurajada name + UI-sans line, stack/drift, mode CSS). This diverges from [comms.md](../../design/comms.md) §3's flat HUD chip + "attribution is free / no name prefix," and from §6–§8 routing radio/announcements exclusively to the non-diegetic feed (those modes are styled here for preview only until that feed exists). Recorded here on purpose — do not edit the design doc to match.
 - **UITK masking:** do not combine `border-radius` with `overflow: hidden` on the same subtitle element (renders as a flat white block — same pitfall as machine-interface).
 - **UITK has no `border-style: dashed`:** draft chip outline is painted via `generateVisualContent` / Painter2D in `LocalSpeechBubbleView`, not USS.
-- **Compose input:** open with arbitrated `InputSubSystem.OpenLocalSpeechCompose` (T); while drafting hold `InputContext.ChatEntry` via `InputTextEntryScope` so Enter=`SendChatMessage` and Escape=`UiCancel`. Do not poll `Keyboard.current` for T.
+- **Compose input:** open with arbitrated `InputSubSystem.OpenLocalSpeechCompose` (T). While drafting hold `InputContext.TextEntry` via `InputTextEntryScope` (all Input System actions off; Enter/Escape via UITK `KeyDownEvent`). `InputTextEntryScope` also pushes `InputInterface` text capture so `IsPointerOverInterface()` stays true and world clicks/selection clear. Do not poll `Keyboard.current` for T.
 
 ## Extension points
 

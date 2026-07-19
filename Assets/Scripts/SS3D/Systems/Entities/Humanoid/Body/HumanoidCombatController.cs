@@ -1,5 +1,6 @@
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Inputs;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -46,6 +47,11 @@ namespace SS3D.Systems.Entities.Humanoid
         private void HandleUpdate(ref Coimbra.Services.Events.EventContext context, in Coimbra.Services.PlayerLoopEvents.UpdateEvent updateEvent)
         {
             if (!IsOwner)
+            {
+                return;
+            }
+
+            if (InputInterface.IsCapturingText)
             {
                 return;
             }

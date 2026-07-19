@@ -35,11 +35,18 @@ namespace SS3D.Systems.Inputs
             }
 
             _handle = input.PushContext(_context);
+            InputInterface.PushTextCapture();
         }
 
         public void Exit()
         {
-            _handle?.Dispose();
+            if (_handle == null)
+            {
+                return;
+            }
+
+            InputInterface.PopTextCapture();
+            _handle.Dispose();
             _handle = null;
         }
     }

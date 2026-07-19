@@ -16,7 +16,9 @@ Central input layer wrapping the Unity Input System. Two responsibilities:
    writer, so dead keys, leaked input, and enabled/refcount desync are structurally impossible.
 2. **Pointer authority** — `InputInterface.IsPointerOverInterface()` is the one place that answers
    "is the pointer over UI", spanning both uGUI (`EventSystem`) and UI Toolkit runtime panels.
-   Callers include interaction click gates and selection hover clearing (examine/outlines).
+   It is also true while `InputTextEntryScope` holds a text-capture (compose / focused fields) so
+   world clicks and selection clear for the whole typing session, not only when the cursor is over
+   the field. Callers include interaction click gates and selection hover clearing (examine/outlines).
 
 See the effort doc [2026-07_input-arbitration.md](../2026-07_input-arbitration.md) for the model,
 the context table, and the migration from the old refcount API.

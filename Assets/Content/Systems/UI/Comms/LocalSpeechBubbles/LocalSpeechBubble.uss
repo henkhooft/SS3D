@@ -217,6 +217,8 @@
     border-width: 0;
     border-radius: 10px;
     padding: 8px 16px 9px 16px;
+    /* Dashed stroke is painted on the outer padding-box edge and may sit half-outside. */
+    overflow: visible;
 }
 
 .comms-draft__name {
@@ -232,15 +234,17 @@
 
 .comms-draft__line-row {
     flex-direction: row;
+    justify-content: center;
     align-items: center;
     margin-top: -6px;
     flex-shrink: 0;
+    width: 100%;
 }
 
 .comms-draft__field {
     margin: 0;
     padding: 0;
-    min-width: 8px;
+    min-width: 2px;
     flex-grow: 0;
     flex-shrink: 0;
     background-color: rgba(0, 0, 0, 0);
@@ -263,7 +267,7 @@
     padding: 0;
     font-size: 17px;
     color: var(--ss3d-text-secondary);
-    -unity-text-align: middle-left;
+    -unity-text-align: middle-center;
     white-space: nowrap;
     -unity-font-style: normal;
 }

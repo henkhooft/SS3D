@@ -12,10 +12,19 @@ namespace SS3D.Systems.Inputs
     /// (via panel picking). World-click gameplay gates must query this instead of talking to a
     /// single stack, otherwise clicks leak through UI Toolkit overlays (radial menu, machine
     /// interfaces) that the uGUI raycaster does not know about.
+    /// Also tracks text-entry capture depth so world interactions/selection clear while a field
+    /// holds <see cref="InputTextEntryScope"/> (compose, console fields, etc.).
     /// </summary>
     public static class InputInterface
     {
         private static readonly List<UIDocument> Documents = new();
+        private static int _textCaptureDepth;
+
+        /// <summary>
+        /// True while any <see cref="InputTextEntryScope"/> is active. World click/hover gates
+        /// should treat this like pointer-over-UI so typing cannot fire gameplay.
+        /// </summary>
+        public static bool IsCapturingText => _textCaptureDepth > 0;
 
         /// <summary>
         /// Registers a runtime UI Toolkit document so its panel participates in pointer queries.
@@ -44,11 +53,32 @@ namespace SS3D.Systems.Inputs
             Documents.Remove(document);
         }
 
+        /// <summary>Pushed by <see cref="InputTextEntryScope"/>; nested scopes are reference-counted.</summary>
+        public static void PushTextCapture()
+        {
+            _textCaptureDepth++;
+        }
+
+        /// <summary>Matched to <see cref="PushTextCapture"/>; never goes below zero.</summary>
+        public static void PopTextCapture()
+        {
+            if (_textCaptureDepth > 0)
+            {
+                _textCaptureDepth--;
+            }
+        }
+
         /// <summary>
-        /// True when the pointer is over any uGUI element or any registered, enabled UI Toolkit panel.
+        /// True when the pointer is over any uGUI element or any registered, enabled UI Toolkit panel,
+        /// or when text entry is capturing keyboard (compose / focused fields).
         /// </summary>
         public static bool IsPointerOverInterface()
         {
+            if (IsCapturingText)
+            {
+                return true;
+            }
+
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return true;

@@ -93,6 +93,11 @@ namespace SS3D.Systems.Comms.UI
             _subtitlePool.Clear();
 
             _draftChip?.RemoveFromHierarchy();
+            if (_draftField != null)
+            {
+                _draftField.UnregisterValueChangedCallback(OnDraftValueChanged);
+            }
+
             _draftChip = null;
             _draftName = null;
             _draftField = null;
@@ -193,6 +198,7 @@ namespace SS3D.Systems.Comms.UI
             _draftName.style.display = string.IsNullOrEmpty(nameText) ? DisplayStyle.None : DisplayStyle.Flex;
 
             ApplyDraftModeClass(mode);
+            FitDraftFieldWidth();
             StartCaretBlink();
         }
 
@@ -228,6 +234,7 @@ namespace SS3D.Systems.Comms.UI
                 }
 
                 _draftField.value = string.Empty;
+                FitDraftFieldWidth();
                 _draftField.Focus();
                 _draftField.SelectRange(0, 0);
             }).ExecuteLater(1);
@@ -259,6 +266,7 @@ namespace SS3D.Systems.Comms.UI
             _draftField.AddToClassList("font-body");
             _draftField.AddToClassList("comms-draft__field");
             // Built-in caret hidden via USS (--unity-cursor-color); mock uses _draftCaret.
+            _draftField.RegisterValueChangedCallback(OnDraftValueChanged);
             lineRow.Add(_draftField);
 
             _draftCaret = new VisualElement();
@@ -285,7 +293,49 @@ namespace SS3D.Systems.Comms.UI
             };
 
             _draftChip.EnableInClassList(modeClass, true);
+            FitDraftFieldWidth();
             _draftChip.MarkDirtyRepaint();
+        }
+
+        private void OnDraftValueChanged(ChangeEvent<string> _)
+        {
+            FitDraftFieldWidth();
+        }
+
+        /// <summary>
+        /// UITK TextField defaults to a wide input; hug the typed glyphs so the centered row
+        /// (text + caret) stays visually centered like a finished chip.
+        /// </summary>
+        private void FitDraftFieldWidth()
+        {
+            if (_draftField == null)
+            {
+                return;
+            }
+
+            string text = _draftField.value ?? string.Empty;
+            if (text.Length == 0)
+            {
+                _draftField.style.width = 2f;
+                return;
+            }
+
+            Vector2 size = _draftField.MeasureTextSize(
+                text, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+            float width = size.x;
+            if (width < 2f)
+            {
+                // Font metrics not ready yet — approximate so layout does not jump left.
+                float fontSize = _draftField.resolvedStyle.fontSize;
+                if (fontSize <= 0f)
+                {
+                    fontSize = 17f;
+                }
+
+                width = text.Length * fontSize * 0.55f;
+            }
+
+            _draftField.style.width = Mathf.Ceil(width + 2f);
         }
 
         private void StartCaretBlink()
@@ -319,18 +369,32 @@ namespace SS3D.Systems.Comms.UI
         }
 
         /// <summary>
-        /// UITK has no border-style:dashed — paint mock 2a's live/unsent outline.
+        /// UITK has no border-style:dashed — paint mock 2a's live/unsent outline on the
+        /// outer padding-box edge (not inset on contentRect inside the padding).
         /// </summary>
         private static void PaintDashedOutline(MeshGenerationContext context)
         {
             VisualElement element = context.visualElement;
-            Rect rect = element.contentRect;
-            if (rect.width < 2f || rect.height < 2f)
+            Rect content = element.contentRect;
+            if (content.width < 1f || content.height < 1f)
             {
                 return;
             }
 
-            float radius = element.resolvedStyle.borderTopLeftRadius;
+            IResolvedStyle style = element.resolvedStyle;
+            // contentRect is inside padding; expand back out to the padding-box / visual plate edge.
+            Rect outer = new(
+                content.xMin - style.paddingLeft,
+                content.yMin - style.paddingTop,
+                content.width + style.paddingLeft + style.paddingRight,
+                content.height + style.paddingTop + style.paddingBottom);
+
+            if (outer.width < 2f || outer.height < 2f)
+            {
+                return;
+            }
+
+            float radius = style.borderTopLeftRadius;
             Color color = ResolveDraftOutlineColor(element);
 
             Painter2D painter = context.painter2D;
@@ -340,7 +404,7 @@ namespace SS3D.Systems.Comms.UI
 
             const float dash = 4f;
             const float gap = 3f;
-            DrawDashedRoundedRect(painter, rect, radius, dash, gap);
+            DrawDashedRoundedRect(painter, outer, radius, dash, gap);
         }
 
         private static Color ResolveDraftOutlineColor(VisualElement element)
