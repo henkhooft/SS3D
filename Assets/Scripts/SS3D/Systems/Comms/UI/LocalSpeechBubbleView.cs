@@ -106,8 +106,9 @@ namespace SS3D.Systems.Comms.UI
 
             SubtitleLabels labels = (SubtitleLabels)subtitle.userData;
             bool showName = !string.IsNullOrEmpty(speakerName);
+            string nameText = showName ? speakerName.ToUpperInvariant() : string.Empty;
             labels.Name.style.display = showName ? DisplayStyle.Flex : DisplayStyle.None;
-            labels.Name.text = showName ? speakerName.ToUpperInvariant() : string.Empty;
+            labels.Name.text = nameText;
             labels.Line.text = displayText;
             labels.Line.style.unityFontStyleAndWeight = mode switch
             {
@@ -115,6 +116,8 @@ namespace SS3D.Systems.Comms.UI
                 SpeechMode.Whisper or SpeechMode.Emote => FontStyle.Italic,
                 _ => FontStyle.Normal,
             };
+
+            FitChipWidth(subtitle, labels, nameText, displayText, mode, stackAge, showName);
         }
 
         public void HideBubblesFrom(int fromIndex)
@@ -142,6 +145,116 @@ namespace SS3D.Systems.Comms.UI
             {
                 _overflowChip.style.display = DisplayStyle.None;
             }
+        }
+
+        /// <summary>
+        /// Hug content for short lines; only pin the chip to max-width when text must wrap.
+        /// Never shrink-fit via binary search — that under-measured (esp. with letter-spacing)
+        /// and forced breaks like "NEED / OXYGEN".
+        /// </summary>
+        private static void FitChipWidth(
+            VisualElement subtitle,
+            SubtitleLabels labels,
+            string nameText,
+            string lineText,
+            SpeechMode mode,
+            int stackAge,
+            bool showName)
+        {
+            float maxChip = mode switch
+            {
+                SpeechMode.Whisper => 300f,
+                SpeechMode.Shout => 480f,
+                SpeechMode.Announcement => 520f,
+                _ => 420f,
+            };
+
+            float padX = stackAge > 0
+                ? 24f
+                : mode switch
+                {
+                    SpeechMode.Whisper => 20f,
+                    SpeechMode.Shout => 32f,
+                    SpeechMode.Emote => 24f,
+                    _ => 28f,
+                };
+
+            float maxContent = Mathf.Max(8f, maxChip - padX);
+            float letterSpacing = mode switch
+            {
+                SpeechMode.Whisper => 1f,
+                SpeechMode.Shout => 1f,
+                _ => 0f,
+            };
+
+            // Clear prior constraints so Undefined measure is truly unconstrained.
+            labels.Line.style.maxWidth = StyleKeyword.None;
+            labels.Name.style.maxWidth = StyleKeyword.None;
+
+            Vector2 naturalLine = labels.Line.MeasureTextSize(
+                lineText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+
+            labels.Line.style.maxWidth = maxContent;
+            labels.Name.style.maxWidth = maxContent;
+            subtitle.style.maxWidth = maxChip;
+
+            // Failed metrics → let Yoga size; never pin a tiny width.
+            if (!IsPlausibleTextWidth(lineText, naturalLine.x))
+            {
+                labels.Line.style.whiteSpace = WhiteSpace.Normal;
+                subtitle.style.width = StyleKeyword.Auto;
+                return;
+            }
+
+            float contentWidth = naturalLine.x + LetterSpacingExtra(lineText, letterSpacing);
+            if (showName)
+            {
+                Vector2 nameSize = labels.Name.MeasureTextSize(
+                    nameText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+                if (IsPlausibleTextWidth(nameText, nameSize.x))
+                {
+                    // Names always use letter-spacing: 1px in USS.
+                    contentWidth = Mathf.Max(
+                        contentWidth,
+                        nameSize.x + LetterSpacingExtra(nameText, 1f));
+                }
+            }
+
+            // Slack for measure vs render rounding — without this the last word wraps.
+            const float MeasureSlack = 10f;
+
+            if (contentWidth + MeasureSlack <= maxContent)
+            {
+                // Hard-stop premature wraps from Yoga / measure slack.
+                labels.Line.style.whiteSpace = WhiteSpace.NoWrap;
+                subtitle.style.width = StyleKeyword.Auto;
+                return;
+            }
+
+            // Truly long: allow wrap at maxContent, chip fills max.
+            labels.Line.style.whiteSpace = WhiteSpace.Normal;
+            subtitle.style.width = maxChip;
+        }
+
+        private static bool IsPlausibleTextWidth(string text, float measuredWidth)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            float minExpected = Mathf.Max(12f, text.Length * 3.5f);
+            return measuredWidth >= minExpected;
+        }
+
+        private static float LetterSpacingExtra(string text, float letterSpacingPx)
+        {
+            if (letterSpacingPx <= 0f || string.IsNullOrEmpty(text) || text.Length < 2)
+            {
+                return 0f;
+            }
+
+            return letterSpacingPx * (text.Length - 1);
         }
 
         private static void ApplyModeClass(VisualElement subtitle, SpeechMode mode)
@@ -174,6 +287,8 @@ namespace SS3D.Systems.Comms.UI
                 subtitle.pickingMode = PickingMode.Ignore;
                 subtitle.style.position = Position.Absolute;
                 subtitle.style.display = DisplayStyle.None;
+                subtitle.style.flexGrow = 0;
+                subtitle.style.flexShrink = 0;
 
                 Label nameLabel = new();
                 nameLabel.AddToClassList("font-titling");
