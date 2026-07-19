@@ -25,7 +25,7 @@
     white-space: nowrap;
     -unity-text-align: middle-center;
     /* .font-titling → Gurajada — pull tight against the line below */
-    font-size: 11px;
+    font-size: 13px;
     letter-spacing: 1px;
     color: rgb(170, 170, 170);
     -unity-font-style: normal;
@@ -93,7 +93,7 @@
 }
 
 .comms-subtitle--shout .comms-subtitle__name {
-    font-size: 12px;
+    font-size: 14px;
     color: rgb(216, 216, 216);
 }
 
