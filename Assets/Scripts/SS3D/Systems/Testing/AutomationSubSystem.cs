@@ -8,6 +8,7 @@ using SS3D.Application.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
+using SS3D.Networking;
 using SS3D.Networking.Settings;
 using SS3D.Systems.Entities;
 using SS3D.Systems.IngameConsoleSystem;
@@ -263,6 +264,24 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "PlayerEmbarked");
                     break;
 
+                case "assert_embarked":
+                    // Confirms this connection currently owns a spawned Entity - unlike "embark",
+                    // which only fires the spawn request without waiting on it. Used after
+                    // "reconnect" to verify EntitySubSystem.TryReclaimEntity actually handed
+                    // control of the pre-existing body back to this connection, not just that the
+                    // connection itself re-authorized.
+                    yield return WaitUntil(IsEmbarked, DefaultWaitTimeoutSeconds, "assert_embarked");
+                    TestSignal.Emit(this, "EmbarkVerified");
+                    break;
+
+                case "reconnect":
+                    // Re-opens the client connection this process already had settings for
+                    // (same ip/port/ckey NetworkSessionSubSystem resolved at startup), simulating
+                    // a disconnected player rejoining rather than a brand-new client. Must follow
+                    // a "disconnect" for the same role; only valid for a client script.
+                    Reconnect();
+                    break;
+
                 case "console":
                     RunConsoleCommand(instruction.ArgsJoined);
                     break;
@@ -315,6 +334,26 @@ namespace SS3D.Systems.Testing
 
             Player player = playerSystem.GetPlayer(InstanceFinder.ClientManager.Connection);
             entitySystem.CmdSpawnLatePlayer(player);
+        }
+
+        private bool IsEmbarked()
+        {
+            EntitySubSystem entitySystem = SubSystems.Get<EntitySubSystem>();
+
+            return entitySystem.TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out _);
+        }
+
+        private void Reconnect()
+        {
+            if (IsServerRole())
+            {
+                throw new InvalidOperationException("'reconnect' is a client-only instruction.");
+            }
+
+            // The real, full reconnect path (not a raw ClientManager.StartConnection) - the same
+            // one SS3D.Systems.Intro.IntroUIHelper uses, re-reading the NetworkSettings this
+            // process already resolved from -ip=/-port=/-ckey= at startup.
+            SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
         }
 
         private void RunConsoleCommand(string commandLine)

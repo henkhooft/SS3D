@@ -43,3 +43,4 @@ Connect/disconnect lifecycle, server-side:
 
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
 - Observer/ghost reconnection (a different mechanism, for death not network disconnect): [Documents/design/observer.md](../../design/observer.md) §6
+- Regression coverage for the disconnect/reconnect ownership flow: `Testing/multiplayer/scenarios/reconnect{,-client}.txt`, see [2026-07_multiplayer-test-harness.md](../2026-07_multiplayer-test-harness.md)
