@@ -261,18 +261,16 @@ namespace SS3D.Systems.Health
         }
 
         /// <summary>
-        /// Stamina push-past-empty bridge (health Phase 7a / Documents/design/stamina.md §3).
+        /// Forces the canonical brain-death trigger (Documents/design/health.md — death has
+        /// exactly one trigger, brain function reaching zero) instead of ghosting the entity
+        /// directly. Used by admin tooling so it doesn't bypass health state.
         /// </summary>
         [Server]
-        public void ApplyOxyDebt(float oxyDebtGain)
+        public void ForceBrainDeath()
         {
-            if (oxyDebtGain <= 0f)
-            {
-                return;
-            }
-
-            _pools = HealthSimulation.ApplyOxyDebt(_pools, oxyDebtGain);
+            OrganSimulation.SetOrganFunction(_organs, OrganType.Brain, 0f);
             PublishSnapshot();
+            TriggerDeath();
         }
 
         [Server]

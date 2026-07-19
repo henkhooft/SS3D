@@ -1,4 +1,4 @@
-> Implements: Documents/design/main-hud.md §layout and interaction model, Documents/design/comms.md §operator feedback conventions
+> Implements: Documents/design/main-hud.md §layout and interaction model
 > Touches systems: UI Toolkit, machine-interface framework, editor tooling
 > Status: shipped
 
