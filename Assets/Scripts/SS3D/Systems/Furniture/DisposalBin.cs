@@ -1,3 +1,4 @@
+using FishNet.Component.Animating;
 using SS3D.Core;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
@@ -16,6 +17,8 @@ namespace SS3D.Systems.Furniture
     [RequireComponent(typeof(Selectable))]
     public class DisposalBin : MonoBehaviour, IDisposalElement, IInteractionTarget
     {
+        private static readonly int OpenStateHash = Animator.StringToHash("DisposalBinOpen");
+
         [SerializeField]
         [Tooltip("Optional. If present, dropping an item in requires matching access, same pattern as AirLockAccessGate.")]
         private AirLockAccessGate _accessGate;
@@ -23,6 +26,9 @@ namespace SS3D.Systems.Furniture
         [SerializeField]
         [Tooltip("Largest item SizeClass this chute accepts. Mirrors AttachedContainer MaxSizeClass (inventory-storage.md §4).")]
         private SizeClass _maxSizeClass = SizeClass.Huge;
+
+        [SerializeField]
+        private NetworkAnimator _networkAnimator;
 
         public GameObject GameObject => gameObject;
 
@@ -50,7 +56,32 @@ namespace SS3D.Systems.Furniture
                 return false;
             }
 
-            return disposalSubSystem.TryEnterNetwork(this, item, destinationTag);
+            if (!disposalSubSystem.TryEnterNetwork(this, item, destinationTag))
+            {
+                return false;
+            }
+
+            PlayOpenAnimation();
+            return true;
+        }
+
+        private void PlayOpenAnimation()
+        {
+            if (_networkAnimator == null)
+            {
+                _networkAnimator = GetComponent<NetworkAnimator>();
+            }
+
+            if (_networkAnimator != null)
+            {
+                _networkAnimator.Play(OpenStateHash, 0, 0f);
+                return;
+            }
+
+            if (TryGetComponent(out Animator animator))
+            {
+                animator.Play(OpenStateHash, 0, 0f);
+            }
         }
     }
 }

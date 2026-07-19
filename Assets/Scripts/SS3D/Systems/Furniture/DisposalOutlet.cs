@@ -1,5 +1,6 @@
 using Coimbra;
 using FishNet;
+using FishNet.Component.Animating;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inventory.Items;
 using System.Collections.Generic;
@@ -17,6 +18,8 @@ namespace SS3D.Systems.Furniture
     {
         private const float ClaimProximityMeters = 2.5f;
 
+        private static readonly int OpenStateHash = Animator.StringToHash("DisposalOutletOpen");
+
         [SerializeField]
         [Tooltip("Department.None marks this as the main/untagged outlet — the one with space ejection.")]
         private Department _targetDepartment = Department.None;
@@ -31,6 +34,9 @@ namespace SS3D.Systems.Furniture
 
         [SerializeField]
         private Transform _spaceEjectionPoint;
+
+        [SerializeField]
+        private NetworkAnimator _networkAnimator;
 
         private readonly List<PendingArrival> _pendingArrivals = new();
 
@@ -75,6 +81,7 @@ namespace SS3D.Systems.Furniture
             }
 
             item.Unfreeze();
+            PlayOpenAnimation();
             SpitItemOut(item);
 
             // Main outlet: schedule space-eject / Cargo sweep after the grace window.
@@ -103,6 +110,25 @@ namespace SS3D.Systems.Furniture
             }
 
             return false;
+        }
+
+        private void PlayOpenAnimation()
+        {
+            if (_networkAnimator == null)
+            {
+                _networkAnimator = GetComponent<NetworkAnimator>();
+            }
+
+            if (_networkAnimator != null)
+            {
+                _networkAnimator.Play(OpenStateHash, 0, 0f);
+                return;
+            }
+
+            if (TryGetComponent(out Animator animator))
+            {
+                animator.Play(OpenStateHash, 0, 0f);
+            }
         }
 
         /// <summary>
