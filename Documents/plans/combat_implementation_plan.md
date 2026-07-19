@@ -192,3 +192,5 @@ Single primary path per [combat.md](../design/combat.md) §2:
   `RequestAttack` telegraph on Run Primary; fists on hand prefabs; improvised fallback on
   `Item`; dedicated profiles on crowbar/hatchet/knife. Editor menu
   `SS3D/Combat/Setup Melee Prefabs` for PrefabUtility re-wiring. Lethality interim until armor.
+- **2026-07-19 (test dummy):** Admin console `spawndummy` → `EntitySubSystem.ServerSpawnCombatDummy`
+  (mindless Human + `CombatDummyBootstrap`). See [systems/combat.md](../architecture/systems/combat.md) Testing.

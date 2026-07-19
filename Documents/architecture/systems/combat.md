@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack
 > Status: partial
-> Verified: 0e7e98d5c — 2026-07-19
+> Verified: e5cde06a5 — 2026-07-19
 
 # Combat
 
@@ -27,6 +27,9 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 - `Assets/Scripts/SS3D/Systems/Health/MeleeDamagePacket.cs` — damage DTO owned by Health
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — `TryPlayMeleeSwingTelegraph` on Run Primary
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — stance toggle + `RequestAttack`
+- `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` — freezes controls on mindless test Human
+- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — `ServerSpawnCombatDummy`
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/SpawnDummyCommand.cs` — console `spawndummy`
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — menu **SS3D → Combat → Setup Melee Prefabs**
 
 ## Extension points
@@ -35,15 +38,22 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 - Improvised fallback is automatic on `Item` when no `MeleeWeaponItemExtension` is present.
 - Empty-hand fists: `HandMeleeExtension` on `HumanHandLeft` / `HumanHandRight` prefabs — do not hand-edit `Human.prefab`.
 
+## Testing
+
+1. Host Play Mode as admin, console: `spawndummy` — mindless Human ~2m ahead (controls frozen).
+2. Harm intent, LMB limbs — windup + swing + zone damage. Help must not Hit.
+3. Optional: health debug overlay `H` on the dummy.
+
 ## Pitfalls
 
 - **Do not revive anim-only LMB intercept** in melee stance — that split was Phase 0 purged. Telegraph is feedback on Hit dispatch only.
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
+- **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing), [inventory](inventory.md) (hands / items)
+- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing + dummy spawn), [inventory](inventory.md) (hands / items)
 - **Used by:** Harm-intent Run Primary / radial Hit
 
 ## Related docs
@@ -51,5 +61,5 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 - Design (read-only): [Documents/design/combat.md](../../design/combat.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md)
 - Stance foundation: [2026-07_player-body-animation.md](../2026-07_player-body-animation.md)
-- [entities](entities.md), [health](health.md), [stamina](stamina.md)
+- [entities](entities.md), [health](health.md), [stamina](stamina.md), [ingame-console](ingame-console.md)
 - [INDEX.md](../INDEX.md)

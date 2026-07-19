@@ -15,7 +15,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management
+- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `ServerSpawnCombatDummy` for mindless test Humans
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateMachine.cs` — authoritative body/combat snapshot
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator (`CombatStance`, `VelX`/`VelZ`); `SetPosingSuppressed` for collapse
@@ -23,6 +23,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at IK (aim yaw/pitch)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — inventory → arm hold + combat stance (Melee/Ranged); must not pose while collapsed
 - `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged locomotion blends
+- Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
 
 ## Extension points
 
