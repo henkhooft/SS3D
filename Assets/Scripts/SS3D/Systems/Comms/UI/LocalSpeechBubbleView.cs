@@ -29,6 +29,9 @@ namespace SS3D.Systems.Comms.UI
             _overlayRoot.style.flexGrow = 1;
             _overlayRoot.pickingMode = PickingMode.Ignore;
 
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log($"[CommsDebug] LocalSpeechBubbleView.Attach: styleSheet={(_bubbleStyleSheet == null ? "NULL - not assigned" : _bubbleStyleSheet.name)}, overlayRoot.panel={(overlayRoot.panel == null ? "null" : "ok")}");
+
             if (_bubbleStyleSheet != null)
             {
                 _overlayRoot.styleSheets.Add(_bubbleStyleSheet);
@@ -80,6 +83,10 @@ namespace SS3D.Systems.Comms.UI
 
             Label label = (Label)bubble.userData;
             label.text = text;
+
+            // TEMP DIAGNOSTIC - remove once F3 root-caused. resolvedStyle/worldBound reflect the
+            // last completed layout pass, so early frames may show zeros before Yoga catches up.
+            Debug.Log($"[CommsDebug] ShowBubble poolIndex={poolIndex}, text=\"{text}\", classList=[{string.Join(",", bubble.GetClasses())}], resolvedSize=({bubble.resolvedStyle.width}x{bubble.resolvedStyle.height}), resolvedOpacity={bubble.resolvedStyle.opacity}, resolvedDisplay={bubble.resolvedStyle.display}, worldBound={bubble.worldBound}, overlayRootSize=({_overlayRoot.resolvedStyle.width}x{_overlayRoot.resolvedStyle.height}), overlayRootWorldBound={_overlayRoot.worldBound}, panel={(bubble.panel == null ? "null" : "ok")}");
         }
 
         public void HideBubble(int poolIndex)
