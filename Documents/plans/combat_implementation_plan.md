@@ -6,7 +6,7 @@ todos:
     content: "Phase 0: Verify merge + smoke-test; screen-effects←health shipped; remaining: turf O2 into LungIntake; marry melee swing animation to windup/recovery"
     status: pending
   - id: phase1-melee-complete
-    content: "Phase 1: Melee to MVP — intent (help/harm) gating on the hit path, lethality tuning to 'a handful of solid hits', improvised-weapon fallback for any held item"
+    content: "Phase 1: Melee to MVP — intent (help/harm) gating on the hit path already shipped (MeleeHitInteraction.AllowedIntent + InteractionPipeline enforcement); remaining: lethality tuning to 'a handful of solid hits', improvised-weapon fallback for any held item"
     status: pending
   - id: phase2-disarm-grab
     content: "Phase 2: Ctrl-disarm (strip weapon from hands) and Alt-grab (positioning control) as modifier+click interactions on the existing IntentController"
