@@ -340,9 +340,15 @@ namespace SS3D.Systems.Comms
                 SpeechMode.Announcement => body,
                 // Whisper never quotes; speak/shout quote only the newest line.
                 SpeechMode.Whisper => body,
-                SpeechMode.Shout => isNewest ? $"\"{body}\"" : body,
+                SpeechMode.Shout => FormatShoutLine(body, isNewest),
                 _ => isNewest ? $"\"{body}\"" : body,
             };
+        }
+
+        private static string FormatShoutLine(string body, bool isNewest)
+        {
+            string upper = body.ToUpperInvariant();
+            return isNewest ? $"\"{upper}\"" : upper;
         }
 
         private static float StackOpacity(int fromNewest)

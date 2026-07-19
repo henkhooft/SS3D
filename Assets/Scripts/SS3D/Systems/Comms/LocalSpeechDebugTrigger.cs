@@ -34,6 +34,7 @@ namespace SS3D.Systems.Comms
             new(SpeechMode.Speak, "Can someone fix atmos?"),
             new(SpeechMode.Whisper, "not on comms, ok?"),
             new(SpeechMode.Shout, "Need oxygen!"),
+            new(SpeechMode.Shout, "Help! Fire in engineering!"),
             new(SpeechMode.Emote, "waves toward the console."),
             new(SpeechMode.Speak, "Anyone seen the captain."),
         };

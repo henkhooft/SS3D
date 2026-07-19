@@ -87,7 +87,9 @@
 }
 
 .comms-subtitle--shout {
+    scale: 1.1;
     background-color: rgba(10, 10, 10, 0.48);
+    border-width: 0;
     padding: 7px 16px 8px 16px;
     max-width: 340px;
 }
@@ -100,6 +102,17 @@
 .comms-subtitle--shout .comms-subtitle__line {
     font-size: 19px;
     color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+.comms-subtitle--shout.comms-subtitle--aged {
+    background-color: rgba(10, 10, 10, 0.4);
+}
+
+.comms-subtitle--shout.comms-subtitle--aged .comms-subtitle__line {
+    color: rgb(230, 230, 230);
+    -unity-font-style: bold;
 }
 
 .comms-subtitle--emote {

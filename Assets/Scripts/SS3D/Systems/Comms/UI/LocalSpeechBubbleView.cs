@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SS3D.Systems.Comms.UI
@@ -108,6 +109,12 @@ namespace SS3D.Systems.Comms.UI
             labels.Name.style.display = showName ? DisplayStyle.Flex : DisplayStyle.None;
             labels.Name.text = showName ? speakerName.ToUpperInvariant() : string.Empty;
             labels.Line.text = displayText;
+            labels.Line.style.unityFontStyleAndWeight = mode switch
+            {
+                SpeechMode.Shout => FontStyle.Bold,
+                SpeechMode.Whisper or SpeechMode.Emote => FontStyle.Italic,
+                _ => FontStyle.Normal,
+            };
         }
 
         public void HideBubblesFrom(int fromIndex)
