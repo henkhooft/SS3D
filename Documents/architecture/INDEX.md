@@ -83,7 +83,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Scene management | [scene-management](systems/scene-management.md) | stub | Scene loading and switching; not a system composition root |
 | UI shell | [ui-shell](systems/ui-shell.md) | stub | Target UITK composition root; MI + Main HUD path catalogs shipped (duplicated); shared catalog helper + full shell deferred |
 | Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; see map § Architecture smells |
-| Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references |
+| Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references; one-off Editor rebuild menus are tracked debt |
 | Persistence | [persistence](systems/persistence.md) | partial | Contributor-based station templates and server meta (permissions, round history) |
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |

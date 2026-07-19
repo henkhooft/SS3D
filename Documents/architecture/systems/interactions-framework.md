@@ -35,7 +35,7 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - Add `InteractionTargetBehaviour` (or `InteractionTargetNetworkBehaviour`) to world objects that should receive interactions.
 - Implement `IInteractionTierProvider` to control radial menu tier (instant vs armed targeted).
 - Use `Requirement` and `IInteractionRangeLimit` / `RangeLimit` for gating.
-- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); expose named helpers on `InteractionIconLookup` when shared.
+- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
 - Replicated state changes in `Start()` must go through networked components (`NetworkedOpenable.SetOpenState`, `SyncVar` toggles), not local-only animator writes.
 - Prefer gating `IInteractionSourceExtension.GetSourceInteractions` on a real availability check (like `HandHit`), not unconditional `Add` — see smells below.
 
