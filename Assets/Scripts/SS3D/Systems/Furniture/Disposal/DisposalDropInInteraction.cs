@@ -31,7 +31,7 @@ namespace SS3D.Systems.Furniture.Disposal
         public string GetGenericName() => "Dispose";
 
         public Sprite GetIcon(InteractionEvent interactionEvent) =>
-            Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Recycle);
+            Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Dispose);
 
         /// <summary>
         /// Above <see cref="SS3D.Systems.Inventory.Interactions.DropInteraction"/> (5) so primary-click
