@@ -78,9 +78,24 @@ Thin sync layer on top of existing types — no renderer rewrite.
 
 - Pure clients that join **after** gas state has settled won't see already-stable atmos visuals until the next meaningful change ticks a chunk dirty again — there's no late-join bootstrap or AOI scoping yet (Phase 2). Newly-changing chunks (fires, breaches, venting) sync immediately.
 
+## Verification
+
+- EditMode: `Assets/Scripts/Tests/EditMode/Atmospherics/Atmos{DirtyChunkTracker,ChunkPatchBuilder,ChunkPatchSerializer,ClientAtlas}Tests.cs`.
+- Multiplayer test harness (real headless server + pure-client process, not just EditMode):
+  `Testing/multiplayer/scenarios/atmos-client-sync{,-client}.txt`, run via
+  `./Testing/multiplayer/run_smoketest.sh atmos-client-sync`. The client embarks, forces a fresh
+  dirty chunk with the new `atmosdebug heat` console command (headless equivalent of
+  `AtmosDebugController`'s GUI buttons), then asserts its own `AtmosRenderContext` snapshot is
+  valid with `atmosclientstatus assert` — a real regression check that a pure client receives
+  and applies chunk patches, not just that the render path compiles. Wired into
+  `develop-release.yml` and `multiplayer-smoke-test.yml`. See
+  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md).
+
 ## Related docs
 
 - System map: [atmospherics.md](systems/atmospherics.md)
 - Prior effort: [2026-07_atmos-ecs-foundation.md](2026-07_atmos-ecs-foundation.md)
 - Design (read-only): [atmospherics.md](../design/atmospherics.md) §10
 - [rendering.md](systems/rendering.md) — `AtmosRenderContext` / `AtmosRendererFeature`
+- [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — headless
+  server+client regression coverage (`atmos-client-sync` scenario)

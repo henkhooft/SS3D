@@ -96,6 +96,19 @@ Manual / partial:
   `Ongoing` and client 0 has already embarked. Ports
   `KnownIssueReproduction/Issue1002_LateJoinFails_HostPerspective.cs`'s
   `ClientCanEmbarkAfterRoundStartWhenHostHasAlreadyEmbarked` case as a real two-process run.
+- `scenarios/atmos-client-sync{,-client}.txt` — regression coverage for
+  [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md): the
+  client embarks, runs `console atmosdebug heat 500` (new `AtmosDebugCommand` — headless
+  equivalent of `AtmosDebugController`'s GUI buttons, since a `-batchmode` client can't click
+  one) at its own tile to force a fresh dirty chunk, waits for the next atmos tick, then runs
+  `console atmosclientstatus assert` (new `AtmosClientStatusCommand`, `CommandType.Offline`) —
+  it emits a `Test signal AtmosClientSnapshotValid|Invalid` either way, and *throws* when
+  `assert` is passed and the snapshot isn't valid, which `AutomationSubSystem`'s existing
+  try/catch turns into a `ScriptFailed` the harness already treats as a failure. No new DSL
+  instruction or `run_smoketest.sh` changes needed — this reuses the same "distinctive signal /
+  exception-on-`console`" idioms every other check in the harness already relies on. Because
+  Phase 1 has no late-join bootstrap, the forced heat-add is what makes this deterministic
+  regardless of how long the server had been running before this client connected.
 - Permissions: `run_smoketest.sh` clears staged `Data/ServerMeta/permissions.json` (Builds often
   ship one), then seeds `Config/permissions.txt` with each client's ckey as `Administrator` —
   a real dedicated server has no Editor session to grant this by hand, and `start_round` is
@@ -105,8 +118,9 @@ Manual / partial:
 ### CI
 - `.github/workflows/develop-release.yml` — **manual** gated path: EditMode → Linux
   server+client builds (separate `buildsPath` dirs, `versioning: None`) → `basic-round` +
-  `late-join 2` → Windows client zip with `Builds/Start_SS3D_*.bat` → GitHub prerelease.
-  See [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
+  `late-join 2` + `atmos-client-sync` → Windows client zip with `Builds/Start_SS3D_*.bat` →
+  GitHub prerelease. See
+  [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
 - `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke only (`workflow_dispatch` or PR
   label `test:multiplayer`); no longer runs on every `develop` push. Same build scripts and
   harness as the release workflow’s smoke stage.
