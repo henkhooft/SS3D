@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours)
 > Status: partial
-> Verified: 2e2d03815 — 2026-07-18
+> Verified: 32cb1634b — 2026-07-19
 
 # Furniture / world objects
 
 ## Overview
 
-Station furniture and interactable world objects — airlocks, lockers, disposal units, vending machines, jukebox, and related prefab behaviours. Power consumption and visuals delegate to [electricity](electricity.md) consumers; airlock opening respects area APC power. Vending machines open a diegetic panel via [machine-interface](machine-interface.md) instead of a direct dispense interaction.
+Station furniture and interactable world objects — airlocks, lockers, disposal units, vending machines, jukebox, and related prefab behaviours. Power consumption and visuals delegate to [electricity](electricity.md) consumers; airlock opening respects area APC power. Vending machines open a diegetic panel via [machine-interface](machine-interface.md) instead of a direct dispense interaction. Disposal chute/outlet gameplay lives under [disposal](disposal.md).
 
 ## Start here
 
@@ -17,6 +17,7 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 - `Assets/Scripts/SS3D/UI/MachineInterface/VendingMachineController.cs` — vending machines (machine-interface controller)
 - `Assets/Scripts/SS3D/Systems/Audio/Boombox.cs` — jukebox toggle; stops audio on power loss
 - `Assets/Content/WorldObjects/Furniture/Machines/Vendors/` — vending machine prefabs
+- Disposal: see [disposal](disposal.md) (`DisposalBin`, `DisposalOutlet`, `DisposalSubSystem`)
 
 ## Extension points
 
@@ -31,11 +32,12 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 
 ## Depends on / Used by
 
-- **Depends on:** [interactions-framework](interactions-framework.md), [interactions-runtime](interactions-runtime.md), [tile](tile.md), [electricity](electricity.md), [area](area.md) (airlock/switch area resolution), [atmospherics](atmospherics.md) (airlock passability), [machine-interface](machine-interface.md) (vending)
+- **Depends on:** [interactions-framework](interactions-framework.md), [interactions-runtime](interactions-runtime.md), [tile](tile.md), [electricity](electricity.md), [area](area.md) (airlock/switch area resolution), [atmospherics](atmospherics.md) (airlock passability), [machine-interface](machine-interface.md) (vending), [disposal](disposal.md) (chute/outlet behaviours)
 - **Used by:** world scenes and construction content
 
 ## Related docs
 
+- [disposal](disposal.md) — disposal item network
 - [machine-interface](machine-interface.md) — vending UI and diegetic shell
 - Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
 - [INDEX.md](../INDEX.md)
