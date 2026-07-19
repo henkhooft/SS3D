@@ -31,10 +31,6 @@ namespace SS3D.Systems.Comms
         [ServerRpc]
         public void CmdSpeak(string text)
         {
-            // TEMP DIAGNOSTIC - remove once F3 root-caused. FishNet's codegen means this only
-            // prints where the RPC body actually executes (server/host), not on the calling client.
-            Debug.Log($"[CommsDebug] CmdSpeak executing server-side for {gameObject.name}: \"{text}\"");
-
             SubSystems.Get<CommsSubSystem>().HandleSpeakRequest(this, text);
         }
 
@@ -43,9 +39,6 @@ namespace SS3D.Systems.Comms
         /// </summary>
         public void ServerBroadcastSpeech(SpeechEvent speechEvent)
         {
-            // TEMP DIAGNOSTIC - remove once F3 root-caused.
-            Debug.Log($"[CommsDebug] ServerBroadcastSpeech entered on {gameObject.name}. IsServer={IsServer}");
-
             if (!IsServer)
             {
                 return;
@@ -57,9 +50,6 @@ namespace SS3D.Systems.Comms
         [ObserversRpc]
         private void RpcReceiveSpeech(SpeechEvent speechEvent)
         {
-            // TEMP DIAGNOSTIC - remove once F3 root-caused. Should print on every observing client.
-            Debug.Log($"[CommsDebug] RpcReceiveSpeech received on {gameObject.name}: \"{speechEvent.Text}\"");
-
             SubSystems.Get<CommsSubSystem>().NotifyLocalSpeechReceived(_entity, speechEvent);
         }
     }

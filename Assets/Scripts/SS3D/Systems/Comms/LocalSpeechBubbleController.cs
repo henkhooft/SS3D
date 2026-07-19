@@ -42,6 +42,7 @@ namespace SS3D.Systems.Comms
         private readonly List<Entity> _staleSpeakers = new();
 
         private LocalSpeechBubbleView _view;
+        private VisualElement _attachedRoot;
         private LocalSpeechListener _listener;
         private CrowdCapRanker _ranker;
         private Entity _localViewer;
@@ -96,12 +97,17 @@ namespace SS3D.Systems.Comms
             {
                 _commsSubSystem.OnLocalSpeechReceived -= HandleSpeechReceived;
             }
+
+            // UIDocument destroys/rebuilds its visual tree across disable/enable. Drop the
+            // cached view so EnsureOverlay re-attaches to the live root instead of driving
+            // orphaned VisualElements (panel=null, NaN layout, invisible bubbles).
+            TearDownOverlay();
         }
 
         protected override void OnDestroyed()
         {
             InputInterface.UnregisterDocument(_document);
-            _view?.Detach();
+            TearDownOverlay();
             base.OnDestroyed();
         }
 
@@ -112,9 +118,6 @@ namespace SS3D.Systems.Comms
 
         private void HandleSpeechReceived(Entity speaker, SpeechEvent speechEvent)
         {
-            // TEMP DIAGNOSTIC - remove once F3 root-caused.
-            Debug.Log($"[CommsDebug] LocalSpeechBubbleController.HandleSpeechReceived: speaker={(speaker == null ? "null" : speaker.name)}, localViewer={(_localViewer == null ? "null" : _localViewer.name)}");
-
             if (speaker == null)
             {
                 return;
@@ -196,15 +199,7 @@ namespace SS3D.Systems.Comms
 
         private void RenderFrame()
         {
-            bool overlayReady = EnsureOverlay();
-
-            if (_activeSpeeches.Count > 0)
-            {
-                // TEMP DIAGNOSTIC - remove once F3 root-caused.
-                Debug.Log($"[CommsDebug] RenderFrame: overlayReady={overlayReady}, cameraMain={(Camera.main == null ? "null" : Camera.main.name)}, shownSpeakers={_shownSpeakers.Count}, activeSpeeches={_activeSpeeches.Count}, document={(_document == null ? "null" : $"enabled={_document.enabled}, activeAndEnabled={_document.isActiveAndEnabled}, root={(_document.rootVisualElement == null ? "null" : "ok")}")}");
-            }
-
-            if (!overlayReady)
+            if (!EnsureOverlay())
             {
                 return;
             }
@@ -219,8 +214,6 @@ namespace SS3D.Systems.Comms
                     Entity speaker = _shownSpeakers[i];
                     if (speaker == null || speaker.ViewPoint == null || !_activeSpeeches.TryGetValue(speaker, out ActiveSpeech entry))
                     {
-                        // TEMP DIAGNOSTIC - remove once F3 root-caused.
-                        Debug.Log($"[CommsDebug] RenderFrame skipping shown speaker index {i}: speaker={(speaker == null ? "null" : speaker.name)}, viewPoint={(speaker != null && speaker.ViewPoint != null ? "ok" : "null")}, hasEntry={speaker != null && _activeSpeeches.ContainsKey(speaker)}");
                         continue;
                     }
 
@@ -230,9 +223,6 @@ namespace SS3D.Systems.Comms
                     bool onScreen = screenPoint.z > 0f
                         && screenPoint.x >= 0f && screenPoint.x <= Screen.width
                         && screenPoint.y >= 0f && screenPoint.y <= Screen.height;
-
-                    // TEMP DIAGNOSTIC - remove once F3 root-caused.
-                    Debug.Log($"[CommsDebug] RenderFrame speaker={speaker.name}, tier={entry.CurrentTier}, anchor={anchor}, screenPoint={screenPoint}, onScreen={onScreen}, screenSize=({Screen.width}x{Screen.height})");
 
                     if (!onScreen)
                     {
@@ -275,27 +265,40 @@ namespace SS3D.Systems.Comms
 
         private bool EnsureOverlay()
         {
-            if (_overlayReady && _view != null)
-            {
-                return true;
-            }
-
             if (_document == null)
             {
                 return false;
             }
 
             VisualElement root = _document.rootVisualElement;
-            if (root == null)
+
+            // rootVisualElement can exist before the runtime panel is ready, and UIDocument
+            // replaces the root across disable/enable. Only treat the overlay as ready when we
+            // are attached to the *current* rooted panel.
+            if (root == null || root.panel == null)
             {
                 return false;
+            }
+
+            if (_overlayReady && _view != null && _attachedRoot == root)
+            {
+                return true;
             }
 
             _view?.Detach();
             _view = new LocalSpeechBubbleView(_bubbleStyleSheet);
             _view.Attach(root);
+            _attachedRoot = root;
             _overlayReady = true;
             return true;
+        }
+
+        private void TearDownOverlay()
+        {
+            _view?.Detach();
+            _view = null;
+            _attachedRoot = null;
+            _overlayReady = false;
         }
 
 #if UNITY_EDITOR

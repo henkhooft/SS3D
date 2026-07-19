@@ -66,21 +66,13 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            // TEMP DIAGNOSTIC - remove once F3 root-caused.
-            Debug.Log("[CommsDebug] F3 detected.");
-
             if (_localEntity == null || !_localEntity.TryGetComponent(out LocalSpeechEmitter emitter))
             {
-                // TEMP DIAGNOSTIC - remove once F3 root-caused.
-                Debug.Log($"[CommsDebug] Aborting: localEntity={(_localEntity == null ? "null" : _localEntity.name)}, hasEmitter={(_localEntity != null && _localEntity.TryGetComponent(out LocalSpeechEmitter _))}");
                 return;
             }
 
             string line = TestLines[_lineIndex % TestLines.Length];
             _lineIndex++;
-
-            // TEMP DIAGNOSTIC - remove once F3 root-caused.
-            Debug.Log($"[CommsDebug] Calling CmdSpeak with: \"{line}\"");
 
             emitter.CmdSpeak(line);
         }

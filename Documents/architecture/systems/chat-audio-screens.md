@@ -1,6 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
 > Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem
 > Status: stub
+> Verified: 8c60b81d3 — 2026-07-19
 
 # Chat / audio / screens
 
@@ -20,13 +21,14 @@ In-game chat, audio playback, and camera/screen controllers. (Navigation map not
 
 ## Manual Editor setup required for the local speech slice
 
-The code and content assets are committed, but three placements need a human with the Unity Editor open (no safe way to hand-edit these serialized files blind):
-
-1. Add a `CommsSubSystem` component to a persistent GameObject in `Assets/Content/Scenes/Game.unity` (mirrors the `ChatSystem` GameObject that already hosts `ChatSubSystem`, fileID `478615866`).
-2. Add a `LocalSpeechEmitter` component to `Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab` (the player entity prefab spawned by `EntitySubSystem`).
-3. Add a GameObject with a `UIDocument` + `LocalSpeechBubbleController` to `Game.unity` (or a persistent UI root), with `CommsOverlayPanelSettings.asset` assigned to the `UIDocument` and `LocalSpeechBubble.uss` / `LocalSpeechConfig.asset` assigned on the controller — `LocalSpeechBubbleController.EnsureEditorAssets()` auto-fills these three from their known paths under `Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/` the first time the component awakens in the Editor, so this step just needs the GameObject + component added.
+Scene/prefab placements for the local speech slice are already in `Game.unity` (`CommsSystem`, `LocalSpeechBubblesSystem`) and `Human.prefab` (`LocalSpeechEmitter`). Re-check those if a fresh scene/prefab loses the wiring. `LocalSpeechBubbleController.EnsureEditorAssets()` still auto-fills USS / config / PanelSettings from `Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/` when missing in the Editor.
 
 `LocalSpeechDebugTrigger` (F3 to speak a test line as the local player) and `TextGarbler`/tier logic need no wiring — they self-bootstrap or are plain C#.
+
+## Pitfalls
+
+- **Speech bubbles invisible with healthy speech logs:** if `ShowBubble` reports `panel=null` / `resolvedSize=(NaNxNaN)`, the controller attached to a `UIDocument.rootVisualElement` that is not (or no longer) on a live panel. `EnsureOverlay` must require `root.panel != null`, compare against the current root identity, and tear down on disable — UIDocument rebuilds its tree across disable/enable and a cached view will keep driving orphans forever.
+- **Do not extend the condemned always-on chat window** — replace per [comms.md](../../design/comms.md).
 
 ## Extension points
 
