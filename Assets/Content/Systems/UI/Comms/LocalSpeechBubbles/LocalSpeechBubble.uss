@@ -1,49 +1,187 @@
 @import url("../../Tokens/ss3d-tokens.uss");
 @import url("../../Tokens/ss3d-typography.uss");
 
-.comms-bubble {
+/*
+ * Local speech chips — Claude Design mockup option 1a (weighted chips).
+ * Soft translucent plate, no comic outline. Name = Gurajada titling;
+ * dialogue = UI sans body.
+ */
+
+.comms-subtitle {
     translate: -50% 0;
-    max-width: 260px;
-    background-color: var(--ss3d-surface-panel);
-    border-width: 1px;
-    border-color: var(--ss3d-border-default);
-    border-radius: var(--ss3d-radius-sm);
-    padding: 6px 12px;
+    max-width: 300px;
+    flex-direction: column;
     align-items: center;
+    background-color: rgba(10, 10, 10, 0.42);
+    border-width: 0;
+    border-radius: 10px;
+    padding: 6px 14px 7px 14px;
 }
 
-.comms-bubble--clear {
-    opacity: 1;
+.comms-subtitle__name {
+    margin-bottom: 0;
+    margin-top: 0;
+    padding-bottom: 0;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+    /* .font-titling → Gurajada — pull tight against the line below */
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: rgb(170, 170, 170);
+    -unity-font-style: normal;
 }
 
-.comms-bubble--muffled {
-    border-color: var(--ss3d-border-strong);
-}
-
-.comms-bubble__label {
+.comms-subtitle__line {
+    margin-top: -6px;
+    padding-top: 0;
     white-space: normal;
     -unity-text-align: middle-center;
-    font-size: 13px;
-    color: var(--ss3d-text-primary);
+    /* .font-body → UI sans */
+    font-size: 17px;
+    color: rgb(255, 255, 255); /* --text-primary */
+    -unity-font-style: normal;
 }
 
-.comms-bubble--muffled .comms-bubble__label {
-    color: var(--ss3d-text-secondary);
+/* Older stacked lines — smaller, no name, quotes already stripped in C#. */
+.comms-subtitle--aged {
+    border-radius: 8px;
+    padding: 5px 12px;
+    background-color: rgba(10, 10, 10, 0.36);
+}
+
+.comms-subtitle--aged .comms-subtitle__line {
+    margin-top: 0;
+    font-size: 15px;
+    color: rgb(200, 200, 200);
+}
+
+.comms-subtitle--aged-far .comms-subtitle__line {
+    font-size: 13px;
+}
+
+.comms-subtitle--muffled {
+    background-color: rgba(10, 10, 10, 0.38);
+}
+
+.comms-subtitle--muffled .comms-subtitle__name,
+.comms-subtitle--muffled .comms-subtitle__line {
+    color: rgb(190, 190, 190);
     letter-spacing: 1px;
+}
+
+/* --- Mode treatments (mock 1a) --- */
+
+.comms-subtitle--whisper {
+    background-color: rgba(10, 10, 10, 0.38);
+    border-radius: 8px;
+    padding: 4px 10px;
+    max-width: 240px;
+}
+
+.comms-subtitle--whisper .comms-subtitle__line {
+    margin-top: 0;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: rgb(220, 220, 220);
+    -unity-font-style: italic;
+}
+
+.comms-subtitle--shout {
+    background-color: rgba(10, 10, 10, 0.48);
+    padding: 7px 16px 8px 16px;
+    max-width: 340px;
+}
+
+.comms-subtitle--shout .comms-subtitle__name {
+    font-size: 12px;
+    color: rgb(216, 216, 216);
+}
+
+.comms-subtitle--shout .comms-subtitle__line {
+    font-size: 19px;
+    color: rgb(255, 255, 255);
+}
+
+.comms-subtitle--emote {
+    background-color: rgba(10, 10, 10, 0.38);
+    border-radius: 8px;
+    padding: 5px 12px;
+}
+
+.comms-subtitle--emote .comms-subtitle__line {
+    margin-top: 0;
+    font-size: 15px;
+    color: rgb(220, 220, 220);
+    -unity-font-style: italic;
+}
+
+.comms-subtitle--radio {
+    background-color: rgba(61, 96, 137, 0.26);
+    border-left-width: 2px;
+    border-left-color: rgb(95, 134, 179); /* ramp-blue-300 */
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding: 7px 12px;
+    align-items: flex-start;
+    max-width: 260px;
+}
+
+.comms-subtitle--radio .comms-subtitle__name {
+    /* channel tag uses terminal face */
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: rgb(95, 134, 179);
+}
+
+.comms-subtitle--radio .comms-subtitle__line {
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
+    font-size: 15px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-left;
+}
+
+.comms-subtitle--announce {
+    background-color: rgba(201, 143, 56, 0.24);
+    border-top-width: 2px;
+    border-top-color: rgb(230, 173, 83); /* ramp-amber-400 */
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding: 8px 20px 10px 20px;
+    max-width: 420px;
+}
+
+.comms-subtitle--announce .comms-subtitle__name {
+    /* arcade-ish small label — OdeToIdleGaming */
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/OdetoIdleGamingSDF.asset");
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgb(240, 196, 125); /* ramp-amber-300 */
+}
+
+.comms-subtitle--announce .comms-subtitle__line {
+    /* announce body stays titling */
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
+    font-size: 17px;
+    letter-spacing: 1px;
+    color: rgb(255, 255, 255);
 }
 
 .comms-overflow-chip {
     position: absolute;
     top: 16px;
     right: 16px;
-    background-color: var(--ss3d-surface-inset);
-    border-width: 1px;
-    border-color: var(--ss3d-border-subtle);
-    border-radius: var(--ss3d-radius-sm);
+    background-color: rgba(10, 10, 10, 0.28);
+    border-width: 0;
+    border-radius: 10px;
     padding: 4px 10px;
 }
 
 .comms-overflow-chip__label {
     font-size: 11px;
-    color: var(--ss3d-text-tertiary);
+    color: rgb(113, 124, 127);
 }

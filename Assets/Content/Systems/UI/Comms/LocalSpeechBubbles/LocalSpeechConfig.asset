@@ -20,6 +20,9 @@ MonoBehaviour:
     m_Bits: 1
   MaxVisibleBubbles: 3
   RerankIntervalSeconds: 0.25
-  BaseFadeDuration: 3
-  PerCharacterFadeSeconds: 0.05
+  MaxStackedMessagesPerSpeaker: 3
+  StackSpacingPixels: 48
+  DriftPixelsPerSecond: 14
+  BaseFadeDuration: 4
+  PerCharacterFadeSeconds: 0.02
   MaxFadeDuration: 8

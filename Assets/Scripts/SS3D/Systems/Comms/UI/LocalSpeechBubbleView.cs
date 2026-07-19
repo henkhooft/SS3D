@@ -4,18 +4,33 @@ using UnityEngine.UIElements;
 namespace SS3D.Systems.Comms.UI
 {
     /// <summary>
-    /// UI Toolkit view for local speech bubbles and the crowd-cap overflow chip. Mirrors
-    /// RadialInteractionMenuView's Attach/Detach shape and pooling approach - a plain C# class
-    /// (not a MonoBehaviour), owned and driven by LocalSpeechBubbleController.
+    /// UI Toolkit view for floating local-speech subtitle chips and the crowd-cap overflow chip.
+    /// Visual language follows the Claude Design "weighted chips" mock (option 1a).
     /// </summary>
     public sealed class LocalSpeechBubbleView
     {
+        private static readonly string[] ModeClasses =
+        {
+            "comms-subtitle--speak",
+            "comms-subtitle--whisper",
+            "comms-subtitle--shout",
+            "comms-subtitle--emote",
+            "comms-subtitle--radio",
+            "comms-subtitle--announce",
+        };
+
         private readonly StyleSheet _bubbleStyleSheet;
-        private readonly List<VisualElement> _bubblePool = new();
+        private readonly List<VisualElement> _subtitlePool = new();
 
         private VisualElement _overlayRoot;
         private VisualElement _overflowChip;
         private Label _overflowLabel;
+
+        private sealed class SubtitleLabels
+        {
+            public Label Name;
+            public Label Line;
+        }
 
         public LocalSpeechBubbleView(StyleSheet bubbleStyleSheet)
         {
@@ -39,6 +54,7 @@ namespace SS3D.Systems.Comms.UI
             _overflowChip.style.display = DisplayStyle.None;
 
             _overflowLabel = new Label();
+            _overflowLabel.AddToClassList("font-body");
             _overflowLabel.AddToClassList("comms-overflow-chip__label");
             _overflowChip.Add(_overflowLabel);
 
@@ -47,12 +63,12 @@ namespace SS3D.Systems.Comms.UI
 
         public void Detach()
         {
-            foreach (VisualElement bubble in _bubblePool)
+            foreach (VisualElement subtitle in _subtitlePool)
             {
-                bubble.RemoveFromHierarchy();
+                subtitle.RemoveFromHierarchy();
             }
 
-            _bubblePool.Clear();
+            _subtitlePool.Clear();
 
             _overflowChip?.RemoveFromHierarchy();
             _overflowChip = null;
@@ -61,45 +77,44 @@ namespace SS3D.Systems.Comms.UI
         }
 
         /// <summary>
-        /// Positions and fills a pooled bubble at the given screen position. <paramref name="left"/>
-        /// and <paramref name="bottom"/> are raw Unity screen-space coordinates (origin bottom-left),
-        /// matching RadialInteractionMenuView's convention of using style.left/style.bottom directly
-        /// so no manual Y-flip against the UI Toolkit panel is needed.
+        /// Positions and fills a pooled subtitle. Screen coords are bottom-left origin.
+        /// <paramref name="stackAge"/> is 0 for the newest line, 1+ for older stacked lines.
         /// </summary>
-        public void ShowBubble(int poolIndex, float left, float bottom, string text, AudibilityTier tier, float opacity)
+        public void ShowBubble(
+            int poolIndex,
+            float left,
+            float bottom,
+            string speakerName,
+            string displayText,
+            SpeechMode mode,
+            AudibilityTier tier,
+            float opacity,
+            int stackAge)
         {
-            VisualElement bubble = GetOrCreateBubble(poolIndex);
-            bubble.style.display = DisplayStyle.Flex;
-            bubble.style.left = left;
-            bubble.style.bottom = bottom;
-            bubble.style.opacity = opacity;
+            VisualElement subtitle = GetOrCreateSubtitle(poolIndex);
+            subtitle.style.display = DisplayStyle.Flex;
+            subtitle.style.left = left;
+            subtitle.style.bottom = bottom;
+            subtitle.style.opacity = opacity;
 
-            bubble.EnableInClassList("comms-bubble--clear", tier == AudibilityTier.Clear);
-            bubble.EnableInClassList("comms-bubble--muffled", tier == AudibilityTier.Muffled);
+            subtitle.EnableInClassList("comms-subtitle--clear", tier == AudibilityTier.Clear);
+            subtitle.EnableInClassList("comms-subtitle--muffled", tier == AudibilityTier.Muffled);
+            subtitle.EnableInClassList("comms-subtitle--aged", stackAge > 0);
+            subtitle.EnableInClassList("comms-subtitle--aged-far", stackAge > 1);
+            ApplyModeClass(subtitle, mode);
 
-            Label label = (Label)bubble.userData;
-            label.text = text;
+            SubtitleLabels labels = (SubtitleLabels)subtitle.userData;
+            bool showName = !string.IsNullOrEmpty(speakerName);
+            labels.Name.style.display = showName ? DisplayStyle.Flex : DisplayStyle.None;
+            labels.Name.text = showName ? speakerName.ToUpperInvariant() : string.Empty;
+            labels.Line.text = displayText;
         }
 
-        public void HideBubble(int poolIndex)
-        {
-            if (poolIndex < 0 || poolIndex >= _bubblePool.Count)
-            {
-                return;
-            }
-
-            _bubblePool[poolIndex].style.display = DisplayStyle.None;
-        }
-
-        /// <summary>
-        /// Hides every pooled bubble at or beyond <paramref name="fromIndex"/> - the tail of the
-        /// pool left over from a previous frame that had more visible bubbles than this one.
-        /// </summary>
         public void HideBubblesFrom(int fromIndex)
         {
-            for (int i = fromIndex; i < _bubblePool.Count; i++)
+            for (int i = fromIndex; i < _subtitlePool.Count; i++)
             {
-                _bubblePool[i].style.display = DisplayStyle.None;
+                _subtitlePool[i].style.display = DisplayStyle.None;
             }
         }
 
@@ -122,27 +137,60 @@ namespace SS3D.Systems.Comms.UI
             }
         }
 
-        private VisualElement GetOrCreateBubble(int index)
+        private static void ApplyModeClass(VisualElement subtitle, SpeechMode mode)
         {
-            while (_bubblePool.Count <= index)
+            for (int i = 0; i < ModeClasses.Length; i++)
             {
-                VisualElement bubble = new();
-                bubble.AddToClassList("comms-bubble");
-                bubble.pickingMode = PickingMode.Ignore;
-                bubble.style.position = Position.Absolute;
-                bubble.style.display = DisplayStyle.None;
-
-                Label label = new();
-                label.AddToClassList("comms-bubble__label");
-                label.pickingMode = PickingMode.Ignore;
-                bubble.Add(label);
-                bubble.userData = label;
-
-                _overlayRoot.Add(bubble);
-                _bubblePool.Add(bubble);
+                subtitle.EnableInClassList(ModeClasses[i], false);
             }
 
-            return _bubblePool[index];
+            string modeClass = mode switch
+            {
+                SpeechMode.Whisper => "comms-subtitle--whisper",
+                SpeechMode.Shout => "comms-subtitle--shout",
+                SpeechMode.Emote => "comms-subtitle--emote",
+                SpeechMode.Radio => "comms-subtitle--radio",
+                SpeechMode.Announcement => "comms-subtitle--announce",
+                _ => "comms-subtitle--speak",
+            };
+
+            subtitle.EnableInClassList(modeClass, true);
+        }
+
+        private VisualElement GetOrCreateSubtitle(int index)
+        {
+            while (_subtitlePool.Count <= index)
+            {
+                VisualElement subtitle = new();
+                subtitle.AddToClassList("comms-subtitle");
+                subtitle.AddToClassList("comms-subtitle--speak");
+                subtitle.pickingMode = PickingMode.Ignore;
+                subtitle.style.position = Position.Absolute;
+                subtitle.style.display = DisplayStyle.None;
+
+                Label nameLabel = new();
+                nameLabel.AddToClassList("font-titling");
+                nameLabel.AddToClassList("comms-subtitle__name");
+                nameLabel.pickingMode = PickingMode.Ignore;
+                subtitle.Add(nameLabel);
+
+                Label lineLabel = new();
+                lineLabel.AddToClassList("font-body");
+                lineLabel.AddToClassList("comms-subtitle__line");
+                lineLabel.pickingMode = PickingMode.Ignore;
+                subtitle.Add(lineLabel);
+
+                subtitle.userData = new SubtitleLabels
+                {
+                    Name = nameLabel,
+                    Line = lineLabel,
+                };
+
+                _overlayRoot.Add(subtitle);
+                _subtitlePool.Add(subtitle);
+            }
+
+            return _subtitlePool[index];
         }
     }
 }

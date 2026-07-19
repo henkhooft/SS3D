@@ -27,7 +27,7 @@ namespace SS3D.Systems.Comms
         /// Server-only entry point: validates and dispatches a local speech line from the given
         /// emitter's owning Entity.
         /// </summary>
-        public void HandleSpeakRequest(LocalSpeechEmitter emitter, string text)
+        public void HandleSpeakRequest(LocalSpeechEmitter emitter, string text, SpeechMode mode)
         {
             if (!IsServer)
             {
@@ -44,10 +44,15 @@ namespace SS3D.Systems.Comms
                 text = text.Substring(0, MaxMessageLength);
             }
 
+            if (!Enum.IsDefined(typeof(SpeechMode), mode))
+            {
+                mode = SpeechMode.Speak;
+            }
+
             SpeechEvent speechEvent = new()
             {
                 Text = text,
-                Mode = SpeechMode.Speak,
+                Mode = mode,
                 ServerTimestamp = Time.time,
             };
 

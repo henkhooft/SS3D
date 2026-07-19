@@ -3,10 +3,10 @@ using UnityEngine;
 namespace SS3D.Systems.Comms
 {
     /// <summary>
-    /// Tunables for local speech bubbles: distance/occlusion tiers, crowd cap, and fade timing.
-    /// A plain feature-local ScriptableObject (referenced directly by serialized fields), not a
-    /// ScriptableSettings singleton like ChatChannels - this config only matters to this one
-    /// controller, so there's no need for the global project-settings lookup.
+    /// Tunables for local speech subtitles: distance/occlusion tiers, crowd cap, stacking, drift,
+    /// and fade timing. A plain feature-local ScriptableObject (referenced directly by serialized
+    /// fields), not a ScriptableSettings singleton like ChatChannels - this config only matters to
+    /// this one controller, so there's no need for the global project-settings lookup.
     /// </summary>
     [CreateAssetMenu(fileName = "New Local Speech Config", menuName = "SS3D/UI/Comms/Local Speech Config")]
     public class LocalSpeechConfig : ScriptableObject
@@ -25,15 +25,26 @@ namespace SS3D.Systems.Comms
         public LayerMask OcclusionMask = 1; // Default layer, matching DropInteraction's line-of-sight check.
 
         [Header("Crowd cap - comms.md §4")]
-        [Tooltip("Maximum number of bubbles shown at once to a single viewer. The rest compress into an overflow chip.")]
+        [Tooltip("Maximum number of speakers shown at once to a single viewer. The rest compress into an overflow chip.")]
         public int MaxVisibleBubbles = 3;
 
         [Tooltip("Seconds between periodic crowd-cap re-ranks, to catch movement-driven tier/rank changes.")]
         public float RerankIntervalSeconds = 0.25f;
 
+        [Header("Per-speaker stack")]
+        [Tooltip("Max simultaneous subtitle lines stacked above one speaker. Older lines drop off.")]
+        public int MaxStackedMessagesPerSpeaker = 3;
+
+        [Tooltip("Vertical gap in screen pixels between stacked lines (newest nearest the head).")]
+        public float StackSpacingPixels = 48f;
+
+        [Tooltip("Upward drift speed in screen pixels per second as a line ages.")]
+        public float DriftPixelsPerSecond = 14f;
+
         [Header("Fade timing - comms.md §3")]
-        public float BaseFadeDuration = 3f;
-        public float PerCharacterFadeSeconds = 0.05f;
+        [Tooltip("Base seconds a line stays visible before the fade-out tail. Short lines land near ~4s.")]
+        public float BaseFadeDuration = 4f;
+        public float PerCharacterFadeSeconds = 0.02f;
         public float MaxFadeDuration = 8f;
 
         public float GetFadeDuration(int characterCount)

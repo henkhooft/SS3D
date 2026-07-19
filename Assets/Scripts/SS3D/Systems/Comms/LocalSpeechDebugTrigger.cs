@@ -10,20 +10,32 @@ namespace SS3D.Systems.Comms
 {
     /// <summary>
     /// PLACEHOLDER: replace with real compose-input UI (comms.md §5 - T/Enter/Shift+Enter/Ctrl+Enter)
-    /// once that slice lands. Until then, this is the only way to manually trigger a local speech
-    /// event for testing: press F3 to speak one of a few rotating test lines as the locally
-    /// controlled entity. Self-bootstraps at scene load (same pattern as
-    /// ScreenEffectsDebugMenuView) so it needs no scene/prefab wiring - safe to delete this single
-    /// file with no other class depending on it.
+    /// once that slice lands. Until then, F3 triggers local-chat test lines only (speak / whisper /
+    /// shout / emote) — radio and station announcements live on other UI surfaces and are not
+    /// previewed here. Self-bootstraps at scene load (same pattern as ScreenEffectsDebugMenuView).
     /// </summary>
     public sealed class LocalSpeechDebugTrigger : Actor
     {
-        private static readonly string[] TestLines =
+        private readonly struct LocalTestLine
         {
-            "Cargo's here, someone sign for it.",
-            "Anyone seen the captain.",
-            "Vent's clogged in dorms.",
-            "Who left the airlock open.",
+            public readonly SpeechMode Mode;
+            public readonly string Text;
+
+            public LocalTestLine(SpeechMode mode, string text)
+            {
+                Mode = mode;
+                Text = text;
+            }
+        }
+
+        private static readonly LocalTestLine[] TestLines =
+        {
+            new(SpeechMode.Speak, "Cargo's here, someone sign for it."),
+            new(SpeechMode.Speak, "Can someone fix atmos?"),
+            new(SpeechMode.Whisper, "not on comms, ok?"),
+            new(SpeechMode.Shout, "Need oxygen!"),
+            new(SpeechMode.Emote, "waves toward the console."),
+            new(SpeechMode.Speak, "Anyone seen the captain."),
         };
 
         private static bool s_bootstrapped;
@@ -71,10 +83,10 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            string line = TestLines[_lineIndex % TestLines.Length];
+            LocalTestLine line = TestLines[_lineIndex % TestLines.Length];
             _lineIndex++;
 
-            emitter.CmdSpeak(line);
+            emitter.CmdSpeak(line.Text, line.Mode);
         }
     }
 }

@@ -29,9 +29,9 @@ namespace SS3D.Systems.Comms
         /// Client -> server: ask to speak locally as this entity.
         /// </summary>
         [ServerRpc]
-        public void CmdSpeak(string text)
+        public void CmdSpeak(string text, SpeechMode mode)
         {
-            SubSystems.Get<CommsSubSystem>().HandleSpeakRequest(this, text);
+            SubSystems.Get<CommsSubSystem>().HandleSpeakRequest(this, text, mode);
         }
 
         /// <summary>
