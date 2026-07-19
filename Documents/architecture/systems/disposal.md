@@ -34,6 +34,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 - **Outlet arrivals spawn inside the mesh:** arrivals are spat along `transform.forward` by `_spitDistance` (default 0.85m), not at the outlet origin.
 - **Main-outlet items vanished after grace:** prefab defaults to `Department.None` with a 30s grace, then `EjectIntoSpace` despawned in place when `_spaceEjectionPoint` was unset. Grace/eject now only runs if an ejection point or `IDisposalSweepable` is present; otherwise arrivals sit for pickup.
 - **Lid/door anim never plays:** controllers need an Idle default (Open-as-default plays on spawn). Drive `NetworkAnimator.Play` from successful chute enter / outlet arrive — not raw `Animator.Play` alone if clients should see it. NetworkAnimator must be in `NetworkObject._networkBehaviours` with `_clientAuthoritative: 0`.
+- **Items visible mid-pipe:** design wants visible transit later (glass sections). Until then capsules hide via `Item.SetVisibility` (ObserversRpc); enable `DisposalSubSystem._debugShowTransitItems` to watch routes. Reveal on spit / pipe-cut spill.
 - **`Object.Destroy` on items:** Coimbra forbids it — use FishNet `Despawn` when `ServerManager` exists, else `gameObject.Dispose(true)` (`using Coimbra`).
 - **Pipe place/cut in play:** no player recipes yet; clearing a disposal tile (map editor / `TryClearTile`) is what triggers sabotage spill.
 

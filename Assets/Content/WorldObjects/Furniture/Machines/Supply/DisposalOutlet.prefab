@@ -172,6 +172,7 @@ MonoBehaviour:
   _targetDepartment: 0
   _graceWindowSeconds: 30
   _spitDistance: 0.85
+  _spitDelaySeconds: 1
   _spaceEjectionPoint: {fileID: 0}
   _networkAnimator: {fileID: 6221302596290927323}
 --- !u!114 &-4327415787478915747

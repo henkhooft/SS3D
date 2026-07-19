@@ -1,6 +1,8 @@
 using Coimbra;
 using FishNet;
 using FishNet.Component.Animating;
+using SS3D.Core;
+using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inventory.Items;
 using System.Collections.Generic;
@@ -33,12 +35,17 @@ namespace SS3D.Systems.Furniture
         private float _spitDistance = 0.85f;
 
         [SerializeField]
+        [Tooltip("Delay after arrival before spitting the item, so the door open animation can play first.")]
+        private float _spitDelaySeconds = 1f;
+
+        [SerializeField]
         private Transform _spaceEjectionPoint;
 
         [SerializeField]
         private NetworkAnimator _networkAnimator;
 
         private readonly List<PendingArrival> _pendingArrivals = new();
+        private readonly List<PendingArrival> _pendingSpits = new();
 
         public GameObject GameObject => gameObject;
 
@@ -48,8 +55,42 @@ namespace SS3D.Systems.Furniture
 
         private void Update()
         {
-            // Grace / eject is server-authoritative; clients never populate _pendingArrivals.
-            if (!InstanceFinder.IsServer || !IsMainOutlet || _pendingArrivals.Count == 0)
+            if (!InstanceFinder.IsServer)
+            {
+                return;
+            }
+
+            TickPendingSpits();
+            TickGraceWindow();
+        }
+
+        private void TickPendingSpits()
+        {
+            if (_pendingSpits.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = _pendingSpits.Count - 1; i >= 0; i--)
+            {
+                PendingArrival pending = _pendingSpits[i];
+                pending.RemainingSeconds -= Time.deltaTime;
+
+                if (pending.RemainingSeconds > 0f)
+                {
+                    _pendingSpits[i] = pending;
+                    continue;
+                }
+
+                _pendingSpits.RemoveAt(i);
+                FinishArrival(pending.Item);
+            }
+        }
+
+        private void TickGraceWindow()
+        {
+            // Grace / eject is server-authoritative; only the main outlet schedules these.
+            if (!IsMainOutlet || _pendingArrivals.Count == 0)
             {
                 return;
             }
@@ -80,8 +121,29 @@ namespace SS3D.Systems.Furniture
                 return;
             }
 
-            item.Unfreeze();
+            // Stay frozen inside the outlet until spit delay elapses so the doors can open first.
+            item.transform.position = transform.position;
             PlayOpenAnimation();
+            _pendingSpits.Add(new PendingArrival(item, _spitDelaySeconds));
+        }
+
+        private void FinishArrival(Item item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if (SubSystems.TryGet(out DisposalSubSystem disposalSubSystem))
+            {
+                disposalSubSystem.RevealItem(item);
+            }
+            else
+            {
+                item.SetVisibility(true);
+            }
+
+            item.Unfreeze();
             SpitItemOut(item);
 
             // Main outlet: schedule space-eject / Cargo sweep after the grace window.

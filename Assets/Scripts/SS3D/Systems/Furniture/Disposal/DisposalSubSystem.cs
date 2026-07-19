@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Logging;
@@ -18,6 +19,10 @@ namespace SS3D.Systems.Furniture.Disposal
     /// </summary>
     public sealed class DisposalSubSystem : NetworkSubSystem
     {
+        [SerializeField]
+        [Tooltip("When on, items stay visible while riding pipes (useful for debugging routes). Off hides them until spit/spill — opaque pipes make mid-transit meshes look wrong.")]
+        private bool _debugShowTransitItems;
+
         private DisposalNetworkRegistry _registry;
         private DisposalPipeObserver _observer;
         private TileMap _map;
@@ -121,10 +126,12 @@ namespace SS3D.Systems.Furniture.Disposal
         {
             if (capsule.Destination is DisposalOutlet outlet)
             {
+                // Stay hidden through the outlet spit delay; FinishArrival reveals.
                 outlet.OnItemArrived(capsule.Item);
                 return;
             }
 
+            RevealItem(capsule.Item);
             capsule.Item.Unfreeze();
         }
 
@@ -184,9 +191,37 @@ namespace SS3D.Systems.Furniture.Disposal
             }
 
             item.Freeze();
+            SetTransitVisibility(item, visible: _debugShowTransitItems);
             DisposalCapsule capsule = new(item, destination, networkId, path);
             _activeCapsules.Add(capsule);
             return true;
+        }
+
+        /// <summary>
+        /// Makes a transit item visible again (outlet spit, pipe-cut spill, or failed destination).
+        /// </summary>
+        public void RevealItem(Item item)
+        {
+            SetTransitVisibility(item, visible: true);
+        }
+
+        private void SetTransitVisibility(Item item, bool visible)
+        {
+            if (item == null || item.NetworkObject == null)
+            {
+                return;
+            }
+
+            ObserversSetItemVisibility(item.NetworkObject, visible);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversSetItemVisibility(NetworkObject itemObject, bool visible)
+        {
+            if (itemObject != null && itemObject.TryGetComponent(out Item item))
+            {
+                item.SetVisibility(visible);
+            }
         }
 
         private static bool TryResolveDestination(DisposalNetworkRecord network, Department destinationTag, out IDisposalElement destination)
@@ -249,6 +284,7 @@ namespace SS3D.Systems.Furniture.Disposal
                 if (capsule.Item == null)
                     continue;
 
+                RevealItem(capsule.Item);
                 capsule.Item.Unfreeze();
                 capsule.Item.transform.position = spillPosition;
             }
