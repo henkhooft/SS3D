@@ -115,6 +115,7 @@ namespace SS3D.Systems.Combat.Editor
                 so.FindProperty("_profile.BurnDamage").floatValue = profile.BurnDamage;
                 so.FindProperty("_profile.WindupSeconds").floatValue = profile.WindupSeconds;
                 so.FindProperty("_profile.RecoverySeconds").floatValue = profile.RecoverySeconds;
+                so.FindProperty("_profile.StaminaCost").floatValue = profile.StaminaCost;
                 so.FindProperty("_profile.CanSever").boolValue = profile.CanSever;
                 so.ApplyModifiedPropertiesWithoutUndo();
 

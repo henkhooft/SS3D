@@ -79,8 +79,9 @@ namespace SS3D.Interactions
         public virtual bool Update(InteractionEvent interactionEvent, InteractionReference reference)
         {
             if (HasStarted
-                && interactionEvent.Source.GetRootSource() is IGameObjectProvider provider
-                && !InteractionExtensions.CharacterMoveCheck(_startPosition, provider.GameObject.transform.position))
+                && !InteractionExtensions.CharacterMoveCheck(
+                    _startPosition,
+                    ResolveMoveCheckPosition(interactionEvent)))
             {
                 interactionEvent.Source.CancelInteraction(reference);
                 return true;
@@ -128,12 +129,23 @@ namespace SS3D.Interactions
         /// <param name="interactionEvent">The interaction event</param>
         protected abstract void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference);
 
-        protected void CaptureStartPosition(InteractionEvent interactionEvent)
+        /// <summary>
+        /// World position used for cancel-on-move. Override when the source transform is a moving bone
+        /// (e.g. hand during a swing anim) so the character root is checked instead.
+        /// </summary>
+        protected virtual Vector3 ResolveMoveCheckPosition(InteractionEvent interactionEvent)
         {
             if (interactionEvent.Source.GetRootSource() is IGameObjectProvider provider)
             {
-                _startPosition = provider.GameObject.transform.position;
+                return provider.GameObject.transform.position;
             }
+
+            return _startPosition;
+        }
+
+        protected void CaptureStartPosition(InteractionEvent interactionEvent)
+        {
+            _startPosition = ResolveMoveCheckPosition(interactionEvent);
         }
 
         protected void StartCounter()

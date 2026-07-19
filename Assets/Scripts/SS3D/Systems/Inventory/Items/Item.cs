@@ -15,6 +15,8 @@ using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
+using SS3D.Systems.Entities;
+using SS3D.Systems.Health;
 using SS3D.Systems.Selection;
 using System.Linq;
 using UnityEngine;
@@ -362,12 +364,25 @@ namespace SS3D.Systems.Inventory.Items
             }
 
             var improvisedHit = new MeleeHitInteraction(MeleeWeaponProfile.Improvised);
+            if (!improvisedHit.CanStartSwing(this))
+            {
+                return;
+            }
+
             foreach (IInteractionTarget target in targets)
             {
-                if (improvisedHit.CanInteract(new InteractionEvent(this, target)))
+                if (target is not IGameObjectProvider provider)
                 {
-                    interactions.Add(new InteractionEntry(target, improvisedHit));
+                    continue;
                 }
+
+                Entity entity = provider.GameObject.GetComponentInParent<Entity>();
+                if (entity == null || entity.GetComponentInChildren<HumanHealthController>() == null)
+                {
+                    continue;
+                }
+
+                interactions.Add(new InteractionEntry(target, improvisedHit));
             }
         }
 

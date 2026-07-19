@@ -106,7 +106,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
 | Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
 | Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md) |
-| Combat | [combat](systems/combat.md) | partial | Phase 0–1 unified melee (fists + improvised + tools); zone reticle chip on Main HUD; stance/swing via [entities](systems/entities.md); disarm/ranged/armor deferred |
+| Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, connect-frame zone hit; reticle on Main HUD; disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |

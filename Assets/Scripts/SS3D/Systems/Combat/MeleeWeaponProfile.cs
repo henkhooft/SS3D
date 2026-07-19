@@ -13,6 +13,7 @@ namespace SS3D.Systems.Combat
         public float BurnDamage;
         public float WindupSeconds;
         public float RecoverySeconds;
+        public float StaminaCost;
         public bool CanSever;
 
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
@@ -23,6 +24,7 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.25f,
             RecoverySeconds = 0.35f,
+            StaminaCost = 8f,
             CanSever = false,
         };
 
@@ -33,6 +35,7 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
             RecoverySeconds = 0.4f,
+            StaminaCost = 10f,
             CanSever = false,
         };
 
@@ -42,6 +45,7 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.35f,
             RecoverySeconds = 0.5f,
+            StaminaCost = 12f,
             CanSever = false,
         };
 
@@ -51,6 +55,7 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
             RecoverySeconds = 0.45f,
+            StaminaCost = 11f,
             CanSever = true,
         };
 
@@ -60,6 +65,7 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.2f,
             RecoverySeconds = 0.35f,
+            StaminaCost = 9f,
             CanSever = true,
         };
     }

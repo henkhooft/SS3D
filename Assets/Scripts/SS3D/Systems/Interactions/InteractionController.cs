@@ -13,6 +13,7 @@ using SS3D.Systems.Inputs;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
@@ -52,6 +53,9 @@ namespace SS3D.Systems.Interactions
         private IInteractionSource _clientActiveSource;
         private InteractionReference _serverActiveReference;
         private IInteractionSource _serverActiveSource;
+
+        private Vector3 _meleeAimPoint;
+        private bool _hasMeleeAimPoint;
 
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
@@ -98,6 +102,7 @@ namespace SS3D.Systems.Interactions
             }
 
             RefreshActiveInteractionTracking();
+            TrySyncMeleeAimDuringSwing();
         }
 
         private void LateUpdate()
@@ -189,6 +194,12 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            // Harm primary always commits a melee swing; connect resolves the hit separately.
+            if (CurrentIntent == IntentType.Harm && TryRunMeleeSwingPrimary())
+            {
+                return;
+            }
+
             List<InteractionEntry> viableInteractions = FilterRadialInteractions(
                 GetViableInteractionsFromSelection(out InteractionEvent interactionEvent));
 
@@ -206,10 +217,112 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            TryPlayMeleeSwingTelegraph(interaction.Interaction);
             InteractionOptimisticFeedback.TryBeginDelayed(interaction.Interaction, interactionEvent);
             InteractionOutlineView.TryBeginPending(interaction.Interaction, interactionEvent);
             CmdRunInteraction(networkTarget, interactionEvent.Point, interaction.Id.GenericName, interaction.Id.TargetComponentIndex);
+        }
+
+        /// <summary>
+        /// Starts windup/swing/recovery for Harm primary regardless of hover target.
+        /// Damage (if any) is applied at connect from synced aim.
+        /// </summary>
+        [Client]
+        private bool TryRunMeleeSwingPrimary()
+        {
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                return false;
+            }
+
+            if (!hit.CanStartSwing(source))
+            {
+                return false;
+            }
+
+            InteractionEvent swingEvent = new(source, null);
+            TryPlayMeleeSwingTelegraph(hit);
+            InteractionOptimisticFeedback.TryBeginDelayed(hit, swingEvent);
+            TrySyncMeleeAimToServer();
+            CmdRunMeleeSwing();
+            return true;
+        }
+
+        [ServerRpc]
+        private void CmdRunMeleeSwing()
+        {
+            if (CurrentIntent != IntentType.Harm)
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!hit.CanStartSwing(source))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            InteractionEvent swingEvent = new(source, null);
+            InteractionReference reference = source.Interact(swingEvent, hit);
+            TrackActiveInteraction(source, reference, hit);
+            RpcExecuteMeleeSwing(reference.Id);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcExecuteMeleeSwing(int referenceId)
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                return;
+            }
+
+            InteractionEvent swingEvent = new(source, null);
+            source.ClientInteract(swingEvent, hit, new InteractionReference(referenceId));
+            _clientActiveSource = source;
+            _clientActiveReferenceId = referenceId;
+            TrySyncMeleeAimToServer();
+        }
+
+        [ServerOrClient]
+        private bool TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source)
+        {
+            hit = null;
+            source = GetActiveInteractionSource();
+            if (source == null)
+            {
+                return false;
+            }
+
+            MeleeWeaponProfile profile = ResolveMeleeProfile(source);
+            hit = new MeleeHitInteraction(profile);
+            return true;
+        }
+
+        [ServerOrClient]
+        private static MeleeWeaponProfile ResolveMeleeProfile(IInteractionSource source)
+        {
+            if (source is Item item)
+            {
+                if (item.TryGetComponent(out MeleeWeaponItemExtension dedicated))
+                {
+                    return dedicated.Profile;
+                }
+
+                return MeleeWeaponProfile.Improvised;
+            }
+
+            return MeleeWeaponProfile.Fists;
         }
 
         [Client]
@@ -1070,6 +1183,7 @@ namespace SS3D.Systems.Interactions
         {
             _serverActiveReference = null;
             _serverActiveSource = null;
+            ClearMeleeAimPoint();
         }
 
         private void ClearClientActiveInteractionTracking()
@@ -1097,12 +1211,86 @@ namespace SS3D.Systems.Interactions
             }
         }
 
+        /// <summary>
+        /// Client mouse aim point for the active melee swing (connect resolves from this, not stance SyncVars).
+        /// </summary>
+        [Server]
+        public bool TryGetMeleeAimPoint(out Vector3 aimPoint)
+        {
+            aimPoint = _meleeAimPoint;
+            return _hasMeleeAimPoint;
+        }
+
+        [Server]
+        public void ClearMeleeAimPoint()
+        {
+            _hasMeleeAimPoint = false;
+            _meleeAimPoint = default;
+        }
+
+        private void TrySyncMeleeAimDuringSwing()
+        {
+            if (_clientActiveReferenceId < 0 || CurrentIntent != IntentType.Harm)
+            {
+                return;
+            }
+
+            TrySyncMeleeAimToServer();
+        }
+
+        private void TrySyncMeleeAimToServer()
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidController humanoid))
+            {
+                return;
+            }
+
+            if (!humanoid.TryGetCombatAim(out _, out _, out Vector3 aimPoint))
+            {
+                return;
+            }
+
+            CmdSyncMeleeAim(aimPoint);
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        private void CmdSyncMeleeAim(Vector3 aimPoint)
+        {
+            _meleeAimPoint = aimPoint;
+            _hasMeleeAimPoint = true;
+        }
+
         [TargetRpc]
         private void TargetRejectInteraction(NetworkConnection connection)
         {
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
+        }
+
+        /// <summary>
+        /// Server → owning client: melee connect applied damage. HUD pulses red; whiffs stay silent.
+        /// </summary>
+        [Server]
+        public void ServerNotifyMeleeConnectHit()
+        {
+            if (Owner == null)
+            {
+                return;
+            }
+
+            TargetNotifyMeleeConnectHit(Owner);
+        }
+
+        [TargetRpc]
+        private void TargetNotifyMeleeConnectHit(NetworkConnection connection)
+        {
+            MeleeConnectFeedback.NotifyLocalConnectHitLanded();
         }
 
         private bool TryValidateGameplayGates(IInteraction interaction, InteractionEvent interactionEvent)

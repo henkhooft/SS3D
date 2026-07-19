@@ -85,6 +85,9 @@ namespace SS3D.UI.MainHud
         private bool _machineUiOpen;
         private bool _subscribedToMachineUi;
         private MachineInterfaceSubSystem _machineUi;
+        private float _connectHitPulseUntil;
+
+        private const float ConnectHitPulseSeconds = 0.22f;
 
         protected override void OnAwake()
         {
@@ -103,6 +106,7 @@ namespace SS3D.UI.MainHud
 
             BuildView();
             InputInterface.RegisterDocument(_document);
+            MeleeConnectFeedback.LocalConnectHitLanded += HandleMeleeConnectHitLanded;
 
             // Subscribe in OnAwake (same as PlayerCameraSubSystem): on pure clients the mind sync
             // often fires LocalPlayerObjectChanged before SubSystem OnStart would run.
@@ -186,6 +190,7 @@ namespace SS3D.UI.MainHud
 
         protected override void OnDestroyed()
         {
+            MeleeConnectFeedback.LocalConnectHitLanded -= HandleMeleeConnectHitLanded;
             UnsubscribeMachineUi();
             UnbindLocalPlayer();
             _view?.Detach();
@@ -244,7 +249,12 @@ namespace SS3D.UI.MainHud
             Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
             ZoneReticleAimState aimState = ZoneReticleAimState.Idle;
             string zoneLabel = string.Empty;
-            bool hitting = IsMeleeHitActive();
+
+            // Connect-hit pulse overrides hover color briefly; whiffs never fire this.
+            if (Time.time < _connectHitPulseUntil)
+            {
+                aimState = ZoneReticleAimState.Hit;
+            }
 
             // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
             // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
@@ -256,10 +266,9 @@ namespace SS3D.UI.MainHud
                 if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _, out Vector3 hitPoint))
                 {
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
-                    if (IsHoveredZoneInRange(hitPoint))
+                    if (aimState != ZoneReticleAimState.Hit && IsHoveredZoneInRange(hitPoint))
                     {
-                        // Red only while windup/recovery on a valid in-range zone — not empty air.
-                        aimState = hitting ? ZoneReticleAimState.Hit : ZoneReticleAimState.Valid;
+                        aimState = ZoneReticleAimState.Valid;
                     }
                 }
             }
@@ -267,21 +276,9 @@ namespace SS3D.UI.MainHud
             _view.SetZoneReticle(screenPosition, aimState, zoneLabel);
         }
 
-        private bool IsMeleeHitActive()
+        private void HandleMeleeConnectHitLanded()
         {
-            Hand hand = _hands?.SelectedHand;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            if (hand.TryGetComponent(out MeleeRecoveryTracker recovery) && recovery.IsRecovering)
-            {
-                return true;
-            }
-
-            // Windup: client optimistic loading bar on the hand while DelayedInteraction runs.
-            return InteractionOptimisticFeedback.TryAdoptExisting(hand.transform, out _);
+            _connectHitPulseUntil = Time.time + ConnectHitPulseSeconds;
         }
 
         private bool IsHoveredZoneInRange(Vector3 worldPoint)

@@ -113,18 +113,17 @@ Delete condemned code and restore a clean interaction primary-click path:
 
 Single primary path per [combat.md](../design/combat.md) §2:
 
-- **Harm + valid zone in contact range → windup → hit → recovery.** Help-intent click does
-  not swing.
-- Call `HumanoidCombatController.RequestAttack` so the visible telegraph matches mechanical
+- **Harm click always swings** (windup → connect → recovery + stamina), even with no
+  collider under the reticle. Help-intent click does not swing.
+- At **connect**, resolve zone from synced aim → `ApplyDamage` if in range; misses still
+  pay recovery. Call `HumanoidCombatController.RequestAttack` so the telegraph matches
   `WindupSeconds` / `RecoverySeconds`.
 - **Fists** + **improvised fallback** for any held item (low base profile) + dedicated
   profiles a step above for crowbar (and 1–2 tools).
-- Zone resolve via existing `ZoneTargetResolver.TryResolveCombatZone` →
-  `HumanHealthController.ApplyDamage`.
 - Interim lethality toward combat.md §4 (“a handful of solid hits”) — **final numbers wait
   on armor (Phase 5)**.
 - HUD zone-label chip ([main-hud.md](../design/main-hud.md) §6) shipped on Main HUD
-  (`ZoneTargetReticle` + `TryResolveHoverZone`); melee still resolves zones server-side.
+  (`ZoneTargetReticle` + `TryResolveHoverZone`).
 
 ### Phase 2 — Disarm and grab
 
@@ -194,3 +193,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
   `SS3D/Combat/Setup Melee Prefabs` for PrefabUtility re-wiring. Lethality interim until armor.
 - **2026-07-19 (test dummy):** Admin console `spawndummy` → `EntitySubSystem.ServerSpawnCombatDummy`
   (mindless Human + `CombatDummyBootstrap`). See [systems/combat.md](../architecture/systems/combat.md) Testing.
+- **2026-07-20 (connect damage fix):** Swings ran but never damaged — (1) cancel-on-move used the
+  hand bone so swing anim aborted windup before `StartDelayed`; (2) connect resolved from
+  stance `AimYaw`/`AimPitch`, which stay stale outside combat stance. Fix: melee move-check
+  uses entity root; owner syncs mouse aim via `CmdSyncMeleeAim` for connect resolve.

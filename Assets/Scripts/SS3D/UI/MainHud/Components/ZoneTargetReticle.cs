@@ -9,13 +9,13 @@ namespace SS3D.UI.MainHud.Components
         Idle = 0,
         /// <summary>Zone under cursor and in melee range — blue.</summary>
         Valid = 1,
-        /// <summary>Melee windup or recovery while aimed at a valid in-range zone — red.</summary>
+        /// <summary>Transient pulse at connect only when damage landed — red.</summary>
         Hit = 2,
     }
 
     /// <summary>
     /// Corner-bracket aim reticle + terminal zone label (main-hud §6). Harm intent only.
-    /// Grey idle, blue valid target, red while hitting.
+    /// Grey idle, blue valid target, red connect-hit pulse (whiffs stay silent).
     /// </summary>
     public sealed class ZoneTargetReticle
     {

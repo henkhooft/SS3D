@@ -5,16 +5,18 @@ using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
-using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Stamina;
 using UnityEngine;
 
 namespace SS3D.Systems.Combat.Interactions
 {
     /// <summary>
-    /// Harm-intent melee: windup → zone damage → recovery. Swing telegraph is played by
-    /// <see cref="SS3D.Systems.Interactions.InteractionController"/> via <see cref="HumanoidCombatController.RequestAttack"/>.
+    /// Harm-intent melee: click always starts windup → connect → recovery (and stamina cost).
+    /// Zone damage is resolved only at the connect frame from current synced aim — not at click.
     /// </summary>
     public sealed class MeleeHitInteraction : DelayedInteraction, IInteractionTierProvider, ITargetedInteraction, IIntentRestrictedInteraction
     {
@@ -34,40 +36,47 @@ namespace SS3D.Systems.Combat.Interactions
 
         public int Priority => 100;
 
-        public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Targeted;
+        /// <summary>Instant so Harm primary always runs the swing without arming.</summary>
+        public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Instant;
 
         public override string GetName(InteractionEvent interactionEvent) => "Hit";
 
         public override string GetGenericName() => "Hit";
 
+        /// <summary>
+        /// Radial/armed targeting still requires a living zone under the cursor.
+        /// Primary Harm click bypasses discovery and always swings (see InteractionController).
+        /// </summary>
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
+            if (!CanStartSwing(originEvent.Source))
+            {
+                return false;
+            }
+
             InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
-            HumanHealthController health = ResolveHealth(combined);
-            return CanInteract(combined)
-                && health != null
+            HumanHealthController health = ResolveHealth(combined.Target);
+            return health != null
                 && ZoneTargetResolver.TryResolveCombatZone(combined, health, out _);
         }
 
+        /// <summary>
+        /// Start/continue gates only — no target or range. Connect resolves what (if anything) is hit.
+        /// </summary>
         public override bool CanInteract(InteractionEvent interactionEvent)
         {
-            Hand hand = ResolveHand(interactionEvent.Source);
+            return CanStartSwing(interactionEvent?.Source);
+        }
+
+        public bool CanStartSwing(IInteractionSource source)
+        {
+            Hand hand = ResolveHand(source);
             if (hand == null)
             {
                 return false;
             }
 
-            if (GetRecoveryTracker(hand)?.IsRecovering == true)
-            {
-                return false;
-            }
-
-            if (ResolveHealth(interactionEvent) == null)
-            {
-                return false;
-            }
-
-            return InteractionExtensions.RangeCheck(interactionEvent);
+            return GetRecoveryTracker(hand)?.IsRecovering != true;
         }
 
         [Server]
@@ -75,33 +84,129 @@ namespace SS3D.Systems.Combat.Interactions
         {
             CaptureStartPosition(interactionEvent);
             StartCounter();
+            TryConsumeSwingStamina(interactionEvent.Source);
             return true;
         }
 
         protected override void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference)
         {
-            HumanHealthController health = ResolveHealth(interactionEvent);
-            if (health == null)
-            {
-                return;
-            }
-
-            if (!ZoneTargetResolver.TryResolveCombatZone(interactionEvent, health, out BodyZone zone))
-            {
-                return;
-            }
-
-            health.ApplyDamage(zone, _profile.ToDamagePacket());
-
             Hand hand = ResolveHand(interactionEvent.Source);
+            bool landed = false;
+            if (hand != null
+                && TryResolveConnectHit(hand, out HumanHealthController health, out BodyZone zone))
+            {
+                health.ApplyDamage(zone, _profile.ToDamagePacket());
+                landed = true;
+            }
+
             if (hand != null)
             {
                 GetOrCreateRecoveryTracker(hand).BeginRecovery(_profile.RecoverySeconds);
+                InteractionController controller = hand.GetComponentInParent<InteractionController>();
+                controller?.ClearMeleeAimPoint();
+                if (landed)
+                {
+                    controller?.ServerNotifyMeleeConnectHit();
+                }
             }
         }
 
         public override void Cancel(InteractionEvent interactionEvent, InteractionReference reference)
         {
+        }
+
+        /// <summary>
+        /// Hands animate during the swing — cancel-on-move must use the entity root, not the hand bone.
+        /// </summary>
+        protected override Vector3 ResolveMoveCheckPosition(InteractionEvent interactionEvent)
+        {
+            Hand hand = ResolveHand(interactionEvent.Source);
+            if (hand != null)
+            {
+                Entity entity = hand.GetComponentInParent<Entity>();
+                if (entity != null)
+                {
+                    return entity.transform.position;
+                }
+            }
+
+            return base.ResolveMoveCheckPosition(interactionEvent);
+        }
+
+        private static bool TryResolveConnectHit(Hand hand, out HumanHealthController health, out BodyZone zone)
+        {
+            health = null;
+            zone = BodyZone.Chest;
+
+            if (!TryBuildConnectAimRay(hand, out Ray aimRay))
+            {
+                return false;
+            }
+
+            if (!ZoneTargetResolver.TryResolveHoverZone(aimRay, out zone, out health, out Vector3 hitPoint))
+            {
+                return false;
+            }
+
+            return hand.GetInteractionRange().IsInRange(hand.InteractionOrigin, hitPoint);
+        }
+
+        private static bool TryBuildConnectAimRay(Hand hand, out Ray aimRay)
+        {
+            aimRay = default;
+            Vector3 origin = hand.InteractionOrigin;
+
+            // Prefer client-synced mouse aim (works outside combat stance). Fall back to body AimYaw/Pitch.
+            InteractionController controller = hand.GetComponentInParent<InteractionController>();
+            if (controller != null && controller.TryGetMeleeAimPoint(out Vector3 aimPoint))
+            {
+                Vector3 toAim = aimPoint - origin;
+                if (toAim.sqrMagnitude >= 0.0001f)
+                {
+                    aimRay = new Ray(origin, toAim.normalized);
+                    return true;
+                }
+            }
+
+            HumanoidBodyStateMachine body = hand.GetComponentInParent<HumanoidBodyStateMachine>();
+            if (body == null)
+            {
+                return false;
+            }
+
+            Vector3 direction = AimDirectionFromYawPitch(body.AimYaw, body.AimPitch);
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return false;
+            }
+
+            aimRay = new Ray(origin, direction.normalized);
+            return true;
+        }
+
+        private static Vector3 AimDirectionFromYawPitch(float yawDegrees, float pitchDegrees)
+        {
+            float yaw = yawDegrees * Mathf.Deg2Rad;
+            float pitch = pitchDegrees * Mathf.Deg2Rad;
+            float cosPitch = Mathf.Cos(pitch);
+            return new Vector3(
+                Mathf.Sin(yaw) * cosPitch,
+                Mathf.Sin(pitch),
+                Mathf.Cos(yaw) * cosPitch);
+        }
+
+        private void TryConsumeSwingStamina(IInteractionSource source)
+        {
+            if (_profile.StaminaCost <= 0f)
+            {
+                return;
+            }
+
+            Hand hand = ResolveHand(source);
+            StaminaController stamina = hand != null
+                ? hand.GetComponentInParent<StaminaController>()
+                : null;
+            stamina?.ServerDepleteStamina(_profile.StaminaCost);
         }
 
         private static Hand ResolveHand(IInteractionSource source)
@@ -111,17 +216,17 @@ namespace SS3D.Systems.Combat.Interactions
                 return null;
             }
 
-            if (source.GetRootSource() is Hand hand)
+            if (source.GetRootSource() is Hand rootHand)
             {
-                return hand;
+                return rootHand;
             }
 
             return source.GetComponentInTree<Hand>();
         }
 
-        private static HumanHealthController ResolveHealth(InteractionEvent interactionEvent)
+        private static HumanHealthController ResolveHealth(IInteractionTarget target)
         {
-            if (interactionEvent.Target is not IGameObjectProvider targetBehaviour)
+            if (target is not IGameObjectProvider targetBehaviour)
             {
                 return null;
             }
