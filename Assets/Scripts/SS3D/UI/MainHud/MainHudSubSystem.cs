@@ -256,23 +256,12 @@ namespace SS3D.UI.MainHud
                 if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _, out Vector3 hitPoint))
                 {
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
-                    if (hitting)
+                    if (IsHoveredZoneInRange(hitPoint))
                     {
-                        aimState = ZoneReticleAimState.Hit;
-                    }
-                    else if (IsHoveredZoneInRange(hitPoint))
-                    {
-                        aimState = ZoneReticleAimState.Valid;
+                        // Red only while windup/recovery on a valid in-range zone — not empty air.
+                        aimState = hitting ? ZoneReticleAimState.Hit : ZoneReticleAimState.Valid;
                     }
                 }
-                else if (hitting)
-                {
-                    aimState = ZoneReticleAimState.Hit;
-                }
-            }
-            else if (hitting)
-            {
-                aimState = ZoneReticleAimState.Hit;
             }
 
             _view.SetZoneReticle(screenPosition, aimState, zoneLabel);

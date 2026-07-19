@@ -42,7 +42,7 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 
 1. Host Play Mode as admin, console: `spawndummy` — mindless Human ~2m ahead (controls frozen).
 2. Harm intent, LMB limbs — windup + swing + zone damage. Help must not Hit.
-3. Harm intent — corner-bracket reticle: grey idle, blue in-range zone + label, red during hit windup/recovery. Help: no reticle. Optional health debug `H`.
+3. Harm intent — corner-bracket reticle: grey idle, blue in-range zone + label, red only during a valid in-range hit windup/recovery. Help: no reticle. Optional health debug `H`.
 
 ## Pitfalls
 

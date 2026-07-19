@@ -9,7 +9,7 @@ namespace SS3D.UI.MainHud.Components
         Idle = 0,
         /// <summary>Zone under cursor and in melee range — blue.</summary>
         Valid = 1,
-        /// <summary>Melee windup or recovery in progress — red.</summary>
+        /// <summary>Melee windup or recovery while aimed at a valid in-range zone — red.</summary>
         Hit = 2,
     }
 
