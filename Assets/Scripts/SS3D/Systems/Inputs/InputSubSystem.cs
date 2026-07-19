@@ -123,7 +123,6 @@ namespace SS3D.Systems.Inputs
 
             InputAction consoleOpen = Inputs.Console.Open;
             InputAction tileToggle = Inputs.TileCreator.ToggleMenu;
-            InputAction sendChat = Inputs.Other.SendChatMessage;
 
             return new Dictionary<InputContext, InputContextDefinition>
             {
@@ -150,15 +149,11 @@ namespace SS3D.Systems.Inputs
                     new[] { console },
                     System.Array.Empty<InputAction>()),
 
-                // Generic text field focused: everything off.
+                // Text field focused (local-speech compose, future feed fields): everything off;
+                // Enter/Escape handled by UITK KeyDownEvent, not Input System actions.
                 [InputContext.TextEntry] = new InputContextDefinition(
                     System.Array.Empty<InputActionMap>(),
                     System.Array.Empty<InputAction>()),
-
-                // Local-speech / chat compose: typing goes to the field; Enter sends, Escape cancels.
-                [InputContext.ChatEntry] = new InputContextDefinition(
-                    System.Array.Empty<InputActionMap>(),
-                    new[] { sendChat, _uiCancel }),
             };
         }
 

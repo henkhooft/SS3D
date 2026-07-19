@@ -14,7 +14,7 @@ namespace SS3D.Systems.Inputs
 
         /// <param name="context">
         /// Which text-entry context to hold. Defaults to <see cref="InputContext.TextEntry"/>
-        /// (all input off); chat uses <see cref="InputContext.ChatEntry"/> to keep Enter live.
+        /// (all Input System actions off; Enter/Escape via UITK when needed).
         /// </param>
         public InputTextEntryScope(InputContext context = InputContext.TextEntry)
         {

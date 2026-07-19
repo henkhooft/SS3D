@@ -112,7 +112,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | stub | Player subsystem and input routing |
-| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose draft; condemned always-on chat window; audio/camera controllers |
+| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose; always-on chat UI Phase 0 purged (headless ChatSubSystem); audio/camera controllers |
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending; path catalog; Dual Kawase blur + dim; DOTween bring-up/dismiss |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays; health drives dying/blood/oxy/concussion/unconscious + hit flash; `SetUiBackdropBlur` for machine UI; atmos temp/fire deferred; F2 debug Canvas condemned |
 | ID / access | [id-access](systems/id-access.md) | partial | Crew records, credential checks, doors, machine UI gates, dev console helpers |
