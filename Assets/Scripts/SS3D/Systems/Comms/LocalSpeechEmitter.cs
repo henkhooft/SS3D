@@ -43,6 +43,9 @@ namespace SS3D.Systems.Comms
         /// </summary>
         public void ServerBroadcastSpeech(SpeechEvent speechEvent)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log($"[CommsDebug] ServerBroadcastSpeech entered on {gameObject.name}. IsServer={IsServer}");
+
             if (!IsServer)
             {
                 return;
@@ -54,6 +57,9 @@ namespace SS3D.Systems.Comms
         [ObserversRpc]
         private void RpcReceiveSpeech(SpeechEvent speechEvent)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused. Should print on every observing client.
+            Debug.Log($"[CommsDebug] RpcReceiveSpeech received on {gameObject.name}: \"{speechEvent.Text}\"");
+
             SubSystems.Get<CommsSubSystem>().NotifyLocalSpeechReceived(_entity, speechEvent);
         }
     }

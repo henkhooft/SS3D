@@ -29,8 +29,13 @@ namespace SS3D.Systems.Comms
         /// </summary>
         public void HandleSpeakRequest(LocalSpeechEmitter emitter, string text)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log($"[CommsDebug] HandleSpeakRequest entered. IsServer={IsServer}, IsClient={IsClient}, IsHost={IsHost}, IsOffline={IsOffline}");
+
             if (!IsServer)
             {
+                // TEMP DIAGNOSTIC - remove once F3 root-caused.
+                Debug.Log("[CommsDebug] HandleSpeakRequest aborting: !IsServer.");
                 return;
             }
 
@@ -51,6 +56,9 @@ namespace SS3D.Systems.Comms
                 ServerTimestamp = Time.time,
             };
 
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log("[CommsDebug] HandleSpeakRequest calling emitter.ServerBroadcastSpeech.");
+
             emitter.ServerBroadcastSpeech(speechEvent);
         }
 
@@ -59,6 +67,9 @@ namespace SS3D.Systems.Comms
         /// </summary>
         public void NotifyLocalSpeechReceived(Entity speaker, SpeechEvent speechEvent)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log($"[CommsDebug] NotifyLocalSpeechReceived on {gameObject.name}. Subscriber present: {OnLocalSpeechReceived != null}");
+
             OnLocalSpeechReceived?.Invoke(speaker, speechEvent);
         }
     }

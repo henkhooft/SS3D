@@ -112,6 +112,9 @@ namespace SS3D.Systems.Comms
 
         private void HandleSpeechReceived(Entity speaker, SpeechEvent speechEvent)
         {
+            // TEMP DIAGNOSTIC - remove once F3 root-caused.
+            Debug.Log($"[CommsDebug] LocalSpeechBubbleController.HandleSpeechReceived: speaker={(speaker == null ? "null" : speaker.name)}, localViewer={(_localViewer == null ? "null" : _localViewer.name)}");
+
             if (speaker == null)
             {
                 return;
