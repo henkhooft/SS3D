@@ -49,6 +49,7 @@ Structural Discover/source-list debt: [interactions-framework](interactions-fram
 
 - **Outline on every hover while holding an item:** `Item.CreateSourceInteractions` always discovers `Drop` with a null target. Outline evaluation must run `InteractionPipeline.FilterForOutline` (keep only `Target != null`) before treating Discover as "available."
 - **Outline on every hover with empty hands:** obsolete `Craft` on hands used to discover `OpenCraftingMenu` for every target. Holding an item switches the source to the item (no `Craft`), so the bug only showed empty-handed. Do not extend crafting — purge per [crafting](crafting.md); until then discover must stay gated.
+- **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 
 ## Cancellation
 

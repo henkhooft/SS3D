@@ -545,7 +545,7 @@ namespace SS3D.Systems.Interactions
             List<InteractionEntry> viableInteractions = GetViableInteractionsFromTarget(targetGameObject, point, out InteractionEvent interactionEvent);
             InteractionIdentifier id = new(genericName, targetComponentIndex);
 
-            if (!InteractionEntry.TryResolve(viableInteractions, id, out InteractionEntry interaction))
+            if (!TryResolveDispatchedInteraction(viableInteractions, id, out InteractionEntry interaction))
             {
                 Log.Error(this, "Failed to resolve interaction {genericName} at target index {targetIndex} on {target}",
                     Logs.Generic, genericName, targetComponentIndex, targetGameObject);
@@ -589,7 +589,7 @@ namespace SS3D.Systems.Interactions
                 List<InteractionEntry> viableInteractions = GetViableInteractionsFromTarget(targetGameObject, point, out InteractionEvent interactionEvent);
                 InteractionIdentifier id = new(genericName, targetComponentIndex);
 
-                if (!InteractionEntry.TryResolve(viableInteractions, id, out InteractionEntry interaction))
+                if (!TryResolveDispatchedInteraction(viableInteractions, id, out InteractionEntry interaction))
                 {
                     Log.Warning(this, "Observer failed to resolve interaction {genericName} at target index {targetIndex}",
                         Logs.Generic, genericName, targetComponentIndex);
@@ -651,6 +651,34 @@ namespace SS3D.Systems.Interactions
             interactionEvent = new InteractionEvent(source, targets[0], point, normal);
 
             return InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
+        }
+
+        /// <summary>
+        /// Resolves a client-dispatched interaction. Exact <see cref="InteractionIdentifier"/> match first;
+        /// falls back to generic name when the client hovered a child Selectable (body part) but the RPC
+        /// revalidates against the parent NetworkObject root (different target-component indices).
+        /// </summary>
+        private static bool TryResolveDispatchedInteraction(
+            List<InteractionEntry> viableInteractions,
+            InteractionIdentifier id,
+            out InteractionEntry interaction)
+        {
+            if (InteractionEntry.TryResolve(viableInteractions, id, out interaction))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < viableInteractions.Count; i++)
+            {
+                if (string.Equals(viableInteractions[i].Id.GenericName, id.GenericName, System.StringComparison.Ordinal))
+                {
+                    interaction = viableInteractions[i];
+                    return true;
+                }
+            }
+
+            interaction = default;
+            return false;
         }
 
         [ServerOrClient]

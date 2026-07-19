@@ -50,6 +50,8 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
+- **Hit fails with target index -2 / no damage despite swing bar:** client discovers on a body-part `Selectable` (e.g. `HumanTorso`); server revalidates on the Entity `NetworkObject` root — wire indices diverge. `InteractionController.TryResolveDispatchedInteraction` falls back to generic name. Melee is **raycast zone damage after windup**, not limb physics contact — broken swing anim does not block a resolved Hit.
+- **`spawndummy` needs Administrator** — same bar as `hurt`.
 
 ## Depends on / Used by
 
