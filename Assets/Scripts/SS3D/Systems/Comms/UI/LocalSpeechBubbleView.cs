@@ -209,7 +209,6 @@ namespace SS3D.Systems.Comms.UI
             }
 
             FitDraftChipWidth();
-            ApplyDraftScreenPosition();
         }
 
         /// <summary>
