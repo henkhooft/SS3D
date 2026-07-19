@@ -9,10 +9,11 @@ using UnityEngine.InputSystem;
 namespace SS3D.Systems.Comms
 {
     /// <summary>
-    /// PLACEHOLDER: replace with real compose-input UI (comms.md §5 - T/Enter/Shift+Enter/Ctrl+Enter)
-    /// once that slice lands. Until then, F3 triggers local-chat test lines only (speak / whisper /
-    /// shout / emote) — radio and station announcements live on other UI surfaces and are not
-    /// previewed here. Self-bootstraps at scene load (same pattern as ScreenEffectsDebugMenuView).
+    /// PLACEHOLDER for remaining compose polish (mode pip hints per comms.md §5). T opens the
+    /// real draft chip via LocalSpeechBubbleController + InputSubSystem.OpenLocalSpeechCompose.
+    /// F3 still cycles local-chat test lines (speak / whisper / shout / emote) for presentation
+    /// checks — radio and station announcements live on other UI surfaces. Self-bootstraps at
+    /// scene load (same pattern as ScreenEffectsDebugMenuView).
     /// </summary>
     public sealed class LocalSpeechDebugTrigger : Actor
     {

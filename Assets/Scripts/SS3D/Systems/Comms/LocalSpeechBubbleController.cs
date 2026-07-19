@@ -7,6 +7,7 @@ using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Inputs;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace SS3D.Systems.Comms
@@ -16,6 +17,7 @@ namespace SS3D.Systems.Comms
     /// stacks up to a few lines per speaker with fade + upward drift, and applies mode-specific
     /// visual treatments. Owns its own UIDocument, following RadialInteractionSubSystem's
     /// convention of a dedicated overlay per feature rather than a shared HUD document.
+    /// Also owns local-speech compose (T → draft chip at the head anchor → Enter commits).
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class LocalSpeechBubbleController : Actor
@@ -40,6 +42,7 @@ namespace SS3D.Systems.Comms
         private readonly Dictionary<Entity, List<ActiveSpeech>> _activeSpeeches = new();
         private readonly List<Entity> _shownSpeakers = new();
         private readonly List<Entity> _staleSpeakers = new();
+        private readonly InputTextEntryScope _composeEntry = new(InputContext.ChatEntry);
 
         private LocalSpeechBubbleView _view;
         private VisualElement _attachedRoot;
@@ -47,9 +50,12 @@ namespace SS3D.Systems.Comms
         private CrowdCapRanker _ranker;
         private Entity _localViewer;
         private CommsSubSystem _commsSubSystem;
+        private InputSubSystem _inputSubSystem;
         private float _nextRerankTime;
         private int _overflowCount;
         private bool _overlayReady;
+        private bool _isComposing;
+        private SpeechMode _composeMode = SpeechMode.Speak;
 
         protected override void OnAwake()
         {
@@ -70,7 +76,8 @@ namespace SS3D.Systems.Comms
             // Subtitles never pick (see LocalSpeechBubbleView - the whole overlay is
             // PickingMode.Ignore), so this never changes IsPointerOverInterface's answer, but
             // every runtime UIDocument owner registers per the input-arbitration convention -
-            // see Documents/architecture/2026-07_input-arbitration.md.
+            // see Documents/architecture/2026-07_input-arbitration.md. The draft TextField does
+            // pick, so RegisterDocument also keeps world clicks clear while composing.
             InputInterface.RegisterDocument(_document);
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
@@ -86,6 +93,14 @@ namespace SS3D.Systems.Comms
                 _commsSubSystem.OnLocalSpeechReceived += HandleSpeechReceived;
             }
 
+            _inputSubSystem = SubSystems.Get<InputSubSystem>();
+            if (_inputSubSystem != null)
+            {
+                _inputSubSystem.OpenLocalSpeechCompose.performed += HandleOpenCompose;
+                _inputSubSystem.Inputs.Other.SendChatMessage.performed += HandleSendCompose;
+                _inputSubSystem.UiCancel.performed += HandleCancelCompose;
+            }
+
             EnsureOverlay();
         }
 
@@ -98,6 +113,15 @@ namespace SS3D.Systems.Comms
                 _commsSubSystem.OnLocalSpeechReceived -= HandleSpeechReceived;
             }
 
+            if (_inputSubSystem != null)
+            {
+                _inputSubSystem.OpenLocalSpeechCompose.performed -= HandleOpenCompose;
+                _inputSubSystem.Inputs.Other.SendChatMessage.performed -= HandleSendCompose;
+                _inputSubSystem.UiCancel.performed -= HandleCancelCompose;
+            }
+
+            EndCompose(clearText: true);
+
             // UIDocument destroys/rebuilds its visual tree across disable/enable. Drop the
             // cached view so EnsureOverlay re-attaches to the live root instead of driving
             // orphaned VisualElements (panel=null, NaN layout, invisible bubbles).
@@ -107,6 +131,7 @@ namespace SS3D.Systems.Comms
         protected override void OnDestroyed()
         {
             InputInterface.UnregisterDocument(_document);
+            EndCompose(clearText: true);
             TearDownOverlay();
             base.OnDestroyed();
         }
@@ -114,6 +139,146 @@ namespace SS3D.Systems.Comms
         private void HandlePlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
             _localViewer = e.PlayerHasObject ? e.PlayerObject.GetComponent<Entity>() : null;
+            if (_localViewer == null)
+            {
+                EndCompose(clearText: true);
+            }
+        }
+
+        private void HandleOpenCompose(InputAction.CallbackContext context)
+        {
+            if (!context.performed || _isComposing)
+            {
+                return;
+            }
+
+            BeginCompose();
+        }
+
+        private void HandleSendCompose(InputAction.CallbackContext context)
+        {
+            if (!context.performed || !_isComposing)
+            {
+                return;
+            }
+
+            CommitCompose();
+        }
+
+        private void HandleCancelCompose(InputAction.CallbackContext context)
+        {
+            if (!context.performed || !_isComposing)
+            {
+                return;
+            }
+
+            EndCompose(clearText: true);
+        }
+
+        private void BeginCompose()
+        {
+            if (_localViewer == null || !_localViewer.TryGetComponent(out LocalSpeechEmitter _))
+            {
+                return;
+            }
+
+            if (!EnsureOverlay() || _view?.DraftField == null)
+            {
+                return;
+            }
+
+            _isComposing = true;
+            _composeMode = SpeechMode.Speak;
+            _composeEntry.Enter();
+            _view.DraftField.value = string.Empty;
+            _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown);
+            _view.FocusDraft();
+        }
+
+        private void CommitCompose()
+        {
+            if (!_isComposing || _view?.DraftField == null)
+            {
+                return;
+            }
+
+            string text = _view.DraftField.value?.Trim() ?? string.Empty;
+            SpeechMode mode = ResolveComposeModeFromModifiers();
+
+            if (string.IsNullOrEmpty(text))
+            {
+                EndCompose(clearText: true);
+                return;
+            }
+
+            if (_localViewer != null && _localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
+            {
+                emitter.CmdSpeak(text, mode);
+            }
+
+            EndCompose(clearText: true);
+        }
+
+        private void EndCompose(bool clearText)
+        {
+            if (_view?.DraftField != null)
+            {
+                _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown);
+                if (clearText)
+                {
+                    _view.DraftField.value = string.Empty;
+                }
+            }
+
+            _view?.HideDraft();
+            _composeEntry.Exit();
+            _isComposing = false;
+            _composeMode = SpeechMode.Speak;
+        }
+
+        private void HandleDraftKeyDown(KeyDownEvent evt)
+        {
+            if (!_isComposing)
+            {
+                return;
+            }
+
+            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            {
+                evt.StopImmediatePropagation();
+                evt.PreventDefault();
+                CommitCompose();
+                return;
+            }
+
+            if (evt.keyCode == KeyCode.Escape)
+            {
+                evt.StopImmediatePropagation();
+                evt.PreventDefault();
+                EndCompose(clearText: true);
+            }
+        }
+
+        private static SpeechMode ResolveComposeModeFromModifiers()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return SpeechMode.Speak;
+            }
+
+            // Ctrl+Enter = shout takes priority over Shift+Enter = whisper (comms.md §5).
+            if (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed)
+            {
+                return SpeechMode.Shout;
+            }
+
+            if (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed)
+            {
+                return SpeechMode.Whisper;
+            }
+
+            return SpeechMode.Speak;
         }
 
         private void HandleSpeechReceived(Entity speaker, SpeechEvent speechEvent)
@@ -151,7 +316,12 @@ namespace SS3D.Systems.Comms
 
         private void Update()
         {
-            if (_localViewer == null || _activeSpeeches.Count == 0)
+            if (_isComposing)
+            {
+                _composeMode = PeekComposeModeFromModifiers();
+            }
+
+            if (_localViewer == null || (_activeSpeeches.Count == 0 && !_isComposing))
             {
                 RenderFrame();
                 return;
@@ -166,6 +336,12 @@ namespace SS3D.Systems.Comms
             }
 
             RenderFrame();
+        }
+
+        private static SpeechMode PeekComposeModeFromModifiers()
+        {
+            // Live preview while holding modifiers (same priority as commit).
+            return ResolveComposeModeFromModifiers();
         }
 
         private void RemoveExpiredEntries()
@@ -247,6 +423,20 @@ namespace SS3D.Systems.Comms
             Camera camera = Camera.main;
             int shownCount = 0;
             float now = Time.time;
+            Vector3? localDraftScreen = null;
+
+            if (camera != null && _localViewer != null && _localViewer.ViewPoint != null)
+            {
+                Vector3 localAnchor = _localViewer.ViewPoint.transform.position + Vector3.up * BubbleWorldHeightOffset;
+                Vector3 localScreen = camera.WorldToScreenPoint(localAnchor);
+                bool localOnScreen = localScreen.z > 0f
+                    && localScreen.x >= 0f && localScreen.x <= Screen.width
+                    && localScreen.y >= 0f && localScreen.y <= Screen.height;
+                if (localOnScreen)
+                {
+                    localDraftScreen = localScreen;
+                }
+            }
 
             if (camera != null)
             {
@@ -272,18 +462,23 @@ namespace SS3D.Systems.Comms
 
                     string speakerName = ResolveSpeakerName(speaker);
 
+                    // While the local player is drafting, reserve the head slot so existing
+                    // lines lift the same way they will after commit — nothing jumps.
+                    int stackBias = _isComposing && speaker == _localViewer ? 1 : 0;
+
                     // Newest nearest the head; older lines stack upward with per-line drift.
                     for (int fromNewest = 0; fromNewest < stack.Count; fromNewest++)
                     {
                         int index = stack.Count - 1 - fromNewest;
                         ActiveSpeech entry = stack[index];
-                        bool isNewest = fromNewest == 0;
+                        bool isNewest = fromNewest == 0 && stackBias == 0;
+                        int visualAge = fromNewest + stackBias;
 
                         string displayText = FormatDisplayText(entry, entry.CurrentTier, speakerName, isNewest);
                         float age = now - entry.StartTime;
                         float drift = age * _config.DriftPixelsPerSecond;
-                        float stackLift = fromNewest * _config.StackSpacingPixels;
-                        float opacity = ComputeFadeOpacity(entry.ExpiryTime) * StackOpacity(fromNewest);
+                        float stackLift = visualAge * _config.StackSpacingPixels;
+                        float opacity = ComputeFadeOpacity(entry.ExpiryTime) * StackOpacity(visualAge);
                         string nameForChip = ResolveNameLabel(entry.Mode, speakerName, isNewest);
 
                         _view.ShowBubble(
@@ -295,13 +490,23 @@ namespace SS3D.Systems.Comms
                             entry.Mode,
                             entry.CurrentTier,
                             opacity,
-                            fromNewest);
+                            visualAge);
                         shownCount++;
                     }
                 }
             }
 
             _view.HideBubblesFrom(shownCount);
+
+            if (_isComposing && localDraftScreen.HasValue)
+            {
+                string draftName = ResolveSpeakerName(_localViewer);
+                _view.ShowDraft(localDraftScreen.Value.x, localDraftScreen.Value.y, draftName, _composeMode);
+            }
+            else if (!_isComposing)
+            {
+                _view.HideDraft();
+            }
 
             if (_overflowCount > 0)
             {

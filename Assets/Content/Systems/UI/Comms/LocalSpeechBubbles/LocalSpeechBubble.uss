@@ -200,3 +200,119 @@
     font-size: 11px;
     color: rgb(113, 124, 127);
 }
+
+/*
+ * Draft compose chip (mock 2a) — same anchor as a finished line.
+ * Dashed outline is painted in C# (UITK has no border-style: dashed).
+ * Text stays dim (secondary) until commit.
+ */
+.comms-draft {
+    translate: -50% 0;
+    max-width: 420px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgba(10, 10, 10, 0.24);
+    border-width: 0;
+    border-radius: 10px;
+    padding: 8px 16px 9px 16px;
+}
+
+.comms-draft__name {
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: rgb(140, 140, 140);
+    -unity-font-style: normal;
+}
+
+.comms-draft__line-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: -6px;
+    flex-shrink: 0;
+}
+
+.comms-draft__field {
+    margin: 0;
+    padding: 0;
+    min-width: 8px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.comms-draft__field > .unity-base-text-field__input {
+    margin: 0;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 0;
+    /* Hide UITK caret — mock paints a separate thin blinking bar. */
+    --unity-cursor-color: rgba(0, 0, 0, 0);
+    cursor-color: rgba(0, 0, 0, 0);
+}
+
+.comms-draft__field .unity-base-text-field__input > TextElement,
+.comms-draft__field Label {
+    margin: 0;
+    padding: 0;
+    font-size: 17px;
+    color: var(--ss3d-text-secondary);
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    -unity-font-style: normal;
+}
+
+.comms-draft__caret {
+    width: 2px;
+    height: 16px;
+    margin-left: 2px;
+    flex-shrink: 0;
+    background-color: rgb(255, 255, 255);
+}
+
+.comms-draft--whisper {
+    background-color: rgba(10, 10, 10, 0.18);
+    border-radius: 8px;
+    padding: 4px 10px;
+    max-width: 300px;
+}
+
+.comms-draft--whisper .comms-draft__field .unity-base-text-field__input > TextElement,
+.comms-draft--whisper .comms-draft__field Label {
+    font-size: 13px;
+    letter-spacing: 1px;
+    -unity-font-style: italic;
+}
+
+.comms-draft--whisper .comms-draft__caret {
+    height: 14px;
+}
+
+.comms-draft--shout {
+    background-color: rgba(10, 10, 10, 0.3);
+    padding: 7px 16px 8px 16px;
+    max-width: 480px;
+    scale: 1.1;
+}
+
+.comms-draft--shout .comms-draft__name {
+    font-size: 14px;
+}
+
+.comms-draft--shout .comms-draft__field .unity-base-text-field__input > TextElement,
+.comms-draft--shout .comms-draft__field Label {
+    font-size: 19px;
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+    color: var(--ss3d-text-secondary);
+}
+
+.comms-draft--shout .comms-draft__caret {
+    height: 18px;
+}

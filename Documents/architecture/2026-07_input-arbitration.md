@@ -52,12 +52,12 @@ released. Definitions live in `InputSubSystem.BuildContexts()`.
 | Context | Priority | Enables |
 |---|---|---|
 | `Global` | 0 | `Other` map; `Console.Open`; `TileCreator.ToggleMenu` |
-| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine` |
+| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine`; `OpenLocalSpeechCompose` |
 | `TileMenu` | 20 | `Movement`, `Camera`, `TileCreator`, `Other`; `Console.Open`; `DetailedExamine` (world interactions/hotkeys dropped) |
 | `MachineUI` | 30 | `Hotkeys`, `Interactions`; `UiCancel` (Escape). `Movement`/`Camera`/`Other` masked so Escape closes the panel instead of toggling the lobby |
 | `Console` | 40 | `Console` map only |
 | `TextEntry` | 50 | nothing (generic field focused; typing goes to the field via uGUI/TMP) |
-| `ChatEntry` | 60 | `Other.SendChatMessage` only (chat field focused, so Enter still submits) |
+| `ChatEntry` | 60 | `Other.SendChatMessage` + `UiCancel` (compose/chat focused: Enter submits, Escape cancels) |
 
 `TileMenu` replaces the old `ToggleCollisions` runtime binding-path matching (including its
 `leftShift`/`rightShift` special case) with an explicit map set.

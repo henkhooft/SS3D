@@ -27,11 +27,28 @@ namespace SS3D.Systems.Comms.UI
         private VisualElement _overflowChip;
         private Label _overflowLabel;
 
+        private VisualElement _draftChip;
+        private Label _draftName;
+        private TextField _draftField;
+        private VisualElement _draftCaret;
+        private IVisualElementScheduledItem _caretBlink;
+        private bool _caretVisible = true;
+
+        private static readonly string[] DraftModeClasses =
+        {
+            "comms-draft--speak",
+            "comms-draft--whisper",
+            "comms-draft--shout",
+        };
+
         private sealed class SubtitleLabels
         {
             public Label Name;
             public Label Line;
         }
+
+        public TextField DraftField => _draftField;
+        public bool IsDraftVisible => _draftChip != null && _draftChip.resolvedStyle.display != DisplayStyle.None;
 
         public LocalSpeechBubbleView(StyleSheet bubbleStyleSheet)
         {
@@ -49,6 +66,8 @@ namespace SS3D.Systems.Comms.UI
                 _overlayRoot.styleSheets.Add(_bubbleStyleSheet);
             }
 
+            BuildDraftChip();
+
             _overflowChip = new VisualElement();
             _overflowChip.AddToClassList("comms-overflow-chip");
             _overflowChip.pickingMode = PickingMode.Ignore;
@@ -64,12 +83,20 @@ namespace SS3D.Systems.Comms.UI
 
         public void Detach()
         {
+            StopCaretBlink();
+
             foreach (VisualElement subtitle in _subtitlePool)
             {
                 subtitle.RemoveFromHierarchy();
             }
 
             _subtitlePool.Clear();
+
+            _draftChip?.RemoveFromHierarchy();
+            _draftChip = null;
+            _draftName = null;
+            _draftField = null;
+            _draftCaret = null;
 
             _overflowChip?.RemoveFromHierarchy();
             _overflowChip = null;
@@ -144,6 +171,277 @@ namespace SS3D.Systems.Comms.UI
             if (_overflowChip != null)
             {
                 _overflowChip.style.display = DisplayStyle.None;
+            }
+        }
+
+        /// <summary>
+        /// Positions the live draft chip at the same screen anchor a finished line would use.
+        /// </summary>
+        public void ShowDraft(float left, float bottom, string speakerName, SpeechMode mode)
+        {
+            if (_draftChip == null)
+            {
+                return;
+            }
+
+            _draftChip.style.display = DisplayStyle.Flex;
+            _draftChip.style.left = left;
+            _draftChip.style.bottom = bottom;
+
+            string nameText = string.IsNullOrEmpty(speakerName) ? string.Empty : speakerName.ToUpperInvariant();
+            _draftName.text = nameText;
+            _draftName.style.display = string.IsNullOrEmpty(nameText) ? DisplayStyle.None : DisplayStyle.Flex;
+
+            ApplyDraftModeClass(mode);
+            StartCaretBlink();
+        }
+
+        public void HideDraft()
+        {
+            if (_draftChip == null)
+            {
+                return;
+            }
+
+            StopCaretBlink();
+            _draftChip.style.display = DisplayStyle.None;
+            if (_draftField != null)
+            {
+                _draftField.value = string.Empty;
+                _draftField.Blur();
+            }
+        }
+
+        public void FocusDraft()
+        {
+            if (_draftField == null)
+            {
+                return;
+            }
+
+            // Delay past the T press that opened compose so it isn't typed into the field.
+            _draftField.schedule.Execute(() =>
+            {
+                if (_draftField == null)
+                {
+                    return;
+                }
+
+                _draftField.value = string.Empty;
+                _draftField.Focus();
+                _draftField.SelectRange(0, 0);
+            }).ExecuteLater(1);
+        }
+
+        private void BuildDraftChip()
+        {
+            _draftChip = new VisualElement();
+            _draftChip.AddToClassList("comms-draft");
+            _draftChip.AddToClassList("comms-draft--speak");
+            _draftChip.pickingMode = PickingMode.Position;
+            _draftChip.style.position = Position.Absolute;
+            _draftChip.style.display = DisplayStyle.None;
+            _draftChip.style.flexGrow = 0;
+            _draftChip.style.flexShrink = 0;
+            _draftChip.generateVisualContent += PaintDashedOutline;
+
+            _draftName = new Label();
+            _draftName.AddToClassList("font-titling");
+            _draftName.AddToClassList("comms-draft__name");
+            _draftName.pickingMode = PickingMode.Ignore;
+            _draftChip.Add(_draftName);
+
+            VisualElement lineRow = new();
+            lineRow.AddToClassList("comms-draft__line-row");
+            lineRow.pickingMode = PickingMode.Ignore;
+
+            _draftField = new TextField { multiline = false, maxLength = 256, value = string.Empty };
+            _draftField.AddToClassList("font-body");
+            _draftField.AddToClassList("comms-draft__field");
+            // Built-in caret hidden via USS (--unity-cursor-color); mock uses _draftCaret.
+            lineRow.Add(_draftField);
+
+            _draftCaret = new VisualElement();
+            _draftCaret.AddToClassList("comms-draft__caret");
+            _draftCaret.pickingMode = PickingMode.Ignore;
+            lineRow.Add(_draftCaret);
+
+            _draftChip.Add(lineRow);
+            _overlayRoot.Add(_draftChip);
+        }
+
+        private void ApplyDraftModeClass(SpeechMode mode)
+        {
+            for (int i = 0; i < DraftModeClasses.Length; i++)
+            {
+                _draftChip.EnableInClassList(DraftModeClasses[i], false);
+            }
+
+            string modeClass = mode switch
+            {
+                SpeechMode.Whisper => "comms-draft--whisper",
+                SpeechMode.Shout => "comms-draft--shout",
+                _ => "comms-draft--speak",
+            };
+
+            _draftChip.EnableInClassList(modeClass, true);
+            _draftChip.MarkDirtyRepaint();
+        }
+
+        private void StartCaretBlink()
+        {
+            StopCaretBlink();
+            _caretVisible = true;
+            if (_draftCaret != null)
+            {
+                _draftCaret.style.opacity = 1f;
+            }
+
+            _caretBlink = _draftChip?.schedule.Execute(() =>
+            {
+                _caretVisible = !_caretVisible;
+                if (_draftCaret != null)
+                {
+                    _draftCaret.style.opacity = _caretVisible ? 1f : 0f;
+                }
+            }).Every(500);
+        }
+
+        private void StopCaretBlink()
+        {
+            _caretBlink?.Pause();
+            _caretBlink = null;
+            _caretVisible = true;
+            if (_draftCaret != null)
+            {
+                _draftCaret.style.opacity = 1f;
+            }
+        }
+
+        /// <summary>
+        /// UITK has no border-style:dashed — paint mock 2a's live/unsent outline.
+        /// </summary>
+        private static void PaintDashedOutline(MeshGenerationContext context)
+        {
+            VisualElement element = context.visualElement;
+            Rect rect = element.contentRect;
+            if (rect.width < 2f || rect.height < 2f)
+            {
+                return;
+            }
+
+            float radius = element.resolvedStyle.borderTopLeftRadius;
+            Color color = ResolveDraftOutlineColor(element);
+
+            Painter2D painter = context.painter2D;
+            painter.strokeColor = color;
+            painter.lineWidth = 1f;
+            painter.lineCap = LineCap.Butt;
+
+            const float dash = 4f;
+            const float gap = 3f;
+            DrawDashedRoundedRect(painter, rect, radius, dash, gap);
+        }
+
+        private static Color ResolveDraftOutlineColor(VisualElement element)
+        {
+            if (element.ClassListContains("comms-draft--whisper"))
+            {
+                return new Color(0.45f, 0.45f, 0.45f, 0.85f);
+            }
+
+            // --ss3d-border-strong
+            return new Color(0.24f, 0.25f, 0.29f, 1f);
+        }
+
+        private static void DrawDashedRoundedRect(
+            Painter2D painter, Rect rect, float radius, float dash, float gap)
+        {
+            radius = Mathf.Clamp(radius, 0f, Mathf.Min(rect.width, rect.height) * 0.5f);
+            float left = rect.xMin + 0.5f;
+            float right = rect.xMax - 0.5f;
+            float top = rect.yMin + 0.5f;
+            float bottom = rect.yMax - 0.5f;
+
+            // Flattened perimeter: top, right, bottom, left (straight runs), plus four corner arcs.
+            StrokeDashedLine(painter, new Vector2(left + radius, top), new Vector2(right - radius, top), dash, gap);
+            StrokeDashedArc(painter, new Vector2(right - radius, top + radius), radius, -90f, 0f, dash, gap);
+            StrokeDashedLine(painter, new Vector2(right, top + radius), new Vector2(right, bottom - radius), dash, gap);
+            StrokeDashedArc(painter, new Vector2(right - radius, bottom - radius), radius, 0f, 90f, dash, gap);
+            StrokeDashedLine(painter, new Vector2(right - radius, bottom), new Vector2(left + radius, bottom), dash, gap);
+            StrokeDashedArc(painter, new Vector2(left + radius, bottom - radius), radius, 90f, 180f, dash, gap);
+            StrokeDashedLine(painter, new Vector2(left, bottom - radius), new Vector2(left, top + radius), dash, gap);
+            StrokeDashedArc(painter, new Vector2(left + radius, top + radius), radius, 180f, 270f, dash, gap);
+        }
+
+        private static void StrokeDashedLine(
+            Painter2D painter, Vector2 from, Vector2 to, float dash, float gap)
+        {
+            Vector2 delta = to - from;
+            float length = delta.magnitude;
+            if (length < 0.01f)
+            {
+                return;
+            }
+
+            Vector2 dir = delta / length;
+            float cursor = 0f;
+            bool draw = true;
+            while (cursor < length)
+            {
+                float segment = draw ? dash : gap;
+                float next = Mathf.Min(cursor + segment, length);
+                if (draw && next > cursor)
+                {
+                    painter.BeginPath();
+                    painter.MoveTo(from + dir * cursor);
+                    painter.LineTo(from + dir * next);
+                    painter.Stroke();
+                }
+
+                cursor = next;
+                draw = !draw;
+            }
+        }
+
+        private static void StrokeDashedArc(
+            Painter2D painter, Vector2 center, float radius, float startDeg, float endDeg, float dash, float gap)
+        {
+            if (radius < 0.5f)
+            {
+                return;
+            }
+
+            float startRad = startDeg * Mathf.Deg2Rad;
+            float endRad = endDeg * Mathf.Deg2Rad;
+            float arcLen = Mathf.Abs(endRad - startRad) * radius;
+            float cursor = 0f;
+            bool draw = true;
+            float sign = endRad >= startRad ? 1f : -1f;
+
+            while (cursor < arcLen)
+            {
+                float segment = draw ? dash : gap;
+                float next = Mathf.Min(cursor + segment, arcLen);
+                if (draw && next > cursor)
+                {
+                    float a0 = startRad + sign * (cursor / radius);
+                    float a1 = startRad + sign * (next / radius);
+                    painter.BeginPath();
+                    painter.MoveTo(center + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * radius);
+                    const int steps = 4;
+                    for (int i = 1; i <= steps; i++)
+                    {
+                        float t = i / (float)steps;
+                        float a = Mathf.Lerp(a0, a1, t);
+                        painter.LineTo(center + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius);
+                    }
+
+                    painter.Stroke();
+                }
+
+                cursor = next;
+                draw = !draw;
             }
         }
 

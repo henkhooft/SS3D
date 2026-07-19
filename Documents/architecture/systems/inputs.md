@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: 56e4cd004 — 2026-07-17
+> Verified: 486cbf7db — 2026-07-19
 
 # Inputs
 
@@ -25,7 +25,7 @@ the context table, and the migration from the old refcount API.
 
 - `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.cs` — owns `Controls`, builds the context table,
   exposes `PushContext` / `SuppressMap` / `SuppressAction` / `SuppressBinding` and the code-defined
-  `UiCancel` / `DetailedExamine` actions.
+  `UiCancel` / `DetailedExamine` / `OpenLocalSpeechCompose` actions.
 - `Assets/Scripts/SS3D/Systems/Inputs/InputArbiter.cs` — pure resolution engine (unit tested).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputContext.cs` — the context enum (value = priority).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputInterface.cs` — unified pointer query + document registry.

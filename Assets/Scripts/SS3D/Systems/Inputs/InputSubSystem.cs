@@ -27,9 +27,13 @@ namespace SS3D.Systems.Inputs
         /// <summary>Held while inspecting (Shift). Bound in code, arbitrated by the Gameplay context.</summary>
         public InputAction DetailedExamine => _detailedExamine;
 
+        /// <summary>Opens local-speech compose (T). Bound in code, arbitrated by the Gameplay context.</summary>
+        public InputAction OpenLocalSpeechCompose => _openLocalSpeechCompose;
+
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
+        private InputAction _openLocalSpeechCompose;
 
         private InputArbiter _arbiter;
 
@@ -87,6 +91,8 @@ namespace SS3D.Systems.Inputs
             _detailedExamine = _systemMap.AddAction("DetailedExamine", InputActionType.Button);
             _detailedExamine.AddBinding("<Keyboard>/leftShift");
             _detailedExamine.AddBinding("<Keyboard>/rightShift");
+            _openLocalSpeechCompose = _systemMap.AddAction(
+                "OpenLocalSpeechCompose", InputActionType.Button, "<Keyboard>/t");
         }
 
         private List<InputAction> CollectAllActions()
@@ -128,7 +134,7 @@ namespace SS3D.Systems.Inputs
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
-                    new[] { consoleOpen, tileToggle, _detailedExamine }),
+                    new[] { consoleOpen, tileToggle, _detailedExamine, _openLocalSpeechCompose }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(
@@ -149,10 +155,10 @@ namespace SS3D.Systems.Inputs
                     System.Array.Empty<InputActionMap>(),
                     System.Array.Empty<InputAction>()),
 
-                // Chat field focused: everything off except sending the message being typed.
+                // Local-speech / chat compose: typing goes to the field; Enter sends, Escape cancels.
                 [InputContext.ChatEntry] = new InputContextDefinition(
                     System.Array.Empty<InputActionMap>(),
-                    new[] { sendChat }),
+                    new[] { sendChat, _uiCancel }),
             };
         }
 
