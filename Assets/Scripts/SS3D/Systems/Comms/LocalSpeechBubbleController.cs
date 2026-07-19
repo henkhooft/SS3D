@@ -196,7 +196,15 @@ namespace SS3D.Systems.Comms
 
         private void RenderFrame()
         {
-            if (!EnsureOverlay())
+            bool overlayReady = EnsureOverlay();
+
+            if (_activeSpeeches.Count > 0)
+            {
+                // TEMP DIAGNOSTIC - remove once F3 root-caused.
+                Debug.Log($"[CommsDebug] RenderFrame: overlayReady={overlayReady}, cameraMain={(Camera.main == null ? "null" : Camera.main.name)}, shownSpeakers={_shownSpeakers.Count}, activeSpeeches={_activeSpeeches.Count}, document={(_document == null ? "null" : $"enabled={_document.enabled}, activeAndEnabled={_document.isActiveAndEnabled}, root={(_document.rootVisualElement == null ? "null" : "ok")}")}");
+            }
+
+            if (!overlayReady)
             {
                 return;
             }
@@ -211,6 +219,8 @@ namespace SS3D.Systems.Comms
                     Entity speaker = _shownSpeakers[i];
                     if (speaker == null || speaker.ViewPoint == null || !_activeSpeeches.TryGetValue(speaker, out ActiveSpeech entry))
                     {
+                        // TEMP DIAGNOSTIC - remove once F3 root-caused.
+                        Debug.Log($"[CommsDebug] RenderFrame skipping shown speaker index {i}: speaker={(speaker == null ? "null" : speaker.name)}, viewPoint={(speaker != null && speaker.ViewPoint != null ? "ok" : "null")}, hasEntry={speaker != null && _activeSpeeches.ContainsKey(speaker)}");
                         continue;
                     }
 
@@ -220,6 +230,9 @@ namespace SS3D.Systems.Comms
                     bool onScreen = screenPoint.z > 0f
                         && screenPoint.x >= 0f && screenPoint.x <= Screen.width
                         && screenPoint.y >= 0f && screenPoint.y <= Screen.height;
+
+                    // TEMP DIAGNOSTIC - remove once F3 root-caused.
+                    Debug.Log($"[CommsDebug] RenderFrame speaker={speaker.name}, tier={entry.CurrentTier}, anchor={anchor}, screenPoint={screenPoint}, onScreen={onScreen}, screenSize=({Screen.width}x{Screen.height})");
 
                     if (!onScreen)
                     {
