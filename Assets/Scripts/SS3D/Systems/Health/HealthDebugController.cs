@@ -55,6 +55,13 @@ namespace SS3D.Systems.Health
 
         private void Update()
         {
+            // Keyboard fallback when Other/Toggle Health Debug is unbound — must respect text capture
+            // (compose / focused fields) the same way arbitrated actions do via TextEntry.
+            if (InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
             if (_toggleAction == null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
             {
                 _open = !_open;
@@ -62,6 +69,20 @@ namespace SS3D.Systems.Health
                 {
                     RefreshTargets();
                 }
+            }
+        }
+
+        private void OnToggle(InputAction.CallbackContext context)
+        {
+            if (!context.performed || InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
+            _open = !_open;
+            if (_open)
+            {
+                RefreshTargets();
             }
         }
 
@@ -77,15 +98,6 @@ namespace SS3D.Systems.Health
                 _panelRect,
                 DrawPanel,
                 "Health Debug (H)");
-        }
-
-        private void OnToggle(InputAction.CallbackContext context)
-        {
-            _open = !_open;
-            if (_open)
-            {
-                RefreshTargets();
-            }
         }
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)

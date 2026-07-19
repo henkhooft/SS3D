@@ -52,12 +52,11 @@ released. Definitions live in `InputSubSystem.BuildContexts()`.
 | Context | Priority | Enables |
 |---|---|---|
 | `Global` | 0 | `Other` map; `Console.Open`; `TileCreator.ToggleMenu` |
-| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine` |
+| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine`; `OpenLocalSpeechCompose` |
 | `TileMenu` | 20 | `Movement`, `Camera`, `TileCreator`, `Other`; `Console.Open`; `DetailedExamine` (world interactions/hotkeys dropped) |
 | `MachineUI` | 30 | `Hotkeys`, `Interactions`; `UiCancel` (Escape). `Movement`/`Camera`/`Other` masked so Escape closes the panel instead of toggling the lobby |
 | `Console` | 40 | `Console` map only |
-| `TextEntry` | 50 | nothing (generic field focused; typing goes to the field via uGUI/TMP) |
-| `ChatEntry` | 60 | `Other.SendChatMessage` only (chat field focused, so Enter still submits) |
+| `TextEntry` | 50 | nothing (field focused; typing via UITK/uGUI; Enter/Escape via UITK for local-speech compose) |
 
 `TileMenu` replaces the old `ToggleCollisions` runtime binding-path matching (including its
 `leftShift`/`rightShift` special case) with an explicit map set.
@@ -65,7 +64,7 @@ released. Definitions live in `InputSubSystem.BuildContexts()`.
 ### Suppressions
 
 - Radial menu holds a `<Mouse>/leftButton` suppression while open (`RadialInteractionSubSystem`).
-- Pointer-over-UI holds `<Mouse>/scroll/y` (chat, crafting, tile menu) and `TileCreator.Place` (tile
+- Pointer-over-UI holds `<Mouse>/scroll/y` (crafting, tile menu) and `TileCreator.Place` (tile
   menu) suppressions, released on pointer exit or component disable.
 - Camera transition holds a `Camera` map suppression; the mouse-rotation snap holds a
   `MouseRotation` suppression released by a timeout (both released on disable too).
@@ -82,6 +81,9 @@ Runtime documents register in setup: `RadialInteractionSubSystem`, `ArmedInterac
 
 ## Legacy input removed
 
+- Always-on chat UI Phase 0 removed `InputContext.ChatEntry`. Local-speech compose uses `TextEntry` +
+  UITK Enter/Escape. `Other/SendChatMessage` may still exist in `Controls.inputed` / generated
+  `Controls.cs` but is unused (dormant until the asset is regenerated).
 - `MachineInterfaceSubSystem` no longer polls `Input.GetKeyDown(KeyCode.Escape)`; it subscribes to the
   arbitrated `UiCancel` action while the `MachineUI` context is active.
 - `ExamineUI` no longer polls `Input.GetKey(Shift)`; it reads the arbitrated `DetailedExamine` action.
@@ -102,7 +104,7 @@ without changing callers.
 |---|---|
 | `ToggleActionMap(map, true/false)` | `PushContext(...)` / dispose handle |
 | `ToggleAllActions(false)` (generic field) | `PushContext(InputContext.TextEntry)` / dispose (via `InputTextEntryScope`) |
-| `ToggleAllActions(false, exclude SendChatMessage)` (chat) | `PushContext(InputContext.ChatEntry)` / dispose (via `InputTextEntryScope`) |
+| `ToggleAllActions(false, exclude SendChatMessage)` (chat) | Removed with always-on chat UI Phase 0; local-speech compose uses `TextEntry` + UITK Enter |
 | `ToggleAction(a, false)` | `SuppressAction(a)` / dispose |
 | `ToggleBinding(path, false)` | `SuppressBinding(path)` / dispose |
 | `ToggleCollisions(...)` | context map set (removed) |
