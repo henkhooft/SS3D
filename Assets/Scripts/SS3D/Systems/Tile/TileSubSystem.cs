@@ -7,6 +7,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Data.Management;
 using SS3D.Data.Persistence;
 using SS3D.Logging;
+using SS3D.Systems.Area;
 using SS3D.Systems.Persistence;
 using System;
 using System.Collections;
@@ -41,6 +42,9 @@ namespace SS3D.Systems.Tile
 
         public string SavePath => savePath;
 
+        // Placed objects spawned on a remote client before the client-local map was created.
+        private readonly List<PlacedTileObject> _pendingClientPlaced = new();
+
 
         [ServerOrClient]
         protected override void OnStart()
@@ -57,12 +61,16 @@ namespace SS3D.Systems.Tile
             Load();
         }
 
-        [Server]
+        [ServerOrClient]
         private async void Setup()
         {
 	        Loader = GetComponent<TileResourceLoader>();
 
-	        // Server only loads the map
+	        // Both peers hold a map instance. On a remote client it starts empty and is populated by
+	        // replicated placed objects; only the server loads persisted tiles from disk.
+	        CreateMap(unnamedMapName);
+	        FlushPendingClientPlaced();
+
 	        if (!IsServer)
 	        {
 		        return;
@@ -72,8 +80,6 @@ namespace SS3D.Systems.Tile
             {
                 persistenceSubSystem.LoadServerMeta();
             }
-
-	        CreateMap(unnamedMapName);
 
 	        await WaitForResourcesLoad();
 
@@ -110,11 +116,52 @@ namespace SS3D.Systems.Tile
         }
 
         /// <summary>
+        /// Called by a placed tile object once its synced identity is applied on a remote client. Mirrors
+        /// the object into the client-local map, queueing it if the map has not been created yet.
+        /// </summary>
+        public void NotifyClientPlacedObjectStarted(PlacedTileObject placed)
+        {
+            if (placed == null)
+                return;
+
+            if (_currentMap != null)
+                _currentMap.AddClientPlacedObject(placed);
+            else if (!_pendingClientPlaced.Contains(placed))
+                _pendingClientPlaced.Add(placed);
+        }
+
+        /// <summary>
+        /// Called by a placed tile object despawning on a remote client.
+        /// </summary>
+        public void NotifyClientPlacedObjectStopped(PlacedTileObject placed)
+        {
+            if (placed == null)
+                return;
+
+            _pendingClientPlaced.Remove(placed);
+            _currentMap?.RemoveClientPlacedObject(placed);
+        }
+
+        /// <summary>
         /// Notifies the tilemap that a tile cell's runtime state changed (e.g. door open/close).
         /// </summary>
         public void NotifyTileStateChanged(Vector3 worldPosition)
         {
             _currentMap?.NotifyTileStateChanged(worldPosition);
+        }
+
+        private void FlushPendingClientPlaced()
+        {
+            if (_currentMap == null || _pendingClientPlaced.Count == 0)
+                return;
+
+            foreach (PlacedTileObject placed in _pendingClientPlaced)
+            {
+                if (placed != null)
+                    _currentMap.AddClientPlacedObject(placed);
+            }
+
+            _pendingClientPlaced.Clear();
         }
 
         [ServerOrClient]
@@ -221,7 +268,7 @@ namespace SS3D.Systems.Tile
             }
 
 	        SavedTileMap mapSave = LocalStorage.LoadMostRecentObject<SavedTileMap>(legacySavePath);
-            _currentMap.Load(mapSave);
+            LoadLegacyMap(mapSave);
         }
 
         [Server]
@@ -236,7 +283,31 @@ namespace SS3D.Systems.Tile
             }
 
             SavedTileMap mapSave = LocalStorage.LoadObject<SavedTileMap>(legacySavePath + "/" + mapName);
-            _currentMap.Load(mapSave);
+            LoadLegacyMap(mapSave);
+        }
+
+        /// <summary>
+        /// Legacy flat-JSON load path (no PersistenceSubSystem). Still must defer area flood
+        /// until every tile object has been placed.
+        /// </summary>
+        private void LoadLegacyMap(SavedTileMap mapSave)
+        {
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                areaSubSystem.BeginDeferredAreaFlood();
+            }
+
+            try
+            {
+                _currentMap.Load(mapSave);
+            }
+            finally
+            {
+                if (SubSystems.TryGet(out AreaSubSystem areaAfterLoad))
+                {
+                    areaAfterLoad.EndDeferredAreaFlood();
+                }
+            }
         }
 
         [Server]

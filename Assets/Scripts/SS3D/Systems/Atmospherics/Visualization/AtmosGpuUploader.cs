@@ -2,6 +2,7 @@ using SS3D.Rendering.URP;
 using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Tile;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics.Visualization
@@ -37,6 +38,17 @@ namespace SS3D.Systems.Atmospherics.Visualization
         private int _mapId = -1;
         private bool _valid;
 
+        // Cached method-group delegates so Refresh does not allocate closures each tick.
+        private readonly Action<TileCoord, int> _fillCellTexel;
+        private readonly Action<TileCoord, int> _writeFlowTexel;
+        private AtmosSimulation _activeSimulation;
+
+        public AtmosGpuUploader()
+        {
+            _fillCellTexel = FillCellTexel;
+            _writeFlowTexel = WriteFlowTexel;
+        }
+
         public bool IsValid => _valid;
 
         public void Refresh(AtmosSimulation simulation)
@@ -61,28 +73,12 @@ namespace SS3D.Systems.Atmospherics.Visualization
             _atlasWidth = atlasWidth;
             _atlasHeight = atlasHeight;
             _mapId = simulation.MapId;
+            _activeSimulation = simulation;
 
-            simulation.ForEachCell((coord, cellIndex) =>
-            {
-                int texel = GetTexelIndex(coord.Grid.x - minX, coord.Grid.y - minZ);
-                if (texel < 0)
-                    return;
+            simulation.ForEachCell(_fillCellTexel);
+            simulation.ForEachCell(_writeFlowTexel);
 
-                AtmosCellMeta meta = simulation.CellMeta[cellIndex];
-                _pressureScratch[texel] = simulation.GetCellPressure(cellIndex);
-                _temperatureScratch[texel] = meta.Temperature;
-                float simFire = simulation.BurnIntensity.IsCreated
-                    ? simulation.BurnIntensity[cellIndex]
-                    : 0f;
-                float decayedFire = _visualFireScratch[texel] * VisualFireDecayPerTick;
-                float visualFire = Mathf.Max(simFire, decayedFire);
-                _visualFireScratch[texel] = visualFire;
-                _fireScratch[texel] = visualFire;
-                _maskScratch[texel] = AtmosCellVisualEncoding.EncodeMask(meta.State);
-                _compositionScratch[texel] = AtmosCellVisualEncoding.EncodeComposition(simulation.MolesRead, cellIndex);
-            });
-
-            WriteFlowGradients(simulation, minX, minZ);
+            _activeSimulation = null;
             UploadTextures();
             _valid = true;
         }
@@ -115,69 +111,84 @@ namespace SS3D.Systems.Atmospherics.Visualization
             DestroyTexture(ref _flow);
             DestroyTexture(ref _fireIntensity);
             DestroyTexture(ref _mask);
+            _activeSimulation = null;
             _valid = false;
         }
 
         private static bool TryComputeBounds(AtmosSimulation simulation, out int minX, out int minZ, out int maxX, out int maxZ)
         {
-            int localMinX = int.MaxValue;
-            int localMinZ = int.MaxValue;
-            int localMaxX = int.MinValue;
-            int localMaxZ = int.MinValue;
+            minX = int.MaxValue;
+            minZ = int.MaxValue;
+            maxX = int.MinValue;
+            maxZ = int.MinValue;
 
-            simulation.ForEachCoord(coord =>
+            IReadOnlyList<TileChunkRef> chunks = simulation.Chunks;
+            if (chunks == null || chunks.Count == 0)
+                return false;
+
+            for (int i = 0; i < chunks.Count; i++)
             {
-                localMinX = Mathf.Min(localMinX, coord.Grid.x);
-                localMinZ = Mathf.Min(localMinZ, coord.Grid.y);
-                localMaxX = Mathf.Max(localMaxX, coord.Grid.x);
-                localMaxZ = Mathf.Max(localMaxZ, coord.Grid.y);
-            });
+                Vector2Int chunkKey = chunks[i].ChunkKey;
+                int chunkMinX = chunkKey.x * AtmosConstants.ChunkSize;
+                int chunkMinZ = chunkKey.y * AtmosConstants.ChunkSize;
+                int chunkMaxX = chunkMinX + AtmosConstants.ChunkSize - 1;
+                int chunkMaxZ = chunkMinZ + AtmosConstants.ChunkSize - 1;
 
-            minX = localMinX;
-            minZ = localMinZ;
-            maxX = localMaxX;
-            maxZ = localMaxZ;
-            return localMinX != int.MaxValue;
+                if (chunkMinX < minX) minX = chunkMinX;
+                if (chunkMinZ < minZ) minZ = chunkMinZ;
+                if (chunkMaxX > maxX) maxX = chunkMaxX;
+                if (chunkMaxZ > maxZ) maxZ = chunkMaxZ;
+            }
+
+            return true;
         }
 
-        private void WriteFlowGradients(AtmosSimulation simulation, int minX, int minZ)
+        private void FillCellTexel(TileCoord coord, int cellIndex)
         {
-            simulation.ForEachCell((coord, cellIndex) =>
-            {
-                int texel = GetTexelIndex(coord.Grid.x - minX, coord.Grid.y - minZ);
-                if (texel < 0 || _maskScratch[texel] == AtmosCellVisualEncoding.MaskEmpty)
-                    return;
-
-                float pressure = _pressureScratch[texel];
-                float gradientX = SamplePressureOffset(simulation, coord, 1, 0, minX, minZ) - pressure;
-                float gradientZ = SamplePressureOffset(simulation, coord, 0, 1, minX, minZ) - pressure;
-
-                Vector2 gradient = new Vector2(gradientX, gradientZ);
-                if (gradient.sqrMagnitude > 1e-6f)
-                    gradient = gradient.normalized;
-
-                // Pack -1..1 into 0..1 for RG storage; shader unpacks in Phase 2.
-                int flowIndex = texel * 2;
-                _flowScratch[flowIndex] = gradient.x * 0.5f + 0.5f;
-                _flowScratch[flowIndex + 1] = gradient.y * 0.5f + 0.5f;
-            });
-        }
-
-        private float SamplePressureOffset(
-            AtmosSimulation simulation,
-            TileCoord coord,
-            int offsetX,
-            int offsetZ,
-            int minX,
-            int minZ)
-        {
-            var neighbourCoord = new TileCoord(coord.MapId, coord.Grid.x + offsetX, coord.Grid.y + offsetZ);
-            if (!simulation.TryGetCellIndex(neighbourCoord, out int neighbourIndex))
-                return 0f;
-
-            int texel = GetTexelIndex(neighbourCoord.Grid.x - minX, neighbourCoord.Grid.y - minZ);
+            AtmosSimulation simulation = _activeSimulation;
+            int texel = GetTexelIndex(coord.Grid.x - _minTileX, coord.Grid.y - _minTileZ);
             if (texel < 0)
-                return simulation.GetCellPressure(neighbourIndex);
+                return;
+
+            AtmosCellMeta meta = simulation.CellMeta[cellIndex];
+            _pressureScratch[texel] = simulation.GetCellPressure(cellIndex);
+            _temperatureScratch[texel] = meta.Temperature;
+            float simFire = simulation.BurnIntensity.IsCreated
+                ? simulation.BurnIntensity[cellIndex]
+                : 0f;
+            float decayedFire = _visualFireScratch[texel] * VisualFireDecayPerTick;
+            float visualFire = Mathf.Max(simFire, decayedFire);
+            _visualFireScratch[texel] = visualFire;
+            _fireScratch[texel] = visualFire;
+            _maskScratch[texel] = AtmosCellVisualEncoding.EncodeMask(meta.State);
+            _compositionScratch[texel] = AtmosCellVisualEncoding.EncodeComposition(simulation.MolesRead, cellIndex);
+        }
+
+        private void WriteFlowTexel(TileCoord coord, int _)
+        {
+            int texel = GetTexelIndex(coord.Grid.x - _minTileX, coord.Grid.y - _minTileZ);
+            if (texel < 0 || _maskScratch[texel] == AtmosCellVisualEncoding.MaskEmpty)
+                return;
+
+            float pressure = _pressureScratch[texel];
+            float gradientX = SamplePressureOffset(coord.Grid.x, coord.Grid.y, 1, 0) - pressure;
+            float gradientZ = SamplePressureOffset(coord.Grid.x, coord.Grid.y, 0, 1) - pressure;
+
+            Vector2 gradient = new Vector2(gradientX, gradientZ);
+            if (gradient.sqrMagnitude > 1e-6f)
+                gradient = gradient.normalized;
+
+            // Pack -1..1 into 0..1 for RG storage; shader unpacks in Phase 2.
+            int flowIndex = texel * 2;
+            _flowScratch[flowIndex] = gradient.x * 0.5f + 0.5f;
+            _flowScratch[flowIndex + 1] = gradient.y * 0.5f + 0.5f;
+        }
+
+        private float SamplePressureOffset(int tileX, int tileZ, int offsetX, int offsetZ)
+        {
+            int texel = GetTexelIndex(tileX + offsetX - _minTileX, tileZ + offsetZ - _minTileZ);
+            if (texel < 0 || _maskScratch[texel] == AtmosCellVisualEncoding.MaskEmpty)
+                return 0f;
 
             return _pressureScratch[texel];
         }

@@ -4,6 +4,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Data;
 using SS3D.Systems.Entities.Humanoid.Body;
 using System;
+using System.Text;
 using FishNet.Object;
 using UnityEngine;
 
@@ -40,6 +41,7 @@ namespace SS3D.Systems.Entities.Humanoid
         private float _meleeSwingFadeStartsAt;
         private float _upperBodyWeight;
         private float _upperBodyWeightTarget;
+        private bool _posingSuppressed;
 
         private static readonly int AttackSwingState = Animator.StringToHash("Attack Swing");
         /// <summary>Mixamo horizontal swing length (~72 frames at 30fps).</summary>
@@ -61,11 +63,10 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _movementController = GetComponent<HumanoidController>();
             }
-            if (_animator == null)
-            {
-                _animator = GetComponent<Animator>();
-            }
 
+            EnsureAnimator();
+
+            LogMissingAnimatorParametersOnce();
             SubscribeToEvents();
 
             if (_bodyStateMachine != null)
@@ -84,6 +85,98 @@ namespace SS3D.Systems.Entities.Humanoid
             }
         }
 
+        private void EnsureAnimator()
+        {
+            if (_animator == null)
+            {
+                _animator = GetComponent<Animator>();
+            }
+
+            if (_animator == null)
+            {
+                _animator = GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        private void LogMissingAnimatorParametersOnce()
+        {
+            if (_animator == null || _animator.runtimeAnimatorController == null)
+            {
+                UnityEngine.Debug.LogError(
+                    $"[AnimationOrchestrator] No runtimeAnimatorController on '{name}'.",
+                    this);
+                return;
+            }
+
+            AnimatorControllerParameter[] parameters = _animator.parameters;
+            bool Has(int hash)
+            {
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    if (parameters[i].nameHash == hash)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            (string Name, int Hash)[] required =
+            {
+                ("Speed", Animations.Humanoid.MovementSpeed),
+                ("Floating", Animations.Humanoid.Floating),
+                ("LimpSide", Animations.Humanoid.LimpSide),
+                ("IsCrawling", Animations.Humanoid.IsCrawling),
+                ("IsDragging", Animations.Humanoid.IsDragging),
+                ("ArmHold", Animations.Humanoid.ArmHold),
+                ("InjuredArmLeft", Animations.Humanoid.InjuredArmLeft),
+                ("InjuredArmRight", Animations.Humanoid.InjuredArmRight),
+                ("IsSeated", Animations.Humanoid.IsSeated),
+                ("CombatMode", Animations.Humanoid.CombatMode),
+                ("CombatStance", Animations.Humanoid.CombatStance),
+                ("AimYaw", Animations.Humanoid.AimYaw),
+                ("AimPitch", Animations.Humanoid.AimPitch),
+                ("VelX", Animations.Humanoid.VelX),
+                ("VelZ", Animations.Humanoid.VelZ),
+                ("Turn", Animations.Humanoid.Turn),
+            };
+
+            StringBuilder missing = null;
+            foreach ((string Name, int Hash) entry in required)
+            {
+                if (Has(entry.Hash))
+                {
+                    continue;
+                }
+
+                missing ??= new StringBuilder();
+                missing.Append(missing.Length == 0 ? entry.Name : ", " + entry.Name);
+            }
+
+            if (missing == null)
+            {
+                return;
+            }
+
+            StringBuilder present = new StringBuilder();
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (i > 0)
+                {
+                    present.Append(", ");
+                }
+
+                present.Append(parameters[i].name);
+            }
+
+            UnityEngine.Debug.LogError(
+                $"[AnimationOrchestrator] Animator on '{name}' is missing parameters: {missing}. "
+                + $"Controller '{_animator.runtimeAnimatorController.name}' currently has "
+                + $"[{present}]. Run SS3D → Animation → Rebind Humanoid Animator Parameters.",
+                this);
+        }
+
         protected override void OnEnabled()
         {
             base.OnEnabled();
@@ -98,7 +191,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
-            if (_animator == null)
+            // Coimbra UpdateEvent still fires after enabled=false — must guard or walk params keep writing.
+            if (!isActiveAndEnabled || _posingSuppressed || _animator == null || !_animator.enabled)
             {
                 return;
             }
@@ -106,6 +200,21 @@ namespace SS3D.Systems.Entities.Humanoid
             ApplyLocomotionVelocity();
             TickMeleeSwingIk();
             TickUpperBodyWeight();
+        }
+
+        /// <summary>
+        /// Ragdoll/collapse sets this so Coimbra listeners cannot keep driving walk cycles.
+        /// </summary>
+        public void SetPosingSuppressed(bool suppressed)
+        {
+            _posingSuppressed = suppressed;
+            if (suppressed && _animator != null)
+            {
+                _animator.SetFloat(Animations.Humanoid.MovementSpeed, 0f);
+                _animator.SetFloat(Animations.Humanoid.VelX, 0f);
+                _animator.SetFloat(Animations.Humanoid.VelZ, 0f);
+                _animator.enabled = false;
+            }
         }
 
         private void SubscribeToEvents()
@@ -239,6 +348,17 @@ namespace SS3D.Systems.Entities.Humanoid
 
         public void ApplySnapshot(BodyAnimationSnapshot snapshot)
         {
+            EnsureAnimator();
+            if (_posingSuppressed || _animator == null || !_animator.enabled)
+            {
+                return;
+            }
+
+            if (snapshot.State == BodyState.Ragdoll)
+            {
+                return;
+            }
+
             _lastSnapshot = snapshot;
             if (!IsLocalMovementAuthority())
             {
