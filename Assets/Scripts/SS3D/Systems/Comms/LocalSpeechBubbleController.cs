@@ -166,6 +166,7 @@ namespace SS3D.Systems.Comms
             _isComposing = true;
             _composeMode = SpeechMode.Speak;
             _composeEntry.Enter();
+            _view.SetRetainDraftFocus(true);
             _view.DraftField.value = string.Empty;
             // TrickleDown so Enter is caught before multiline TextField treats it as a newline
             // (that was eating the first Enter and requiring a second press to commit).
@@ -200,6 +201,11 @@ namespace SS3D.Systems.Comms
 
         private void EndCompose(bool clearText)
         {
+            if (_view != null)
+            {
+                _view.SetRetainDraftFocus(false);
+            }
+
             if (_view?.DraftField != null)
             {
                 _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);

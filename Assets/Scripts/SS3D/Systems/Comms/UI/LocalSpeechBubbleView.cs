@@ -29,9 +29,11 @@ namespace SS3D.Systems.Comms.UI
 
         private VisualElement _draftChip;
         private Label _draftName;
+        private Label _draftMeasure;
         private TextField _draftField;
         private SpeechMode _draftMode = SpeechMode.Speak;
         private bool _draftShown;
+        private bool _retainDraftFocus;
 
         private static readonly string[] DraftModeClasses =
         {
@@ -97,8 +99,10 @@ namespace SS3D.Systems.Comms.UI
 
             _draftChip = null;
             _draftName = null;
+            _draftMeasure = null;
             _draftField = null;
             _draftShown = false;
+            _retainDraftFocus = false;
 
             _overflowChip?.RemoveFromHierarchy();
             _overflowChip = null;
@@ -211,6 +215,7 @@ namespace SS3D.Systems.Comms.UI
                 return;
             }
 
+            _retainDraftFocus = false;
             _draftShown = false;
             _draftChip.style.display = DisplayStyle.None;
             if (_draftField != null)
@@ -218,6 +223,15 @@ namespace SS3D.Systems.Comms.UI
                 _draftField.value = string.Empty;
                 _draftField.Blur();
             }
+        }
+
+        /// <summary>
+        /// While true, world clicks that blur the field immediately restore focus so TextEntry
+        /// cannot leave the player unable to type or move.
+        /// </summary>
+        public void SetRetainDraftFocus(bool retain)
+        {
+            _retainDraftFocus = retain;
         }
 
         public void FocusDraft()
@@ -230,7 +244,7 @@ namespace SS3D.Systems.Comms.UI
             // Delay past the T press that opened compose so it isn't typed into the field.
             _draftField.schedule.Execute(() =>
             {
-                if (_draftField == null)
+                if (_draftField == null || !_draftShown)
                 {
                     return;
                 }
@@ -260,15 +274,45 @@ namespace SS3D.Systems.Comms.UI
             _draftName.pickingMode = PickingMode.Ignore;
             _draftChip.Add(_draftName);
 
+            // Off-screen measure proxy — TextField.MeasureTextSize returns the *current* laid-out
+            // width once style.width is set, so hug-sizing never updates until a mode/wrap change.
+            _draftMeasure = new Label();
+            _draftMeasure.AddToClassList("font-body");
+            _draftMeasure.AddToClassList("comms-draft__measure");
+            _draftMeasure.pickingMode = PickingMode.Ignore;
+            _draftChip.Add(_draftMeasure);
+
             // Visible TextField — real UITK caret, same wrap budget as finished chips.
             // multiline allows soft wrap; Enter is intercepted (never inserts a newline).
             _draftField = new TextField { multiline = true, maxLength = 256, value = string.Empty };
             _draftField.AddToClassList("font-body");
             _draftField.AddToClassList("comms-draft__field");
             _draftField.RegisterValueChangedCallback(OnDraftValueChanged);
+            _draftField.RegisterCallback<FocusOutEvent>(HandleDraftFocusOut);
             _draftChip.Add(_draftField);
 
             _overlayRoot.Add(_draftChip);
+        }
+
+        private void HandleDraftFocusOut(FocusOutEvent _)
+        {
+            if (!_retainDraftFocus || !_draftShown || _draftField == null)
+            {
+                return;
+            }
+
+            // Defer past the click that stole focus; otherwise Focus() is a no-op.
+            _draftField.schedule.Execute(() =>
+            {
+                if (!_retainDraftFocus || !_draftShown || _draftField == null)
+                {
+                    return;
+                }
+
+                _draftField.Focus();
+                int len = _draftField.value?.Length ?? 0;
+                _draftField.SelectRange(len, len);
+            }).ExecuteLater(0);
         }
 
         private void ApplyDraftModeClass(SpeechMode mode)
@@ -287,12 +331,18 @@ namespace SS3D.Systems.Comms.UI
             };
 
             _draftChip.EnableInClassList(modeClass, true);
-            _draftField.style.unityFontStyleAndWeight = mode switch
+            FontStyle fontStyle = mode switch
             {
                 SpeechMode.Shout => FontStyle.Bold,
                 SpeechMode.Whisper => FontStyle.Italic,
                 _ => FontStyle.Normal,
             };
+            _draftField.style.unityFontStyleAndWeight = fontStyle;
+            if (_draftMeasure != null)
+            {
+                _draftMeasure.style.unityFontStyleAndWeight = fontStyle;
+            }
+
             _draftChip.MarkDirtyRepaint();
             FitDraftChipWidth();
         }
@@ -300,14 +350,17 @@ namespace SS3D.Systems.Comms.UI
         private void OnDraftValueChanged(ChangeEvent<string> _)
         {
             FitDraftChipWidth();
+            // Second pass after Yoga applies the new width (TextField measure is layout-sensitive).
+            _draftField?.schedule.Execute(FitDraftChipWidth).ExecuteLater(0);
         }
 
         /// <summary>
         /// Same hug/wrap rules as finished chips, applied to the draft TextField.
+        /// Measures via an off-screen Label so prior style.width cannot poison the result.
         /// </summary>
         private void FitDraftChipWidth()
         {
-            if (_draftChip == null || _draftField == null)
+            if (_draftChip == null || _draftField == null || _draftMeasure == null)
             {
                 return;
             }
@@ -334,21 +387,22 @@ namespace SS3D.Systems.Comms.UI
                 && !string.IsNullOrEmpty(_draftName.text);
             string nameText = showName ? _draftName.text : string.Empty;
 
-            _draftField.style.maxWidth = maxContent;
             _draftName.style.maxWidth = maxContent;
             _draftChip.style.maxWidth = maxChip;
 
             if (string.IsNullOrEmpty(lineText))
             {
-                // Empty draft: compact chip, caret still visible in the field.
-                _draftField.style.width = 12f;
                 _draftField.style.whiteSpace = WhiteSpace.NoWrap;
+                _draftField.style.width = 12f;
+                _draftField.style.maxWidth = maxContent;
                 _draftChip.style.width = StyleKeyword.Auto;
                 return;
             }
 
-            Vector2 naturalLine = _draftField.MeasureTextSize(
-                lineText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+            _draftMeasure.text = lineText;
+            // Unconstrained horizontal measure (AtMost large), independent of the field's current width.
+            Vector2 naturalLine = _draftMeasure.MeasureTextSize(
+                lineText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined);
 
             float contentWidth;
             if (IsPlausibleTextWidth(lineText, naturalLine.x))
@@ -357,10 +411,15 @@ namespace SS3D.Systems.Comms.UI
             }
             else
             {
-                float fontSize = _draftField.resolvedStyle.fontSize;
+                float fontSize = _draftMeasure.resolvedStyle.fontSize;
                 if (fontSize <= 0f)
                 {
-                    fontSize = 17f;
+                    fontSize = _draftMode switch
+                    {
+                        SpeechMode.Whisper => 13f,
+                        SpeechMode.Shout => 19f,
+                        _ => 17f,
+                    };
                 }
 
                 contentWidth = lineText.Length * fontSize * 0.55f + LetterSpacingExtra(lineText, letterSpacing);
@@ -369,7 +428,7 @@ namespace SS3D.Systems.Comms.UI
             if (showName)
             {
                 Vector2 nameSize = _draftName.MeasureTextSize(
-                    nameText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+                    nameText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined);
                 if (IsPlausibleTextWidth(nameText, nameSize.x))
                 {
                     contentWidth = Mathf.Max(contentWidth, nameSize.x + LetterSpacingExtra(nameText, 1f));
@@ -382,12 +441,14 @@ namespace SS3D.Systems.Comms.UI
                 float fieldWidth = Mathf.Ceil(contentWidth + 4f);
                 _draftField.style.whiteSpace = WhiteSpace.NoWrap;
                 _draftField.style.width = fieldWidth;
+                _draftField.style.maxWidth = maxContent;
                 _draftChip.style.width = StyleKeyword.Auto;
                 return;
             }
 
             _draftField.style.whiteSpace = WhiteSpace.Normal;
             _draftField.style.width = maxContent;
+            _draftField.style.maxWidth = maxContent;
             _draftChip.style.width = maxChip;
         }
 
