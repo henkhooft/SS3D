@@ -207,7 +207,7 @@
  * Text stays dim (secondary) until commit.
  */
 .comms-draft {
-    translate: -50% 0;
+    /* Positioned in code: left = headX - width/2 (no translate — UITK stale-% bug while typing). */
     max-width: 420px;
     flex-grow: 0;
     flex-shrink: 0;

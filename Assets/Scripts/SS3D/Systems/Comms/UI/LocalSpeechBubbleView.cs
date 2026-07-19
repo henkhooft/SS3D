@@ -34,6 +34,9 @@ namespace SS3D.Systems.Comms.UI
         private SpeechMode _draftMode = SpeechMode.Speak;
         private bool _draftShown;
         private bool _retainDraftFocus;
+        private float _draftAnchorLeft;
+        private float _draftAnchorBottom;
+        private float _draftChipWidth;
 
         private static readonly string[] DraftModeClasses =
         {
@@ -193,8 +196,8 @@ namespace SS3D.Systems.Comms.UI
             bool justOpened = !_draftShown;
             _draftShown = true;
             _draftChip.style.display = DisplayStyle.Flex;
-            _draftChip.style.left = left;
-            _draftChip.style.bottom = bottom;
+            _draftAnchorLeft = left;
+            _draftAnchorBottom = bottom;
 
             string nameText = string.IsNullOrEmpty(speakerName) ? string.Empty : speakerName.ToUpperInvariant();
             _draftName.text = nameText;
@@ -206,6 +209,29 @@ namespace SS3D.Systems.Comms.UI
             }
 
             FitDraftChipWidth();
+            ApplyDraftScreenPosition();
+        }
+
+        /// <summary>
+        /// Head-anchored position without USS translate:-50%. UITK keeps a stale translate
+        /// transform while draft width changes every keystroke (worldBound left sticks; center drifts).
+        /// </summary>
+        private void ApplyDraftScreenPosition()
+        {
+            if (_draftChip == null)
+            {
+                return;
+            }
+
+            _draftChip.style.translate = new Translate(0, 0);
+            float width = _draftChipWidth > 0f ? _draftChipWidth : _draftChip.resolvedStyle.width;
+            if (float.IsNaN(width) || width < 0f)
+            {
+                width = 0f;
+            }
+
+            _draftChip.style.left = _draftAnchorLeft - (width * 0.5f);
+            _draftChip.style.bottom = _draftAnchorBottom;
         }
 
         public void HideDraft()
@@ -266,6 +292,7 @@ namespace SS3D.Systems.Comms.UI
             _draftChip.style.display = DisplayStyle.None;
             _draftChip.style.flexGrow = 0;
             _draftChip.style.flexShrink = 0;
+            _draftChip.style.translate = new Translate(0, 0);
             _draftChip.generateVisualContent += PaintDashedOutline;
 
             _draftName = new Label();
@@ -347,7 +374,7 @@ namespace SS3D.Systems.Comms.UI
             FitDraftChipWidth();
         }
 
-        private void OnDraftValueChanged(ChangeEvent<string> _)
+        private void OnDraftValueChanged(ChangeEvent<string> evt)
         {
             FitDraftChipWidth();
             // Second pass after Yoga applies the new width (TextField measure is layout-sensitive).
@@ -395,7 +422,18 @@ namespace SS3D.Systems.Comms.UI
                 _draftField.style.whiteSpace = WhiteSpace.NoWrap;
                 _draftField.style.width = 12f;
                 _draftField.style.maxWidth = maxContent;
-                _draftChip.style.width = StyleKeyword.Auto;
+                // Explicit width so ApplyDraftScreenPosition can center with left = headX - w/2
+                // (USS translate:-50% keeps a stale render transform while width changes each keystroke).
+                float emptyNameW = 0f;
+                if (showName)
+                {
+                    emptyNameW = _draftName.MeasureTextSize(
+                        nameText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined).x;
+                }
+
+                _draftChip.style.width = Mathf.Min(Mathf.Ceil(Mathf.Max(12f, emptyNameW) + padX), maxChip);
+                _draftChipWidth = _draftChip.style.width.value.value;
+                ApplyDraftScreenPosition();
                 return;
             }
 
@@ -425,31 +463,46 @@ namespace SS3D.Systems.Comms.UI
                 contentWidth = lineText.Length * fontSize * 0.55f + LetterSpacingExtra(lineText, letterSpacing);
             }
 
+            // Do NOT widen the field to the name width — finished chips hug each line separately and
+            // center via align-items. Widening + UpperLeft text made short drafts look left-aligned.
+            // Force center align in code: USS -unity-text-align does not stick on TextField (logs: UpperLeft).
+            _draftField.style.unityTextAlign = TextAnchor.MiddleCenter;
+            VisualElement textInput = _draftField.Q(className: "unity-base-text-field__input");
+            if (textInput != null)
+            {
+                textInput.style.unityTextAlign = TextAnchor.MiddleCenter;
+            }
+
+            float nameMeasured = 0f;
             if (showName)
             {
-                Vector2 nameSize = _draftName.MeasureTextSize(
-                    nameText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined);
-                if (IsPlausibleTextWidth(nameText, nameSize.x))
-                {
-                    contentWidth = Mathf.Max(contentWidth, nameSize.x + LetterSpacingExtra(nameText, 1f));
-                }
+                nameMeasured = _draftName.MeasureTextSize(
+                    nameText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined).x;
             }
 
             const float MeasureSlack = 10f;
-            if (contentWidth + MeasureSlack <= maxContent)
+            bool hug = contentWidth + MeasureSlack <= maxContent;
+            float assignedFieldWidth;
+            if (hug)
             {
-                float fieldWidth = Mathf.Ceil(contentWidth + 4f);
+                assignedFieldWidth = Mathf.Ceil(contentWidth + 4f);
                 _draftField.style.whiteSpace = WhiteSpace.NoWrap;
-                _draftField.style.width = fieldWidth;
+                _draftField.style.width = assignedFieldWidth;
                 _draftField.style.maxWidth = maxContent;
-                _draftChip.style.width = StyleKeyword.Auto;
-                return;
+                float hugInner = Mathf.Max(nameMeasured, assignedFieldWidth);
+                _draftChip.style.width = Mathf.Min(Mathf.Ceil(hugInner + padX), maxChip);
+            }
+            else
+            {
+                assignedFieldWidth = maxContent;
+                _draftField.style.whiteSpace = WhiteSpace.Normal;
+                _draftField.style.width = maxContent;
+                _draftField.style.maxWidth = maxContent;
+                _draftChip.style.width = maxChip;
             }
 
-            _draftField.style.whiteSpace = WhiteSpace.Normal;
-            _draftField.style.width = maxContent;
-            _draftField.style.maxWidth = maxContent;
-            _draftChip.style.width = maxChip;
+            _draftChipWidth = _draftChip.style.width.value.value;
+            ApplyDraftScreenPosition();
         }
 
         /// <summary>
