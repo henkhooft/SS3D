@@ -119,9 +119,9 @@ namespace SS3D.UI.MainHud
         }
 
         /// <summary>
-        /// Updates the zone-targeting reticle (cursor position + optional zone chip label).
+        /// Updates the zone-targeting reticle (cursor position + aim state / zone label).
         /// </summary>
-        public void SetZoneReticle(Vector2 screenPosition, bool hasZone, string zoneLabel)
+        public void SetZoneReticle(Vector2 screenPosition, ZoneReticleAimState state, string zoneLabel)
         {
             if (_zoneReticle == null)
             {
@@ -129,7 +129,7 @@ namespace SS3D.UI.MainHud
             }
 
             _zoneReticle.UpdateCursorPosition(screenPosition);
-            _zoneReticle.SetZoneHover(hasZone, zoneLabel);
+            _zoneReticle.SetAimState(state, zoneLabel);
         }
 
         public void SetZoneReticleVisible(bool visible)
@@ -142,7 +142,7 @@ namespace SS3D.UI.MainHud
             _zoneReticle.Root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible)
             {
-                _zoneReticle.SetZoneHover(false, string.Empty);
+                _zoneReticle.SetAimState(ZoneReticleAimState.Idle, string.Empty);
             }
         }
 

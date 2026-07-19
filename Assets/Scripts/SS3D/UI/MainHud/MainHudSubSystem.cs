@@ -6,6 +6,7 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Health;
@@ -241,8 +242,9 @@ namespace SS3D.UI.MainHud
             _view.SetZoneReticleVisible(true);
 
             Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
-            bool hasZone = false;
+            ZoneReticleAimState aimState = ZoneReticleAimState.Idle;
             string zoneLabel = string.Empty;
+            bool hitting = IsMeleeHitActive();
 
             // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
             // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
@@ -251,14 +253,57 @@ namespace SS3D.UI.MainHud
                 && cameras.PlayerCamera.TryGetComponent(out Camera camera))
             {
                 Ray ray = camera.ScreenPointToRay(screenPosition);
-                if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _))
+                if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _, out Vector3 hitPoint))
                 {
-                    hasZone = true;
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
+                    if (hitting)
+                    {
+                        aimState = ZoneReticleAimState.Hit;
+                    }
+                    else if (IsHoveredZoneInRange(hitPoint))
+                    {
+                        aimState = ZoneReticleAimState.Valid;
+                    }
+                }
+                else if (hitting)
+                {
+                    aimState = ZoneReticleAimState.Hit;
                 }
             }
+            else if (hitting)
+            {
+                aimState = ZoneReticleAimState.Hit;
+            }
 
-            _view.SetZoneReticle(screenPosition, hasZone, zoneLabel);
+            _view.SetZoneReticle(screenPosition, aimState, zoneLabel);
+        }
+
+        private bool IsMeleeHitActive()
+        {
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
+            }
+
+            if (hand.TryGetComponent(out MeleeRecoveryTracker recovery) && recovery.IsRecovering)
+            {
+                return true;
+            }
+
+            // Windup: client optimistic loading bar on the hand while DelayedInteraction runs.
+            return InteractionOptimisticFeedback.TryAdoptExisting(hand.transform, out _);
+        }
+
+        private bool IsHoveredZoneInRange(Vector3 worldPoint)
+        {
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
+            }
+
+            return hand.GetInteractionRange().IsInRange(hand.InteractionOrigin, worldPoint);
         }
 
         private void BuildView()

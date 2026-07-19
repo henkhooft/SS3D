@@ -14,20 +14,20 @@ namespace SS3D.Systems.Health
         private const float MaxRayDistance = 8f;
 
         /// <summary>
-        /// Short zone label for the Main HUD reticle chip (main-hud §6): head, chest, l_arm, …
+        /// Player-facing zone label for the Main HUD reticle chip (main-hud §6).
         /// </summary>
         public static string GetReticleLabel(BodyZone zone)
         {
             return zone switch
             {
-                BodyZone.Head => "head",
-                BodyZone.Chest => "chest",
-                BodyZone.LeftArm => "l_arm",
-                BodyZone.RightArm => "r_arm",
-                BodyZone.LeftLeg => "l_leg",
-                BodyZone.RightLeg => "r_leg",
-                BodyZone.Groin => "groin",
-                _ => "chest",
+                BodyZone.Head => "Head",
+                BodyZone.Chest => "Chest",
+                BodyZone.LeftArm => "Left Arm",
+                BodyZone.RightArm => "Right Arm",
+                BodyZone.LeftLeg => "Left Leg",
+                BodyZone.RightLeg => "Right Leg",
+                BodyZone.Groin => "Groin",
+                _ => "Chest",
             };
         }
 
@@ -38,8 +38,19 @@ namespace SS3D.Systems.Health
         /// </summary>
         public static bool TryResolveHoverZone(Ray ray, out BodyZone zone, out HumanHealthController health)
         {
+            return TryResolveHoverZone(ray, out zone, out health, out _);
+        }
+
+        /// <inheritdoc cref="TryResolveHoverZone(Ray, out BodyZone, out HumanHealthController)"/>
+        public static bool TryResolveHoverZone(
+            Ray ray,
+            out BodyZone zone,
+            out HumanHealthController health,
+            out Vector3 hitPoint)
+        {
             zone = BodyZone.Chest;
             health = null;
+            hitPoint = default;
 
             int mask = LayerMask.GetMask("Characters", HealthLayers.BodyPartsLayerName);
             if (mask == 0)
@@ -85,6 +96,7 @@ namespace SS3D.Systems.Health
             }
 
             health = closestHealth;
+            hitPoint = zoneHit.point;
             zone = ApplyGroinBanding(zone, zoneHit.point, closestHealth);
             return true;
         }

@@ -113,7 +113,7 @@
     border-color: var(--ss3d-accent-rust);
 }
 
-/* Zone targeting reticle (main-hud §6) — cursor-follow; chip only while hovering a valid limb. */
+/* Zone targeting reticle (main-hud §6) — corner brackets + center dot; terminal zone label. */
 .zone-target-overlay {
     position: absolute;
     left: 0;
@@ -124,79 +124,118 @@
 
 .zone-target-reticle {
     position: absolute;
-    width: 22px;
-    height: 22px;
+    width: 52px;
+    height: 52px;
+    --zone-reticle-color: var(--ss3d-text-tertiary);
 }
 
-.zone-target-reticle__ring {
+.zone-target-reticle--valid {
+    --zone-reticle-color: var(--ss3d-ramp-blue-300);
+}
+
+.zone-target-reticle--hit {
+    --zone-reticle-color: var(--ss3d-feedback-danger);
+}
+
+.zone-target-reticle__corner {
     position: absolute;
+    width: 15px;
+    height: 15px;
+}
+
+.zone-target-reticle__corner--tl {
     left: 0;
     top: 0;
+}
+
+.zone-target-reticle__corner--tr {
+    right: 0;
+    top: 0;
+}
+
+.zone-target-reticle__corner--bl {
+    left: 0;
+    bottom: 0;
+}
+
+.zone-target-reticle__corner--br {
     right: 0;
     bottom: 0;
-    border-radius: 11px;
-    border-width: 1px;
-    border-color: var(--ss3d-border-default);
 }
 
-.zone-target-reticle__tick {
+.zone-target-reticle__arm {
     position: absolute;
-    background-color: var(--ss3d-text-tertiary);
+    background-color: var(--zone-reticle-color);
 }
 
-.zone-target-reticle__tick--top {
-    left: 50%;
-    top: -5px;
-    width: 1px;
-    height: 6px;
-    margin-left: -0.5px;
+.zone-target-reticle__arm--h {
+    height: 2px;
+    left: 0;
+    right: 0;
 }
 
-.zone-target-reticle__tick--bottom {
-    left: 50%;
-    bottom: -5px;
-    width: 1px;
-    height: 6px;
-    margin-left: -0.5px;
+.zone-target-reticle__arm--v {
+    width: 2px;
+    top: 0;
+    bottom: 0;
 }
 
-.zone-target-reticle__tick--left {
-    top: 50%;
-    left: -5px;
-    width: 6px;
-    height: 1px;
-    margin-top: -0.5px;
+.zone-target-reticle__corner--tl .zone-target-reticle__arm--h {
+    top: 0;
 }
 
-.zone-target-reticle__tick--right {
-    top: 50%;
-    right: -5px;
-    width: 6px;
-    height: 1px;
-    margin-top: -0.5px;
+.zone-target-reticle__corner--tl .zone-target-reticle__arm--v {
+    left: 0;
 }
 
-.zone-target-reticle--active .zone-target-reticle__ring {
-    border-color: var(--ss3d-accent-rust);
+.zone-target-reticle__corner--tr .zone-target-reticle__arm--h {
+    top: 0;
 }
 
-.zone-target-reticle--active .zone-target-reticle__tick {
-    background-color: var(--ss3d-accent-rust);
+.zone-target-reticle__corner--tr .zone-target-reticle__arm--v {
+    right: 0;
 }
 
-.zone-target-chip {
+.zone-target-reticle__corner--bl .zone-target-reticle__arm--h {
+    bottom: 0;
+}
+
+.zone-target-reticle__corner--bl .zone-target-reticle__arm--v {
+    left: 0;
+}
+
+.zone-target-reticle__corner--br .zone-target-reticle__arm--h {
+    bottom: 0;
+}
+
+.zone-target-reticle__corner--br .zone-target-reticle__arm--v {
+    right: 0;
+}
+
+.zone-target-reticle__dot {
     position: absolute;
-    flex-direction: column;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: var(--ss3d-radius-sm);
-    background-color: var(--ss3d-surface-hud);
-    border-width: 1px;
-    border-color: var(--ss3d-border-subtle);
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    margin-top: -3px;
+    background-color: var(--zone-reticle-color);
 }
 
-.zone-target-chip__label {
-    font-size: 11px;
-    color: var(--ss3d-text-primary);
+.zone-target-label {
+    position: absolute;
+    font-size: 17px;
+    color: var(--ss3d-text-tertiary);
     white-space: nowrap;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.zone-target-label--valid {
+    color: var(--ss3d-ramp-blue-300);
+}
+
+.zone-target-label--hit {
+    color: var(--ss3d-feedback-danger);
 }

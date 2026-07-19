@@ -3,18 +3,27 @@ using UnityEngine.UIElements;
 
 namespace SS3D.UI.MainHud.Components
 {
+    public enum ZoneReticleAimState
+    {
+        /// <summary>Harm aiming — grey. Optional zone label when hovering out of range.</summary>
+        Idle = 0,
+        /// <summary>Zone under cursor and in melee range — blue.</summary>
+        Valid = 1,
+        /// <summary>Melee windup or recovery in progress — red.</summary>
+        Hit = 2,
+    }
+
     /// <summary>
-    /// Cursor-following crosshair + zone-label chip (main-hud §6). Shown only while Harm intent
-    /// is active; chip appears when hovering a valid limb zone.
+    /// Corner-bracket aim reticle + terminal zone label (main-hud §6). Harm intent only.
+    /// Grey idle, blue valid target, red while hitting.
     /// </summary>
     public sealed class ZoneTargetReticle
     {
-        private const float ReticleSize = 22f;
-        private const float ChipOffsetY = 22f;
+        private const float ReticleSize = 52f;
+        private const float ChipGapAboveReticle = 14f;
 
         private VisualElement _root;
         private VisualElement _reticle;
-        private VisualElement _chip;
         private Label _chipLabel;
 
         public VisualElement Root => _root;
@@ -22,7 +31,7 @@ namespace SS3D.UI.MainHud.Components
         public ZoneTargetReticle()
         {
             BuildTree();
-            SetChipVisible(false);
+            SetAimState(ZoneReticleAimState.Idle, string.Empty);
         }
 
         public void UpdateCursorPosition(Vector2 screenPosition)
@@ -36,22 +45,21 @@ namespace SS3D.UI.MainHud.Components
             _reticle.style.left = screenPosition.x - half;
             _reticle.style.bottom = screenPosition.y - half;
 
-            _chip.style.left = screenPosition.x;
-            _chip.style.bottom = screenPosition.y - ChipOffsetY;
-            _chip.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
+            _chipLabel.style.left = screenPosition.x;
+            _chipLabel.style.bottom = screenPosition.y + half + ChipGapAboveReticle;
+            _chipLabel.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
         }
 
-        public void SetZoneHover(bool hasZone, string zoneLabel)
+        public void SetAimState(ZoneReticleAimState state, string zoneLabel)
         {
-            _reticle.EnableInClassList("zone-target-reticle--active", hasZone);
-            if (!hasZone)
-            {
-                SetChipVisible(false);
-                return;
-            }
+            _reticle.EnableInClassList("zone-target-reticle--valid", state == ZoneReticleAimState.Valid);
+            _reticle.EnableInClassList("zone-target-reticle--hit", state == ZoneReticleAimState.Hit);
+            _chipLabel.EnableInClassList("zone-target-label--valid", state == ZoneReticleAimState.Valid);
+            _chipLabel.EnableInClassList("zone-target-label--hit", state == ZoneReticleAimState.Hit);
 
-            _chipLabel.text = zoneLabel;
-            SetChipVisible(true);
+            bool showLabel = !string.IsNullOrEmpty(zoneLabel);
+            _chipLabel.text = showLabel ? zoneLabel : string.Empty;
+            _chipLabel.style.display = showLabel ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void BuildTree()
@@ -64,49 +72,46 @@ namespace SS3D.UI.MainHud.Components
             _reticle.AddToClassList("zone-target-reticle");
             _reticle.pickingMode = PickingMode.Ignore;
 
-            VisualElement ring = new();
-            ring.AddToClassList("zone-target-reticle__ring");
-            ring.pickingMode = PickingMode.Ignore;
-
-            foreach (string tickClass in new[]
+            foreach (string corner in new[]
                      {
-                         "zone-target-reticle__tick--top",
-                         "zone-target-reticle__tick--bottom",
-                         "zone-target-reticle__tick--left",
-                         "zone-target-reticle__tick--right",
+                         "zone-target-reticle__corner--tl",
+                         "zone-target-reticle__corner--tr",
+                         "zone-target-reticle__corner--bl",
+                         "zone-target-reticle__corner--br",
                      })
             {
-                VisualElement tick = new();
-                tick.AddToClassList("zone-target-reticle__tick");
-                tick.AddToClassList(tickClass);
-                tick.pickingMode = PickingMode.Ignore;
-                _reticle.Add(tick);
+                VisualElement cornerRoot = new();
+                cornerRoot.AddToClassList("zone-target-reticle__corner");
+                cornerRoot.AddToClassList(corner);
+                cornerRoot.pickingMode = PickingMode.Ignore;
+
+                VisualElement h = new();
+                h.AddToClassList("zone-target-reticle__arm");
+                h.AddToClassList("zone-target-reticle__arm--h");
+                h.pickingMode = PickingMode.Ignore;
+
+                VisualElement v = new();
+                v.AddToClassList("zone-target-reticle__arm");
+                v.AddToClassList("zone-target-reticle__arm--v");
+                v.pickingMode = PickingMode.Ignore;
+
+                cornerRoot.Add(h);
+                cornerRoot.Add(v);
+                _reticle.Add(cornerRoot);
             }
 
-            _reticle.Add(ring);
-
-            _chip = new VisualElement();
-            _chip.AddToClassList("zone-target-chip");
-            _chip.pickingMode = PickingMode.Ignore;
+            VisualElement dot = new();
+            dot.AddToClassList("zone-target-reticle__dot");
+            dot.pickingMode = PickingMode.Ignore;
+            _reticle.Add(dot);
 
             _chipLabel = new Label();
-            _chipLabel.AddToClassList("zone-target-chip__label");
+            _chipLabel.AddToClassList("zone-target-label");
             _chipLabel.AddToClassList("font-terminal");
             _chipLabel.pickingMode = PickingMode.Ignore;
-            _chip.Add(_chipLabel);
 
             _root.Add(_reticle);
-            _root.Add(_chip);
-        }
-
-        private void SetChipVisible(bool visible)
-        {
-            if (_chip == null)
-            {
-                return;
-            }
-
-            _chip.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            _root.Add(_chipLabel);
         }
     }
 }

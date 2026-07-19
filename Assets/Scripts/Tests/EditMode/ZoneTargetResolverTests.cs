@@ -27,15 +27,15 @@ namespace EditorTests
         }
 
         [Test]
-        public void GetReticleLabelUsesDesignShortNames()
+        public void GetReticleLabelUsesReadableNames()
         {
-            Assert.AreEqual("head", ZoneTargetResolver.GetReticleLabel(BodyZone.Head));
-            Assert.AreEqual("chest", ZoneTargetResolver.GetReticleLabel(BodyZone.Chest));
-            Assert.AreEqual("l_arm", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftArm));
-            Assert.AreEqual("r_arm", ZoneTargetResolver.GetReticleLabel(BodyZone.RightArm));
-            Assert.AreEqual("l_leg", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftLeg));
-            Assert.AreEqual("r_leg", ZoneTargetResolver.GetReticleLabel(BodyZone.RightLeg));
-            Assert.AreEqual("groin", ZoneTargetResolver.GetReticleLabel(BodyZone.Groin));
+            Assert.AreEqual("Head", ZoneTargetResolver.GetReticleLabel(BodyZone.Head));
+            Assert.AreEqual("Chest", ZoneTargetResolver.GetReticleLabel(BodyZone.Chest));
+            Assert.AreEqual("Left Arm", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftArm));
+            Assert.AreEqual("Right Arm", ZoneTargetResolver.GetReticleLabel(BodyZone.RightArm));
+            Assert.AreEqual("Left Leg", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftLeg));
+            Assert.AreEqual("Right Leg", ZoneTargetResolver.GetReticleLabel(BodyZone.RightLeg));
+            Assert.AreEqual("Groin", ZoneTargetResolver.GetReticleLabel(BodyZone.Groin));
         }
     }
 }
