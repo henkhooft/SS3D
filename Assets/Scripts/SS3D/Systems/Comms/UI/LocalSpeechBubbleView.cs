@@ -30,9 +30,8 @@ namespace SS3D.Systems.Comms.UI
         private VisualElement _draftChip;
         private Label _draftName;
         private TextField _draftField;
-        private VisualElement _draftCaret;
-        private IVisualElementScheduledItem _caretBlink;
-        private bool _caretVisible = true;
+        private SpeechMode _draftMode = SpeechMode.Speak;
+        private bool _draftShown;
 
         private static readonly string[] DraftModeClasses =
         {
@@ -83,8 +82,6 @@ namespace SS3D.Systems.Comms.UI
 
         public void Detach()
         {
-            StopCaretBlink();
-
             foreach (VisualElement subtitle in _subtitlePool)
             {
                 subtitle.RemoveFromHierarchy();
@@ -101,7 +98,7 @@ namespace SS3D.Systems.Comms.UI
             _draftChip = null;
             _draftName = null;
             _draftField = null;
-            _draftCaret = null;
+            _draftShown = false;
 
             _overflowChip?.RemoveFromHierarchy();
             _overflowChip = null;
@@ -189,6 +186,8 @@ namespace SS3D.Systems.Comms.UI
                 return;
             }
 
+            bool justOpened = !_draftShown;
+            _draftShown = true;
             _draftChip.style.display = DisplayStyle.Flex;
             _draftChip.style.left = left;
             _draftChip.style.bottom = bottom;
@@ -197,9 +196,12 @@ namespace SS3D.Systems.Comms.UI
             _draftName.text = nameText;
             _draftName.style.display = string.IsNullOrEmpty(nameText) ? DisplayStyle.None : DisplayStyle.Flex;
 
-            ApplyDraftModeClass(mode);
-            FitDraftFieldWidth();
-            StartCaretBlink();
+            if (justOpened || _draftMode != mode)
+            {
+                ApplyDraftModeClass(mode);
+            }
+
+            FitDraftChipWidth();
         }
 
         public void HideDraft()
@@ -209,7 +211,7 @@ namespace SS3D.Systems.Comms.UI
                 return;
             }
 
-            StopCaretBlink();
+            _draftShown = false;
             _draftChip.style.display = DisplayStyle.None;
             if (_draftField != null)
             {
@@ -233,10 +235,10 @@ namespace SS3D.Systems.Comms.UI
                     return;
                 }
 
-                _draftField.value = string.Empty;
-                FitDraftFieldWidth();
                 _draftField.Focus();
-                _draftField.SelectRange(0, 0);
+                int len = _draftField.value?.Length ?? 0;
+                _draftField.SelectRange(len, len);
+                FitDraftChipWidth();
             }).ExecuteLater(1);
         }
 
@@ -258,28 +260,20 @@ namespace SS3D.Systems.Comms.UI
             _draftName.pickingMode = PickingMode.Ignore;
             _draftChip.Add(_draftName);
 
-            VisualElement lineRow = new();
-            lineRow.AddToClassList("comms-draft__line-row");
-            lineRow.pickingMode = PickingMode.Ignore;
-
-            _draftField = new TextField { multiline = false, maxLength = 256, value = string.Empty };
+            // Visible TextField — real UITK caret, same wrap budget as finished chips.
+            // multiline allows soft wrap; Enter is intercepted (never inserts a newline).
+            _draftField = new TextField { multiline = true, maxLength = 256, value = string.Empty };
             _draftField.AddToClassList("font-body");
             _draftField.AddToClassList("comms-draft__field");
-            // Built-in caret hidden via USS (--unity-cursor-color); mock uses _draftCaret.
             _draftField.RegisterValueChangedCallback(OnDraftValueChanged);
-            lineRow.Add(_draftField);
+            _draftChip.Add(_draftField);
 
-            _draftCaret = new VisualElement();
-            _draftCaret.AddToClassList("comms-draft__caret");
-            _draftCaret.pickingMode = PickingMode.Ignore;
-            lineRow.Add(_draftCaret);
-
-            _draftChip.Add(lineRow);
             _overlayRoot.Add(_draftChip);
         }
 
         private void ApplyDraftModeClass(SpeechMode mode)
         {
+            _draftMode = mode;
             for (int i = 0; i < DraftModeClasses.Length; i++)
             {
                 _draftChip.EnableInClassList(DraftModeClasses[i], false);
@@ -293,79 +287,108 @@ namespace SS3D.Systems.Comms.UI
             };
 
             _draftChip.EnableInClassList(modeClass, true);
-            FitDraftFieldWidth();
+            _draftField.style.unityFontStyleAndWeight = mode switch
+            {
+                SpeechMode.Shout => FontStyle.Bold,
+                SpeechMode.Whisper => FontStyle.Italic,
+                _ => FontStyle.Normal,
+            };
             _draftChip.MarkDirtyRepaint();
+            FitDraftChipWidth();
         }
 
         private void OnDraftValueChanged(ChangeEvent<string> _)
         {
-            FitDraftFieldWidth();
+            FitDraftChipWidth();
         }
 
         /// <summary>
-        /// UITK TextField defaults to a wide input; hug the typed glyphs so the centered row
-        /// (text + caret) stays visually centered like a finished chip.
+        /// Same hug/wrap rules as finished chips, applied to the draft TextField.
         /// </summary>
-        private void FitDraftFieldWidth()
+        private void FitDraftChipWidth()
         {
-            if (_draftField == null)
+            if (_draftChip == null || _draftField == null)
             {
                 return;
             }
 
-            string text = _draftField.value ?? string.Empty;
-            if (text.Length == 0)
+            float maxChip = _draftMode switch
             {
-                _draftField.style.width = 2f;
+                SpeechMode.Whisper => 300f,
+                SpeechMode.Shout => 480f,
+                _ => 420f,
+            };
+
+            float padX = _draftMode switch
+            {
+                SpeechMode.Whisper => 20f,
+                SpeechMode.Shout => 32f,
+                _ => 28f,
+            };
+
+            float maxContent = Mathf.Max(8f, maxChip - padX);
+            float letterSpacing = _draftMode is SpeechMode.Whisper or SpeechMode.Shout ? 1f : 0f;
+            string lineText = _draftField.value ?? string.Empty;
+            bool showName = _draftName != null
+                && _draftName.resolvedStyle.display != DisplayStyle.None
+                && !string.IsNullOrEmpty(_draftName.text);
+            string nameText = showName ? _draftName.text : string.Empty;
+
+            _draftField.style.maxWidth = maxContent;
+            _draftName.style.maxWidth = maxContent;
+            _draftChip.style.maxWidth = maxChip;
+
+            if (string.IsNullOrEmpty(lineText))
+            {
+                // Empty draft: compact chip, caret still visible in the field.
+                _draftField.style.width = 12f;
+                _draftField.style.whiteSpace = WhiteSpace.NoWrap;
+                _draftChip.style.width = StyleKeyword.Auto;
                 return;
             }
 
-            Vector2 size = _draftField.MeasureTextSize(
-                text, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
-            float width = size.x;
-            if (width < 2f)
+            Vector2 naturalLine = _draftField.MeasureTextSize(
+                lineText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+
+            float contentWidth;
+            if (IsPlausibleTextWidth(lineText, naturalLine.x))
             {
-                // Font metrics not ready yet — approximate so layout does not jump left.
+                contentWidth = naturalLine.x + LetterSpacingExtra(lineText, letterSpacing);
+            }
+            else
+            {
                 float fontSize = _draftField.resolvedStyle.fontSize;
                 if (fontSize <= 0f)
                 {
                     fontSize = 17f;
                 }
 
-                width = text.Length * fontSize * 0.55f;
+                contentWidth = lineText.Length * fontSize * 0.55f + LetterSpacingExtra(lineText, letterSpacing);
             }
 
-            _draftField.style.width = Mathf.Ceil(width + 2f);
-        }
-
-        private void StartCaretBlink()
-        {
-            StopCaretBlink();
-            _caretVisible = true;
-            if (_draftCaret != null)
+            if (showName)
             {
-                _draftCaret.style.opacity = 1f;
-            }
-
-            _caretBlink = _draftChip?.schedule.Execute(() =>
-            {
-                _caretVisible = !_caretVisible;
-                if (_draftCaret != null)
+                Vector2 nameSize = _draftName.MeasureTextSize(
+                    nameText, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+                if (IsPlausibleTextWidth(nameText, nameSize.x))
                 {
-                    _draftCaret.style.opacity = _caretVisible ? 1f : 0f;
+                    contentWidth = Mathf.Max(contentWidth, nameSize.x + LetterSpacingExtra(nameText, 1f));
                 }
-            }).Every(500);
-        }
-
-        private void StopCaretBlink()
-        {
-            _caretBlink?.Pause();
-            _caretBlink = null;
-            _caretVisible = true;
-            if (_draftCaret != null)
-            {
-                _draftCaret.style.opacity = 1f;
             }
+
+            const float MeasureSlack = 10f;
+            if (contentWidth + MeasureSlack <= maxContent)
+            {
+                float fieldWidth = Mathf.Ceil(contentWidth + 4f);
+                _draftField.style.whiteSpace = WhiteSpace.NoWrap;
+                _draftField.style.width = fieldWidth;
+                _draftChip.style.width = StyleKeyword.Auto;
+                return;
+            }
+
+            _draftField.style.whiteSpace = WhiteSpace.Normal;
+            _draftField.style.width = maxContent;
+            _draftChip.style.width = maxChip;
         }
 
         /// <summary>

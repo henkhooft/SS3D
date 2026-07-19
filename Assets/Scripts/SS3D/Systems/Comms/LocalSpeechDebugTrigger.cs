@@ -3,6 +3,7 @@ using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Inputs;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -75,6 +76,11 @@ namespace SS3D.Systems.Comms
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
+            if (InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
             if (Keyboard.current == null || !Keyboard.current[Key.F3].wasPressedThisFrame)
             {
                 return;

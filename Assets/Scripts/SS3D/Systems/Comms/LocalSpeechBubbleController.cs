@@ -167,7 +167,9 @@ namespace SS3D.Systems.Comms
             _composeMode = SpeechMode.Speak;
             _composeEntry.Enter();
             _view.DraftField.value = string.Empty;
-            _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown);
+            // TrickleDown so Enter is caught before multiline TextField treats it as a newline
+            // (that was eating the first Enter and requiring a second press to commit).
+            _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
             _view.FocusDraft();
         }
 
@@ -178,7 +180,8 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            string text = _view.DraftField.value?.Trim() ?? string.Empty;
+            string text = _view.DraftField.value?.Replace("\r", string.Empty).Replace("\n", " ").Trim()
+                ?? string.Empty;
             SpeechMode mode = ResolveComposeModeFromModifiers();
 
             if (string.IsNullOrEmpty(text))
@@ -199,7 +202,7 @@ namespace SS3D.Systems.Comms
         {
             if (_view?.DraftField != null)
             {
-                _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown);
+                _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
                 if (clearText)
                 {
                     _view.DraftField.value = string.Empty;
@@ -219,7 +222,9 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            bool isSubmit = evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter
+                || evt.character is '\n' or '\r';
+            if (isSubmit)
             {
                 evt.StopImmediatePropagation();
                 evt.PreventDefault();
