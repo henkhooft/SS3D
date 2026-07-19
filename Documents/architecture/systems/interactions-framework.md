@@ -37,13 +37,13 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - Use `Requirement` and `IInteractionRangeLimit` / `RangeLimit` for gating.
 - Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
 - Replicated state changes in `Start()` must go through networked components (`NetworkedOpenable.SetOpenState`, `SyncVar` toggles), not local-only animator writes.
-- Prefer gating `IInteractionSourceExtension.GetSourceInteractions` on a real availability check (like `HandHit`), not unconditional `Add` — see smells below.
+- Prefer gating `IInteractionSourceExtension.GetSourceInteractions` on a real availability check (like `HandMeleeExtension`), not unconditional `Add` — see smells below.
 
 ## Architecture smells
 
 Structural debt (not one-off bugs). Bandages live in Pitfalls / [interactions-runtime](interactions-runtime.md); prefer fixing the contract when touching this area.
 
-1. **`Discover` has no contract.** Some source extensions always `Add` (e.g. `Drop`); others gate on `CanInteract` at discover time (`HandHit`, CPR). Consumers cannot tell whether an entry means “candidate for this target,” “source-only world action,” or “already range-checked.” Empty-hand vs held-item also swaps which extensions run (`Hands.GetActiveInteractionSource` → Hand or Item), so the same hover can look fine with an item and broken with empty hands.
+1. **`Discover` has no contract.** Some source extensions always `Add` (e.g. `Drop`); others gate on `CanInteract` at discover time (`HandMeleeExtension`, CPR). Consumers cannot tell whether an entry means “candidate for this target,” “source-only world action,” or “already range-checked.” Empty-hand vs held-item also swaps which extensions run (`Hands.GetActiveInteractionSource` → Hand or Item), so the same hover can look fine with an item and broken with empty hands.
 2. **Source-only and target-bound entries share one list.** `Drop` uses `Target == null` in the same bag as object interactions. Anything that assumes Discover ≈ “doable *to this hover*” needs a consumer filter (`FilterForOutline`). Longer-term: mark source-only interactions or split discover lists.
 3. **`InteractionEvent.Point` uses `Vector3.zero` as unset.** Magnitude checks cannot distinguish “no point resolved” from a real hit at world origin. Prefer an explicit `HasPoint` (or nullable) when reshaping the event type.
 4. **Pickable ≠ rangeable** (owned with [selection](selection.md)): shader pick works without colliders; range/drop need a resolved point from colliders. Missing colliders on `Selectable` wall mounts silently break range until `RangeCheck` falls back to the transform.

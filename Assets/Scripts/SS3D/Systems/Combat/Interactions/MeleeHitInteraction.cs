@@ -4,17 +4,17 @@ using SS3D.Data.Generated;
 using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
-using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Containers;
-using SS3D.Systems.Inventory.Items;
 using UnityEngine;
 
 namespace SS3D.Systems.Combat.Interactions
 {
     /// <summary>
-    /// Harm-intent melee hit with windup, zone-targeted damage, and post-swing recovery.
+    /// Harm-intent melee: windup → zone damage → recovery. Swing telegraph is played by
+    /// <see cref="SS3D.Systems.Interactions.InteractionController"/> via <see cref="HumanoidCombatController.RequestAttack"/>.
     /// </summary>
     public sealed class MeleeHitInteraction : DelayedInteraction, IInteractionTierProvider, ITargetedInteraction, IIntentRestrictedInteraction
     {
@@ -27,6 +27,8 @@ namespace SS3D.Systems.Combat.Interactions
             CheckInterval = 0.1f;
             Icon = Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Nuke);
         }
+
+        public MeleeWeaponProfile Profile => _profile;
 
         public IntentType AllowedIntent => IntentType.Harm;
 
@@ -89,8 +91,7 @@ namespace SS3D.Systems.Combat.Interactions
                 return;
             }
 
-            MeleeDamagePacket packet = _profile.ToDamagePacket();
-            health.ApplyDamage(zone, packet);
+            health.ApplyDamage(zone, _profile.ToDamagePacket());
 
             Hand hand = ResolveHand(interactionEvent.Source);
             if (hand != null)
@@ -131,13 +132,13 @@ namespace SS3D.Systems.Combat.Interactions
 
         private static MeleeRecoveryTracker GetRecoveryTracker(Hand hand)
         {
-            return hand.GetComponent<MeleeRecoveryTracker>();
+            hand.TryGetComponent(out MeleeRecoveryTracker tracker);
+            return tracker;
         }
 
         private static MeleeRecoveryTracker GetOrCreateRecoveryTracker(Hand hand)
         {
-            MeleeRecoveryTracker tracker = hand.GetComponent<MeleeRecoveryTracker>();
-            if (tracker == null)
+            if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
             {
                 tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
             }

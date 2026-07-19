@@ -47,7 +47,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 ## Extension points
 
 - `IHealthEffectModifier` — virology/chemistry/stamina deltas (Phase 7+)
-- `ApplyDamage(BodyZone, MeleeDamagePacket)` — melee combat input (Phase 4)
+- `ApplyDamage(BodyZone, MeleeDamagePacket)` — melee combat input (`MeleeDamagePacket` lives in Health)
 - `ApplyDamage(BodyZone, brute, burn)` — direct damage (console `hurt`, future sources)
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)

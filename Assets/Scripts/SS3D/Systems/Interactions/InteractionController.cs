@@ -12,6 +12,8 @@ using SS3D.Logging;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
@@ -181,13 +183,6 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            // Melee combat preview: LMB (Run Primary) swings instead of world interactions.
-            HumanoidCombatController combat = GetComponent<HumanoidCombatController>();
-            if (combat != null && combat.TryHandlePrimaryAttack())
-            {
-                return;
-            }
-
             if (_armedSystem.IsArmed)
             {
                 TryResolveArmedInteraction();
@@ -211,6 +206,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            TryPlayMeleeSwingTelegraph(interaction.Interaction);
             InteractionOptimisticFeedback.TryBeginDelayed(interaction.Interaction, interactionEvent);
             InteractionOutlineView.TryBeginPending(interaction.Interaction, interactionEvent);
             CmdRunInteraction(networkTarget, interactionEvent.Point, interaction.Id.GenericName, interaction.Id.TargetComponentIndex);
@@ -239,6 +235,25 @@ namespace SS3D.Systems.Interactions
             {
                 _ownerIntent = newValue;
             }
+        }
+
+        /// <summary>
+        /// Plays melee swing telegraph on the owning client when Run Primary dispatches a Hit.
+        /// Windup timing on the interaction matches <see cref="Combat.MeleeWeaponProfile.WindupSeconds"/>.
+        /// </summary>
+        private void TryPlayMeleeSwingTelegraph(IInteraction interaction)
+        {
+            if (interaction is not MeleeHitInteraction)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.AttackSwing);
         }
 
         [Client]

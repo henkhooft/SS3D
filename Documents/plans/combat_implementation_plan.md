@@ -4,10 +4,10 @@ overview: Clean-slate combat build-out per combat.md. Phase 0 purges the obsolet
 todos:
   - id: phase0-purge
     content: "Phase 0: Purge Assets/Scripts/SS3D/Systems/Combat/, weapon MeleeWeaponItemExtension prefab wiring, InteractionController melee-stance LMB intercept, orphaned IntentController; leave HumanoidCombatController + stance packs; compile-clean"
-    status: pending
+    status: completed
   - id: phase1-unified-melee
     content: "Phase 1: Unified melee MVP — Harm click → windup/recovery + RequestAttack + zone ApplyDamage; fists + improvised any-held-item + dedicated tool profiles; Help does not swing"
-    status: pending
+    status: completed
   - id: phase2-disarm-grab
     content: "Phase 2: Ctrl-disarm (force-strip hands) and Alt-grab (positioning) per main-hud.md §7"
     status: pending
@@ -187,3 +187,8 @@ Single primary path per [combat.md](../design/combat.md) §2:
   that slice condemned (stance LMB ≠ damage, unwired fists, windup ≠ anim). Presentation
   (`HumanoidCombatController` + stance packs) deliberately **kept**. Doc pass only — no
   gameplay C# until Phase 0 executes.
+- **2026-07-19 (Phase 0–1):** Purged obsolete Combat prototype + orphaned `IntentController`;
+  moved `MeleeDamagePacket` into Health; rebuilt unified Hit path with
+  `RequestAttack` telegraph on Run Primary; fists on hand prefabs; improvised fallback on
+  `Item`; dedicated profiles on crowbar/hatchet/knife. Editor menu
+  `SS3D/Combat/Setup Melee Prefabs` for PrefabUtility re-wiring. Lethality interim until armor.

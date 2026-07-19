@@ -1,59 +1,55 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
-> Entry points: (condemned) MeleeHitInteraction / HandHit / MeleeWeaponItemExtension; keep HumanoidCombatController
-> Status: condemned
-> Verified: 94d038384 — 2026-07-19
+> Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack
+> Status: partial
+> Verified: 0e7e98d5c — 2026-07-19
 
 # Combat
 
 ## Overview
 
-**Obsolete — due for removal**, not extension. The Phase 4 melee vertical slice under
-`Assets/Scripts/SS3D/Systems/Combat/` is a disconnected prototype: melee-stance LMB plays
-swing animation without running hit resolution; fists (`HandHit`) were never prefab-wired;
-windup/recovery data is not married to the swing telegraph. Do not add weapons, profiles, or
-hit paths here.
+Phase 0–1 clean-slate melee per [combat_implementation_plan.md](../../plans/combat_implementation_plan.md).
+Harm-intent Hit resolves zones via `ZoneTargetResolver`, applies `MeleeDamagePacket` through
+`HumanHealthController.ApplyDamage`, and enforces windup/recovery. Empty-hand fists
+(`HandMeleeExtension`), improvised any-held-item (`Item.CreateSourceInteractions`), and dedicated
+profiles on crowbar / hatchet / kitchen knife. Run Primary plays swing telegraph via
+`HumanoidCombatController.RequestAttack` then dispatches the delayed Hit — presentation does not
+consume LMB alone.
 
-Clean-slate rebuild is specified in [combat_implementation_plan.md](../../plans/combat_implementation_plan.md)
-(Phase 0 purge → Phase 1 unified melee). Design authority: [combat.md](../../design/combat.md).
+Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 
-**Keep (non-Combat):** health zone damage APIs (`ApplyDamage`, `ZoneTargetResolver`,
-`BodyParts`); Help/Harm intent; stamina drain APIs (combat costs deferred);
-`HumanoidCombatController` + stance packs / swing triggers under [entities](entities.md)
-([player-body-animation](../2026-07_player-body-animation.md)). New combat owns primary-attack
-click and calls `RequestAttack` as feedback — do not revive the anim-only LMB intercept.
+## Start here
 
-## Start here (purge targets)
-
-- `Assets/Scripts/SS3D/Systems/Combat/` — entire folder (delete in Phase 0)
-- `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs`
-- `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` — also strip from Crowbar / Hatchet / KitchenKnife prefabs
-- `Assets/Scripts/SS3D/Systems/Combat/Interactions/HandHit.cs`
-- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — melee-stance LMB → `TryHandlePrimaryAttack` early-return (remove; Phase 1 re-owns click)
-- `Assets/Scripts/SS3D/Interactions/IntentController.cs` — orphaned uGUI; Main HUD owns intent
-- **Keep:** `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs`
+- `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — Harm Hit, windup, zone damage, recovery
+- `Assets/Scripts/SS3D/Systems/Combat/Interactions/HandMeleeExtension.cs` — fists on hand prefabs
+- `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` — dedicated tool profiles
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` — Fists / Improvised / Crowbar / Hatchet / KitchenKnife
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryTracker.cs` — post-hit recovery lockout on Hand
+- `Assets/Scripts/SS3D/Systems/Health/MeleeDamagePacket.cs` — damage DTO owned by Health
+- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — `TryPlayMeleeSwingTelegraph` on Run Primary
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — stance toggle + `RequestAttack`
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — menu **SS3D → Combat → Setup Melee Prefabs**
 
 ## Extension points
 
-None — system is condemned. Prefer delete over new features. After Phase 0–1, this map
-promotes to `partial` via `update-system-docs`.
+- Dedicated weapons: add `MeleeWeaponItemExtension` with a profile (Editor menu or PrefabUtility).
+- Improvised fallback is automatic on `Item` when no `MeleeWeaponItemExtension` is present.
+- Empty-hand fists: `HandMeleeExtension` on `HumanHandLeft` / `HumanHandRight` prefabs — do not hand-edit `Human.prefab`.
 
 ## Pitfalls
 
-- **Stance LMB ≠ damage:** In `HumanoidCombatMode.Melee`, `InteractionController` consumed
-  primary click for anim preview only. Extending that path re-creates the split Phase 0
-  exists to erase.
-- **Do not hand-edit `Human.prefab`** for combat rewiring — Editor/`PrefabUtility` or wait for
-  owning composition pass ([agent-first composition](../2026-07_agent-first-composition.md)).
+- **Do not revive anim-only LMB intercept** in melee stance — that split was Phase 0 purged. Telegraph is feedback on Hit dispatch only.
+- **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
+- **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 
 ## Depends on / Used by
 
-- **Depends on (keep-list):** [health](health.md), [interactions-framework](interactions-framework.md), [entities](entities.md)
-- **Used by:** none intended until rewrite; Harm-intent discovery currently touches condemned types
+- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing), [inventory](inventory.md) (hands / items)
+- **Used by:** Harm-intent Run Primary / radial Hit
 
 ## Related docs
 
-- Design (read-only): [Documents/design/combat.md](../../design/combat.md) — intended direction; current Combat code is not the target to extend
+- Design (read-only): [Documents/design/combat.md](../../design/combat.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md)
-- Effort (stance foundation — keep): [2026-07_player-body-animation.md](../2026-07_player-body-animation.md)
+- Stance foundation: [2026-07_player-body-animation.md](../2026-07_player-body-animation.md)
 - [entities](entities.md), [health](health.md), [stamina](stamina.md)
 - [INDEX.md](../INDEX.md)

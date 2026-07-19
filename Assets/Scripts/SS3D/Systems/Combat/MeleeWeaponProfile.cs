@@ -1,7 +1,11 @@
 using System;
+using SS3D.Systems.Health;
 
 namespace SS3D.Systems.Combat
 {
+    /// <summary>
+    /// Melee timing and damage profile. Interim lethality — retune after armor (combat plan Phase 5).
+    /// </summary>
     [Serializable]
     public struct MeleeWeaponProfile
     {
@@ -19,6 +23,16 @@ namespace SS3D.Systems.Combat
             BurnDamage = 0f,
             WindupSeconds = 0.25f,
             RecoverySeconds = 0.35f,
+            CanSever = false,
+        };
+
+        /// <summary>Low-base fallback for any held item without a dedicated profile.</summary>
+        public static MeleeWeaponProfile Improvised => new()
+        {
+            BruteDamage = 6f,
+            BurnDamage = 0f,
+            WindupSeconds = 0.3f,
+            RecoverySeconds = 0.4f,
             CanSever = false,
         };
 

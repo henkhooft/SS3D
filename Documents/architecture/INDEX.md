@@ -23,7 +23,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | comms | [comms.md](../design/comms.md) — active | none yet (local-speech slice shipped in-branch; non-diegetic feed / PDA log still open) | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | area | [area.md](../design/area.md) — active | [area-foundation](2026-07_area-foundation.md) — shipped (partial: APC-seeded variant; live mutation recompute and editor merge/split deferred) | [area](systems/area.md) — partial |
 | hacking-interface | [hacking-interface.md](../design/hacking-interface.md) — active | none yet | none yet |
-| combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/swing keep); clean-slate rebuild in [combat_implementation_plan](../plans/combat_implementation_plan.md) (Phase 0 purge pending; no dated effort yet) | [combat](systems/combat.md) — condemned |
+| combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/swing keep); [combat_implementation_plan](../plans/combat_implementation_plan.md) — Phase 0–1 shipped (unified melee); Phases 2–7 pending | [combat](systems/combat.md) — partial |
 | stamina | [stamina.md](../design/stamina.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — Phase 7a core shipped with inventory clean-slate (combat drains deferred) | [stamina](systems/stamina.md) — partial |
 | health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — planned; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired) | [health](systems/health.md) — partial |
 | armor | [armor.md](../design/armor.md) — active | none yet | none yet |
@@ -106,7 +106,7 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
 | Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
 | Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md) |
-| Combat | [combat](systems/combat.md) | condemned | Obsolete Phase 4 melee prototype — do not extend; purge + unified melee per [combat_implementation_plan](../plans/combat_implementation_plan.md); stance/swing keep in [entities](systems/entities.md) |
+| Combat | [combat](systems/combat.md) | partial | Phase 0–1 unified melee (fists + improvised + tools); stance/swing via [entities](systems/entities.md); disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |
@@ -161,7 +161,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) | Layered persistence framework; Phase 1a/1b shipped, Phase 2 round snapshots pending |
 | [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation |
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
-| [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0 purge condemned Combat/ → Phase 1 unified melee; disarm/ranged/stamina/armor later (pending) |
+| [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0–1 unified melee shipped; disarm/ranged/stamina/armor later |
 | [urp_lighting_look_plan_d42c32f5.plan.md](../plans/urp_lighting_look_plan_d42c32f5.plan.md) | URP half-toon look pass (pending) |
 | [shuttle_system_design_a3dd2e04.plan.md](../plans/shuttle_system_design_a3dd2e04.plan.md) | Shuttle tile blueprints / multi-map (pending) |
 
