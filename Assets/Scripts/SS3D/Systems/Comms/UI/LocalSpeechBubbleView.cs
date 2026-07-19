@@ -357,20 +357,73 @@ namespace SS3D.Systems.Comms.UI
             };
 
             _draftChip.EnableInClassList(modeClass, true);
+            ApplyDraftTypeStyles(mode);
+
+            _draftChip.MarkDirtyRepaint();
+            FitDraftChipWidth();
+        }
+
+        /// <summary>
+        /// TextField ignores many nested USS text rules (same as unityTextAlign). Force size/color
+        /// in code so .font-body's 11px secondary gray cannot win.
+        /// </summary>
+        private void ApplyDraftTypeStyles(SpeechMode mode)
+        {
+            if (_draftField == null)
+            {
+                return;
+            }
+
+            float fontSize = mode switch
+            {
+                SpeechMode.Whisper => 13f,
+                SpeechMode.Shout => 19f,
+                _ => 17f,
+            };
             FontStyle fontStyle = mode switch
             {
                 SpeechMode.Shout => FontStyle.Bold,
                 SpeechMode.Whisper => FontStyle.Italic,
                 _ => FontStyle.Normal,
             };
-            _draftField.style.unityFontStyleAndWeight = fontStyle;
+            Color textColor = mode switch
+            {
+                SpeechMode.Whisper => new Color(235f / 255f, 235f / 255f, 235f / 255f, 1f),
+                SpeechMode.Shout => Color.white,
+                _ => new Color(245f / 255f, 245f / 255f, 245f / 255f, 1f),
+            };
+            float letterSpacing = mode is SpeechMode.Whisper or SpeechMode.Shout ? 1f : 0f;
+
+            ApplyTypeToElement(_draftField, fontSize, fontStyle, textColor, letterSpacing);
             if (_draftMeasure != null)
             {
-                _draftMeasure.style.unityFontStyleAndWeight = fontStyle;
+                ApplyTypeToElement(_draftMeasure, fontSize, fontStyle, textColor, letterSpacing);
             }
 
-            _draftChip.MarkDirtyRepaint();
-            FitDraftChipWidth();
+            VisualElement textInput = _draftField.Q(className: "unity-base-text-field__input");
+            if (textInput != null)
+            {
+                ApplyTypeToElement(textInput, fontSize, fontStyle, textColor, letterSpacing);
+                textInput.style.unityTextAlign = TextAnchor.MiddleCenter;
+            }
+
+            // Multiline TextField hosts text in nested TextElement / Label children.
+            _draftField.Query(className: "unity-base-text-field__input").ForEach(input =>
+            {
+                input.Query<TextElement>().ForEach(te =>
+                    ApplyTypeToElement(te, fontSize, fontStyle, textColor, letterSpacing));
+                input.Query<Label>().ForEach(label =>
+                    ApplyTypeToElement(label, fontSize, fontStyle, textColor, letterSpacing));
+            });
+        }
+
+        private static void ApplyTypeToElement(
+            VisualElement element, float fontSize, FontStyle fontStyle, Color color, float letterSpacing)
+        {
+            element.style.fontSize = fontSize;
+            element.style.unityFontStyleAndWeight = fontStyle;
+            element.style.color = color;
+            element.style.letterSpacing = letterSpacing;
         }
 
         private void OnDraftValueChanged(ChangeEvent<string> evt)
@@ -464,7 +517,9 @@ namespace SS3D.Systems.Comms.UI
 
             // Do NOT widen the field to the name width — finished chips hug each line separately and
             // center via align-items. Widening + UpperLeft text made short drafts look left-aligned.
-            // Force center align in code: USS -unity-text-align does not stick on TextField (logs: UpperLeft).
+            // Force type + center align in code: USS text rules do not stick on TextField (font-body
+            // otherwise wins at 11px secondary gray).
+            ApplyDraftTypeStyles(_draftMode);
             _draftField.style.unityTextAlign = TextAnchor.MiddleCenter;
             VisualElement textInput = _draftField.Q(className: "unity-base-text-field__input");
             if (textInput != null)

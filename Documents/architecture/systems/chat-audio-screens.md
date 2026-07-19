@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
 > Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem
 > Status: partial
-> Verified: 486cbf7db — 2026-07-19
+> Verified: 577ea44f0 — 2026-07-19
 
 # Chat / audio / screens
 
@@ -11,7 +11,7 @@ In-game chat, audio playback, and camera/screen controllers. (Navigation map not
 
 **Condemned UI:** always-on chat window — do not extend or port to UITK; replace per [comms.md](../../design/comms.md) ([agent-first composition](../2026-07_agent-first-composition.md)). The in-game `ToggleChatsButton` on `PlayerCanvas` is disabled (obsolete chrome).
 
-Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (option 1a): soft translucent plate, Gurajada uppercase name on the newest line only, UI-sans dialogue, older stack lines shed name/quotes and fade. Compose (mock 2a / comms.md §5): **T** opens a draft chip at the same head anchor as a finished line — dashed outline on the outer plate edge + real TextField caret, dim secondary text — Enter sends speak, Shift+Enter whisper, Ctrl+Enter shout, Escape cancels. Typing holds `TextEntry` + `InputInterface` text capture so gameplay input is fully masked.
+Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (option 1a): soft translucent plate, Gurajada uppercase name on the newest line only, UI-sans dialogue, older stack lines shed name/quotes and fade. Compose (mock 2a / comms.md §5): **T** opens a draft chip at the same head anchor as a finished line — dashed outline on the outer plate edge + real TextField caret, high-contrast body type — Enter sends speak, Shift+Enter whisper, Ctrl+Enter shout, Escape cancels. Typing holds `TextEntry` + `InputInterface` text capture so gameplay input is fully masked.
 
 ## Start here
 
@@ -35,6 +35,8 @@ Scene/prefab placements for the local speech slice are already in `Game.unity` (
 - **Compose input:** open with arbitrated `InputSubSystem.OpenLocalSpeechCompose` (T). While drafting hold `InputContext.TextEntry` via `InputTextEntryScope` (all Input System actions off; Enter/Escape via UITK `KeyDownEvent` on TrickleDown so multiline wrap does not eat the first Enter). `InputTextEntryScope` also pushes `InputInterface` text capture so `IsPointerOverInterface()` / `IsCapturingText` stay true. Keyboard-polled debug toggles (H health, F3 speech, Atmos P fallback) must check `IsCapturingText`.
 - **Compose focus lock:** while drafting, `SetRetainDraftFocus(true)` re-focuses the TextField on `FocusOutEvent` so a world click cannot leave TextEntry held with no focused field (keys go nowhere). Escape/Enter still end compose and clear the lock.
 - **Draft width measure:** do not call `TextField.MeasureTextSize` after setting `style.width` — it returns the laid-out width and hug-sizing stalls until a mode/wrap invalidation. Measure via an off-screen Label proxy instead.
+- **Draft TextField type:** do not rely on nested USS `font-size` / `color` on the TextField — `.font-body` (11px secondary) and UITK's input tree ignore those rules the same way they ignore `-unity-text-align`. Force size/color via `ApplyDraftTypeStyles` in `LocalSpeechBubbleView`.
+- **Draft head centering:** do not use USS `translate: -50%` on the draft chip — UITK keeps a stale translate transform while width changes every keystroke. Set `left = headX - width/2` in `ApplyDraftScreenPosition`.
 
 ## Extension points
 
