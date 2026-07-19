@@ -4,8 +4,8 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
-    /// Cursor-following crosshair + zone-label chip (main-hud §6). Chip shows only while hovering
-    /// a valid limb zone; the reticle itself tracks the pointer whenever the HUD is visible.
+    /// Cursor-following crosshair + zone-label chip (main-hud §6). Shown only while Harm intent
+    /// is active; chip appears when hovering a valid limb zone.
     /// </summary>
     public sealed class ZoneTargetReticle
     {

@@ -51,8 +51,8 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ApplyDamage(BodyZone, brute, burn)` — direct damage (console `hurt`, future sources)
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)
-- `ZoneTargetResolver.TryResolveCombatZone` — BodyParts raycast + groin banding for Harm hits
-- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` — Main HUD zone chip (main-hud §6)
+- `ZoneTargetResolver.TryResolveCombatZone` — zone raycast + groin banding for Harm hits (`ZoneTargetCollider` is the contract; bones may be on Characters)
+- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` — Main HUD zone chip (Harm intent; main-hud §6)
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 

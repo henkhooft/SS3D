@@ -32,65 +32,60 @@ namespace SS3D.Systems.Health
         }
 
         /// <summary>
-        /// Camera-aim hover resolve for the zone reticle: closest BodyParts hit under the ray,
-        /// with groin banding on chest/spine hits.
+        /// Camera-aim hover resolve for the zone reticle: finds a health root under the ray,
+        /// then resolves the zone via the same collider raycasts combat uses (armature bones may
+        /// be on Characters and/or triggers — do not rely on BodyParts Physics.RaycastAll alone).
         /// </summary>
         public static bool TryResolveHoverZone(Ray ray, out BodyZone zone, out HumanHealthController health)
         {
             zone = BodyZone.Chest;
             health = null;
 
-            int mask = HealthLayers.BodyPartsMask;
+            int mask = LayerMask.GetMask("Characters", HealthLayers.BodyPartsLayerName);
             if (mask == 0)
             {
                 mask = ~0;
             }
 
-            RaycastHit[] hits = Physics.RaycastAll(ray, MaxRayDistance, mask, QueryTriggerInteraction.Ignore);
-
-            float closestDistance = float.PositiveInfinity;
-            ZoneTargetCollider bestZoneCollider = null;
-            RaycastHit bestHit = default;
-            HumanHealthController bestHealth = null;
-
-            for (int i = 0; i < hits.Length; i++)
-            {
-                RaycastHit candidate = hits[i];
-                if (!candidate.collider.TryGetComponent(out ZoneTargetCollider zoneCollider))
-                {
-                    continue;
-                }
-
-                if (!IsBodyPartCollider(candidate.collider))
-                {
-                    continue;
-                }
-
-                HumanHealthController candidateHealth =
-                    candidate.collider.GetComponentInParent<HumanHealthController>();
-                if (candidateHealth == null)
-                {
-                    continue;
-                }
-
-                if (candidate.distance >= closestDistance)
-                {
-                    continue;
-                }
-
-                closestDistance = candidate.distance;
-                bestZoneCollider = zoneCollider;
-                bestHit = candidate;
-                bestHealth = candidateHealth;
-            }
-
-            if (bestZoneCollider == null || bestHealth == null)
+            RaycastHit[] hits = Physics.RaycastAll(ray, MaxRayDistance, mask, QueryTriggerInteraction.Collide);
+            if (hits.Length == 0)
             {
                 return false;
             }
 
-            health = bestHealth;
-            zone = ApplyGroinBanding(bestZoneCollider.Zone, bestHit.point, bestHealth);
+            float closestDistance = float.PositiveInfinity;
+            HumanHealthController closestHealth = null;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit candidateHit = hits[i];
+                if (candidateHit.distance >= closestDistance)
+                {
+                    continue;
+                }
+
+                HumanHealthController candidate = candidateHit.collider.GetComponentInParent<HumanHealthController>();
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                closestDistance = candidateHit.distance;
+                closestHealth = candidate;
+            }
+
+            if (closestHealth == null)
+            {
+                return false;
+            }
+
+            if (!TryResolveZoneFromRay(ray, closestHealth, out zone, out RaycastHit zoneHit))
+            {
+                return false;
+            }
+
+            health = closestHealth;
+            zone = ApplyGroinBanding(zone, zoneHit.point, closestHealth);
             return true;
         }
 
@@ -256,13 +251,9 @@ namespace SS3D.Systems.Health
 
         private static bool IsBodyPartCollider(Collider collider)
         {
-            int bodyPartsLayer = HealthLayers.BodyPartsLayer;
-            if (bodyPartsLayer < 0)
-            {
-                return collider.GetComponent<ZoneTargetCollider>() != null;
-            }
-
-            return collider.gameObject.layer == bodyPartsLayer;
+            // ZoneTargetCollider is the contract. Armature zone bones still sit on Characters
+            // (often as triggers); do not require the BodyParts layer name alone.
+            return collider != null && collider.GetComponent<ZoneTargetCollider>() != null;
         }
 
         private static bool TryGetTorsoLocalHeight01(HumanHealthController health, Vector3 worldHit, out float localHeight01)

@@ -225,6 +225,13 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
+            // Zone confirm is combat aiming feedback (main-hud §6) — Harm only.
+            if (_intentProvider == null || _intentProvider.CurrentIntent != IntentType.Harm)
+            {
+                _view.SetZoneReticleVisible(false);
+                return;
+            }
+
             if (SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed)
             {
                 _view.SetZoneReticleVisible(false);
@@ -237,8 +244,9 @@ namespace SS3D.UI.MainHud
             bool hasZone = false;
             string zoneLabel = string.Empty;
 
-            if (!InputInterface.IsPointerOverInterface()
-                && SubSystems.TryGet(out CameraSubSystem cameras)
+            // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
+            // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
+            if (SubSystems.TryGet(out CameraSubSystem cameras)
                 && cameras.PlayerCamera != null
                 && cameras.PlayerCamera.TryGetComponent(out Camera camera))
             {
