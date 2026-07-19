@@ -19,6 +19,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Main HUD:** equipment/gear click = equip/unequip vs active hand, or open item storage if the worn item is a bag; hands select active hand (and open held bag if any). Cross-surface drag via `StoragePanelHost.BeginHudDrag` / `EndHudDrag`. Visibility: `ApplyVisibility` (local body + in-game round; suppressed while MI open). Storage panels use the same MI suppress (`StoragePanelHost.ApplyMachineUiVisibility` — hide root, keep panels bound). Catalog via `Resources.Load` (**SS3D → Main HUD → Rebuild Asset Catalog**).
 
+**Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
+
 **Legacy uGUI purged:** condemned container UI scripts and prefabs under `Systems/UI/Systems/Containers/` removed; `HumanoidInventory` / `StaminaBar` stripped from `PlayerCanvas.prefab`. Hands wiring on `Human.prefab` remains prefab composition debt ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
