@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack
 > Status: partial
-> Verified: e5cde06a5 — 2026-07-19
+> Verified: 39fe3fbb2 — 2026-07-19
 
 # Combat
 
@@ -13,7 +13,7 @@ Harm-intent Hit resolves zones via `ZoneTargetResolver`, applies `MeleeDamagePac
 (`HandMeleeExtension`), improvised any-held-item (`Item.CreateSourceInteractions`), and dedicated
 profiles on crowbar / hatchet / kitchen knife. Run Primary plays swing telegraph via
 `HumanoidCombatController.RequestAttack` then dispatches the delayed Hit — presentation does not
-consume LMB alone.
+consume LMB alone. Zone-label reticle chip (main-hud §6) lives on Main HUD — see [inventory](inventory.md).
 
 Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 
@@ -42,7 +42,7 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 
 1. Host Play Mode as admin, console: `spawndummy` — mindless Human ~2m ahead (controls frozen).
 2. Harm intent, LMB limbs — windup + swing + zone damage. Help must not Hit.
-3. Optional: health debug overlay `H` on the dummy.
+3. Hover limbs — Main HUD reticle shows zone chip (`chest`, `l_arm`, …); optional health debug `H`.
 
 ## Pitfalls
 
@@ -52,10 +52,11 @@ Deferred: disarm/grab, ranged, combat stamina drains, armor, blocking.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
 - **Hit fails with target index -2 / no damage despite swing bar:** client discovers on a body-part `Selectable` (e.g. `HumanTorso`); server revalidates on the Entity `NetworkObject` root — wire indices diverge. `InteractionController.TryResolveDispatchedInteraction` falls back to generic name. Melee is **raycast zone damage after windup**, not limb physics contact — broken swing anim does not block a resolved Hit.
 - **`spawndummy` needs Administrator** — same bar as `hurt`.
+- **Head/torso must not be world containers:** `ContainerInteractive` stripped from `HumanHead`/`HumanTorso` prefabs (clothing/pocket `AttachedContainer` HUD slots kept). Re-run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** if it returns. Surgery organ holes are deferred.
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing + dummy spawn), [inventory](inventory.md) (hands / items)
+- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing + dummy spawn), [inventory](inventory.md) (hands / items / zone reticle)
 - **Used by:** Harm-intent Run Primary / radial Hit
 
 ## Related docs

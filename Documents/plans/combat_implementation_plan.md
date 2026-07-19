@@ -123,8 +123,8 @@ Single primary path per [combat.md](../design/combat.md) §2:
   `HumanHealthController.ApplyDamage`.
 - Interim lethality toward combat.md §4 (“a handful of solid hits”) — **final numbers wait
   on armor (Phase 5)**.
-- HUD zone-label chip ([main-hud.md](../design/main-hud.md) §6) is a main-hud follow-up if
-  not already built; melee still resolves zones server-side without it.
+- HUD zone-label chip ([main-hud.md](../design/main-hud.md) §6) shipped on Main HUD
+  (`ZoneTargetReticle` + `TryResolveHoverZone`); melee still resolves zones server-side.
 
 ### Phase 2 — Disarm and grab
 

@@ -13,6 +13,87 @@ namespace SS3D.Systems.Health
         private const float MaxPointResolveDistanceSqr = 0.08f;
         private const float MaxRayDistance = 8f;
 
+        /// <summary>
+        /// Short zone label for the Main HUD reticle chip (main-hud §6): head, chest, l_arm, …
+        /// </summary>
+        public static string GetReticleLabel(BodyZone zone)
+        {
+            return zone switch
+            {
+                BodyZone.Head => "head",
+                BodyZone.Chest => "chest",
+                BodyZone.LeftArm => "l_arm",
+                BodyZone.RightArm => "r_arm",
+                BodyZone.LeftLeg => "l_leg",
+                BodyZone.RightLeg => "r_leg",
+                BodyZone.Groin => "groin",
+                _ => "chest",
+            };
+        }
+
+        /// <summary>
+        /// Camera-aim hover resolve for the zone reticle: closest BodyParts hit under the ray,
+        /// with groin banding on chest/spine hits.
+        /// </summary>
+        public static bool TryResolveHoverZone(Ray ray, out BodyZone zone, out HumanHealthController health)
+        {
+            zone = BodyZone.Chest;
+            health = null;
+
+            int mask = HealthLayers.BodyPartsMask;
+            if (mask == 0)
+            {
+                mask = ~0;
+            }
+
+            RaycastHit[] hits = Physics.RaycastAll(ray, MaxRayDistance, mask, QueryTriggerInteraction.Ignore);
+
+            float closestDistance = float.PositiveInfinity;
+            ZoneTargetCollider bestZoneCollider = null;
+            RaycastHit bestHit = default;
+            HumanHealthController bestHealth = null;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit candidate = hits[i];
+                if (!candidate.collider.TryGetComponent(out ZoneTargetCollider zoneCollider))
+                {
+                    continue;
+                }
+
+                if (!IsBodyPartCollider(candidate.collider))
+                {
+                    continue;
+                }
+
+                HumanHealthController candidateHealth =
+                    candidate.collider.GetComponentInParent<HumanHealthController>();
+                if (candidateHealth == null)
+                {
+                    continue;
+                }
+
+                if (candidate.distance >= closestDistance)
+                {
+                    continue;
+                }
+
+                closestDistance = candidate.distance;
+                bestZoneCollider = zoneCollider;
+                bestHit = candidate;
+                bestHealth = candidateHealth;
+            }
+
+            if (bestZoneCollider == null || bestHealth == null)
+            {
+                return false;
+            }
+
+            health = bestHealth;
+            zone = ApplyGroinBanding(bestZoneCollider.Zone, bestHit.point, bestHealth);
+            return true;
+        }
+
         public static bool TryResolveZone(Vector3 worldPoint, HumanHealthController health, out BodyZone zone)
         {
             return TryResolveZoneFromPoint(worldPoint, health, out zone);

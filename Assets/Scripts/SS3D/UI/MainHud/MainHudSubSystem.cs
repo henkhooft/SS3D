@@ -8,11 +8,14 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Screens;
 using SS3D.UI.MachineInterface;
 using SS3D.UI.MainHud.Components;
 using SS3D.UI.MachineInterface.Components;
@@ -206,6 +209,48 @@ namespace SS3D.UI.MainHud
             }
 
             RefreshActiveHand();
+            RefreshZoneReticle();
+        }
+
+        private void RefreshZoneReticle()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            if (_localPlayer == null || !IsRoundInGame() || _machineUiOpen)
+            {
+                _view.SetZoneReticleVisible(false);
+                return;
+            }
+
+            if (SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed)
+            {
+                _view.SetZoneReticleVisible(false);
+                return;
+            }
+
+            _view.SetZoneReticleVisible(true);
+
+            Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
+            bool hasZone = false;
+            string zoneLabel = string.Empty;
+
+            if (!InputInterface.IsPointerOverInterface()
+                && SubSystems.TryGet(out CameraSubSystem cameras)
+                && cameras.PlayerCamera != null
+                && cameras.PlayerCamera.TryGetComponent(out Camera camera))
+            {
+                Ray ray = camera.ScreenPointToRay(screenPosition);
+                if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _))
+                {
+                    hasZone = true;
+                    zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
+                }
+            }
+
+            _view.SetZoneReticle(screenPosition, hasZone, zoneLabel);
         }
 
         private void BuildView()

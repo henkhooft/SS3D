@@ -51,6 +51,7 @@ namespace SS3D.UI.MainHud
         private EquipmentGrid _equipmentGrid;
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
+        private ZoneTargetReticle _zoneReticle;
         private Sequence _visibilitySequence;
         private bool _visible;
         private float _scale = 1f;
@@ -86,6 +87,7 @@ namespace SS3D.UI.MainHud
             KillVisibilitySequence();
             _root?.RemoveFromHierarchy();
             _root = null;
+            _zoneReticle = null;
         }
 
         public void SetVisible(bool visible)
@@ -114,6 +116,34 @@ namespace SS3D.UI.MainHud
         public void SetIntent(IntentType intent)
         {
             _intentModule.SetIntent(intent);
+        }
+
+        /// <summary>
+        /// Updates the zone-targeting reticle (cursor position + optional zone chip label).
+        /// </summary>
+        public void SetZoneReticle(Vector2 screenPosition, bool hasZone, string zoneLabel)
+        {
+            if (_zoneReticle == null)
+            {
+                return;
+            }
+
+            _zoneReticle.UpdateCursorPosition(screenPosition);
+            _zoneReticle.SetZoneHover(hasZone, zoneLabel);
+        }
+
+        public void SetZoneReticleVisible(bool visible)
+        {
+            if (_zoneReticle?.Root == null)
+            {
+                return;
+            }
+
+            _zoneReticle.Root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
+            {
+                _zoneReticle.SetZoneHover(false, string.Empty);
+            }
         }
 
         public void SetEquipmentIcon(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon)
@@ -295,10 +325,13 @@ namespace SS3D.UI.MainHud
             _intentModule.ToggleRequested += () => IntentToggleRequested?.Invoke();
             VisualElement intentZone = BuildZone("main-hud__zone--intent", _intentModule);
 
+            _zoneReticle = new ZoneTargetReticle();
+
             _root.Add(alertZone);
             _root.Add(equipmentZone);
             _root.Add(handsGearZone);
             _root.Add(intentZone);
+            _root.Add(_zoneReticle.Root);
         }
 
         private static VisualElement BuildZone(string className, VisualElement child)

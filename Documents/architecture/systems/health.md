@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects wired; vitals HUD Phase 6 remainder)
-> Verified: ab8eff923 — 2026-07-17
+> Verified: 39fe3fbb2 — 2026-07-19
 
 # Health
 
@@ -41,7 +41,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/DefibCommand.cs` — admin defib testing
 - `Assets/Scripts/SS3D/Systems/Health/HealthDebugController.cs` — IMGUI overlay (H) for full zone/organ/pool inspection
 - `Assets/Scripts/SS3D/Systems/Health/HealthDebugDetail.cs` — per-zone/per-organ SyncVar payload for debug UI
-- `Assets/Scripts/SS3D/Systems/Health/ZoneTargetResolver.cs` — point + combat raycast zone resolution, groin banding
+- `Assets/Scripts/SS3D/Systems/Health/ZoneTargetResolver.cs` — point + combat/hover raycast zone resolution, groin banding, reticle labels
 - `Assets/Scripts/SS3D/Systems/Health/HealthLayers.cs` — `BodyParts` layer mask for combat raycasts
 
 ## Extension points
@@ -52,6 +52,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)
 - `ZoneTargetResolver.TryResolveCombatZone` — BodyParts raycast + groin banding for Harm hits
+- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` — Main HUD zone chip (main-hud §6)
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 
