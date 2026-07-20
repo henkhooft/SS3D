@@ -53,7 +53,7 @@ Zone targeting (seven zones, raycast, reticle confirm) and the intent/combat-ver
 - **Armor/protective gear mitigation per zone.** Combat numbers can't really be finalized without this, but scoping it into this pass would balloon it — natural next follow-up.
 - **Hitscan vs. projectile, finally.** Recommended hitscan-by-default in §3, but this needs an implementation-side confirmation given netcode implications.
 - **Skill/training modifiers to accuracy.** Not assumed to exist. If a skill system exists elsewhere, it would modulate a weapon's base cone — this doc doesn't invent one.
-- **Death and critical-state resolution.** The main HUD doc covers the screen-space feedback (vignette, heartbeat) for critical/dying — what happens after (cloning, cryo, respawn rules) is a distinct, very SS13-specific system worth its own pass.
+- **Death and critical-state resolution.** The main HUD doc covers the screen-space feedback (vignette, heartbeat) for critical/dying — what happens after is a distinct, very SS13-specific system, now designed in `death-cloning-respawn.md` (cloning/respawn) and `cryogenics.md` (cryo, a separate "pause" mechanic, not a revival path).
 
 ## 7. Worked example — melee vs. ranged skirmish
 

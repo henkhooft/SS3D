@@ -32,6 +32,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 ## Related docs
 
+- Design (read-only): [admin-tools.md](../../design/admin-tools.md) — permission tiers, ahelp, stealth observation, world intervention, moderation this system will eventually need to expose
 - [id-access](id-access.md)
 - [screen-effects](screen-effects.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)

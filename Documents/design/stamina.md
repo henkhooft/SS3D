@@ -35,7 +35,7 @@ This gives stamina real stakes without inventing a new failure state — the fai
 Same rule as vitals (`main-hud.md` §5): minimal permanent chrome, diegetic feedback first, panel as backup.
 
 - **No permanent stamina bar.** Consistent with the vitals cluster's "only draws the eye when something's actually wrong" pattern — a full bar sitting on screen at all times when a character is fully rested adds chrome for no reason.
-- **Screen-space feedback carries most of the load**, the same way it does for vitals: heavier breathing audio, mild FOV narrowing or screen sway when winded, visible weapon sway increasing as stamina drops. The player learns their exertion state by how it *feels* to move and fight, not by watching a meter.
+- **Screen-space feedback carries most of the load**, the same way it does for vitals: heavier breathing audio (personal tier, `audio.md` §4), mild FOV narrowing or screen sway when winded, visible weapon sway increasing as stamina drops. The player learns their exertion state by how it *feels* to move and fight, not by watching a meter.
 - **A compact indicator fades in only when stamina drops below a threshold** (e.g. under ~50%), living near the vitals cluster, and fades back out once it recovers — same hidden-until-relevant pattern the alerts stack already uses.
 - **On-demand detail** rides along with the existing per-limb/organ readout (hold examine-self) rather than opening a separate panel.
 

@@ -89,6 +89,7 @@ Nothing here assumes audio exists. If voice chat gets added later, it runs as an
 | Compose input | Intent module's modifier-chording and fading-hint pattern |
 | Radio & channels | Radio/channel system, ID/access for channel permissions, radial menu grammar |
 | Log | PDA (main HUD gear strip), timestamped storage keyed to the chat/message backend |
+| PDA-to-PDA messaging | New address mode on this doc's message/log backend, not a new channel type (`pda.md` §4) |
 
 ## 12. Worked examples
 
