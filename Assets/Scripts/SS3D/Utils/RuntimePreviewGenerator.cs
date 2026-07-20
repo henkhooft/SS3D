@@ -343,8 +343,16 @@ public static class RuntimePreviewGenerator
 
 			RenderTexture activeRT = RenderTexture.active;
 			RenderTexture renderTexture = null;
+			List<Light> previewLights = null;
+			AmbientMode previousAmbientMode = RenderSettings.ambientMode;
+			Color previousAmbientLight = RenderSettings.ambientLight;
+			float previousAmbientIntensity = RenderSettings.ambientIntensity;
 			try
 			{
+				// Gameplay lighting is fixture-only (zero ambient, main light disabled). Icon
+				// previews would render black without a temporary light setup of their own.
+				previewLights = CreatePreviewLights( previewBounds );
+
 				int supersampledWidth = Mathf.RoundToInt( width * m_renderSupersampling );
 				int supersampledHeight = Mathf.RoundToInt( height * m_renderSupersampling );
 
@@ -432,6 +440,11 @@ public static class RuntimePreviewGenerator
 			}
 			finally
 			{
+				DestroyPreviewLights( previewLights );
+				RenderSettings.ambientMode = previousAmbientMode;
+				RenderSettings.ambientLight = previousAmbientLight;
+				RenderSettings.ambientIntensity = previousAmbientIntensity;
+
 				RenderTexture.active = activeRT;
 
 				if( renderTexture )
@@ -739,6 +752,67 @@ public static class RuntimePreviewGenerator
 		renderCamera.backgroundColor = m_backgroundColor;
 		renderCamera.orthographic = m_orthographicMode;
 		renderCamera.clearFlags = m_backgroundColor.a < 1f ? CameraClearFlags.Depth : CameraClearFlags.Color;
+	}
+
+	/// <summary>
+	/// Temporary lights for icon/tile previews. Point lights only — the gameplay URP asset
+	/// disables main (directional) light rendering, so a directional key would be ignored.
+	/// </summary>
+	private static List<Light> CreatePreviewLights( Bounds previewBounds )
+	{
+		RenderSettings.ambientMode = AmbientMode.Flat;
+		RenderSettings.ambientLight = new Color( 0.4f, 0.4f, 0.42f, 1f );
+		RenderSettings.ambientIntensity = 1f;
+
+		float extent = Mathf.Max( previewBounds.extents.magnitude, 0.15f );
+		Vector3 center = previewBounds.center;
+		Vector3 keyOffset = -m_previewDirection * ( extent * 3f );
+		Vector3 fillOffset = ( Vector3.up + Vector3.right ) * ( extent * 2.5f );
+
+		var lights = new List<Light>( 2 );
+		try
+		{
+			lights.Add( CreatePreviewPointLight( center + keyOffset, intensity: 1.35f, range: extent * 10f ) );
+			lights.Add( CreatePreviewPointLight( center + fillOffset, intensity: 0.45f, range: extent * 10f ) );
+			return lights;
+		}
+		catch
+		{
+			DestroyPreviewLights( lights );
+			throw;
+		}
+	}
+
+	private static Light CreatePreviewPointLight( Vector3 position, float intensity, float range )
+	{
+		var lightObject = new GameObject( "ModelPreviewGeneratorLight" )
+		{
+			hideFlags = HideFlags.HideAndDontSave,
+		};
+		lightObject.transform.position = position;
+
+		Light light = lightObject.AddComponent<Light>();
+		light.type = LightType.Point;
+		light.color = Color.white;
+		light.intensity = intensity;
+		light.range = range;
+		light.shadows = LightShadows.None;
+		light.cullingMask = 1 << PREVIEW_LAYER;
+		return light;
+	}
+
+	private static void DestroyPreviewLights( List<Light> lights )
+	{
+		if( lights == null )
+			return;
+
+		for( int i = 0; i < lights.Count; i++ )
+		{
+			if( lights[i] != null )
+				Object.DestroyImmediate( lights[i].gameObject );
+		}
+
+		lights.Clear();
 	}
 
 #if UNITY_RENDER_PIPELINE_UNIVERSAL

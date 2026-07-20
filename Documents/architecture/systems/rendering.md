@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: a86b44505 — 2026-07-17
+> Verified: 4c9ba60cd — 2026-07-20
 
 # Rendering
 
@@ -37,6 +37,7 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 ## Pitfalls
 
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
+- **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
 
 ## Depends on / Used by
 
