@@ -49,17 +49,19 @@ float4 ST_EvaluateDirectLight(
 {
     STToonSettings settings = ST_GetToonSettings();
 
-    if (dot(lightColor, 1.0) <= 0.0)
+    if (dot(lightColor, 1.0) <= 0.0 || lightAttenuation <= 0.0)
     {
         return 0.0;
     }
 
     float3 normal = normalize(surface.normalWS);
     float3 lightDir = normalize(lightDirectionWS);
-    float3 viewDir = normalize(surface.viewDirWS);
 
     float ndotl = dot(normal, lightDir);
-    float toon = ST_Toon(ndotl, lightAttenuation, settings);
+    // Geometric half-toon / cel banding only. Shadow + distance attenuation must
+    // scale the final contribution — folding atten into the shade/lit blend left
+    // cast shadows as a pastel tint of the lit color (still looks fully lit).
+    float toon = ST_Toon(ndotl, 1.0, settings);
 
     float4 litCol = swapLightColorBlend
         ? ST_ColorBlend(_Color, float4(lightColor, 1.0), _AmbientCol)
@@ -71,7 +73,7 @@ float4 ST_EvaluateDirectLight(
         : settings.darkColor;
     float4 blendCol = ST_ColorBlend(shadeCol, texCol, toon);
     float4 postCol = ST_PostEffects(blendCol, toon, lightAttenuation, ndotl, settings);
-    return postCol;
+    return postCol * lightAttenuation;
 }
 
 void ST_AccumulateLight(
@@ -81,7 +83,7 @@ void ST_AccumulateLight(
     bool swapLightColorBlend)
 {
     half lightAttenuation = light.shadowAttenuation * light.distanceAttenuation;
-    if (dot(light.color, 1.0) <= 0.0 || light.distanceAttenuation <= 0.0)
+    if (dot(light.color, 1.0) <= 0.0 || lightAttenuation <= 0.0)
     {
         return;
     }
