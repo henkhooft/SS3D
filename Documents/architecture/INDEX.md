@@ -47,7 +47,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | none yet | none yet |
 | construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
 | creative-mode | [creative-mode.md](../design/creative-mode.md) — active | none yet | none yet |
-| rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | none yet (look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); palette emission sample fix shipped on Simple Toon) | [rendering](systems/rendering.md) — partial |
+| rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); polish handoff [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) (planned); palette emission sample fix shipped on Simple Toon | [rendering](systems/rendering.md) — partial |
 | shuttles | [shuttles.md](../design/shuttles.md) — active | none yet | none yet |
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |

@@ -385,12 +385,17 @@ namespace SS3D.UI.MachineInterface
 
         private void OnChannelsChanged(ApcControlFlags oldValue, ApcControlFlags newValue, bool asServer)
         {
-            if (!asServer)
+            if (asServer)
             {
-                return;
+                if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+                {
+                    areaSubSystem.RefreshAreaLightingStates();
+                }
+
+                RefreshAllViewers();
             }
 
-            RefreshAllViewers();
+            LightPower.RefreshAllFixtures();
         }
     }
 }
