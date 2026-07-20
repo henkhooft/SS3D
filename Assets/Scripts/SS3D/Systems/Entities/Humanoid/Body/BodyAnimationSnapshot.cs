@@ -13,6 +13,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public LocomotionMode Locomotion;
         public ArmHoldPose ArmHold;
         public AnimationTriggerId ActiveTrigger;
+        /// <summary>0–2 melee swing cycle index when <see cref="ActiveTrigger"/> is AttackSwing.</summary>
+        public byte AttackVariant;
         public HumanoidCombatMode CombatMode;
         public LimpSide LimpSide;
         public float AimYaw;
@@ -20,10 +22,14 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public float MovementSpeed;
         public float InjuredArmLeft;
         public float InjuredArmRight;
+        /// <summary>Max left/right leg brute fraction — drives limp idle severity and additive weight.</summary>
+        public float InjuredLeg;
         public bool IsSeated;
         public bool IsCrawling;
         public bool IsFloating;
         public bool IsDragging;
+        /// <summary>True when the active hand is Left — mirrors Upper Body Mixamo holds/swings.</summary>
+        public bool MirrorUpperBody;
 
         public uint Pack()
         {
@@ -38,6 +44,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsCrawling) packed |= 1u << 16;
             if (IsFloating) packed |= 1u << 17;
             if (IsDragging) packed |= 1u << 18;
+            packed |= ((uint)AttackVariant & 0x3) << 19;
+            if (MirrorUpperBody) packed |= 1u << 21;
             return packed;
         }
 
@@ -47,7 +55,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             float aimPitch,
             float movementSpeed,
             float injuredArmLeft,
-            float injuredArmRight)
+            float injuredArmRight,
+            float injuredLeg)
         {
             return new BodyAnimationSnapshot
             {
@@ -61,11 +70,14 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 IsCrawling = (packed & (1u << 16)) != 0,
                 IsFloating = (packed & (1u << 17)) != 0,
                 IsDragging = (packed & (1u << 18)) != 0,
+                AttackVariant = (byte)((packed >> 19) & 0x3),
+                MirrorUpperBody = (packed & (1u << 21)) != 0,
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
                 MovementSpeed = movementSpeed,
                 InjuredArmLeft = injuredArmLeft,
                 InjuredArmRight = injuredArmRight,
+                InjuredLeg = injuredLeg,
             };
         }
 
@@ -76,7 +88,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 && Math.Abs(AimPitch - other.AimPitch) < 0.01f
                 && Math.Abs(MovementSpeed - other.MovementSpeed) < 0.01f
                 && Math.Abs(InjuredArmLeft - other.InjuredArmLeft) < 0.01f
-                && Math.Abs(InjuredArmRight - other.InjuredArmRight) < 0.01f;
+                && Math.Abs(InjuredArmRight - other.InjuredArmRight) < 0.01f
+                && Math.Abs(InjuredLeg - other.InjuredLeg) < 0.01f;
         }
 
         public override bool Equals(object obj) => obj is BodyAnimationSnapshot other && Equals(other);

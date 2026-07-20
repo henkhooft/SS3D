@@ -18,6 +18,7 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int ArmHold = Animator.StringToHash("ArmHold");
             public static readonly int InjuredArmLeft = Animator.StringToHash("InjuredArmLeft");
             public static readonly int InjuredArmRight = Animator.StringToHash("InjuredArmRight");
+            public static readonly int InjuredLeg = Animator.StringToHash("InjuredLeg");
             public static readonly int IsSeated = Animator.StringToHash("IsSeated");
             public static readonly int CombatMode = Animator.StringToHash("CombatMode");
             public static readonly int CombatStance = Animator.StringToHash("CombatStance");
@@ -25,6 +26,8 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int AimPitch = Animator.StringToHash("AimPitch");
             public static readonly int AttackSwing = Animator.StringToHash("AttackSwing");
             public static readonly int AttackStab = Animator.StringToHash("AttackStab");
+            public static readonly int AttackVariant = Animator.StringToHash("AttackVariant");
+            public static readonly int MirrorUpperBody = Animator.StringToHash("MirrorUpperBody");
             public static readonly int Throw = Animator.StringToHash("Throw");
             public static readonly int Emote = Animator.StringToHash("Emote");
             public static readonly int Flinch = Animator.StringToHash("Flinch");

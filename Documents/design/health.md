@@ -111,7 +111,7 @@ Not a redesign of the main HUD doc's vitals cluster (§5) — a note on what its
 
 ## 9. Out of scope for this pass
 
-- Disease/infection (organs make this a natural future system, but it's a separate pass)
+- Disease/infection — designed in `virology.md`, which builds directly on this doc's organ/systemic-pool model
 - The surgical procedure itself — what it accomplishes is defined in §6, the mechanic isn't
 - Genetic/DNA or radiation damage, if that exists as a separate type — not assumed here
 - Cybernetic/prosthetic depth beyond "this is a treatment option for severed limbs and failed organs"

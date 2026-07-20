@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack / CmdRunMeleeSwing
 > Status: partial
-> Verified: 8ae7fabec — 2026-07-20
+> Verified: bd4ec5e61 — 2026-07-20
 
 # Combat
 
@@ -16,6 +16,8 @@ fists, improvised held items, and dedicated tool profiles (crowbar / hatchet / k
 Zone reticle on Main HUD — see [inventory](inventory.md).
 
 Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`MeleeWeaponProfile.StaminaCost`); broader combat stamina (block/fire) still deferred.
+
+**Shipped adjacent foundation (presentation):** Peaceful/Melee/Ranged stance locomotion, Injured limp gait (severity idle + oneshots), left-hand Upper Body mirror, aim look-at IK, and melee `AttackSwing` + `AttackVariant` (0–2) live under [entities](entities.md) — see [player-body-animation](../2026-07_player-body-animation.md) and [animation-polish](../2026-07_animation-polish.md). Wiring swing telegraph to windup timing remains a combat build-out task (tune Attack Swing exit/speed in the Animator — do not hardcode clip length in C#).
 
 ## Start here
 
@@ -51,6 +53,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Do not require a hover collider to start a swing** — Harm primary uses `CmdRunMeleeSwing`; connect resolves hit from synced mouse aim.
 - **Connect aim is not stance SyncVars** — peaceful Harm never updates `AimYaw`/`AimPitch`. Owner syncs camera aim via `CmdSyncMeleeAim` during windup; connect prefers that over body aim.
 - **Cancel-on-move uses entity root** — `DelayedInteraction` defaults to the hand transform; melee overrides to `Entity` so swing bone motion does not cancel windup.
+- **Connect ray from hand can skew** — building hand→aimPoint after swing anim starts may miss moving arm zones; prefer camera ray matching the reticle (open follow-up).
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
@@ -67,5 +70,6 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - Design (read-only): [Documents/design/combat.md](../../design/combat.md) — fork diverges: click always swings; connect resolves hit
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md)
 - Stance foundation: [2026-07_player-body-animation.md](../2026-07_player-body-animation.md)
+- Animation polish: [2026-07_animation-polish.md](../2026-07_animation-polish.md)
 - [entities](entities.md), [health](health.md), [stamina](stamina.md), [ingame-console](ingame-console.md)
 - [INDEX.md](../INDEX.md)

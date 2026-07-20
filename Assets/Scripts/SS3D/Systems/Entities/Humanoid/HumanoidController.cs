@@ -304,10 +304,13 @@ namespace SS3D.Systems.Entities.Humanoid
         protected abstract void MovePlayer();
         
         /// <summary>
-        /// Process the player movement input, smoothing it
+        /// Process the player movement input, smoothing it.
         /// </summary>
-        /// <returns></returns>
-        protected void ProcessPlayerInput()
+        /// <param name="publishSpeed">
+        /// When false, skip OnSpeedChanged — used when predicted movement owns gait/speed publish
+        /// so Update does not snap Speed/Vel ahead of the smoothed tick.
+        /// </param>
+        protected void ProcessPlayerInput(bool publishSpeed = true)
         {
             EnsureInputReady();
 
@@ -324,7 +327,10 @@ namespace SS3D.Systems.Entities.Humanoid
             Input = Vector2.ClampMagnitude(new Vector2(x, y), inputFilteredSpeed);
             SmoothedInput = Vector2.Lerp(SmoothedInput, Input, Time.deltaTime * (_lerpMultiplier / 10));
 
-            OnSpeedChanged(Input.magnitude != 0 ? inputFilteredSpeed : 0);
+            if (publishSpeed)
+            {
+                OnSpeedChanged(Input.magnitude != 0 ? inputFilteredSpeed : 0);
+            }
         }
 
         /// <summary>

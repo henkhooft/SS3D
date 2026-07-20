@@ -154,7 +154,7 @@ Three renderers, one shared tile anchor and write pattern — the same "one shar
 
 - Perception-altering/debuff gas effects — needs an effect target in the health or combat model; flagged in §11, not decided here
 - Exact numeric values — reagent boiling/freezing points, molar masses, pump rated flow and max differential by tier, liquid overflow-diffusion thresholds (a balancing pass, not a design decision)
-- Vent/valve/pipe fixture physical object models and placement UI — pipes are established as tile-grain, weldable/cuttable physical objects; the exact fixture set is content, not this doc
+- Vent/valve/pipe fixture physical object models — pipes are established as tile-grain, weldable/cuttable physical objects; the exact fixture set is content, not this doc. Placement UI itself is answered by `creative-mode.md` §3–§4.
 - Mop/cleanup interaction for puddles — puddles are assumed cleanable via the existing freeform-tool convention; the specific interaction isn't detailed here
 - Fire propagation and ongoing spread duration — already flagged as atmospherics' domain but out of scope by both chemistry (§12) and explosives (§9); still true here
 - Floor/ceiling and multi-level exposure — no z-level system exists anywhere in this project; this entire doc assumes a single flat plane, which is what makes liquid/solid phase tractable without a height-field simulation

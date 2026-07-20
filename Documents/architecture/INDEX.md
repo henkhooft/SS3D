@@ -23,7 +23,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | comms | [comms.md](../design/comms.md) — active | none yet (local-speech slice shipped in-branch; non-diegetic feed / PDA log still open) | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | area | [area.md](../design/area.md) — active | [area-foundation](2026-07_area-foundation.md) — shipped (partial: APC-seeded variant; live mutation recompute and editor merge/split deferred) | [area](systems/area.md) — partial |
 | hacking-interface | [hacking-interface.md](../design/hacking-interface.md) — active | none yet | none yet |
-| combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/swing keep); [combat_implementation_plan](../plans/combat_implementation_plan.md) — Phase 0–1 shipped (unified melee); Phases 2–7 pending | [combat](systems/combat.md) — partial |
+| combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/locomotion); [animation-polish](2026-07_animation-polish.md) — shipped (melee torso, limp, mirror, swing variants); [combat_implementation_plan](../plans/combat_implementation_plan.md) — Phase 0–1 shipped (unified melee); Phases 2–7 pending | [combat](systems/combat.md) — partial |
 | stamina | [stamina.md](../design/stamina.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — Phase 7a core shipped with inventory clean-slate (combat drains deferred) | [stamina](systems/stamina.md) — partial |
 | health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — planned; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired) | [health](systems/health.md) — partial |
 | armor | [armor.md](../design/armor.md) — active | none yet | none yet |
@@ -34,7 +34,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
 | lobby | [lobby.md](../design/lobby.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
 | round-config | [round-config.md](../design/round-config.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
-| round-end | [round-end.md](../design/round-end.md) — draft | none yet | none yet |
+| round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
 | electricity | [electricity.md](../design/electricity.md) — active | none yet (electricity system is touched by [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md), but that effort implements area.md/main-hud.md, not electricity.md) | [electricity](systems/electricity.md) — partial |
 | pda | [pda.md](../design/pda.md) — active | none yet | [inventory](systems/inventory.md) — partial |
@@ -50,15 +50,16 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | none yet (look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); palette emission sample fix shipped on Simple Toon) | [rendering](systems/rendering.md) — partial |
 | shuttles | [shuttles.md](../design/shuttles.md) — active | none yet | none yet |
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
-| persistence-save | none yet | none yet | [persistence](systems/persistence.md) — partial (station templates, server meta only, not a design spec) |
-| networking | none yet | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in) | [networking-session](systems/networking-session.md) — partial |
-| audio | none yet | none yet | none yet |
+| objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
+| persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
+| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in) | [networking-session](systems/networking-session.md) — partial |
+| audio | [audio.md](../design/audio.md) — active | none yet | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | onboarding-tutorial | none yet | none yet | none yet |
-| antagonist-content | none yet | none yet | none yet |
+| antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
 | rd-material-economy | none yet | none yet | none yet |
-| cryogenics | none yet | none yet | none yet |
-| admin-tools | none yet | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |
-| player-accounts | none yet | none yet | none yet |
+| cryogenics | [cryogenics.md](../design/cryogenics.md) — active | none yet | none yet |
+| admin-tools | [admin-tools.md](../design/admin-tools.md) — active | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |
+| player-accounts | [player-accounts.md](../design/player-accounts.md) — active | none yet | none yet |
 
 [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) (shipped) and the infrastructure systems below (core
 subsystems, rendering pipeline internals, data/codegen, etc.) aren't gameplay domains with
@@ -67,11 +68,12 @@ so they stay out of this table and live only in the Infrastructure section below
 
 ### Migration note
 
-`design/round-end.md` (round-end/transition) now exists as a **draft** — it builds its summary
-screen and transition on the spectator framework `observer.md` §7 supplies and spends the secret
-gamemode identity `round-config.md` §4 protects. Authored in the house style (no prototyping
-section, `Status: draft`, design-docs-cite-design-docs only). Owner review to promote it to
-`active`.
+`design/round-end.md` (round-end/transition) is now **active** — it builds its summary screen and
+transition on the spectator framework `observer.md` §7 supplies, spends the secret gamemode identity
+`round-config.md` §4 protects, and defines the evac shuttle's call/countdown/point-of-no-return
+sequence (§3), closing the dependency `shuttles.md` §9 and `objectives.md` §7 both flagged against
+it. Authored in the house style (no prototyping section, design-docs-cite-design-docs only, numbered
+Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every other design doc).
 
 ## Infrastructure
 
@@ -104,9 +106,9 @@ section, `Status: draft`, design-docs-cite-design-docs only). Owner review to pr
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle chip; HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring remains prefab debt |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
-| Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
-| Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md) |
-| Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, connect-frame zone hit; reticle on Main HUD; disarm/ranged/armor deferred |
+| Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances + injured limp/severity/mirror; shelved Misc/Probably Not clips; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
+| Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md); limp/`InjuredLeg`/arm injury → body anim ([animation-polish](2026-07_animation-polish.md)) |
+| Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, connect-frame zone hit; reticle on Main HUD; stance/aim/limp/mirror in [entities](systems/entities.md); disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |
@@ -135,7 +137,8 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
 | [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
-| [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; blend/timing polish remains) |
+| [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; polish in [animation-polish](2026-07_animation-polish.md)) |
+| [2026-07_animation-polish](2026-07_animation-polish.md) | shipped (melee torso, limp severity/oneshots, left-hand mirror, swing variants) |
 | [2026-07_screen-space-effects](2026-07_screen-space-effects.md) | shipped (foundation + health wiring; atmos deferred) |
 | [2026-07_headless-dedicated-server](2026-07_headless-dedicated-server.md) | shipped (partial: selection outline, drop interaction against a real client still broken, not root-caused) |
 | [2026-07_agent-first-composition](2026-07_agent-first-composition.md) | shipped (policy); code deferred — bootstrap, UiShell + shared path-catalog helper, prefab tooling; main-HUD UITK slice partial ([inventory](systems/inventory.md)) |
@@ -159,7 +162,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [areas_implementation_plan_c0639343.plan.md](../plans/areas_implementation_plan_c0639343.plan.md) | APC-seeded areas, flood-fill, power/lighting follow-ups |
 | [electricity_kwh_foundation_917ccdbc.plan.md](../plans/electricity_kwh_foundation_917ccdbc.plan.md) | kWh storage, priority shedding, HV cable grid rules |
 | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) | Layered persistence framework; Phase 1a/1b shipped, Phase 2 round snapshots pending |
-| [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation |
+| [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation (+ polish notes) |
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
 | [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0–1 unified melee shipped; disarm/ranged/stamina/armor later |
 | [urp_lighting_look_plan_d42c32f5.plan.md](../plans/urp_lighting_look_plan_d42c32f5.plan.md) | URP half-toon look pass (pending) |
