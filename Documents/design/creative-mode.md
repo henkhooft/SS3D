@@ -76,7 +76,7 @@ The construction menu's area tool is the concrete answer to Area §8's deferred 
 
 **Latejoin needs no separate authoring.** Lobby's latejoin flow already reuses the identical job-list interface, filtered to open slots (`lobby.md` §7) — it resolves against the same tagged points a round-start assignment would, not a second pool.
 
-**Not designed here: antagonist or hazard-specific spawn points.** Creative mode's own session has no antag categories to resolve (§10), and per-gamemode antagonist content is still an undesigned system project-wide — antag spawn tagging is a natural follow-on once that content exists, not something to invent a placeholder for now.
+**Antagonist-tagged spawn points now have a real consumer.** A spawn point can also be tagged to an antagonist category instead of a job — the identical marker and per-map collection as job-tagged spawns (above), just read by `antagonist-content.md` §6 for its Nuclear Operative squad instead of by lobby's job resolution. Hazard-specific spawn points remain undesigned — no gamemode needs one yet.
 
 **Coverage validation happens at the map pool, not silently at round start.** Before an admin enables a saved map in round config's pool, the map pool's config screen (`round-config.md` §5) checks the map's tagged spawn points against the currently active job list and flags any job with zero coverage — real, inspectable information an admin acts on before a round can fail at resolution, not a crew member discovering mid-round-start that their assigned job has nowhere to put them. Companion edit, §15.
 
@@ -179,7 +179,7 @@ The construction menu panel is the one deliberate departure from "no abstract me
 
 - Persistent, cross-session stamp/template library — session-scoped copy-paste only for this pass (§5)
 - Simultaneous multi-builder edit-conflict resolution beyond last-write-wins plus undo's validity check — no further arbitration designed
-- Antagonist/hazard-specific spawn-point tagging — follow-on once per-gamemode antagonist content exists (§8)
+- Hazard-specific spawn-point tagging — no gamemode needs one yet; antagonist-tagged spawn points are now designed (§8), consumed by `antagonist-content.md` §6
 - Map metadata beyond a name — author, tags, thumbnail generation
 - Griefing/PvP prevention during a session — server policy, not a mechanic
 

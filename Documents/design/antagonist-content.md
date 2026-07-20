@@ -10,9 +10,9 @@ same precedent, and separately flag a "standalone, console-independent forging t
 future antag item" (§8, §12). `ai-cyborgs.md` §5 and §12 defer "Malf-AI's actual special-ability
 roster (turrets, an APC overload burst, hologram duplicates)" the same way. `objectives.md` §12
 defers "uplink or any antag-item-acquisition system... a real and eventually necessary system,
-deliberately not assumed or designed here." This doc is that business, for two concrete antagonist
-types — Traitor and Malfunctioning AI — plus the assignment mechanism every future antagonist type
-will need the same way.
+deliberately not assumed or designed here." This doc is that business, for three concrete antagonist
+types — Traitor, Malfunctioning AI, and Nuclear Operatives — plus the assignment mechanism every
+future antagonist type will need the same way.
 
 ## 1. Design philosophy
 
@@ -40,10 +40,20 @@ door, deploying a turret, triggering an overload: all real, logged actions, the 
 the world, so it isn't logged into it — the same distinction `round-config.md` §4 already draws
 between the secret itself and what's done with it.
 
-**This pass ships two antagonist types, not the whole roster.** The same restraint `objectives.md`
-§1 used for archetypes applies to gamemodes: Traitor and Malfunctioning AI are fully designed here;
-Revolution, Cult, Nuclear Operatives, and others are named as a growable roster (§6), not invented
+**This pass ships three antagonist types, not the whole roster.** The same restraint `objectives.md`
+§1 used for archetypes applies to gamemodes: Traitor, Malfunctioning AI, and Nuclear Operatives are
+fully designed here; Revolution, Cult, and others are named as a growable roster (§7), not invented
 as placeholders.
+
+**Nuclear Operatives earns its place first among team gamemodes because its loop barely touches the
+station.** Every other faction gamemode this project will eventually design (Revolution, Cult)
+needs a functioning crew to convert or fight through. This one doesn't — its entire loop (steal a
+disk, arm a device, detonate or get defused) is a self-contained infiltration-and-defense problem
+that already has almost every piece it needs sitting in other docs: a shuttle (`shuttles.md`), a
+timed explosive (`explosives-destruction.md` §6), and a vault access check (`id-access.md` §6). That
+makes it a genuinely good first team gamemode to actually build, not just design — the same
+practical reasoning `creative-mode.md` §1 already used to justify shipping *some* out-of-fiction
+exceptions before others.
 
 ## 2. Antagonist assignment — the mechanism round config punted
 
@@ -53,7 +63,7 @@ becomes an antagonist.
 
 **Selection draws from the opted-in, eligible pool only** — never from someone who didn't opt in,
 matching the opt-in section's entire reason for existing. Count and any per-job exclusions are a
-content/balancing decision (§10), not fixed here; what this doc fixes is that the draw happens
+content/balancing decision (§11), not fixed here; what this doc fixes is that the draw happens
 exactly once, at the same resolution moment lobby's own job-preference pass runs (`lobby.md` §5), and
 is a plain random draw among eligible volunteers — not a hidden weighting toward or away from any
 particular player.
@@ -94,13 +104,13 @@ holding the real ID, exactly as it would expose the objectives tab — a deliber
 **Telecrystals are a real, logged currency**, spent at the uplink and nowhere else. Every purchase
 itemizes on the tab's own transaction list — the same "real, inspectable ledger" discipline
 `cargo.md` §4 already runs for its budget, just scoped to one antagonist's own private shop instead
-of a shared station budget. Starting balance is a content/balancing number (§10).
+of a shared station budget. Starting balance is a content/balancing number (§11).
 
 **Purchases materialize the item directly** — the one deliberate, bounded exception §1 already
 flags. No further mechanic needed: this isn't a delivery system to build, it's a single, contained
 break from "everything maps to something physical," confined to this one shop.
 
-**The catalog is a representative slice** (§10), and deliberately leans on existing systems rather
+**The catalog is a representative slice** (§11), and deliberately leans on existing systems rather
 than inventing new items wherever one already fits:
 
 | Item | What it actually is |
@@ -141,17 +151,84 @@ the same bypass path" — just concrete instead of deferred.
 **Every ability writes a real log line**, the same discipline every other AI action already commits
 to (`ai-cyborgs.md` §4) — Malf-AI's toolkit is bigger, not quieter.
 
-## 6. Roster — what's here, what's growable
+## 6. Nuclear Operatives
 
-Traitor and Malfunctioning AI are fully designed. Named, explicitly not designed this pass:
-**Revolution**, **Cult**, **Nuclear Operatives**, **Blob**, and **Wizard** — plausible future entries
-in round config's gamemode pool (`round-config.md` §2), each its own future pass through this same
+**A team gamemode, not an individual one — the first faction/shared-objective case this project
+designs.** `objectives.md` §12 explicitly scoped itself to individual-antagonist objectives only;
+this section is the first time this project actually needs a *shared* objective record, held by a
+squad rather than one character. It's a new record shape, deliberately not folded into
+`objectives.md` itself — that doc's exclusion stands, this is a sibling shape built for exactly the
+case it named and stepped around.
+
+**The squad never enters the ordinary job pool at all.** Round config draws Nuclear Operatives the
+same way it draws any gamemode (`round-config.md` §2–§3); this doc then draws a fixed-size squad from
+the players who opted into this category (§2's mechanism, generalized from "one antagonist" to "one
+squad") — and removes them from lobby's ordinary job-resolution pool entirely before that pass runs
+(`lobby.md` §5), the same way Observer/spectate already sits outside the job list rather than
+competing for a slot (`lobby.md` §7). A Nuclear Operative doesn't have a crew job to give up; they
+were never in that pool to begin with.
+
+**They start on their own shuttle, off-station.** Reuses the shuttle framework wholesale
+(`shuttles.md`) — a new roster entry alongside cargo's and the evac shuttle's, manual-piloted by
+default since flying there is the entire point, the same framing `shuttles.md` §10 already gives
+mining/exploration shuttles. Companion edit needed at that doc's §10.
+
+**Squad members spawn directly aboard it, at a spawn point creative mode's own doc already
+anticipated needing.** `creative-mode.md` §8 named "antagonist or hazard-specific spawn points" as
+the natural follow-on once antagonist content existed to need one — this is that follow-on. A
+Nuclear Operative spawn point is the same job-tagged marker §8 there already defines, just tagged to
+this antagonist category instead of a crew job, sited on the operative shuttle rather than the
+station. Companion edit needed at that doc's §8.
+
+**Loadout and coordination reuse the Traitor uplink wholesale.** Each operative gets their own PDA,
+their own uplink tab (§4), and a starting telecrystal balance — no separate equipment system
+invented for a second antagonist type in the same pass. The encrypted channel catalog entry (§4)
+doubles as the squad's own coordination line.
+
+**The authentication disk is a team steal-target, not a personal one.** Sited in the station's vault
+(access-gated the ordinary way, `id-access.md` §6 — exact level is content, per that doc's own
+growable cross-cutting list, §4 there), it's a possession check exactly like `objectives.md` §5's
+Steal archetype, generalized only in *who* counts as a valid holder: any operative, or the device
+itself once loaded, rather than one fixed antagonist.
+
+**The device is an ordinary timed charge with one added precondition.** `explosives-destruction.md`
+§6's timed charge — arm, visible countdown, defuse — applies unmodified once one real condition is
+met: the disk has to be physically loaded into the device before arming succeeds, the same
+condition-gated pattern chemistry's own recipes already use for a real physical prerequisite beyond
+ratio (`chemistry.md` §4). Loading the disk is an ordinary Tier 3 combine action with a short,
+interruptible timer — nothing lost if interrupted, same as any other freeform step
+(`crafting.md` §2).
+
+**Once armed, there is exactly one way to stop it.** The standard defuse interaction
+(`explosives-destruction.md` §6) — a tool check against a visible countdown, not a hidden roll.
+Pulling the disk back out after arming does not itself stop the clock; the device is committed the
+moment arming succeeds, the same way a normal timed charge doesn't un-arm just because someone
+tampers with an unrelated part of it. This keeps exactly one defuse path instead of two competing
+ones.
+
+**Detonation is this gamemode's own end-condition trigger — no new round-end mechanism needed.**
+`round-end.md` §2's first bullet already covers it generically: "the active gamemode's end condition
+is met... the specific condition belongs to each gamemode, not here." Detonation is Nuclear
+Operatives' instantiation of that existing bullet, the same way evacuation needed its own named
+bullet only because it's a mechanism several gamemodes might share — detonation isn't, so it doesn't
+need one.
+
+**A successful defuse doesn't end the round by itself.** It resolves the team objective to failed
+and removes the threat; the round then continues toward whatever its natural end condition already
+is (timer, admin, or eventually its own gamemode resolution) — the same "outcome, not process"
+principle `objectives.md` §5 already uses for its own resolution timing.
+
+## 7. Roster — what's here, what's growable
+
+Traitor, Malfunctioning AI, and Nuclear Operatives are fully designed. Named, explicitly not
+designed this pass: **Revolution**, **Cult**, **Blob**, and **Wizard** — plausible future entries in
+round config's gamemode pool (`round-config.md` §2), each its own future pass through this same
 shape (§2's assignment mechanism, an objective or team-goal set, whatever antagonist-specific
 capability each needs). None of them are placeholder-designed here; naming them is just honest
 scope, the same way `objectives.md` §12 named sabotage and protect as plausible future archetypes
 without inventing stubs for either.
 
-## 7. HUD & touchpoints
+## 8. HUD & touchpoints
 
 No new permanent chrome.
 
@@ -161,8 +238,11 @@ No new permanent chrome.
   animation, sparks and fire at an overloaded APC) — no HUD overlay.
 - Hologram duplicates render as an ordinary AI presence through the camera network
   (`ai-cyborgs.md` §8) — no special-cased UI.
+- The device's countdown and the disk's insertion state render on the object itself, same "let the
+  world carry the information" rule every other timed charge already follows
+  (`explosives-destruction.md` §7) — no separate nuclear-specific HUD.
 
-## 8. Worked examples
+## 9. Worked examples
 
 **A — A traitor buys a way past a locked door:**
 
@@ -191,7 +271,27 @@ No new permanent chrome.
 | 2 | They open the PDA | ID/access summary reads the real ID as normal; the uplink tab is also visible, since it reads the same inserted identity |
 | 3 | They now hold telecrystals and a catalog that were never theirs | A real, physical consequence of theft, the same "possession is the gate" rule as everywhere else — not a special case for this one tab |
 
-## 9. Integration notes
+**D — A successful nuclear operation:**
+
+| Step | What happens | Team objective state |
+|---|---|---|
+| 1 | Round config draws Nuclear Operatives; a squad is drawn from the opted-in pool and removed from lobby's job resolution (§6) | Squad spawns aboard their own shuttle, off-station |
+| 2 | The squad flies in, docks, and fights through to the vault (`shuttles.md`, `id-access.md` §6) | Disk still on-station |
+| 3 | An operative takes the disk | Team objective's possession check now reads true for the squad |
+| 4 | They return to the device and load the disk in | Arming's precondition is met; a Tier 3 combine action begins |
+| 5 | Arming completes | Visible countdown starts; only the standard defuse interaction can stop it now |
+| 6 | Countdown reaches zero | Detonation fires `round-end.md` §2's gamemode-end-condition trigger; round ends |
+
+**E — Crew defuses in time:**
+
+| Step | What happens | Team objective state |
+|---|---|---|
+| 1 | Same as example D through arming | Countdown running |
+| 2 | An engineer reaches the device before it reaches zero | Applies the standard defuse interaction (`explosives-destruction.md` §6) |
+| 3 | Defuse succeeds | Team objective resolves to failed; the round does not end immediately |
+| 4 | Round continues | Proceeds toward its own natural end condition — timer, admin action, or whatever else applies |
+
+## 10. Integration notes
 
 | Antagonist-content element | Touches existing / needed system |
 |---|---|
@@ -206,14 +306,22 @@ No new permanent chrome.
 | Malf-AI overload burst | `electricity.md` §6 |
 | Malf-AI hologram | `ai-cyborgs.md` §2–§3, `observer.md` §3's no-physical-footprint precedent |
 | Malf-AI audit logging | `ai-cyborgs.md` §4 |
+| Nuclear Operative squad assignment | §2's mechanism, generalized to a squad; removed from lobby's job pool (`lobby.md` §5, §7) |
+| Nuclear Operative shuttle | `shuttles.md` §10 — new roster entry |
+| Nuclear Operative spawn point | `creative-mode.md` §8 — new antag-tagged spawn category |
+| Authentication disk | Team steal-target, generalized `objectives.md` §5; vault access (`id-access.md` §6) |
+| Nuclear device | `explosives-destruction.md` §6 (timed charge, unmodified) with a disk-loaded precondition (`chemistry.md` §4's condition-gated pattern) |
+| Detonation as round trigger | `round-end.md` §2's existing gamemode-end-condition bullet |
 
-**Companion edit needed:** `pda.md` §3's tab bar should gain a row for the uplink tab, the same way
-it already gained one for objectives.
+**Companion edits needed:** `pda.md` §3's tab bar should gain a row for the uplink tab, the same way
+it already gained one for objectives. `shuttles.md` §10 should gain a Nuclear Operative shuttle
+roster entry. `creative-mode.md` §8 should gain an antagonist-tagged spawn-point category alongside
+its existing job-tagged one.
 
-## 10. Out of scope for this pass
+## 11. Out of scope for this pass
 
-- **Revolution, Cult, Nuclear Operatives, Blob, Wizard, and any other gamemode roster entry** (§6) —
-  each its own future pass through this doc's assignment shape.
+- **Revolution, Cult, Blob, Wizard, and any other gamemode roster entry** (§7) — each its own future
+  pass through this doc's assignment shape.
 - **Exact telecrystal starting balance, item prices, and antagonist-count ratio** — a
   balancing/content pass, not a design decision.
 - **The full uplink catalog beyond the representative slice in §4** — a content pass.
@@ -221,6 +329,12 @@ it already gained one for objectives.
   server-policy/balancing choice, not fixed here.
 - **A disguise/chameleon item type** — plausible future uplink content, would need its own real
   appearance-change mechanic this pass doesn't invent.
-- **Antag-specific spawn points** — neither Traitor nor Malfunctioning AI needs one; a plausible
-  requirement for a future roster entry (Nuclear Operatives, say), left for that entry's own pass per
-  `creative-mode.md` §8, §14.
+- **Nuclear Operative squad size, device timer duration, and disk/vault siting** — a
+  balancing/map-authoring pass, not a design decision.
+- **An "all operatives eliminated" early crew-win trigger** — a plausible variant this pass doesn't
+  add; the core loop resolves only through detonation, defusal, or the round's other end conditions.
+- **Ship-to-ship combat or a hostile response shuttle** — `shuttles.md` §12 already flags this as not
+  a base mechanic; this pass doesn't add one for Nuclear Operatives specifically either.
+- **Extending round config's map-pool spawn-coverage check** (`round-config.md` §5) to flag missing
+  antagonist-tagged spawn points the way it already flags missing job coverage — a plausible,
+  real gap, not designed here.
