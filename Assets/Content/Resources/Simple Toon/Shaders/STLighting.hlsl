@@ -97,6 +97,10 @@ void ST_AccumulateLight(
         return;
     }
 
+    // URP point distanceAttenuation blows up near the source (unlike PR #857's custom
+    // deferred falloff). Soften the near field so overhead fills don't plasticize heads.
+    lightAttenuation = lightAttenuation / (1.0h + 1.75h * lightAttenuation);
+
     float4 lit = ST_EvaluateDirectLight(
         surface,
         light.color,

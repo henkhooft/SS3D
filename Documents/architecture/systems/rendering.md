@@ -38,6 +38,7 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
 - **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
+- **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
 
 ## Depends on / Used by
 
@@ -48,4 +49,5 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 
 - [FORK_STATUS.md](../../FORK_STATUS.md) § URP migration
 - Plan: [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md)
+- Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)
