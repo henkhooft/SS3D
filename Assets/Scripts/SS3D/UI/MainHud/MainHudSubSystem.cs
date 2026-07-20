@@ -263,10 +263,19 @@ namespace SS3D.UI.MainHud
                 && cameras.PlayerCamera.TryGetComponent(out Camera camera))
             {
                 Ray ray = camera.ScreenPointToRay(screenPosition);
-                if (ZoneTargetResolver.TryResolveHoverZone(ray, out BodyZone zone, out _, out Vector3 hitPoint))
+                HumanHealthController selfHealth = _localPlayer != null
+                    ? _localPlayer.GetComponentInChildren<HumanHealthController>()
+                    : null;
+                if (ZoneTargetResolver.TryResolveHoverZone(
+                        ray,
+                        selfHealth,
+                        out BodyZone zone,
+                        out _,
+                        out _,
+                        out Collider zoneCollider))
                 {
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
-                    if (aimState != ZoneReticleAimState.Hit && IsHoveredZoneInRange(hitPoint))
+                    if (aimState != ZoneReticleAimState.Hit && IsHoveredZoneInRange(zoneCollider))
                     {
                         aimState = ZoneReticleAimState.Valid;
                     }
@@ -281,7 +290,7 @@ namespace SS3D.UI.MainHud
             _connectHitPulseUntil = Time.time + ConnectHitPulseSeconds;
         }
 
-        private bool IsHoveredZoneInRange(Vector3 worldPoint)
+        private bool IsHoveredZoneInRange(Collider zoneCollider)
         {
             Hand hand = _hands?.SelectedHand;
             if (hand == null)
@@ -289,7 +298,10 @@ namespace SS3D.UI.MainHud
                 return false;
             }
 
-            return hand.GetInteractionRange().IsInRange(hand.InteractionOrigin, worldPoint);
+            return ZoneTargetResolver.IsMeleeZoneReachInRange(
+                hand.InteractionOrigin,
+                hand.GetInteractionRange(),
+                zoneCollider);
         }
 
         private void BuildView()

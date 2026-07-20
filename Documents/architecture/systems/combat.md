@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack / CmdRunMeleeSwing
 > Status: partial
-> Verified: bd4ec5e61 — 2026-07-20
+> Verified: 5c0e2e5bb — 2026-07-20
 
 # Combat
 
@@ -10,10 +10,13 @@
 Phase 0–1 clean-slate melee per [combat_implementation_plan.md](../../plans/combat_implementation_plan.md).
 **Harm primary always swings** (windup → connect → recovery + stamina) via `CmdRunMeleeSwing` —
 no collider required at click. Zone damage is resolved only at the **connect** frame from the
-client-synced mouse aim point (`CmdSyncMeleeAim` → `TryGetMeleeAimPoint`), falling back to body
-`AimYaw`/`AimPitch` when no aim was synced. Misses still consume the full swing. Empty-hand
-fists, improvised held items, and dedicated tool profiles (crowbar / hatchet / kitchen knife).
-Zone reticle on Main HUD — see [inventory](inventory.md).
+client-synced **camera** aim ray (`CmdSyncMeleeAim` → `TryGetMeleeAimRay`), excluding self and
+falling back to body `AimYaw`/`AimPitch` when no aim was synced. Misses still consume the full
+swing. Empty-hand fists, improvised held items, and dedicated tool profiles (crowbar / hatchet /
+kitchen knife). Zone reticle on Main HUD — see [inventory](inventory.md).
+
+**Intent ↔ stance:** `C` (and HUD intent chip) toggles Help/Harm. Harm always enters combat stance
+(Melee/Ranged from inventory); Help returns Peaceful — see [entities](entities.md).
 
 Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`MeleeWeaponProfile.StaminaCost`); broader combat stamina (block/fire) still deferred.
 
@@ -22,13 +25,13 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — swing start gates + connect-frame zone damage
-- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm → `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
+- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm → `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`; intent ↔ combat stance
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — `C` → intent toggle; `RequestAttack` telegraph
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/HandMeleeExtension.cs` — fists on hand prefabs (radial discovery)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` — dedicated tool profiles
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` — timing, damage, `StaminaCost`
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryTracker.cs` — post-connect recovery lockout on Hand
 - `Assets/Scripts/SS3D/Systems/Health/MeleeDamagePacket.cs` — damage DTO owned by Health
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — stance toggle + `RequestAttack`
 - `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` — freezes controls on mindless test Human
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — `ServerSpawnCombatDummy`
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/SpawnDummyCommand.cs` — console `spawndummy`
@@ -43,17 +46,21 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 ## Testing
 
 1. Host Play Mode as admin, console: `spawndummy` — mindless Human ~2m ahead (controls frozen).
-2. Harm intent, LMB with nothing under the reticle — full swing + recovery; no damage.
-3. Harm LMB aimed at limbs through windup — damage applies at connect from current aim.
-4. Help must not swing. Reticle: grey idle / blue in-range; red pulse only if connect applied damage (whiff = no pulse). Optional health debug `H`.
+2. `C` toggles Help/Harm and combat stance together; Harm shows Melee/Ranged locomotion.
+3. Harm LMB with nothing under the reticle — full swing + recovery; no self-damage.
+4. Harm LMB aimed at limbs through windup — damage applies at connect from camera aim (not hand bone).
+5. Help must not swing. Reticle: grey idle / blue in-range; red pulse only if connect applied damage (whiff = no pulse). Optional health debug `H`.
 
 ## Pitfalls
 
 - **Do not revive anim-only LMB intercept** in melee stance — telegraph is feedback on swing dispatch only.
-- **Do not require a hover collider to start a swing** — Harm primary uses `CmdRunMeleeSwing`; connect resolves hit from synced mouse aim.
-- **Connect aim is not stance SyncVars** — peaceful Harm never updates `AimYaw`/`AimPitch`. Owner syncs camera aim via `CmdSyncMeleeAim` during windup; connect prefers that over body aim.
-- **Cancel-on-move uses entity root** — `DelayedInteraction` defaults to the hand transform; melee overrides to `Entity` so swing bone motion does not cancel windup.
-- **Connect ray from hand can skew** — building hand→aimPoint after swing anim starts may miss moving arm zones; prefer camera ray matching the reticle (open follow-up).
+- **Do not require a hover collider to start a swing** — Harm primary uses `CmdRunMeleeSwing`; connect resolves hit from synced camera ray.
+- **`C` toggles intent, not stance alone** — stance follows Harm via `InteractionController.ApplyCombatModeForIntent`.
+- **Connect aim is not stance SyncVars** — owner syncs the **camera mouse ray** via `CmdSyncMeleeAim`; connect must use that ray, not hand→aim.
+- **Exclude self on connect/reticle** — pass attacker `HumanHealthController` into `TryResolveHoverZone` or swings hit your own arms.
+- **Cancel-on-move uses entity root** — melee overrides to `Entity` so swing bone motion does not cancel windup.
+- **Melee reach uses closest point on zone collider** — ray hit on forearm/hand can be past `RangeLimit`; use `IsMeleeZoneReachInRange`.
+- **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.

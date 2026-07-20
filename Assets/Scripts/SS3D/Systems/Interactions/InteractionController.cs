@@ -54,8 +54,9 @@ namespace SS3D.Systems.Interactions
         private InteractionReference _serverActiveReference;
         private IInteractionSource _serverActiveSource;
 
+        private Vector3 _meleeAimRayOrigin;
         private Vector3 _meleeAimPoint;
-        private bool _hasMeleeAimPoint;
+        private bool _hasMeleeAimRay;
 
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
@@ -330,6 +331,7 @@ namespace SS3D.Systems.Interactions
         {
             _ownerIntent = _ownerIntent == IntentType.Harm ? IntentType.Help : IntentType.Harm;
             CmdSetIntent(_ownerIntent);
+            ApplyCombatModeForIntent(_ownerIntent);
         }
 
         public override void OnStartClient()
@@ -339,6 +341,7 @@ namespace SS3D.Systems.Interactions
             if (IsOwner)
             {
                 _ownerIntent = _currentIntent;
+                ApplyCombatModeForIntent(_ownerIntent);
             }
         }
 
@@ -347,6 +350,42 @@ namespace SS3D.Systems.Interactions
             if (IsOwner)
             {
                 _ownerIntent = newValue;
+                ApplyCombatModeForIntent(newValue);
+            }
+        }
+
+        /// <summary>
+        /// Harm always enters combat stance; Help returns to peaceful. Owner-driven Cmd.
+        /// </summary>
+        [Client]
+        private void ApplyCombatModeForIntent(IntentType intent)
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidBodyStateMachine body))
+            {
+                return;
+            }
+
+            if (intent == IntentType.Harm)
+            {
+                HumanoidCombatMode stance = HumanoidCombatMode.Melee;
+                if (TryGetComponent(out HumanoidBodyStateBridge bridge))
+                {
+                    stance = bridge.ResolveCombatStance();
+                }
+
+                if (body.CombatMode != stance)
+                {
+                    body.CmdSetCombatMode(stance);
+                }
+            }
+            else if (body.CombatMode.IsCombat())
+            {
+                body.CmdSetCombatMode(HumanoidCombatMode.Peaceful);
             }
         }
 
@@ -1212,19 +1251,32 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Client mouse aim point for the active melee swing (connect resolves from this, not stance SyncVars).
+        /// Client-synced camera aim ray for the active melee swing (matches zone reticle; not hand bone).
         /// </summary>
         [Server]
-        public bool TryGetMeleeAimPoint(out Vector3 aimPoint)
+        public bool TryGetMeleeAimRay(out Ray aimRay)
         {
-            aimPoint = _meleeAimPoint;
-            return _hasMeleeAimPoint;
+            aimRay = default;
+            if (!_hasMeleeAimRay)
+            {
+                return false;
+            }
+
+            Vector3 direction = _meleeAimPoint - _meleeAimRayOrigin;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return false;
+            }
+
+            aimRay = new Ray(_meleeAimRayOrigin, direction.normalized);
+            return true;
         }
 
         [Server]
         public void ClearMeleeAimPoint()
         {
-            _hasMeleeAimPoint = false;
+            _hasMeleeAimRay = false;
+            _meleeAimRayOrigin = default;
             _meleeAimPoint = default;
         }
 
@@ -1250,19 +1302,20 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            if (!humanoid.TryGetCombatAim(out _, out _, out Vector3 aimPoint))
+            if (!humanoid.TryGetCombatAimRay(out Ray aimRay, out Vector3 aimPoint))
             {
                 return;
             }
 
-            CmdSyncMeleeAim(aimPoint);
+            CmdSyncMeleeAim(aimRay.origin, aimPoint);
         }
 
         [ServerRpc(RequireOwnership = true)]
-        private void CmdSyncMeleeAim(Vector3 aimPoint)
+        private void CmdSyncMeleeAim(Vector3 rayOrigin, Vector3 aimPoint)
         {
+            _meleeAimRayOrigin = rayOrigin;
             _meleeAimPoint = aimPoint;
-            _hasMeleeAimPoint = true;
+            _hasMeleeAimRay = true;
         }
 
         [TargetRpc]

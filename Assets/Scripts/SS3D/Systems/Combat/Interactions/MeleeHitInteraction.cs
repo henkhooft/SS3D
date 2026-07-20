@@ -143,37 +143,43 @@ namespace SS3D.Systems.Combat.Interactions
                 return false;
             }
 
-            if (!ZoneTargetResolver.TryResolveHoverZone(aimRay, out zone, out health, out Vector3 hitPoint))
+            HumanHealthController selfHealth = hand.GetComponentInParent<HumanHealthController>();
+            if (!ZoneTargetResolver.TryResolveHoverZone(
+                    aimRay,
+                    selfHealth,
+                    out zone,
+                    out health,
+                    out _,
+                    out Collider zoneCollider))
             {
                 return false;
             }
 
-            return hand.GetInteractionRange().IsInRange(hand.InteractionOrigin, hitPoint);
+            return ZoneTargetResolver.IsMeleeZoneReachInRange(
+                hand.InteractionOrigin,
+                hand.GetInteractionRange(),
+                zoneCollider);
         }
 
         private static bool TryBuildConnectAimRay(Hand hand, out Ray aimRay)
         {
             aimRay = default;
-            Vector3 origin = hand.InteractionOrigin;
 
-            // Prefer client-synced mouse aim (works outside combat stance). Fall back to body AimYaw/Pitch.
+            // Match zone reticle: camera mouse ray synced during windup — not hand→aim (swing anim skews that).
             InteractionController controller = hand.GetComponentInParent<InteractionController>();
-            if (controller != null && controller.TryGetMeleeAimPoint(out Vector3 aimPoint))
+            if (controller != null && controller.TryGetMeleeAimRay(out aimRay))
             {
-                Vector3 toAim = aimPoint - origin;
-                if (toAim.sqrMagnitude >= 0.0001f)
-                {
-                    aimRay = new Ray(origin, toAim.normalized);
-                    return true;
-                }
+                return true;
             }
 
+            Entity entity = hand.GetComponentInParent<Entity>();
             HumanoidBodyStateMachine body = hand.GetComponentInParent<HumanoidBodyStateMachine>();
-            if (body == null)
+            if (body == null || entity == null)
             {
                 return false;
             }
 
+            Vector3 origin = entity.transform.position + Vector3.up * 1.5f;
             Vector3 direction = AimDirectionFromYawPitch(body.AimYaw, body.AimPitch);
             if (direction.sqrMagnitude < 0.0001f)
             {

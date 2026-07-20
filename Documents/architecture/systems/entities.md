@@ -31,7 +31,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 - Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips.
 - Shelved clips (not wired): `Assets/Art/Animations/Misc/`, `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag content.
-- `HumanoidCombatMode` is 2 bits; `C` toggles Peaceful ↔ inventory-derived combat. `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
+- `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory still picks Melee vs Ranged while in combat. `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** `Ragdoll.ApplyCollapseVisuals` / death reinforce RPCs until body-presentation authority ships.
 

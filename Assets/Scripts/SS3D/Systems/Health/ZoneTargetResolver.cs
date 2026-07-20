@@ -38,7 +38,7 @@ namespace SS3D.Systems.Health
         /// </summary>
         public static bool TryResolveHoverZone(Ray ray, out BodyZone zone, out HumanHealthController health)
         {
-            return TryResolveHoverZone(ray, out zone, out health, out _);
+            return TryResolveHoverZone(ray, excludeHealth: null, out zone, out health, out _, out _);
         }
 
         /// <inheritdoc cref="TryResolveHoverZone(Ray, out BodyZone, out HumanHealthController)"/>
@@ -48,9 +48,22 @@ namespace SS3D.Systems.Health
             out HumanHealthController health,
             out Vector3 hitPoint)
         {
+            return TryResolveHoverZone(ray, excludeHealth: null, out zone, out health, out hitPoint, out _);
+        }
+
+        /// <inheritdoc cref="TryResolveHoverZone(Ray, out BodyZone, out HumanHealthController)"/>
+        public static bool TryResolveHoverZone(
+            Ray ray,
+            HumanHealthController excludeHealth,
+            out BodyZone zone,
+            out HumanHealthController health,
+            out Vector3 hitPoint,
+            out Collider zoneCollider)
+        {
             zone = BodyZone.Chest;
             health = null;
             hitPoint = default;
+            zoneCollider = null;
 
             int mask = LayerMask.GetMask("Characters", HealthLayers.BodyPartsLayerName);
             if (mask == 0)
@@ -76,7 +89,7 @@ namespace SS3D.Systems.Health
                 }
 
                 HumanHealthController candidate = candidateHit.collider.GetComponentInParent<HumanHealthController>();
-                if (candidate == null)
+                if (candidate == null || candidate == excludeHealth)
                 {
                     continue;
                 }
@@ -97,8 +110,24 @@ namespace SS3D.Systems.Health
 
             health = closestHealth;
             hitPoint = zoneHit.point;
+            zoneCollider = zoneHit.collider;
             zone = ApplyGroinBanding(zone, zoneHit.point, closestHealth);
             return true;
+        }
+
+        /// <summary>
+        /// Melee reach uses the closest point on the resolved zone collider — not the ray impact.
+        /// Extended limbs (forearm, hand) can be past hand range at the hit point while still reachable.
+        /// </summary>
+        public static bool IsMeleeZoneReachInRange(Vector3 handOrigin, RangeLimit range, Collider zoneCollider)
+        {
+            if (zoneCollider == null)
+            {
+                return false;
+            }
+
+            Vector3 reachPoint = zoneCollider.ClosestPoint(handOrigin);
+            return range.IsInRange(handOrigin, reachPoint);
         }
 
         public static bool TryResolveZone(Vector3 worldPoint, HumanHealthController health, out BodyZone zone)
@@ -158,23 +187,73 @@ namespace SS3D.Systems.Health
                     continue;
                 }
 
-                if (!physicsCollider.Raycast(ray, out RaycastHit candidate, MaxRayDistance))
+                if (!TryPickClosestZoneHit(ray, physicsCollider, zoneCollider.Zone, ref closestDistance, ref hit, ref zone))
                 {
                     continue;
                 }
 
-                if (candidate.distance >= closestDistance)
-                {
-                    continue;
-                }
-
-                closestDistance = candidate.distance;
-                hit = candidate;
-                zone = zoneCollider.Zone;
                 found = true;
             }
 
+            // Limb mesh colliders (HumanArmLeft/Right etc.) follow AnatomyNode and may catch rays
+            // the smaller armature ZoneTargetCollider triggers miss — especially while animating.
+            AnatomyNode[] anatomyNodes = health.GetComponentsInChildren<AnatomyNode>(true);
+            for (int i = 0; i < anatomyNodes.Length; i++)
+            {
+                AnatomyNode anatomyNode = anatomyNodes[i];
+                if (!anatomyNode.IsDetachable || anatomyNode.IsSevered)
+                {
+                    continue;
+                }
+
+                Collider[] anatomyColliders = anatomyNode.GetComponentsInChildren<Collider>(true);
+                for (int c = 0; c < anatomyColliders.Length; c++)
+                {
+                    Collider physicsCollider = anatomyColliders[c];
+                    if (physicsCollider == null || !physicsCollider.enabled)
+                    {
+                        continue;
+                    }
+
+                    if (physicsCollider.GetComponent<ZoneTargetCollider>() != null)
+                    {
+                        continue;
+                    }
+
+                    if (!TryPickClosestZoneHit(ray, physicsCollider, anatomyNode.PrimaryZone, ref closestDistance, ref hit, ref zone))
+                    {
+                        continue;
+                    }
+
+                    found = true;
+                }
+            }
+
             return found;
+        }
+
+        private static bool TryPickClosestZoneHit(
+            Ray ray,
+            Collider physicsCollider,
+            BodyZone candidateZone,
+            ref float closestDistance,
+            ref RaycastHit hit,
+            ref BodyZone zone)
+        {
+            if (!physicsCollider.Raycast(ray, out RaycastHit candidate, MaxRayDistance))
+            {
+                return false;
+            }
+
+            if (candidate.distance >= closestDistance)
+            {
+                return false;
+            }
+
+            closestDistance = candidate.distance;
+            hit = candidate;
+            zone = candidateZone;
+            return true;
         }
 
         public static BodyZone ApplyGroinBanding(BodyZone zone, Vector3 worldHit, HumanHealthController health)
