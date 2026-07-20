@@ -1,6 +1,6 @@
 > Implements: Documents/plans/animation_system_design_250de599.plan.md; issues #1060, #1333, #1246, #937
 > Touches systems: entities, player-control, interactions-runtime, inventory, health, combat
-> Status: shipped (foundation; blend/timing polish remains animator-owned)
+> Status: shipped (foundation; polish shipped in 2026-07_animation-polish.md)
 
 # Player body & animation foundation (Jul 2026)
 
@@ -57,11 +57,13 @@ Each state exposes: `CanMove`, `CanRotate`, `CanRun`, `CanUseHands`, `CanInterac
    - **Peaceful** — [Locomotion Pack](../../Assets/Art/Animations/Locomotion%20Pack/) idle / walk / run / strafes
    - **Melee** — [Pro Melee Axe Pack](../../Assets/Art/Animations/Pro%20Melee%20Axe%20Pack/) standing idle / walk F-B-L-R / run F-B (includes backpedal)
    - **Ranged** — [Basic Shooter Pack](../../Assets/Art/Animations/Basic%20Shooter%20Pack/) rifle idle / walk / walk back / strafes / run / run back
-2. **UpperBody** (arms-only mask) — **Melee** item/weapon holds and `AttackSwing` only; Ranged uses base shooter locomotion (no hold overlay). Head stays on base + look-at IK. Weight is 0 in Peaceful/Ranged.
-3. **Additive** — flinch (`Flinch` uses melee gut react), injured arm overlay
+2. **UpperBody** (spine+arms mask, head excluded) — **Melee** holds and `AttackSwing`; Ranged uses base shooter locomotion (no hold overlay). Head stays on base + look-at IK. Weight is 1 for entire Melee stance (Hold Default when empty-handed); 0 in Peaceful/Ranged.
+3. **Additive** — flinch (`Flinch` uses melee gut react), injured-arm overlay (`Empty Additive` → Male Injured Pack hurting idle at low weight)
 4. **FullBody Override** — sit, crawl, emote, stand-up
 
-`AttackSwing` is an upper-body one-shot over Melee locomotion (layer weight raised for the swing only).
+`AttackSwing` is an upper-body one-shot over Melee locomotion (Animator trigger + exit-time back to Hold Default). Swing owns spine/chest; look-at is head-only while Attack Swing plays.
+
+Base locomotion also includes **Injured Locomotion** (Male Injured Pack FreeformCartesian2D) entered from any CombatStance when `LimpSide != 0`, exiting to the stance matching `CombatStance`.
 
 Rebuild via **SS3D → Animation → Rebuild Combat Stance Blend Trees** after reimporting pack FBX clips.
 
@@ -72,11 +74,11 @@ Rebuild via **SS3D → Animation → Rebuild Combat Stance Blend Trees** after r
 | Owner | Owns | Asset / API |
 |-------|------|-------------|
 | **Animator** | Clip choice, blend-tree positions, transition exit times / durations, avatar masks, layer default weights, hold poses | `HumanCharacterAnimator.controller`, `.mask`, FBX import |
-| **Code** | When combat is on/off, `CombatStance` / `ArmHold` / `VelX`/`VelZ`, firing triggers (`AttackSwing`), network snapshot, smoothed look-at IK toward aim | `AnimationOrchestrator`, `HumanoidIkController`, body state machine |
+| **Code** | When combat is on/off, `CombatStance` / `ArmHold` / `VelX`/`VelZ` / `LimpSide`, firing triggers (`AttackSwing`), network snapshot, smoothed look-at IK toward aim | `AnimationOrchestrator`, `HumanoidIkController`, body state machine |
 
-Animators should be able to open the controller and adjust swing → idle blends, locomotion samples, and masks **without touching scripts**. If a change requires editing `MeleeSwingDurationSeconds` or layer-weight lerp constants in code, that logic still belongs in the Animator and should be migrated.
+Animators should be able to open the controller and adjust swing → idle blends, locomotion samples, and masks **without touching scripts**.
 
-**Current debt (move back into the controller when polishing):** upper-body layer weight fades and swing duration timers in `AnimationOrchestrator`; melee IK suppress blend in `HumanoidIkController`. Prefer Any State → Attack Swing → Hold/Empty with exit-time blends, and keep Upper Body weight driven by a single animator parameter or layer setup animators control.
+**Remaining code-owned fades (intentional):** Upper Body layer weight lerp when entering/leaving Melee stance; VelX/VelZ idle↔walk snap for blend-tree seeding; look-at smooth toward aim. Swing clip length and Attack Swing → Hold Default exit are Animator-owned — see [2026-07_animation-polish.md](2026-07_animation-polish.md).
 
 ### Combat stances
 
@@ -85,8 +87,9 @@ Animators should be able to open the controller and adjust swing → idle blends
 | Peaceful | Locomotion Pack | Default; `C` toggles combat off |
 | Melee | Pro Melee Axe Pack | `C` on + unarmed or non-ranged weapon |
 | Ranged | Basic Shooter Pack | `C` on + hand item trait contains Ranged/Gun/Firearm/Rifle |
+| Injured (overlay state) | Male Injured Pack | `LimpSide != 0` from any stance (leg brute via health bridge) |
 
-Peaceful movement faces the move direction. Melee/Ranged face the mouse: body yaw from the planar aim, head/torso pitch via look-at IK (AimPitch). Pack clips bake root rotation into pose so GameObject aim yaw stays authoritative. Combat walk/run world speed uses slow combat gait scales for both Melee and Ranged so feet stay in sync with pack cadence.
+Peaceful movement faces the move direction. Melee/Ranged face the mouse: body yaw from the planar aim, head/torso pitch via look-at IK (AimPitch). During Attack Swing, torso look-at weight drops to 0 so the swing clip owns the spine. Pack clips bake root rotation into pose so GameObject aim yaw stays authoritative. Combat walk/run world speed uses slow combat gait scales for both Melee and Ranged so feet stay in sync with pack cadence.
 
 `BodyAnimationSnapshot` replicates `CombatMode` (2 bits), `AimYaw`, and `AimPitch`. Orchestrator drives animator `CombatStance` / aim floats and combat look-at IK.
 

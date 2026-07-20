@@ -331,3 +331,12 @@ struct BodyAnimationSnapshot {
 ### Combat stance packs (follow-up)
 
 Base locomotion is three FreeformCartesian2D blends switched by animator int `CombatStance` (0 Peaceful / 1 Melee / 2 Ranged). Packs: Locomotion Pack, Pro Melee Axe Pack, Basic Shooter Pack. `HumanoidCombatMode` is packed in 2 snapshot bits; `C` toggles Peaceful ↔ Melee/Ranged from held-item traits. Editor menu: **SS3D → Animation → Rebuild Combat Stance Blend Trees**. After importing new pack FBX metas, reimport in Unity then run that menu so Mixamo `Mix_*` clips resolve. See [2026-07_player-body-animation.md](../architecture/2026-07_player-body-animation.md).
+
+### Animation polish (2026-07)
+
+Shipped in [2026-07_animation-polish.md](../architecture/2026-07_animation-polish.md):
+
+- Upper Body mask includes spine/chest; AttackSwing is trigger + exit-time (no C# swing timers).
+- Fourth base state **Injured Locomotion** from Male Injured Pack; `LimpSide != 0` from any combat stance.
+- `HumanoidBodyStateBridge` drives `InjuredArmLeft`/`Right` from arm zone brute; Additive hurting-idle overlay.
+- Rebuild menu also remaps AttackSwing / Flinch / Empty Additive; flag file `artifacts/force-rebuild-animator.flag` for Editor-held projects.

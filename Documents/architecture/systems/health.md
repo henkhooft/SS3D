@@ -70,7 +70,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 ## Depends on / Used by
 
 - **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md)
-- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp), `Hand` (arm debuff stub)
+- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp + injured-arm presentation), `Hand` (arm debuff stub)
 - **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; combat drains deferred
 
 ## Related docs
@@ -80,5 +80,6 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
 - Stamina map: [stamina](stamina.md)
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **planned** single authority for collapse/death presentation
+- [2026-07_animation-polish](../2026-07_animation-polish.md) — limp/injured gait + arm overlay presentation
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [screen-effects](screen-effects.md)

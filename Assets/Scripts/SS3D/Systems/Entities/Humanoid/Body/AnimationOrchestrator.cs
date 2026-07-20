@@ -37,17 +37,14 @@ namespace SS3D.Systems.Entities.Humanoid
         private AnimationTriggerId _lastConsumedTrigger = AnimationTriggerId.None;
         private byte _lastTriggerSequence;
         private bool _ownerPredictedAttack;
-        private float _meleeSwingEndsAt;
-        private float _meleeSwingFadeStartsAt;
         private float _upperBodyWeight;
         private float _upperBodyWeightTarget;
         private bool _posingSuppressed;
 
-        private static readonly int AttackSwingState = Animator.StringToHash("Attack Swing");
-        /// <summary>Mixamo horizontal swing length (~72 frames at 30fps).</summary>
-        private const float MeleeSwingDurationSeconds = 2.4f;
-        /// <summary>Start blending the upper-body layer out before the clip ends.</summary>
-        private const float MeleeSwingFadeNormalized = 0.75f;
+        /// <summary>
+        /// Soft fade when entering/leaving Melee stance (Upper Body layer on/off).
+        /// Swing clip lifetime is Animator exit-time owned — do not add swing duration constants here.
+        /// </summary>
         [SerializeField] private float _upperBodyWeightLerp = 6f;
 
         public Animator Animator => _animator;
@@ -198,7 +195,6 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             ApplyLocomotionVelocity();
-            TickMeleeSwingIk();
             TickUpperBodyWeight();
         }
 
@@ -286,50 +282,8 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _ownerPredictedAttack = true;
-
-            if (trigger == AnimationTriggerId.AttackSwing)
-            {
-                BeginMeleeSwingVisual();
-                return;
-            }
-
             _animator.ResetTrigger(hash);
             _animator.SetTrigger(hash);
-        }
-
-        private void BeginMeleeSwingVisual()
-        {
-            // Snappy attack start; fade out is handled by TickUpperBodyWeight.
-            _upperBodyWeight = 1f;
-            _upperBodyWeightTarget = 1f;
-            if (_animator.layerCount > 1)
-            {
-                _animator.SetLayerWeight(1, 1f);
-            }
-
-            // Force the upper-body state — Any State triggers can be raced/consumed by other layers.
-            _animator.Play(AttackSwingState, 1, 0f);
-            _meleeSwingEndsAt = Time.time + MeleeSwingDurationSeconds;
-            _meleeSwingFadeStartsAt = Time.time + MeleeSwingDurationSeconds * MeleeSwingFadeNormalized;
-            _ikController?.SetMeleeAttackActive(true);
-        }
-
-        private void TickMeleeSwingIk()
-        {
-            // Start easing look-at back in when the upper-body layer begins fading out.
-            if (_meleeSwingFadeStartsAt > 0f && Time.time >= _meleeSwingFadeStartsAt)
-            {
-                _ikController?.SetMeleeAttackActive(false);
-            }
-
-            if (_meleeSwingEndsAt <= 0f || Time.time < _meleeSwingEndsAt)
-            {
-                return;
-            }
-
-            _meleeSwingEndsAt = 0f;
-            _meleeSwingFadeStartsAt = 0f;
-            _ikController?.SetMeleeAttackActive(false);
         }
 
         private void TickUpperBodyWeight()
@@ -455,12 +409,9 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             // Peaceful / Ranged: full base locomotion (ranged pack already has rifle poses).
-            // Melee: item/weapon holds + active swings only (empty-handed uses base melee idle).
-            bool swingHoldsLayer = _meleeSwingFadeStartsAt > 0f && Time.time < _meleeSwingFadeStartsAt;
-            bool meleeHold = snapshot.CombatMode == HumanoidCombatMode.Melee
-                && snapshot.ArmHold != ArmHoldPose.Default;
+            // Melee: Upper Body stays at weight 1 (Hold Default when empty; AttackSwing via trigger).
             bool needsUpperBodyLayer = snapshot.State != BodyState.Ragdoll
-                && (swingHoldsLayer || meleeHold);
+                && snapshot.CombatMode == HumanoidCombatMode.Melee;
             _upperBodyWeightTarget = needsUpperBodyLayer ? 1f : 0f;
         }
 
@@ -483,7 +434,9 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 bool injured = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight) > 0.01f;
                 bool staggered = snapshot.State == BodyState.Staggered;
-                _animator.SetLayerWeight(2, injured || staggered ? 1f : 0f);
+                // Injured arm overlay is a light additive; stagger needs full weight for flinch reads.
+                float weight = staggered ? 1f : injured ? 0.4f : 0f;
+                _animator.SetLayerWeight(2, weight);
             }
         }
 
@@ -513,16 +466,10 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _lastConsumedTrigger = trigger;
-            if (trigger == AnimationTriggerId.AttackSwing)
-            {
-                BeginMeleeSwingVisual();
-                OnTriggerFired?.Invoke(trigger);
-                return;
-            }
-
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
             if (hash != 0)
             {
+                _animator.ResetTrigger(hash);
                 _animator.SetTrigger(hash);
             }
 

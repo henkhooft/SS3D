@@ -7,8 +7,8 @@ using UnityEngine;
 namespace SS3D.Editor
 {
     /// <summary>
-    /// Rebuilds Base Layer locomotion into Peaceful / Melee / Ranged FreeformCartesian2D
-    /// blend trees switched by the CombatStance animator int.
+    /// Rebuilds Base Layer locomotion into Peaceful / Melee / Ranged / Injured
+    /// FreeformCartesian2D blend trees switched by CombatStance and LimpSide.
     /// </summary>
     public static class HumanoidLocomotionBlendSetup
     {
@@ -17,6 +17,7 @@ namespace SS3D.Editor
         private const string LocomotionPack = "Assets/Art/Animations/Locomotion Pack";
         private const string MeleePack = "Assets/Art/Animations/Pro Melee Axe Pack";
         private const string ShooterPack = "Assets/Art/Animations/Basic Shooter Pack";
+        private const string InjuredPack = "Assets/Art/Animations/Male Injured Pack";
 
         private static readonly (string File, string ClipName, Vector2 Pos)[] PeacefulClips =
         {
@@ -68,6 +69,27 @@ namespace SS3D.Editor
         };
 
         /// <summary>
+        /// Male Injured Pack has no dedicated strafes — sample walk/run forward/back and reuse
+        /// walk at lateral positions so VelX still blends.
+        /// </summary>
+        private static readonly (string File, string ClipName, Vector2 Pos)[] InjuredClips =
+        {
+            ("injured idle.fbx", "Mix_InjuredIdle", new Vector2(0f, 0f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(0f, 0.3f)),
+            ("injured walk backwards.fbx", "Mix_InjuredWalkBackwards", new Vector2(0f, -0.3f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(-0.3f, 0.3f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(0.3f, 0.3f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(-0.3f, 0f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(0.3f, 0f)),
+            ("injured run.fbx", "Mix_InjuredRun", new Vector2(0f, 1f)),
+            ("injured run backwards.fbx", "Mix_InjuredRunBackwards", new Vector2(0f, -1f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(-1f, 1f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(1f, 1f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(-1f, 0f)),
+            ("injured walk.fbx", "Mix_InjuredWalk", new Vector2(1f, 0f)),
+        };
+
+        /// <summary>
         /// Parameters expected by <c>Animations.Humanoid</c> / AnimationOrchestrator.
         /// Order is preserved when force-rebinding so the Animator window stays readable.
         /// </summary>
@@ -104,8 +126,9 @@ namespace SS3D.Editor
         {
             if (!EditorUtility.DisplayDialog(
                     "Rebuild Combat Stance Blend Trees",
-                    "Rebuild Base Layer Peaceful / Melee / Ranged FreeformCartesian2D locomotion " +
-                    "switched by CombatStance (0/1/2). Also remaps AttackSwing / Flinch to melee clips.\n\n" +
+                    "Rebuild Base Layer Peaceful / Melee / Ranged / Injured FreeformCartesian2D locomotion " +
+                    "switched by CombatStance + LimpSide. Restores AttackSwing trigger on Upper Body; " +
+                    "remaps Flinch / injured-arm additive.\n\n" +
                     "Modifies HumanCharacterAnimator.controller.",
                     "Rebuild",
                     "Cancel"))
@@ -115,6 +138,34 @@ namespace SS3D.Editor
 
             string result = RebuildCombatStanceBlendTrees();
             EditorUtility.DisplayDialog("Rebuild Combat Stance Blend Trees", result, "OK");
+        }
+
+        /// <summary>
+        /// Drop <c>artifacts/force-rebuild-animator.flag</c> then wait for script reload —
+        /// used when batchmode cannot open the project because the interactive Editor holds it.
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void RebuildFromFlagIfPresent()
+        {
+            const string flagPath = "artifacts/force-rebuild-animator.flag";
+            if (!System.IO.File.Exists(flagPath))
+            {
+                return;
+            }
+
+            try
+            {
+                System.IO.File.Delete(flagPath);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[HumanoidLocomotionBlendSetup] Could not delete rebuild flag: {ex.Message}");
+                return;
+            }
+
+            string result = RebuildCombatStanceBlendTrees();
+            Debug.Log($"[HumanoidLocomotionBlendSetup] Flag-triggered rebuild: {result}");
+            System.IO.File.WriteAllText("artifacts/force-rebuild-animator.result", result);
         }
 
         /// <summary>Batchmode: -executeMethod SS3D.Editor.HumanoidLocomotionBlendSetup.RebuildCombatStanceBlendTreesBatch</summary>
@@ -241,7 +292,8 @@ namespace SS3D.Editor
             BlendTree peacefulTree = BuildBlendTree(controller, "Peaceful Locomotion 2D", LocomotionPack, PeacefulClips);
             BlendTree meleeTree = BuildBlendTree(controller, "Melee Locomotion 2D", MeleePack, MeleeClips);
             BlendTree rangedTree = BuildBlendTree(controller, "Ranged Locomotion 2D", ShooterPack, RangedClips);
-            if (peacefulTree == null || meleeTree == null || rangedTree == null)
+            BlendTree injuredTree = BuildBlendTree(controller, "Injured Locomotion 2D", InjuredPack, InjuredClips);
+            if (peacefulTree == null || meleeTree == null || rangedTree == null || injuredTree == null)
             {
                 return "ERROR: Failed to build one or more stance blend trees (check Mix_* clip names after reimport).";
             }
@@ -249,9 +301,11 @@ namespace SS3D.Editor
             AnimatorState peaceful = FindOrCreateState(baseMachine, "Peaceful Locomotion", new Vector3(300, 0, 0));
             AnimatorState melee = FindOrCreateState(baseMachine, "Melee Locomotion", new Vector3(300, 120, 0));
             AnimatorState ranged = FindOrCreateState(baseMachine, "Ranged Locomotion", new Vector3(300, 240, 0));
+            AnimatorState injured = FindOrCreateState(baseMachine, "Injured Locomotion", new Vector3(550, 120, 0));
             peaceful.motion = peacefulTree;
             melee.motion = meleeTree;
             ranged.motion = rangedTree;
+            injured.motion = injuredTree;
             baseMachine.defaultState = peaceful;
 
             // Retarget legacy Movement state if present.
@@ -261,14 +315,30 @@ namespace SS3D.Editor
                 legacyMovement.motion = peacefulTree;
             }
 
+            // Drop placeholder Limp Left/Right states — Injured Locomotion replaces them.
+            RemoveStateIfPresent(baseMachine, "Limp Left");
+            RemoveStateIfPresent(baseMachine, "Limp Right");
+
+            ClearTransitions(peaceful);
+            ClearTransitions(melee);
+            ClearTransitions(ranged);
+            ClearTransitions(injured);
+
             WireStanceTransitions(peaceful, melee, ranged);
             WireStanceTransitions(melee, peaceful, ranged);
             WireStanceTransitions(ranged, peaceful, melee);
 
+            WireLimpEntry(peaceful, injured);
+            WireLimpEntry(melee, injured);
+            WireLimpEntry(ranged, injured);
+            WireLimpExit(injured, peaceful, 0);
+            WireLimpExit(injured, melee, 1);
+            WireLimpExit(injured, ranged, 2);
+
             AnimationClip jumpClip = LoadPackClip($"{LocomotionPack}/jump.fbx", "Mix_Jump");
             if (jumpClip != null)
             {
-                AnimatorState jumpState = FindOrCreateState(baseMachine, "Jump", new Vector3(550, 120, 0));
+                AnimatorState jumpState = FindOrCreateState(baseMachine, "Jump", new Vector3(750, 120, 0));
                 jumpState.motion = jumpClip;
                 EnsureAnyStateTrigger(baseMachine, jumpState, "Jump", canTransitionToSelf: false);
                 EnsureExitToState(jumpState, peaceful, hasExitTime: true, exitTime: 0.85f, duration: 0.1f);
@@ -276,10 +346,10 @@ namespace SS3D.Editor
 
             RemapStateMotion(baseMachine, "Flinch", $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
 
-            // Mute Any State AttackSwing on all layers — orchestrator uses Animator.Play on Upper Body.
+            // Base layer must not consume AttackSwing — upper body owns the swing trigger.
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
 
-            // Upper-body Attack Swing overlays arms/torso; base layer keeps walk/run.
+            // Upper-body Attack Swing overlays spine+arms; exit-time returns to Hold Default.
             if (controller.layers.Length > 1)
             {
                 AnimatorStateMachine upper = controller.layers[1].stateMachine;
@@ -293,7 +363,7 @@ namespace SS3D.Editor
                     upperAttack.writeDefaultValues = true;
                 }
 
-                MuteAnyStateTrigger(upper, "AttackSwing");
+                EnsureAnyStateTrigger(upper, upperAttack, "AttackSwing", canTransitionToSelf: true);
                 AnimatorState holdDefault = FindState(upper, "Hold Default");
                 if (holdDefault != null)
                 {
@@ -303,16 +373,19 @@ namespace SS3D.Editor
 
             if (controller.layers.Length > 2)
             {
-                RemapStateMotion(controller.layers[2].stateMachine, "Flinch",
+                AnimatorStateMachine additive = controller.layers[2].stateMachine;
+                RemapStateMotion(additive, "Flinch",
                     $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
+                RemapStateMotion(additive, "Empty Additive",
+                    $"{InjuredPack}/injured hurting idle.fbx", "Mix_InjuredHurtingIdle");
             }
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            return "OK: Rebuilt Peaceful / Melee / Ranged locomotion blends switched by CombatStance; " +
-                   "AttackSwing / Flinch remapped to melee pack clips where states exist.";
+            return "OK: Rebuilt Peaceful / Melee / Ranged / Injured locomotion blends; " +
+                   "AttackSwing trigger on Upper Body; Flinch / injured-arm additive remapped.";
         }
 
         private static BlendTree BuildBlendTree(
@@ -348,8 +421,8 @@ namespace SS3D.Editor
 
         private static void WireStanceTransitions(AnimatorState from, AnimatorState otherA, AnimatorState otherB)
         {
-            EnsureStanceTransition(from, otherA, (int)GetStanceForState(otherA));
-            EnsureStanceTransition(from, otherB, (int)GetStanceForState(otherB));
+            EnsureStanceTransition(from, otherA, GetStanceForState(otherA));
+            EnsureStanceTransition(from, otherB, GetStanceForState(otherB));
         }
 
         private static int GetStanceForState(AnimatorState state)
@@ -383,6 +456,64 @@ namespace SS3D.Editor
             created.hasFixedDuration = true;
             created.duration = 0.15f;
             created.AddCondition(AnimatorConditionMode.Equals, stanceValue, "CombatStance");
+            // Stay on healthy stance locomotion while not limping.
+            created.AddCondition(AnimatorConditionMode.Equals, 0f, "LimpSide");
+        }
+
+        private static void WireLimpEntry(AnimatorState from, AnimatorState injured)
+        {
+            foreach (AnimatorStateTransition transition in from.transitions)
+            {
+                if (transition.destinationState == injured
+                    && transition.conditions.Any(c => c.parameter == "LimpSide"))
+                {
+                    return;
+                }
+            }
+
+            AnimatorStateTransition created = from.AddTransition(injured);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = 0.2f;
+            // LimpSide: 0 None, 1 Left, 2 Right — any non-zero enters injured gait.
+            created.AddCondition(AnimatorConditionMode.Greater, 0f, "LimpSide");
+        }
+
+        private static void WireLimpExit(AnimatorState injured, AnimatorState stanceState, int stanceValue)
+        {
+            foreach (AnimatorStateTransition transition in injured.transitions)
+            {
+                if (transition.destinationState == stanceState
+                    && transition.conditions.Any(c => c.parameter == "CombatStance" && (int)c.threshold == stanceValue))
+                {
+                    return;
+                }
+            }
+
+            AnimatorStateTransition created = injured.AddTransition(stanceState);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = 0.2f;
+            created.AddCondition(AnimatorConditionMode.Equals, 0f, "LimpSide");
+            created.AddCondition(AnimatorConditionMode.Equals, stanceValue, "CombatStance");
+        }
+
+        private static void ClearTransitions(AnimatorState state)
+        {
+            AnimatorStateTransition[] existing = state.transitions;
+            for (int i = existing.Length - 1; i >= 0; i--)
+            {
+                state.RemoveTransition(existing[i]);
+            }
+        }
+
+        private static void RemoveStateIfPresent(AnimatorStateMachine machine, string stateName)
+        {
+            AnimatorState state = FindState(machine, stateName);
+            if (state != null)
+            {
+                machine.RemoveState(state);
+            }
         }
 
         private static void RemapStateMotion(AnimatorStateMachine machine, string stateName, string fbxPath, string clipName)

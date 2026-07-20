@@ -83,6 +83,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             UpdateLimp();
+            UpdateInjuredArms();
             UpdateDragging();
         }
 
@@ -220,6 +221,18 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _bodyStateMachine.SetLimpSide(side);
+        }
+
+        private void UpdateInjuredArms()
+        {
+            if (_bodyStateMachine == null)
+            {
+                return;
+            }
+
+            float left = _healthController != null ? _healthController.GetZoneBruteFraction(BodyZone.LeftArm) : 0f;
+            float right = _healthController != null ? _healthController.GetZoneBruteFraction(BodyZone.RightArm) : 0f;
+            _bodyStateMachine.SetInjuredArms(left, right);
         }
 
         private void UpdateDragging()
