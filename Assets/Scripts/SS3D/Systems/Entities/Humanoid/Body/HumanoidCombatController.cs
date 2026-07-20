@@ -117,8 +117,10 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             // Play immediately on the owning client — don't wait for ServerRpc + SyncVar.
-            _orchestrator?.PlayAttackTrigger(attackType);
-            _bodyStateMachine.CmdFireTrigger(attackType);
+            byte variant = _orchestrator != null
+                ? _orchestrator.PlayAttackTrigger(attackType)
+                : (byte)0;
+            _bodyStateMachine.CmdFireTrigger(attackType, variant);
         }
     }
 }

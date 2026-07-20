@@ -60,7 +60,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            ProcessPlayerInput();
+            ProcessPlayerInput(publishSpeed: _predictedMovement == null || !_predictedMovement.enabled);
 
             if (_predictedMovement != null && _predictedMovement.enabled)
             {
