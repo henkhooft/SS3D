@@ -21,8 +21,8 @@ For doc authoring conventions see [SKILL.md](SKILL.md).
 | Render pipeline | Built-in | **URP 17** |
 | Release channel | Tagged releases on GitHub | **No releases** — build from source |
 | Documentation | GitBook ([ss3d.gitbook.io](https://ss3d.gitbook.io/dev-guide/)) | `Documents/design/` + `Documents/architecture/` + system maps |
-| Commits ahead of upstream | — | **~424** (0 behind as of last fetch) |
-| Files changed vs upstream | — | ~13k files, +1.35M / −77.5k lines |
+| Commits ahead of upstream | — | **~424** (0 behind as of last fetch) — *stale; needs a live upstream refetch, not verifiable from this session's repo scope, see note below* |
+| Files changed vs upstream | — | ~13k files, +1.35M / −77.5k lines — *same caveat* |
 
 ### Shipped gameplay
 
@@ -34,9 +34,12 @@ Coverage means how much of the design intent is playable today, not “code exis
 |---|---|---|
 | [Selection + examine](#selection-api-1387) | shipped | Shader mesh picking; hover tooltips; Shift-hold detailed examine (text/image) |
 | [Interactions + radial menu](#interactions-hardening-and-radial-menu) | shipped | Hardened multiplayer interactions; three-tier UITK radial; armed Tier-2 targeting |
-| [Main HUD](#main-hud-ui-toolkit) | partial | Gear/hands/intent UITK overlay; legacy inventory chrome disabled; vitals/self-examine still pending |
+| [Main HUD](#main-hud-ui-toolkit) | partial | Gear/hands/intent UITK overlay; real on-demand storage panels (see Inventory row); vitals/self-examine still pending |
+| [Inventory & storage](#inventory-and-storage-redesign) | partial | Clean-slate Container model: weight, size-class fit, stacking, locks; on-demand panel with drag-drop; backpack/toolbelt/locker wired; Play Mode verification pending |
+| [Comms](#comms-local-speech-and-crowd-cap) | partial | Local speech chips with distance/occlusion tiers, T-compose, crowd cap; radio/channels, non-diegetic feed, PDA log still open |
+| [Disposal](#disposal-item-network) | partial | BFS pipe routing, chute/outlet transit, SizeClass gate; pipe crafting, Cargo hook, player transit deferred |
 | [Health](#health-rewrite) | partial | Two-tier damage, organs, bleeding, critical/defib, field treatments, limb severing; vitals HUD pending |
-| [Combat](#combat-melee-vertical-slice) | partial | Harm-intent melee (fists, crowbar) with windup/zones; blocking and ranged not built |
+| [Combat](#combat-melee-vertical-slice) | partial | Harm-intent melee (fists, crowbar) with windup/zones; blocking and ranged not built. **In progress on a branch:** a clean-slate rewrite (`cursor/combat-plan-clean-slate`) marks this code condemned and has already replaced the melee hit path — not yet merged, see [In progress](#in-progress-on-feature-branches) |
 | [Body animation](#player-body-animation-foundation) | partial | Peaceful / melee / ranged stance locomotion + aim IK; combat hit presentation still thin |
 | [Screen effects](#screen-space-effects) | partial | Dying/blood/oxy/concussion/unconscious + hit flash from health; atmos temp/fire not wired |
 | [Vision / FOV](#vision-fov) | shipped | Hard black fog-of-war from viewpoint raycasts |
@@ -93,7 +96,11 @@ were **removed** from this fork. Remaining workflows:
 
 Doc layer redesign (coverage table, strip prototyping prompts from design docs) merged via PR #2.
 Agent-first composition policy and UI path-catalog conventions live under
-[architecture/](architecture/) (see shipped sections below).
+[architecture/](architecture/) (see shipped sections below). A design/implementation alignment
+audit (PR #18) fixed code that had drifted from its design doc; this document (FORK_STATUS.md)
+itself received a fuller such pass on 2026-07-20 — see the design specs table below and this
+session's new docs (objectives, round-end, creative-mode expansion, persistence-save, admin-tools,
+cryogenics).
 
 ---
 
@@ -158,6 +165,9 @@ Merged from `archive/feature-1387-selection-api`. Cursor picking misalignment fi
 **Post-merge polish** (PR #5): hover flicker and outline bleed into item icons fixed by excluding
 outline shells from the pick pass via `SelectionRenderingLayers` (lives in `Rendering.URP` to avoid
 assembly cycles); green outline cleared on item pickup.
+
+**Post-merge polish** (PR #17): `ClosestPoint` no longer called on non-convex `MeshCollider`s
+(was throwing/misbehaving on some selectable meshes).
 
 ### Detailed examine (#1394)
 
@@ -228,6 +238,10 @@ loading-bar flash, toggle-interaction Power icon fallback, radial menu polish, c
 Removed FastScriptReload and repaired Game scene missing scripts.
 
 Merged from `archive/feature-interactions`.
+
+**Post-merge polish** (PR #17): outline now shows only for objects with a target-bound interaction;
+range enforced when an interaction point is missing; Craft discovery gated behind a check, with the
+underlying interaction-architecture smells documented rather than silently worked around.
 
 ### Tilemap and adjacency engine
 
@@ -301,6 +315,9 @@ the ID/access foundation shipped for APC/SMES/atmos panels.
 **Post-merge polish** (PR #4): refresh-driven UI teardown no longer drops Take/vend click handlers;
 `MachinePowerConsumer` no longer sticks at “in use” wattage after vend.
 
+**Backdrop blur** (PR #14): diegetic panels blur the world behind them via Dual Kawase blur plus a
+dark dim, replacing an earlier depth-of-field approach.
+
 `MachineInterfaceHost` disables `UIDocument` when closed to avoid interfering with the selection
 pick pass. Diegetic panels mount the full cloned UXML `TemplateContainer` so attached style sheets
 apply at runtime. UI Toolkit masking rule: never combine `border-radius` and `overflow: hidden` on
@@ -308,7 +325,8 @@ the same element — split painted and clipping layers (`DiegeticDeviceShell`, `
 
 Merged from `archive/machine-ui` (APC/SMES networking),
 `archive/feature-diegetic-screen-ui-framework` (diegetic shell + vending), and
-`atmos-pipes` (APC/SMES diegetic redesign + atmos device panels). Plan:
+`atmos-pipes` (APC/SMES diegetic redesign + atmos device panels). Backdrop blur merged via PR #14
+(`cursor/diegetic-ui-backdrop-blur`). Plan:
 [diegetic_screen_ui_framework_643c2e6f.plan.md](plans/diegetic_screen_ui_framework_643c2e6f.plan.md).
 System map: [machine-interface.md](architecture/systems/machine-interface.md).
 
@@ -341,6 +359,9 @@ ports). Architecture:
 [electricity_kwh_foundation_917ccdbc.plan.md](plans/electricity_kwh_foundation_917ccdbc.plan.md).
 
 Deferred: live tile-mutation recompute; editor merge/split UI.
+
+**Post-merge polish** (PR #17): `PowerStatus` flicker fixed so airlocks can actually close;
+APC flood-fill now deferred until station template load finishes, instead of racing it.
 
 ### Atmospherics ECS foundation
 
@@ -479,6 +500,9 @@ System map: [entities.md](architecture/systems/entities.md).
 
 Merged from `feature/animation-system` onto `develop`.
 
+**Post-merge polish** (PR #17): removed a duplicate `_bodyStateMachine` component on the ghost
+controller.
+
 ### Screen-space effects
 
 **Paths:** `SS3D.Systems.ScreenEffects`
@@ -567,6 +591,68 @@ Partial player HUD overlay from [main-hud.md](design/main-hud.md):
 
 Merged via PR #10. System map: [inventory.md](architecture/systems/inventory.md) (player HUD slice).
 
+### Inventory and storage redesign
+
+**Paths:** `SS3D.Systems.Inventory`, `Assets/Content/Systems/UI/MainHud/StoragePanel/`
+
+Clean-slate rewrite per [inventory-storage.md](design/inventory-storage.md), replacing the
+placeholder inventory data model:
+
+- **Container primitive** — real weight (recursive through nested containers), a five-tier
+  size-class fit-check, stackable identical items, minimal ID-locked containers
+- **On-demand storage panel** — opens per-container from the gear strip or a world object; drag-drop
+  between panels and hands reuses the Tier 3 combine convention; locker access gated on the door
+- **Main HUD wiring** — worn item names on HUD slots, drag-to-world drop, backpack/toolbelt/locker
+  hookup, gear-strip PDA well renamed to Pocket
+- **Old UI purge** — legacy inventory uGUI fully removed, not just disabled
+- **Stamina bridge (Phase 7a)** — `CarriedWeight` feeds the stamina regen function
+
+Merged via PR #16 (`claude/inventory-architecture-redesign-6q9527`). Architecture:
+[2026-07_inventory-storage-redesign.md](architecture/2026-07_inventory-storage-redesign.md).
+System map: [inventory.md](architecture/systems/inventory.md).
+
+Deferred: Play Mode verification, uniform-specific pocket variance, standalone "quick loot everything."
+
+### Comms — local speech and crowd cap
+
+**Paths:** `SS3D.Systems.Chat` (headless `ChatSubSystem`), Main HUD local-speech UI
+
+Vertical slice 1 of [comms.md](design/comms.md):
+
+- **Local speech chips** — world-anchored subtitle bubbles at the speaker's head, not a chat-log line
+- **Distance/occlusion tiers** and **crowd cap** — nearest speakers get bubbles, the rest compress
+  into a "+N more talking nearby" chip
+- **T-compose** — on-demand input box, momentary chrome, matching the intent-module fading-hint pattern
+- **Always-on chat UI Phase 0 purged** — the old scrolling chat box is gone; `ChatSubSystem` runs
+  headless, ready for the non-diegetic feed and PDA log to build on
+
+Merged via PR #20 (`claude/crowd-cap-chat-plan-o8v03z`). System map:
+[chat-audio-screens.md](architecture/systems/chat-audio-screens.md).
+
+Deferred: radio/non-positional channels, whisper/shout distance tiers, non-diegetic feed (OOC/dead
+chat/announcements), PDA history log, voice compatibility.
+
+### Disposal — item network
+
+**Paths:** `SS3D.Systems.Disposal`
+
+Physical BFS-routed pipe network per [disposal.md](design/disposal.md), replacing BYOND's
+instant off-map transit:
+
+- **Pipe network routing** — BFS connectivity across placed pipe segments, same technique class as
+  Area's flood fill and electricity's backbone
+- **Chute entry** — SizeClass gate (shares inventory-storage's five-tier field, not a bespoke check)
+- **Transit and outlets** — item travels the routed path at a real pace; outlet eject animation,
+  spit-delay timing, and main-outlet arrival fixed for items with no wired space-ejection point
+- **Interaction polish** — Dispose click priority, recycle icon registered
+
+Merged via PR #19 (`claude/disposal-implementation-plan-4wh4hr`). Architecture:
+[2026-07_disposal-item-network.md](architecture/2026-07_disposal-item-network.md).
+System map: [disposal.md](architecture/systems/disposal.md).
+
+Deferred: pipe crafting/placement UI (now designed in
+[creative-mode.md](design/creative-mode.md) §4), the Cargo export hook, Phase 2 player transit.
+
 ### Input arbitration
 
 **Paths:** `SS3D.Systems.Inputs`
@@ -595,9 +681,28 @@ Genuine Server-subtarget Linux build (not a client launched with `-serveronly`):
 - Docker Compose + start scripts under `Builds/`
 
 Known gaps: selection outline and drop interaction against a real client still broken (not
-root-caused); no automated multiplayer harness yet.
+root-caused). An automated multiplayer harness now exists — see below.
 
 Architecture: [2026-07_headless-dedicated-server.md](architecture/2026-07_headless-dedicated-server.md).
+
+### Multiplayer test harness
+
+**Paths:** Headless multiplayer test scripts, dedicated-server + client launch tooling
+
+Replaces the brittle PlayMode-based multiplayer test with a real headless harness that boots a
+dedicated server and one or more real clients:
+
+- Automated round-start auth and permission seeding for smoke runs
+- Log-signal detection for round lifecycle (replacing timing-based waits) plus a combined build menu
+- A reconnect scenario (disconnect ownership cleanup, reconnecting a player to their own body) —
+  see also `claude/player-join-leave-arch-z5zzmm`, in progress, below
+- Regression coverage extended for atmospherics client-visualization sync (in progress, below)
+
+Merged via PR #15 (`claude/multiplayer-test-harness-l90540`). Architecture:
+[2026-07_multiplayer-test-harness.md](architecture/2026-07_multiplayer-test-harness.md).
+
+Known gaps: mouse/screen-space interaction and pocket/container round-trip regressions not yet
+covered; not yet verified against a real Unity build.
 
 ### Agent-first composition and UI path catalogs
 
@@ -643,6 +748,8 @@ specs or document explicit deviations.
 | [persistence-save.md](design/persistence-save.md) | Four-layer save model — station templates, server meta, player meta, automatic round-snapshot recovery |
 | [admin-tools.md](design/admin-tools.md) | Permission tiers, ahelp, stealth observation, world intervention, moderation — every action logged |
 | [cryogenics.md](design/cryogenics.md) | Physical cryo pod as a real pause mechanic for logged-off characters, distinct from death/respawn |
+| [disposal.md](design/disposal.md) | Physical BFS-routed pipe network replacing instant off-map transit; Cargo export hook |
+| [inventory-storage.md](design/inventory-storage.md) | One Container primitive for backpacks/crates/lockers — weight, size-class fit, stacking, locks |
 
 Machine interfaces, the radial interaction menu, screen-space overlays, and the Main HUD overlay
 partially implement [main-hud.md](design/main-hud.md) (tiered interactions, intent, diegetic machine
@@ -658,8 +765,15 @@ stance/locomotion presentation; it is not full combat. **Vision FOV** has no ded
 it is a rendering feature under [rendering-lighting.md](design/rendering-lighting.md) territory.
 **Persistence foundation** partially implements [persistence-save.md](design/persistence-save.md)
 (station templates and server meta shipped; player meta and the automatic round-snapshot
-crash-recovery safety net that doc designs are still pending). The rest of these specs remain
-design-only.
+crash-recovery safety net that doc designs are still pending). **Comms** partially implements
+[comms.md](design/comms.md) (local speech chips, distance/occlusion, crowd cap; radio/channels,
+non-diegetic feed, and PDA log still open). **Disposal** partially implements
+[disposal.md](design/disposal.md) (BFS pipe routing and transit shipped; pipe placement now has a
+real path via [creative-mode.md](design/creative-mode.md) §4, but the Cargo export hook and Phase 2
+player transit remain). **Inventory and storage redesign** partially implements
+[inventory-storage.md](design/inventory-storage.md) (Container primitive, on-demand panel, Main HUD
+wiring, and the stamina bridge shipped; Play Mode verification pending). The rest of these specs
+remain design-only.
 
 ---
 
@@ -670,18 +784,27 @@ before assuming commit counts.
 
 | Branch | Ahead / behind `develop` | System | Notes |
 |---|---|---|---|
-| `cursor/diegetic-ui-backdrop-blur` | 2 / 0 | Machine UI + screen-effects | Dual Kawase world blur + dark scrim behind diegetic panels |
-| `feature/inventory-storage` | 9 / 290 | Inventory + storage UI | Gear/hands strip largely superseded by Main HUD PR #10; rebase before continuing |
-| `feature/urp-lighting-phase1` | 2 / 301 | URP lighting visual foundation | Forward+ fixture fixes, unitless intensity handling |
-| `feature/map-editor-replacement` | 10 / 180 | TileMap Creator / creative | Click-to-place and editor input work |
-| `feature/character-creator` | 3 / 170 | Character customizer | Layout + URP preview polish |
-| `claude/crowd-cap-chat-plan-o8v03z` | 4 / 57 | Comms | Early chat/crowd-cap integration spike |
-| `claude/atmospherics-client-viz-sync-ejkbw4` | 1 / 115 | Atmospherics | Client VFX sync spike ([effort doc](architecture/2026-07_atmos-client-visualization-sync.md)) |
-| `claude/multiplayer-test-harness-l90540` | 1 / 57 | Networking | Automated multiplayer harness spike |
+| `cursor/combat-plan-clean-slate` | 9 / 0 | Combat | Clean-slate rewrite; marks existing melee code condemned, already ships a unified Hit path, zone-reticle chip, and an admin `spawndummy` test tool |
+| `claude/map-editor-creative-mode-8pp6qj` | 21 / 76 | TileMap Creator / creative mode | Full-screen Map Editor UI replacing TileMap Creator — further along than `feature/map-editor-replacement` below |
+| `feature/urp-lighting-phase1-v2` | 4 / 0 | URP lighting visual foundation | Fixture-driven half-toon lighting on Forward+; supersedes `feature/urp-lighting-phase1` below |
+| `claude/player-join-leave-arch-z5zzmm` | 3 / 39 | Networking | Disconnect ownership cleanup + reconnect-to-own-body; adds a reconnect scenario to the multiplayer harness |
+| `claude/vitals-scan-result-alt-ui-ez50ba` | 2 / 95 | Health / Main HUD | Health scanner machine interface (alternate vitals-scan-result UI) |
+| `claude/ui-toolkit-architecture-ybt2qv` | 1 / 49 | UI shell | UI Toolkit shell scaffolding; migrates radial/armed interaction UI onto it |
+| `claude/atmospherics-client-viz-sync-ejkbw4` | 3 / 22 | Atmospherics | Client-visualization sync Phase 1 + harness regression coverage ([effort doc](architecture/2026-07_atmos-client-visualization-sync.md)) |
+| `feature/map-editor-replacement` | 10 / 340 | TileMap Creator / creative | Click-to-place and editor input work; largely superseded by `claude/map-editor-creative-mode-8pp6qj` above |
+| `feature/tilemap-overlay` | 2 / 333 | Tilemap visuals | Area floor stripes + sparse decals, replacing tile overlays |
+| `feature/character-creator` | 3 / 330 | Character customizer | Layout + URP preview polish |
+| `feature/inventory-storage` | 19 / 373 | Inventory + storage UI | Superseded by the shipped inventory redesign (PR #16, a different branch); likely safe to abandon |
+| `feature/urp-lighting-phase1` | 4 / 354 | URP lighting visual foundation | Superseded by `feature/urp-lighting-phase1-v2` above |
 
 Merged and retired from this table: `health-rewrite` (PR #12), vision FOV (PR #11; old
 `feature/vision-urp-tilemap` abandoned), `feature/performance-improvements` (PR #13),
-`feature/mi-path-catalog` (catalog wedge on `develop`).
+`feature/mi-path-catalog` (catalog wedge on `develop`), `cursor/diegetic-ui-backdrop-blur` (PR #14),
+`claude/multiplayer-test-harness-l90540` (PR #15), `claude/inventory-architecture-redesign-6q9527`
+(PR #16 — a different branch from the still-open `feature/inventory-storage` above),
+`cursor/fix-airlock-close-and-apc-area-load` (PR #17), `claude/design-doc-alignment-audit-wsyn1d`
+(PR #18), `claude/disposal-implementation-plan-4wh4hr` (PR #19), `claude/crowd-cap-chat-plan-o8v03z`
+(PR #20).
 
 ---
 
@@ -718,7 +841,10 @@ vending polish (#4), selection/outline flicker (#5), screen-space effects (#6), 
 emission (#7), input arbitration (#8 / #9), Main HUD UITK (#10), vision FOV hard mask (#11), health
 rewrite + combat melee + screen-effect health wiring (#12), hot-path performance (#13), player body
 animation (`feature/animation-system`), headless dedicated server tooling, agent-first composition
-policy, machine UI / Main HUD path catalogs.
+policy, machine UI / Main HUD path catalogs, diegetic UI backdrop blur (#14), multiplayer test
+harness (#15), inventory and storage redesign (#16), airlock/APC + selection/interaction bugfix
+batch (#17), design/implementation alignment audit (#18), disposal item-network implementation
+(#19), comms local-speech and crowd-cap vertical slice (#20).
 
 ---
 
