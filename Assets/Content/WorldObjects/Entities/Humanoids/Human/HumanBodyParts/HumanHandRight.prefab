@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 5767018055607047746}
   - component: {fileID: 427023688766138603}
   - component: {fileID: 9182736450123456796}
+  - component: {fileID: 9182736450123456805}
   m_Layer: 10
   m_Name: HumanHandRight
   m_TagString: Untagged
@@ -484,6 +485,7 @@ MonoBehaviour:
     Horizontal: 1.5
     Vertical: 2
   _pickupIcon: {fileID: 21300000, guid: 2db953f2ae8f41d4e9842d9144a9e396, type: 2}
+  _side: 0
   _interactionOrigin: {fileID: 0}
   HandsController: {fileID: 0}
 --- !u!114 &3575842280113044479
@@ -651,3 +653,15 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 7778332084892924709, guid: f553c8289710b5e4dab99c3bcbbb802e, type: 3}
+--- !u!114 &9182736450123456805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7546631754298856378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1f2a3b4c5d64789a0b1c2d3e4f5a678, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -111,7 +111,9 @@ namespace SS3D.Interactions
                 return restricted.AllowedIntent == intent;
             }
 
-            return true;
+            // Unrestricted world verbs (Drop, Open, MI, …) are Help-default.
+            // Harm (and other exclusive modes) must opt in via IIntentRestrictedInteraction.
+            return intent == IntentType.Help;
         }
 
         private static GameObject ResolveTargetGameObject(List<IInteractionTarget> targets)

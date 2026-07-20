@@ -37,17 +37,21 @@ namespace SS3D.Systems.Entities.Humanoid
         private AnimationTriggerId _lastConsumedTrigger = AnimationTriggerId.None;
         private byte _lastTriggerSequence;
         private bool _ownerPredictedAttack;
-        private float _meleeSwingEndsAt;
-        private float _meleeSwingFadeStartsAt;
         private float _upperBodyWeight;
         private float _upperBodyWeightTarget;
         private bool _posingSuppressed;
+        private int _nextAttackVariant;
 
-        private static readonly int AttackSwingState = Animator.StringToHash("Attack Swing");
-        /// <summary>Mixamo horizontal swing length (~72 frames at 30fps).</summary>
-        private const float MeleeSwingDurationSeconds = 2.4f;
-        /// <summary>Start blending the upper-body layer out before the clip ends.</summary>
-        private const float MeleeSwingFadeNormalized = 0.75f;
+        /// <summary>Horizontal / downward / backhand cycle for melee AttackSwing.</summary>
+        private const int MeleeSwingVariantCount = 3;
+
+        /// <summary>Leg brute at/above this → stumble idle on injured blend; prefer base over arm additive.</summary>
+        private const float StumbleLegThreshold = 0.65f;
+
+        /// <summary>
+        /// Soft fade when entering/leaving Melee stance (Upper Body layer on/off).
+        /// Swing clip lifetime is Animator exit-time owned — do not add swing duration constants here.
+        /// </summary>
         [SerializeField] private float _upperBodyWeightLerp = 6f;
 
         public Animator Animator => _animator;
@@ -132,11 +136,14 @@ namespace SS3D.Systems.Entities.Humanoid
                 ("ArmHold", Animations.Humanoid.ArmHold),
                 ("InjuredArmLeft", Animations.Humanoid.InjuredArmLeft),
                 ("InjuredArmRight", Animations.Humanoid.InjuredArmRight),
+                ("InjuredLeg", Animations.Humanoid.InjuredLeg),
                 ("IsSeated", Animations.Humanoid.IsSeated),
                 ("CombatMode", Animations.Humanoid.CombatMode),
                 ("CombatStance", Animations.Humanoid.CombatStance),
                 ("AimYaw", Animations.Humanoid.AimYaw),
                 ("AimPitch", Animations.Humanoid.AimPitch),
+                ("AttackVariant", Animations.Humanoid.AttackVariant),
+                ("MirrorUpperBody", Animations.Humanoid.MirrorUpperBody),
                 ("VelX", Animations.Humanoid.VelX),
                 ("VelZ", Animations.Humanoid.VelZ),
                 ("Turn", Animations.Humanoid.Turn),
@@ -198,7 +205,6 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             ApplyLocomotionVelocity();
-            TickMeleeSwingIk();
             TickUpperBodyWeight();
         }
 
@@ -270,66 +276,33 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Owner-side immediate attack playback (upper-body Attack Swing over locomotion).
+        /// Owner-side immediate attack playback. Returns the swing variant used (0–2) for AttackSwing.
         /// </summary>
-        public void PlayAttackTrigger(AnimationTriggerId trigger)
+        public byte PlayAttackTrigger(AnimationTriggerId trigger)
         {
             if (_animator == null)
             {
-                return;
+                return 0;
             }
 
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
             if (hash == 0)
             {
-                return;
+                return 0;
+            }
+
+            byte variant = 0;
+            if (trigger == AnimationTriggerId.AttackSwing)
+            {
+                variant = (byte)(_nextAttackVariant % MeleeSwingVariantCount);
+                _nextAttackVariant = (_nextAttackVariant + 1) % MeleeSwingVariantCount;
+                _animator.SetInteger(Animations.Humanoid.AttackVariant, variant);
             }
 
             _ownerPredictedAttack = true;
-
-            if (trigger == AnimationTriggerId.AttackSwing)
-            {
-                BeginMeleeSwingVisual();
-                return;
-            }
-
             _animator.ResetTrigger(hash);
             _animator.SetTrigger(hash);
-        }
-
-        private void BeginMeleeSwingVisual()
-        {
-            // Snappy attack start; fade out is handled by TickUpperBodyWeight.
-            _upperBodyWeight = 1f;
-            _upperBodyWeightTarget = 1f;
-            if (_animator.layerCount > 1)
-            {
-                _animator.SetLayerWeight(1, 1f);
-            }
-
-            // Force the upper-body state — Any State triggers can be raced/consumed by other layers.
-            _animator.Play(AttackSwingState, 1, 0f);
-            _meleeSwingEndsAt = Time.time + MeleeSwingDurationSeconds;
-            _meleeSwingFadeStartsAt = Time.time + MeleeSwingDurationSeconds * MeleeSwingFadeNormalized;
-            _ikController?.SetMeleeAttackActive(true);
-        }
-
-        private void TickMeleeSwingIk()
-        {
-            // Start easing look-at back in when the upper-body layer begins fading out.
-            if (_meleeSwingFadeStartsAt > 0f && Time.time >= _meleeSwingFadeStartsAt)
-            {
-                _ikController?.SetMeleeAttackActive(false);
-            }
-
-            if (_meleeSwingEndsAt <= 0f || Time.time < _meleeSwingEndsAt)
-            {
-                return;
-            }
-
-            _meleeSwingEndsAt = 0f;
-            _meleeSwingFadeStartsAt = 0f;
-            _ikController?.SetMeleeAttackActive(false);
+            return variant;
         }
 
         private void TickUpperBodyWeight()
@@ -389,7 +362,7 @@ namespace SS3D.Systems.Entities.Humanoid
                     }
                     else
                     {
-                        ConsumeTrigger(snapshot.ActiveTrigger);
+                        ConsumeTrigger(snapshot.ActiveTrigger, snapshot.AttackVariant);
                     }
                 }
             }
@@ -448,6 +421,7 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             _animator.SetInteger(Animations.Humanoid.ArmHold, (int)snapshot.ArmHold);
             _animator.SetBool(Animations.Humanoid.IsSeated, snapshot.IsSeated);
+            _animator.SetBool(Animations.Humanoid.MirrorUpperBody, snapshot.MirrorUpperBody);
 
             if (_animator.layerCount <= 1)
             {
@@ -455,12 +429,9 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             // Peaceful / Ranged: full base locomotion (ranged pack already has rifle poses).
-            // Melee: item/weapon holds + active swings only (empty-handed uses base melee idle).
-            bool swingHoldsLayer = _meleeSwingFadeStartsAt > 0f && Time.time < _meleeSwingFadeStartsAt;
-            bool meleeHold = snapshot.CombatMode == HumanoidCombatMode.Melee
-                && snapshot.ArmHold != ArmHoldPose.Default;
+            // Melee: Upper Body stays at weight 1 (Hold Default when empty; AttackSwing via trigger).
             bool needsUpperBodyLayer = snapshot.State != BodyState.Ragdoll
-                && (swingHoldsLayer || meleeHold);
+                && snapshot.CombatMode == HumanoidCombatMode.Melee;
             _upperBodyWeightTarget = needsUpperBodyLayer ? 1f : 0f;
         }
 
@@ -478,12 +449,34 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             _animator.SetFloat(Animations.Humanoid.InjuredArmLeft, snapshot.InjuredArmLeft);
             _animator.SetFloat(Animations.Humanoid.InjuredArmRight, snapshot.InjuredArmRight);
+            _animator.SetFloat(Animations.Humanoid.InjuredLeg, snapshot.InjuredLeg);
 
             if (_animator.layerCount > 2)
             {
-                bool injured = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight) > 0.01f;
+                float armMax = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight);
+                float leg = snapshot.InjuredLeg;
                 bool staggered = snapshot.State == BodyState.Staggered;
-                _animator.SetLayerWeight(2, injured || staggered ? 1f : 0f);
+
+                float weight;
+                if (staggered)
+                {
+                    weight = 1f;
+                }
+                else if (leg >= StumbleLegThreshold && leg >= armMax)
+                {
+                    // Stumble idle already reads on base; keep arm additive light.
+                    weight = armMax * 0.25f;
+                }
+                else if (armMax > 0.01f)
+                {
+                    weight = Mathf.Lerp(0.15f, 0.55f, armMax);
+                }
+                else
+                {
+                    weight = 0f;
+                }
+
+                _animator.SetLayerWeight(2, weight);
             }
         }
 
@@ -504,7 +497,7 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetLayerWeight(3, overrideWeight);
         }
 
-        private void ConsumeTrigger(AnimationTriggerId trigger)
+        private void ConsumeTrigger(AnimationTriggerId trigger, byte attackVariant = 0)
         {
             // Sequence already gates re-entry; allow the same trigger id to fire repeatedly (e.g. swing spam).
             if (trigger == AnimationTriggerId.None)
@@ -515,14 +508,13 @@ namespace SS3D.Systems.Entities.Humanoid
             _lastConsumedTrigger = trigger;
             if (trigger == AnimationTriggerId.AttackSwing)
             {
-                BeginMeleeSwingVisual();
-                OnTriggerFired?.Invoke(trigger);
-                return;
+                _animator.SetInteger(Animations.Humanoid.AttackVariant, attackVariant & 0x3);
             }
 
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
             if (hash != 0)
             {
+                _animator.ResetTrigger(hash);
                 _animator.SetTrigger(hash);
             }
 
@@ -531,7 +523,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
         public void FireLocalTrigger(AnimationTriggerId trigger)
         {
-            _bodyStateMachine?.CmdFireTrigger(trigger);
+            _bodyStateMachine?.CmdFireTrigger(trigger, 0);
         }
 
         private bool IsLocalMovementAuthority()

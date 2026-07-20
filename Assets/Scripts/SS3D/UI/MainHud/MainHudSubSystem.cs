@@ -6,13 +6,17 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Screens;
 using SS3D.UI.MachineInterface;
 using SS3D.UI.MainHud.Components;
 using SS3D.UI.MachineInterface.Components;
@@ -77,6 +81,7 @@ namespace SS3D.UI.MainHud
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
+        private IntentType? _cachedIntent;
         private Hand _cachedSelectedHand;
         private bool _machineUiOpen;
         private bool _subscribedToMachineUi;
@@ -99,6 +104,7 @@ namespace SS3D.UI.MainHud
 
             BuildView();
             InputInterface.RegisterDocument(_document);
+            MeleeConnectFeedback.LocalConnectHitLanded += HandleMeleeConnectHitLanded;
 
             // Subscribe in OnAwake (same as PlayerCameraSubSystem): on pure clients the mind sync
             // often fires LocalPlayerObjectChanged before SubSystem OnStart would run.
@@ -182,6 +188,7 @@ namespace SS3D.UI.MainHud
 
         protected override void OnDestroyed()
         {
+            MeleeConnectFeedback.LocalConnectHitLanded -= HandleMeleeConnectHitLanded;
             UnsubscribeMachineUi();
             UnbindLocalPlayer();
             _view?.Detach();
@@ -206,6 +213,95 @@ namespace SS3D.UI.MainHud
             }
 
             RefreshActiveHand();
+            RefreshIntent();
+            RefreshZoneReticle();
+        }
+
+        private void RefreshZoneReticle()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            bool visible = _localPlayer != null
+                && IsRoundInGame()
+                && !_machineUiOpen
+                && _intentProvider != null
+                && _intentProvider.CurrentIntent == IntentType.Harm
+                && !(SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed);
+
+            Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
+            string zoneLabel = string.Empty;
+            bool inRange = false;
+
+            // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
+            // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
+            if (visible
+                && SubSystems.TryGet(out CameraSubSystem cameras)
+                && cameras.PlayerCamera != null
+                && cameras.PlayerCamera.TryGetComponent(out Camera camera))
+            {
+                Ray ray = camera.ScreenPointToRay(screenPosition);
+                HumanHealthController selfHealth = _localPlayer != null
+                    ? _localPlayer.GetComponentInChildren<HumanHealthController>()
+                    : null;
+                if (ZoneTargetResolver.TryResolveHoverZone(
+                        ray,
+                        selfHealth,
+                        out BodyZone zone,
+                        out _,
+                        out _,
+                        out Collider zoneCollider))
+                {
+                    zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
+                    inRange = IsHoveredZoneInRange(zoneCollider);
+                }
+            }
+
+            TryGetSelectedHandRecovery(out float lockReadyProgress01, out bool recharging);
+            _view.ApplyZoneReticle(
+                visible,
+                screenPosition,
+                zoneLabel,
+                inRange,
+                lockReadyProgress01,
+                recharging);
+        }
+
+        private void HandleMeleeConnectHitLanded()
+        {
+            _view?.NotifyZoneReticleConnectHit();
+        }
+
+        private bool TryGetSelectedHandRecovery(out float readyProgress01, out bool recharging)
+        {
+            readyProgress01 = 1f;
+            recharging = false;
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null || !hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            {
+                return false;
+            }
+
+            recharging = tracker.IsRecovering;
+            readyProgress01 = tracker.ReadyProgress01;
+            return true;
+        }
+
+        private bool IsHoveredZoneInRange(Collider zoneCollider)
+        {
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
+            }
+
+            return ZoneTargetResolver.IsMeleeZoneReachInRange(
+                hand.InteractionOrigin,
+                hand.GetInteractionRange(),
+                zoneCollider);
         }
 
         private void BuildView()
@@ -369,6 +465,7 @@ namespace SS3D.UI.MainHud
             _inventory = null;
             _hands = null;
             _intentProvider = null;
+            _cachedIntent = null;
             _cachedSelectedHand = null;
         }
 
@@ -769,7 +866,18 @@ namespace SS3D.UI.MainHud
 
         private void RefreshIntent()
         {
+            if (_view == null)
+            {
+                return;
+            }
+
             IntentType intent = _intentProvider?.CurrentIntent ?? IntentType.Help;
+            if (_cachedIntent == intent)
+            {
+                return;
+            }
+
+            _cachedIntent = intent;
             _view.SetIntent(intent);
         }
 
