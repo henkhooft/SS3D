@@ -127,4 +127,4 @@ At round-end, each held objective's final state (§2) feeds the round-end summar
 - **Uplink or any antag-item-acquisition system** — a real and eventually necessary system, deliberately not assumed or designed here (§8).
 - **Exact steal-item roster and assassination-target pool composition per job/gamemode** — a content pass.
 - **Round-end reveal presentation** — sequencing, framing, narrative text — belongs to round-end/transition, not this doc.
-- **Admin override of an objective's state** — in-round admin tools' territory, a separate still-open pass.
+- **Admin override of an objective's state** — designed in `admin-tools.md` §6.

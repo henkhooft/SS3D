@@ -38,7 +38,7 @@ The screen is a simple tab bar. Confirmed and proposed tabs:
 - **Objectives** — a hidden tab, present only for characters holding at least one objective record; read-only, listing each held objective and its pending/complete/failed state (`objectives.md` §8). Non-antagonists never see this tab exist.
 
 **Flagged for later, not designed here:**
-- **Ahelp** — an entry point for submitting an admin-help ticket lives on this device in most SS13-derived designs, and there's no reason to invent a different entry point here. This doc guarantees the PDA has a tab-shaped slot ready for it; the ticketing system itself (queue, admin-side view, audit logging) is `in-round admin tools`' job, a separate still-open pass, the same relationship round config has with that same doc (`round-config.md` §10).
+- **Ahelp** — an entry point for submitting an admin-help ticket lives on this device in most SS13-derived designs, and there's no reason to invent a different entry point here. This doc guarantees the PDA has a tab-shaped slot ready for it; the ticketing system itself (queue, admin-side view, audit logging) is `admin-tools.md` §3's job, the same relationship round config has with that same doc (`round-config.md` §10).
 
 ## 4. Private messaging — resolving the gap
 
@@ -107,7 +107,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 ## 10. Out of scope for this pass
 
 - Live location/tracking tied to the manifest (§5) — deferred pending a tracking-implant or AI-sensor system that would actually gate it
-- The ahelp ticketing system itself — queue, admin-side view, audit logging (`in-round admin tools`, separate pass; this doc only guarantees the PDA-side entry point)
+- The ahelp ticketing system itself — queue, admin-side view, audit logging (`admin-tools.md` §3; this doc only guarantees the PDA-side entry point)
 - Cargo/requisition ordering via PDA — a plausible future hook once an economy/ordering system exists, not designed here
 - Notes, ringtones, or other cosmetic PDA features — no gameplay weight, not designed here
 - PDA skinning/department color variants — a content/art question, not a systems one

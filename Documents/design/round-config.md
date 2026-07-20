@@ -99,5 +99,5 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 - Dynamic/threat-budget-style meta-gamemodes (a plausible future extension of the pool shape, not designed as one here)
 - Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; player-accounts is a separate not-yet-designed system)
 - Exact weight values and precondition thresholds (a balancing pass, not a design decision)
-- The full admin toolkit — ahelp, player management, audit logging, stealth observation (`in-round admin tools`, a separate pass; this doc only needs a config screen, not the whole toolkit)
+- The full admin toolkit — ahelp, player management, audit logging, stealth observation — designed in `admin-tools.md`; this doc only needs its own config screen (§5), not the whole toolkit
 

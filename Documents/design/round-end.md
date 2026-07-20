@@ -54,7 +54,7 @@ A round ends when one canonical thing becomes true, mirroring the single-trigger
   This is the primary, designed ending; the specific condition belongs to each gamemode, not here.
 - **A hard round timer elapses**, where a gamemode defines one — a bounded fallback so a stalled
   round still concludes.
-- **An admin ends it** — an out-of-band manual end, always available.
+- **An admin ends it** — an out-of-band manual end, always available, invoked through `admin-tools.md` §6.
 - **The evacuation shuttle completes its journey** — arrives at its rendezvous, or is lost en route
   — the common path for any gamemode that resolves through evacuating rather than a bespoke win
   check. §3 defines the full call/countdown/arrival sequence this trigger actually runs on.
@@ -183,6 +183,7 @@ returns to the lobby.
 | Objective tracking | The active gamemode's own objective state (read, not re-adjudicated) |
 | Death/clone fates in the summary | `death-cloning-respawn.md` §2, §5 |
 | Return to pre-round flow | `lobby.md` §5, §7 |
+| Admin manual end | `admin-tools.md` §6 (invocation point; this doc defines the trigger's effect) |
 | Evac call console | New — diegetic device-screen pattern (`hacking-interface.md` §2) |
 | Evac shuttle physical behavior | `shuttles.md` §2–§6, §9 |
 | Escape objective's resolution moment | `objectives.md` §7 (this doc supplies the instant its check reads) |

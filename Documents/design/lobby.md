@@ -36,7 +36,7 @@ A separate section, visually distinct from the job list — this is an eligibili
 
 ## 5. Resolution — one pass, not a scramble
 
-At round start — timer expiry, or an admin/host override (touches in-round admin tools, a separate pass) — every player's preference list resolves server-side in a single allocation pass: try each player's highest-ranked still-open job, respecting slot caps, moving down their list as needed.
+At round start — timer expiry, or an admin/host override (`admin-tools.md` §6) — every player's preference list resolves server-side in a single allocation pass: try each player's highest-ranked still-open job, respecting slot caps, moving down their list as needed.
 
 **A guaranteed fallback role** (Assistant/Civilian-equivalent) exists specifically so nobody comes out of resolution unable to join at all — the one hard guarantee the algorithm has to honor.
 
@@ -64,7 +64,7 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 |---|---|
 | Job unlock/playtime gating | Player meta layer (`persistence-save.md` §5) |
 | Gamemode-dependent job/antag availability | Round config & gamemode selection (separate pass, assumed to have already run) |
-| Resolution trigger override | In-round admin tools (separate pass) |
+| Resolution trigger override | `admin-tools.md` §6 |
 | Observer/spectate entry | Deferred ghost/observer UI (`main-hud.md` §13) |
 | Character identity | Full appearance/loadout customization (separate pass, not designed here) |
 | Spawn resolution | Creative mode's spawn-point authoring (`creative-mode.md` §8) — job-tagged points on a drawn map, previously unaddressed/assumed infra |
@@ -92,7 +92,7 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 ## 11. Out of scope for this pass
 
 - Round configuration & gamemode selection itself (separate pass — this doc assumes a gamemode has already been chosen upstream)
-- In-round admin tools, including manual override of round start or resolution (separate pass)
+- The admin toolkit itself, beyond the resolution-override trigger point — designed in `admin-tools.md` §6
 - Full character appearance/loadout customization (separate pass)
 - The exact fairness/weighting algorithm inside preference resolution (a balancing/backend decision, not a design one)
 - Real authentication underlying a stable per-player key — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 treats it as a black box the same way this doc's job-list data is read, not authored)
