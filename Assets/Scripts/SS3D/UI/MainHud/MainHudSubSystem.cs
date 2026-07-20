@@ -29,9 +29,10 @@ namespace SS3D.UI.MainHud
     /// <see cref="MachineInterfaceSubSystem"/>); machine UI must not call into Main HUD.
     /// </para>
     /// <para>
-    /// The alert icon stack has no hunger/thirst/restrained/pressure/radiation trackers to bind to yet - it
-    /// always reports the all-clear <see cref="AlertStackState"/> until those systems exist, mirroring how
-    /// <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/> itself was built ahead of its own hookup.
+    /// The alert icon stack has no hunger/thirst/restrained/pressure/radiation/low-oxygen/dying trackers to
+    /// bind to yet, so its <see cref="AlertStackState"/> is only ever the all-clear default or a dev-set
+    /// <see cref="SetDebugAlertOverride"/> - mirroring how <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/>
+    /// itself was built ahead of its own hookup.
     /// </para>
     /// <para>
     /// Self-bootstraps the same way <c>ScreenEffectsSubSystem</c> does, instead of living on a scene/prefab
@@ -67,8 +68,10 @@ namespace SS3D.UI.MainHud
         [SerializeField] private StyleSheet _equipmentGridStyle;
         [SerializeField] private StyleSheet _inventorySlotStyle;
         [SerializeField] private MainHudIconSet _icons;
+        [SerializeField] private AlertIconSet _alertIcons;
 
         private MainHudView _view;
+        private AlertStackState? _debugAlertOverride;
         private GameObject _localPlayer;
         private HumanInventory _inventory;
         private Hands _hands;
@@ -149,6 +152,7 @@ namespace SS3D.UI.MainHud
             _equipmentGridStyle = catalog.EquipmentGridStyle;
             _inventorySlotStyle = catalog.InventorySlotStyle;
             _icons = catalog.Icons;
+            _alertIcons = catalog.AlertIcons;
             ApplyDocumentPanelSettings(catalog.PanelSettings);
         }
 
@@ -212,11 +216,35 @@ namespace SS3D.UI.MainHud
                 _equipmentGridStyle, _inventorySlotStyle,
             };
 
-            _view = new MainHudView(styleSheets, _icons);
+            _view = new MainHudView(styleSheets, _icons, _alertIcons);
             _view.IntentToggleRequested += HandleIntentToggleRequested;
             _view.HandSelectedRequested += HandleHandSelectedRequested;
             _view.Attach(_document.rootVisualElement);
-            _view.SetAlertState(default);
+            _view.SetAlertState(_debugAlertOverride ?? default);
+        }
+
+        /// <summary>
+        /// Current debug override, if any - read by the <c>alertstack</c> console command so setting one
+        /// hazard doesn't wipe severities the debug menu or a previous command call already set.
+        /// </summary>
+        public AlertStackState DebugAlertOverride => _debugAlertOverride ?? default;
+
+        /// <summary>
+        /// Dev-only hook for <c>AlertStackDebugMenuView</c> (F3) and the <c>alertstack</c> console command to
+        /// force hazard severities without needing the (still nonexistent) hunger/thirst/pressure/radiation/
+        /// pulling/restrained/low-oxygen/dying trackers - same rationale as
+        /// <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem.SetEffect"/>.
+        /// </summary>
+        public void SetDebugAlertOverride(AlertStackState state)
+        {
+            _debugAlertOverride = state;
+            _view?.SetAlertState(state);
+        }
+
+        public void ClearDebugAlertOverride()
+        {
+            _debugAlertOverride = null;
+            _view?.SetAlertState(default);
         }
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
@@ -567,6 +595,25 @@ namespace SS3D.UI.MainHud
                 };
             }
 
+            if (_alertIcons.Fire == null)
+            {
+                _alertIcons = new AlertIconSet
+                {
+                    Fire = LoadAlertSprite("hot-fire"),
+                    Hot = LoadAlertSprite("hot-thermometer"),
+                    Cold = LoadAlertSprite("cold-thermometer"),
+                    LowPressure = LoadAlertSprite("pressure-low"),
+                    HighPressure = LoadAlertSprite("pressure-high"),
+                    Radiation = LoadAlertSprite("radiation-trefoil"),
+                    Hunger = LoadAlertSprite("hunger"),
+                    Thirst = LoadAlertSprite("thirst-droplet"),
+                    Pulling = LoadAlertSprite("pulling"),
+                    Restrained = LoadAlertSprite("restrained-cuffs"),
+                    LowOxygen = LoadAlertSprite("low-oxygen"),
+                    Dying = LoadAlertSprite("dying-heartbeat"),
+                };
+            }
+
             if (_document != null && _document.panelSettings == null)
             {
                 _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(
@@ -578,6 +625,12 @@ namespace SS3D.UI.MainHud
         {
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
                 $"{MainHudAssetPaths.IconRoot}{fileName}.png");
+        }
+
+        private static Sprite LoadAlertSprite(string fileName)
+        {
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                $"{MainHudAssetPaths.AlertIconRoot}{fileName}.png");
         }
 #endif
     }

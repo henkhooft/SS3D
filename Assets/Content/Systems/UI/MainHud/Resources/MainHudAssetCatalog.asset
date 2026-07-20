@@ -30,3 +30,15 @@ MonoBehaviour:
   _iconId: {fileID: 21300000, guid: 64f4962d7f3e86a41b25ee48ce05e8ac, type: 3}
   _iconPda: {fileID: 21300000, guid: 95d839a0c2741cb47aa6b0cbe40b3b26, type: 3}
   _iconBack: {fileID: 21300000, guid: e3f92c7c96d5c844e933479427109147, type: 3}
+  _alertFire: {fileID: 21300000, guid: 352d4305acb44594925eaffe7f81e23b, type: 3}
+  _alertHot: {fileID: 21300000, guid: 2c85abc5f7a34db3b9882961de2dfeb4, type: 3}
+  _alertCold: {fileID: 21300000, guid: 868138d70fcf4fdb861a7c3390e27459, type: 3}
+  _alertLowPressure: {fileID: 21300000, guid: 32c1ce3515944dad8c6e3c95ab4e2dc7, type: 3}
+  _alertHighPressure: {fileID: 21300000, guid: 2d4aab2592104831ab2b8c70efad4115, type: 3}
+  _alertRadiation: {fileID: 21300000, guid: 5d49550e00574e1dbfc896b68a4402c4, type: 3}
+  _alertHunger: {fileID: 21300000, guid: 60b0c5f0533f4010a7eea9e92f8886fa, type: 3}
+  _alertThirst: {fileID: 21300000, guid: 93ad3b7ff2104cd7bf30cf4a30948ec6, type: 3}
+  _alertPulling: {fileID: 21300000, guid: ba645f15a26342c8959f0ebbd44fad31, type: 3}
+  _alertRestrained: {fileID: 21300000, guid: 2dfb5350e39c40088de56fa05e47f2b2, type: 3}
+  _alertLowOxygen: {fileID: 21300000, guid: 4932236c496847daa69b79d2d8b2cb5c, type: 3}
+  _alertDying: {fileID: 21300000, guid: ab8990ca57cd474a8e9c935fd243684e, type: 3}

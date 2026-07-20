@@ -54,6 +54,22 @@ namespace SS3D.Editor
                 Back = LoadRequiredSprite("BeepBack", missing),
             };
 
+            AlertIconSet alertIcons = new()
+            {
+                Fire = LoadRequiredAlertSprite("hot-fire", missing),
+                Hot = LoadRequiredAlertSprite("hot-thermometer", missing),
+                Cold = LoadRequiredAlertSprite("cold-thermometer", missing),
+                LowPressure = LoadRequiredAlertSprite("pressure-low", missing),
+                HighPressure = LoadRequiredAlertSprite("pressure-high", missing),
+                Radiation = LoadRequiredAlertSprite("radiation-trefoil", missing),
+                Hunger = LoadRequiredAlertSprite("hunger", missing),
+                Thirst = LoadRequiredAlertSprite("thirst-droplet", missing),
+                Pulling = LoadRequiredAlertSprite("pulling", missing),
+                Restrained = LoadRequiredAlertSprite("restrained-cuffs", missing),
+                LowOxygen = LoadRequiredAlertSprite("low-oxygen", missing),
+                Dying = LoadRequiredAlertSprite("dying-heartbeat", missing),
+            };
+
             if (missing.Count > 0)
             {
                 error = "Main HUD asset catalog rebuild failed. Missing assets:\n- "
@@ -84,7 +100,8 @@ namespace SS3D.Editor
                 handsStyle,
                 equipmentStyle,
                 inventorySlotStyle,
-                icons);
+                icons,
+                alertIcons);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;
@@ -104,6 +121,18 @@ namespace SS3D.Editor
         private static Sprite LoadRequiredSprite(string fileName, List<string> missing)
         {
             string path = $"{MainHudAssetPaths.IconRoot}{fileName}.png";
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null)
+            {
+                missing.Add($"Sprite: {path}");
+            }
+
+            return sprite;
+        }
+
+        private static Sprite LoadRequiredAlertSprite(string fileName, List<string> missing)
+        {
+            string path = $"{MainHudAssetPaths.AlertIconRoot}{fileName}.png";
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (sprite == null)
             {
