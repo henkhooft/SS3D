@@ -54,7 +54,7 @@ The AI core, the upload console, and every cyborg chassis are devices in the FDU
 
 **Cyborg subversion works the same way**, chassis as device: a hidden law insert, or a full override bypassing the AI's actual authority over that borg — a hijacked cyborg that no longer answers to a legitimate AI's laws, discovered the same way any other tampered device would be.
 
-**Malf-AI's actual special-ability roster (turrets, an APC overload burst, hologram duplicates) is deliberately not designed here** — per scope, this doc gives malf its baseline mechanism, not its toolkit. A malf gamemode's abilities are just larger, illegitimate grants of the same Area authority §3 already defines, reached through the same bypass path §5 defines — the same treatment round config gives per-mode antag logic ("that mode's own business, not round config's," `round-config.md` §6).
+**Malf-AI's actual special-ability roster (turrets, an APC overload burst, hologram duplicates) is deliberately not designed here** — per scope, this doc gives malf its baseline mechanism, not its toolkit. A malf gamemode's abilities are just larger, illegitimate grants of the same Area authority §3 already defines, reached through the same bypass path §5 defines — the same treatment round config gives per-mode antag logic ("that mode's own business, not round config's," `round-config.md` §6). Now designed in `antagonist-content.md` §5, exactly on this framing.
 
 ## 6. Cyborgs
 
@@ -116,7 +116,7 @@ This is the piece built now specifically so a future non-human driver is an exte
 | Law module, upload console | Diegetic device-screen pattern (`hacking-interface.md` §2); ID/access rail |
 | Audit trail | Same pattern as round config's admin history log (`round-config.md` §5) |
 | AI / lawboard / cyborg subversion | Hacking interface's three-tier device model, reused wholesale (`hacking-interface.md` §3, §4) |
-| Malf-AI special abilities | Gamemode-specific escalation of this doc's baseline — not designed here, same treatment as `round-config.md` §6 |
+| Malf-AI special abilities | `antagonist-content.md` §5 (turrets, overload burst, hologram duplicates) |
 | Cyborg damage/repair | Per-limb brute/burn model (`health.md` §2), reskinned treatment tools; EMP as a new pool |
 | Cyborg chassis fabrication | Fabricator job-state pattern (`crafting.md` §3) |
 | Borg module tool select | Radial menu, Tier 3 convention (`main-hud.md` §8) |
@@ -157,7 +157,7 @@ This is the piece built now specifically so a future non-human driver is an exte
 
 ## 12. Out of scope for this pass
 
-- Malf-AI's specific special-ability roster (turrets, APC overload burst, hologram duplicates, etc.) — gamemode-specific escalation of this doc's baseline authority, not designed here
+- Malf-AI's specific special-ability roster — designed in `antagonist-content.md` §5
 - Exact numeric values — EMP thresholds, audit-log retention, borg battery capacity, core rebuild time (a balancing pass, not a design decision)
 - The LLM-driven agent itself — architecture only (§9), not implementation, guardrails, or hosting
 - Full cyborg module/tool roster per type — content and balancing, not a mechanic

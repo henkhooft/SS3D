@@ -70,7 +70,7 @@ Round config's antag-category handoff already establishes the shape lobby reads 
 
 **Read-only, listing each held objective in plain language** with its current state (pending / complete / failed) styled the same way the alert stack and hacking interface tiers already use restrained status color rather than decoration. No progress bars, no hidden percentage — an objective is binary, and the tab says so plainly.
 
-**No new item, no uplink dependency.** This deliberately doesn't require an uplink or antag-item-acquisition system to exist first — objectives are assigned and read independent of how (or whether) an antagonist gets tools, which is its own, separate, not-yet-designed question (§12).
+**No new item, no uplink dependency.** This deliberately doesn't require an uplink or antag-item-acquisition system to exist first — objectives are assigned and read independent of how (or whether) an antagonist gets tools, which is its own, separate question, now designed in `antagonist-content.md` §4 (§12).
 
 ## 9. Round-end resolution
 
@@ -124,7 +124,7 @@ At round-end, each held objective's final state (§2) feeds the round-end summar
 
 - **Sabotage, protect, and other archetypes** — plausible future entries in §2's shape, not designed here; sabotage in particular needs a real "did this succeed" state that structural-damage systems don't cleanly expose yet.
 - **Faction/shared objectives** (revolution, cult, or any team-goal gamemode) — this doc covers individual-antagonist objectives only, the same scoping line round config already draws around per-gamemode antag logic (`round-config.md` §6).
-- **Uplink or any antag-item-acquisition system** — a real and eventually necessary system, deliberately not assumed or designed here (§8).
+- **Uplink or any antag-item-acquisition system** — designed in `antagonist-content.md` §4, resolving §8's flagged dependency.
 - **Exact steal-item roster and assassination-target pool composition per job/gamemode** — a content pass.
 - **Round-end reveal presentation** — sequencing, framing, narrative text — belongs to round-end/transition, not this doc.
 - **Admin override of an objective's state** — designed in `admin-tools.md` §6.

@@ -55,7 +55,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | networking | none yet | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in) | [networking-session](systems/networking-session.md) — partial |
 | audio | none yet | none yet | none yet |
 | onboarding-tutorial | none yet | none yet | none yet |
-| antagonist-content | none yet | none yet | none yet |
+| antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
 | rd-material-economy | none yet | none yet | none yet |
 | cryogenics | [cryogenics.md](../design/cryogenics.md) — active | none yet | none yet |
 | admin-tools | [admin-tools.md](../design/admin-tools.md) — active | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |

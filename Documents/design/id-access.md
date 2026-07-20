@@ -71,7 +71,7 @@ Each job record (`lobby.md` §2) resolves to a starting access-level set the mom
 
 Even the Captain's set is enumerated, not a hardcoded bypass flag — a compromised or subverted Captain's ID is a real set of bits, and revoking it at the console (§7) actually removes something rather than fighting a special case that ignores the check entirely.
 
-**Gamemode-specific deltas** (a Head Revolutionary needing nothing extra, a traitor being ordinary crew with a hidden objective) are explicitly not this doc's business — the same disclaimer `round-config.md` §6 already gives its own per-gamemode antag logic.
+**Gamemode-specific deltas** (a Head Revolutionary needing nothing extra, a traitor being ordinary crew with a hidden objective) are explicitly not this doc's business — the same disclaimer `round-config.md` §6 already gives its own per-gamemode antag logic. Traitor's "nothing extra" is now confirmed explicitly in `antagonist-content.md` §3; Revolution itself remains undesigned (`antagonist-content.md` §6).
 
 ## 6. The access check — one shared function
 
@@ -105,7 +105,7 @@ The console is itself a device in the FDU's three-tier taxonomy, and nothing abo
 
 This is the literal mechanism behind "a cloned or forged credential" and "the raw bitmask... where a cloned or forged credential would need to match" — phrases the hacking interface doc already used (§3, §5 worked example) without ever saying how the write actually happens. Now it does: through this console, bypassed. **The write still logs**, per §7 — an illegitimate grant leaves an edit in the console's log with no matching legitimate operator session, real evidence for whoever reviews it later, not a clean erasure.
 
-A standalone, console-independent forging tool — a portable cloner an antagonist could carry and use anywhere — is a plausible future antag item in the SS13 tradition, but it's a content addition layered on top of this mechanism, not a different mechanism. Flagged out of scope (§12) rather than designed here.
+A standalone, console-independent forging tool — a portable cloner an antagonist could carry and use anywhere — is a plausible future antag item in the SS13 tradition, but it's a content addition layered on top of this mechanism, not a different mechanism. Now designed as a Traitor uplink item (`antagonist-content.md` §4) — the write still goes through this exact mechanism, still logs, per this section.
 
 ## 9. Loss, theft, revocation
 
@@ -178,9 +178,9 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 
 - The full enumerated list of every access level and exactly which device checks which (a content pass, not a design decision)
 - Real authentication behind a stable per-player identity — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 covers the cross-round job-history/playtime shape itself)
-- A standalone, console-independent forging tool ("agent card" or similar) — a plausible future antag item layered on §8's mechanism, not designed here
+- A standalone, console-independent forging tool ("agent card" or similar) — designed as a Traitor uplink item in `antagonist-content.md` §4
 - Photo ID or any biometric verification beyond the printed name/job/department
-- Per-gamemode access deltas (Head Revolutionary, traitor objectives, etc.) — that gamemode's own business, per `round-config.md` §6's precedent
+- Per-gamemode access deltas beyond Traitor's (Head Revolutionary and other undesigned roster entries) — that gamemode's own business, per `antagonist-content.md` §6
 - Console siting, count, and station layout (a map-authoring question)
 - Exact wording/UX of the "report lost" social flow — it's a comms conversation, not a system
 

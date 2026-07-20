@@ -196,8 +196,8 @@ returns to the lobby.
   rating; any persistent scoring is a separate, later concern.
 - **Full observer/ghost experience.** Unchanged from `observer.md` §9 and `main-hud.md` §13 — this
   doc supplies only the summary and transition, not the spectator UI itself.
-- **Antagonist content and objective design.** What antagonists exist and what they pursue is its own
-  pass; round end only reports outcomes.
+- **Antagonist content and objective design.** What antagonists exist is designed in
+  `antagonist-content.md`; what they pursue is `objectives.md`'s job. Round end only reports outcomes.
 - **Exact countdown duration and the call console's access policy.** §3's no-access-gate call is a
   recommendation, not locked — a balancing/confirmation pass, not a design decision.
 - **Multiple simultaneous evac vehicles, or a gamemode-specific evac variant** (a hostile boarding

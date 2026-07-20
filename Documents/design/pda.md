@@ -36,6 +36,7 @@ The screen is a simple tab bar. Confirmed and proposed tabs:
 - **Crew manifest** — a list of connected crew: name, job, and a coarse online/offline, alive/no-signal, or in-cryo-storage status (`cryogenics.md` §3), pulled from the same ID/access and connection data. Deliberately **does not** include live location — see §5.
 - **Messages** — private, address-to-a-person text, distinct from comms' proximity/channel model. See §4 for why this exists and how it's built.
 - **Objectives** — a hidden tab, present only for characters holding at least one objective record; read-only, listing each held objective and its pending/complete/failed state (`objectives.md` §8). Non-antagonists never see this tab exist.
+- **Uplink** — a hidden tab, present only for characters holding Traitor antagonist status; telecrystal balance, catalog, and transaction ledger (`antagonist-content.md` §4). Same hidden-tab gating as Objectives, including the same stolen-PDA consequence.
 
 **Flagged for later, not designed here:**
 - **Ahelp** — an entry point for submitting an admin-help ticket lives on this device in most SS13-derived designs, and there's no reason to invent a different entry point here. This doc guarantees the PDA has a tab-shaped slot ready for it; the ticketing system itself (queue, admin-side view, audit logging) is `admin-tools.md` §3's job, the same relationship round config has with that same doc (`round-config.md` §10).
@@ -83,6 +84,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 | Crew manifest tab | ID/access + connection data (cross-cutting infra, not designed here) |
 | Messages tab | Comms message/log backend (`comms.md` §11) — new address mode (§4) |
 | Objectives tab | Held objective records, hidden-tab gating (`objectives.md` §8) |
+| Uplink tab | Telecrystal shop, hidden-tab gating (`antagonist-content.md` §4) |
 | Ahelp tab (entry point only) | In-round admin tools (separate pass, not designed here) |
 | Notification chip | Alert-stack momentary-chip pattern (`main-hud.md` §9) |
 

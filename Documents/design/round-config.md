@@ -46,7 +46,7 @@ The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, pr
 
 ## 6. What this doesn't decide
 
-- **Which specific crew member becomes which antag** within a chosen gamemode. That's the gamemode's own runtime logic, and it varies enormously by mode — the same way this project treats the material silo or the R&D tech tree as existing systems it hooks into rather than redesigns, this doc treats "how a gamemode picks its antags from the eligible, opted-in crew" as that mode's business, not round config's.
+- **Which specific crew member becomes which antag** within a chosen gamemode. That's the gamemode's own runtime logic, and it varies enormously by mode — the same way this project treats the material silo or the R&D tech tree as existing systems it hooks into rather than redesigns, this doc treats "how a gamemode picks its antags from the eligible, opted-in crew" as that mode's business, not round config's — now designed in `antagonist-content.md` §2.
 - **Dynamic/threat-budget-style modes** — a meta-mode that spawns a scaling mix of threats against a budget rather than drawing one fixed gamemode. The pool-and-weight shape here could plausibly host that later as a more sophisticated pool entry, but it isn't designed as one now.
 - **Round length and end conditions.** That's `round-end summary & transition`'s territory — a separate, still-open pass.
 
@@ -63,7 +63,7 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 | Config persistence | Server meta layer (`persistence-save.md` §4) |
 | Round-start / fallback logging | Server logging, cross-cutting infra (not designed here) |
 | Admin override of a draw | In-round admin tools (separate pass) |
-| Per-gamemode antag assignment | Gamemode's own runtime logic (not designed here) |
+| Per-gamemode antag assignment | `antagonist-content.md` §2 |
 
 ## 9. Worked examples
 
@@ -95,7 +95,7 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 ## 10. Out of scope for this pass
 
 - Round length and end conditions (`round-end summary & transition`, a separate still-open pass)
-- The per-gamemode antag-assignment algorithm — who specifically becomes what, within a chosen mode (that mode's own logic)
+- The exact antagonist-count ratio and eligibility exclusions within the assignment mechanism `antagonist-content.md` §2 now defines — a balancing/content decision, not this doc's
 - Dynamic/threat-budget-style meta-gamemodes (a plausible future extension of the pool shape, not designed as one here)
 - Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; player-accounts is a separate not-yet-designed system)
 - Exact weight values and precondition thresholds (a balancing pass, not a design decision)
