@@ -195,9 +195,10 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            // Harm primary always commits a melee swing; connect resolves the hit separately.
-            if (CurrentIntent == IntentType.Harm && TryRunMeleeSwingPrimary())
+            // Harm is combat-exclusive: attempt a swing and never fall through to Drop/Open/MI.
+            if (CurrentIntent == IntentType.Harm)
             {
+                TryRunMeleeSwingPrimary();
                 return;
             }
 

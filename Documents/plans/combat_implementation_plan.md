@@ -202,3 +202,6 @@ Single primary path per [combat.md](../design/combat.md) §2:
   Reticle: lock-on recharge from `MeleeRecoveryTracker` + cross flash on land. HUD intent
   polls `CurrentIntent` (interim; prefer `IntentChanged` later). `C` still also Cancel
   Interaction in `Controls.inputed` — input conflict open.
+- **2026-07-20 (Harm exclusivity):** Unrestricted interactions are Help-default in
+  `MatchesIntent`; Harm primary always returns after the melee attempt (no Drop/Open
+  fall-through); Drop hotkey requires Help.

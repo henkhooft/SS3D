@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack / CmdRunMeleeSwing
 > Status: partial
-> Verified: 1cc5ff7b2 — 2026-07-20
+> Verified: 44e290cc9 — 2026-07-20
 
 # Combat
 
@@ -21,6 +21,8 @@ white cross flash (whiffs silent). Owner clients mirror recovery via `ServerNoti
 
 **Intent ↔ stance:** `C` (and HUD intent chip) toggles Help/Harm. Harm always enters combat stance
 (Melee/Ranged from inventory); Help returns Peaceful — see [entities](entities.md).
+**Harm is combat-exclusive:** unrestricted world verbs (Drop, Open, MI) are Help-default;
+Harm primary never falls through to them when a swing cannot start — see [interactions-runtime](interactions-runtime.md).
 
 Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`MeleeWeaponProfile.StaminaCost`); broader combat stamina (block/fire) still deferred.
 
@@ -55,7 +57,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 2. `C` / HUD chip toggles Help/Harm and combat stance together; Harm shows Melee/Ranged locomotion; HUD intent highlight must update for both paths.
 3. Harm LMB with nothing under the reticle — full swing + recovery; no self-damage; brackets recharge red.
 4. Harm LMB aimed at limbs through windup — damage applies at connect from camera aim; white cross flash on land (whiff = no flash).
-5. Help must not swing. Optional health debug `H`.
+5. Help must not swing. Harm must not Drop / open MI (including while recovering). Optional health debug `H`.
 
 ## Pitfalls
 
@@ -70,6 +72,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsRecovering` / bracket recharge; use `ServerNotifyMeleeRecovery`.
 - **No LoadingBar on melee** — `MeleeHitInteraction.CreateClient` returns null and Harm primary skips `InteractionOptimisticFeedback`; windup is telegraph, cooldown is reticle lock-on recharge.
 - **Reticle presentation is single-composer** — do not reintroduce parallel SetAim/SetLock/Tick writers; color priority and flash live in `ZoneReticleDriver` ([inventory](inventory.md)).
+- **Harm is combat-exclusive** — do not reintroduce primary fall-through to Drop/Open when recovery blocks a swing; unrestricted verbs are Help-default in `MatchesIntent`.
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
