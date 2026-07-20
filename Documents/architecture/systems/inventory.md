@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 772b62dc0 — 2026-07-20
+> Verified: 1cc5ff7b2 — 2026-07-20
 
 # Inventory
 
@@ -17,7 +17,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Content storage prefabs:** Backpack (`3×2`, Small), Toolbelt (`4×1`, Small), and Lockers (`4×4`, Bulky) each have a `Storage` child `AttachedContainer` (`HasUi`, not `DisplayAsSlotInUI`) plus root `ContainerInteractive`. Re-run **SS3D → Inventory → Hook Up Storage Prefabs** (`StorageContainerPrefabSetup`) if those flags drift.
 
-**Main HUD:** equipment/gear click = equip/unequip vs active hand, or open item storage if the worn item is a bag; hands select active hand (and open held bag if any). Cross-surface drag via `StoragePanelHost.BeginHudDrag` / `EndHudDrag`. Visibility: `ApplyVisibility` (local body + in-game round; suppressed while MI open). Storage panels use the same MI suppress (`StoragePanelHost.ApplyMachineUiVisibility` — hide root, keep panels bound). Catalog via `Resources.Load` (**SS3D → Main HUD → Rebuild Asset Catalog**). **Intent chip** tracks `IIntentProvider.CurrentIntent` (`C` and chip click → `RequestToggleIntent`). **Zone reticle** (`ZoneTargetReticle`): Harm-intent only — corner brackets + center dot + terminal zone label. Grey idle, blue in-range; **red lock-on recharge** while the selected hand's `MeleeRecoveryTracker` is recovering (brackets recede then grow back); **white cross flash** on successful connect (whiffs stay silent). Hidden in Help, over armed Tier 2–3 overlay, or when HUD suppressed.
+**Main HUD:** equipment/gear click = equip/unequip vs active hand, or open item storage if the worn item is a bag; hands select active hand (and open held bag if any). Cross-surface drag via `StoragePanelHost.BeginHudDrag` / `EndHudDrag`. Visibility: `ApplyVisibility` (local body + in-game round; suppressed while MI open). Storage panels use the same MI suppress (`StoragePanelHost.ApplyMachineUiVisibility` — hide root, keep panels bound). Catalog via `Resources.Load` (**SS3D → Main HUD → Rebuild Asset Catalog**). **Intent chip** tracks `IIntentProvider.CurrentIntent` (`C` and chip click → `RequestToggleIntent`). **Zone reticle:** Harm-intent only. `ZoneReticleDriver` composes one `ZoneReticleFrame` per tick (color priority Recharging > Valid > Idle; bracket recharge; connect cross flash); `ZoneTargetReticle.Apply` is the only USS writer. Hidden in Help, over armed Tier 2–3 overlay, or when HUD suppressed.
 
 **Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
 
@@ -31,8 +31,9 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
-- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle + `StoragePanelHost` viewer bind
-- `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneTargetReticle.cs` — brackets + zone label + lock-on recharge + connect cross flash (styles in `MainHud.uss`)
+- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle inputs + `StoragePanelHost` viewer bind
+- `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneReticleDriver.cs` — composes `ZoneReticleFrame` (aim + recovery + flash clock)
+- `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneTargetReticle.cs` — dumb `Apply(frame)` painter (styles in `MainHud.uss`)
 - `Assets/Scripts/SS3D/UI/MainHud/Components/IntentModule.cs` — Help/Harm segmented toggle
 - `Assets/Scripts/SS3D/UI/StoragePanel/StoragePanelHost.cs` — multi-panel manager, HUD drop targets, drag-drop
 - `Assets/Content/Systems/UI/StoragePanel/Resources/StoragePanelAssetCatalog.asset` — committed UITK refs
@@ -52,6 +53,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **UITK white block:** never put `border-radius` and `overflow: hidden` on the same element — split painted outer vs clip inner (`storage-panel` / `storage-panel__clip`, weight track same). Same rule as [machine-interface](machine-interface.md).
 - **HUD slot label recenter:** Main HUD hover chips live in `inventory-slot__label-host` (flex-centered). Do not center with `left: 50%; translate: -50%` — UITK keeps the old percentage width after `SlotLabel` changes (Head → item name).
 - **Zone reticle misses limbs:** armature `ZoneTargetCollider` bones are on **Characters** (often triggers), not BodyParts. Resolve via `TryResolveHoverZone` → `TryResolveZoneFromRay` (Collider.Raycast), never BodyParts-only `Physics.RaycastAll` + `QueryTriggerInteraction.Ignore`. Do not gate the chip on `IsPointerOverInterface` (leftover uGUI can keep it true). Exclude local `HumanHealthController` or the reticle/connect hit yourself.
+- **Zone reticle color fight:** never toggle `--valid` / `--recharging` from separate setters. Push aim + recovery into `ZoneReticleDriver`, then `Apply` one `ZoneReticleFrame` (priority Recharging > Valid > Idle). Cross flash is a frame field, not a parallel Hit color mode.
 - **Intent chip vs `C`:** HUD used to refresh intent only on chip click — `C` changed gameplay intent but not the highlight. `MainHudSubSystem` now polls `CurrentIntent` each frame (same pattern as active hand). Prefer an `IntentChanged` event on `IIntentProvider` when a second consumer appears — interim poll is accepted tech debt.
 - **Invalid panel drop must not fall through to HUD:** `TryCompleteTransfer` returns after a panel slot hit even when `CanContainItemAtPosition` is false — otherwise the release point can hit a hand under the panel and move the item there. World-drop when neither panel slot nor HUD owns the release; cancel only if the release is over an open panel's chrome (not via `IsPointerOverInterface`, which leftover uGUI keeps true). Gameplay camera comes from `CameraSubSystem`, not `Camera.main`.
 - **PDA gear well → Pocket:** design (`main-hud.md` §8) still says belt/ID/PDA/back; this fork's strip is belt/ID/**pocket**/back. ID holds the PDA+card via `ContainerType.Identification` (`RoleSubSystem`). The Pocket well maps to `ContainerType.Pocket` on `HumanTorso` (`PocketContainer`, 2×2). Click opens pocket panels (same as the hotkey); drops use `TryFindPositionFor` so multi-slot wells aren't stuck on (0,0).

@@ -4,20 +4,10 @@ using UnityEngine.UIElements;
 
 namespace SS3D.UI.MainHud.Components
 {
-    public enum ZoneReticleAimState
-    {
-        /// <summary>Harm aiming — grey. Optional zone label when hovering out of range.</summary>
-        Idle = 0,
-        /// <summary>Zone under cursor and in melee range — blue.</summary>
-        Valid = 1,
-        /// <summary>Deprecated: connect hit uses cross flash; kept so callers compile.</summary>
-        Hit = 2,
-    }
-
     /// <summary>
-    /// Corner-bracket aim reticle + terminal zone label (main-hud §6). Harm intent only.
-    /// Grey idle, blue valid target; red lock-on recharge during melee recovery (design 2A);
-    /// white cross flash on successful connect (whiffs stay silent).
+    /// Corner-bracket aim reticle + terminal zone label (main-hud §6).
+    /// Dumb view: paints only from <see cref="ZoneReticleFrame"/> produced by
+    /// <see cref="ZoneReticleDriver"/>. Do not toggle color classes from multiple setters.
     /// </summary>
     public sealed class ZoneTargetReticle
     {
@@ -25,10 +15,7 @@ namespace SS3D.UI.MainHud.Components
         private const float ChipGapAboveReticle = 14f;
         private const float CornerMinPx = 4f;
         private const float CornerMaxPx = 16f;
-        private const float CrossFlashSeconds = 0.5f;
         private const float CrossFlashPopFraction = 0.15f;
-        private const float CrossFlashShakeFraction = 0.4f;
-        private const float CrossFlashShakePx = 2.5f;
 
         private VisualElement _root;
         private VisualElement _reticle;
@@ -36,125 +23,65 @@ namespace SS3D.UI.MainHud.Components
         private VisualElement _crossFlash;
         private readonly List<VisualElement> _corners = new(4);
         private Label _chipLabel;
-        private float _crossFlashStartedAt = -1f;
-        private Vector2 _cursorScreenPosition;
 
         public VisualElement Root => _root;
 
         public ZoneTargetReticle()
         {
             BuildTree();
-            SetAimState(ZoneReticleAimState.Idle, string.Empty);
-            SetLockProgress(1f, recharging: false);
-            SetCrossFlashProgress(-1f);
-            ApplyShake(Vector2.zero);
+            Apply(new ZoneReticleFrame(
+                visible: false,
+                cursorScreen: Vector2.zero,
+                zoneLabel: string.Empty,
+                color: ZoneReticleColorMode.Idle,
+                bracketReady01: 1f,
+                crossFlashT: -1f,
+                shakeOffset: Vector2.zero));
         }
 
-        public void UpdateCursorPosition(Vector2 screenPosition)
+        public void Apply(in ZoneReticleFrame frame)
         {
-            if (_reticle == null)
+            if (_root == null)
             {
                 return;
             }
 
-            _cursorScreenPosition = screenPosition;
+            _root.style.display = frame.Visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!frame.Visible)
+            {
+                return;
+            }
+
             float half = ReticleSize * 0.5f;
-            _reticle.style.left = screenPosition.x - half;
-            _reticle.style.bottom = screenPosition.y - half;
+            _reticle.style.left = frame.CursorScreen.x - half;
+            _reticle.style.bottom = frame.CursorScreen.y - half;
 
-            _chipLabel.style.left = screenPosition.x;
-            _chipLabel.style.bottom = screenPosition.y + half + ChipGapAboveReticle;
+            _chipLabel.style.left = frame.CursorScreen.x;
+            _chipLabel.style.bottom = frame.CursorScreen.y + half + ChipGapAboveReticle;
             _chipLabel.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
-        }
 
-        public void SetAimState(ZoneReticleAimState state, string zoneLabel)
-        {
-            // Hit no longer recolors brackets — cross flash is the connect confirm.
-            _reticle.EnableInClassList("zone-target-reticle--valid", state == ZoneReticleAimState.Valid);
-            _reticle.EnableInClassList("zone-target-reticle--hit", false);
-            _chipLabel.EnableInClassList("zone-target-label--valid", state == ZoneReticleAimState.Valid);
-            _chipLabel.EnableInClassList("zone-target-label--hit", false);
+            // Exactly one color modifier — clear all, then set the composed mode.
+            _reticle.EnableInClassList("zone-target-reticle--valid", frame.Color == ZoneReticleColorMode.Valid);
+            _reticle.EnableInClassList("zone-target-reticle--recharging", frame.Color == ZoneReticleColorMode.Recharging);
+            _chipLabel.EnableInClassList("zone-target-label--valid", frame.Color == ZoneReticleColorMode.Valid);
+            _chipLabel.EnableInClassList("zone-target-label--recharging", frame.Color == ZoneReticleColorMode.Recharging);
 
-            bool showLabel = !string.IsNullOrEmpty(zoneLabel);
-            _chipLabel.text = showLabel ? zoneLabel : string.Empty;
-            _chipLabel.style.display = showLabel ? DisplayStyle.Flex : DisplayStyle.None;
-        }
-
-        /// <summary>
-        /// Design 2A lock-on recharge: <paramref name="readyProgress01"/> 0 = brackets receded at
-        /// recovery start, 1 = full lock. Red while <paramref name="recharging"/>.
-        /// </summary>
-        public void SetLockProgress(float readyProgress01, bool recharging)
-        {
-            float progress = Mathf.Clamp01(readyProgress01);
-            float cornerPx = Mathf.Lerp(CornerMinPx, CornerMaxPx, progress);
-
+            float cornerPx = Mathf.Lerp(CornerMinPx, CornerMaxPx, Mathf.Clamp01(frame.BracketReady01));
             for (int i = 0; i < _corners.Count; i++)
             {
                 _corners[i].style.width = cornerPx;
                 _corners[i].style.height = cornerPx;
             }
 
-            _reticle.EnableInClassList("zone-target-reticle--recharging", recharging);
-            _chipLabel.EnableInClassList("zone-target-label--recharging", recharging);
+            bool showLabel = !string.IsNullOrEmpty(frame.ZoneLabel);
+            _chipLabel.text = showLabel ? frame.ZoneLabel : string.Empty;
+            _chipLabel.style.display = showLabel ? DisplayStyle.Flex : DisplayStyle.None;
+
+            ApplyCrossFlash(frame.CrossFlashT);
+            _shakeHost.style.translate = new Translate(frame.ShakeOffset.x, frame.ShakeOffset.y);
         }
 
-        public void PlayCrossFlash()
-        {
-            _crossFlashStartedAt = Time.unscaledTime;
-        }
-
-        /// <summary>
-        /// Advances cross-flash scale/opacity and shakes the whole aim frame (brackets + flash).
-        /// </summary>
-        public void TickCrossFlash()
-        {
-            if (_crossFlashStartedAt < 0f)
-            {
-                SetCrossFlashProgress(-1f);
-                ApplyShake(Vector2.zero);
-                return;
-            }
-
-            float elapsed = Time.unscaledTime - _crossFlashStartedAt;
-            if (elapsed >= CrossFlashSeconds)
-            {
-                _crossFlashStartedAt = -1f;
-                SetCrossFlashProgress(-1f);
-                ApplyShake(Vector2.zero);
-                return;
-            }
-
-            float t = elapsed / CrossFlashSeconds;
-            SetCrossFlashProgress(t);
-
-            Vector2 shake = Vector2.zero;
-            if (t < CrossFlashShakeFraction)
-            {
-                // Deterministic jitter matching design ss3d-hit-shake keyframes.
-                float shakeT = t / CrossFlashShakeFraction;
-                float x = shakeT < 0.2f ? -1f
-                    : shakeT < 0.4f ? 1f
-                    : shakeT < 0.6f ? -0.67f
-                    : shakeT < 0.8f ? 0.67f
-                    : 0f;
-                float y = shakeT < 0.2f ? 0.67f
-                    : shakeT < 0.4f ? -0.67f
-                    : shakeT < 0.6f ? 0.67f
-                    : shakeT < 0.8f ? -0.33f
-                    : 0f;
-                shake = new Vector2(x, y) * CrossFlashShakePx;
-            }
-
-            ApplyShake(shake);
-        }
-
-        private void ApplyShake(Vector2 shakeOffset)
-        {
-            _shakeHost.style.translate = new Translate(shakeOffset.x, shakeOffset.y);
-        }
-
-        private void SetCrossFlashProgress(float t)
+        private void ApplyCrossFlash(float t)
         {
             if (t < 0f)
             {
@@ -184,7 +111,6 @@ namespace SS3D.UI.MainHud.Components
             _reticle.AddToClassList("zone-target-reticle");
             _reticle.pickingMode = PickingMode.Ignore;
 
-            // Shake host wraps brackets + center + cross so hit feedback jolts the whole frame.
             _shakeHost = new VisualElement();
             _shakeHost.AddToClassList("zone-target-reticle__shake");
             _shakeHost.pickingMode = PickingMode.Ignore;
@@ -243,8 +169,6 @@ namespace SS3D.UI.MainHud.Components
             root.AddToClassList("zone-target-reticle__cross-flash");
             root.pickingMode = PickingMode.Ignore;
 
-            // Four diagonal capsules pointing at center (design 2A option B).
-            // Rotate then translate along local +X so arms form an open X.
             float[] angles = { 45f, 135f, 225f, 315f };
             for (int i = 0; i < angles.Length; i++)
             {

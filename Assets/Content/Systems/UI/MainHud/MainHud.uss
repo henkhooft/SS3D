@@ -145,10 +145,6 @@
     --zone-reticle-color: var(--ss3d-feedback-danger);
 }
 
-.zone-target-reticle--hit {
-    --zone-reticle-color: var(--ss3d-feedback-danger);
-}
-
 .zone-target-reticle__corner {
     position: absolute;
     width: 16px;
@@ -283,9 +279,5 @@
 }
 
 .zone-target-label--recharging {
-    color: var(--ss3d-feedback-danger);
-}
-
-.zone-target-label--hit {
     color: var(--ss3d-feedback-danger);
 }

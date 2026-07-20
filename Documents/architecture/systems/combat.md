@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack / CmdRunMeleeSwing
 > Status: partial
-> Verified: 772b62dc0 — 2026-07-20
+> Verified: 1cc5ff7b2 — 2026-07-20
 
 # Combat
 
@@ -13,7 +13,11 @@ no collider required at click. Zone damage is resolved only at the **connect** f
 client-synced **camera** aim ray (`CmdSyncMeleeAim` → `TryGetMeleeAimRay`), excluding self and
 falling back to body `AimYaw`/`AimPitch` when no aim was synced. Misses still consume the full
 swing. Empty-hand fists, improvised held items, and dedicated tool profiles (crowbar / hatchet /
-kitchen knife). Zone reticle on Main HUD — see [inventory](inventory.md).
+kitchen knife). Zone reticle on Main HUD — single-composer presentation (`ZoneReticleDriver` →
+`ZoneReticleFrame` → `ZoneTargetReticle.Apply`); see [inventory](inventory.md).
+
+**Melee HUD feedback (design 2A):** recovery drives red lock-on recharge; successful connect plays
+white cross flash (whiffs silent). Owner clients mirror recovery via `ServerNotifyMeleeRecovery`.
 
 **Intent ↔ stance:** `C` (and HUD intent chip) toggles Help/Harm. Harm always enters combat stance
 (Melee/Ranged from inventory); Help returns Peaceful — see [entities](entities.md).
@@ -65,6 +69,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
 - **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsRecovering` / bracket recharge; use `ServerNotifyMeleeRecovery`.
 - **No LoadingBar on melee** — `MeleeHitInteraction.CreateClient` returns null and Harm primary skips `InteractionOptimisticFeedback`; windup is telegraph, cooldown is reticle lock-on recharge.
+- **Reticle presentation is single-composer** — do not reintroduce parallel SetAim/SetLock/Tick writers; color priority and flash live in `ZoneReticleDriver` ([inventory](inventory.md)).
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.

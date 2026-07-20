@@ -52,6 +52,7 @@ namespace SS3D.UI.MainHud
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
         private ZoneTargetReticle _zoneReticle;
+        private ZoneReticleDriver _zoneReticleDriver;
         private Sequence _visibilitySequence;
         private bool _visible;
         private float _scale = 1f;
@@ -88,6 +89,7 @@ namespace SS3D.UI.MainHud
             _root?.RemoveFromHierarchy();
             _root = null;
             _zoneReticle = null;
+            _zoneReticleDriver = null;
         }
 
         public void SetVisible(bool visible)
@@ -119,44 +121,31 @@ namespace SS3D.UI.MainHud
         }
 
         /// <summary>
-        /// Updates the zone-targeting reticle (cursor, aim state, zone label, lock recharge).
+        /// Pushes aim / recovery / visibility into the reticle driver and paints one composed frame.
         /// </summary>
-        public void SetZoneReticle(
+        public void ApplyZoneReticle(
+            bool visible,
             Vector2 screenPosition,
-            ZoneReticleAimState state,
             string zoneLabel,
+            bool inRange,
             float lockReadyProgress01,
             bool recharging)
         {
-            if (_zoneReticle == null)
+            if (_zoneReticle == null || _zoneReticleDriver == null)
             {
                 return;
             }
 
-            _zoneReticle.UpdateCursorPosition(screenPosition);
-            _zoneReticle.SetAimState(state, zoneLabel);
-            _zoneReticle.SetLockProgress(lockReadyProgress01, recharging);
-            _zoneReticle.TickCrossFlash();
+            _zoneReticleDriver.SetVisible(visible);
+            _zoneReticleDriver.SetAimInput(screenPosition, zoneLabel, inRange);
+            _zoneReticleDriver.SetRecoveryInput(lockReadyProgress01, recharging);
+            _zoneReticleDriver.Tick(out ZoneReticleFrame frame);
+            _zoneReticle.Apply(in frame);
         }
 
-        public void PlayZoneReticleCrossFlash()
+        public void NotifyZoneReticleConnectHit()
         {
-            _zoneReticle?.PlayCrossFlash();
-        }
-
-        public void SetZoneReticleVisible(bool visible)
-        {
-            if (_zoneReticle?.Root == null)
-            {
-                return;
-            }
-
-            _zoneReticle.Root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!visible)
-            {
-                _zoneReticle.SetAimState(ZoneReticleAimState.Idle, string.Empty);
-                _zoneReticle.SetLockProgress(1f, recharging: false);
-            }
+            _zoneReticleDriver?.NotifyConnectHit();
         }
 
         public void SetEquipmentIcon(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon)
@@ -339,6 +328,7 @@ namespace SS3D.UI.MainHud
             VisualElement intentZone = BuildZone("main-hud__zone--intent", _intentModule);
 
             _zoneReticle = new ZoneTargetReticle();
+            _zoneReticleDriver = new ZoneReticleDriver();
 
             _root.Add(alertZone);
             _root.Add(equipmentZone);

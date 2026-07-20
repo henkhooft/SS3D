@@ -224,34 +224,21 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
-            if (_localPlayer == null || !IsRoundInGame() || _machineUiOpen)
-            {
-                _view.SetZoneReticleVisible(false);
-                return;
-            }
-
-            // Zone confirm is combat aiming feedback (main-hud §6) — Harm only.
-            if (_intentProvider == null || _intentProvider.CurrentIntent != IntentType.Harm)
-            {
-                _view.SetZoneReticleVisible(false);
-                return;
-            }
-
-            if (SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed)
-            {
-                _view.SetZoneReticleVisible(false);
-                return;
-            }
-
-            _view.SetZoneReticleVisible(true);
+            bool visible = _localPlayer != null
+                && IsRoundInGame()
+                && !_machineUiOpen
+                && _intentProvider != null
+                && _intentProvider.CurrentIntent == IntentType.Harm
+                && !(SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed);
 
             Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
-            ZoneReticleAimState aimState = ZoneReticleAimState.Idle;
             string zoneLabel = string.Empty;
+            bool inRange = false;
 
             // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
             // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
-            if (SubSystems.TryGet(out CameraSubSystem cameras)
+            if (visible
+                && SubSystems.TryGet(out CameraSubSystem cameras)
                 && cameras.PlayerCamera != null
                 && cameras.PlayerCamera.TryGetComponent(out Camera camera))
             {
@@ -268,26 +255,23 @@ namespace SS3D.UI.MainHud
                         out Collider zoneCollider))
                 {
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
-                    if (IsHoveredZoneInRange(zoneCollider))
-                    {
-                        aimState = ZoneReticleAimState.Valid;
-                    }
+                    inRange = IsHoveredZoneInRange(zoneCollider);
                 }
             }
 
             TryGetSelectedHandRecovery(out float lockReadyProgress01, out bool recharging);
-            // Recharging red overrides blue-valid tint; brackets still show zone label.
-            if (recharging)
-            {
-                aimState = ZoneReticleAimState.Idle;
-            }
-
-            _view.SetZoneReticle(screenPosition, aimState, zoneLabel, lockReadyProgress01, recharging);
+            _view.ApplyZoneReticle(
+                visible,
+                screenPosition,
+                zoneLabel,
+                inRange,
+                lockReadyProgress01,
+                recharging);
         }
 
         private void HandleMeleeConnectHitLanded()
         {
-            _view?.PlayZoneReticleCrossFlash();
+            _view?.NotifyZoneReticleConnectHit();
         }
 
         private bool TryGetSelectedHandRecovery(out float readyProgress01, out bool recharging)
