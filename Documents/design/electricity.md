@@ -140,5 +140,5 @@ No new permanent chrome, same discipline as every doc in this project.
 - Exact numeric values — output curves, heat thresholds, cell capacities, breaker ratings (a balancing pass, not a design decision)
 - Station logging/camera integration for the sabotage detection trail in §6 (cross-cutting infra, not designed here)
 - Handheld battery cells for portable tools/weapons — a small item-economy question, not grid-relevant
-- Editor tooling for authoring the backbone loop/spur topology (same category as Area's own authoring-tool gap, `area.md` §8)
+- Editor tooling for authoring the backbone loop/spur topology — answered by `creative-mode.md` §4, same category as Area's own authoring-tool gap (`area.md` §8)
 

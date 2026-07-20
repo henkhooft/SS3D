@@ -50,6 +50,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | none yet (look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); palette emission sample fix shipped on Simple Toon) | [rendering](systems/rendering.md) — partial |
 | shuttles | [shuttles.md](../design/shuttles.md) — active | none yet | none yet |
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
+| objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | none yet | none yet | [persistence](systems/persistence.md) — partial (station templates, server meta only, not a design spec) |
 | networking | none yet | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in) | [networking-session](systems/networking-session.md) — partial |
 | audio | none yet | none yet | none yet |

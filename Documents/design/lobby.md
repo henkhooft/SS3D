@@ -67,6 +67,7 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 | Resolution trigger override | In-round admin tools (separate pass) |
 | Observer/spectate entry | Deferred ghost/observer UI (`main-hud.md` §13) |
 | Character identity | Full appearance/loadout customization (separate pass, not designed here) |
+| Spawn resolution | Creative mode's spawn-point authoring (`creative-mode.md` §8) — job-tagged points on a drawn map, previously unaddressed/assumed infra |
 
 ## 10. Worked examples
 

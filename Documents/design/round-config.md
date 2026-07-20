@@ -42,6 +42,8 @@ The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, pr
 
 **A read-only history log** — the last N rounds' drawn mode, drawn map, and whether fallback triggered — sits alongside the pool editor. Real, inspectable data an admin tuning weights over time can actually look at, rather than adjusting numbers against a black box. Same "give real information instead of a hidden mechanism" instinct that's run through this entire project, just applied to server tuning instead of player-facing systems.
 
+**Map pool entries get a spawn-coverage check.** Before an admin enables a saved map, the config screen checks that map's tagged spawn points (`creative-mode.md` §8) against the currently active job list and flags any job with zero coverage — real, inspectable information surfaced before a round can fail at resolution, not a crew member discovering mid-round-start that their job has nowhere to spawn.
+
 ## 6. What this doesn't decide
 
 - **Which specific crew member becomes which antag** within a chosen gamemode. That's the gamemode's own runtime logic, and it varies enormously by mode — the same way this project treats the material silo or the R&D tech tree as existing systems it hooks into rather than redesigns, this doc treats "how a gamemode picks its antags from the eligible, opted-in crew" as that mode's business, not round config's.

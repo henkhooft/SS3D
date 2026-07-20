@@ -97,6 +97,7 @@ No new permanent chrome.
 | Outlet → export pad | Cargo's exporting & selling loop (`cargo.md` §7) |
 | Mid-transit interception / sabotage | Same cable-cut detection pattern (`electricity.md` §6) |
 | Phase 2 ejection into space | Existing vacuum-exposure hazard, reused not redesigned |
+| Pipe segment placement/authoring | Creative mode's utility-routing tool (`creative-mode.md` §4) |
 
 ## 11. Worked examples
 
