@@ -141,8 +141,8 @@ No new permanent chrome.
 
 ## 12. Companion edits flagged
 
-- `health.md` §9 — remove "disease/infection" from the out-of-scope list; point to this doc instead.
-- `chemistry.md` §13 — remove "disease/infection interactions"; cure reagents are ordinary recipes per §4 there, nothing further needed.
-- `surgery.md` §11 — "disease/infection risk from surgery" resolves as an ordinary contact-exposure vector (§3 here), not a bespoke surgical mechanic; repoint the citation rather than redesigning surgery.
-- `examine.md` §11 — the flagged "medical scanner tool" is now built in §5; repoint the citation.
+- `health.md` §9 — resolved: now points to this doc instead of listing disease/infection as a bare future item.
+- `chemistry.md` §13 — resolved: repointed to this doc; cure reagents remain ordinary recipes per §4 there.
+- `surgery.md` §11 — resolved: repointed to this doc's §3 (ordinary contact-exposure vector, not a bespoke surgical mechanic).
+- `examine.md` §11 and its worked example C — resolved: both repointed to this doc's §5.
 

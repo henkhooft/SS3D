@@ -36,7 +36,7 @@ Deliberately not selected as an Area consumer. Gas simulation wants its own dyna
 
 **Power net.** Each area optionally owns one APC. This is the concrete simplification Area buys: the hacking interface doc already assumes devices know "which APC they draw from" — with Area in place, that's derived from physical location instead of authored per-device. Place a device on an area's tiles, it inherits that area's APC automatically.
 
-**Lighting.** Rides the same area→APC link as power rather than existing as a separate system — lighting going out when an area loses power is the same event, not two.
+**Lighting.** Rides the same area→APC link as power rather than existing as a separate system — lighting going out when an area loses power is the same event, not two. Concretely, each area's lighting sits in one of three states driven by its APC's power state — Normal, Emergency (backup battery), Dark (no power left) — per `rendering-lighting.md` §4, which owns the full visual spec; this doc just supplies the APC state that drives it.
 
 **Camera network.** Cameras on an area's tiles auto-register to a network group named after the area (or its parent tag, for broader grouping on the security console — e.g. all of Engineering's sub-areas under one channel).
 

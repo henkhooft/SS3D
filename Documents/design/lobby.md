@@ -12,7 +12,7 @@ The first server-side system in this pass, and a genuinely different kind of des
 
 ## 2. Job list
 
-Grouped by department (Command, Security, Engineering, Medical, Science, Cargo, Service, Civilian) — pure information architecture, not engine-dependent, so it's kept as-is. Each entry shows the job name, department color (muted, matching the existing status-color palette), and a slot count (e.g. "Engineer — 2/4", "Captain — 0/1").
+Grouped by department (Command, Security, Engineering, Medical, Science, Cargo, Service, Civilian) — pure information architecture, not engine-dependent, so it's kept as-is. Each entry shows the job name, department color (muted, matching the existing status-color palette), and a slot count (e.g. "Engineer — 2/4", "Captain — 0/1"). Each job record also carries an access-level-set field, populated from id/access's job→access table (`id-access.md` §5) the moment a job resolves — lobby reads this table, it doesn't author it.
 
 **Locked jobs stay visible, not hidden.** A playtime-gated job (e.g. "Chief Engineer — requires 10 hours as Engineer") shows grayed out with the real requirement stated, rather than disappearing from the list entirely — the same "real, visible reason" rule armor's absorption values and the hacking interface's failure states already follow. A new player should be able to see the whole game's shape, including the parts they can't access yet, not discover job tiers exist by their absence.
 

@@ -95,7 +95,7 @@ The evac shuttle is a shuttle instance, nothing more — configured to default t
 Kept brief — the point of §§2–8 is that none of this needs re-deriving per type:
 
 - **Mining/exploration shuttles** — manual-piloted by default, since flying somewhere is the point of the trip; same helm, same collision model.
-- **Cargo shuttles** — automated hauling on a fixed route, structurally identical to the evac shuttle's autopilot behavior, just without the round-end hook.
+- **Cargo shuttles** — automated hauling on a fixed route, structurally identical to the evac shuttle's autopilot behavior, just without the round-end hook. Fully specified as its own instance in `cargo.md` §6 (call button, round trip, approval-gated orders, export appraisal).
 - **Escape pods** — the minimal case: autopilot-only, likely no helm console object at all, so manual override simply isn't reachable rather than being specifically disabled.
 
 None of these need a new system — they're the same shuttle framework with different route/helm/access configuration, the same way armor's fire suit and ballistic vest are one absorption model with different numbers (`armor.md` §1).

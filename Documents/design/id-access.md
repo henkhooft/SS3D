@@ -172,7 +172,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 | Physical possession as the gate | `surgery.md` §7 |
 | Examine-readable identity | Same convention as crate manifests (`cargo.md` §5) |
 
-**Companion edit needed:** `lobby.md` §2's job record should gain an access-level-set field, populated from this doc's §5 table — the same shape as round config's antag-category handoff into lobby's opt-in section. No other existing doc needs amendment; everywhere else that already said "the existing ID/access system," this doc is that system, unchanged from what they assumed.
+`lobby.md` §2's job record now carries an access-level-set field, populated from this doc's §5 table — the same shape as round config's antag-category handoff into lobby's opt-in section. No other existing doc needs amendment; everywhere else that already said "the existing ID/access system," this doc is that system, unchanged from what they assumed.
 
 ## 12. Out of scope for this pass
 

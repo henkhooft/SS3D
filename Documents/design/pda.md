@@ -49,7 +49,7 @@ Comms (`comms.md`) deliberately scopes to proximity-based local speech and chann
 
 **Recommendation: Option B.** The use case is real and distinct from radio — quiet one-to-one coordination without broadcasting to an entire department channel, which matters for ordinary crew coordination and matters even more for an antagonist who specifically doesn't want a channel full of witnesses. And because it's an address mode on the existing message backend rather than a new channel type, the cost is genuinely small: no new logging system, no new occlusion/range model (it's not proximity-gated at all, which is the point), just a new "to:" field alongside the existing channel field.
 
-**This does mean a small companion edit is needed to `comms.md`** — its integration notes table (§11) should gain a row for PDA-to-PDA messaging as a new consumer of the message backend, the same way rendering/lighting flagged a companion edit to Area's lighting bullet rather than silently changing it out from under that doc.
+**This does mean a small companion edit to `comms.md`** — its integration notes table (§11) now carries a row for PDA-to-PDA messaging as a new consumer of the message backend, the same way rendering/lighting flagged a companion edit to Area's lighting bullet rather than silently changing it out from under that doc.
 
 ## 5. Crew manifest — the location question, deferred on purpose
 
@@ -81,7 +81,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 | Construction guide tab | `crafting.md` §2, §6 (unchanged) |
 | ID/access summary tab | Existing ID/access system, read-only view |
 | Crew manifest tab | ID/access + connection data (cross-cutting infra, not designed here) |
-| Messages tab | Comms message/log backend (`comms.md` §11) — new address mode, requires companion edit there (§4) |
+| Messages tab | Comms message/log backend (`comms.md` §11) — new address mode (§4) |
 | Objectives tab | Held objective records, hidden-tab gating (`objectives.md` §8) |
 | Ahelp tab (entry point only) | In-round admin tools (separate pass, not designed here) |
 | Notification chip | Alert-stack momentary-chip pattern (`main-hud.md` §9) |
