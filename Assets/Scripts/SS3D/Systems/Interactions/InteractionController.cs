@@ -241,12 +241,41 @@ namespace SS3D.Systems.Interactions
                 return false;
             }
 
+            // Optimistic lock so rapid clicks cannot queue another Cmd before the TargetRpc arrives.
+            BeginLocalSwingCycle(source, hit.Profile);
+
             InteractionEvent swingEvent = new(source, null);
             TryPlayMeleeSwingTelegraph(hit);
             // No world-space LoadingBar — windup is swing telegraph; recovery is reticle lock-on recharge.
             TrySyncMeleeAimToServer();
             CmdRunMeleeSwing();
             return true;
+        }
+
+        [Client]
+        private static void BeginLocalSwingCycle(IInteractionSource source, MeleeWeaponProfile profile)
+        {
+            Hand hand = null;
+            if (source?.GetRootSource() is Hand rootHand)
+            {
+                hand = rootHand;
+            }
+            else if (source != null)
+            {
+                hand = source.GetComponentInTree<Hand>();
+            }
+
+            if (hand == null)
+            {
+                return;
+            }
+
+            if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            {
+                tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
+            }
+
+            tracker.BeginSwingCycle(profile.WindupSeconds, profile.RecoverySeconds);
         }
 
         [ServerRpc]
@@ -1328,13 +1357,13 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Server → owning client: melee recovery started (hit or miss). Mirrors the server tracker
-        /// onto the client Hand so CanStartSwing / HUD bracket recharge work off-host.
+        /// Server → owning client: melee swing cycle lock started (windup+recovery). Mirrors the
+        /// server tracker onto the client Hand so CanStartSwing / HUD bracket recharge work off-host.
         /// </summary>
         [Server]
-        public void ServerNotifyMeleeRecovery(Hand hand, float recoverySeconds)
+        public void ServerNotifyMeleeRecovery(Hand hand, float cycleSeconds)
         {
-            if (Owner == null || recoverySeconds <= 0f)
+            if (Owner == null || cycleSeconds <= 0f)
             {
                 return;
             }
@@ -1345,11 +1374,11 @@ namespace SS3D.Systems.Interactions
                 handIndex = hands.PlayerHands.IndexOf(hand);
             }
 
-            TargetNotifyMeleeRecovery(Owner, handIndex, recoverySeconds);
+            TargetNotifyMeleeRecovery(Owner, handIndex, cycleSeconds);
         }
 
         [TargetRpc]
-        private void TargetNotifyMeleeRecovery(NetworkConnection connection, int handIndex, float recoverySeconds)
+        private void TargetNotifyMeleeRecovery(NetworkConnection connection, int handIndex, float cycleSeconds)
         {
             Hand hand = ResolveLocalHand(handIndex);
             if (hand != null)
@@ -1359,10 +1388,11 @@ namespace SS3D.Systems.Interactions
                     tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
                 }
 
-                tracker.BeginRecovery(recoverySeconds);
+                // Full cycle already summed on the server (windup + recovery).
+                tracker.BeginSwingCycle(0f, cycleSeconds);
             }
 
-            MeleeRecoveryFeedback.NotifyLocalRecoveryStarted(recoverySeconds);
+            MeleeRecoveryFeedback.NotifyLocalRecoveryStarted(cycleSeconds);
         }
 
         /// <summary>

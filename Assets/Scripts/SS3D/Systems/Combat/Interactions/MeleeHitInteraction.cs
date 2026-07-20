@@ -81,7 +81,7 @@ namespace SS3D.Systems.Combat.Interactions
                 return false;
             }
 
-            return GetRecoveryTracker(hand)?.IsRecovering != true;
+            return GetRecoveryTracker(hand)?.IsBusy != true;
         }
 
         [Server]
@@ -90,6 +90,17 @@ namespace SS3D.Systems.Combat.Interactions
             CaptureStartPosition(interactionEvent);
             StartCounter();
             TryConsumeSwingStamina(interactionEvent.Source);
+
+            // Lock for windup+recovery now — waiting until connect let rapid clicks cancel/restart windup.
+            Hand hand = ResolveHand(interactionEvent.Source);
+            if (hand != null)
+            {
+                float cycleSeconds = _profile.WindupSeconds + _profile.RecoverySeconds;
+                GetOrCreateRecoveryTracker(hand).BeginSwingCycle(_profile.WindupSeconds, _profile.RecoverySeconds);
+                InteractionController controller = hand.GetComponentInParent<InteractionController>();
+                controller?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
+            }
+
             return true;
         }
 
@@ -106,10 +117,8 @@ namespace SS3D.Systems.Combat.Interactions
 
             if (hand != null)
             {
-                GetOrCreateRecoveryTracker(hand).BeginRecovery(_profile.RecoverySeconds);
                 InteractionController controller = hand.GetComponentInParent<InteractionController>();
                 controller?.ClearMeleeAimPoint();
-                controller?.ServerNotifyMeleeRecovery(hand, _profile.RecoverySeconds);
                 if (landed)
                 {
                     controller?.ServerNotifyMeleeConnectHit();

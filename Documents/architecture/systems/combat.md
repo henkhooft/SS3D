@@ -69,7 +69,8 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Cancel-on-move is off for melee** — `DelayedInteraction` cancels windup when the root moves; that skipped `StartDelayed` / recovery so walking felt like no cooldown. `MeleeHitInteraction.CancelOnMove` is false (CPR/craft still cancel). Entity-root override remains if cancel is re-enabled.
 - **Melee reach uses closest point on zone collider** — ray hit on forearm/hand can be past `RangeLimit`; use `IsMeleeZoneReachInRange`.
 - **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
-- **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsRecovering` / bracket recharge; use `ServerNotifyMeleeRecovery`.
+- **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsBusy` / bracket recharge; use `ServerNotifyMeleeRecovery` with the full windup+recovery cycle from swing **Start** (not connect).
+- **Swing lock starts at Start** — do not wait until connect to lock; rapid clicks used to cancel in-flight windup via `SupportsMultipleInteractions` and never pay recovery.
 - **No LoadingBar on melee** — `MeleeHitInteraction.CreateClient` returns null and Harm primary skips `InteractionOptimisticFeedback`; windup is telegraph, cooldown is reticle lock-on recharge.
 - **Reticle presentation is single-composer** — do not reintroduce parallel SetAim/SetLock/Tick writers; color priority and flash live in `ZoneReticleDriver` ([inventory](inventory.md)).
 - **Harm is combat-exclusive** — do not reintroduce primary fall-through to Drop/Open when recovery blocks a swing; unrestricted verbs are Help-default in `MatchesIntent`.
