@@ -59,7 +59,7 @@ Builds the item `examine.md` §11 flagged and left undesigned. A handheld tool, 
 
 Both resolve instantly — no minigame, consistent with the project's stance that information belongs behind a device, not a puzzle (`hacking-interface.md` §1). A successful scan returns disease id, current stage, and time remaining to the next stage — real values read off real state, not a coarse hint.
 
-**Before any scan, symptoms are the only signal, and only once incubation ends.** Past incubation, contagious-and-symptomatic stages render on the character model — a cough animation, a sound cue, a pallor or flush tint — the same diegetic-first rule wounds already follow (`health.md` §2). During incubation, nothing is visible at all without a scan; that silent window is the point, not an oversight.
+**Before any scan, symptoms are the only signal, and only once incubation ends.** Past incubation, contagious-and-symptomatic stages render on the character model — a cough animation, a sound cue (personal audio tier, `audio.md` §4), a pallor or flush tint — the same diegetic-first rule wounds already follow (`health.md` §2). During incubation, nothing is visible at all without a scan; that silent window is the point, not an oversight.
 
 ## 6. Treatment & cure
 

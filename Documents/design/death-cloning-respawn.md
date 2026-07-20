@@ -68,7 +68,7 @@ Records live on the genetics console / crew records as a real, breakable databas
 ## 7. HUD & feedback touchpoints
 
 - **Critical/dying feedback** (heartbeat audio + synced pulse, `main-hud.md` §5) is unchanged and unextended here. The moment brain function hits zero, that feedback simply stops — the absence of the heartbeat is the tell, not a separate "you died" overlay stacked on top of it.
-- **Defib use:** a real diegetic shock effect, and the heartbeat audio picking back up on success — or the clean "no response" readout on the unit (§3) if not.
+- **Defib use:** a real diegetic shock effect, and the heartbeat audio (personal tier, `audio.md` §4) picking back up on success — or the clean "no response" readout on the unit (§3) if not.
 - **Cloning pod:** the same diegetic device-screen treatment as the fabricator (`hacking-interface.md` §2 pattern, reused via crafting §3) — record status, material/power check, running/stalled/complete states, identical visual language to the fabricator mockups already built.
 - **Clone-ready prompt:** the single narrow exception to the deferred ghost/observer UI, per §5.
 

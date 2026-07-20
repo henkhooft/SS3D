@@ -53,7 +53,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
 | networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in) | [networking-session](systems/networking-session.md) — partial |
-| audio | none yet | none yet | none yet |
+| audio | [audio.md](../design/audio.md) — active | none yet | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
 | rd-material-economy | none yet | none yet | none yet |

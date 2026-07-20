@@ -44,7 +44,7 @@ Deliberately not selected as an Area consumer. Gas simulation wants its own dyna
 
 **Alarms & announcements.** An area is the default alarm/announcement scope — a fire alarm pulled in an area scopes to that area, with the parent tag as the mechanism for bubbling a critical alert up to the whole department or station. The AI or crew target lockdowns/announcements at an area by referencing its id or parent tag.
 
-**Ambience/audio.** An area carries an ambience track id; the player's current area (one tile lookup) drives ambient audio, crossfading at boundaries.
+**Ambience/audio.** An area carries an ambience track id; the player's current area (one tile lookup) drives ambient audio, crossfading at boundaries. `audio.md` §2 owns the full spec, including which tracks are power-dependent.
 
 ## 6. Worked example — Engineering, main bay
 
