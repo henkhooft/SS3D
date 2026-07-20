@@ -27,6 +27,12 @@ namespace SS3D.Interactions
         protected bool HasStarted { get; private set; }
 
         /// <summary>
+        /// When true, moving farther than CharacterMoveCheck tolerance cancels the windup.
+        /// Melee overrides to false so walking does not abort connect/recovery.
+        /// </summary>
+        protected virtual bool CancelOnMove => true;
+
+        /// <summary>
         /// The interval in seconds in which CanInteract is checked
         /// </summary>
         protected float CheckInterval { get; set; }
@@ -79,6 +85,7 @@ namespace SS3D.Interactions
         public virtual bool Update(InteractionEvent interactionEvent, InteractionReference reference)
         {
             if (HasStarted
+                && CancelOnMove
                 && !InteractionExtensions.CharacterMoveCheck(
                     _startPosition,
                     ResolveMoveCheckPosition(interactionEvent)))

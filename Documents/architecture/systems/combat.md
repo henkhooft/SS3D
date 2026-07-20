@@ -66,7 +66,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **`C` toggles intent, not stance alone** — stance follows Harm via `InteractionController.ApplyCombatModeForIntent`. Hardcoded `cKey` in `HumanoidCombatController`; Input System still binds **Cancel Interaction** to `C` too — see [interactions-runtime](interactions-runtime.md).
 - **Connect aim is not stance SyncVars** — owner syncs the **camera mouse ray** via `CmdSyncMeleeAim`; connect must use that ray, not hand→aim.
 - **Exclude self on connect/reticle** — pass attacker `HumanHealthController` into `TryResolveHoverZone` or swings hit your own arms.
-- **Cancel-on-move uses entity root** — melee overrides to `Entity` so swing bone motion does not cancel windup.
+- **Cancel-on-move is off for melee** — `DelayedInteraction` cancels windup when the root moves; that skipped `StartDelayed` / recovery so walking felt like no cooldown. `MeleeHitInteraction.CancelOnMove` is false (CPR/craft still cancel). Entity-root override remains if cancel is re-enabled.
 - **Melee reach uses closest point on zone collider** — ray hit on forearm/hand can be past `RangeLimit`; use `IsMeleeZoneReachInRange`.
 - **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
 - **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsRecovering` / bracket recharge; use `ServerNotifyMeleeRecovery`.

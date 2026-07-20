@@ -122,7 +122,14 @@ namespace SS3D.Systems.Combat.Interactions
         }
 
         /// <summary>
-        /// Hands animate during the swing — cancel-on-move must use the entity root, not the hand bone.
+        /// Combat swings must complete while walking — cancel-on-move would skip StartDelayed
+        /// and never begin recovery, so walking felt like no cooldown.
+        /// </summary>
+        protected override bool CancelOnMove => false;
+
+        /// <summary>
+        /// Hands animate during the swing — if cancel-on-move is re-enabled, use entity root
+        /// rather than the hand bone.
         /// </summary>
         protected override Vector3 ResolveMoveCheckPosition(InteractionEvent interactionEvent)
         {
