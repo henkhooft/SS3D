@@ -28,8 +28,9 @@ STToonSettings ST_GetToonSettings()
 
 float ST_ApplyHalfToonCurve(float ndotl)
 {
-    float lit = saturate(ndotl);
-    lit = smoothstep(0.0, 0.75, lit);
+    float lambert = saturate(ndotl);
+    float wrap = saturate(ndotl * 0.5 + 0.5);
+    float lit = lerp(lambert, wrap, 0.5);
 
     if (_RampStrength > 0.001)
     {

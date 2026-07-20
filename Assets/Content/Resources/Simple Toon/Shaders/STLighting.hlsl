@@ -73,6 +73,15 @@ float4 ST_EvaluateDirectLight(
         : settings.darkColor;
     float4 blendCol = ST_ColorBlend(shadeCol, texCol, toon);
     float4 postCol = ST_PostEffects(blendCol, toon, lightAttenuation, ndotl, settings);
+
+    if (_HalfToon > 0.5 && _SpecIntensity > 0.001)
+    {
+        float3 viewDir = normalize(surface.viewDirWS);
+        float3 halfDir = normalize(lightDir + viewDir);
+        float spec = pow(saturate(dot(normal, halfDir)), _SpecPower) * _SpecIntensity;
+        postCol.rgb += spec * lightColor * texCol.rgb;
+    }
+
     return postCol * lightAttenuation;
 }
 
@@ -94,7 +103,17 @@ void ST_AccumulateLight(
         light.direction,
         lightAttenuation,
         swapLightColorBlend);
-    result = max(result, lit);
+
+    // Half-toon: additive fixture stacking (two wall lights both reach the floor).
+    // Full toon: max() preserves the original Simple Toon single-light read.
+    if (_HalfToon > 0.5)
+    {
+        result += lit;
+    }
+    else
+    {
+        result = max(result, lit);
+    }
 }
 
 float4 ST_EvaluateLighting(

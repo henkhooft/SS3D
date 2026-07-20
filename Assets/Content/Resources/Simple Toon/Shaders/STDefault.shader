@@ -16,6 +16,10 @@
         _Steps ("Steps", Range(1,25)) = 3
         _StpSmooth ("Smoothness", Range(0,1)) = 0
         _Offset ("Lit Offset", Range(-1,1.1)) = 0
+        [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Normal Scale", Float) = 1
+        _SpecIntensity ("Specular Intensity", Range(0,1)) = 0
+        _SpecPower ("Specular Power", Range(1,128)) = 32
 
         [Header(Light)][Space(5)]
         [Toggle] _HalfToon ("Half Toon", Float) = 0

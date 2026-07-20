@@ -19,6 +19,8 @@ namespace SS3D.Systems.Electricity
         [SerializeField]
         private Light _light;
         [SerializeField]
+        private Light _fillLight;
+        [SerializeField]
         private Renderer[] _emissiveRenderers;
         [SerializeField]
         private bool _respectDevBypass = true;
@@ -32,6 +34,7 @@ namespace SS3D.Systems.Electricity
         private Color _emergencyTint = new Color(1f, 0.25f, 0.2f);
 
         private float _poweredIntensity;
+        private float _poweredFillIntensity;
         private Color _poweredLightColor = Color.white;
         private float _poweredLumin;
         private Color _poweredEmission;
@@ -52,6 +55,11 @@ namespace SS3D.Systems.Electricity
             {
                 _poweredIntensity = _light.intensity;
                 _poweredLightColor = _light.color;
+            }
+
+            if (_fillLight != null)
+            {
+                _poweredFillIntensity = _fillLight.intensity;
             }
 
             CacheEmissiveMaterials();
@@ -376,37 +384,40 @@ namespace SS3D.Systems.Electricity
                 emission = MultiplyColor(_poweredEmission, record.DepartmentalLightTint);
             }
 
-            if (_light != null)
-            {
-                _light.intensity = _poweredIntensity;
-                _light.color = _poweredLightColor;
-                _light.enabled = true;
-            }
+            ApplyLightState(_light, _poweredIntensity, _poweredLightColor);
+            ApplyLightState(_fillLight, _poweredFillIntensity, _poweredLightColor);
 
             SetEmissiveState(_poweredLumin, emission);
         }
 
         private void TurnLightOnEmergency()
         {
-            if (_light != null)
-            {
-                _light.intensity = _poweredIntensity * _emergencyIntensityMultiplier;
-                _light.color = _emergencyTint;
-                _light.enabled = true;
-            }
+            float emergencyIntensity = _poweredIntensity * _emergencyIntensityMultiplier;
+            float emergencyFillIntensity = _poweredFillIntensity * _emergencyIntensityMultiplier;
+            ApplyLightState(_light, emergencyIntensity, _emergencyTint);
+            ApplyLightState(_fillLight, emergencyFillIntensity, _emergencyTint);
 
             SetEmissiveState(_poweredLumin * _emergencyIntensityMultiplier, MultiplyColor(_poweredEmission, _emergencyTint));
         }
 
         private void TurnLightOff()
         {
-            if (_light != null)
-            {
-                _light.intensity = 0f;
-                _light.enabled = false;
-            }
+            ApplyLightState(_light, 0f, _poweredLightColor, enabled: false);
+            ApplyLightState(_fillLight, 0f, _poweredLightColor, enabled: false);
 
             SetEmissiveState(0f, Color.black);
+        }
+
+        private static void ApplyLightState(Light light, float intensity, Color color, bool enabled = true)
+        {
+            if (light == null)
+            {
+                return;
+            }
+
+            light.intensity = intensity;
+            light.color = color;
+            light.enabled = enabled && intensity > 0f;
         }
 
         private static Color MultiplyColor(Color left, Color right)
