@@ -34,7 +34,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
 | lobby | [lobby.md](../design/lobby.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
 | round-config | [round-config.md](../design/round-config.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
-| round-end | [round-end.md](../design/round-end.md) — draft | none yet | none yet |
+| round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
 | electricity | [electricity.md](../design/electricity.md) — active | none yet (electricity system is touched by [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md), but that effort implements area.md/main-hud.md, not electricity.md) | [electricity](systems/electricity.md) — partial |
 | pda | [pda.md](../design/pda.md) — active | none yet | [inventory](systems/inventory.md) — partial |
@@ -68,11 +68,12 @@ so they stay out of this table and live only in the Infrastructure section below
 
 ### Migration note
 
-`design/round-end.md` (round-end/transition) now exists as a **draft** — it builds its summary
-screen and transition on the spectator framework `observer.md` §7 supplies and spends the secret
-gamemode identity `round-config.md` §4 protects. Authored in the house style (no prototyping
-section, `Status: draft`, design-docs-cite-design-docs only). Owner review to promote it to
-`active`.
+`design/round-end.md` (round-end/transition) is now **active** — it builds its summary screen and
+transition on the spectator framework `observer.md` §7 supplies, spends the secret gamemode identity
+`round-config.md` §4 protects, and defines the evac shuttle's call/countdown/point-of-no-return
+sequence (§3), closing the dependency `shuttles.md` §9 and `objectives.md` §7 both flagged against
+it. Authored in the house style (no prototyping section, design-docs-cite-design-docs only, numbered
+Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every other design doc).
 
 ## Infrastructure
 

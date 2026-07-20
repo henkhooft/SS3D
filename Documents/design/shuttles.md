@@ -79,11 +79,11 @@ No new permanent chrome, consistent with the rest of this project.
 
 ## 9. Worked example — evac shuttle (this doc's scope, not round-end's)
 
-The evac shuttle is a shuttle instance, nothing more — configured to default to autopilot on a fixed route between a station dock and a rendezvous point, with an open (non-access-gated) helm. What triggers its call, what the countdown timer does, and what "point of no return" means are round-end's job, not this doc's; this doc only guarantees the physical object exists, with real dock/undock/transit/collision behavior, for that system to drive.
+The evac shuttle is a shuttle instance, nothing more — configured to default to autopilot on a fixed route between a station dock and a rendezvous point, with an open (non-access-gated) helm. What triggers its call, what the countdown timer does, and what "point of no return" means are round-end's job, not this doc's — now defined in `round-end.md` §3; this doc only guarantees the physical object exists, with real dock/undock/transit/collision behavior, for that system to drive.
 
 | Step | What happens | Shuttle state |
 |---|---|---|
-| 1 | (Round-end triggers a call — not detailed here) | Shuttle undocks from its home dock, autopilot engages |
+| 1 | Round end's evac call console is used (`round-end.md` §3) | Countdown runs, then expires; shuttle undocks from its home dock, autopilot engages |
 | 2 | Autopilot flies the authored route toward the station | Obstacle check running continuously per §4; nothing blocking |
 | 3 | An antag reaches the open helm and takes manual control | Autopilot disengages; direct thrust/heading input now active |
 | 4 | Antag deliberately rams the shuttle into a station structure | Real collision resolves per §6; the struck Area's integrity check fails |
@@ -115,11 +115,11 @@ None of these need a new system — they're the same shuttle framework with diff
 | Helm console screen | Diegetic device-screen pattern (`hacking-interface.md` §2) |
 | Helm/area access gating | Existing ID/access system (`area.md` §5) |
 | Camera network | Area's stable-id camera grouping (`area.md` §5) — confirmed compatible, no change needed |
-| Evac call/timer/point of no return | `round-end summary & transition` — not designed here; this doc is upstream of it |
+| Evac call/timer/point of no return | `round-end.md` §3 |
 
 ## 12. Out of scope for this pass
 
-- Round-end's call/timer/point-of-no-return logic itself (separate, still-open pass; §9 only supplies the physical shuttle it will drive)
+- Round-end's call/timer/point-of-no-return logic itself — defined in `round-end.md` §3; §9 here only supplies the physical shuttle it drives
 - Exact numeric values — thrust, mass, integrity, impact-damage thresholds, velocity caps (a balancing pass, not a design decision)
 - Full physics/netcode implications of continuous shuttle movement and docking under multiplayer prediction (flagged in §5 as needing implementation-side confirmation)
 - Ship-to-ship weapons or shuttle combat (plausible for some gamemodes, not a base mechanic designed here)

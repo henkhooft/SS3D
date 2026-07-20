@@ -62,7 +62,7 @@ Round config's antag-category handoff already establishes the shape lobby reads 
 
 **Check:** reuses shuttles' existing Area-attachment model — a shuttle's interior tiles are just Areas riding a moving root transform (`shuttles.md` §11) — so "is this character aboard" is the same occupancy query Area already answers for every other purpose (lighting, atmo, camera grouping). No new tracking needed, just a query run at the moment round-end's own evacuation logic resolves.
 
-**This objective has an explicit dependency this doc can't close on its own.** Round-end summary & transition — what triggers the evac call, what the countdown does, what "point of no return" means — is still an open pass, the same way shuttles §9 flagged it (`shuttles.md` §9). This doc supplies the check function; round-end/transition supplies the moment it fires.
+**This objective's check runs at the moment round-end's evacuation sequence locks in** — the point of no return `round-end.md` §3 defines for the evac shuttle, closing the dependency shuttles §9 flagged (`shuttles.md` §9). This doc supplies the check function; `round-end.md` §3 supplies the moment it fires.
 
 ## 8. The PDA objectives tab
 
@@ -74,7 +74,7 @@ Round config's antag-category handoff already establishes the shape lobby reads 
 
 ## 9. Round-end resolution
 
-At round-end, each held objective's final state (§2) feeds the round-end summary — same dependency §7 already flagged. This doc guarantees every objective has resolved to a real, non-ambiguous state (never left pending) by the time that summary needs to read it; the summary's own presentation — how it's revealed, in what order, with what framing — is round-end/transition's job, not this doc's.
+At round-end, each held objective's final state (§2) feeds the round-end summary (`round-end.md` §5) — same dependency §7 already flagged. This doc guarantees every objective has resolved to a real, non-ambiguous state (never left pending) by the time that summary needs to read it; the summary's own presentation — how it's revealed, in what order, with what framing — is round-end.md's job, not this doc's.
 
 ## 10. Worked examples
 
@@ -114,9 +114,9 @@ At round-end, each held objective's final state (§2) feeds the round-end summar
 | Steal-eligible item tag | Same pattern as size-class tagging (`inventory-storage.md` §4) |
 | Assassinate check | Death event, health/death system (`health.md` §4, `death-cloning-respawn.md`) |
 | Escape check | Shuttle Area-attachment/occupancy (`shuttles.md` §2, §11) |
-| Escape resolution timing | Round-end summary & transition (not designed here) |
+| Escape resolution timing | `round-end.md` §3 (evac point-of-no-return) |
 | PDA objectives tab | Diegetic tab-bar pattern, hidden-tab precedent (`pda.md` §3, `id-access.md` §3) |
-| Round-end summary read | Round-end summary & transition (not designed here) |
+| Round-end summary read | `round-end.md` §5 (summary screen) |
 
 **Companion edit needed:** `pda.md` should gain a row in its tab bar for the objectives tab (§8) — a small addition to that doc's existing tab-bar list, not a functional change to anything already specified there.
 
