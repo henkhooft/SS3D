@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, MeleeWeaponItemExtension, HandHit; combat stance via HumanoidCombatController
-> Status: partial (Phase 4 melee vertical slice; stance/aim/limp presentation shipped; blocking/ranged deferred)
-> Verified: db4a82294 — 2026-07-20
+> Status: partial (Phase 4 melee vertical slice; stance/aim/limp/mirror presentation shipped; blocking/ranged deferred)
+> Verified: b00382c9c — 2026-07-20
 
 # Combat
 
@@ -9,7 +9,7 @@
 
 Phase 4 ships zone-targeted melee hits wired to the health rewrite. Harm-intent targeted hits resolve body zones via raycast on the `BodyParts` layer, apply brute/burn through `HumanHealthController.ApplyDamage`, and enforce per-weapon windup/recovery. Fists and crowbar are the first weapon profiles; full combat model (blocking, ranged accuracy) remains per design spec.
 
-**Shipped adjacent foundation (presentation):** Peaceful/Melee/Ranged stance locomotion, Injured limp gait (all stances), aim look-at IK, and melee swing triggers live under [entities](entities.md) body animation — see [player-body-animation](../2026-07_player-body-animation.md) and [animation-polish](../2026-07_animation-polish.md). Stance presentation and Phase 4 hit resolution sit on the same base; wiring swing telegraph to windup timing remains a combat build-out task (tune Attack Swing exit/speed in the Animator — do not hardcode clip length in C#).
+**Shipped adjacent foundation (presentation):** Peaceful/Melee/Ranged stance locomotion, Injured limp gait (severity idle + oneshots), left-hand Upper Body mirror, aim look-at IK, and melee `AttackSwing` + `AttackVariant` (0–2) live under [entities](entities.md) — see [player-body-animation](../2026-07_player-body-animation.md) and [animation-polish](../2026-07_animation-polish.md). Wiring swing telegraph to windup timing remains a combat build-out task (tune Attack Swing exit/speed in the Animator — do not hardcode clip length in C#).
 
 ## Start here
 

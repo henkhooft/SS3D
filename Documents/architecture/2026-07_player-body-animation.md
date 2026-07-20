@@ -58,14 +58,16 @@ Each state exposes: `CanMove`, `CanRotate`, `CanRun`, `CanUseHands`, `CanInterac
    - **Melee** — [Pro Melee Axe Pack](../../Assets/Art/Animations/Pro%20Melee%20Axe%20Pack/) standing idle / walk F-B-L-R / run F-B (includes backpedal)
    - **Ranged** — [Basic Shooter Pack](../../Assets/Art/Animations/Basic%20Shooter%20Pack/) rifle idle / walk / walk back / strafes / run / run back
 2. **UpperBody** (spine+arms mask, head excluded) — **Melee** holds and `AttackSwing`; Ranged uses base shooter locomotion (no hold overlay). Head stays on base + look-at IK. Weight is 1 for entire Melee stance (Hold Default when empty-handed); 0 in Peaceful/Ranged.
-3. **Additive** — flinch (`Flinch` uses melee gut react), injured-arm overlay (`Empty Additive` → Male Injured Pack hurting idle at low weight)
+3. **Additive** — flinch (`Flinch` uses melee gut react), injured-arm overlay (`Empty Additive` → Male Injured Pack hurting idle; layer weight scales with `InjuredArm*` and yields when `InjuredLeg` owns stumble)
 4. **FullBody Override** — sit, crawl, emote, stand-up
 
-`AttackSwing` is an upper-body one-shot over Melee locomotion (Animator trigger + exit-time back to Hold Default). Swing owns spine/chest; look-at is head-only while Attack Swing plays.
+`AttackSwing` is an upper-body one-shot over Melee locomotion (Animator trigger + exit-time back to Hold Default; `AttackVariant` 0–2 cycles horizontal / downward / backhand). Swing owns spine/chest; look-at is head-only while Attack Swing plays. Left active hand sets `MirrorUpperBody` on Hold*/Attack Swing* only.
 
-Base locomotion also includes **Injured Locomotion** (Male Injured Pack FreeformCartesian2D) entered from any CombatStance when `LimpSide != 0`, exiting to the stance matching `CombatStance`.
+Base locomotion also includes **Injured Locomotion** (Male Injured Pack FreeformCartesian2D; idle severity via nested `InjuredLeg` 1D) entered from any CombatStance when `LimpSide != 0`, exiting to the stance matching `CombatStance`. Limp-gated Jump / Turn90 / Emote→Wave are wired on Base Layer but **not input-bound** yet.
 
 Rebuild via **SS3D → Animation → Rebuild Combat Stance Blend Trees** after reimporting pack FBX clips.
+
+Shelved (unwired) packs: [Misc](../../Assets/Art/Animations/Misc/), [Probably Not](../../Assets/Art/Animations/Probably%20Not/).
 
 ### Who tunes what (animators vs code)
 
@@ -74,7 +76,7 @@ Rebuild via **SS3D → Animation → Rebuild Combat Stance Blend Trees** after r
 | Owner | Owns | Asset / API |
 |-------|------|-------------|
 | **Animator** | Clip choice, blend-tree positions, transition exit times / durations, avatar masks, layer default weights, hold poses | `HumanCharacterAnimator.controller`, `.mask`, FBX import |
-| **Code** | When combat is on/off, `CombatStance` / `ArmHold` / `VelX`/`VelZ` / `LimpSide`, firing triggers (`AttackSwing`), network snapshot, smoothed look-at IK toward aim | `AnimationOrchestrator`, `HumanoidIkController`, body state machine |
+| **Code** | When combat is on/off, `CombatStance` / `ArmHold` / `VelX`/`VelZ` / `LimpSide` / `InjuredLeg` / `InjuredArm*` / `MirrorUpperBody`, firing triggers (`AttackSwing`), network snapshot, smoothed look-at IK toward aim | `AnimationOrchestrator`, `HumanoidIkController`, body state machine |
 
 Animators should be able to open the controller and adjust swing → idle blends, locomotion samples, and masks **without touching scripts**.
 
