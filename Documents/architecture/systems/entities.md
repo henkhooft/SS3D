@@ -39,6 +39,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Use `SetPosingSuppressed` + shared collapse visuals — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2 cycle: horizontal / downward / backhand).
+- **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement is enabled — that races the tick and reintroduces the surge.
 - **Batch rebuild while Editor open:** drop `artifacts/force-rebuild-animator.flag` (consumed on script reload) or run the menu; batchmode cannot open a held project.
 
 ## Depends on / Used by
