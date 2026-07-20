@@ -177,7 +177,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 ## 12. Out of scope for this pass
 
 - The full enumerated list of every access level and exactly which device checks which (a content pass, not a design decision)
-- Real authentication behind a stable per-player identity — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 covers the cross-round job-history/playtime shape itself)
+- Real authentication behind a stable per-player identity — designed in `player-accounts.md` (`persistence-save.md` §5 covers the cross-round job-history/playtime shape itself)
 - A standalone, console-independent forging tool ("agent card" or similar) — designed as a Traitor uplink item in `antagonist-content.md` §4
 - Photo ID or any biometric verification beyond the printed name/job/department
 - Per-gamemode access deltas beyond Traitor's (Head Revolutionary and other undesigned roster entries) — that gamemode's own business, per `antagonist-content.md` §6

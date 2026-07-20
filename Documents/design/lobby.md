@@ -95,6 +95,6 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 - The admin toolkit itself, beyond the resolution-override trigger point — designed in `admin-tools.md` §6
 - Full character appearance/loadout customization (separate pass)
 - The exact fairness/weighting algorithm inside preference resolution (a balancing/backend decision, not a design one)
-- Real authentication underlying a stable per-player key — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 treats it as a black box the same way this doc's job-list data is read, not authored)
+- Real authentication underlying a stable per-player key — designed in `player-accounts.md` (`persistence-save.md` §5 treats it as a black box the same way this doc's job-list data is read, not authored)
 - The observer/ghost UI itself (already deferred in `main-hud.md` §13 — this doc only adds the entry point)
 

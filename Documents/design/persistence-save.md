@@ -47,7 +47,7 @@ Each is real disk state; none of them is the diegetic crew record or ID card dat
 
 **Scope:** playtime accumulated per role (feeding `lobby.md` §2's playtime-gated job display), job unlock state, a returning player's saved lobby preference defaults (so their ranked list doesn't start blank every session), and moderation notes/bans.
 
-**Keyed to a real player identity — which this doc doesn't invent.** Real authentication is a separate, not-yet-designed system (`player-accounts`); this doc treats "a stable per-player key exists" as a black box the same way crafting treats the material silo (`crafting.md` §3) or Area treats atmospherics (`area.md` §4) — an assumed dependency, not something to redesign here. Until that stable key exists, player meta is only as trustworthy as the connection claiming it — a known, stated limitation, not a silently-assumed one.
+**Keyed to a real player identity — which this doc doesn't invent.** Real authentication is designed in `player-accounts.md`; this doc treats "a stable per-player key exists" as a black box the same way crafting treats the material silo (`crafting.md` §3) or Area treats atmospherics (`area.md` §4) — an assumed dependency, not redesigned here. On a server that doesn't require the verification `player-accounts.md` §3 supplies, player meta is only as trustworthy as the connection claiming it — a known, stated limitation, not a silently-assumed one.
 
 **Moderation notes/bans are stored here, not designed here.** This layer is the substrate a note or a ban gets written to; the actual moderation workflow — who can issue one, what it restricts, any appeal process — is `admin-tools.md` §7's job, the same separation `round-config.md` §10 already drew around its own admin toolkit.
 
@@ -122,7 +122,7 @@ No new permanent chrome, same discipline as everywhere else in this project.
 | Round history log | Written here, rendered by round config's admin screen (`round-config.md` §5) |
 | Playtime / job unlocks | Feeds lobby's playtime-gated job display (`lobby.md` §2) |
 | Saved lobby preferences | Lobby's ranked-preference list (`lobby.md` §3) |
-| Stable player identity key | `player-accounts` (not designed here) |
+| Stable player identity key | `player-accounts.md` §3 |
 | Moderation notes/bans | Storage only; workflow is `admin-tools.md` §7's job |
 | Crew record / ID card exclusion | `death-cloning-respawn.md` §4, `id-access.md` §2 — never a parallel save |
 | Round snapshot cadence, recovery | This doc, §6 |
@@ -130,7 +130,7 @@ No new permanent chrome, same discipline as everywhere else in this project.
 
 ## 11. Out of scope for this pass
 
-- **Real authentication/account identity itself** — `player-accounts`, a separate, not-yet-designed system this doc treats as a black box (§5)
+- **Real authentication/account identity itself** — designed in `player-accounts.md`; this doc treats it as a black box (§5)
 - **Exact snapshot cadence, retention window, and disk-space/rotation policy** — a balancing pass, not a design decision
 - **Per-domain round-snapshot capture shape** (electricity kWh state, atmospherics turf buffers, item/container contents, entity/mind data) — this doc guarantees the mechanism; each system's own doc is where its own runtime-state shape gets defined
 - **Admin-facing save/restore/rewind UI and permissions beyond the always-available override in §6** — `admin-tools.md`'s permission-tier model (§2) covers who could invoke this; the exact UI isn't detailed here

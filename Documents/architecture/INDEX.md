@@ -59,7 +59,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | rd-material-economy | none yet | none yet | none yet |
 | cryogenics | [cryogenics.md](../design/cryogenics.md) — active | none yet | none yet |
 | admin-tools | [admin-tools.md](../design/admin-tools.md) — active | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |
-| player-accounts | none yet | none yet | none yet |
+| player-accounts | [player-accounts.md](../design/player-accounts.md) — active | none yet | none yet |
 
 [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) (shipped) and the infrastructure systems below (core
 subsystems, rendering pipeline internals, data/codegen, etc.) aren't gameplay domains with

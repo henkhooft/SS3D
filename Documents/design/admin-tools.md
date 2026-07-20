@@ -66,7 +66,7 @@ None of these invent new round or objective logic — they're the identical stat
 
 - **Mute** — silences a player's comms output (`comms.md`) for a duration, logged.
 - **Kick** — disconnects the current session; no persistent record beyond the log line.
-- **Ban** — kicks and blocks reconnection, keyed to the same stable identity `persistence-save.md` §5 already flags as pending real authentication. Until that exists, a ban is only as good as the connection claiming that identity — the identical caveat that doc already states, not a new one invented here.
+- **Ban** — kicks and blocks reconnection, keyed to the same stable identity `persistence-save.md` §5 already flags. On a server requiring `player-accounts.md` §3's verification, this is a real, reliable ban; on one that doesn't, a ban is only as good as the connection claiming that identity — the identical caveat that doc already states, not a new one invented here.
 - **Notes** — a plain, timestamped remark attached to a player's record, visible to Moderator tier and above, never player-facing.
 
 Appeal process, ban-duration conventions, and escalation policy are server policy, not designed here (§11).
@@ -111,7 +111,7 @@ No new permanent chrome for ordinary players — this entire doc is admin-facing
 |---|---|---|
 | 1 | An admin bans a player for repeated griefing | Ban keyed to the player's claimed identity, per §7 |
 | 2 | The banned player reconnects under a different claimed ckey | Ban doesn't catch them — the exact limitation `persistence-save.md` §5 already flagged |
-| 3 | Admin notes the evasion; real authentication (`player-accounts`) is the actual fix, not a workaround invented here | Consistent with the rest of this project's honesty about what it hasn't solved yet |
+| 3 | Admin notes the evasion; real authentication (`player-accounts.md`) is the actual fix, and even that only raises the cost of evasion rather than eliminating it (`player-accounts.md` §5) | Consistent with the rest of this project's honesty about what it hasn't solved yet |
 
 ## 10. Integration notes
 
@@ -136,5 +136,5 @@ No new permanent chrome for ordinary players — this entire doc is admin-facing
 - **Ban duration conventions, appeal process, and escalation policy** — server policy, not a mechanic.
 - **Exact permission-tier names and count** beyond the three-tier illustration in §2 — a server-configurable content decision.
 - **Vote-kick or other player-driven moderation** — a different, player-facing mechanic, not this doc's territory.
-- **Real player authentication** — `player-accounts`, a separate not-yet-designed system this doc inherits the same black-box treatment for that `persistence-save.md` §5 already established.
+- **Real player authentication** — designed in `player-accounts.md`; this doc inherits the same black-box treatment for it that `persistence-save.md` §5 already established.
 - **Server-level operations** (restart, config-file edits, hosting/deployment) — outside gameplay design scope entirely.

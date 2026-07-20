@@ -97,7 +97,7 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 - Round length and end conditions (`round-end summary & transition`, a separate still-open pass)
 - The exact antagonist-count ratio and eligibility exclusions within the assignment mechanism `antagonist-content.md` §2 now defines — a balancing/content decision, not this doc's
 - Dynamic/threat-budget-style meta-gamemodes (a plausible future extension of the pool shape, not designed as one here)
-- Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; player-accounts is a separate not-yet-designed system)
+- Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; `player-accounts.md` is where authentication itself is designed)
 - Exact weight values and precondition thresholds (a balancing pass, not a design decision)
 - The full admin toolkit — ahelp, player management, audit logging, stealth observation — designed in `admin-tools.md`; this doc only needs its own config screen (§5), not the whole toolkit
 
