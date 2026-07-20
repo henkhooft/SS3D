@@ -34,6 +34,17 @@
     margin-right: 3px;
 }
 
+.map-editor-toolbar-strip--vertical {
+    flex-direction: column;
+}
+
+.map-editor-toolbar-strip--vertical > * {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
 .map-editor-icon-btn {
     width: 38px;
     height: 38px;
@@ -64,27 +75,6 @@
 
 .map-editor-icon-btn--disabled .map-editor-vector-icon {
     -unity-background-image-tint-color: var(--ss3d-text-tertiary);
-}
-
-.map-editor-exit-btn--labeled {
-    width: auto;
-    min-width: 38px;
-    height: 36px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    padding-left: 12px;
-    padding-right: 12px;
-}
-
-.map-editor-exit-btn--labeled .map-editor-icon-btn__icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-}
-
-.map-editor-exit-btn .map-editor-vector-icon {
-    -unity-background-image-tint-color: var(--ss3d-text-primary);
 }
 
 .map-editor-mode-tab__icon {
@@ -151,26 +141,20 @@
 }
 
 .map-editor-separator {
-    width: 1px;
+    height: 1px;
     align-self: stretch;
     background-color: var(--ss3d-border-default);
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.map-editor-separator--vertical {
+    height: 1px;
+    width: auto;
     margin-top: 2px;
     margin-bottom: 2px;
-}
-
-.map-editor-exit-btn {
-    padding-left: 12px;
-    padding-right: 12px;
-    height: 36px;
-    background-color: var(--ss3d-surface-elevated);
-    border-width: 1px;
-    border-color: var(--ss3d-border-default);
-    border-radius: var(--ss3d-radius-sm);
-    color: var(--ss3d-text-primary);
-}
-
-.map-editor-exit-btn:hover {
-    background-color: var(--ss3d-surface-panel-raised);
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .map-editor-region {
@@ -178,11 +162,17 @@
 }
 
 .map-editor-region--top-left { left: 24px; top: 24px; }
-.map-editor-region--top-center { left: 50%; top: 24px; translate: -50% 0; width: auto; }
-.map-editor-region--top-right { right: 24px; top: 24px; }
-/* Explicit width so absolute + left:50% does not stretch to the full hud layer. */
-.map-editor-region--selected { left: 50%; top: 108px; translate: -50% 0; width: 448px; }
-.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 336px; }
+.map-editor-region--top-right { right: 24px; top: 24px; width: auto; }
+.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 260px; }
+
+.map-editor-right-column {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.map-editor-right-column > * {
+    margin-bottom: 12px;
+}
 
 .map-editor-window {
     background-color: var(--ss3d-surface-panel);
@@ -200,6 +190,108 @@
     letter-spacing: 1px;
     -unity-text-align: upper-left;
 }
+
+.map-editor-popover-label {
+    color: var(--ss3d-text-secondary);
+    font-size: var(--ss3d-text-body-sm, 12px);
+    margin-bottom: 4px;
+}
+
+/* -- Camera dial ---------------------------------------------------- */
+
+.map-editor-camera-dial-wrap {
+    align-items: center;
+}
+
+.map-editor-camera-dial {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-editor-camera-dial__ring {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 999px;
+    background-color: var(--ss3d-surface-inset);
+    border-width: 1.5px;
+    border-color: var(--ss3d-border-strong);
+}
+
+.map-editor-camera-dial__open {
+    position: absolute;
+    left: 24px;
+    top: 24px;
+    right: 24px;
+    bottom: 24px;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.map-editor-camera-dial__open .map-editor-vector-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.map-editor-camera-dial__open.map-editor-icon-btn--active {
+    background-color: var(--ss3d-accent-rust-dim);
+}
+
+.map-editor-camera-dial__open.map-editor-icon-btn--active .map-editor-vector-icon {
+    -unity-background-image-tint-color: var(--ss3d-text-on-accent);
+}
+
+.map-editor-camera-dial__btn {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background-color: var(--ss3d-surface-elevated);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.map-editor-camera-dial__btn-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.map-editor-camera-dial__rotate-left {
+    left: -4px;
+    top: 27px;
+}
+
+.map-editor-camera-dial__rotate-right {
+    right: -4px;
+    top: 27px;
+}
+
+.map-editor-camera-dial__zoom-row {
+    flex-direction: row;
+    margin-top: 8px;
+}
+
+.map-editor-camera-dial__zoom-row > .map-editor-camera-dial__btn {
+    position: relative;
+    left: 0;
+    top: 0;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+/* -- Object library panel -------------------------------------------- */
 
 .map-editor-mode-rail {
     width: 108px;
@@ -288,24 +380,88 @@
     margin-left: 8px;
 }
 
+.map-editor-library-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--ss3d-surface-panel-raised);
+    padding: 10px 14px;
+    border-top-left-radius: var(--ss3d-radius-md);
+    border-top-right-radius: var(--ss3d-radius-md);
+}
+
+.map-editor-library-header__title {
+    color: var(--ss3d-text-primary);
+    -unity-font-definition: initial;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.map-editor-library-header__buttons {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.map-editor-header-icon-btn {
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: var(--ss3d-radius-sm);
+    padding: 0;
+    margin-left: 2px;
+}
+
+.map-editor-header-icon-btn__icon {
+    width: 14px;
+    height: 14px;
+}
+
+.map-editor-header-icon-btn .map-editor-vector-icon {
+    -unity-background-image-tint-color: var(--ss3d-text-tertiary);
+}
+
+.map-editor-header-icon-btn:hover {
+    background-color: var(--ss3d-btn-highlighted-bg, var(--ss3d-surface-elevated));
+}
+
+.map-editor-header-icon-btn--active {
+    background-color: var(--ss3d-accent-rust-dim);
+}
+
+.map-editor-header-icon-btn--active .map-editor-vector-icon {
+    -unity-background-image-tint-color: var(--ss3d-text-on-accent);
+}
+
+.map-editor-library-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    padding: 14px;
+}
+
 .map-editor-grid {
     flex-direction: row;
-    flex-wrap: wrap;
 }
 
 .map-editor-grid-scroll {
     flex-grow: 1;
-    min-height: 220px;
-    max-height: 240px;
+    margin-top: 10px;
+}
+
+.map-editor-grid-column {
+    flex-direction: column;
+    flex-shrink: 0;
 }
 
 .map-editor-slot {
-    flex-grow: 1;
-    flex-shrink: 0;
-    flex-basis: 96px;
-    min-width: 88px;
-    max-width: 112px;
+    width: 88px;
     height: 104px;
+    flex-shrink: 0;
     align-items: center;
     justify-content: flex-start;
     margin: 4px;
@@ -348,58 +504,23 @@
     max-width: 100%;
 }
 
-.map-editor-selected-panel {
-    width: 420px;
-    flex-direction: row;
-}
-
-.map-editor-selected-icon {
-    width: 64px;
-    height: 64px;
-    border-width: 1.5px;
-    border-color: var(--ss3d-border-strong);
-    border-radius: var(--ss3d-radius-md);
-    margin-right: 14px;
-    -unity-background-scale-mode: scale-to-fit;
-}
-
-.map-editor-selected-name {
-    color: var(--ss3d-text-primary);
-    font-size: 16px;
-    margin-bottom: 4px;
-}
-
-.map-editor-selected-meta {
-    color: var(--ss3d-text-tertiary);
-    font-size: 12px;
-    margin-bottom: 8px;
-}
-
-.map-editor-selected-hint {
-    background-color: var(--ss3d-surface-inset);
-    border-width: 1px;
-    border-color: var(--ss3d-border-default);
-    border-radius: var(--ss3d-radius-sm);
-    padding: 6px 10px;
-    font-size: 12px;
-    color: var(--ss3d-text-tertiary);
-}
-
-.map-editor-selected-hint--active {
-    border-color: var(--map-editor-accent);
-    color: var(--map-editor-accent);
-}
-
 .map-editor-popover {
     position: absolute;
-    top: 52px;
-    right: 0;
+    top: 0;
     width: 260px;
     z-index: 100;
 }
 
+.map-editor-popover--anchor-right {
+    left: calc(100% + 8px);
+}
+
+.map-editor-popover--anchor-left {
+    right: calc(100% + 8px);
+}
+
 .map-editor-popover--wide {
-    width: 300px;
+    width: 320px;
 }
 
 .map-editor-toggle-row {
@@ -433,6 +554,7 @@
 }
 
 .map-editor-map-row {
+    width: 100%;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
@@ -440,11 +562,42 @@
     padding-bottom: 6px;
     border-bottom-width: 1px;
     border-bottom-color: var(--ss3d-border-subtle);
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-radius: 0;
+    margin: 0;
+}
+
+.map-editor-map-row:hover {
+    background-color: var(--ss3d-surface-panel-raised);
 }
 
 .map-editor-map-name {
     color: var(--ss3d-text-primary);
     font-size: 13px;
+}
+
+.map-editor-map-name--overwrite-target {
+    color: var(--map-editor-accent);
+}
+
+.map-editor-map-badge {
+    font-size: 11px;
+    color: var(--ss3d-feedback-info-text, var(--ss3d-text-primary));
+    background-color: var(--ss3d-feedback-info-bg);
+    border-width: 1px;
+    border-color: var(--ss3d-feedback-info-border);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 2px 8px;
+    margin-left: 8px;
+}
+
+.map-editor-map-badge--warning {
+    color: var(--ss3d-feedback-warning-text, var(--ss3d-text-primary));
+    background-color: var(--ss3d-feedback-warning-bg);
+    border-color: var(--ss3d-feedback-warning-border);
 }
 
 .map-editor-action-btn {
@@ -455,6 +608,17 @@
     border-radius: var(--ss3d-radius-sm);
     color: var(--ss3d-text-primary);
     font-size: 12px;
+    margin-left: 8px;
+}
+
+.map-editor-action-btn--primary {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: var(--map-editor-accent);
+    border-color: var(--map-editor-accent);
+    color: var(--ss3d-text-on-accent);
+    margin-left: 0;
+    -unity-text-align: middle-center;
 }
 
 .map-editor-stub-message {
@@ -467,7 +631,7 @@
 
 .map-editor-toast {
     position: absolute;
-    bottom: 40px;
+    bottom: 296px;
     left: 50%;
     translate: -50% 0;
     background-color: var(--ss3d-surface-panel-raised);
@@ -477,11 +641,6 @@
     padding: 10px 18px;
     color: var(--ss3d-text-primary);
     font-size: 13px;
-}
-
-.map-editor-exit-btn__label {
-    font-size: 12px;
-    color: var(--ss3d-text-primary);
 }
 
 .map-editor-reveal-btn {
@@ -510,15 +669,6 @@
 
 .map-editor-library {
     flex-grow: 1;
+    flex-shrink: 1;
     margin-left: 12px;
-}
-
-.map-editor-save-field {
-    margin-top: 8px;
-    margin-bottom: 8px;
-    background-color: var(--ss3d-surface-inset);
-    border-width: 1px;
-    border-color: var(--ss3d-border-default);
-    color: var(--ss3d-text-primary);
-    padding: 6px;
 }

@@ -90,6 +90,26 @@ namespace SS3D.Systems.Tile.MapEditor
             ApplyCamera();
         }
 
+        /// <summary>Nudges yaw by a fixed step — the camera dial's rotate-left/right buttons.</summary>
+        public void RotateStep(float degrees)
+        {
+            if (!_active)
+                return;
+
+            _yaw += degrees;
+            ApplyCamera();
+        }
+
+        /// <summary>Nudges distance by a fixed step — the camera dial's zoom-in/out buttons.</summary>
+        public void ZoomStep(float amount)
+        {
+            if (!_active)
+                return;
+
+            _distance = Mathf.Clamp(_distance - amount, MinDistance, MaxDistance);
+            ApplyCamera();
+        }
+
         /// <summary>
         /// Applies UI camera sliders. Speeds are on a 1–10 scale where 5 ≈ 1x.
         /// </summary>

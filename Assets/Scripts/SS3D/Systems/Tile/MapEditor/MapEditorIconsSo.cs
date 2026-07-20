@@ -13,19 +13,25 @@ namespace SS3D.Systems.Tile.MapEditor
         public static class Paths
         {
             public const string Select = "Assets/Art/Icons/external icons/sbed/select.svg";
-            public const string Edit = "Assets/Art/Icons/external icons/delapouite/pencil.svg";
+            public const string Construct = "Assets/Art/Icons/external icons/lorc/hammer-nails.svg";
             public const string Move = "Assets/Art/Icons/external icons/delapouite/move.svg";
+            public const string Dropper = "Assets/Art/Icons/external icons/lorc/eyedropper.svg";
+            public const string Delete = "Assets/Art/Icons/external icons/delapouite/trash-can.svg";
             public const string Undo = "Assets/Art/Icons/external icons/lorc/return-arrow.svg";
             public const string Redo = "Assets/Art/Icons/external icons/delapouite/share.svg";
-            public const string Quicksave = "Assets/Art/Icons/external icons/delapouite/save.svg";
+            public const string SaveMap = "Assets/Art/Icons/external icons/delapouite/save.svg";
             public const string OpenMap = "Assets/Art/Icons/external icons/delapouite/open-folder.svg";
+            public const string RotateLeft = "Assets/Art/Icons/external icons/delapouite/anticlockwise-rotation.svg";
+            public const string RotateRight = "Assets/Art/Icons/external icons/delapouite/clockwise-rotation.svg";
+            public const string ZoomIn = "Assets/Art/Icons/external icons/lorc/magnifying-glass.svg";
+            public const string ZoomOut = "Assets/Art/Icons/external icons/lorc/magnifying-glass.svg";
+            public const string PanelExpand = "Assets/Art/Icons/map-editor/chevron-up.svg";
+            public const string PanelCollapse = "Assets/Art/Icons/map-editor/chevron-down.svg";
             public const string ResetView = "Assets/Art/Icons/external icons/lorc/compass.svg";
             public const string Layers = "Assets/Art/Icons/external icons/delapouite/stack.svg";
-            public const string Eye = "Assets/Art/Icons/external icons/lorc/eyeball.svg";
             public const string EyeOff = "Assets/Art/Icons/external icons/delapouite/invisible.svg";
             public const string Camera = "Assets/Art/Icons/external icons/delapouite/photo-camera.svg";
             public const string Settings = "Assets/Art/Icons/external icons/lorc/cog.svg";
-            public const string Exit = "Assets/Art/Icons/external icons/delapouite/exit-door.svg";
             public const string Search = "Assets/Art/Icons/external icons/lorc/magnifying-glass.svg";
             public const string ModeUpper = "Assets/Art/Icons/external icons/delapouite/expand.svg";
             public const string ModeLower = "Assets/Art/Icons/external icons/delapouite/contract.svg";
@@ -54,19 +60,25 @@ namespace SS3D.Systems.Tile.MapEditor
 
         [Header("Baked references (filled by SS3D/Map Editor/Bake Icons for player builds)")]
         [SerializeField] private VectorImage _select;
-        [SerializeField] private VectorImage _edit;
+        [SerializeField] private VectorImage _construct;
         [SerializeField] private VectorImage _move;
+        [SerializeField] private VectorImage _dropper;
+        [SerializeField] private VectorImage _delete;
         [SerializeField] private VectorImage _undo;
         [SerializeField] private VectorImage _redo;
-        [SerializeField] private VectorImage _quicksave;
+        [SerializeField] private VectorImage _saveMap;
         [SerializeField] private VectorImage _openMap;
+        [SerializeField] private VectorImage _rotateLeft;
+        [SerializeField] private VectorImage _rotateRight;
+        [SerializeField] private VectorImage _zoomIn;
+        [SerializeField] private VectorImage _zoomOut;
+        [SerializeField] private VectorImage _panelExpand;
+        [SerializeField] private VectorImage _panelCollapse;
         [SerializeField] private VectorImage _resetView;
         [SerializeField] private VectorImage _layers;
-        [SerializeField] private VectorImage _eye;
         [SerializeField] private VectorImage _eyeOff;
         [SerializeField] private VectorImage _camera;
         [SerializeField] private VectorImage _settings;
-        [SerializeField] private VectorImage _exit;
         [SerializeField] private VectorImage _search;
         [SerializeField] private VectorImage _modeUpper;
         [SerializeField] private VectorImage _modeLower;
@@ -96,8 +108,10 @@ namespace SS3D.Systems.Tile.MapEditor
             tool switch
             {
                 MapEditorTool.Select => Resolve(_select, Paths.Select),
-                MapEditorTool.Edit => Resolve(_edit, Paths.Edit),
+                MapEditorTool.Edit => Resolve(_construct, Paths.Construct),
                 MapEditorTool.Move => Resolve(_move, Paths.Move),
+                MapEditorTool.Dropper => Resolve(_dropper, Paths.Dropper),
+                MapEditorTool.Delete => Resolve(_delete, Paths.Delete),
                 _ => null,
             };
 
@@ -138,26 +152,23 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public VectorImage Undo => Resolve(_undo, Paths.Undo);
         public VectorImage Redo => Resolve(_redo, Paths.Redo);
-        public VectorImage Quicksave => Resolve(_quicksave, Paths.Quicksave);
+        public VectorImage SaveMap => Resolve(_saveMap, Paths.SaveMap);
         public VectorImage OpenMap => Resolve(_openMap, Paths.OpenMap);
+        public VectorImage RotateLeft => Resolve(_rotateLeft, Paths.RotateLeft);
+        public VectorImage RotateRight => Resolve(_rotateRight, Paths.RotateRight);
+        public VectorImage ZoomIn => Resolve(_zoomIn, Paths.ZoomIn);
+        public VectorImage ZoomOut => Resolve(_zoomOut, Paths.ZoomOut);
+        public VectorImage PanelExpand => Resolve(_panelExpand, Paths.PanelExpand);
+        public VectorImage PanelCollapse => Resolve(_panelCollapse, Paths.PanelCollapse);
         public VectorImage ResetView => Resolve(_resetView, Paths.ResetView);
         public VectorImage Layers => Resolve(_layers, Paths.Layers);
-        public VectorImage Eye => Resolve(_eye, Paths.Eye);
-        public VectorImage EyeOff => Resolve(_eyeOff, Paths.EyeOff);
         public VectorImage Camera => Resolve(_camera, Paths.Camera);
         public VectorImage Settings => Resolve(_settings, Paths.Settings);
-        public VectorImage Exit => Resolve(_exit, Paths.Exit);
         public VectorImage Search => Resolve(_search, Paths.Search);
 
         /// <summary>
-        /// Icon for the "Hide UI" button, visible only while the HUD is showing — an open eye,
-        /// since clicking it hides the (currently visible) UI.
-        /// </summary>
-        public VectorImage HideUiIcon => Resolve(_eye, Paths.Eye);
-
-        /// <summary>
-        /// Icon for the floating reveal button, visible only while the HUD is hidden — a crossed-out
-        /// eye, since clicking it shows the (currently hidden) UI.
+        /// Icon for the floating reveal button, visible only while the HUD is hidden (toggled via
+        /// the F7 hotkey — the toolbar no longer has an explicit Hide UI button).
         /// </summary>
         public VectorImage ShowUi => Resolve(_eyeOff, Paths.EyeOff);
 

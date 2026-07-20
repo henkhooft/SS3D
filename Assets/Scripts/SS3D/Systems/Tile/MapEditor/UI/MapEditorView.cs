@@ -14,6 +14,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     /// </summary>
     public sealed class MapEditorView
     {
+        /// <summary>Object library panel heights (px) for the three resize states.</summary>
+        private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
+        {
+            [PaletteMode.Min] = 52f,
+            [PaletteMode.Normal] = 260f,
+            [PaletteMode.Max] = 460f,
+        };
+
+        /// <summary>Object library grid row count per resize state (columns scroll horizontally).</summary>
+        private const int NormalGridRows = 2;
+        private const int MaxGridRows = 4;
+
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
         private readonly MapEditorViewModel _vm;
@@ -22,28 +34,35 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private VisualElement _root;
         private VisualElement _hudLayer;
-        private VisualElement _toolsToolbar;
-        private VisualElement _viewToolbar;
-        private VisualElement _selectedPanel;
+        private VisualElement _leftToolbar;
+        private VisualElement _rightToolbar;
         private VisualElement _modeRail;
         private VisualElement _subcatRow;
+        private VisualElement _paletteBody;
+        private VisualElement _paletteRegion;
         private ScrollView _gridScroll;
         private VisualElement _grid;
         private TextField _searchField;
+        private TextField _saveNameField;
         private Label _windowTitle;
-        private Label _selectedName;
-        private Label _selectedMeta;
-        private Label _selectedHint;
-        private VisualElement _selectedIcon;
         private Label _toast;
-        private VisualElement _toolsPopoverAnchor;
-        private VisualElement _viewPopoverAnchor;
+        private VisualElement _leftPopoverAnchor;
+        private VisualElement _rightPopoverAnchor;
+        private VisualElement _cameraPopoverAnchor;
         private VisualElement _activePopover;
-        private TextField _saveAsField;
+
+        private PaletteMode _paletteMode = PaletteMode.Normal;
 
         private readonly Dictionary<MapEditorTool, Button> _toolButtons = new();
         private readonly Dictionary<MapEditorMode, Button> _modeButtons = new();
         private readonly Dictionary<MapEditorSubcategory, Button> _subcatButtons = new();
+
+        private enum PaletteMode
+        {
+            Min,
+            Normal,
+            Max,
+        }
 
         public MapEditorView(
             StyleSheet styleSheet,
@@ -60,20 +79,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _vm.StateChanged += Refresh;
         }
 
-        public event Action ExitRequested;
         public event Action<MapEditorTool> ToolSelected;
         public event Action UndoRequested;
         public event Action RedoRequested;
-        public event Action QuicksaveRequested;
         public event Action<string> SaveAsRequested;
         public event Action<string> LoadMapRequested;
         public event Action<string> DeleteMapRequested;
         public event Action ResetViewRequested;
-        public event Action HideUIRequested;
         public event Action ShowUIRequested;
         public event Action<bool> GridSnapChanged;
         public event Action<bool> DebugOverlayChanged;
         public event Action<float, float, float> CameraSettingsChanged;
+        public event Action<int> CameraRotateRequested;
+        public event Action<int> CameraZoomRequested;
         public event Action NewMapRequested;
         public event Action MapListRefreshRequested;
         public event Action<TileLayerCategory, bool> LayerCategoryVisibilityChanged;
@@ -100,10 +118,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _hudLayer.style.right = 0;
             _hudLayer.style.bottom = 0;
 
-            BuildExitButton();
-            BuildToolsToolbar();
-            BuildViewToolbar();
-            BuildSelectedPanel();
+            BuildLeftToolbar();
+            BuildRightSide();
             BuildBottomDock();
             BuildRevealButton();
 
@@ -125,104 +141,110 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public void SetMouseOverUI(bool over) => _root?.EnableInClassList("map-editor-mouse-over", over);
 
-        private void BuildExitButton()
+        private void BuildLeftToolbar()
         {
             VisualElement region = CreateRegion("map-editor-region--top-left");
-            Button exit = new(() => ExitRequested?.Invoke());
-            exit.AddToClassList("map-editor-exit-btn");
-            exit.AddToClassList("map-editor-exit-btn--labeled");
-            exit.tooltip = "Exit";
+            _leftPopoverAnchor = region;
 
-            VisualElement icon = CreateIconElement(_icons?.Exit);
-            icon.AddToClassList("map-editor-icon-btn__icon");
-            Label label = new("Exit");
-            label.AddToClassList("map-editor-exit-btn__label");
-            exit.Add(icon);
-            exit.Add(label);
-            region.Add(exit);
-            _hudLayer.Add(region);
-        }
-
-        private void BuildToolsToolbar()
-        {
-            VisualElement region = CreateRegion("map-editor-region--top-center");
-            _toolsPopoverAnchor = region;
-
-            _toolsToolbar = CreateToolbarStrip();
-            AddToolButton(_toolsToolbar, MapEditorTool.Select, "Select");
-            AddToolButton(_toolsToolbar, MapEditorTool.Edit, "Edit");
-            AddToolButton(_toolsToolbar, MapEditorTool.Move, "Move");
-            AddSeparator(_toolsToolbar);
+            _leftToolbar = CreateToolbarStrip(vertical: true);
+            AddToolButton(_leftToolbar, MapEditorTool.Edit, "Edit");
+            AddToolButton(_leftToolbar, MapEditorTool.Select, "Select");
+            AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper (copy object)");
+            AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete");
+            AddSeparator(_leftToolbar, vertical: true);
 
             Button undo = CreateIconButton(_icons?.Undo, "Undo", () => UndoRequested?.Invoke());
             undo.name = "undo-btn";
-            _toolsToolbar.Add(undo);
+            _leftToolbar.Add(undo);
 
             Button redo = CreateIconButton(_icons?.Redo, "Redo", () => RedoRequested?.Invoke());
             redo.name = "redo-btn";
-            _toolsToolbar.Add(redo);
-            AddSeparator(_toolsToolbar);
+            _leftToolbar.Add(redo);
+            AddSeparator(_leftToolbar, vertical: true);
 
-            _toolsToolbar.Add(CreateIconButton(_icons?.Quicksave, "Quicksave", () => QuicksaveRequested?.Invoke()));
-            _toolsToolbar.Add(CreateIconButton(_icons?.OpenMap, "Map selection", ToggleMapsPopover));
+            _leftToolbar.Add(CreateIconButton(_icons?.SaveMap, "Save map...", () => TogglePopover("saveMenu")));
+            _leftToolbar.Add(CreateIconButton(_icons?.OpenMap, "Open map selection", () => TogglePopover("maps")));
 
-            region.Add(_toolsToolbar);
+            region.Add(_leftToolbar);
             _hudLayer.Add(region);
         }
 
-        private void BuildViewToolbar()
+        private void BuildRightSide()
         {
             VisualElement region = CreateRegion("map-editor-region--top-right");
-            _viewPopoverAnchor = region;
+            region.AddToClassList("map-editor-right-column");
 
-            _viewToolbar = CreateToolbarStrip();
-            _viewToolbar.Add(CreateIconButton(_icons?.ResetView, "Reset position", () => ResetViewRequested?.Invoke()));
-            _viewToolbar.Add(CreateIconButton(_icons?.Layers, "Layer view mode", () => TogglePopover("layers")));
-            _viewToolbar.Add(CreateIconButton(_icons?.HideUiIcon, "Hide UI", () => HideUIRequested?.Invoke()));
-            _viewToolbar.Add(CreateIconButton(_icons?.Camera, "Camera options", () => TogglePopover("camera")));
-            _viewToolbar.Add(CreateIconButton(_icons?.Settings, "Map editor settings", () => TogglePopover("settings")));
+            VisualElement cameraWrap = new() { pickingMode = PickingMode.Position };
+            cameraWrap.style.position = Position.Relative;
+            _cameraPopoverAnchor = cameraWrap;
+            cameraWrap.Add(BuildCameraDial());
+            region.Add(cameraWrap);
 
-            region.Add(_viewToolbar);
+            VisualElement toolbarWrap = new() { pickingMode = PickingMode.Position };
+            toolbarWrap.style.position = Position.Relative;
+            _rightPopoverAnchor = toolbarWrap;
+
+            _rightToolbar = CreateToolbarStrip(vertical: true);
+            _rightToolbar.Add(CreateIconButton(_icons?.ResetView, "Reset position", () => ResetViewRequested?.Invoke()));
+            _rightToolbar.Add(CreateIconButton(_icons?.Layers, "Layer view mode", () => TogglePopover("layers")));
+            _rightToolbar.Add(CreateIconButton(_icons?.Settings, "Map editor settings", () => TogglePopover("settings")));
+            toolbarWrap.Add(_rightToolbar);
+            region.Add(toolbarWrap);
+
             _hudLayer.Add(region);
         }
 
-        private void BuildSelectedPanel()
+        private VisualElement BuildCameraDial()
         {
-            VisualElement region = CreateRegion("map-editor-region--selected");
-            // Display-only — must not steal world placement under / around the hint strip.
-            VisualElement window = CreateWindow("Selected Object", blocksWorldPicks: false);
-            _selectedPanel = window;
+            VisualElement dial = new() { pickingMode = PickingMode.Position };
+            dial.AddToClassList("map-editor-camera-dial");
 
-            VisualElement row = new() { pickingMode = PickingMode.Ignore };
-            row.AddToClassList("map-editor-selected-panel");
+            VisualElement ring = new() { pickingMode = PickingMode.Ignore };
+            ring.AddToClassList("map-editor-camera-dial__ring");
+            ring.name = "camera-dial-ring";
+            dial.Add(ring);
 
-            _selectedIcon = new VisualElement { pickingMode = PickingMode.Ignore };
-            _selectedIcon.AddToClassList("map-editor-selected-icon");
+            Button open = CreateIconButton(_icons?.Camera, "Camera options", () => TogglePopover("camera"));
+            open.AddToClassList("map-editor-camera-dial__open");
+            open.name = "camera-dial-open";
+            dial.Add(open);
 
-            VisualElement textCol = new() { pickingMode = PickingMode.Ignore };
-            _selectedName = new Label("—") { pickingMode = PickingMode.Ignore };
-            _selectedName.AddToClassList("map-editor-selected-name");
-            _selectedMeta = new Label("Placement hint") { pickingMode = PickingMode.Ignore };
-            _selectedMeta.AddToClassList("map-editor-selected-meta");
-            _selectedHint = new Label { pickingMode = PickingMode.Ignore };
-            _selectedHint.AddToClassList("map-editor-selected-hint");
+            dial.Add(CreateDialButton(_icons?.RotateLeft, "Rotate left",
+                () => CameraRotateRequested?.Invoke(-1), "map-editor-camera-dial__rotate-left"));
+            dial.Add(CreateDialButton(_icons?.RotateRight, "Rotate right",
+                () => CameraRotateRequested?.Invoke(1), "map-editor-camera-dial__rotate-right"));
 
-            textCol.Add(_selectedName);
-            textCol.Add(_selectedMeta);
-            textCol.Add(_selectedHint);
-            row.Add(_selectedIcon);
-            row.Add(textCol);
-            window.Add(row);
-            region.Add(window);
-            _hudLayer.Add(region);
+            VisualElement zoomRow = new() { pickingMode = PickingMode.Position };
+            zoomRow.AddToClassList("map-editor-camera-dial__zoom-row");
+            zoomRow.Add(CreateDialButton(_icons?.ZoomOut, "Zoom out", () => CameraZoomRequested?.Invoke(-1)));
+            zoomRow.Add(CreateDialButton(_icons?.ZoomIn, "Zoom in", () => CameraZoomRequested?.Invoke(1)));
+
+            VisualElement wrap = new() { pickingMode = PickingMode.Position };
+            wrap.AddToClassList("map-editor-camera-dial-wrap");
+            wrap.Add(dial);
+            wrap.Add(zoomRow);
+            return wrap;
+        }
+
+        private static Button CreateDialButton(VectorImage icon, string tooltip, Action onClick, string extraClass = null)
+        {
+            Button btn = new(onClick) { tooltip = tooltip };
+            btn.AddToClassList("map-editor-camera-dial__btn");
+            if (extraClass != null)
+                btn.AddToClassList(extraClass);
+
+            VisualElement iconElement = CreateIconElement(icon);
+            iconElement.AddToClassList("map-editor-camera-dial__btn-icon");
+            btn.Add(iconElement);
+            return btn;
         }
 
         private void BuildBottomDock()
         {
             VisualElement region = CreateRegion("map-editor-region--bottom");
             region.AddToClassList("map-editor-bottom-row");
+            _paletteRegion = region;
 
-            // Position so rail padding blocks world picks; tabs remain the interactive targets.
             _modeRail = new VisualElement { pickingMode = PickingMode.Position };
             _modeRail.AddToClassList("map-editor-mode-rail");
             foreach (MapEditorMode mode in Enum.GetValues(typeof(MapEditorMode)))
@@ -234,12 +256,37 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement library = new() { pickingMode = PickingMode.Position };
             library.AddToClassList("map-editor-library");
-            VisualElement libWindow = CreateWindow("Object Library");
-            _windowTitle = libWindow.Q<Label>(className: "map-editor-window__title");
+            VisualElement libWindow = CreateWindow(string.Empty);
+            libWindow.style.flexGrow = 1;
+            libWindow.style.paddingTop = 0;
+            libWindow.style.paddingBottom = 0;
+            libWindow.style.paddingLeft = 0;
+            libWindow.style.paddingRight = 0;
 
-            VisualElement header = new();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.justifyContent = Justify.SpaceBetween;
+            VisualElement header = new() { pickingMode = PickingMode.Position };
+            header.AddToClassList("map-editor-library-header");
+            _windowTitle = new Label { pickingMode = PickingMode.Ignore };
+            _windowTitle.AddToClassList("map-editor-library-header__title");
+            header.Add(_windowTitle);
+
+            VisualElement headerButtons = new() { pickingMode = PickingMode.Position };
+            headerButtons.AddToClassList("map-editor-library-header__buttons");
+            Button collapseBtn = CreateHeaderIconButton(_icons?.PanelCollapse, "Minimize panel",
+                () => TogglePaletteMode(PaletteMode.Min));
+            collapseBtn.name = "palette-collapse-btn";
+            Button expandBtn = CreateHeaderIconButton(_icons?.PanelExpand, "Expand panel",
+                () => TogglePaletteMode(PaletteMode.Max));
+            expandBtn.name = "palette-expand-btn";
+            headerButtons.Add(collapseBtn);
+            headerButtons.Add(expandBtn);
+            header.Add(headerButtons);
+
+            _paletteBody = new VisualElement { pickingMode = PickingMode.Position };
+            _paletteBody.AddToClassList("map-editor-library-body");
+
+            VisualElement toolsRow = new() { pickingMode = PickingMode.Position };
+            toolsRow.style.flexDirection = FlexDirection.Row;
+            toolsRow.style.justifyContent = Justify.SpaceBetween;
 
             _subcatRow = new VisualElement();
             _subcatRow.style.flexDirection = FlexDirection.Row;
@@ -255,17 +302,20 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             search.Add(searchIcon);
             search.Add(_searchField);
 
-            header.Add(_subcatRow);
-            header.Add(search);
+            toolsRow.Add(_subcatRow);
+            toolsRow.Add(search);
 
-            _gridScroll = new ScrollView(ScrollViewMode.Vertical);
+            _gridScroll = new ScrollView(ScrollViewMode.Horizontal);
             _gridScroll.AddToClassList("map-editor-grid-scroll");
             _grid = new VisualElement();
             _grid.AddToClassList("map-editor-grid");
             _gridScroll.Add(_grid);
 
+            _paletteBody.Add(toolsRow);
+            _paletteBody.Add(_gridScroll);
+
             libWindow.Add(header);
-            libWindow.Add(_gridScroll);
+            libWindow.Add(_paletteBody);
             library.Add(libWindow);
 
             region.Add(_modeRail);
@@ -280,6 +330,34 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             reveal.name = "reveal-ui-btn";
             reveal.style.display = DisplayStyle.None;
             _root.Add(reveal);
+        }
+
+        private void TogglePaletteMode(PaletteMode extreme)
+        {
+            _paletteMode = _paletteMode == extreme ? PaletteMode.Normal : extreme;
+            ApplyPaletteMode();
+        }
+
+        private void ApplyPaletteMode()
+        {
+            if (_paletteRegion == null)
+                return;
+
+            _paletteRegion.style.height = PaletteHeights[_paletteMode];
+            bool showBody = _paletteMode != PaletteMode.Min;
+            _paletteBody.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
+            _modeRail.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
+
+            Button collapseBtn = _paletteRegion.Q<Button>("palette-collapse-btn");
+            collapseBtn?.EnableInClassList("map-editor-header-icon-btn--active", _paletteMode == PaletteMode.Min);
+            Button expandBtn = _paletteRegion.Q<Button>("palette-expand-btn");
+            expandBtn?.EnableInClassList("map-editor-header-icon-btn--active", _paletteMode == PaletteMode.Max);
+            if (collapseBtn != null)
+                collapseBtn.tooltip = _paletteMode == PaletteMode.Min ? "Restore panel" : "Minimize panel";
+            if (expandBtn != null)
+                expandBtn.tooltip = _paletteMode == PaletteMode.Max ? "Restore panel" : "Expand panel";
+
+            RebuildGrid();
         }
 
         private void Refresh()
@@ -303,23 +381,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
 
             RebuildSubcategories();
-            RebuildGrid();
+            ApplyPaletteMode();
 
-            string selectedLabel = _vm.IsEraserSelected ? "Eraser" : _vm.SelectedAsset?.NameString ?? "—";
-            _selectedName.text = selectedLabel;
-            _selectedMeta.text =
-                $"Placement hint · Rotation {(int)_vm.CurrentRotation * 90}° · Snap {(_vm.GridSnap ? "On" : "Off")}";
-            _selectedHint.text = _vm.SelectedObjectHint;
-            _selectedHint.EnableInClassList("map-editor-selected-hint--active",
-                _vm.CurrentTool == MapEditorTool.Edit && (_vm.SelectedAsset != null || _vm.IsEraserSelected));
-
-            if (_vm.SelectedAsset?.icon != null)
-                _selectedIcon.style.backgroundImage = new StyleBackground(_vm.SelectedAsset.icon);
-            else
-                _selectedIcon.style.backgroundImage = null;
-
-            Button undoBtn = _toolsToolbar?.Q<Button>("undo-btn");
-            Button redoBtn = _toolsToolbar?.Q<Button>("redo-btn");
+            Button undoBtn = _leftToolbar?.Q<Button>("undo-btn");
+            Button redoBtn = _leftToolbar?.Q<Button>("redo-btn");
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
             redoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.RedoDepth <= 0);
 
@@ -358,6 +423,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void RebuildGrid()
         {
+            if (_grid == null || _paletteMode == PaletteMode.Min)
+                return;
+
             _grid.Clear();
 
             if (_vm.CurrentMode == MapEditorMode.Scripting ||
@@ -376,42 +444,24 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             IEnumerable<MapEditorCatalogEntry> entries =
                 _catalog.Query(_vm.CurrentMode, _vm.CurrentSubcategory, _vm.SearchText);
 
+            int rows = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
+            VisualElement column = null;
+            int inColumn = 0;
             bool any = false;
+
             foreach (MapEditorCatalogEntry entry in entries)
             {
                 any = true;
-                GenericObjectSo asset = entry.IsEraser ? null : _loader.GetAsset(entry.AssetName);
-                Button slot = new(() => AssetSelected?.Invoke(entry, asset));
-                slot.AddToClassList("map-editor-slot");
-                bool active = _vm.SelectedEntry != null &&
-                              string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
-                slot.EnableInClassList("map-editor-slot--active", active);
-
-                VisualElement iconFrame = new();
-                iconFrame.AddToClassList("map-editor-slot__icon-frame");
-
-                VisualElement icon = new();
-                icon.AddToClassList("map-editor-slot__icon");
-                if (entry.IsEraser)
+                if (column == null || inColumn >= rows)
                 {
-                    icon.AddToClassList("map-editor-slot__icon--eraser");
-                }
-                else if (asset?.icon != null)
-                {
-                    icon.style.backgroundImage = new StyleBackground(asset.icon);
+                    column = new VisualElement { pickingMode = PickingMode.Position };
+                    column.AddToClassList("map-editor-grid-column");
+                    _grid.Add(column);
+                    inColumn = 0;
                 }
 
-                iconFrame.Add(icon);
-
-                Label label = new(entry.IsEraser ? "Eraser" : entry.AssetName)
-                {
-                    style = { whiteSpace = WhiteSpace.Normal },
-                };
-                label.AddToClassList("map-editor-slot__label");
-
-                slot.Add(iconFrame);
-                slot.Add(label);
-                _grid.Add(slot);
+                column.Add(BuildSlot(entry));
+                inColumn++;
             }
 
             if (!any)
@@ -422,13 +472,49 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
         }
 
-        private void ToggleMapsPopover() => TogglePopover("maps");
+        private Button BuildSlot(MapEditorCatalogEntry entry)
+        {
+            GenericObjectSo asset = entry.IsEraser ? null : _loader.GetAsset(entry.AssetName);
+            Button slot = new(() => AssetSelected?.Invoke(entry, asset));
+            slot.AddToClassList("map-editor-slot");
+            bool active = _vm.SelectedEntry != null &&
+                          string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
+            slot.EnableInClassList("map-editor-slot--active", active);
+
+            VisualElement iconFrame = new();
+            iconFrame.AddToClassList("map-editor-slot__icon-frame");
+
+            VisualElement icon = new();
+            icon.AddToClassList("map-editor-slot__icon");
+            if (entry.IsEraser)
+            {
+                icon.AddToClassList("map-editor-slot__icon--eraser");
+            }
+            else if (asset?.icon != null)
+            {
+                icon.style.backgroundImage = new StyleBackground(asset.icon);
+            }
+
+            iconFrame.Add(icon);
+
+            Label label = new(entry.IsEraser ? "Eraser" : entry.AssetName)
+            {
+                style = { whiteSpace = WhiteSpace.Normal },
+            };
+            label.AddToClassList("map-editor-slot__label");
+
+            slot.Add(iconFrame);
+            slot.Add(label);
+            return slot;
+        }
 
         private void TogglePopover(string key)
         {
             _vm.OpenPopover = _vm.OpenPopover == key ? null : key;
             RefreshPopover();
         }
+
+        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu";
 
         private void RefreshPopover()
         {
@@ -438,10 +524,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (string.IsNullOrEmpty(_vm.OpenPopover))
                 return;
 
-            VisualElement anchor = _vm.OpenPopover == "maps" ? _toolsPopoverAnchor : _viewPopoverAnchor;
+            VisualElement anchor = _vm.OpenPopover switch
+            {
+                "maps" or "saveMenu" => _leftPopoverAnchor,
+                "camera" => _cameraPopoverAnchor,
+                _ => _rightPopoverAnchor,
+            };
+
             VisualElement popover = new();
             popover.AddToClassList("map-editor-popover");
-            if (_vm.OpenPopover == "maps")
+            popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
+                ? "map-editor-popover--anchor-right"
+                : "map-editor-popover--anchor-left");
+            if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 popover.AddToClassList("map-editor-popover--wide");
 
             VisualElement window = CreateWindow(GetPopoverTitle(_vm.OpenPopover));
@@ -460,7 +555,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             anchor.Add(popover);
             _activePopover = popover;
 
-            if (_vm.OpenPopover == "maps")
+            if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 RequestMapListRefresh();
         }
 
@@ -470,6 +565,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             key switch
             {
                 "maps" => "Map Selection",
+                "saveMenu" => "Save Map",
                 "layers" => "Layer View Mode",
                 "camera" => "Camera Options",
                 "settings" => "Map Editor Settings",
@@ -482,6 +578,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             {
                 case "maps":
                     BuildMapsPopover(container);
+                    break;
+                case "saveMenu":
+                    BuildSavePopover(container);
                     break;
                 case "layers":
                     _vm.EnsureLayerDefaults();
@@ -531,30 +630,61 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             newMapBtn.AddToClassList("map-editor-action-btn");
             newMapBtn.style.marginBottom = 8;
             container.Add(newMapBtn);
+        }
 
-            _saveAsField = new TextField("Save as…") { value = string.Empty };
-            _saveAsField.AddToClassList("map-editor-save-field");
+        private void BuildSavePopover(VisualElement container)
+        {
+            VisualElement nameLabel = new Label("Save Name") { pickingMode = PickingMode.Ignore };
+            nameLabel.AddToClassList("map-editor-popover-label");
+            container.Add(nameLabel);
+
+            VisualElement nameField = new() { pickingMode = PickingMode.Position };
+            nameField.AddToClassList("map-editor-search");
+            _saveNameField = new TextField { value = string.IsNullOrEmpty(_vm.SaveMapName) ? "Untitled Map" : _vm.SaveMapName };
+            _saveNameField.AddToClassList("map-editor-search-field");
+            _saveNameField.RegisterValueChangedCallback(evt => _vm.SaveMapName = evt.newValue);
+            nameField.Add(_saveNameField);
+            container.Add(nameField);
+
+            Label overwriteLabel = new("Overwrite Existing") { pickingMode = PickingMode.Ignore };
+            overwriteLabel.AddToClassList("map-editor-popover-label");
+            overwriteLabel.style.marginTop = 8;
+            container.Add(overwriteLabel);
+
+            VisualElement listRoot = new() { pickingMode = PickingMode.Position };
+            listRoot.name = "save-overwrite-list";
+            container.Add(listRoot);
+
             Button saveBtn = new(() =>
             {
-                if (!string.IsNullOrWhiteSpace(_saveAsField.value))
-                    SaveAsRequested?.Invoke(_saveAsField.value.Trim());
+                string name = _saveNameField.value?.Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                    SaveAsRequested?.Invoke(name);
             })
-            { text = "Save" };
+            { text = "Save Map" };
             saveBtn.AddToClassList("map-editor-action-btn");
-            container.Add(_saveAsField);
+            saveBtn.AddToClassList("map-editor-action-btn--primary");
+            saveBtn.style.marginTop = 10;
             container.Add(saveBtn);
         }
 
-        public void PopulateMapList(IReadOnlyList<Persistence.MapEditorMapEntry> maps)
+        public void PopulateMapList(IReadOnlyList<MapEditorMapEntry> maps)
         {
-            if (_activePopover == null || _vm.OpenPopover != "maps")
+            if (_activePopover == null)
                 return;
 
+            if (_vm.OpenPopover == "maps")
+                PopulateLoadList(maps);
+            else if (_vm.OpenPopover == "saveMenu")
+                PopulateOverwriteList(maps);
+        }
+
+        private void PopulateLoadList(IReadOnlyList<MapEditorMapEntry> maps)
+        {
             VisualElement window = _activePopover.Q(className: "map-editor-window");
             if (window == null)
                 return;
 
-            // Remove old rows (keep title, save field, save btn, close)
             List<VisualElement> toRemove = new();
             foreach (VisualElement child in window.Children())
             {
@@ -565,26 +695,60 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             foreach (VisualElement child in toRemove)
                 child.RemoveFromHierarchy();
 
-            int insertIndex = 2;
-            foreach (Persistence.MapEditorMapEntry map in maps)
+            int insertIndex = 1;
+            foreach (MapEditorMapEntry map in maps)
             {
-                VisualElement row = new();
+                Button row = new(() => LoadMapRequested?.Invoke(map.Name));
                 row.AddToClassList("map-editor-map-row");
-                Label name = new(map.DisplayLabel);
+                Label name = new(map.DisplayLabel) { pickingMode = PickingMode.Ignore };
                 name.AddToClassList("map-editor-map-name");
-                Button load = new(() => LoadMapRequested?.Invoke(map.Name)) { text = "Load" };
-                load.AddToClassList("map-editor-action-btn");
+
                 Button delete = new(() => DeleteMapRequested?.Invoke(map.Name)) { text = "Del" };
                 delete.AddToClassList("map-editor-action-btn");
-                delete.style.marginLeft = 4;
+                delete.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
 
-                VisualElement actions = new();
+                VisualElement actions = new() { pickingMode = PickingMode.Position };
                 actions.style.flexDirection = FlexDirection.Row;
-                actions.Add(load);
+                actions.style.alignItems = Align.Center;
+                Label badge = new("Load") { pickingMode = PickingMode.Ignore };
+                badge.AddToClassList("map-editor-map-badge");
+                actions.Add(badge);
                 actions.Add(delete);
+
                 row.Add(name);
                 row.Add(actions);
                 window.Insert(insertIndex++, row);
+            }
+        }
+
+        private void PopulateOverwriteList(IReadOnlyList<MapEditorMapEntry> maps)
+        {
+            VisualElement listRoot = _activePopover.Q(name: "save-overwrite-list");
+            if (listRoot == null)
+                return;
+
+            listRoot.Clear();
+            string current = _saveNameField?.value?.Trim();
+
+            foreach (MapEditorMapEntry map in maps)
+            {
+                bool isTarget = string.Equals(map.Name, current, StringComparison.OrdinalIgnoreCase);
+                Button row = new(() =>
+                {
+                    if (_saveNameField != null)
+                        _saveNameField.value = map.Name;
+                    _vm.SaveMapName = map.Name;
+                });
+                row.AddToClassList("map-editor-map-row");
+                Label name = new(map.DisplayLabel) { pickingMode = PickingMode.Ignore };
+                name.AddToClassList("map-editor-map-name");
+                name.EnableInClassList("map-editor-map-name--overwrite-target", isTarget);
+                Label badge = new(isTarget ? "Overwriting" : "Overwrite") { pickingMode = PickingMode.Ignore };
+                badge.AddToClassList("map-editor-map-badge");
+                badge.EnableInClassList("map-editor-map-badge--warning", isTarget);
+                row.Add(name);
+                row.Add(badge);
+                listRoot.Add(row);
             }
         }
 
@@ -646,12 +810,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return region;
         }
 
-        private static VisualElement CreateToolbarStrip()
+        private static VisualElement CreateToolbarStrip(bool vertical = false)
         {
             // Ignore the strip chrome for world picks; only buttons/fields should block placement.
             VisualElement strip = new() { pickingMode = PickingMode.Ignore };
             strip.AddToClassList("map-editor-toolbar-strip");
-            strip.style.flexDirection = FlexDirection.Row;
+            strip.EnableInClassList("map-editor-toolbar-strip--vertical", vertical);
+            strip.style.flexDirection = vertical ? FlexDirection.Column : FlexDirection.Row;
             return strip;
         }
 
@@ -667,6 +832,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return btn;
         }
 
+        private static Button CreateHeaderIconButton(VectorImage icon, string tooltip, Action onClick)
+        {
+            Button btn = new(onClick);
+            btn.AddToClassList("map-editor-header-icon-btn");
+            btn.tooltip = tooltip;
+
+            VisualElement iconElement = CreateIconElement(icon);
+            iconElement.AddToClassList("map-editor-header-icon-btn__icon");
+            btn.Add(iconElement);
+            return btn;
+        }
+
         private static VisualElement CreateIconElement(VectorImage icon)
         {
             VisualElement element = new() { pickingMode = PickingMode.Ignore };
@@ -676,23 +853,25 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return element;
         }
 
-        private static void AddSeparator(VisualElement parent)
+        private static void AddSeparator(VisualElement parent, bool vertical = false)
         {
             VisualElement sep = new() { pickingMode = PickingMode.Ignore };
             sep.AddToClassList("map-editor-separator");
+            sep.EnableInClassList("map-editor-separator--vertical", vertical);
             parent.Add(sep);
         }
 
-        private static VisualElement CreateWindow(string title, bool blocksWorldPicks = true)
+        private static VisualElement CreateWindow(string title)
         {
-            VisualElement window = new()
-            {
-                pickingMode = blocksWorldPicks ? PickingMode.Position : PickingMode.Ignore,
-            };
+            VisualElement window = new() { pickingMode = PickingMode.Position };
             window.AddToClassList("map-editor-window");
-            Label titleLabel = new(title) { pickingMode = PickingMode.Ignore };
-            titleLabel.AddToClassList("map-editor-window__title");
-            window.Add(titleLabel);
+            if (!string.IsNullOrEmpty(title))
+            {
+                Label titleLabel = new(title) { pickingMode = PickingMode.Ignore };
+                titleLabel.AddToClassList("map-editor-window__title");
+                window.Add(titleLabel);
+            }
+
             return window;
         }
 

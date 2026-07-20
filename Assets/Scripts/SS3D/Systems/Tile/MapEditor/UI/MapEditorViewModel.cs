@@ -28,6 +28,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public string SelectedObjectHint { get; set; } = "Select the Edit tool to place this object";
         public string ToastMessage { get; set; }
         public string OpenPopover { get; set; }
+        public string SaveMapName { get; set; } = "Untitled Map";
         public Direction CurrentRotation { get; set; } = Direction.North;
         public MapEditorSaveTarget SaveTarget { get; set; } = MapEditorSaveTarget.LocalTemplate;
         public MapEditorPlacementMode PlacementMode { get; set; } = MapEditorPlacementMode.Normal;
@@ -137,6 +138,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (CurrentTool == MapEditorTool.Move)
             {
                 SelectedObjectHint = "Move tool active — click and drag an object";
+                return;
+            }
+
+            if (CurrentTool == MapEditorTool.Dropper)
+            {
+                SelectedObjectHint = "Dropper tool active — click a placed object to copy it";
+                return;
+            }
+
+            if (CurrentTool == MapEditorTool.Delete)
+            {
+                SelectedObjectHint = "Delete tool active — click an object to remove it";
                 return;
             }
 

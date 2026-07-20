@@ -75,7 +75,13 @@ namespace SS3D.Systems.Tile.MapEditor
         public bool MouseOverUI => _active && InputInterface.IsPointerOverInterface();
 
         public bool IsOrbiting => _session.IsOrbiting;
-        public bool IsDeleting => _viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit;
+
+        /// <summary>
+        /// True for the dedicated Delete tool (always erases, no selected asset), or for the
+        /// legacy Edit-tool-plus-Eraser-catalog-entry combination.
+        /// </summary>
+        public bool IsDeleting => _viewModel.CurrentTool == MapEditorTool.Delete ||
+            (_viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit);
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
         public bool GridSnapEnabled => _viewModel.GridSnap;
         public Camera PickCamera => _playerCamera != null ? _playerCamera : Camera.main;
@@ -191,22 +197,21 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void WireViewEvents()
         {
-            _view.ExitRequested += RequestExit;
             _view.ToolSelected += OnToolSelected;
             _view.UndoRequested += OnUndoRequested;
             _view.RedoRequested += OnRedoRequested;
-            _view.QuicksaveRequested += HandleQuicksave;
             _view.SaveAsRequested += OnSaveAsRequested;
             _view.LoadMapRequested += OnLoadMapRequested;
             _view.DeleteMapRequested += OnDeleteMapRequested;
             _view.NewMapRequested += OnNewMapRequested;
             _view.MapListRefreshRequested += RefreshMapList;
             _view.ResetViewRequested += OnResetViewRequested;
-            _view.HideUIRequested += OnHideUiRequested;
             _view.ShowUIRequested += OnShowUiRequested;
             _view.GridSnapChanged += OnGridSnapChanged;
             _view.DebugOverlayChanged += OnDebugOverlayChanged;
             _view.CameraSettingsChanged += OnCameraSettingsChanged;
+            _view.CameraRotateRequested += OnCameraRotateRequested;
+            _view.CameraZoomRequested += OnCameraZoomRequested;
             _view.LayerCategoryVisibilityChanged += OnLayerCategoryVisibilityChanged;
             _view.ModeSelected += OnModeSelected;
             _view.SubcategorySelected += OnSubcategorySelected;
@@ -294,12 +299,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 _cameraFollow.enabled = !blocked;
         }
 
-        private void RequestExit()
-        {
-            _viewModel.ShowToast("Map editor closed.");
-            SetActive(false);
-        }
-
         private void HandleAssetSelected(MapEditorCatalogEntry entry, GenericObjectSo asset)
         {
             if (entry == null)
@@ -317,12 +316,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.SetSelectedObject(asset);
         }
 
-        private void HandleQuicksave()
-        {
-            string name = $"quicksave_{DateTime.Now:HHmmss}";
-            RpcSaveMap(name, true, LocalConnection);
-        }
-
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
             if (!_active)
@@ -338,6 +331,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
                     HandleSelectClick();
+
+                if (_viewModel.CurrentTool == MapEditorTool.Dropper && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                    HandleDropperClick();
 
                 if (_viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
                     HandleMoveInput();
@@ -367,7 +363,7 @@ namespace SS3D.Systems.Tile.MapEditor
                     _viewModel.ClearToast();
             }
 
-            if (_viewModel.OpenPopover == "maps")
+            if (_viewModel.OpenPopover is "maps" or "saveMenu")
                 RefreshMapList();
         }
 
@@ -412,6 +408,51 @@ namespace SS3D.Systems.Tile.MapEditor
                     _toastTimer = 1.6f;
                 }
             }
+        }
+
+        /// <summary>
+        /// Copies whatever is under the cursor into the active library selection and switches to
+        /// Edit so the user can immediately place more of it.
+        /// </summary>
+        private void HandleDropperClick()
+        {
+            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
+            TileMap map = _tileSystem.CurrentMap;
+            if (map != null && map.TryGetTileLocations(position, out ITileLocation[] locations))
+            {
+                foreach (ITileLocation location in locations)
+                {
+                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
+                    {
+                        CopyIntoActiveSelection(placed.NameString);
+                        return;
+                    }
+                }
+            }
+
+            if (PickCamera == null)
+                return;
+
+            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
+                if (item != null)
+                    CopyIntoActiveSelection(item.NameString);
+            }
+        }
+
+        private void CopyIntoActiveSelection(string assetName)
+        {
+            GenericObjectSo asset = _tileSystem.GetAsset(assetName);
+            _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = assetName }, asset);
+            _viewModel.SetTool(MapEditorTool.Edit);
+            if (asset != null)
+                _hologramManager.SetSelectedObject(asset);
+            _viewModel.ShowToast($"Copied {assetName}");
+            _toastTimer = 1.6f;
         }
 
         private void HandleMoveInput()
@@ -546,22 +587,21 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_view == null)
                 return;
 
-            _view.ExitRequested -= RequestExit;
             _view.ToolSelected -= OnToolSelected;
             _view.UndoRequested -= OnUndoRequested;
             _view.RedoRequested -= OnRedoRequested;
-            _view.QuicksaveRequested -= HandleQuicksave;
             _view.SaveAsRequested -= OnSaveAsRequested;
             _view.LoadMapRequested -= OnLoadMapRequested;
             _view.DeleteMapRequested -= OnDeleteMapRequested;
             _view.NewMapRequested -= OnNewMapRequested;
             _view.MapListRefreshRequested -= RefreshMapList;
             _view.ResetViewRequested -= OnResetViewRequested;
-            _view.HideUIRequested -= OnHideUiRequested;
             _view.ShowUIRequested -= OnShowUiRequested;
             _view.GridSnapChanged -= OnGridSnapChanged;
             _view.DebugOverlayChanged -= OnDebugOverlayChanged;
             _view.CameraSettingsChanged -= OnCameraSettingsChanged;
+            _view.CameraRotateRequested -= OnCameraRotateRequested;
+            _view.CameraZoomRequested -= OnCameraZoomRequested;
             _view.LayerCategoryVisibilityChanged -= OnLayerCategoryVisibilityChanged;
             _view.ModeSelected -= OnModeSelected;
             _view.SubcategorySelected -= OnSubcategorySelected;
@@ -569,13 +609,23 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.AssetSelected -= HandleAssetSelected;
         }
 
-        private void OnToolSelected(MapEditorTool tool) => _viewModel.SetTool(tool);
+        private void OnToolSelected(MapEditorTool tool)
+        {
+            _viewModel.SetTool(tool);
+
+            // Delete always erases whatever is under the cursor — drop any lingering placement
+            // ghost from a previous Edit-tool selection.
+            if (tool == MapEditorTool.Delete)
+                _hologramManager.ClearSelection();
+        }
 
         private void OnUndoRequested() => RpcUndo(LocalConnection);
 
         private void OnRedoRequested() => RpcRedo(LocalConnection);
 
-        private void OnSaveAsRequested(string name) => RpcSaveMap(name, false, LocalConnection);
+        // The Save Map popover always shows an "Overwriting" warning inline when the typed name
+        // collides with an existing save, so the Save button itself can safely always overwrite.
+        private void OnSaveAsRequested(string name) => RpcSaveMap(name, true, LocalConnection);
 
         private void OnLoadMapRequested(string name) => RpcLoadMap(name, LocalConnection);
 
@@ -585,11 +635,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnResetViewRequested() => _session.ResetPosition();
 
-        private void OnHideUiRequested()
-        {
-            _viewModel.HideUI = true;
-            _viewModel.NotifyChanged();
-        }
+        private void OnCameraRotateRequested(int direction) => _session.RotateStep(15f * direction);
+
+        private void OnCameraZoomRequested(int direction) => _session.ZoomStep(2f * direction);
 
         private void OnShowUiRequested()
         {

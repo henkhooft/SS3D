@@ -80,15 +80,18 @@ namespace SS3D.Systems.Tile.MapEditor
         public static MapEditorSubcategory[] GetSubcategories(MapEditorMode mode) =>
             mode switch
             {
+                // Primary order matches the current design; Turfs/Overlays trail so assets
+                // heuristically tagged into them stay reachable even though the redesigned
+                // tab row no longer gives them top billing.
                 MapEditorMode.Upper => new[]
                 {
-                    MapEditorSubcategory.Flooring, MapEditorSubcategory.Turfs, MapEditorSubcategory.Overlays,
-                    MapEditorSubcategory.Walls, MapEditorSubcategory.Doors, MapEditorSubcategory.TileObjects,
-                    MapEditorSubcategory.WallAttachments,
+                    MapEditorSubcategory.Flooring, MapEditorSubcategory.Walls, MapEditorSubcategory.Doors,
+                    MapEditorSubcategory.TileObjects, MapEditorSubcategory.WallAttachments,
+                    MapEditorSubcategory.Turfs, MapEditorSubcategory.Overlays,
                 },
                 MapEditorMode.Lower => new[]
                 {
-                    MapEditorSubcategory.Piping, MapEditorSubcategory.Disposals, MapEditorSubcategory.BaseTiles,
+                    MapEditorSubcategory.BaseTiles, MapEditorSubcategory.Piping, MapEditorSubcategory.Disposals,
                 },
                 MapEditorMode.Items => new[]
                 {
@@ -121,11 +124,11 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorSubcategory.Overlays => "Overlays",
                 MapEditorSubcategory.Walls => "Walls",
                 MapEditorSubcategory.Doors => "Doors",
-                MapEditorSubcategory.TileObjects => "Tile Objects",
+                MapEditorSubcategory.TileObjects => "Furniture",
                 MapEditorSubcategory.WallAttachments => "Wall Attachments",
                 MapEditorSubcategory.Piping => "Piping",
                 MapEditorSubcategory.Disposals => "Disposals",
-                MapEditorSubcategory.BaseTiles => "Base Tiles",
+                MapEditorSubcategory.BaseTiles => "Plenum",
                 MapEditorSubcategory.FoodDrink => "Food & Drink",
                 MapEditorSubcategory.Tools => "Tools",
                 MapEditorSubcategory.Medical => "Medical",

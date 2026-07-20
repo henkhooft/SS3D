@@ -134,7 +134,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
-            if (_mapEditor == null || !_mapEditor.IsActive || _mapEditor.CurrentTool != MapEditorTool.Edit)
+            if (_mapEditor == null || !_mapEditor.IsActive || !IsActiveTool(_mapEditor.CurrentTool))
             {
                 if (_placePressActive || _isDragging)
                     CancelPlacementGesture(resetHolograms: _selectedObject != null);
@@ -193,6 +193,14 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             _lastSnappedPosition = position;
         }
+
+        /// <summary>
+        /// Edit places/erases via a selected asset or the Eraser catalog entry; Delete is a
+        /// dedicated always-erasing tool that reuses the same drag/hologram pipeline with no
+        /// selected asset (see <see cref="IMapEditorHost.IsDeleting"/>).
+        /// </summary>
+        private static bool IsActiveTool(MapEditorTool tool) =>
+            tool is MapEditorTool.Edit or MapEditorTool.Delete;
 
         private static Vector2Int ToTile(Vector3 world) =>
             new(Mathf.RoundToInt(world.x), Mathf.RoundToInt(world.z));
