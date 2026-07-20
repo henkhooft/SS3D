@@ -40,7 +40,7 @@ A player who disconnects without reaching a pod isn't left as a permanent liabil
 
 **Relocation is a deliberate, visible act, not a silent teleport.** Since an abandoned body could be anywhere on the station, the system moves it to the cryo room to actually enter a pod — a real, system-triggered event, inspectable the same way any other administrative action in this project is (through the tools `admin-tools.md` already establishes), never a mystery disappearance nobody could account for.
 
-**The grace period exists specifically so a connection hiccup doesn't cost someone their character.** A brief drop and reconnect within the window does nothing at all; cryo only ever fires once the window actually closes.
+**The grace period exists specifically so a connection hiccup doesn't cost someone their character.** A brief drop and reconnect within the window does nothing at all — `networking.md` §3 owns exactly what that window looks like and how control resumes; cryo only ever fires once the window actually closes.
 
 ## 5. Returning — resuming, not rejoining
 
@@ -81,7 +81,7 @@ No new permanent chrome, same discipline as everywhere else in this project.
 
 | Step | What happens | Cryo state |
 |---|---|---|
-| 1 | A player's connection drops mid-round, far from any pod | Character remains in the world, vulnerable, briefly |
+| 1 | A player's connection drops mid-round, far from any pod | Character remains in the world, vulnerable, briefly (`networking.md` §2's real, visible disconnect tell) |
 | 2 | The stated grace period elapses with no reconnect | System relocates the character to the cryo room and enters them into a pod |
 | 3 | Job slot frees | Same as a deliberate departure |
 | 4 | The relocation is a real, logged event | Inspectable through existing admin tooling, not a silent disappearance |
