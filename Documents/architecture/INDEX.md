@@ -57,7 +57,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | none yet | none yet | none yet |
 | rd-material-economy | none yet | none yet | none yet |
-| cryogenics | none yet | none yet | none yet |
+| cryogenics | [cryogenics.md](../design/cryogenics.md) — active | none yet | none yet |
 | admin-tools | [admin-tools.md](../design/admin-tools.md) — active | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |
 | player-accounts | none yet | none yet | none yet |
 

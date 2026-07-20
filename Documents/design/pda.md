@@ -33,7 +33,7 @@ The screen is a simple tab bar. Confirmed and proposed tabs:
 
 **New, defined in this doc:**
 - **ID/access summary** — a read-only view of the inserted ID's name, job, and access levels. Directly reuses the ID/access system, the same "crew see only whether their own ID would work" framing the hacking interface's permissions panel already established (`hacking-interface.md` §3) — this tab is that same read, just surfaced on your own device instead of someone else's.
-- **Crew manifest** — a list of connected crew: name, job, and a coarse online/offline or alive/no-signal status, pulled from the same ID/access and connection data. Deliberately **does not** include live location — see §5.
+- **Crew manifest** — a list of connected crew: name, job, and a coarse online/offline, alive/no-signal, or in-cryo-storage status (`cryogenics.md` §3), pulled from the same ID/access and connection data. Deliberately **does not** include live location — see §5.
 - **Messages** — private, address-to-a-person text, distinct from comms' proximity/channel model. See §4 for why this exists and how it's built.
 - **Objectives** — a hidden tab, present only for characters holding at least one objective record; read-only, listing each held objective and its pending/complete/failed state (`objectives.md` §8). Non-antagonists never see this tab exist.
 

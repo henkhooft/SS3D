@@ -167,7 +167,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 
 - Exact reagent list, ratios, dose thresholds, and metabolism rates (a balancing pass, not a design decision)
 - Exact thermal numbers — reaction magnitudes, flash thresholds, ambient decay rate (§5) (a balancing pass, not a design decision)
-- Cryogenics as a player-facing system — §5 only establishes the real container-temperature primitive a future pass would need, doesn't design what that pass does with it
+- Cryogenics as a player-facing system — designed in `cryogenics.md`, which uses the real container-temperature primitive §5 established here
 - General blast/explosion physics, if a dedicated system doesn't already exist elsewhere — chemistry's own explosive mixes assume a lightweight, local, container-centered effect rather than a redesign of blast mechanics generally
 - Gas diffusion/propagation specifics — assumed to already be atmospherics' domain (`area.md` §4), not redesigned here
 - Botany/plant growth and food preparation as reagent sources — the grinder assumes harvestable/cookable items already exist as objects, doesn't design where they come from
