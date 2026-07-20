@@ -220,7 +220,8 @@ MonoBehaviour:
   _respectDevBypass: 1
   _applyDepartmentalLightTint: 0
   _fixtureCapability: 1
-  _emergencyIntensityMultiplier: 0.35
+  _emergencyIntensityMultiplier: 0.1
+  _emergencyRangeMultiplier: 0.352
   _emergencyTint: {r: 1, g: 0.25, b: 0.2, a: 1}
 --- !u!114 &8301714305325130111
 MonoBehaviour:

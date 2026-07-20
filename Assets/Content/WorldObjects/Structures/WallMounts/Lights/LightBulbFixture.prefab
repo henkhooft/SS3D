@@ -135,7 +135,7 @@ Light:
   m_Type: 0
   m_Color: {r: 0.9687333, g: 1, b: 0.8537736, a: 1}
   m_Intensity: 1.2
-  m_Range: 10
+  m_Range: 12
   m_SpotAngle: 179
   m_InnerSpotAngle: 169.11382
   m_CookieSize2D: {x: 10, y: 10}
@@ -269,7 +269,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NetworkObserver: {fileID: 0}
-  <PrefabId>k__BackingField: 130
+  <PrefabId>k__BackingField: 164
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
@@ -310,7 +310,8 @@ MonoBehaviour:
   _respectDevBypass: 1
   _applyDepartmentalLightTint: 0
   _fixtureCapability: 1
-  _emergencyIntensityMultiplier: 0.35
+  _emergencyIntensityMultiplier: 0.1
+  _emergencyRangeMultiplier: 0.353
   _emergencyTint: {r: 1, g: 0.25, b: 0.2, a: 1}
 --- !u!114 &8301714305325130111
 MonoBehaviour:
@@ -588,7 +589,7 @@ Light:
   m_Type: 2
   m_Color: {r: 0.9687333, g: 1, b: 0.8537736, a: 1}
   m_Intensity: 2
-  m_Range: 10
+  m_Range: 12
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 10, y: 10}
