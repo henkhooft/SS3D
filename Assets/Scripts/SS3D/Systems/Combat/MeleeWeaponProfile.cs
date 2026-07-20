@@ -23,7 +23,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 8f,
             BurnDamage = 0f,
             WindupSeconds = 0.25f,
-            RecoverySeconds = 0.35f,
+            RecoverySeconds = 0.7f,
             StaminaCost = 8f,
             CanSever = false,
         };
@@ -34,7 +34,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 6f,
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
-            RecoverySeconds = 0.4f,
+            RecoverySeconds = 0.8f,
             StaminaCost = 10f,
             CanSever = false,
         };
@@ -44,7 +44,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 18f,
             BurnDamage = 0f,
             WindupSeconds = 0.35f,
-            RecoverySeconds = 0.5f,
+            RecoverySeconds = 1.0f,
             StaminaCost = 12f,
             CanSever = false,
         };
@@ -54,7 +54,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 16f,
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
-            RecoverySeconds = 0.45f,
+            RecoverySeconds = 0.9f,
             StaminaCost = 11f,
             CanSever = true,
         };
@@ -64,7 +64,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 12f,
             BurnDamage = 0f,
             WindupSeconds = 0.2f,
-            RecoverySeconds = 0.35f,
+            RecoverySeconds = 0.7f,
             StaminaCost = 9f,
             CanSever = true,
         };

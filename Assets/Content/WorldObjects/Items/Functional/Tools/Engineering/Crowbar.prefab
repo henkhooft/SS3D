@@ -336,5 +336,5 @@ MonoBehaviour:
     BruteDamage: 18
     BurnDamage: 0
     WindupSeconds: 0.35
-    RecoverySeconds: 0.5
+    RecoverySeconds: 1
     CanSever: 0
