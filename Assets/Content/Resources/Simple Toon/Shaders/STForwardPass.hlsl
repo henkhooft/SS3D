@@ -1,7 +1,8 @@
 #ifndef SS3D_ST_FORWARD_PASS_INCLUDED
 #define SS3D_ST_FORWARD_PASS_INCLUDED
 
-#include "STLighting.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "STInput.hlsl"
 
 struct STAttributes
 {
@@ -38,23 +39,6 @@ STVaryings ST_Vert(STAttributes input)
     output.normalWS = normalInputs.normalWS;
     output.viewDirWS = GetWorldSpaceViewDir(positionInputs.positionWS);
     return output;
-}
-
-STSurfaceInput ST_GetSurface(STVaryings input)
-{
-    STSurfaceInput surface;
-    surface.uv = input.uv;
-    surface.normalWS = input.normalWS;
-    surface.viewDirWS = input.viewDirWS;
-    surface.positionWS = input.positionWS;
-    return surface;
-}
-
-half4 ST_FragLit(STVaryings input, bool swapLightColorBlend, bool gateZeroLight, half alphaMultiplier)
-{
-    UNITY_SETUP_INSTANCE_ID(input);
-    float4 col = ST_EvaluateLighting(ST_GetSurface(input), swapLightColorBlend, gateZeroLight, alphaMultiplier);
-    return col;
 }
 
 #endif
