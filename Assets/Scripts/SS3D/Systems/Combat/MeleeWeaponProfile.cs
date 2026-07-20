@@ -34,7 +34,7 @@ namespace SS3D.Systems.Combat
             BruteDamage = 6f,
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
-            RecoverySeconds = 0.8f,
+            RecoverySeconds = 1.6f,
             StaminaCost = 10f,
             CanSever = false,
         };
