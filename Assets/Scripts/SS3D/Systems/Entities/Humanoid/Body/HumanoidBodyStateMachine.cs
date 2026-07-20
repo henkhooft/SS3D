@@ -27,6 +27,12 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         [SyncVar(OnChange = nameof(SyncAimPitch))]
         private float _aimPitch;
 
+        /// <summary>Synced combat aim yaw (degrees). Used for melee connect-frame raycasts.</summary>
+        public float AimYaw => _aimYaw;
+
+        /// <summary>Synced combat aim pitch (degrees). Used for melee connect-frame raycasts.</summary>
+        public float AimPitch => _aimPitch;
+
         [SyncVar(OnChange = nameof(SyncMovementSpeed))]
         private float _movementSpeed;
 

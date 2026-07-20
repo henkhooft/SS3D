@@ -405,13 +405,11 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Resolves combat aim from the camera mouse ray (3D hit or fallback distance).
-        /// Body yaw uses the planar component; pitch is elevation to the aim point.
+        /// Camera mouse ray used for combat aim and zone reticle (same ray connect damage should use).
         /// </summary>
-        public bool TryGetCombatAim(out float yaw, out float pitch, out Vector3 aimPoint)
+        public bool TryGetCombatAimRay(out Ray aimRay, out Vector3 aimPoint)
         {
-            yaw = 0f;
-            pitch = 0f;
+            aimRay = default;
             aimPoint = Position;
 
             if (_camera == null)
@@ -430,11 +428,29 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            aimRay = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
             const float maxDistance = 100f;
             const float fallbackDistance = 20f;
 
-            if (!TryResolveAimPoint(ray, maxDistance, fallbackDistance, out aimPoint))
+            if (!TryResolveAimPoint(aimRay, maxDistance, fallbackDistance, out aimPoint))
+            {
+                return false;
+            }
+
+            return aimRay.direction.sqrMagnitude >= 0.0001f;
+        }
+
+        /// <summary>
+        /// Resolves combat aim from the camera mouse ray (3D hit or fallback distance).
+        /// Body yaw uses the planar component; pitch is elevation to the aim point.
+        /// </summary>
+        public bool TryGetCombatAim(out float yaw, out float pitch, out Vector3 aimPoint)
+        {
+            yaw = 0f;
+            pitch = 0f;
+            aimPoint = Position;
+
+            if (!TryGetCombatAimRay(out Ray ray, out aimPoint))
             {
                 return false;
             }

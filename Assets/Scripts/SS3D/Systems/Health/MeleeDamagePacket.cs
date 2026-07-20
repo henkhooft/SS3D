@@ -1,5 +1,8 @@
-namespace SS3D.Systems.Combat
+namespace SS3D.Systems.Health
 {
+    /// <summary>
+    /// Damage payload applied to a body zone (melee and future combat sources).
+    /// </summary>
     public struct MeleeDamagePacket
     {
         public float Brute;

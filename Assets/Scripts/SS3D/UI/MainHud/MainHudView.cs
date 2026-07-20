@@ -51,6 +51,8 @@ namespace SS3D.UI.MainHud
         private EquipmentGrid _equipmentGrid;
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
+        private ZoneTargetReticle _zoneReticle;
+        private ZoneReticleDriver _zoneReticleDriver;
         private Sequence _visibilitySequence;
         private bool _visible;
         private float _scale = 1f;
@@ -86,6 +88,8 @@ namespace SS3D.UI.MainHud
             KillVisibilitySequence();
             _root?.RemoveFromHierarchy();
             _root = null;
+            _zoneReticle = null;
+            _zoneReticleDriver = null;
         }
 
         public void SetVisible(bool visible)
@@ -114,6 +118,34 @@ namespace SS3D.UI.MainHud
         public void SetIntent(IntentType intent)
         {
             _intentModule.SetIntent(intent);
+        }
+
+        /// <summary>
+        /// Pushes aim / recovery / visibility into the reticle driver and paints one composed frame.
+        /// </summary>
+        public void ApplyZoneReticle(
+            bool visible,
+            Vector2 screenPosition,
+            string zoneLabel,
+            bool inRange,
+            float lockReadyProgress01,
+            bool recharging)
+        {
+            if (_zoneReticle == null || _zoneReticleDriver == null)
+            {
+                return;
+            }
+
+            _zoneReticleDriver.SetVisible(visible);
+            _zoneReticleDriver.SetAimInput(screenPosition, zoneLabel, inRange);
+            _zoneReticleDriver.SetRecoveryInput(lockReadyProgress01, recharging);
+            _zoneReticleDriver.Tick(out ZoneReticleFrame frame);
+            _zoneReticle.Apply(in frame);
+        }
+
+        public void NotifyZoneReticleConnectHit()
+        {
+            _zoneReticleDriver?.NotifyConnectHit();
         }
 
         public void SetEquipmentIcon(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon)
@@ -295,10 +327,14 @@ namespace SS3D.UI.MainHud
             _intentModule.ToggleRequested += () => IntentToggleRequested?.Invoke();
             VisualElement intentZone = BuildZone("main-hud__zone--intent", _intentModule);
 
+            _zoneReticle = new ZoneTargetReticle();
+            _zoneReticleDriver = new ZoneReticleDriver();
+
             _root.Add(alertZone);
             _root.Add(equipmentZone);
             _root.Add(handsGearZone);
             _root.Add(intentZone);
+            _root.Add(_zoneReticle.Root);
         }
 
         private static VisualElement BuildZone(string className, VisualElement child)

@@ -1,16 +1,17 @@
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace SS3D.Systems.Entities.Humanoid
 {
     /// <summary>
-    /// Toggles peaceful / combat stance and drives strafe + aim behaviour (#1246).
+    /// Drives combat stance presentation and melee swing telegraph (#1246).
+    /// <c>C</c> toggles Help/Harm intent (combat mode follows Harm via <see cref="InteractionController"/>).
     /// Combat subtype (Melee vs Ranged) comes from inventory via <see cref="HumanoidBodyStateBridge"/>.
-    /// Melee LMB swing is triggered from <see cref="SS3D.Systems.Interactions.InteractionController"/>
-    /// (Run Primary) so it shares the same input path as interactions.
+    /// Melee swing telegraph is requested by combat Hit dispatch via <see cref="RequestAttack"/>.
     /// </summary>
     [RequireComponent(typeof(HumanoidBodyStateMachine))]
     public class HumanoidCombatController : NetworkActor
@@ -18,6 +19,7 @@ namespace SS3D.Systems.Entities.Humanoid
         [SerializeField] private HumanoidBodyStateMachine _bodyStateMachine;
         [SerializeField] private AnimationOrchestrator _orchestrator;
         [SerializeField] private HumanoidBodyStateBridge _bodyStateBridge;
+        [SerializeField] private InteractionController _interactionController;
 
         protected override void OnAwake()
         {
@@ -35,6 +37,11 @@ namespace SS3D.Systems.Entities.Humanoid
             if (_bodyStateBridge == null)
             {
                 _bodyStateBridge = GetComponent<HumanoidBodyStateBridge>();
+            }
+
+            if (_interactionController == null)
+            {
+                _interactionController = GetComponent<InteractionController>();
             }
         }
 
@@ -58,38 +65,11 @@ namespace SS3D.Systems.Entities.Humanoid
 
             if (Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame)
             {
-                if (_bodyStateMachine.CombatMode.IsCombat())
+                if (_interactionController != null)
                 {
-                    _bodyStateMachine.CmdSetCombatMode(HumanoidCombatMode.Peaceful);
-                }
-                else
-                {
-                    HumanoidCombatMode stance = _bodyStateBridge != null
-                        ? _bodyStateBridge.ResolveCombatStance()
-                        : HumanoidCombatMode.Melee;
-                    _bodyStateMachine.CmdSetCombatMode(stance);
+                    _interactionController.RequestToggleIntent();
                 }
             }
-        }
-
-        /// <summary>
-        /// Called from interaction Run Primary while in melee combat.
-        /// Returns true if the click was consumed as an attack.
-        /// </summary>
-        public bool TryHandlePrimaryAttack()
-        {
-            if (!IsOwner || _bodyStateMachine == null)
-            {
-                return false;
-            }
-
-            if (_bodyStateMachine.CombatMode != HumanoidCombatMode.Melee)
-            {
-                return false;
-            }
-
-            RequestAttack(AnimationTriggerId.AttackSwing);
-            return true;
         }
 
         /// <summary>

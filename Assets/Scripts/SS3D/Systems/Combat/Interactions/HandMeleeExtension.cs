@@ -2,30 +2,26 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Health;
-using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.Inventory.Containers;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace SS3D.Systems.Combat.Interactions
 {
     /// <summary>
-    /// Dedicated melee profile when this item is held. Prefer this over improvised fallback on <see cref="Item"/>.
+    /// Empty-hand fists melee from hand sources.
     /// </summary>
-    public class MeleeWeaponItemExtension : MonoBehaviour, IInteractionSourceExtension
+    public class HandMeleeExtension : MonoBehaviour, IInteractionSourceExtension
     {
-        [SerializeField] private MeleeWeaponProfile _profile = MeleeWeaponProfile.Crowbar;
-
-        public MeleeWeaponProfile Profile => _profile;
-
         public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
         {
-            if (!TryGetComponent(out Item item))
+            if (!TryGetComponent(out Hand hand))
             {
                 return;
             }
 
-            var interaction = new MeleeHitInteraction(_profile);
-            if (!interaction.CanStartSwing(item))
+            var interaction = new MeleeHitInteraction(MeleeWeaponProfile.Fists);
+            if (!interaction.CanStartSwing(hand))
             {
                 return;
             }

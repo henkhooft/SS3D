@@ -45,6 +45,42 @@ namespace EditorTests
         }
 
         [Test]
+        public void FilterAndSort_HarmExcludesUnrestrictedWorldVerbs()
+        {
+            StubInteractionSource source = new();
+            List<InteractionEntry> entries = new()
+            {
+                CreateEntry(new HarmOnlyInteraction(), "Hit"),
+                CreateEntry("Pickup", 10),
+                CreateEntry("Drop", 5),
+            };
+
+            List<InteractionEntry> viable = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Harm);
+
+            Assert.AreEqual(1, viable.Count);
+            Assert.AreEqual("Hit", viable[0].Interaction.GetGenericName());
+        }
+
+        [Test]
+        public void FilterAndSort_HelpExcludesHarmOnlyInteractions()
+        {
+            StubInteractionSource source = new();
+            List<InteractionEntry> entries = new()
+            {
+                CreateEntry(new HarmOnlyInteraction(), "Hit"),
+                CreateEntry("Open", 20),
+            };
+
+            List<InteractionEntry> help = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Help);
+            List<InteractionEntry> harm = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Harm);
+
+            Assert.AreEqual(1, help.Count);
+            Assert.AreEqual("Open", help[0].Interaction.GetGenericName());
+            Assert.AreEqual(1, harm.Count);
+            Assert.AreEqual("Hit", harm[0].Interaction.GetGenericName());
+        }
+
+        [Test]
         public void TryResolve_MatchesTargetComponentIndex()
         {
             CreateGameObject(out GameObject targetObject, out TargetComponent firstTarget);
