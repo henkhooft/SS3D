@@ -18,7 +18,7 @@ namespace SS3D.Systems.Area
 
             if (!hasArea)
             {
-                return consumerStatus == PowerStatus.Powered;
+                return false;
             }
 
             switch (areaState)

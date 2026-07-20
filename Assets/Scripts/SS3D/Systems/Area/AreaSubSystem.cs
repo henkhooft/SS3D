@@ -85,6 +85,7 @@ namespace SS3D.Systems.Area
             tileSubSystem.RegisterTileMutationObserver(this);
 
             IsSetUp = true;
+            GameplayLightGuard.DisableOrphanSceneLights();
             OnSystemSetUp?.Invoke();
             SubscribeElectricityTicks();
         }
@@ -108,6 +109,16 @@ namespace SS3D.Systems.Area
         public bool TryGetLightingState(AreaId areaId, out AreaLightingState state)
         {
             return _lightingStates.TryGetValue(areaId, out state);
+        }
+
+        /// <summary>
+        /// Re-derives Normal/Emergency/Dark from APC channels and stats immediately (server).
+        /// Use after APC channel toggles instead of waiting for the next electricity tick.
+        /// </summary>
+        [Server]
+        public void RefreshAreaLightingStates()
+        {
+            UpdateAreaLightingStates();
         }
 
         public bool TryGetLightingStateForTile(TileCoord coord, out AreaLightingState state)

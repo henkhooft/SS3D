@@ -8,7 +8,7 @@ namespace SS3D.Systems.Electricity
     public static class LightingDevBypass
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        public static bool AlwaysPowerLightFixtures { get; set; } = true;
+        public static bool AlwaysPowerLightFixtures { get; set; }
 #else
         public static bool AlwaysPowerLightFixtures => false;
 #endif
