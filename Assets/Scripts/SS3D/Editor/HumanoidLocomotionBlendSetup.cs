@@ -110,6 +110,7 @@ namespace SS3D.Editor
             ("AimPitch", AnimatorControllerParameterType.Float),
             ("AttackSwing", AnimatorControllerParameterType.Trigger),
             ("AttackStab", AnimatorControllerParameterType.Trigger),
+            ("AttackVariant", AnimatorControllerParameterType.Int),
             ("Throw", AnimatorControllerParameterType.Trigger),
             ("Emote", AnimatorControllerParameterType.Trigger),
             ("Flinch", AnimatorControllerParameterType.Trigger),
@@ -349,25 +350,39 @@ namespace SS3D.Editor
             // Base layer must not consume AttackSwing — upper body owns the swing trigger.
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
 
-            // Upper-body Attack Swing overlays spine+arms; exit-time returns to Hold Default.
+            // Upper-body Attack Swing variants (cycle via AttackVariant 0/1/2); exit-time → Hold Default.
             if (controller.layers.Length > 1)
             {
                 AnimatorStateMachine upper = controller.layers[1].stateMachine;
-                AnimationClip attackClip = LoadPackClip(
-                    $"{MeleePack}/standing melee attack horizontal.fbx",
-                    "Mix_StandingMeleeAttackHorizontal");
-                AnimatorState upperAttack = FindOrCreateState(upper, "Attack Swing", new Vector3(600, 100, 0));
-                if (attackClip != null)
-                {
-                    upperAttack.motion = attackClip;
-                    upperAttack.writeDefaultValues = true;
-                }
+                MuteAnyStateTrigger(upper, "AttackSwing");
 
-                EnsureAnyStateTrigger(upper, upperAttack, "AttackSwing", canTransitionToSelf: true);
-                AnimatorState holdDefault = FindState(upper, "Hold Default");
-                if (holdDefault != null)
+                (string StateName, string File, string ClipName, int Variant, Vector3 Pos)[] swings =
                 {
-                    EnsureExitToState(upperAttack, holdDefault, hasExitTime: true, exitTime: 0.85f, duration: 0.15f);
+                    ("Attack Swing", "standing melee attack horizontal.fbx",
+                        "Mix_StandingMeleeAttackHorizontal", 0, new Vector3(600, 40, 0)),
+                    ("Attack Swing Downward", "standing melee attack downward.fbx",
+                        "Mix_StandingMeleeAttackDownward", 1, new Vector3(600, 100, 0)),
+                    ("Attack Swing Backhand", "standing melee attack backhand.fbx",
+                        "Mix_StandingMeleeAttackBackhand", 2, new Vector3(600, 160, 0)),
+                };
+
+                AnimatorState holdDefault = FindState(upper, "Hold Default");
+                foreach ((string StateName, string File, string ClipName, int Variant, Vector3 Pos) swing in swings)
+                {
+                    AnimationClip attackClip = LoadPackClip($"{MeleePack}/{swing.File}", swing.ClipName);
+                    AnimatorState upperAttack = FindOrCreateState(upper, swing.StateName, swing.Pos);
+                    if (attackClip != null)
+                    {
+                        upperAttack.motion = attackClip;
+                        upperAttack.writeDefaultValues = true;
+                    }
+
+                    EnsureAnyStateTriggerWithInt(
+                        upper, upperAttack, "AttackSwing", "AttackVariant", swing.Variant, canTransitionToSelf: true);
+                    if (holdDefault != null)
+                    {
+                        EnsureExitToState(upperAttack, holdDefault, hasExitTime: true, exitTime: 0.85f, duration: 0.15f);
+                    }
                 }
             }
 
@@ -385,7 +400,7 @@ namespace SS3D.Editor
             AssetDatabase.Refresh();
 
             return "OK: Rebuilt Peaceful / Melee / Ranged / Injured locomotion blends; " +
-                   "AttackSwing trigger on Upper Body; Flinch / injured-arm additive remapped.";
+                   "AttackSwing variants (horizontal/downward/backhand) on Upper Body; Flinch / injured-arm additive remapped.";
         }
 
         private static BlendTree BuildBlendTree(
@@ -632,7 +647,8 @@ namespace SS3D.Editor
             foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
             {
                 if (transition.destinationState == destination
-                    && transition.conditions.Any(c => c.parameter == triggerName))
+                    && transition.conditions.Any(c => c.parameter == triggerName)
+                    && transition.conditions.Length == 1)
                 {
                     transition.mute = false;
                     transition.canTransitionToSelf = canTransitionToSelf;
@@ -646,6 +662,41 @@ namespace SS3D.Editor
             created.duration = 0.05f;
             created.canTransitionToSelf = canTransitionToSelf;
             created.AddCondition(AnimatorConditionMode.If, 0f, triggerName);
+        }
+
+        private static void EnsureAnyStateTriggerWithInt(
+            AnimatorStateMachine machine,
+            AnimatorState destination,
+            string triggerName,
+            string intParamName,
+            int intValue,
+            bool canTransitionToSelf)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.destinationState != destination)
+                {
+                    continue;
+                }
+
+                bool hasTrigger = transition.conditions.Any(c => c.parameter == triggerName);
+                bool hasVariant = transition.conditions.Any(
+                    c => c.parameter == intParamName && (int)c.threshold == intValue);
+                if (hasTrigger && hasVariant)
+                {
+                    transition.mute = false;
+                    transition.canTransitionToSelf = canTransitionToSelf;
+                    return;
+                }
+            }
+
+            AnimatorStateTransition created = machine.AddAnyStateTransition(destination);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = 0.05f;
+            created.canTransitionToSelf = canTransitionToSelf;
+            created.AddCondition(AnimatorConditionMode.If, 0f, triggerName);
+            created.AddCondition(AnimatorConditionMode.Equals, intValue, intParamName);
         }
 
         private static void MuteAnyStateTrigger(AnimatorStateMachine machine, string triggerName)

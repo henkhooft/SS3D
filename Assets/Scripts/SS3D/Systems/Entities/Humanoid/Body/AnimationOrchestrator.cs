@@ -40,6 +40,10 @@ namespace SS3D.Systems.Entities.Humanoid
         private float _upperBodyWeight;
         private float _upperBodyWeightTarget;
         private bool _posingSuppressed;
+        private int _nextAttackVariant;
+
+        /// <summary>Horizontal / downward / backhand cycle for melee AttackSwing.</summary>
+        private const int MeleeSwingVariantCount = 3;
 
         /// <summary>
         /// Soft fade when entering/leaving Melee stance (Upper Body layer on/off).
@@ -134,6 +138,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 ("CombatStance", Animations.Humanoid.CombatStance),
                 ("AimYaw", Animations.Humanoid.AimYaw),
                 ("AimPitch", Animations.Humanoid.AimPitch),
+                ("AttackVariant", Animations.Humanoid.AttackVariant),
                 ("VelX", Animations.Humanoid.VelX),
                 ("VelZ", Animations.Humanoid.VelZ),
                 ("Turn", Animations.Humanoid.Turn),
@@ -266,24 +271,33 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Owner-side immediate attack playback (upper-body Attack Swing over locomotion).
+        /// Owner-side immediate attack playback. Returns the swing variant used (0–2) for AttackSwing.
         /// </summary>
-        public void PlayAttackTrigger(AnimationTriggerId trigger)
+        public byte PlayAttackTrigger(AnimationTriggerId trigger)
         {
             if (_animator == null)
             {
-                return;
+                return 0;
             }
 
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
             if (hash == 0)
             {
-                return;
+                return 0;
+            }
+
+            byte variant = 0;
+            if (trigger == AnimationTriggerId.AttackSwing)
+            {
+                variant = (byte)(_nextAttackVariant % MeleeSwingVariantCount);
+                _nextAttackVariant = (_nextAttackVariant + 1) % MeleeSwingVariantCount;
+                _animator.SetInteger(Animations.Humanoid.AttackVariant, variant);
             }
 
             _ownerPredictedAttack = true;
             _animator.ResetTrigger(hash);
             _animator.SetTrigger(hash);
+            return variant;
         }
 
         private void TickUpperBodyWeight()
@@ -343,7 +357,7 @@ namespace SS3D.Systems.Entities.Humanoid
                     }
                     else
                     {
-                        ConsumeTrigger(snapshot.ActiveTrigger);
+                        ConsumeTrigger(snapshot.ActiveTrigger, snapshot.AttackVariant);
                     }
                 }
             }
@@ -457,7 +471,7 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetLayerWeight(3, overrideWeight);
         }
 
-        private void ConsumeTrigger(AnimationTriggerId trigger)
+        private void ConsumeTrigger(AnimationTriggerId trigger, byte attackVariant = 0)
         {
             // Sequence already gates re-entry; allow the same trigger id to fire repeatedly (e.g. swing spam).
             if (trigger == AnimationTriggerId.None)
@@ -466,6 +480,11 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _lastConsumedTrigger = trigger;
+            if (trigger == AnimationTriggerId.AttackSwing)
+            {
+                _animator.SetInteger(Animations.Humanoid.AttackVariant, attackVariant & 0x3);
+            }
+
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
             if (hash != 0)
             {
@@ -478,7 +497,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
         public void FireLocalTrigger(AnimationTriggerId trigger)
         {
-            _bodyStateMachine?.CmdFireTrigger(trigger);
+            _bodyStateMachine?.CmdFireTrigger(trigger, 0);
         }
 
         private bool IsLocalMovementAuthority()

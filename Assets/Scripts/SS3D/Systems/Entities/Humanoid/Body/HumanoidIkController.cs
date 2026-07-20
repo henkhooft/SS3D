@@ -9,7 +9,12 @@ namespace SS3D.Systems.Entities.Humanoid
     public class HumanoidIkController : MonoBehaviour
     {
         private const int UpperBodyLayer = 1;
-        private static readonly int AttackSwingState = Animator.StringToHash("Attack Swing");
+        private static readonly int[] AttackSwingStateHashes =
+        {
+            Animator.StringToHash("Attack Swing"),
+            Animator.StringToHash("Attack Swing Downward"),
+            Animator.StringToHash("Attack Swing Backhand"),
+        };
 
         [SerializeField] private HumanoidRigReferences _rig;
         [SerializeField] private Transform _lookAtTarget;
@@ -146,14 +151,26 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            AnimatorStateInfo current = _animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
-            if (current.shortNameHash == AttackSwingState)
+            if (IsAttackSwingState(_animator.GetCurrentAnimatorStateInfo(UpperBodyLayer)))
             {
                 return true;
             }
 
-            AnimatorStateInfo next = _animator.GetNextAnimatorStateInfo(UpperBodyLayer);
-            return _animator.IsInTransition(UpperBodyLayer) && next.shortNameHash == AttackSwingState;
+            return _animator.IsInTransition(UpperBodyLayer)
+                && IsAttackSwingState(_animator.GetNextAnimatorStateInfo(UpperBodyLayer));
+        }
+
+        private static bool IsAttackSwingState(AnimatorStateInfo info)
+        {
+            for (int i = 0; i < AttackSwingStateHashes.Length; i++)
+            {
+                if (info.shortNameHash == AttackSwingStateHashes[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Vector3 AimDirection(float yawDegrees, float pitchDegrees)

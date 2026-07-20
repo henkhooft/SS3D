@@ -13,6 +13,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public LocomotionMode Locomotion;
         public ArmHoldPose ArmHold;
         public AnimationTriggerId ActiveTrigger;
+        /// <summary>0–2 melee swing cycle index when <see cref="ActiveTrigger"/> is AttackSwing.</summary>
+        public byte AttackVariant;
         public HumanoidCombatMode CombatMode;
         public LimpSide LimpSide;
         public float AimYaw;
@@ -38,6 +40,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsCrawling) packed |= 1u << 16;
             if (IsFloating) packed |= 1u << 17;
             if (IsDragging) packed |= 1u << 18;
+            packed |= ((uint)AttackVariant & 0x3) << 19;
             return packed;
         }
 
@@ -61,6 +64,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 IsCrawling = (packed & (1u << 16)) != 0,
                 IsFloating = (packed & (1u << 17)) != 0,
                 IsDragging = (packed & (1u << 18)) != 0,
+                AttackVariant = (byte)((packed >> 19) & 0x3),
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
                 MovementSpeed = movementSpeed,

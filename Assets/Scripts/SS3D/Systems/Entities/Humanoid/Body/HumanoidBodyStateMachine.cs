@@ -214,9 +214,10 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         }
 
         [ServerRpc]
-        public void CmdFireTrigger(AnimationTriggerId trigger)
+        public void CmdFireTrigger(AnimationTriggerId trigger, byte attackVariant)
         {
             _snapshot.ActiveTrigger = trigger;
+            _snapshot.AttackVariant = (byte)(attackVariant & 0x3);
             _triggerSequence++;
             ApplyLocalSnapshot();
         }
