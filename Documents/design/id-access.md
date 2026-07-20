@@ -24,7 +24,7 @@ A server-side record created when lobby's preference resolution assigns a job (`
 - DNA record reference, where one exists (`death-cloning-respawn.md` §4 — this doc is the "existing crew identity record" that doc already assumed)
 - Connection status — what `pda.md` §5's crew manifest tab actually reads
 
-This is the authoritative object. The physical card (§3) and the PDA's identity tab (`pda.md` §3) are both just views onto it, or in the console's case (§7), an editor for its access-level field. Persistence across rounds — should a returning player's job history feed lobby's playtime gates (`lobby.md` §2) — rides on the same persistence/accounts infra that doc already flagged as assumed, cross-cutting, not designed here.
+This is the authoritative object. The physical card (§3) and the PDA's identity tab (`pda.md` §3) are both just views onto it, or in the console's case (§7), an editor for its access-level field. Persistence across rounds — a returning player's job history feeding lobby's playtime gates (`lobby.md` §2) — rides on the player meta layer (`persistence-save.md` §5), keyed to a stable player identity that doc treats as a black box pending real authentication.
 
 ## 3. The ID card — physical object
 
@@ -177,7 +177,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 ## 12. Out of scope for this pass
 
 - The full enumerated list of every access level and exactly which device checks which (a content pass, not a design decision)
-- Persistence/accounts infrastructure behind cross-round job history and playtime gating (cross-cutting infra, assumed to exist per `lobby.md` §11)
+- Real authentication behind a stable per-player identity — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 covers the cross-round job-history/playtime shape itself)
 - A standalone, console-independent forging tool ("agent card" or similar) — a plausible future antag item layered on §8's mechanism, not designed here
 - Photo ID or any biometric verification beyond the printed name/job/department
 - Per-gamemode access deltas (Head Revolutionary, traitor objectives, etc.) — that gamemode's own business, per `round-config.md` §6's precedent

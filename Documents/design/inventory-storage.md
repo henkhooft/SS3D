@@ -133,7 +133,7 @@ No new permanent chrome — same discipline as every doc in this project.
 - Uniform-specific pocket variance (a uniform with more or fewer pockets than the standard two) — the built-in pocket slots are uniform this pass
 - Item degradation/durability for non-armor items sitting in storage
 - A standalone "quick loot everything" bulk-transfer action — a plausible UX convenience, not load-bearing for the system's shape
-- Persistence of container contents across rounds (persistence & accounts' job, cross-cutting infra, same carve-out every other doc gives it)
+- Persistence of container contents across rounds — round snapshots are the mechanism (`persistence-save.md` §6), but the exact captured shape of item/container state is this doc's own future work, not that doc's
 - Visual bulge/silhouette changes on a character model based on how full their bag is — a nice-to-have, not required for the panel-based approach to work
 
 ## 14. Companion edits flagged

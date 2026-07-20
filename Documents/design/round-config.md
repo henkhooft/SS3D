@@ -38,7 +38,7 @@ What crosses over to lobby is narrower: a resolved set of active antagonist *cat
 
 ## 5. Admin-facing config screen
 
-The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, precondition editor (min/max player count) — same visual language as the rest of this project, explicitly not the classic browser-rendered checkbox table. Settings persist across rounds — this ties into the persistence/accounts cross-cutting infra already flagged as separate, not-designed-here in `lobby.md` §11.
+The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, precondition editor (min/max player count) — same visual language as the rest of this project, explicitly not the classic browser-rendered checkbox table. Settings persist across rounds as server meta (`persistence-save.md` §4) — this doc authors the pool contents, that doc is what actually keeps them on disk between rounds.
 
 **A read-only history log** — the last N rounds' drawn mode, drawn map, and whether fallback triggered — sits alongside the pool editor. Real, inspectable data an admin tuning weights over time can actually look at, rather than adjusting numbers against a black box. Same "give real information instead of a hidden mechanism" instinct that's run through this entire project, just applied to server tuning instead of player-facing systems.
 
@@ -60,7 +60,7 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 |---|---|
 | Antag-category handoff | Special/antagonist opt-in section (`lobby.md` §4) — this doc resolves what populates it |
 | Job-list deltas (rare) | Job list (`lobby.md` §2) |
-| Config persistence | Persistence & accounts, cross-cutting infra (not designed here) |
+| Config persistence | Server meta layer (`persistence-save.md` §4) |
 | Round-start / fallback logging | Server logging, cross-cutting infra (not designed here) |
 | Admin override of a draw | In-round admin tools (separate pass) |
 | Per-gamemode antag assignment | Gamemode's own runtime logic (not designed here) |
@@ -97,7 +97,7 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 - Round length and end conditions (`round-end summary & transition`, a separate still-open pass)
 - The per-gamemode antag-assignment algorithm — who specifically becomes what, within a chosen mode (that mode's own logic)
 - Dynamic/threat-budget-style meta-gamemodes (a plausible future extension of the pool shape, not designed as one here)
-- Persistence/accounts and server logging themselves (cross-cutting infra, assumed to exist)
+- Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; player-accounts is a separate not-yet-designed system)
 - Exact weight values and precondition thresholds (a balancing pass, not a design decision)
 - The full admin toolkit — ahelp, player management, audit logging, stealth observation (`in-round admin tools`, a separate pass; this doc only needs a config screen, not the whole toolkit)
 

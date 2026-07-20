@@ -134,6 +134,6 @@ No new permanent chrome.
 - The export price table (same — balancing, not designed here)
 - Department-specific sub-budgets, as opposed to one shared station budget — a plausible server-configurable variant, not load-bearing for this design, same category as lobby's optional ready-toggle
 - Black-market or antag-specific ordering variants (a gamemode-specific extension, not a base mechanic)
-- Persistence of the budget across rounds (persistence & accounts' job, cross-cutting infra)
+- Persistence of the budget across rounds — server meta layer (`persistence-save.md` §4)
 - Full server-side transaction logging beyond the console's own ledger tab (server logging, cross-cutting infra)
 

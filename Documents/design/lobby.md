@@ -62,7 +62,7 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 
 | Element | Touches existing / needed system |
 |---|---|
-| Job unlock/playtime gating | Persistence & accounts (cross-cutting infra — not designed here) |
+| Job unlock/playtime gating | Player meta layer (`persistence-save.md` §5) |
 | Gamemode-dependent job/antag availability | Round config & gamemode selection (separate pass, assumed to have already run) |
 | Resolution trigger override | In-round admin tools (separate pass) |
 | Observer/spectate entry | Deferred ghost/observer UI (`main-hud.md` §13) |
@@ -95,6 +95,6 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 - In-round admin tools, including manual override of round start or resolution (separate pass)
 - Full character appearance/loadout customization (separate pass)
 - The exact fairness/weighting algorithm inside preference resolution (a balancing/backend decision, not a design one)
-- The persistence/accounts system underlying playtime-gated jobs (cross-cutting infra, assumed to exist)
+- Real authentication underlying a stable per-player key — `player-accounts`, a separate not-yet-designed system (`persistence-save.md` §5 treats it as a black box the same way this doc's job-list data is read, not authored)
 - The observer/ghost UI itself (already deferred in `main-hud.md` §13 — this doc only adds the entry point)
 
