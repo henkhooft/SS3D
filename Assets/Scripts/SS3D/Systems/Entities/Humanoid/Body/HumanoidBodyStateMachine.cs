@@ -158,6 +158,17 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             PublishSnapshot();
         }
 
+        public void SetMirrorUpperBody(bool mirror)
+        {
+            if (_snapshot.MirrorUpperBody == mirror)
+            {
+                return;
+            }
+
+            _snapshot.MirrorUpperBody = mirror;
+            PublishSnapshot();
+        }
+
         public void SetInjuredArms(float left, float right)
         {
             _injuredArmLeft = Mathf.Clamp01(left);

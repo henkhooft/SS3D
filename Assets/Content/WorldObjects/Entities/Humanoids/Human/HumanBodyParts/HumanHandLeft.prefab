@@ -612,6 +612,7 @@ MonoBehaviour:
     Horizontal: 1.5
     Vertical: 2
   _pickupIcon: {fileID: 21300000, guid: d1f34343e08a14e48a856e409c355f32, type: 3}
+  _side: 1
   _interactionOrigin: {fileID: 0}
   HandsController: {fileID: 0}
 --- !u!114 &5077178896765091160

@@ -139,6 +139,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 ("AimYaw", Animations.Humanoid.AimYaw),
                 ("AimPitch", Animations.Humanoid.AimPitch),
                 ("AttackVariant", Animations.Humanoid.AttackVariant),
+                ("MirrorUpperBody", Animations.Humanoid.MirrorUpperBody),
                 ("VelX", Animations.Humanoid.VelX),
                 ("VelZ", Animations.Humanoid.VelZ),
                 ("Turn", Animations.Humanoid.Turn),
@@ -416,6 +417,7 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             _animator.SetInteger(Animations.Humanoid.ArmHold, (int)snapshot.ArmHold);
             _animator.SetBool(Animations.Humanoid.IsSeated, snapshot.IsSeated);
+            _animator.SetBool(Animations.Humanoid.MirrorUpperBody, snapshot.MirrorUpperBody);
 
             if (_animator.layerCount <= 1)
             {

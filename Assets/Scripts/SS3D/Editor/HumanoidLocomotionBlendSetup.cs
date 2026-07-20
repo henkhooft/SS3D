@@ -111,6 +111,7 @@ namespace SS3D.Editor
             ("AttackSwing", AnimatorControllerParameterType.Trigger),
             ("AttackStab", AnimatorControllerParameterType.Trigger),
             ("AttackVariant", AnimatorControllerParameterType.Int),
+            ("MirrorUpperBody", AnimatorControllerParameterType.Bool),
             ("Throw", AnimatorControllerParameterType.Trigger),
             ("Emote", AnimatorControllerParameterType.Trigger),
             ("Flinch", AnimatorControllerParameterType.Trigger),
@@ -377,11 +378,22 @@ namespace SS3D.Editor
                         upperAttack.writeDefaultValues = true;
                     }
 
+                    EnableMirrorParameter(upperAttack, "MirrorUpperBody");
                     EnsureAnyStateTriggerWithInt(
                         upper, upperAttack, "AttackSwing", "AttackVariant", swing.Variant, canTransitionToSelf: true);
                     if (holdDefault != null)
                     {
                         EnsureExitToState(upperAttack, holdDefault, hasExitTime: true, exitTime: 0.85f, duration: 0.15f);
+                    }
+                }
+
+                // Mixamo holds are authored for the right hand — mirror when active hand is left.
+                foreach (string holdName in new[] { "Hold Default", "Hold Item", "Hold Weapon" })
+                {
+                    AnimatorState hold = FindState(upper, holdName);
+                    if (hold != null)
+                    {
+                        EnableMirrorParameter(hold, "MirrorUpperBody");
                     }
                 }
             }
@@ -400,7 +412,7 @@ namespace SS3D.Editor
             AssetDatabase.Refresh();
 
             return "OK: Rebuilt Peaceful / Melee / Ranged / Injured locomotion blends; " +
-                   "AttackSwing variants (horizontal/downward/backhand) on Upper Body; Flinch / injured-arm additive remapped.";
+                   "AttackSwing variants + MirrorUpperBody on Upper Body holds/swings; Flinch / injured-arm additive remapped.";
         }
 
         private static BlendTree BuildBlendTree(
@@ -636,6 +648,17 @@ namespace SS3D.Editor
             }
 
             return machine.AddState(name, position);
+        }
+
+        private static void EnableMirrorParameter(AnimatorState state, string parameterName)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            state.mirrorParameterActive = true;
+            state.mirrorParameter = parameterName;
         }
 
         private static void EnsureAnyStateTrigger(

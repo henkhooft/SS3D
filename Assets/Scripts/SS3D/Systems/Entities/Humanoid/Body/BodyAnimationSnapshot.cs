@@ -26,6 +26,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public bool IsCrawling;
         public bool IsFloating;
         public bool IsDragging;
+        /// <summary>True when the active hand is Left — mirrors Upper Body Mixamo holds/swings.</summary>
+        public bool MirrorUpperBody;
 
         public uint Pack()
         {
@@ -41,6 +43,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsFloating) packed |= 1u << 17;
             if (IsDragging) packed |= 1u << 18;
             packed |= ((uint)AttackVariant & 0x3) << 19;
+            if (MirrorUpperBody) packed |= 1u << 21;
             return packed;
         }
 
@@ -65,6 +68,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 IsFloating = (packed & (1u << 17)) != 0,
                 IsDragging = (packed & (1u << 18)) != 0,
                 AttackVariant = (byte)((packed >> 19) & 0x3),
+                MirrorUpperBody = (packed & (1u << 21)) != 0,
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
                 MovementSpeed = movementSpeed,

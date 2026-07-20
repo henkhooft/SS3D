@@ -26,6 +26,7 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int AttackSwing = Animator.StringToHash("AttackSwing");
             public static readonly int AttackStab = Animator.StringToHash("AttackStab");
             public static readonly int AttackVariant = Animator.StringToHash("AttackVariant");
+            public static readonly int MirrorUpperBody = Animator.StringToHash("MirrorUpperBody");
             public static readonly int Throw = Animator.StringToHash("Throw");
             public static readonly int Emote = Animator.StringToHash("Emote");
             public static readonly int Flinch = Animator.StringToHash("Flinch");

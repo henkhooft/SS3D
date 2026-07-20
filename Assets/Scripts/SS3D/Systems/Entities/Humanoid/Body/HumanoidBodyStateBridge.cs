@@ -84,6 +84,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
             UpdateLimp();
             UpdateInjuredArms();
+            UpdateMirrorUpperBody();
             UpdateDragging();
         }
 
@@ -196,6 +197,18 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _bodyStateMachine.SetArmHold(pose);
+        }
+
+        private void UpdateMirrorUpperBody()
+        {
+            if (_bodyStateMachine == null || _hands == null)
+            {
+                return;
+            }
+
+            Hand active = _hands.SelectedHand;
+            bool mirror = active != null && active.Side == HandSide.Left;
+            _bodyStateMachine.SetMirrorUpperBody(mirror);
         }
 
         private void UpdateLimp()

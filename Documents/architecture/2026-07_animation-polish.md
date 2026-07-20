@@ -20,13 +20,14 @@ Follow-on to [2026-07_player-body-animation.md](2026-07_player-body-animation.md
 3. **Injured gait** — `Injured Locomotion 2D` blend from Male Injured Pack; rebuild menu wires limp entry/exit for all stances.
 4. **Injured arms** — `HumanoidBodyStateBridge` feeds `SetInjuredArms` from arm zone brute; Additive `Empty Additive` remapped to hurting idle at 0.4 weight.
 5. **Rebuild tooling** — `HumanoidLocomotionBlendSetup` builds Injured tree; optional `artifacts/force-rebuild-animator.flag` one-shot when interactive Editor holds the project.
+6. **Left-hand mirror** — `Hand.Side` + snapshot `MirrorUpperBody` bool; Upper Body Hold*/Attack Swing* states use Animator mirror parameter (not Base Layer locomotion).
 
 ## Who tunes what (after polish)
 
 | Owner | Owns |
 |-------|------|
 | Animator | Swing exit time, limp transitions, blend samples, upper-body mask, AttackSwing Any State |
-| Code | `CombatStance`, `LimpSide`, `InjuredArm*`, `VelX`/`VelZ`, fire `AttackSwing` trigger, Melee layer weight on/off, look-at aim smoothing |
+| Code | `CombatStance`, `LimpSide`, `InjuredArm*`, `VelX`/`VelZ`, `MirrorUpperBody`, fire `AttackSwing` trigger, Melee layer weight on/off, look-at aim smoothing |
 
 Intentional leftovers in code: Upper Body weight lerp for stance enter/leave; locomotion velocity snap into the blend tree; look-at lerp. Do not reintroduce swing wall-clock timers.
 
