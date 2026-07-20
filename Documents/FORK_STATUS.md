@@ -8,7 +8,7 @@ current review capacity supports.
 This document is the plain-language divergence log. It is updated periodically — not per-commit.
 For doc authoring conventions see [SKILL.md](SKILL.md).
 
-**Last updated:** 2026-07-18
+**Last updated:** 2026-07-20
 
 ---
 
@@ -438,7 +438,8 @@ Layered contributor-based disk persistence replacing the monolithic tilemap JSON
 EditMode tests: `PersistenceFrameworkTests`, `ServerMetaPersistenceTests`; updated
 `AreaFloodFillTests` for template restore.
 
-Merged from `archive/feature-persistence-framework`. System map:
+Merged from `archive/feature-persistence-framework`. Design:
+[persistence-save.md](design/persistence-save.md). System map:
 [persistence.md](architecture/systems/persistence.md). Plan:
 [persistence_architecture_design_2fe61864.plan.md](plans/persistence_architecture_design_2fe61864.plan.md).
 
@@ -636,6 +637,12 @@ specs or document explicit deviations.
 | [comms.md](design/comms.md) | Diegetic speech subtitles with distance/occlusion; visual radio channel selector |
 | [main-hud.md](design/main-hud.md) | Minimal chrome HUD — 3D body vitals, cut targeting doll, intent chording |
 | [hacking-interface.md](design/hacking-interface.md) | Field diagnostic unit (FDU) — diegetic 7-panel tool; discovery by physical access |
+| [objectives.md](design/objectives.md) | Steal/assassinate/escape resolved against real system state (possession, death, Area occupancy) — no hidden roll |
+| [round-end.md](design/round-end.md) | Reveal, summary, and transition; evac shuttle call/countdown/point-of-no-return |
+| [creative-mode.md](design/creative-mode.md) | In-game map editor: object placement, utility routing, bulk tools, undo, spawn-point authoring |
+| [persistence-save.md](design/persistence-save.md) | Four-layer save model — station templates, server meta, player meta, automatic round-snapshot recovery |
+| [admin-tools.md](design/admin-tools.md) | Permission tiers, ahelp, stealth observation, world intervention, moderation — every action logged |
+| [cryogenics.md](design/cryogenics.md) | Physical cryo pod as a real pause mechanic for logged-off characters, distinct from death/respawn |
 
 Machine interfaces, the radial interaction menu, screen-space overlays, and the Main HUD overlay
 partially implement [main-hud.md](design/main-hud.md) (tiered interactions, intent, diegetic machine
@@ -649,7 +656,10 @@ implements [health.md](design/health.md) (Phases 1–5b; Phase 6+ deferred). **C
 implements [combat.md](design/combat.md) (Phase 4 melee only). **Player body animation** implements
 stance/locomotion presentation; it is not full combat. **Vision FOV** has no dedicated design doc —
 it is a rendering feature under [rendering-lighting.md](design/rendering-lighting.md) territory.
-The rest of these specs remain design-only.
+**Persistence foundation** partially implements [persistence-save.md](design/persistence-save.md)
+(station templates and server meta shipped; player meta and the automatic round-snapshot
+crash-recovery safety net that doc designs are still pending). The rest of these specs remain
+design-only.
 
 ---
 
