@@ -31,6 +31,10 @@ namespace SS3D.Tests.EditMode
             Assert.AreNotEqual(0, Animations.Humanoid.Throw);
             Assert.AreNotEqual(0, Animations.Humanoid.Emote);
             Assert.AreNotEqual(0, Animations.Humanoid.Flinch);
+            Assert.AreNotEqual(0, Animations.Humanoid.InjuredArmLeft);
+            Assert.AreNotEqual(0, Animations.Humanoid.InjuredArmRight);
+            Assert.AreNotEqual(0, Animations.Humanoid.InjuredLeg);
+            Assert.AreNotEqual(0, Animations.Humanoid.MirrorUpperBody);
             Assert.AreNotEqual(0, Animations.Humanoid.Jump);
             Assert.AreNotEqual(0, Animations.Humanoid.TurnLeft90);
             Assert.AreNotEqual(0, Animations.Humanoid.TurnRight90);

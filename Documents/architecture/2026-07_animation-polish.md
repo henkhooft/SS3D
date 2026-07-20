@@ -21,13 +21,14 @@ Follow-on to [2026-07_player-body-animation.md](2026-07_player-body-animation.md
 4. **Injured arms** — `HumanoidBodyStateBridge` feeds `SetInjuredArms` from arm zone brute; Additive `Empty Additive` remapped to hurting idle at 0.4 weight.
 5. **Rebuild tooling** — `HumanoidLocomotionBlendSetup` builds Injured tree; optional `artifacts/force-rebuild-animator.flag` one-shot when interactive Editor holds the project.
 6. **Left-hand mirror** — `Hand.Side` + snapshot `MirrorUpperBody` bool; Upper Body Hold*/Attack Swing* states use Animator mirror parameter (not Base Layer locomotion).
+7. **Injured oneshots + severity** — limp `Jump`/`Turn90` use Male Injured Pack; idle blends to stumble via `InjuredLeg`; rare `Emote` → Injured Wave while severely limping; arm additive weight scales with arms and yields to stumble when legs dominate.
 
 ## Who tunes what (after polish)
 
 | Owner | Owns |
 |-------|------|
-| Animator | Swing exit time, limp transitions, blend samples, upper-body mask, AttackSwing Any State |
-| Code | `CombatStance`, `LimpSide`, `InjuredArm*`, `VelX`/`VelZ`, `MirrorUpperBody`, fire `AttackSwing` trigger, Melee layer weight on/off, look-at aim smoothing |
+| Animator | Swing exit time, limp transitions, blend samples, upper-body mask, AttackSwing Any State, injured jump/turn/wave |
+| Code | `CombatStance`, `LimpSide`, `InjuredArm*`, `InjuredLeg`, `VelX`/`VelZ`, `MirrorUpperBody`, fire `AttackSwing` trigger, Melee layer weight on/off, look-at aim smoothing |
 
 Intentional leftovers in code: Upper Body weight lerp for stance enter/leave; locomotion velocity snap into the blend tree; look-at lerp. Do not reintroduce swing wall-clock timers.
 
@@ -36,6 +37,7 @@ Intentional leftovers in code: Upper Body weight lerp for stance enter/leave; lo
 - Combat windup telegraph length vs Mixamo swing (shorten Attack Swing state speed in controller, or add windup pose later)
 - Side-specific limp L/R clips (pack is not side-split; `LimpSide` still set for future bias)
 - Body-presentation-authority collapse path
+- Injured pack path-curve turn clips (walk/run left-right turns) — not FreeformCartesian samples
 
 ## Related
 

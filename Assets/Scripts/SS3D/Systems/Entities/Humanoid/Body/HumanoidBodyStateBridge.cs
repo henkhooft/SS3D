@@ -12,13 +12,21 @@ namespace SS3D.Systems.Entities.Humanoid
     [RequireComponent(typeof(HumanoidBodyStateMachine))]
     public class HumanoidBodyStateBridge : MonoBehaviour
     {
+        private const float LimpThreshold = 0.3f;
+        private const float WaveEmoteLegThreshold = 0.75f;
+        private const float WaveEmoteCooldownSeconds = 48f;
+
         [SerializeField] private HumanoidBodyStateMachine _bodyStateMachine;
         [SerializeField] private HumanoidLivingController _livingController;
         [SerializeField] private HumanHealthController _healthController;
         [SerializeField] private Hands _hands;
 
+        private float _nextHurtEmoteTime;
+
         private void Awake()
         {
+            _nextHurtEmoteTime = Time.time + WaveEmoteCooldownSeconds * 0.5f;
+
             if (_bodyStateMachine == null)
             {
                 _bodyStateMachine = GetComponent<HumanoidBodyStateMachine>();
@@ -222,18 +230,49 @@ namespace SS3D.Systems.Entities.Humanoid
             // path was removed in the health rewrite; per-leg damage now comes from the zone model.
             float leftDamage = _healthController != null ? _healthController.GetZoneBruteFraction(BodyZone.LeftLeg) : 0f;
             float rightDamage = _healthController != null ? _healthController.GetZoneBruteFraction(BodyZone.RightLeg) : 0f;
+            float maxLeg = Mathf.Max(leftDamage, rightDamage);
 
             LimpSide side = LimpSide.None;
-            if (leftDamage > 0.3f && leftDamage > rightDamage)
+            if (leftDamage > LimpThreshold && leftDamage > rightDamage)
             {
                 side = LimpSide.Left;
             }
-            else if (rightDamage > 0.3f)
+            else if (rightDamage > LimpThreshold)
             {
                 side = LimpSide.Right;
             }
 
             _bodyStateMachine.SetLimpSide(side);
+            _bodyStateMachine.SetInjuredLeg(maxLeg);
+            TickRareHurtEmote(maxLeg);
+        }
+
+        /// <summary>
+        /// While severely limping and nearly idle, occasionally fire Emote (Injured Wave on animator).
+        /// </summary>
+        private void TickRareHurtEmote(float maxLeg)
+        {
+            if (_bodyStateMachine == null || maxLeg < WaveEmoteLegThreshold)
+            {
+                return;
+            }
+
+            if (_bodyStateMachine.Snapshot.MovementSpeed > 0.15f)
+            {
+                return;
+            }
+
+            if (Time.time < _nextHurtEmoteTime)
+            {
+                return;
+            }
+
+            _nextHurtEmoteTime = Time.time + WaveEmoteCooldownSeconds;
+            // Owner prediction + server auth via existing trigger RPC path.
+            if (_bodyStateMachine.IsOwner)
+            {
+                _bodyStateMachine.CmdFireTrigger(AnimationTriggerId.Emote, 0);
+            }
         }
 
         private void UpdateInjuredArms()

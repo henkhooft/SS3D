@@ -21,7 +21,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee Upper Body weight; `SetPosingSuppressed` for collapse
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — knockdown / death collapse visuals (`ApplyCollapseVisuals`)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — inventory holds, combat stance, limp + injured arms from health, `MirrorUpperBody` from active hand side
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — inventory holds, combat stance, limp + `InjuredLeg` + injured arms from health, rare hurt Emote, `MirrorUpperBody` from active hand side
 - `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (drives Upper Body mirror)
@@ -41,6 +41,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2 cycle: horizontal / downward / backhand).
 - **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* states use Animator `MirrorUpperBody` (from `Hand.Side`). Do not enable mirror on Base Layer FreeformCartesian locomotion — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight` body-part prefabs, not on mega `Human.prefab`.
+- **Injured oneshots:** Jump / Turn90 / Emote while `LimpSide != 0` must use Injured Jump / Injured Turn / Injured Wave (Base Layer). Healthy Jump/Turn require `LimpSide == 0`. After changing blend setup, run rebuild menu or drop `artifacts/force-rebuild-animator.flag`.
 - **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement is enabled — that races the tick and reintroduces the surge.
 - **Batch rebuild while Editor open:** drop `artifacts/force-rebuild-animator.flag` (consumed on script reload) or run the menu; batchmode cannot open a held project.
 

@@ -18,6 +18,7 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int ArmHold = Animator.StringToHash("ArmHold");
             public static readonly int InjuredArmLeft = Animator.StringToHash("InjuredArmLeft");
             public static readonly int InjuredArmRight = Animator.StringToHash("InjuredArmRight");
+            public static readonly int InjuredLeg = Animator.StringToHash("InjuredLeg");
             public static readonly int IsSeated = Animator.StringToHash("IsSeated");
             public static readonly int CombatMode = Animator.StringToHash("CombatMode");
             public static readonly int CombatStance = Animator.StringToHash("CombatStance");

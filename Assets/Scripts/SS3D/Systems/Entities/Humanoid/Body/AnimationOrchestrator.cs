@@ -45,6 +45,9 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>Horizontal / downward / backhand cycle for melee AttackSwing.</summary>
         private const int MeleeSwingVariantCount = 3;
 
+        /// <summary>Leg brute at/above this → stumble idle on injured blend; prefer base over arm additive.</summary>
+        private const float StumbleLegThreshold = 0.65f;
+
         /// <summary>
         /// Soft fade when entering/leaving Melee stance (Upper Body layer on/off).
         /// Swing clip lifetime is Animator exit-time owned — do not add swing duration constants here.
@@ -133,6 +136,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 ("ArmHold", Animations.Humanoid.ArmHold),
                 ("InjuredArmLeft", Animations.Humanoid.InjuredArmLeft),
                 ("InjuredArmRight", Animations.Humanoid.InjuredArmRight),
+                ("InjuredLeg", Animations.Humanoid.InjuredLeg),
                 ("IsSeated", Animations.Humanoid.IsSeated),
                 ("CombatMode", Animations.Humanoid.CombatMode),
                 ("CombatStance", Animations.Humanoid.CombatStance),
@@ -445,13 +449,33 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             _animator.SetFloat(Animations.Humanoid.InjuredArmLeft, snapshot.InjuredArmLeft);
             _animator.SetFloat(Animations.Humanoid.InjuredArmRight, snapshot.InjuredArmRight);
+            _animator.SetFloat(Animations.Humanoid.InjuredLeg, snapshot.InjuredLeg);
 
             if (_animator.layerCount > 2)
             {
-                bool injured = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight) > 0.01f;
+                float armMax = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight);
+                float leg = snapshot.InjuredLeg;
                 bool staggered = snapshot.State == BodyState.Staggered;
-                // Injured arm overlay is a light additive; stagger needs full weight for flinch reads.
-                float weight = staggered ? 1f : injured ? 0.4f : 0f;
+
+                float weight;
+                if (staggered)
+                {
+                    weight = 1f;
+                }
+                else if (leg >= StumbleLegThreshold && leg >= armMax)
+                {
+                    // Stumble idle already reads on base; keep arm additive light.
+                    weight = armMax * 0.25f;
+                }
+                else if (armMax > 0.01f)
+                {
+                    weight = Mathf.Lerp(0.15f, 0.55f, armMax);
+                }
+                else
+                {
+                    weight = 0f;
+                }
+
                 _animator.SetLayerWeight(2, weight);
             }
         }

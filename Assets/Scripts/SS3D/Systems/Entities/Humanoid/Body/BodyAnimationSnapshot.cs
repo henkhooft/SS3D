@@ -22,6 +22,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public float MovementSpeed;
         public float InjuredArmLeft;
         public float InjuredArmRight;
+        /// <summary>Max left/right leg brute fraction — drives limp idle severity and additive weight.</summary>
+        public float InjuredLeg;
         public bool IsSeated;
         public bool IsCrawling;
         public bool IsFloating;
@@ -53,7 +55,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             float aimPitch,
             float movementSpeed,
             float injuredArmLeft,
-            float injuredArmRight)
+            float injuredArmRight,
+            float injuredLeg)
         {
             return new BodyAnimationSnapshot
             {
@@ -74,6 +77,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 MovementSpeed = movementSpeed,
                 InjuredArmLeft = injuredArmLeft,
                 InjuredArmRight = injuredArmRight,
+                InjuredLeg = injuredLeg,
             };
         }
 
@@ -84,7 +88,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 && Math.Abs(AimPitch - other.AimPitch) < 0.01f
                 && Math.Abs(MovementSpeed - other.MovementSpeed) < 0.01f
                 && Math.Abs(InjuredArmLeft - other.InjuredArmLeft) < 0.01f
-                && Math.Abs(InjuredArmRight - other.InjuredArmRight) < 0.01f;
+                && Math.Abs(InjuredArmRight - other.InjuredArmRight) < 0.01f
+                && Math.Abs(InjuredLeg - other.InjuredLeg) < 0.01f;
         }
 
         public override bool Equals(object obj) => obj is BodyAnimationSnapshot other && Equals(other);
