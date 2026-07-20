@@ -28,9 +28,10 @@ STToonSettings ST_GetToonSettings()
 
 float ST_ApplyHalfToonCurve(float ndotl)
 {
+    // Prefer Lambert for reference contrast; light wrap only as a small floor.
     float lambert = saturate(ndotl);
     float wrap = saturate(ndotl * 0.5 + 0.5);
-    float lit = lerp(lambert, wrap, 0.5);
+    float lit = lerp(lambert, wrap, 0.25);
 
     if (_RampStrength > 0.001)
     {

@@ -25,6 +25,8 @@ namespace SS3D.Systems.Electricity
         [SerializeField]
         private bool _respectDevBypass = true;
         [SerializeField]
+        private bool _applyDepartmentalLightTint;
+        [SerializeField]
         private LightFixtureCapability _fixtureCapability = LightFixtureCapability.NormalOnly;
 
         public LightFixtureCapability FixtureCapability => _fixtureCapability;
@@ -375,7 +377,8 @@ namespace SS3D.Systems.Electricity
         private void TurnLightOnNormal()
         {
             Color emission = _poweredEmission;
-            if (_hasArea
+            if (_applyDepartmentalLightTint
+                && _hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && _consumer?.TileObject != null
                 && areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record)

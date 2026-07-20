@@ -40,8 +40,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _BumpScale: 2.5
-    - _SpecIntensity: 0.55
-    - _SpecPower: 36
+    - _SpecIntensity: 0.7
+    - _SpecPower: 28
     - _AmbientCol: 0
     - _Clipped: 0
     - _ColBright: 0
@@ -51,9 +51,9 @@ Material:
     - _MaxLight: 1
     - _MinLight: 0
     - _Offset: 0.35
-    - _RampStrength: 0.25
+    - _RampStrength: 0.2
     - _Segmented: 1
-    - _ShnIntense: 0.45
+    - _ShnIntense: 0.55
     - _ShnOverlap: 0
     - _ShnRange: 0.45
     - _ShnSmooth: 0.55
@@ -62,7 +62,7 @@ Material:
     m_Colors:
     - _Color: {r: 0.9339623, g: 0.9339623, b: 0.9339623, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ShadowTint: {r: 0.78, g: 0.8, b: 0.9, a: 1}
+    - _ShadowTint: {r: 0.45, g: 0.48, b: 0.55, a: 1}
     - _ShnColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
