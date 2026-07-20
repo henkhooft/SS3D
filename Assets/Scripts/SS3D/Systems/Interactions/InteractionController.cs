@@ -242,7 +242,7 @@ namespace SS3D.Systems.Interactions
 
             InteractionEvent swingEvent = new(source, null);
             TryPlayMeleeSwingTelegraph(hit);
-            InteractionOptimisticFeedback.TryBeginDelayed(hit, swingEvent);
+            // No world-space LoadingBar — windup is swing telegraph; recovery is reticle lock-on recharge.
             TrySyncMeleeAimToServer();
             CmdRunMeleeSwing();
             return true;
@@ -1327,7 +1327,45 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Server → owning client: melee connect applied damage. HUD pulses red; whiffs stay silent.
+        /// Server → owning client: melee recovery started (hit or miss). Mirrors the server tracker
+        /// onto the client Hand so CanStartSwing / HUD bracket recharge work off-host.
+        /// </summary>
+        [Server]
+        public void ServerNotifyMeleeRecovery(Hand hand, float recoverySeconds)
+        {
+            if (Owner == null || recoverySeconds <= 0f)
+            {
+                return;
+            }
+
+            int handIndex = -1;
+            if (hand != null && hand.HandsController is Hands hands)
+            {
+                handIndex = hands.PlayerHands.IndexOf(hand);
+            }
+
+            TargetNotifyMeleeRecovery(Owner, handIndex, recoverySeconds);
+        }
+
+        [TargetRpc]
+        private void TargetNotifyMeleeRecovery(NetworkConnection connection, int handIndex, float recoverySeconds)
+        {
+            Hand hand = ResolveLocalHand(handIndex);
+            if (hand != null)
+            {
+                if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+                {
+                    tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
+                }
+
+                tracker.BeginRecovery(recoverySeconds);
+            }
+
+            MeleeRecoveryFeedback.NotifyLocalRecoveryStarted(recoverySeconds);
+        }
+
+        /// <summary>
+        /// Server → owning client: melee connect applied damage. HUD cross-flash; whiffs stay silent.
         /// </summary>
         [Server]
         public void ServerNotifyMeleeConnectHit()
@@ -1344,6 +1382,22 @@ namespace SS3D.Systems.Interactions
         private void TargetNotifyMeleeConnectHit(NetworkConnection connection)
         {
             MeleeConnectFeedback.NotifyLocalConnectHitLanded();
+        }
+
+        private Hand ResolveLocalHand(int handIndex)
+        {
+            Hands hands = GetComponentInChildren<Hands>();
+            if (hands == null)
+            {
+                return null;
+            }
+
+            if (handIndex >= 0 && handIndex < hands.PlayerHands.Count)
+            {
+                return hands.PlayerHands[handIndex];
+            }
+
+            return hands.SelectedHand;
         }
 
         private bool TryValidateGameplayGates(IInteraction interaction, InteractionEvent interactionEvent)

@@ -36,6 +36,11 @@ namespace SS3D.Systems.Combat.Interactions
 
         public int Priority => 100;
 
+        /// <summary>
+        /// Melee uses swing telegraph + reticle lock-on recharge — never the world-space LoadingBar.
+        /// </summary>
+        public override IClientInteraction CreateClient(InteractionEvent interactionEvent) => null;
+
         /// <summary>Instant so Harm primary always runs the swing without arming.</summary>
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Instant;
 
@@ -104,6 +109,7 @@ namespace SS3D.Systems.Combat.Interactions
                 GetOrCreateRecoveryTracker(hand).BeginRecovery(_profile.RecoverySeconds);
                 InteractionController controller = hand.GetComponentInParent<InteractionController>();
                 controller?.ClearMeleeAimPoint();
+                controller?.ServerNotifyMeleeRecovery(hand, _profile.RecoverySeconds);
                 if (landed)
                 {
                     controller?.ServerNotifyMeleeConnectHit();

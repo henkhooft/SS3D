@@ -81,13 +81,11 @@ namespace SS3D.UI.MainHud
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
+        private IntentType? _cachedIntent;
         private Hand _cachedSelectedHand;
         private bool _machineUiOpen;
         private bool _subscribedToMachineUi;
         private MachineInterfaceSubSystem _machineUi;
-        private float _connectHitPulseUntil;
-
-        private const float ConnectHitPulseSeconds = 0.22f;
 
         protected override void OnAwake()
         {
@@ -215,6 +213,7 @@ namespace SS3D.UI.MainHud
             }
 
             RefreshActiveHand();
+            RefreshIntent();
             RefreshZoneReticle();
         }
 
@@ -250,12 +249,6 @@ namespace SS3D.UI.MainHud
             ZoneReticleAimState aimState = ZoneReticleAimState.Idle;
             string zoneLabel = string.Empty;
 
-            // Connect-hit pulse overrides hover color briefly; whiffs never fire this.
-            if (Time.time < _connectHitPulseUntil)
-            {
-                aimState = ZoneReticleAimState.Hit;
-            }
-
             // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
             // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
             if (SubSystems.TryGet(out CameraSubSystem cameras)
@@ -275,19 +268,42 @@ namespace SS3D.UI.MainHud
                         out Collider zoneCollider))
                 {
                     zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
-                    if (aimState != ZoneReticleAimState.Hit && IsHoveredZoneInRange(zoneCollider))
+                    if (IsHoveredZoneInRange(zoneCollider))
                     {
                         aimState = ZoneReticleAimState.Valid;
                     }
                 }
             }
 
-            _view.SetZoneReticle(screenPosition, aimState, zoneLabel);
+            TryGetSelectedHandRecovery(out float lockReadyProgress01, out bool recharging);
+            // Recharging red overrides blue-valid tint; brackets still show zone label.
+            if (recharging)
+            {
+                aimState = ZoneReticleAimState.Idle;
+            }
+
+            _view.SetZoneReticle(screenPosition, aimState, zoneLabel, lockReadyProgress01, recharging);
         }
 
         private void HandleMeleeConnectHitLanded()
         {
-            _connectHitPulseUntil = Time.time + ConnectHitPulseSeconds;
+            _view?.PlayZoneReticleCrossFlash();
+        }
+
+        private bool TryGetSelectedHandRecovery(out float readyProgress01, out bool recharging)
+        {
+            readyProgress01 = 1f;
+            recharging = false;
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null || !hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            {
+                return false;
+            }
+
+            recharging = tracker.IsRecovering;
+            readyProgress01 = tracker.ReadyProgress01;
+            return true;
         }
 
         private bool IsHoveredZoneInRange(Collider zoneCollider)
@@ -465,6 +481,7 @@ namespace SS3D.UI.MainHud
             _inventory = null;
             _hands = null;
             _intentProvider = null;
+            _cachedIntent = null;
             _cachedSelectedHand = null;
         }
 
@@ -865,7 +882,18 @@ namespace SS3D.UI.MainHud
 
         private void RefreshIntent()
         {
+            if (_view == null)
+            {
+                return;
+            }
+
             IntentType intent = _intentProvider?.CurrentIntent ?? IntentType.Help;
+            if (_cachedIntent == intent)
+            {
+                return;
+            }
+
+            _cachedIntent = intent;
             _view.SetIntent(intent);
         }
 

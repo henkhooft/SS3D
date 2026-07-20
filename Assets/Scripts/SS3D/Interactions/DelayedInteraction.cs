@@ -36,7 +36,7 @@ namespace SS3D.Interactions
         /// Creates a client-side interaction object for this interaction
         /// </summary>
         /// <param name="interactionEvent">The interaction event</param>
-        public IClientInteraction CreateClient(InteractionEvent interactionEvent)
+        public virtual IClientInteraction CreateClient(InteractionEvent interactionEvent)
         {
             // Don't create client interaction if delay too small
             if (Math.Abs(Delay) < 0.1f)

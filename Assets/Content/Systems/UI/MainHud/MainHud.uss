@@ -129,8 +129,20 @@
     --zone-reticle-color: var(--ss3d-text-tertiary);
 }
 
+.zone-target-reticle__shake {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
 .zone-target-reticle--valid {
     --zone-reticle-color: var(--ss3d-ramp-blue-300);
+}
+
+.zone-target-reticle--recharging {
+    --zone-reticle-color: var(--ss3d-feedback-danger);
 }
 
 .zone-target-reticle--hit {
@@ -139,8 +151,8 @@
 
 .zone-target-reticle__corner {
     position: absolute;
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
 }
 
 .zone-target-reticle__corner--tl {
@@ -223,6 +235,40 @@
     background-color: var(--zone-reticle-color);
 }
 
+/* Design 2A option B — white cross flash on successful melee connect. */
+.zone-target-reticle__cross-flash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    margin-left: -22px;
+    margin-top: -22px;
+    display: none;
+    opacity: 0;
+    transform-origin: center;
+}
+
+.zone-target-reticle__cross-arm {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 24px;
+    height: 4px;
+    margin-left: -12px;
+    margin-top: -2px;
+    background-color: #ffffff;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-color: #14141a;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
 .zone-target-label {
     position: absolute;
     font-size: 17px;
@@ -234,6 +280,10 @@
 
 .zone-target-label--valid {
     color: var(--ss3d-ramp-blue-300);
+}
+
+.zone-target-label--recharging {
+    color: var(--ss3d-feedback-danger);
 }
 
 .zone-target-label--hit {

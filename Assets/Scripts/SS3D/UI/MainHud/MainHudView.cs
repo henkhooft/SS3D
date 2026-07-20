@@ -119,9 +119,14 @@ namespace SS3D.UI.MainHud
         }
 
         /// <summary>
-        /// Updates the zone-targeting reticle (cursor position + aim state / zone label).
+        /// Updates the zone-targeting reticle (cursor, aim state, zone label, lock recharge).
         /// </summary>
-        public void SetZoneReticle(Vector2 screenPosition, ZoneReticleAimState state, string zoneLabel)
+        public void SetZoneReticle(
+            Vector2 screenPosition,
+            ZoneReticleAimState state,
+            string zoneLabel,
+            float lockReadyProgress01,
+            bool recharging)
         {
             if (_zoneReticle == null)
             {
@@ -130,6 +135,13 @@ namespace SS3D.UI.MainHud
 
             _zoneReticle.UpdateCursorPosition(screenPosition);
             _zoneReticle.SetAimState(state, zoneLabel);
+            _zoneReticle.SetLockProgress(lockReadyProgress01, recharging);
+            _zoneReticle.TickCrossFlash();
+        }
+
+        public void PlayZoneReticleCrossFlash()
+        {
+            _zoneReticle?.PlayCrossFlash();
         }
 
         public void SetZoneReticleVisible(bool visible)
@@ -143,6 +155,7 @@ namespace SS3D.UI.MainHud
             if (!visible)
             {
                 _zoneReticle.SetAimState(ZoneReticleAimState.Idle, string.Empty);
+                _zoneReticle.SetLockProgress(1f, recharging: false);
             }
         }
 

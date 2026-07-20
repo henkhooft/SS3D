@@ -197,3 +197,8 @@ Single primary path per [combat.md](../design/combat.md) §2:
   hand bone so swing anim aborted windup before `StartDelayed`; (2) connect resolved from
   stance `AimYaw`/`AimPitch`, which stay stale outside combat stance. Fix: melee move-check
   uses entity root; owner syncs mouse aim via `CmdSyncMeleeAim` for connect resolve.
+- **2026-07-20 (targeting + intent):** Connect uses camera ray + exclude-self + closest-point
+  reach + AnatomyNode limb meshes. `C`/HUD chip toggle Help/Harm; Harm forces combat stance.
+  Reticle: lock-on recharge from `MeleeRecoveryTracker` + cross flash on land. HUD intent
+  polls `CurrentIntent` (interim; prefer `IntentChanged` later). `C` still also Cancel
+  Interaction in `Controls.inputed` — input conflict open.

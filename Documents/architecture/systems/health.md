@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects wired; vitals HUD Phase 6 remainder)
-> Verified: 39fe3fbb2 — 2026-07-19
+> Verified: 772b62dc0 — 2026-07-20
 
 # Health
 
@@ -52,7 +52,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)
 - `ZoneTargetResolver.TryResolveCombatZone` — zone raycast + groin banding for Harm hits (`ZoneTargetCollider` is the contract; bones may be on Characters)
-- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` — Main HUD zone chip (Harm intent; main-hud §6)
+- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + connect (exclude-self overload; AnatomyNode limb meshes; closest-point reach)
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 
@@ -67,6 +67,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Death skips ragdoll / keeps walk cycle:** `OnDisable` must not `Recover()` (ownership teardown stands the corpse up). Death uses `ServerDeathRagdoll` + observer reinforce: disable Animator/`AnimationOrchestrator`, enable bone physics. Do not rely on SyncVar OnChange alone from server `Kill()`.
 - **Unconscious presentation:** collapse on `!IsConscious` **or** `IsCardiacArrest`. Use `ApplyCollapseVisuals` + `RpcSetConsciousnessCollapsed` (same reinforce pattern as death). Coimbra `UpdateEvent` keeps firing after `enabled=false` — `AnimationOrchestrator.SetPosingSuppressed` must stop walk-param writes. Broader ownership: [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect Clear from other bodies:** only clear when `_drivingLocalScreenEffects` — other players' mind unassign must not wipe the local owner's Volume intensities.
+- **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).
 
 ## Depends on / Used by
 

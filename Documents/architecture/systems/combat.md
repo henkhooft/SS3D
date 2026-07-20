@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/
 > Entry points: MeleeHitInteraction, HandMeleeExtension, MeleeWeaponItemExtension; swing via HumanoidCombatController.RequestAttack / CmdRunMeleeSwing
 > Status: partial
-> Verified: 5c0e2e5bb — 2026-07-20
+> Verified: 772b62dc0 — 2026-07-20
 
 # Combat
 
@@ -25,12 +25,14 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — swing start gates + connect-frame zone damage
-- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm → `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`; intent ↔ combat stance
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — `C` → intent toggle; `RequestAttack` telegraph
+- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm → `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`; intent ↔ combat stance; aim + recovery TargetRpcs
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — `C` → `RequestToggleIntent`; `RequestAttack` telegraph
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/HandMeleeExtension.cs` — fists on hand prefabs (radial discovery)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` — dedicated tool profiles
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` — timing, damage, `StaminaCost`
-- `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryTracker.cs` — post-connect recovery lockout on Hand
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryTracker.cs` — post-connect recovery lockout + `ReadyProgress01` for HUD brackets
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeConnectFeedback.cs` — client signal → reticle cross flash on land
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryFeedback.cs` — client signal when recovery starts (hit or miss)
 - `Assets/Scripts/SS3D/Systems/Health/MeleeDamagePacket.cs` — damage DTO owned by Health
 - `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` — freezes controls on mindless test Human
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — `ServerSpawnCombatDummy`
@@ -46,21 +48,23 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 ## Testing
 
 1. Host Play Mode as admin, console: `spawndummy` — mindless Human ~2m ahead (controls frozen).
-2. `C` toggles Help/Harm and combat stance together; Harm shows Melee/Ranged locomotion.
-3. Harm LMB with nothing under the reticle — full swing + recovery; no self-damage.
-4. Harm LMB aimed at limbs through windup — damage applies at connect from camera aim (not hand bone).
-5. Help must not swing. Reticle: grey idle / blue in-range; red pulse only if connect applied damage (whiff = no pulse). Optional health debug `H`.
+2. `C` / HUD chip toggles Help/Harm and combat stance together; Harm shows Melee/Ranged locomotion; HUD intent highlight must update for both paths.
+3. Harm LMB with nothing under the reticle — full swing + recovery; no self-damage; brackets recharge red.
+4. Harm LMB aimed at limbs through windup — damage applies at connect from camera aim; white cross flash on land (whiff = no flash).
+5. Help must not swing. Optional health debug `H`.
 
 ## Pitfalls
 
 - **Do not revive anim-only LMB intercept** in melee stance — telegraph is feedback on swing dispatch only.
 - **Do not require a hover collider to start a swing** — Harm primary uses `CmdRunMeleeSwing`; connect resolves hit from synced camera ray.
-- **`C` toggles intent, not stance alone** — stance follows Harm via `InteractionController.ApplyCombatModeForIntent`.
+- **`C` toggles intent, not stance alone** — stance follows Harm via `InteractionController.ApplyCombatModeForIntent`. Hardcoded `cKey` in `HumanoidCombatController`; Input System still binds **Cancel Interaction** to `C` too — see [interactions-runtime](interactions-runtime.md).
 - **Connect aim is not stance SyncVars** — owner syncs the **camera mouse ray** via `CmdSyncMeleeAim`; connect must use that ray, not hand→aim.
 - **Exclude self on connect/reticle** — pass attacker `HumanHealthController` into `TryResolveHoverZone` or swings hit your own arms.
 - **Cancel-on-move uses entity root** — melee overrides to `Entity` so swing bone motion does not cancel windup.
 - **Melee reach uses closest point on zone collider** — ray hit on forearm/hand can be past `RangeLimit`; use `IsMeleeZoneReachInRange`.
 - **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
+- **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsRecovering` / bracket recharge; use `ServerNotifyMeleeRecovery`.
+- **No LoadingBar on melee** — `MeleeHitInteraction.CreateClient` returns null and Harm primary skips `InteractionOptimisticFeedback`; windup is telegraph, cooldown is reticle lock-on recharge.
 - **UNT0026:** use `TryGetComponent` for optional combat components (recovery tracker, weapon extension presence).
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
@@ -69,7 +73,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [stamina](stamina.md) (swing `ServerDepleteStamina`), [interactions-framework](interactions-framework.md), [entities](entities.md) (stance/swing/aim + dummy spawn), [inventory](inventory.md) (hands / items / zone reticle)
+- **Depends on:** [health](health.md) (`ApplyDamage`, `ZoneTargetResolver`), [stamina](stamina.md) (swing `ServerDepleteStamina`), [interactions-framework](interactions-framework.md), [interactions-runtime](interactions-runtime.md), [entities](entities.md) (stance/swing/aim + dummy spawn), [inventory](inventory.md) (hands / items / zone reticle)
 - **Used by:** Harm-intent Run Primary
 
 ## Related docs
