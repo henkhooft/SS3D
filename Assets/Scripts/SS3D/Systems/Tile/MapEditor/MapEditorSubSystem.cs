@@ -314,7 +314,7 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId) &&
-                FloorDecalCatalog.Get().TryGet(decalId, out FloorDecalDefinition definition) &&
+                FloorDecalCatalog.Get()?.TryGet(decalId, out FloorDecalDefinition definition) == true &&
                 _viewModel.CurrentTool == MapEditorTool.Edit)
             {
                 _hologramManager.SetSelectedFloorDecal(definition);

@@ -71,6 +71,9 @@ namespace SS3D.Systems.Tile.MapEditor
         private void AppendFloorDecals(HashSet<string> mapped)
         {
             FloorDecalCatalog catalog = FloorDecalCatalog.Get();
+            if (catalog?.Definitions == null)
+                return;
+
             foreach (FloorDecalDefinition definition in catalog.Definitions)
             {
                 if (definition == null || definition.Id == 0)

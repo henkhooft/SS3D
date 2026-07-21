@@ -14,10 +14,31 @@ namespace SS3D.Systems.Tile.FloorVisuals
         private List<FloorDecalDefinition> _definitions = new();
 
         private Dictionary<ushort, FloorDecalDefinition> _byId;
+        private static FloorDecalCatalog _runtimeFallback;
 
-        public IReadOnlyList<FloorDecalDefinition> Definitions => _definitions;
+        public IReadOnlyList<FloorDecalDefinition> Definitions
+        {
+            get
+            {
+                EnsureIndex();
+                return _definitions;
+            }
+        }
 
-        public static FloorDecalCatalog Get() => ScriptableSettings.GetOrFind<FloorDecalCatalog>();
+        public static FloorDecalCatalog Get()
+        {
+            FloorDecalCatalog catalog = ScriptableSettings.GetOrFind<FloorDecalCatalog>();
+            if (catalog != null)
+                return catalog;
+
+            if (_runtimeFallback == null)
+            {
+                _runtimeFallback = CreateInstance<FloorDecalCatalog>();
+                _runtimeFallback.hideFlags = HideFlags.HideAndDontSave;
+            }
+
+            return _runtimeFallback;
+        }
 
         public bool TryGet(ushort id, out FloorDecalDefinition definition)
         {

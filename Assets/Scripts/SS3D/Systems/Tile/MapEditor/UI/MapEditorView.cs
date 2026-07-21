@@ -551,7 +551,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (!entry.IsEraser &&
                 MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId))
             {
-                FloorDecalCatalog.Get().TryGet(decalId, out floorDecal);
+                FloorDecalCatalog.Get()?.TryGet(decalId, out floorDecal);
             }
 
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
