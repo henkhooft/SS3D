@@ -59,6 +59,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private string _moveAssetName;
         private Direction _moveDirection;
         private bool _moveIsItem;
+        /// <summary>Last map name successfully saved or loaded this session — target for Ctrl+S.</summary>
+        private string _lastQuickSaveName;
 
         /// <summary>Fired after the editor opens (Main HUD listens to suppress chrome).</summary>
         public event Action EditorOpened;
@@ -389,6 +391,12 @@ namespace SS3D.Systems.Tile.MapEditor
                     if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.yKey.wasPressedThisFrame)
                         RpcRedo(LocalConnection);
                 }
+
+                // File shortcuts work even while a search/save field is focused.
+                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.oKey.wasPressedThisFrame)
+                    HandleOpenMapHotkey();
+                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.sKey.wasPressedThisFrame)
+                    HandleQuickSaveHotkey();
             }
 
             if (_toastTimer > 0f)
@@ -665,19 +673,80 @@ namespace SS3D.Systems.Tile.MapEditor
                 OnToolSelected(MapEditorTool.Delete);
         }
 
+        private void HandleOpenMapHotkey()
+        {
+            if (!_active || _view == null)
+                return;
+
+            _view.OpenPopover("maps");
+            RefreshMapList();
+        }
+
+        private void HandleQuickSaveHotkey()
+        {
+            if (!_active)
+                return;
+
+            string name = ResolveQuickSaveName();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                _view?.OpenPopover("saveMenu");
+                RefreshMapList();
+                return;
+            }
+
+            RememberQuickSaveName(name);
+            RpcSaveMap(name, overwrite: true, LocalConnection);
+        }
+
+        private string ResolveQuickSaveName()
+        {
+            if (!string.IsNullOrWhiteSpace(_lastQuickSaveName))
+                return _lastQuickSaveName.Trim();
+
+            string typed = _viewModel.SaveMapName?.Trim();
+            if (!string.IsNullOrWhiteSpace(typed) &&
+                !string.Equals(typed, "Untitled Map", StringComparison.OrdinalIgnoreCase))
+                return typed;
+
+            return null;
+        }
+
+        private void RememberQuickSaveName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+
+            _lastQuickSaveName = name.Trim();
+            _viewModel.SaveMapName = _lastQuickSaveName;
+        }
+
         private void OnUndoRequested() => RpcUndo(LocalConnection);
 
         private void OnRedoRequested() => RpcRedo(LocalConnection);
 
         // The Save Map popover always shows an "Overwriting" warning inline when the typed name
         // collides with an existing save, so the Save button itself can safely always overwrite.
-        private void OnSaveAsRequested(string name) => RpcSaveMap(name, true, LocalConnection);
+        private void OnSaveAsRequested(string name)
+        {
+            RememberQuickSaveName(name);
+            RpcSaveMap(name, true, LocalConnection);
+        }
 
-        private void OnLoadMapRequested(string name) => RpcLoadMap(name, LocalConnection);
+        private void OnLoadMapRequested(string name)
+        {
+            RememberQuickSaveName(name);
+            RpcLoadMap(name, LocalConnection);
+        }
 
         private void OnDeleteMapRequested(string name) => RpcDeleteMap(name, LocalConnection);
 
-        private void OnNewMapRequested() => RpcNewMap(LocalConnection);
+        private void OnNewMapRequested()
+        {
+            _lastQuickSaveName = null;
+            _viewModel.SaveMapName = "Untitled Map";
+            RpcNewMap(LocalConnection);
+        }
 
         private void OnResetViewRequested() => _session.ResetPosition();
 

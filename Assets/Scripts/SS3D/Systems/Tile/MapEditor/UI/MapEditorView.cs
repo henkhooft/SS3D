@@ -174,10 +174,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             _leftToolbar.Add(WrapWithHoverHint(
                 CreateIconButton(_icons?.SaveMap, null, () => TogglePopover("saveMenu")),
-                "Save map"));
+                "Save map [Ctrl+S]"));
             _leftToolbar.Add(WrapWithHoverHint(
                 CreateIconButton(_icons?.OpenMap, null, () => TogglePopover("maps")),
-                "Load map"));
+                "Load map [Ctrl+O]"));
 
             region.Add(_leftToolbar);
             _hudLayer.Add(region);
@@ -613,6 +613,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             _vm.OpenPopover = _vm.OpenPopover == key ? null : key;
             RefreshPopover();
+        }
+
+        /// <summary>Opens a popover (does not toggle closed if already that key).</summary>
+        public void OpenPopover(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                return;
+
+            _vm.OpenPopover = key;
+            RefreshPopover();
+            _vm.NotifyChanged();
         }
 
         private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu";
