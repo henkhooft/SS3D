@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: phase2-melee
     content: "Phase 2: Melee connect → structural force; MeleeWeaponProfile.StructuralForce; living target preferred over wall"
-    status: pending
+    status: completed
   - id: phase3-blast
     content: "Phase 3: Blast BFS Resolve(epicenter, yield, falloff); cascade on Destroyed; crew brute; geometry EditMode tests"
     status: pending
@@ -220,4 +220,10 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 - Area live recompute is **deferred one Update tick** then full `RefloodAllAreaTilesPreservingMetadata` (not a true local-region flood). Immediate reflood inside `OnTileCleared` would still see the wall because TileMap notifies before removal.
 - Debris spawn skipped (log only) until rubble art exists.
 - EditMode tests could not be batch-run while the Unity Editor held the project lock; run `./Tools/run_editmode_tests.sh --filter StructuralDamageTests` (and `ClearingDoorBetweenRooms`) after closing the Editor.
+
+### Phase 2
+
+- Living zone connect still preferred; structural only when body resolve fails.
+- `MeleeWeaponProfile.StructuralForce` with `ResolveStructuralForce()` fallback (`BruteDamage * 0.75`) for prefabs serialized before the field existed. Re-run **SS3D → Combat → Setup Melee Prefabs** to stamp crowbar/hatchet/knife profiles.
+- Connect uses `MeleeStructuralHitResolver` (physics raycast to `PlacedTileObject`, then aim-ray tile sampling). Cast ~8m from camera like living zones, then apply hand range to the hit — do not use hand range as camera-ray max distance.
 

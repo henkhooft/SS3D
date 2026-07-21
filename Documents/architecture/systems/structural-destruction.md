@@ -7,7 +7,7 @@
 
 ## Overview
 
-Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1: accumulate force → Damaged / Cracked / Destroyed; Destroyed clears via [tile](tile.md) `ConstructionService`; Cracked drops airtightness for [atmospherics](atmospherics.md); [area](area.md) refloods after structural place/clear. Blast BFS, melee connect, visuals, explosive items, and repair are later phases ([station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md)).
+Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1: accumulate force → Damaged / Cracked / Destroyed; Destroyed clears via [tile](tile.md) `ConstructionService`; Cracked drops airtightness for [atmospherics](atmospherics.md); [area](area.md) refloods after structural place/clear. Phase 2: Harm melee connect applies `StructuralForce` when no living zone is hit ([combat](combat.md)). Blast BFS, visuals, explosive items, and repair are later phases ([station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md)).
 
 ## Start here
 
@@ -30,11 +30,12 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - **Area reflood must not run inside `OnTileCleared` synchronously:** `TileMap` notifies before the occupant is removed; immediate flood still sees the wall/door. Area queues `_pendingLiveBoundaryRecompute` and flushes next `UpdateEvent` (same class of bug as `AtmosTileObserver` defer).
 - **Cracked still blocks Area expansion:** only Destroyed (clear) opens boundaries; Cracked only flips `IsAirtight` for atmos.
 - **Do not bind TileQueryService at Awake:** `StructuralDamageSubSystem` self-bootstraps before `TileSubSystem` creates its map. Resolve query/construction lazily from the current `TileSubSystem` or `TryApply` always misses.
+- **Structural melee ray length ≠ hand range:** camera aim rays must cast ~8m (like living zones), then check `RangeLimit` from the **entity root** (not the swinging hand bone) to the hit/closest point. Hand-bone reach during windup often fails adjacent walls; cardinal-ahead is the last fallback.
 
 ## Depends on / Used by
 
 - **Depends on:** [tile](tile.md), [area](area.md), [atmospherics](atmospherics.md) (observer refresh), [core-subsystems](core-subsystems.md)
-- **Used by:** (Phase 2+) combat melee; (Phase 3+) blast resolver
+- **Used by:** [combat](combat.md) melee connect; (Phase 3+) blast resolver
 
 ## Related docs
 

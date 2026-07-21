@@ -117,6 +117,12 @@ namespace SS3D.Systems.Combat.Editor
                 so.FindProperty("_profile.RecoverySeconds").floatValue = profile.RecoverySeconds;
                 so.FindProperty("_profile.StaminaCost").floatValue = profile.StaminaCost;
                 so.FindProperty("_profile.CanSever").boolValue = profile.CanSever;
+                SerializedProperty structuralForce = so.FindProperty("_profile.StructuralForce");
+                if (structuralForce != null)
+                {
+                    structuralForce.floatValue = profile.StructuralForce;
+                }
+
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, path);

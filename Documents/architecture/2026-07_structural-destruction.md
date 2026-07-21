@@ -18,6 +18,12 @@ Ship per-tile structural integrity for Turf walls/doors/windows: Intact → Dama
 - Console: `hurtstructure [force]`
 - EditMode: `StructuralDamageTests`; Area door-clear live recompute harness test
 
+## Phase 2 shipped surface
+
+- `MeleeWeaponProfile.StructuralForce` + `ResolveStructuralForce()`
+- `MeleeHitInteraction` connect: living first, else `MeleeStructuralHitResolver` → `TryApplyStructuralDamage`
+- Crowbar 35 / hatchet 28 / fists 5 / knife 4 provisional force
+
 ## Deviations / notes
 
 - Phase 1 Area recompute is **full reflood preserving metadata**, deferred one Update tick because `TileMap` notifies clear **before** occupant removal (same pitfall as atmos). True local flood fill is follow-up.
