@@ -9,8 +9,8 @@
 
 .alert-chip__box {
     position: relative;
-    width: 56px;
-    height: 56px;
+    width: 72px;
+    height: 72px;
     align-items: center;
     justify-content: center;
     background-color: var(--ss3d-surface-inset);
@@ -26,24 +26,13 @@
 }
 
 .alert-chip__glyph {
-    width: 28px;
-    height: 28px;
+    width: 40px;
+    height: 40px;
     -unity-background-image-tint-color: var(--ss3d-feedback-warning);
 }
 
 .alert-chip--critical .alert-chip__glyph {
     -unity-background-image-tint-color: var(--ss3d-feedback-danger);
-}
-
-.alert-chip__glow {
-    position: absolute;
-    left: -3px;
-    top: -3px;
-    right: -3px;
-    bottom: -3px;
-    border-radius: var(--ss3d-radius-md);
-    border-width: 1px;
-    border-color: var(--ss3d-feedback-danger);
 }
 
 .alert-chip__label {

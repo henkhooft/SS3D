@@ -137,13 +137,17 @@ namespace SS3D.UI.MainHud.Components
 
         private sealed class AlertChip : VisualElement
         {
-            private const float GlowPulseDuration = 0.55f;
+            private const float BorderPulseDuration = 0.5f;
+
+            // #b94848 (--ss3d-feedback-danger) at low vs full alpha — only the stroke blinks.
+            private static readonly Color BorderCriticalDim = new(0.725f, 0.282f, 0.282f, 0.25f);
+            private static readonly Color BorderCriticalBright = new(0.9f, 0.32f, 0.32f, 1f);
 
             public AlertHazard Hazard { get; }
 
             private readonly VisualElement _box;
-            private readonly VisualElement _glow;
-            private Tween _glowTween;
+            private Tween _borderTween;
+            private float _borderPulse;
             private AlertSeverity _severity;
 
             public AlertChip(AlertHazard hazard, string label, Sprite icon)
@@ -155,11 +159,6 @@ namespace SS3D.UI.MainHud.Components
                 _box = new VisualElement();
                 _box.AddToClassList("alert-chip__box");
 
-                _glow = new VisualElement();
-                _glow.AddToClassList("alert-chip__glow");
-                _glow.pickingMode = PickingMode.Ignore;
-                _glow.style.opacity = 0f;
-
                 VisualElement glyph = new();
                 glyph.AddToClassList("alert-chip__glyph");
                 glyph.pickingMode = PickingMode.Ignore;
@@ -168,7 +167,6 @@ namespace SS3D.UI.MainHud.Components
                     glyph.style.backgroundImage = new StyleBackground(icon);
                 }
 
-                _box.Add(_glow);
                 _box.Add(glyph);
 
                 Label chipLabel = new(label);
@@ -181,6 +179,7 @@ namespace SS3D.UI.MainHud.Components
 
                 RegisterCallback<PointerEnterEvent>(_ => AddToClassList("alert-chip--hovered"));
                 RegisterCallback<PointerLeaveEvent>(_ => RemoveFromClassList("alert-chip--hovered"));
+                RegisterCallback<DetachFromPanelEvent>(_ => StopBorderPulse());
             }
 
             public void SetSeverity(AlertSeverity severity)
@@ -196,34 +195,53 @@ namespace SS3D.UI.MainHud.Components
 
                 if (severity == AlertSeverity.Critical)
                 {
-                    StartGlow();
+                    StartBorderPulse();
                 }
                 else
                 {
-                    StopGlow();
+                    StopBorderPulse();
                 }
             }
 
-            // Pulses a glow overlay's opacity rather than the whole chip's, so the icon itself stays fully
-            // legible while the critical border breathes - UI Toolkit has no CSS keyframe/box-shadow
-            // equivalent to animate directly, so DOTween drives it the same way MainHudView drives show/hide.
-            private void StartGlow()
+            // Pulses only the box's rounded border color. UITK has no CSS keyframe equivalent, so DOTween
+            // drives it the same way MainHudView drives show/hide.
+            private void StartBorderPulse()
             {
-                StopGlow();
-                _glowTween = DOTween.To(
-                        () => _glow.style.opacity.value,
-                        value => _glow.style.opacity = value,
+                StopBorderPulse();
+                _borderPulse = 0f;
+                ApplyBorderColor(BorderCriticalDim);
+                _borderTween = DOTween.To(
+                        () => _borderPulse,
+                        value =>
+                        {
+                            _borderPulse = value;
+                            ApplyBorderColor(Color.Lerp(BorderCriticalDim, BorderCriticalBright, value));
+                        },
                         1f,
-                        GlowPulseDuration)
+                        BorderPulseDuration)
                     .SetLoops(-1, LoopType.Yoyo)
-                    .SetEase(Ease.InOutSine);
+                    .SetEase(Ease.InOutSine)
+                    .SetUpdate(true);
             }
 
-            private void StopGlow()
+            private void StopBorderPulse()
             {
-                _glowTween?.Kill();
-                _glowTween = null;
-                _glow.style.opacity = 0f;
+                _borderTween?.Kill();
+                _borderTween = null;
+                _borderPulse = 0f;
+                // Drop inline overrides so USS warning/critical border-color applies again.
+                _box.style.borderTopColor = StyleKeyword.Null;
+                _box.style.borderRightColor = StyleKeyword.Null;
+                _box.style.borderBottomColor = StyleKeyword.Null;
+                _box.style.borderLeftColor = StyleKeyword.Null;
+            }
+
+            private void ApplyBorderColor(Color color)
+            {
+                _box.style.borderTopColor = color;
+                _box.style.borderRightColor = color;
+                _box.style.borderBottomColor = color;
+                _box.style.borderLeftColor = color;
             }
         }
     }
