@@ -50,7 +50,6 @@ namespace SS3D.Systems.Tile.MapEditor
         private CameraFollow _cameraFollow;
         private Camera _playerCamera;
         private IInputHandle _mapEditorHandle;
-        private IInputHandle _scrollSuppress;
         private VisualElement _overlayRoot;
         private bool _active;
         private bool _mouseOverUI;
@@ -71,7 +70,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         /// <summary>
         /// Live pointer-over-UI via <see cref="InputInterface"/> (registered UITK + uGUI).
-        /// Cached <see cref="_mouseOverUI"/> is only for scroll suppress / CSS class.
+        /// Cached <see cref="_mouseOverUI"/> is only for the CSS hover class.
         /// </summary>
         public bool MouseOverUI => _active && InputInterface.IsPointerOverInterface();
 
@@ -145,8 +144,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _gameplayHud?.SetVisible(true);
             _mapEditorHandle?.Dispose();
             _mapEditorHandle = null;
-            _scrollSuppress?.Dispose();
-            _scrollSuppress = null;
             TeardownView();
             UnregisterDocument();
             if (_document != null)
@@ -542,16 +539,6 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             _mouseOverUI = over;
             _view?.SetMouseOverUI(over);
-
-            if (over)
-            {
-                _scrollSuppress ??= _inputSystem.SuppressBinding("<Mouse>/scroll/y");
-            }
-            else
-            {
-                _scrollSuppress?.Dispose();
-                _scrollSuppress = null;
-            }
         }
 
         private void EnableDocument()

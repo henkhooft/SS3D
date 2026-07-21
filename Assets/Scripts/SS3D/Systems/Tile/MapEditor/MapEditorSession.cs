@@ -1,3 +1,4 @@
+using SS3D.Systems.Inputs;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -179,6 +180,12 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void UpdateZoom()
         {
+            // Map editor polls devices directly (InputContext.MapEditor masks Camera/Zoom).
+            // Wheel over UITK chrome (object library ScrollView, popovers) must not zoom —
+            // Input System SuppressBinding cannot gate raw Mouse.current.scroll.
+            if (InputInterface.IsPointerOverInterface())
+                return;
+
             float scroll = Mouse.current?.scroll.ReadValue().y ?? 0f;
             if (Mathf.Abs(scroll) <= 0.01f)
                 return;
