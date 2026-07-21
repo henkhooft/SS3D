@@ -377,6 +377,9 @@ namespace SS3D.Systems.Tile.MapEditor
                     _viewModel.NotifyChanged();
                 }
 
+                if (!InputInterface.IsCapturingText)
+                    HandleToolHotkeys();
+
                 if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.zKey.wasPressedThisFrame)
                     RpcUndo(LocalConnection);
                 if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.yKey.wasPressedThisFrame)
@@ -639,6 +642,22 @@ namespace SS3D.Systems.Tile.MapEditor
 
             if (previous == MapEditorTool.Delete)
                 _hologramManager.ClearSelection();
+        }
+
+        private void HandleToolHotkeys()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null || keyboard.ctrlKey.isPressed || keyboard.altKey.isPressed)
+                return;
+
+            if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame)
+                OnToolSelected(MapEditorTool.Edit);
+            else if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame)
+                OnToolSelected(MapEditorTool.Select);
+            else if (keyboard.digit3Key.wasPressedThisFrame || keyboard.numpad3Key.wasPressedThisFrame)
+                OnToolSelected(MapEditorTool.Dropper);
+            else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame)
+                OnToolSelected(MapEditorTool.Delete);
         }
 
         private void OnUndoRequested() => RpcUndo(LocalConnection);

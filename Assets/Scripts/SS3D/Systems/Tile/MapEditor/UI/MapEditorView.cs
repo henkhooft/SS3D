@@ -157,10 +157,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _leftPopoverAnchor = region;
 
             _leftToolbar = CreateToolbarStrip(vertical: true);
-            AddToolButton(_leftToolbar, MapEditorTool.Edit, "Construct");
-            AddToolButton(_leftToolbar, MapEditorTool.Select, "Select");
-            AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper");
-            AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete");
+            AddToolButton(_leftToolbar, MapEditorTool.Edit, "Construct [1]");
+            AddToolButton(_leftToolbar, MapEditorTool.Select, "Select [2]");
+            AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper [3]");
+            AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete [4]");
             AddSeparator(_leftToolbar, vertical: true);
 
             Button undo = CreateIconButton(_icons?.Undo, null, () => UndoRequested?.Invoke());
