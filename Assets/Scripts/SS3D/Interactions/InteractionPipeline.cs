@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SS3D.Interactions.Interfaces;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Interactions
@@ -9,6 +10,8 @@ namespace SS3D.Interactions
     /// </summary>
     public static class InteractionPipeline
     {
+        private static readonly ProfilerMarker DiscoverPerformanceMarker = new("SS3D.Interactions.Discover");
+
         public static List<InteractionEntry> GetViableInteractions(
             IInteractionSource source,
             List<IInteractionTarget> targets,
@@ -25,25 +28,100 @@ namespace SS3D.Interactions
             List<IInteractionTarget> targets,
             InteractionEvent interactionEvent)
         {
-            List<InteractionEntry> interactions = new();
-            Vector3 point = interactionEvent.Point;
-            GameObject targetGameObject = ResolveTargetGameObject(targets);
+            using (DiscoverPerformanceMarker.Auto())
+            {
+                List<InteractionEntry> interactions = new();
+                Vector3 point = interactionEvent.Point;
+                GameObject targetGameObject = ResolveTargetGameObject(targets);
+
+                foreach (IInteractionTarget target in targets)
+                {
+                    InteractionEvent e = new(source, target, point, interactionEvent.Normal);
+                    IInteraction[] targetInteractions = target.CreateTargetInteractions(e);
+
+                    foreach (IInteraction interaction in targetInteractions)
+                    {
+                        interactions.Add(InteractionEntry.Create(target, interaction, targetGameObject));
+                    }
+                }
+
+                source.CreateSourceInteractions(targets.ToArray(), interactions);
+                RebuildEntryIndices(interactions, targetGameObject);
+
+                return interactions;
+            }
+        }
+
+        /// <summary>
+        /// Hover-outline probe: target-bound interactions only (no source-only Drop/etc.), no sort,
+        /// no wire-index rebuild. For LateUpdate feedback — not RPC dispatch.
+        /// </summary>
+        /// <returns>
+        /// False when nothing target-bound was discovered (caller should hide outline).
+        /// True when at least one target-bound interaction exists; <paramref name="hasViableInteractions"/>
+        /// distinguishes green vs yellow outline.
+        /// </returns>
+        public static bool TryEvaluateOutlineInteractability(
+            IInteractionSource source,
+            List<IInteractionTarget> targets,
+            Vector3 point,
+            Vector3 normal,
+            IntentType intent,
+            out bool hasViableInteractions)
+        {
+            hasViableInteractions = false;
+            bool hasTargetBound = false;
+
+            if (source == null || targets == null || targets.Count == 0)
+            {
+                return false;
+            }
 
             foreach (IInteractionTarget target in targets)
             {
-                InteractionEvent e = new(source, target, point, interactionEvent.Normal);
-                IInteraction[] targetInteractions = target.CreateTargetInteractions(e);
+                if (target == null)
+                {
+                    continue;
+                }
+
+                InteractionEvent discoverEvent = new(source, target, point, normal);
+                IInteraction[] targetInteractions = target.CreateTargetInteractions(discoverEvent);
 
                 foreach (IInteraction interaction in targetInteractions)
                 {
-                    interactions.Add(InteractionEntry.Create(target, interaction, targetGameObject));
+                    hasTargetBound = true;
+
+                    if (hasViableInteractions)
+                    {
+                        continue;
+                    }
+
+                    InteractionEvent checkEvent = new(source, target, point, normal);
+                    if (!interaction.CanInteract(checkEvent))
+                    {
+                        continue;
+                    }
+
+                    if (!MatchesIntent(interaction, intent))
+                    {
+                        continue;
+                    }
+
+                    if (!source.CanExecuteInteraction(interaction))
+                    {
+                        continue;
+                    }
+
+                    hasViableInteractions = true;
+                }
+
+                if (hasTargetBound && hasViableInteractions)
+                {
+                    return true;
                 }
             }
 
-            source.CreateSourceInteractions(targets.ToArray(), interactions);
-            RebuildEntryIndices(interactions, targetGameObject);
-
-            return interactions;
+            return hasTargetBound;
         }
 
         public static List<InteractionEntry> FilterAndSort(

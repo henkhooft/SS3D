@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Interactions/
 > Entry points: IInteraction, IInteractionSource, IInteractionTarget, InteractionPipeline, InteractionIdentifier
 > Status: shipped
-> Verified: a20853b1c — 2026-07-18
+> Verified: a15807a6d — 2026-07-21
 
 # Interactions (framework)
 
@@ -18,7 +18,7 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionTarget.cs` — objects that receive interactions
 - `Assets/Scripts/SS3D/Interactions/InteractionEntry.cs` — target + interaction + wire identifier
 - `Assets/Scripts/SS3D/Interactions/InteractionIdentifier.cs` — stable RPC wire ID
-- `Assets/Scripts/SS3D/Interactions/InteractionPipeline.cs` — shared discover → filter → sort; `FilterForOutline` drops source-only entries for hover feedback
+- `Assets/Scripts/SS3D/Interactions/InteractionPipeline.cs` — shared discover → filter → sort; `TryEvaluateOutlineInteractability` for hover LateUpdate; `FilterForOutline` for list-based outline filters; `SS3D.Interactions.Discover` marker on full Discover
 - `Assets/Scripts/SS3D/Interactions/InteractionEvent.cs` — source/target/point/normal; default `Point` is `Vector3.zero` when unset (see smells)
 - `Assets/Scripts/SS3D/Interactions/InteractionTier.cs` — instant / targeted / folder tiers for radial menu
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionTierProvider.cs` — per-interaction tier override

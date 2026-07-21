@@ -91,7 +91,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | Permissions | [permissions](systems/permissions.md) | partial | Admin permission checks; persisted via [persistence](systems/persistence.md) envelope with legacy txt fallback |
-| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; client FOV hard mask (`VisionRendererFeature` + raycast `_VisionMap`) |
+| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; client FOV hard mask (`VisionRendererFeature` + batched raycast `_VisionMap`) |
 
 ## Gameplay
 
@@ -153,6 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
+| [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
 
 ## Implementation plans
 
