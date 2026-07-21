@@ -299,6 +299,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             search.AddToClassList("map-editor-search");
             _searchField = new TextField { value = string.Empty };
             _searchField.AddToClassList("map-editor-search-field");
+            _searchField.textEdition.placeholder = "Search tags, names, keyword";
+            _searchField.textEdition.hidePlaceholderOnFocus = true;
             _searchField.RegisterValueChangedCallback(evt => SearchChanged?.Invoke(evt.newValue));
             VisualElement searchIcon = CreateIconElement(_icons?.Search);
             searchIcon.AddToClassList("map-editor-search-icon");

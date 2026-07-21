@@ -475,6 +475,10 @@
     height: 100%;
 }
 
+.map-editor-search-field .unity-base-text-field__input--placeholder {
+    color: var(--ss3d-text-tertiary);
+}
+
 .map-editor-library-header {
     flex-direction: row;
     align-items: center;
