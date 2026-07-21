@@ -1,6 +1,7 @@
 using System.Linq;
 using NUnit.Framework;
 using SS3D.Hacks;
+using SS3D.Systems.Inventory.Containers;
 using UnityEditor;
 using UnityEngine;
 
@@ -41,6 +42,21 @@ namespace EditorTests
             RagdollWhenPressingButton[] hacks = prefab.GetComponentsInChildren<RagdollWhenPressingButton>(true);
 
             Assert.AreEqual(0, hacks.Length, "Human.prefab must not ship SS3D.Hacks debug components to players.");
+        }
+
+        [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanHead.prefab")]
+        [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanTorso.prefab")]
+        [Ignore("ContainerInteractive still present on HumanHead/HumanTorso roots — run SS3D/Inventory/Strip " +
+            "Head/Torso ContainerInteractive in the Editor, verify in Play Mode, then re-enable this test. See " +
+            "2026-07_human-prefab-decomposition.md Phase 0.")]
+        public void BodyPart_HasNoRootContainerInteractive(string prefabPath)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab, $"Could not load prefab at {prefabPath}");
+
+            Assert.IsFalse(
+                prefab.TryGetComponent(out ContainerInteractive _),
+                $"{prefabPath} root must not expose a world ContainerInteractive (combat/examine targeting clarity).");
         }
     }
 }

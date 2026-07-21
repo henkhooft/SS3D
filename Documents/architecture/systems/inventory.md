@@ -21,7 +21,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
 
-**Hands wiring on `Human.prefab` remains prefab composition debt** ([agent-first composition](../2026-07_agent-first-composition.md)). Head/torso no longer expose world `ContainerInteractive` (stripped for combat targeting clarity; clothing/pocket HUD slots remain) — menu **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
+**Hands wiring on `Human.prefab` remains prefab composition debt** ([agent-first composition](../2026-07_agent-first-composition.md)). Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — the strip tool was only actually built in [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 0 (earlier text here claiming it was already stripped was wrong; `ContainerInteractive` was still live on both roots). Run menu **SS3D → Inventory → Strip Head/Torso ContainerInteractive** in the Editor, then verify in Play Mode, before relying on this being fixed.
 
 ## Start here
 

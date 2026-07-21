@@ -90,6 +90,15 @@ copy-pasted organ from landing on `Human.prefab` in review.
   denylist (starting with anything under `SS3D/Hacks/`) is present. Wire it into
   `.github/workflows/editmodetestrunner.yml` (already runs EditMode headlessly — no new CI plumbing).
 
+**Status (this pass):** missing-script cache fixed and verified (safe text-level correction, no
+structural risk — see entities.md § Pitfalls). `HumanPrefabHygiene.cs` and
+`BodyPartContainerInteractiveStrip.cs` are written and follow the corrected nested-`NetworkObject`-aware
+recipe pattern (see entities.md § Pitfalls for why the original `StorageContainerPrefabSetup` pattern
+would have silently dropped nested body-part behaviours), but **have not been executed** — this
+environment has no Unity Editor to run `PrefabUtility` or verify compilation. `HumanPrefabIntegrityTests`
+carries both denylist assertions as `[Ignore]`d until a maintainer runs the two menu items in the Editor,
+confirms Play Mode still works (movement, hands, `spawndummy`, examine, speech), and re-enables them.
+
 ### Phase 1 — True prefab-ize the organs
 
 - Write a reusable C# Editor tool (`Assets/Scripts/SS3D/Systems/Health/Editor/OrganPrefabExtract.cs`
