@@ -9,12 +9,11 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Items;
-using SS3D.Systems.Inventory.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Inventory.Containers
@@ -41,18 +40,6 @@ namespace SS3D.Systems.Inventory.Containers
         /// </summary>
         [NonSerialized]
         public HumanInventory Inventory;
-
-        /// <summary>
-        /// Color of selected hand, or when mouse passes over the slot.
-        /// </summary>
-        [SerializeField]
-        private Color _selectedColor;
-
-        /// <summary>
-        /// Color of unselected hand
-        /// </summary>
-        [SerializeField]
-        private Color _defaultColor;
 
         /// <summary>
         /// The selected hand, should be part of PlayerHands list.
@@ -83,19 +70,12 @@ namespace SS3D.Systems.Inventory.Containers
         }
 
         /// <summary>
-        /// Sync for clients, set highlight on slots properly.
+        /// Sync for clients. Active-hand highlighting now lives on the Main HUD gear strip
+        /// (HandsGearStrip.SetActiveHand), driven by MainHudSubSystem watching SelectedHand — nothing
+        /// left to do here beyond the SyncVar itself.
         /// </summary>
         public void SyncSelectedHand(Hand oldHand, Hand newHand, bool asServer)
         {
-            if (asServer || !IsOwner) return;
-            if(oldHand != null)
-            {
-                SetHandHighlight(oldHand, false);
-            }
-            if (newHand != null)
-            {
-                SetHandHighlight(newHand, true);
-            }
         }
 
         [Client]
@@ -108,12 +88,11 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void OnInventorySetUp()
         {
-            SetHandHighlight(PlayerHands.First(), true);
-
             // Set up hand related controls.
             _controls = SubSystems.Get<InputSubSystem>().Inputs.Hotkeys;
             _controls.SwapHands.performed += HandleSwapHands;
             _controls.Drop.performed += HandleDropHeldItem;
+            _controls.ToggleInternalClothing.performed += HandleTogglePockets;
             _controlsInitialized = true;
 
             Inventory.OnInventorySetUp -= OnInventorySetUp;
@@ -127,6 +106,7 @@ namespace SS3D.Systems.Inventory.Containers
             {
                 _controls.SwapHands.performed -= HandleSwapHands;
                 _controls.Drop.performed -= HandleDropHeldItem;
+                _controls.ToggleInternalClothing.performed -= HandleTogglePockets;
                 _controlsInitialized = false;
             }
         }
@@ -178,7 +158,33 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void HandleDropHeldItem(InputAction.CallbackContext context)
         {
+            // Drop is a Help-mode world verb; Harm is combat-exclusive (melee / future combat chords).
+            IIntentProvider intentProvider = GetComponentInParent<IIntentProvider>()
+                ?? GetComponent<IIntentProvider>();
+            if (intentProvider != null && intentProvider.CurrentIntent != IntentType.Help)
+            {
+                return;
+            }
+
             SelectedHand.CmdDropHeldItem();
+        }
+
+        /// <summary>
+        /// Opens pocket containers via ContainerViewer (StoragePanelHost listens) —
+        /// replaces the old internal-clothing UI toggle.
+        /// </summary>
+        [Client]
+        private void HandleTogglePockets(InputAction.CallbackContext context)
+        {
+            if (!IsOwner || !enabled || Inventory?.containerViewer == null)
+            {
+                return;
+            }
+
+            for (int i = 0; Inventory.TryGetTypeContainer(ContainerType.Pocket, i, out AttachedContainer pocket); i++)
+            {
+                Inventory.containerViewer.ShowContainerUI(pocket);
+            }
         }
 
         [ServerRpc]
@@ -192,42 +198,6 @@ namespace SS3D.Systems.Inventory.Containers
         {
             int index = PlayerHands.FindIndex(0, x => x == SelectedHand);
             _selectedHand = PlayerHands[(index + 1) % PlayerHands.Count];
-        }
-
-        [Client]
-        private void SetHandHighlight(Hand hand, bool highlight)
-        {
-            InventoryView inventoryView = ViewLocator.Get<InventoryView>().FirstOrDefault();
-            if (inventoryView == null)
-            {
-                return;
-            }
-
-            Transform handSlot = inventoryView.GetHandSlot(hand);
-            if (handSlot == null)
-            {
-                return;
-            }
-
-            Button button = handSlot.GetComponent<Button>();
-            if (button == null)
-            {
-                return;
-            }
-
-            ColorBlock buttonColors = button.colors;
-            if (highlight)
-            {
-                buttonColors.normalColor = _selectedColor;
-                buttonColors.highlightedColor = _selectedColor; // The selected hand keeps the same color, highlighted or not.
-            }
-            else
-            {
-                buttonColors.normalColor = _defaultColor;
-                buttonColors.highlightedColor = _selectedColor;
-            }
-
-            button.colors = buttonColors;
         }
 
         /// <summary>

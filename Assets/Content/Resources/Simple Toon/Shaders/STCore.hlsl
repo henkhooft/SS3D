@@ -22,14 +22,39 @@ STToonSettings ST_GetToonSettings()
     settings.stpSmooth = (_Segmented > 0.5) ? _StpSmooth : 1.0;
     settings.clipped = (_Clipped > 0.5) ? 1.0 : 0.0;
     settings.maxAtten = 1.0;
-    settings.darkColor = float4(0.0, 0.0, 0.0, 1.0);
+    settings.darkColor = (_HalfToon > 0.5) ? _ShadowTint : float4(0.0, 0.0, 0.0, 1.0);
     return settings;
+}
+
+float ST_ApplyHalfToonCurve(float ndotl)
+{
+    // Prefer Lambert for reference contrast; light wrap only as a small floor.
+    float lambert = saturate(ndotl);
+    float wrap = saturate(ndotl * 0.5 + 0.5);
+    float lit = lerp(lambert, wrap, 0.25);
+
+    if (_RampStrength > 0.001)
+    {
+        float ramp = SAMPLE_TEXTURE2D(_ToonRamp, sampler_ToonRamp, float2(lit, 0.5)).r;
+        lit = lerp(lit, ramp, _RampStrength);
+    }
+
+    return lit;
 }
 
 float ST_Toon(float dot, half atten, STToonSettings settings)
 {
+    float result = _MinLight;
+
+    if (_HalfToon > 0.5)
+    {
+        float lit = ST_ApplyHalfToonCurve(dot) * atten;
+        result = clamp(lit, 0.0, settings.maxLight);
+        return result;
+    }
+
     float offset = clamp(_Offset, -1.0, 1.0);
-    float delta = settings.maxLight - _MinLight;
+    float delta = max(settings.maxLight - _MinLight, 1e-5);
 
     float intsPls = dot + offset;
     float intsMax = 1.0 + offset;
@@ -68,7 +93,7 @@ float ST_Toon(float dot, half atten, STToonSettings settings)
     float lerpV = lumDlt * dimLit;
     float relateV = _MinLight + lerpV;
 
-    float result = settings.clipped * clipV;
+    result = settings.clipped * clipV;
     result += (1.0 - settings.clipped) * relateV;
     return result;
 }

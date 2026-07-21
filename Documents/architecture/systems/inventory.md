@@ -1,54 +1,87 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/
-> Entry points: ItemSubSystem, MainHudSubSystem
+> Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
+> Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 5f89c0b39 — 2026-07-21
+> Verified: 42d6ccf4a — 2026-07-21
 
 # Inventory
 
 ## Overview
 
-Items, containers, hands, and identification cards (`IDCard`, `PDA`). ID cards bind to server-side crew records via [id-access](id-access.md); spawn-time binding in `RoleSubSystem`.
+Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand storage panel UI, and Main HUD equip/storage UX. ID cards bind to server-side crew records via [id-access](id-access.md); spawn-time binding in `RoleSubSystem`.
 
-**Condemned UI:** inventory / hands / intent uGUI — do not extend; replace per [main-hud.md](../../design/main-hud.md) and [inventory-storage.md](../../design/inventory-storage.md) with Phase 0 purge. Domain items/containers may remain until that redesign. Hands wiring on `Human.prefab` is prefab composition debt ([agent-first composition](../2026-07_agent-first-composition.md)).
+**Container primitive:** `AttachedContainer` — position-grid slots (`Size.x × Size.y`), `SizeClass` fit ceiling, recursive computed `Weight`, `MaxWeight` panel readout, stacking (`Item.MaxStackSize`/`StackCount`, merge-on-add; split not built). Optional `AttachedContainerLock` ID-gates world containers. See [inventory-storage.md](../../design/inventory-storage.md).
 
-**Main HUD (partial):** `SS3D.UI.MainHud` shows worn equipment (incl. gloves), gear strip, hands, and intent. Hold-to-self-examine from [main-hud.md](../../design/main-hud.md) §5 is **not** in the HUD — deferred to the general examine surface. Hand-well clicks call `HumanInventory.ActivateHand` (same as legacy slots). The HUD `UIDocument` is registered with [InputInterface](inputs.md) so pointer-over-HUD blocks world clicks. Visibility is owned by `MainHudSubSystem.ApplyVisibility`: local spawned body + in-game round, and **suppressed while** [machine-interface](machine-interface.md) is open (`InterfaceOpened` / `InterfaceClosed`). Show/hide uses the same DOTween bring-up as diegetic MI (opacity, scale, lift). Fork divergence from design (screens “on top” of HUD): chrome hides for diegetic focus. Styles/icons/`PanelSettings` load from a committed `MainHudAssetCatalog` via `Resources.Load` (rebuild: **SS3D → Main HUD → Rebuild Asset Catalog**) — Editor-only `AssetDatabase` is fallback only; standalone builds need the catalog asset.
+**Carried weight:** `HumanInventory.CarriedWeight` sums every inventory container's recursive `AttachedContainer.Weight` (hands included). Fires `OnCarriedWeightChanged`. Feeds [stamina](stamina.md) encumbrance (Phase 7a).
 
-**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. No hazard has a real backend tracker yet — severities are only set through `MainHudSubSystem.SetDebugAlertOverride`/`ClearDebugAlertOverride`, driven by the **F3** debug menu (`AlertStackDebugMenuView`: top-left UITK panel, arbitrated `ToggleAlertStackDebug` + `InputInterface`, reuses Main HUD `PanelSettings` theme so labels render; deliberately not modeled on the condemned `ScreenEffectsDebugMenuView` uGUI) or the `alertstack <hazard> <none|warning|critical>` console command.
+**Storage panel UI:** `StoragePanelHost` manages N simultaneous `StoragePanelView` panels. Opened when an *item that is itself storage* is clicked (backpack on back, bag in hand, world `ViewContainerInteraction`), via pocket hotkey / gear-strip **Pocket** well (`ToggleInternalClothing` → pockets), or nested click. Hand / gear / clothing slots do **not** open the 1-slot equip container — click equip/unequips (or selects hand) unless the held/worn item has its own `AttachedContainer`. Drag to another slot transfers; drag into the world (not over UI) places via `HumanInventory.ClientPlaceItemInWorld` (DropInteraction rules). Panel width follows container columns; header drag uses UITK pointer capture with the host on `InputInterface`. HUD slots register as `HudDropTarget` peers for panel↔HUD transfers.
+
+**Content storage prefabs:** Backpack (`3×2`, Small), Toolbelt (`4×1`, Small), and Lockers (`4×4`, Bulky) each have a `Storage` child `AttachedContainer` (`HasUi`, not `DisplayAsSlotInUI`) plus root `ContainerInteractive`. Re-run **SS3D → Inventory → Hook Up Storage Prefabs** (`StorageContainerPrefabSetup`) if those flags drift.
+
+**Main HUD:** equipment/gear click = equip/unequip vs active hand, or open item storage if the worn item is a bag; hands select active hand (and open held bag if any). Cross-surface drag via `StoragePanelHost.BeginHudDrag` / `EndHudDrag`. Visibility: `ApplyVisibility` (local body + in-game round; suppressed while [machine-interface](machine-interface.md) is open or the [map editor](tile.md) is open). Storage panels use the same MI suppress (`StoragePanelHost.ApplyMachineUiVisibility` — hide root, keep panels bound). Catalog via `Resources.Load` (**SS3D → Main HUD → Rebuild Asset Catalog**). **Intent chip** tracks `IIntentProvider.CurrentIntent` (`C` and chip click → `RequestToggleIntent`). **Zone reticle:** Harm-intent only. `ZoneReticleDriver` composes one `ZoneReticleFrame` per tick (color priority Recharging > Valid > Idle; bracket recharge; connect cross flash); `ZoneTargetReticle.Apply` is the only USS writer. Hidden in Help, over armed Tier 2–3 overlay, or when HUD suppressed.
+
+**Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
+
+**Hands wiring on `Human.prefab` remains prefab composition debt** ([agent-first composition](../2026-07_agent-first-composition.md)). Head/torso no longer expose world `ContainerInteractive` (stripped for combat targeting clarity; clothing/pocket HUD slots remain) — menu **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
+
+**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. No hazard has a real backend tracker yet — severities are only set through `MainHudSubSystem.SetDebugAlertOverride`/`ClearDebugAlertOverride`, driven by the **F4** debug menu (`AlertStackDebugMenuView`: top-left UITK panel, arbitrated `ToggleAlertStackDebug` + `InputInterface`; F3 remains [chat-audio-screens](chat-audio-screens.md) `LocalSpeechDebugTrigger`) or the `alertstack` console command.
 
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
-- `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers and hands
-- `Assets/Scripts/SS3D/Systems/Inventory/Items/Identification/IDCard.cs` — physical ID token
-- `Assets/Scripts/SS3D/Systems/Inventory/Items/Identification/PDA.cs` — PDA with internal ID slot
-- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — Main HUD overlay bootstrap + bind
-- `Assets/Content/Systems/UI/MainHud/Resources/MainHudAssetCatalog.asset` — committed UITK refs for builds
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainer.cs` — container primitive
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
+- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle inputs + `StoragePanelHost` viewer bind
+- `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneReticleDriver.cs` — composes `ZoneReticleFrame` (aim + recovery + flash clock)
+- `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneTargetReticle.cs` — dumb `Apply(frame)` painter (styles in `MainHud.uss`)
+- `Assets/Scripts/SS3D/UI/MainHud/Components/IntentModule.cs` — Help/Harm segmented toggle
+- `Assets/Scripts/SS3D/UI/StoragePanel/StoragePanelHost.cs` — multi-panel manager, HUD drop targets, drag-drop
+- `Assets/Content/Systems/UI/StoragePanel/Resources/StoragePanelAssetCatalog.asset` — committed UITK refs
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertIconStack.cs` — hazard/severity model + chip rendering
-- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — F3 debug menu via `InputSubSystem.ToggleAlertStackDebug` + `InputInterface` (namespace `Dev`, not `Debug`, to avoid shadowing `UnityEngine.Debug`)
-- `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (lives in MainHud asm — Systems cannot reference MainHud)
+- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — F4 alert debug menu (`ToggleAlertStackDebug`; namespace `Dev` not `Debug`)
+- `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (MainHud asm)
 
 ## Extension points
 
-- **New Main HUD stylesheet/icon:** add a path in `MainHudAssetPaths`, assign on `MainHudAssetCatalog`, run **SS3D → Main HUD → Rebuild Asset Catalog**, commit the SO (do not rely on Editor `AssetDatabase` in `MainHudSubSystem`). Do not invent a third Resources-catalog stack — shared helper is deferred under [ui-shell](ui-shell.md) § Future work.
-- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop the icon PNG under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`, wire the sprite through `MainHudAssetCatalog`/`MainHudAssetCatalogBuilder`/`MainHudSubSystem`'s editor fallback, then run **SS3D → Main HUD → Rebuild Asset Catalog**. Add a row to `AlertStackDebugMenuView` and a case to `AlertStackCommand` (in `SS3D.UI.MainHud`, not Systems) so it's testable before a real tracker exists.
+- **New container-opening entry point:** `ContainerViewer.ShowContainerUI(container)` only — do not invent a second open path.
+- **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
+- **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Storage Panel → Rebuild Asset Catalog**.
+- **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip with **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
+- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Icons/AlertStack/`, wire catalog/builder/editor fallback, rebuild catalog; add F4 debug row + `AlertStackCommand` case.
 
 ## Pitfalls
 
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Main HUD → Rebuild Asset Catalog** and commit the asset (same pattern as Machine UI; second copy of that stack).
-- **Spawn/round catch-up can re-show HUD over MI:** always route through `ApplyVisibility()` (includes `_machineUiOpen`). Do not call bare `SetVisible(true)` from bind/round handlers. Do not hide HUD from `MachineInterfaceHost` — MainHud observes MI events (asmdef direction).
+- **`ContainerViewer` must never reference `SS3D.UI.*`:** MainHudSubSystem hands the viewer to `StoragePanelHost` at bind/unbind. Do not add Systems→UI asmdef refs.
+- **Stack-merge highlight must match `AddStoredItem`:** `CanContainItemAtPosition` treats mergeable occupied stacks as valid — keep in sync with merge room checks.
+- **Spawn/round catch-up can re-show HUD over MI / map editor:** always route through `ApplyVisibility()` (includes `_machineUiOpen` / `_mapEditorOpen`). Do not call bare `SetVisible(true)` from bind/round handlers. Do not hide HUD from `MachineInterfaceHost` or `MapEditorSubSystem` — MainHud observes their events (asmdef direction). Storage panels have a parallel gate (`StoragePanelHost` + `InterfaceOpened`/`Closed`) — hiding Main HUD alone is not enough.
+- **UITK white block:** never put `border-radius` and `overflow: hidden` on the same element — split painted outer vs clip inner (`storage-panel` / `storage-panel__clip`, weight track same). Same rule as [machine-interface](machine-interface.md).
+- **HUD slot label recenter:** Main HUD hover chips live in `inventory-slot__label-host` (flex-centered). Do not center with `left: 50%; translate: -50%` — UITK keeps the old percentage width after `SlotLabel` changes (Head → item name).
+- **Zone reticle misses limbs:** armature `ZoneTargetCollider` bones are on **Characters** (often triggers), not BodyParts. Resolve via `TryResolveHoverZone` → `TryResolveZoneFromRay` (Collider.Raycast), never BodyParts-only `Physics.RaycastAll` + `QueryTriggerInteraction.Ignore`. Do not gate the chip on `IsPointerOverInterface` (leftover uGUI can keep it true). Exclude local `HumanHealthController` or the reticle/connect hit yourself.
+- **Zone reticle color fight:** never toggle `--valid` / `--recharging` from separate setters. Push aim + recovery into `ZoneReticleDriver`, then `Apply` one `ZoneReticleFrame` (priority Recharging > Valid > Idle). Cross flash is a frame field, not a parallel Hit color mode.
+- **Intent chip vs `C`:** HUD used to refresh intent only on chip click — `C` changed gameplay intent but not the highlight. `MainHudSubSystem` now polls `CurrentIntent` each frame (same pattern as active hand). Prefer an `IntentChanged` event on `IIntentProvider` when a second consumer appears — interim poll is accepted tech debt.
+- **Invalid panel drop must not fall through to HUD:** `TryCompleteTransfer` returns after a panel slot hit even when `CanContainItemAtPosition` is false — otherwise the release point can hit a hand under the panel and move the item there. World-drop when neither panel slot nor HUD owns the release; cancel only if the release is over an open panel's chrome (not via `IsPointerOverInterface`, which leftover uGUI keeps true). Gameplay camera comes from `CameraSubSystem`, not `Camera.main`.
+- **PDA gear well → Pocket:** design (`main-hud.md` §8) still says belt/ID/PDA/back; this fork's strip is belt/ID/**pocket**/back. ID holds the PDA+card via `ContainerType.Identification` (`RoleSubSystem`). The Pocket well maps to `ContainerType.Pocket` on `HumanTorso` (`PocketContainer`, 2×2). Click opens pocket panels (same as the hotkey); drops use `TryFindPositionFor` so multi-slot wells aren't stuck on (0,0).
+- **Gear-strip / clothing / hands vs bags:** click opens a panel only for storage *on the item* (`HasUi` `AttachedContainer` via `TryGetStorageContainerOnItem`). Never open the equip slot's own 1×1 container. Unequip non-containers via click; bags open their grid. Do not use `Item.Container` — that is the parent slot, not the bag.
+- **Item storage prefers `HasUi`:** backpack/toolbelt/locker content grids use `HasUi=1` and `DisplayAsSlotInUI=0` (Medkit pattern). Do not flip `DisplayAsSlotInUI` on those — HumanInventory would register them as body slots when worn.
+- **Locker door gates storage:** `Locker` implements `IStorageAccessGate` — View/Store `CanInteract` is false while closed. Door priority is 30 when closed (open wins click) and 15 when open (view at 25 wins click; close via radial). Closing the door calls `CloseStorageUIs` so panels cannot outlive the door.
+- **Gear-strip panels open above the anchor:** `StoragePanelHost.PositionPanel` flips above when the anchor is near the bottom (belt/ID/pocket/back). Do not set `style.top = gearBound.y` without that clamp — the strip sits on the screen edge.
+- **Sticky `_dragMoved` blocks hand clicks:** HUD WireDrag must clear `_dragMoved` on every PointerDown *before* the empty-slot early-out. After dragging an item out of a hand, the well is empty so the next press never re-entered the old reset path and ClickEvent kept ignoring hand switches.
+- **Play Mode / Editor verification still required** for this clean-slate pass (catalog present; compile/Play Mode not run in implementing session).
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
-- **Do not poll `Keyboard.current` for HUD debug toggles:** subscribe to an arbitrated `InputSubSystem` action (code-defined like `ToggleAlertStackDebug` / `UiCancel`) and register the panel's `UIDocument` with `InputInterface`.
-- **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug` for every type in `SS3D.UI.MainHud`. Use `Dev` (or similar). On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
-- **F3 alert debug panel needs a themed PanelSettings:** a blank `ScriptableObject.CreateInstance<PanelSettings>()` has no font — rows look like empty colored boxes. Reuse `MainHudAssetCatalog.PanelSettings`. Keep the panel top-left; alert icons are top-right.
+- **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
+- **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right).
 
 ## Depends on / Used by
 
-- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md) (UITK document registry / pointer-over-UI), [machine-interface](machine-interface.md) (open/close suppress)
-- **Used by:** [examine](examine.md), [player-control](player-control.md), [id-access](id-access.md)
+- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md), [id-access](id-access.md), [stamina](stamina.md) (encumbrance consumer), [machine-interface](machine-interface.md) (open/close suppress)
+- **Used by:** [examine](examine.md), [player-control](player-control.md), [id-access](id-access.md), [stamina](stamina.md), [combat](combat.md) (zone reticle / intent chip)
 - **Catalog pattern:** [ui-shell](ui-shell.md), [machine-interface](machine-interface.md)
 
 ## Related docs
 
-- Design (read-only): [Documents/design/inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
-- [2026-07_agent-first-composition](../2026-07_agent-first-composition.md), [2026-07_mi-path-catalog](../2026-07_mi-path-catalog.md)
+- Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
+- [2026-07_inventory-storage-redesign](../2026-07_inventory-storage-redesign.md)
 - [INDEX.md](../INDEX.md)

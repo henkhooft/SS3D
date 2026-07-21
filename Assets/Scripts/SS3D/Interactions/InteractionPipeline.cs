@@ -82,6 +82,28 @@ namespace SS3D.Interactions
             return viable;
         }
 
+        /// <summary>
+        /// Hover outlines only reflect interactions that target the hovered object.
+        /// Source-only entries (e.g. Drop, which always appears while holding an item) must not
+        /// light up every Selectable under the cursor.
+        /// </summary>
+        public static List<InteractionEntry> FilterForOutline(List<InteractionEntry> entries)
+        {
+            List<InteractionEntry> targeted = new();
+
+            foreach (InteractionEntry entry in entries)
+            {
+                if (entry.Target == null)
+                {
+                    continue;
+                }
+
+                targeted.Add(entry);
+            }
+
+            return targeted;
+        }
+
         public static bool MatchesIntent(IInteraction interaction, IntentType intent)
         {
             if (interaction is IIntentRestrictedInteraction restricted)
@@ -89,7 +111,9 @@ namespace SS3D.Interactions
                 return restricted.AllowedIntent == intent;
             }
 
-            return true;
+            // Unrestricted world verbs (Drop, Open, MI, …) are Help-default.
+            // Harm (and other exclusive modes) must opt in via IIntentRestrictedInteraction.
+            return intent == IntentType.Help;
         }
 
         private static GameObject ResolveTargetGameObject(List<IInteractionTarget> targets)

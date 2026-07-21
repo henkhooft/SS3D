@@ -13,6 +13,10 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Interactions;
+using SS3D.Systems.Combat;
+using SS3D.Systems.Combat.Interactions;
+using SS3D.Systems.Entities;
+using SS3D.Systems.Health;
 using SS3D.Systems.Selection;
 using System.Linq;
 using UnityEngine;
@@ -49,6 +53,18 @@ namespace SS3D.Systems.Inventory.Items
         [FormerlySerializedAs("Weight")]
         [SerializeField] private float _weight;
 
+        [Tooltip("Physical size tier, checked against a container's MaxSizeClass fit ceiling."), SerializeField]
+        private SizeClass _sizeClass = SizeClass.Normal;
+
+        [Tooltip("If greater than 1, identical items (same source asset) collapse into one stack up to this count."), SerializeField]
+        private int _maxStackSize = 1;
+
+        /// <summary>
+        /// How many units this item instance currently represents. Only meaningful when MaxStackSize > 1.
+        /// </summary>
+        [SyncVar]
+        private int _stackCount = 1;
+
         [FormerlySerializedAs("Traits")]
         [SerializeField] private List<Trait> _startingTraits;
 
@@ -76,7 +92,39 @@ namespace SS3D.Systems.Inventory.Items
         [SyncVar]
         private AttachedContainer _container;
 
-        public string Name => _name;
+        public string Name
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_name))
+                {
+                    return _name;
+                }
+
+                string objectName = gameObject.name;
+                const string cloneSuffix = "(Clone)";
+                if (objectName.EndsWith(cloneSuffix))
+                {
+                    objectName = objectName[..^cloneSuffix.Length].TrimEnd();
+                }
+
+                return objectName;
+            }
+        }
+
+        /// <summary>
+        /// This item's own weight. Does not include the recursive weight of anything stored inside it —
+        /// see AttachedContainer.Weight for that (Documents/design/inventory-storage.md §2, §7).
+        /// </summary>
+        public float Weight => _weight;
+
+        public SizeClass SizeClass => _sizeClass;
+
+        public int MaxStackSize => _maxStackSize;
+
+        public bool IsStackable => _maxStackSize > 1;
+
+        public int StackCount => _stackCount;
 
         public ReadOnlyCollection<Trait> Traits => ((List<Trait>) _traits.Collection).AsReadOnly();
 
@@ -308,6 +356,34 @@ namespace SS3D.Systems.Inventory.Items
             DropInteraction dropInteraction = new();
 
             interactions.Add(new InteractionEntry(null, dropInteraction));
+
+            // Improvised melee for any held item without a dedicated weapon profile.
+            if (TryGetComponent(out MeleeWeaponItemExtension _))
+            {
+                return;
+            }
+
+            var improvisedHit = new MeleeHitInteraction(MeleeWeaponProfile.Improvised);
+            if (!improvisedHit.CanStartSwing(this))
+            {
+                return;
+            }
+
+            foreach (IInteractionTarget target in targets)
+            {
+                if (target is not IGameObjectProvider provider)
+                {
+                    continue;
+                }
+
+                Entity entity = provider.GameObject.GetComponentInParent<Entity>();
+                if (entity == null || entity.GetComponentInChildren<HumanHealthController>() == null)
+                {
+                    continue;
+                }
+
+                interactions.Add(new InteractionEntry(target, improvisedHit));
+            }
         }
 
         /// <summary>
@@ -352,6 +428,27 @@ namespace SS3D.Systems.Inventory.Items
             _container = newContainer;
         }
 
+        /// <summary>
+        /// Whether this item and <paramref name="other"/> are the same stackable definition and could
+        /// share one stack. Does not check remaining capacity — see AttachedContainer's merge logic.
+        /// </summary>
+        [ServerOrClient]
+        public bool CanMergeWith(Item other)
+        {
+            return IsStackable
+                && other != null
+                && other.IsStackable
+                && Asset != null
+                && other.Asset != null
+                && Asset.Equals(other.Asset);
+        }
+
+        [Server]
+        public void SetStackCount(int count)
+        {
+            _stackCount = Mathf.Max(1, count);
+        }
+
        
 
         // Generate preview of the same object, but without stored items.
@@ -363,6 +460,14 @@ namespace SS3D.Systems.Inventory.Items
             // unnecessary on a dedicated server (no shaders are included in the build for it to use).
             return null;
 #else
+            // Same for headless / -nographics clients (multiplayer harness): NullGfxDevice cannot
+            // run RuntimePreviewGenerator without URP GraphicsBuffer/Blitter exceptions.
+            if (UnityEngine.Application.isBatchMode
+                || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                return null;
+            }
+
             RuntimePreviewGenerator.BackgroundColor = new Color(0, 0, 0, 0);
             RuntimePreviewGenerator.OrthographicMode = true;
             // Find stored items

@@ -12,8 +12,9 @@ namespace SS3D.UI.MainHud.Dev
     /// <summary>
     /// Dev-only panel to force every Alert Icon Stack hazard through None/Warning/Critical, without needing
     /// the hunger/thirst/pressure/radiation/pulling/restrained/low-oxygen/dying trackers that don't exist yet
-    /// (see <see cref="MainHudSubSystem.SetDebugAlertOverride"/>). Toggle with F3 via
-    /// <see cref="InputSubSystem.ToggleAlertStackDebug"/> (F2 is the condemned screen-effects uGUI menu).
+    /// (see <see cref="MainHudSubSystem.SetDebugAlertOverride"/>). Toggle with F4 via
+    /// <see cref="InputSubSystem.ToggleAlertStackDebug"/>. F3 is local-speech debug
+    /// (<c>LocalSpeechDebugTrigger</c>); F2 is the condemned screen-effects uGUI menu.
     /// <para>
     /// Anchored top-left so it does not cover the live alert stack (top-right). Reuses the Main HUD
     /// <see cref="PanelSettings"/> theme so labels actually render (a blank runtime PanelSettings has no font).
@@ -157,7 +158,7 @@ namespace SS3D.UI.MainHud.Dev
             _panel.style.borderBottomRightRadius = 6f;
             _panel.style.flexDirection = FlexDirection.Column;
 
-            _panel.Add(BuildLabel("Alert Stack Debug (F3)", 15, FontStyle.Bold));
+            _panel.Add(BuildLabel("Alert Stack Debug (F4)", 15, FontStyle.Bold));
             _panel.Add(BuildHint("Icons render top-right. Pick a severity per hazard."));
 
             ScrollView list = new(ScrollViewMode.Vertical);

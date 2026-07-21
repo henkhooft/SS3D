@@ -100,7 +100,7 @@ If the ghost has already committed elsewhere before defib succeeds, the original
 
 - Exact roster of ghost-role body types (drones, mice, pAIs, hostile simple mobs, etc.) and their individual stat blocks — a content/balancing pass, not a mechanic
 - Any future method for the living to detect or perceive ghosts (a medium-type ability, a specific antagonist power) — this pass commits to fully invisible and undetectable; a later addition would need its own justification against §1
-- Admin/staff observer tooling (godmode, jump-to-player, stealth observation) — `in-round admin tools`, a separate still-open pass
+- Admin/staff observer tooling (godmode, jump-to-player, stealth observation) — designed in `admin-tools.md` §4, built on this doc's ghost framework
 - Full handling of a defib-revived-but-unoccupied body (AI takeover, NPC behavior, etc.) — flagged in §6, belongs to `death-cloning-respawn.md` to formalize
 - Ghost cosmetic customization (appearance, trail effects, etc.) — no gameplay weight
 - The round-end summary screen and transition logic itself — this doc only supplies the camera/state framework round-end will use; the content and transition mechanics are `round-end.md`'s job

@@ -78,8 +78,15 @@ namespace SS3D.Systems.Atmospherics
 
         private void Update()
         {
+            if (InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
             if (_toggleAction == null && Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
+            {
                 _open = !_open;
+            }
         }
 
         private void LateUpdate()
@@ -105,9 +112,16 @@ namespace SS3D.Systems.Atmospherics
 
         private void OnToggle(InputAction.CallbackContext context)
         {
+            if (!context.performed || InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
             _open = !_open;
             if (_open && _camera == null)
+            {
                 _camera = Camera.main;
+            }
         }
 
         private void DrawPanel(int windowId)

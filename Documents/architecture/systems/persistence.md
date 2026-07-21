@@ -40,4 +40,4 @@ Layered contributor-based disk persistence for station templates and server meta
 ## Related docs
 
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
-- Design (read-only): [round-config.md](../../design/round-config.md) (blocks map pool contributor)
+- Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor)

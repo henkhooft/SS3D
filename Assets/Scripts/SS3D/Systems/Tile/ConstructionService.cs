@@ -18,13 +18,14 @@ namespace SS3D.Systems.Tile
             _query = query;
         }
 
-        public PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting)
+        public PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting,
+            bool skipBuildCheck = false)
         {
             if (_map == null || tileObject == null)
                 return PlaceResult.Failed;
 
             Vector3 gridPosition = TileHelper.GetClosestPosition(worldPosition);
-            if (!_map.PlaceTileObject(tileObject, gridPosition, direction, skipBuildCheck: false, replaceExisting,
+            if (!_map.PlaceTileObject(tileObject, gridPosition, direction, skipBuildCheck, replaceExisting,
                     skipAdjacency: false, out GameObject instance))
             {
                 return PlaceResult.Failed;
@@ -63,12 +64,13 @@ namespace SS3D.Systems.Tile
         public PreviewResult TryPreviewTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting)
         {
             if (_map == null || tileObject == null)
-                return new PreviewResult { CanBuild = false };
+                return PreviewResult.Failed();
 
-            return new PreviewResult
-            {
-                CanBuild = _map.CanBuild(tileObject, worldPosition, direction, replaceExisting),
-            };
+            BuildFailReason[] failures = _map.EvaluateBuild(tileObject, worldPosition, direction, replaceExisting);
+            if (failures.Length == 0)
+                return PreviewResult.Ok;
+
+            return PreviewResult.Failed(failures);
         }
 
         public SpawnResult SpawnIngredient(GameObject prefab, Vector3 nearWorldPosition, Direction direction = Direction.North,

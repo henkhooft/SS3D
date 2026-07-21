@@ -20,6 +20,10 @@ namespace SS3D.Systems.Inputs
         /// <summary>The construction build menu is open (placement input, no world interactions).</summary>
         TileMenu = 20,
 
+        /// <summary>The full-screen Map Editor is open. It drives its own free-fly camera by polling
+        /// devices directly, so unlike <see cref="TileMenu"/> it masks Movement/Camera/Hotkeys too.</summary>
+        MapEditor = 25,
+
         /// <summary>A machine interface panel is open (movement/camera captured by the panel).</summary>
         MachineUI = 30,
 
@@ -28,9 +32,5 @@ namespace SS3D.Systems.Inputs
 
         /// <summary>A generic text input field is focused; all gameplay/system keybinds are off.</summary>
         TextEntry = 50,
-
-        /// <summary>The chat input field is focused; like <see cref="TextEntry"/> but keeps the
-        /// send-message action live so Enter submits.</summary>
-        ChatEntry = 60,
     }
 }

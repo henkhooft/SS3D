@@ -15,6 +15,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/CommandsController.cs` — command dispatch (offline, server, client)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/Command.cs` — base class; subclasses auto-register
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/SpawnDummyCommand.cs` — admin `spawndummy` (combat test Human)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/IdAccessCommands/` — `accesscheck`, `accessgrant`, `accessrevoke`, `accesspreset` dev helpers
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectCommand.cs` — client `screeneffect` intensity setter
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectHitFlashCommand.cs` — client hit-flash trigger
@@ -30,7 +31,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 **Screen-effect debug:** client commands call [screen-effects](screen-effects.md); F2 menu is an alternate path on the same subsystem.
 
-**Alert-stack debug:** client `alertstack` lives in [inventory](inventory.md) MainHud; F3 menu is the alternate path.
+**Alert-stack debug:** client `alertstack` lives in [inventory](inventory.md) MainHud; F4 menu is the alternate path (F3 is local-speech debug).
 
 ## Depends on / Used by
 
@@ -38,8 +39,10 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 ## Related docs
 
+- Design (read-only): [admin-tools.md](../../design/admin-tools.md) — permission tiers, ahelp, stealth observation, world intervention, moderation this system will eventually need to expose
 - [id-access](id-access.md)
 - [screen-effects](screen-effects.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [ui-shell](ui-shell.md)
+- [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md) — `console <command line>` in the harness's automation scripts routes through `CommandsController.ClientProcessCommand`
 - [INDEX.md](../INDEX.md)

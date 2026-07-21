@@ -15,7 +15,8 @@ namespace SS3D.Tests.EditMode
 
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
             {
-                if (TileLayerCategoryMapping.IsItemsCategory(category))
+                if (TileLayerCategoryMapping.IsItemsCategory(category)
+                    || TileLayerCategoryMapping.IsFloorDecalsCategory(category))
                     continue;
 
                 foreach (TileLayer layer in TileLayerCategoryMapping.GetLayers(category))
@@ -44,6 +45,19 @@ namespace SS3D.Tests.EditMode
 
             Assert.IsTrue(TileLayerCategoryMapping.TryGetCategoryForLayer(TileLayer.FurnitureTop, out TileLayerCategory furnitureCategory));
             Assert.AreEqual(TileLayerCategory.Furniture, furnitureCategory);
+
+            Assert.IsTrue(TileLayerCategoryMapping.IsFloorDecalsCategory(TileLayerCategory.FloorDecals));
+            Assert.AreEqual(0, TileLayerCategoryMapping.GetLayers(TileLayerCategory.FloorDecals).Count);
+
+            Assert.IsTrue(TileLayerCategoryMapping.TryGetCategoryForLayer(TileLayer.PipeMiddle, out TileLayerCategory pipeCategory));
+            Assert.AreEqual(TileLayerCategory.WiresAndPipes, pipeCategory);
+        }
+
+        [Test]
+        public void TileLayer_DoesNotIncludeOverlays()
+        {
+            foreach (TileLayer layer in TileHelper.GetTileLayers())
+                Assert.IsFalse(string.Equals(layer.ToString(), "Overlays", System.StringComparison.Ordinal));
         }
     }
 }

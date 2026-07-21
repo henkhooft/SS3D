@@ -221,6 +221,42 @@ namespace SS3D.Systems.Tile
             return true;
         }
 
+        public bool TryGetFloorDecalId(Vector3 worldPosition, out ushort decalId)
+        {
+            decalId = 0;
+            TileChunk chunk = GetChunk(worldPosition);
+            if (chunk == null)
+                return false;
+
+            Vector2Int local = chunk.GetXY(worldPosition);
+            decalId = chunk.GetFloorDecalId(local.x, local.y);
+            return true;
+        }
+
+        public bool TrySetFloorDecal(Vector3 worldPosition, ushort decalId)
+        {
+            if (!HasPlenumAt(worldPosition))
+                return false;
+
+            TileChunk chunk = GetOrCreateChunk(worldPosition);
+            Vector2Int local = chunk.GetXY(worldPosition);
+            chunk.SetFloorDecalId(local.x, local.y, decalId);
+            OnFloorDecalsChanged?.Invoke(GetKey(worldPosition));
+            return true;
+        }
+
+        public bool TryClearFloorDecal(Vector3 worldPosition) => TrySetFloorDecal(worldPosition, 0);
+
+        public event Action<Vector2Int> OnFloorDecalsChanged;
+
+        private bool HasPlenumAt(Vector3 worldPosition)
+        {
+            if (!TryGetTileLocation(TileLayer.Plenum, worldPosition, out ITileLocation plenumLocation))
+                return false;
+
+            return !plenumLocation.IsFullyEmpty();
+        }
+
         public void ClearAllAreaIds()
         {
             foreach (TileChunk chunk in _chunks.Values)
@@ -349,21 +385,40 @@ namespace SS3D.Systems.Tile
         /// <param name="dir">Direction the object is facing</param>
         /// <param name="replaceExisting">Replace an existing object</param>
         /// <returns></returns>
-        public bool CanBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
+        public bool CanBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting) =>
+            EvaluateBuild(tileObjectSo, placePosition, dir, replaceExisting).Length == 0;
+
+        /// <summary>
+        /// Aggregates <see cref="BuildChecker"/> failures across every cell the object occupies.
+        /// </summary>
+        public BuildFailReason[] EvaluateBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
         {
             List<Vector2Int> gridPositionList = tileObjectSo.GetGridOffsetList(dir);
+            var failures = new List<BuildFailReason>();
 
-            bool canBuild = true;
             foreach (Vector2Int gridOffset in gridPositionList)
             {
                 Vector3 gridPosition = new(placePosition.x + gridOffset.x, 0, placePosition.z + gridOffset.y);
                 TryGetTileLocations(gridPosition, out ITileLocation[] tileLocations);
 
-                canBuild &= BuildChecker.CanBuild(tileLocations, tileObjectSo, dir, gridPosition,
-                    GetNeighbourPlacedObjects(TileLayer.Turf, gridPosition), replaceExisting);
+                BuildFailReason[] cellFailures = BuildChecker.Evaluate(
+                    tileLocations,
+                    tileObjectSo,
+                    dir,
+                    gridPosition,
+                    GetNeighbourPlacedObjects(TileLayer.Turf, gridPosition),
+                    replaceExisting);
+
+                foreach (BuildFailReason failure in cellFailures)
+                {
+                    if (!failures.Contains(failure))
+                        failures.Add(failure);
+                }
             }
-            
-            return canBuild;
+
+            return failures.Count == 0
+                ? System.Array.Empty<BuildFailReason>()
+                : failures.ToArray();
         }
 
         public bool PlaceTileObject(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir,
@@ -614,6 +669,8 @@ namespace SS3D.Systems.Tile
                 TileChunk chunk = GetOrCreateChunk(savedChunk.originPosition);
                 if (savedChunk.areaIds != null)
                     chunk.SetAreaIds(savedChunk.areaIds);
+                if (savedChunk.floorDecalIds != null)
+                    chunk.SetFloorDecalIds(savedChunk.floorDecalIds);
 
                 if (tileSystem == null)
                     continue;
@@ -624,7 +681,16 @@ namespace SS3D.Systems.Tile
                 {
                     foreach (SavedPlacedTileObject savedObject in savedTile.GetPlacedObjects())
                     {
-                        TileObjectSo toBePlaced = (TileObjectSo)tileSystem.GetAsset(savedObject.tileObjectSOName);
+                        TileObjectSo toBePlaced = tileSystem.GetAsset(savedObject.tileObjectSOName) as TileObjectSo;
+                        if (toBePlaced == null)
+                        {
+                            Log.Warning(this,
+                                "Skipping unknown or removed tile asset '{assetName}' while loading map",
+                                Logs.Generic,
+                                savedObject.tileObjectSOName);
+                            continue;
+                        }
+
                         Vector3 placePosition = chunk.GetWorldPosition(savedTile.Location.x, savedTile.Location.y);
 
                         // Skipping build check here to allow loading tile objects in a non-valid order

@@ -27,7 +27,7 @@ Clamp is the one stage that's skippable by choice, not by accident — and skipp
 This is the only stage that varies by what's actually being done. All three share the same shell (open zone in, tool or item applied, zone left open for Close) rather than being three separate systems:
 
 - **Direct repair** — hemostat or cautery on the open zone, a Tier 2 action. Reduces the zone's wound severity directly (per the tiers in `health.md` §5) or resolves an internal bleeding source a bandage can't reach. This is the surgical-grade version of what field treatment already does, for damage past what field treatment alone resolves.
-- **Organ exchange** — two steps, both existing grammar: **extract** (hemostat on the open zone, Tier 2) removes the failing organ, and it becomes a real, holdable item — same "everything maps to something physical" rule the hacking interface established, and yes, it's examinable (`main-hud.md` §15). **Install** (the replacement organ used on the open zone, Tier 3 combine/use-with) puts the new one in. Replacement organs come from transplant stock or a fabricator print (`crafting.md` §3) — not designed here, just the natural source.
+- **Organ exchange** — two steps, both existing grammar: **extract** (hemostat on the open zone, Tier 2) removes the failing organ, and it becomes a real, holdable item — same "everything maps to something physical" rule the hacking interface established, and yes, it's examinable (`examine.md` §7). **Install** (the replacement organ used on the open zone, Tier 3 combine/use-with) puts the new one in. Replacement organs come from transplant stock or a fabricator print (`crafting.md` §3) — not designed here, just the natural source.
 - **Limb attach** — the severed limb or a fabricated prosthetic, used on the stump zone, Tier 3 combine/use-with. No extraction needed; the severance already did that. No saw needed either, for the same reason.
 
 Nothing here invents a new targeting or combine behavior — organ install and limb attach are literally the Tier 3 grammar's original use case, applied to a body instead of a machine.
@@ -71,7 +71,7 @@ No new permanent chrome.
 | Interrupted steps | Freeform crafting's interruptible-timed-step pattern (`crafting.md` §2) |
 | Patient restraint (no table) | Grab escalation (`main-hud.md` §7) |
 | Replacement organs / prosthetics | Fabricator output (`crafting.md` §3) — sourced from, not redesigned here |
-| Extracted organ as item | Examine system (`main-hud.md` §15) |
+| Extracted organ as item | Examine system (`examine.md` §7) |
 | Anesthesia/sedation | Assumed to exist (chemistry or equivalent), not redesigned here |
 
 ## 10. Worked examples
@@ -110,6 +110,6 @@ No new permanent chrome.
 - Exact numeric values — step timers, cautery burn amount, complication severity (a balancing pass, not a design decision)
 - Improvised surgical tools (a kitchen knife standing in for a scalpel) — plausible future hook in the same spirit as armor's improvised protection, not detailed here
 - Multi-person surgical roles (an assistant holding retraction, etc.) — single-operator procedure assumed
-- Disease/infection risk from surgery — already flagged as a separate future system in `health.md` §9
+- Disease/infection risk from surgery — resolves as an ordinary contact-exposure vector (`virology.md` §3), not a bespoke surgical mechanic
 - Surgical skill/training affecting speed or quality — not assumed to exist, same caveat combat and stamina already apply to accuracy/exertion modifiers
 

@@ -41,10 +41,20 @@ namespace SS3D.Systems.Tile
             IsInitialized = true;
 
 #if !UNITY_SERVER
-            // Icons are only used by client-side UI (construction/build menus); generating them
-            // requires rendering a camera, which is unavailable and unnecessary on a dedicated server.
-            StartCoroutine(LoadAssetsWithIcon(tempAssets));
+            // Icons are only used by client-side UI (construction/build menus). Generating them
+            // requires rendering a camera through URP; that crashes on NullGfxDevice
+            // (-batchmode -nographics multiplayer harness clients) with GraphicsBuffer/Blitter errors.
+            if (CanGeneratePreviewIcons())
+            {
+                StartCoroutine(LoadAssetsWithIcon(tempAssets));
+            }
 #endif
+        }
+
+        private static bool CanGeneratePreviewIcons()
+        {
+            return !UnityEngine.Application.isBatchMode
+                && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null;
         }
 
         private IEnumerator LoadAssetsWithIcon(GenericObjectSo[] assets)
@@ -55,6 +65,12 @@ namespace SS3D.Systems.Tile
 	        foreach (GenericObjectSo asset in assets)
 	        {
                 GameObject prefab = Data.Assets.Get<GameObject>(asset.PrefabAsset);
+                if (prefab == null)
+                {
+                    tempIcons.Add(null);
+                    continue;
+                }
+
                 Transform prefabTransform = prefab.transform;
 		        Shader shader = Shader.Find("Unlit/ObjectIcon");
 

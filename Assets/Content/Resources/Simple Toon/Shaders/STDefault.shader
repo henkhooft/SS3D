@@ -16,8 +16,16 @@
         _Steps ("Steps", Range(1,25)) = 3
         _StpSmooth ("Smoothness", Range(0,1)) = 0
         _Offset ("Lit Offset", Range(-1,1.1)) = 0
+        [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Normal Scale", Float) = 1
+        _SpecIntensity ("Specular Intensity", Range(0,1)) = 0
+        _SpecPower ("Specular Power", Range(1,128)) = 32
 
         [Header(Light)][Space(5)]
+        [Toggle] _HalfToon ("Half Toon", Float) = 0
+        _ToonRamp ("Toon Ramp", 2D) = "white" {}
+        _RampStrength ("Ramp Strength", Range(0,1)) = 0.65
+        _ShadowTint ("Shadow Tint", COLOR) = (1,1,1,1)
         [Toggle] _Clipped ("Clipped", Float) = 0
         _MinLight ("Min Light", Range(0,1)) = 0
         _MaxLight ("Max Light", Range(0,1)) = 1
@@ -59,15 +67,17 @@
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_instancing
 
             #include "STForwardPass.hlsl"
+            #include "STFragment.hlsl"
 
             half4 ST_FragOpaque(STVaryings input) : SV_Target
             {
-                half4 col = ST_FragLit(input, false, false, 1.0);
+                half4 col = ST_FragLit(input, false, true, 1.0);
                 col.a = 1.0;
                 return col;
             }

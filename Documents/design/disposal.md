@@ -20,7 +20,7 @@ Two rules fall out:
 
 A physical hopper/funnel machine, placed in departments and public areas. Dropping an item in is the same Tier 3 combine interaction already used for freeform construction and general item-on-object actions (`crafting.md` §2) — no new gesture to learn.
 
-**Sized by collider class, not by an "item" flag.** The chute's accept check keys off physical size rather than a type tag. This is entirely for §8's benefit: when player-sized transit lands later, a body just needs to pass the same size check an oversized item would, rather than the entry point being redesigned around it.
+**Sized by size class, not by an "item" flag.** The chute's accept check keys off inventory's five-tier size-class field (`inventory-storage.md` §4) rather than a type tag. This is entirely for §8's benefit: when player-sized transit lands later, a body just needs to pass the same size check an oversized item would, rather than the entry point being redesigned around it.
 
 **Some units are ID-locked.** A secure evidence chute in Security, for instance, reuses the exact ID-locked-crate pattern from Cargo — another entry in the FDU's existing device taxonomy (`cargo.md` §5, `hacking-interface.md` §3) rather than a bespoke lock.
 
@@ -36,7 +36,7 @@ A physical hopper/funnel machine, placed in departments and public areas. Droppi
 
 ## 4. Tagging & destination routing
 
-At or near a chute, a quick tagger interaction lets a player attach a destination label before dropping something in — a real, examine-readable property on the object itself (`main-hud.md` §15), the same "manifest is printed on the object" convention Cargo's crates already establish (`cargo.md` §5), not hidden metadata.
+At or near a chute, a quick tagger interaction lets a player attach a destination label before dropping something in — a real, examine-readable property on the object itself (`examine.md` §5, §7), the same "manifest is printed on the object" convention Cargo's crates already establish (`cargo.md` §5), not hidden metadata.
 
 - **No tag** → routes to the main disposal outlet (§6) by default.
 - **Tagged for a department** → routes via junctions toward that department's local outlet.
@@ -92,11 +92,12 @@ No new permanent chrome.
 | Pipe material | Material-stock precedent (`crafting.md` §5) |
 | Chute drop-in interaction | Tier 3 combine grammar (`crafting.md` §2) |
 | Junction routing | Shared BFS/connectivity technique — fourth consumer (`area.md` §3, `rendering-lighting.md`, `electricity.md` §1) |
-| Package tag / destination label | Examine system (`main-hud.md` §15); manifest-as-physical-property precedent (`cargo.md` §5) |
+| Package tag / destination label | Examine system (`examine.md` §5, §7); manifest-as-physical-property precedent (`cargo.md` §5) |
 | Locked/secure disposal unit | ID/access system, FDU device taxonomy reuse (`hacking-interface.md` §3, `cargo.md` §5) |
 | Outlet → export pad | Cargo's exporting & selling loop (`cargo.md` §7) |
 | Mid-transit interception / sabotage | Same cable-cut detection pattern (`electricity.md` §6) |
 | Phase 2 ejection into space | Existing vacuum-exposure hazard, reused not redesigned |
+| Pipe segment placement/authoring | Creative mode's utility-routing tool (`creative-mode.md` §4) |
 
 ## 11. Worked examples
 

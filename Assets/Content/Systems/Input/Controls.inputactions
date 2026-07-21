@@ -946,7 +946,7 @@
                 {
                     "name": "",
                     "id": "78cc14e5-d0e3-4503-949c-e1a9a26f70db",
-                    "path": "<Keyboard>/leftShift",
+                    "path": "<Keyboard>/alt",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -990,7 +990,18 @@
                 {
                     "name": "",
                     "id": "c19df163-7e9b-4f1e-8e61-8b142ffcb3d4",
-                    "path": "<Keyboard>/alt",
+                    "path": "<Keyboard>/leftShift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Square Drag",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a8e4c2b1-9d7f-4e3a-b6c5-1f0e2d3a4b5c",
+                    "path": "<Keyboard>/rightShift",
                     "interactions": "",
                     "processors": "",
                     "groups": "",

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SS3D.Core;
 using SS3D.Systems.Area;
+using SS3D.Systems.Tile.Connections;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
@@ -18,9 +19,13 @@ namespace SS3D.Systems.Electricity
         [SerializeField]
         private Light _light;
         [SerializeField]
+        private Light _fillLight;
+        [SerializeField]
         private Renderer[] _emissiveRenderers;
         [SerializeField]
         private bool _respectDevBypass = true;
+        [SerializeField]
+        private bool _applyDepartmentalLightTint;
         [SerializeField]
         private LightFixtureCapability _fixtureCapability = LightFixtureCapability.NormalOnly;
 
@@ -28,9 +33,15 @@ namespace SS3D.Systems.Electricity
         [SerializeField]
         private float _emergencyIntensityMultiplier = 0.35f;
         [SerializeField]
+        [Range(0.05f, 1f)]
+        private float _emergencyRangeMultiplier = 0.45f;
+        [SerializeField]
         private Color _emergencyTint = new Color(1f, 0.25f, 0.2f);
 
         private float _poweredIntensity;
+        private float _poweredFillIntensity;
+        private float _poweredRange;
+        private float _poweredFillRange;
         private Color _poweredLightColor = Color.white;
         private float _poweredLumin;
         private Color _poweredEmission;
@@ -50,7 +61,14 @@ namespace SS3D.Systems.Electricity
             if (_light != null)
             {
                 _poweredIntensity = _light.intensity;
+                _poweredRange = _light.range;
                 _poweredLightColor = _light.color;
+            }
+
+            if (_fillLight != null)
+            {
+                _poweredFillIntensity = _fillLight.intensity;
+                _poweredFillRange = _fillLight.range;
             }
 
             CacheEmissiveMaterials();
@@ -187,6 +205,13 @@ namespace SS3D.Systems.Electricity
 
         private void HandleAreaLightingStateChanged(AreaId areaId, AreaLightingState state)
         {
+            // If we haven't resolved an area yet, retry now — the area system just published
+            // a state so flood-fill must have run and tiles are assigned.
+            if (!_hasArea)
+            {
+                CacheAreaId();
+            }
+
             if (_hasArea && _areaId == areaId)
             {
                 RefreshVisuals();
@@ -244,7 +269,20 @@ namespace SS3D.Systems.Electricity
 
         private void HandleElectricityTick()
         {
+            if (!_hasArea)
+            {
+                CacheAreaId();
+            }
+
             RefreshVisuals();
+        }
+
+        public static void RefreshAllFixtures()
+        {
+            foreach (LightPower fixture in FindObjectsByType<LightPower>(FindObjectsSortMode.None))
+            {
+                fixture.RefreshVisuals();
+            }
         }
 
         public void RefreshVisuals()
@@ -270,17 +308,20 @@ namespace SS3D.Systems.Electricity
         {
             useEmergencyVisuals = false;
 
-            PowerStatus consumerStatus = _consumer != null ? _consumer.PowerStatus : PowerStatus.Inactive;
-            if (!PowerGate.IsChannelOpen(_consumer))
+            if (_consumer == null)
             {
-                consumerStatus = PowerStatus.Inactive;
+                return false;
             }
-            else if (_respectDevBypass && LightingDevBypass.IsActive)
+
+            CacheAreaId();
+
+            if (!IsFixtureLightingChannelOpen())
             {
-                consumerStatus = PowerStatus.Powered;
+                return false;
             }
 
             AreaLightingState areaState = AreaLightingState.Dark;
+            bool hasAreaContext = _hasArea;
             if (_hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetLightingState(_areaId, out areaState))
@@ -289,21 +330,62 @@ namespace SS3D.Systems.Electricity
             }
             else if (_hasArea)
             {
-                areaState = AreaLightingState.Normal;
+                areaState = AreaLightingState.Dark;
+            }
+
+            if (hasAreaContext && areaState == AreaLightingState.Dark)
+            {
+                return false;
+            }
+
+            PowerStatus consumerStatus = _consumer.PowerStatus;
+            if (_respectDevBypass && LightingDevBypass.IsActive)
+            {
+                consumerStatus = PowerStatus.Powered;
             }
 
             return AreaLightFixturePolicy.ShouldEmitLight(
-                _hasArea,
+                hasAreaContext,
                 areaState,
                 _fixtureCapability,
                 consumerStatus,
                 out useEmergencyVisuals);
         }
 
+        /// <summary>
+        /// Lighting fixtures must belong to an area APC. PowerGate passthrough (no APC) is treated as off
+        /// unless the dev bypass is active for tilemap authoring.
+        /// </summary>
+        private bool IsFixtureLightingChannelOpen()
+        {
+            if (!PowerGate.IsChannelOpen(_consumer))
+            {
+                return false;
+            }
+
+            if (_consumer is not IElectricDevice device)
+            {
+                return _respectDevBypass && LightingDevBypass.IsActive;
+            }
+
+            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                return _respectDevBypass && LightingDevBypass.IsActive;
+            }
+
+            if (areaSubSystem.TryGetEffectiveApcForDevice(device, out _))
+            {
+                return true;
+            }
+
+            return _respectDevBypass && LightingDevBypass.IsActive;
+        }
+
         private void TurnLightOnNormal()
         {
             Color emission = _poweredEmission;
-            if (_hasArea
+            if (_applyDepartmentalLightTint
+                && _hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && _consumer?.TileObject != null
                 && areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record)
@@ -312,37 +394,41 @@ namespace SS3D.Systems.Electricity
                 emission = MultiplyColor(_poweredEmission, record.DepartmentalLightTint);
             }
 
-            if (_light != null)
-            {
-                _light.intensity = _poweredIntensity;
-                _light.color = _poweredLightColor;
-                _light.enabled = true;
-            }
+            ApplyLightState(_light, _poweredIntensity, _poweredRange, _poweredLightColor);
+            ApplyLightState(_fillLight, _poweredFillIntensity, _poweredFillRange, _poweredLightColor);
 
             SetEmissiveState(_poweredLumin, emission);
         }
 
         private void TurnLightOnEmergency()
         {
-            if (_light != null)
-            {
-                _light.intensity = _poweredIntensity * _emergencyIntensityMultiplier;
-                _light.color = _emergencyTint;
-                _light.enabled = true;
-            }
+            float emergencyIntensity = _poweredIntensity * _emergencyIntensityMultiplier;
+            float emergencyRange = _poweredRange * _emergencyRangeMultiplier;
+            ApplyLightState(_light, emergencyIntensity, emergencyRange, _emergencyTint);
+            ApplyLightState(_fillLight, 0f, _poweredFillRange, _emergencyTint, enabled: false);
 
             SetEmissiveState(_poweredLumin * _emergencyIntensityMultiplier, MultiplyColor(_poweredEmission, _emergencyTint));
         }
 
         private void TurnLightOff()
         {
-            if (_light != null)
-            {
-                _light.intensity = 0f;
-                _light.enabled = false;
-            }
+            ApplyLightState(_light, 0f, _poweredRange, _poweredLightColor, enabled: false);
+            ApplyLightState(_fillLight, 0f, _poweredFillRange, _poweredLightColor, enabled: false);
 
             SetEmissiveState(0f, Color.black);
+        }
+
+        private static void ApplyLightState(Light light, float intensity, float range, Color color, bool enabled = true)
+        {
+            if (light == null)
+            {
+                return;
+            }
+
+            light.intensity = intensity;
+            light.range = range;
+            light.color = color;
+            light.enabled = enabled && intensity > 0f;
         }
 
         private static Color MultiplyColor(Color left, Color right)

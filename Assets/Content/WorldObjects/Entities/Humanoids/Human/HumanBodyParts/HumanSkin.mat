@@ -74,6 +74,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaClip: 0
+    - _SpecIntensity: 0
+    - _SpecPower: 32
+    - _HalfToon: 0
     - _AmbientCol: 1
     - _Blend: 0
     - _BlendOp: 0

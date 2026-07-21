@@ -75,11 +75,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 14df766b77b0daf4b82ad93125f66782
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayPurple.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 162e188d33a82b440a239f20901c716a
     m_Address: Assets/Content/WorldObjects/Items/Consumable/Chemical/Medications/BurnPatch.prefab
     m_ReadOnly: 0
@@ -187,11 +182,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3a25eb0bd251b5847af05fb59feff383
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/Seats/Chairs/Plastic/PlasticChairGrey.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3a7b793253e1a0f4587097192998c361
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayBrown.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -340,11 +330,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 5e24183c4537dcf47b16fde5ab1ce0ea
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayRed.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5e8a02c5ce0073644ac01bdb55d72a70
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableWood.prefab
     m_ReadOnly: 0
@@ -387,11 +372,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6caa99f8281726e40a793826d5c047db
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableSteel.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6cd51fc127b8aac40b2accd3e2666202
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayOrange.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -467,11 +447,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 81faf4debf00a0a478b924176f48d011
     m_Address: Assets/Content/WorldObjects/Items/Clothing/ShoeHiTops.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 821d0946be816bb42a0eed24631d57ee
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayBlue.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -652,11 +627,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b38ae683afaacc4419ac13936cecd1a5
     m_Address: Assets/Content/WorldObjects/Furniture/Machines/Engineering/SMES.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b3e652487789fe54d8d24245d5962c3a
-    m_Address: Assets/Content/WorldObjects/Structures/Floors/TileOverlays/TileOverlayGreen.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
