@@ -204,9 +204,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             ring.name = "camera-dial-ring";
             dial.Add(ring);
 
-            Button open = CreateIconButton(_icons?.Camera, "Camera options", () => TogglePopover("camera"));
+            // Dedicated dial button — avoid map-editor-icon-btn's fixed 38px size,
+            // which fights absolute centering inside the 56px dial.
+            Button open = new(() => TogglePopover("camera")) { tooltip = "Camera options", name = "camera-dial-open" };
             open.AddToClassList("map-editor-camera-dial__open");
-            open.name = "camera-dial-open";
+            VisualElement cameraIcon = CreateIconElement(_icons?.Camera);
+            open.Add(cameraIcon);
             dial.Add(open);
 
             dial.Add(CreateDialButton(_icons?.RotateLeft, "Rotate left",

@@ -198,25 +198,35 @@
 }
 
 /* -- Camera dial ---------------------------------------------------- */
+/* Matches Construction Map Editor mockup: 76px panel, 56px dial, gap 8. */
 
 .map-editor-camera-dial-wrap {
+    flex-direction: column;
     align-items: center;
+    width: 76px;
+    background-color: var(--map-editor-toolbar-bg);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    border-radius: var(--ss3d-radius-md);
+    padding: 10px;
 }
 
 .map-editor-camera-dial {
     position: relative;
-    width: 76px;
-    height: 76px;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
+    overflow: visible;
 }
 
 .map-editor-camera-dial__ring {
     position: absolute;
-    left: 10px;
-    top: 10px;
-    right: 10px;
-    bottom: 10px;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     border-radius: 999px;
     background-color: var(--ss3d-surface-inset);
     border-width: 1.5px;
@@ -225,28 +235,35 @@
 
 .map-editor-camera-dial__open {
     position: absolute;
-    left: 24px;
-    top: 24px;
-    right: 24px;
-    bottom: 24px;
+    left: 14px;
+    top: 14px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
     border-radius: 999px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     align-items: center;
     justify-content: center;
     padding: 0;
+    margin: 0;
 }
 
-.map-editor-camera-dial__open .map-editor-vector-icon {
+.map-editor-camera-dial__open .map-editor-vector-icon,
+.map-editor-camera-dial__open .map-editor-icon-btn__icon {
     width: 18px;
     height: 18px;
+    margin: 0;
 }
 
-.map-editor-camera-dial__open.map-editor-icon-btn--active {
+.map-editor-camera-dial__open.map-editor-camera-dial__open--active {
     background-color: var(--ss3d-accent-rust-dim);
 }
 
-.map-editor-camera-dial__open.map-editor-icon-btn--active .map-editor-vector-icon {
+.map-editor-camera-dial__open.map-editor-camera-dial__open--active .map-editor-vector-icon {
     -unity-background-image-tint-color: var(--ss3d-text-on-accent);
 }
 
@@ -254,6 +271,10 @@
     position: absolute;
     width: 22px;
     height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    max-width: 22px;
+    max-height: 22px;
     border-radius: 999px;
     background-color: var(--ss3d-surface-elevated);
     border-width: 1px;
@@ -261,32 +282,39 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    margin: 0;
 }
 
 .map-editor-camera-dial__btn-icon {
     width: 13px;
     height: 13px;
+    margin: 0;
 }
 
 .map-editor-camera-dial__rotate-left {
     left: -4px;
-    top: 27px;
+    top: 17px;
 }
 
 .map-editor-camera-dial__rotate-right {
     right: -4px;
-    top: 27px;
+    top: 17px;
 }
 
 .map-editor-camera-dial__zoom-row {
     flex-direction: row;
+    align-items: center;
+    justify-content: center;
     margin-top: 8px;
+    flex-shrink: 0;
 }
 
 .map-editor-camera-dial__zoom-row > .map-editor-camera-dial__btn {
     position: relative;
-    left: 0;
-    top: 0;
+    left: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
     margin-left: 3px;
     margin-right: 3px;
 }

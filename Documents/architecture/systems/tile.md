@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: shipped
-> Verified: 3ef6ed327 — 2026-07-18
+> Verified: c5015281c — 2026-07-21
 
 # Tile / construction
 
@@ -61,6 +61,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **Drag path stutters when moving fast:** was Instantiate/Destroy + `RpcSendCanBuild` per hologram per tile step (GC + network hitch). Pool inactive ghosts; skip per-tile validity refresh while dragging; drive path from `Vector2Int` tiles.
 - **Shift+drag rectangle:** `Tile Creator / Square Drag` is Shift (filled array); plain drag stays a Bresenham line. Rebuild when the modifier changes even if the cursor tile does not. Replace-existing is Alt (was Shift).
 - **Drag placement stuck / dead clicks:** `ConstructionHologramManager` must resolve LMB up/down *before* the orbit early-out — otherwise releasing while MMB-orbiting leaves `_placePressActive` stuck. Also recover if the button is up but the press flag is still set. Cancel (don't commit) when a gesture ends over UI, and rebuild a single cursor hologram so multi-tile drag ghosts do not linger.
+- **Map-editor SVG icons blank (e.g. Select cursor):** Unity VectorImage import does not resolve SVG `fill="currentColor"`. Filled shapes must use a concrete color (e.g. `#d8d8d8`); `-unity-background-image-tint-color` then tints them in USS.
 
 ## Depends on / Used by
 
