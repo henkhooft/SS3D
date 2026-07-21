@@ -44,10 +44,16 @@ hand-edit — a wrong YAML edit silently desyncs `fileID` references with no com
 prefab-composition-debt item and forbids "add one more behaviour" as a feature path, and the health
 rewrite's Phase 0d demonstrated the only accepted mitigation (strip-and-rewire via Editor tooling,
 not organic growth). But enforcement is **convention only** — nothing stops a future PR from adding
-a 127th component. Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) that
-would make even the rewire tool-mediated has never been scheduled.
+a 127th component. Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) is now
+scheduled: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md) (status:
+planned) turns strip-and-rewire into a repeatable `PrefabUtility` recipe convention, adds a CI-checked
+missing-script/denylist gate, and prefab-izes the currently-inlined organ GameObjects. That audit also
+found the Phase 0d precedent tool was actually a one-off Python YAML-surgery script
+(`Tools/migrate_health_prefabs.py`), not Editor tooling, and that `inventory.md`/`combat.md` cite a
+`BodyPartContainerInteractiveStrip.cs` tool that was never actually built — both are Phase 0 fixes in
+the new effort doc.
 
-- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab)
+- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 

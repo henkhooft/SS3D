@@ -9,7 +9,7 @@
 
 Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lobby](rounds-lobby.md). Humanoid body animation is driven by a packed `BodyAnimationSnapshot` SyncVar, not ad-hoc Animator calls.
 
-**Prefab composition debt:** `Human.prefab` is a mega-prefab (~15k lines, ~120 script refs). Do not hand-add features on it. Target is a thin visual/network anchor; health Phase 0d is strip-and-rewire, not grow. See [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md).
+**Prefab composition debt:** `Human.prefab` is a mega-prefab (~15k lines, ~120 script refs). Do not hand-add features on it. Target is a thin visual/network anchor; health Phase 0d is strip-and-rewire, not grow. See [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md) and the scheduled paydown [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) (planned).
 
 **Body presentation debt:** collapse / death / ragdoll / walk-cycle ownership is fragmented across Health, `Ragdoll`, `AnimationOrchestrator`, body-state bridge, and movement. Interim collapse APIs exist; **do not add another path** — refactor per [2026-07_body-presentation-authority.md](../2026-07_body-presentation-authority.md).
 
@@ -57,5 +57,6 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **planned** collapse/death presentation refactor
 - [2026-07_player-body-animation](../2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
+- [2026-07_human-prefab-decomposition](../2026-07_human-prefab-decomposition.md) — **planned** Human.prefab paydown
 - [animation_system_design plan](../../plans/animation_system_design_250de599.plan.md)
 - [INDEX.md](../INDEX.md)
