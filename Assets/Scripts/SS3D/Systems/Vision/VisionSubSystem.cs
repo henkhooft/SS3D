@@ -84,7 +84,10 @@ namespace SS3D.Systems.Vision
 
         private ViewCastInfo[] _viewCastResults;
         private float[] _angleBuffer;
-        private Color[] _pixelBuffer;
+        /// <summary>Normalized view depth per angular bin (0–1), written into the R16 vision map.</summary>
+        private float[] _depthBuffer;
+        private float[] _dilateScratch;
+        private ushort[] _depthUpload;
         private Entity _targetEntity;
         private int _wallsLayer = -1;
 
@@ -250,15 +253,11 @@ namespace SS3D.Systems.Vision
             {
                 Vector3 offset = viewPoints[i] - center;
                 offset.y = 0f;
-                _pixelBuffer[i] = new Color(offset.magnitude / viewRange, 0f, 0f);
+                _depthBuffer[i] = offset.magnitude / viewRange;
             }
 
             DilateSimilarDepthPixels();
-
-#pragma warning disable UNT0017 // SetPixels invocation is slow
-            visionMap.SetPixels(0, 0, stepCount, 1, _pixelBuffer);
-#pragma warning restore UNT0017
-            visionMap.Apply(false);
+            UploadVisionMap();
 
             MapPerformanceMarker.End();
         }
@@ -289,23 +288,38 @@ namespace SS3D.Systems.Vision
 
         /// <summary>
         /// Fill 1° angular holes on continuous surfaces without extending into distant corridors.
+        /// Reads from <see cref="_dilateScratch"/> so neighbouring bins use pre-dilate depths.
         /// </summary>
         private void DilateSimilarDepthPixels()
         {
             const float similarMeters = 1.75f;
             float similarNorm = similarMeters / viewRange;
-            Color[] source = new Color[stepCount];
-            Array.Copy(_pixelBuffer, source, stepCount);
+            Array.Copy(_depthBuffer, _dilateScratch, stepCount);
 
             for (int i = 0; i < stepCount; i++)
             {
-                float center = source[i].r;
-                float left = source[(i - 1 + stepCount) % stepCount].r;
-                float right = source[(i + 1) % stepCount].r;
+                float center = _dilateScratch[i];
+                float left = _dilateScratch[(i - 1 + stepCount) % stepCount];
+                float right = _dilateScratch[(i + 1) % stepCount];
                 float maxNeighbor = Mathf.Max(left, right);
                 if (Mathf.Abs(maxNeighbor - center) <= similarNorm)
-                    _pixelBuffer[i].r = Mathf.Max(center, maxNeighbor);
+                    _depthBuffer[i] = Mathf.Max(center, maxNeighbor);
             }
+        }
+
+        /// <summary>
+        /// Pack normalized depths into the R16 texture without Color[] / SetPixels allocs.
+        /// </summary>
+        private void UploadVisionMap()
+        {
+            for (int i = 0; i < stepCount; i++)
+            {
+                float depth = Mathf.Clamp01(_depthBuffer[i]);
+                _depthUpload[i] = (ushort)(depth * 65535f + 0.5f);
+            }
+
+            visionMap.SetPixelData(_depthUpload, 0);
+            visionMap.Apply(false);
         }
 
         private void ViewCastBatch(Vector3 origin, float[] angles, int count, ViewCastInfo[] resultArray)
@@ -469,7 +483,9 @@ namespace SS3D.Systems.Vision
             _activeRayIndices = new int[count];
             _viewCastResults = new ViewCastInfo[count];
             _angleBuffer = new float[count];
-            _pixelBuffer = new Color[count];
+            _depthBuffer = new float[count];
+            _dilateScratch = new float[count];
+            _depthUpload = new ushort[count];
         }
 
         private void DisposeCastBuffers()

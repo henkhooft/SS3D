@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: f4a79e078 — 2026-07-21
+> Verified: 23cb4d2d5 — 2026-07-21
 
 # Rendering
 
@@ -23,7 +23,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - `Assets/Scripts/SS3D/Rendering/URP/AtmosRenderContext.cs` — shared GPU snapshot for atmos shaders
 - `Assets/Scripts/SS3D/Rendering/URP/VisionRendererFeature.cs` — FOV mask + hard black composite
 - `Assets/Scripts/SS3D/Rendering/URP/UiBackdropBlurRendererFeature.cs` — Dual Kawase world blur behind diegetic machine UI
-- `Assets/Scripts/SS3D/Systems/Vision/VisionSubSystem.cs` — client `RaycastCommand` waves → `_VisionMap` (occluder cache)
+- `Assets/Scripts/SS3D/Systems/Vision/VisionSubSystem.cs` — client `RaycastCommand` waves → R16 `_VisionMap` (occluder cache; float dilate + `SetPixelData`)
 - `Assets/Content/Resources/Simple Toon/Shaders/STLighting.hlsl` — half-toon lighting + palette emission sample
 - `Assets/Content/Resources/Simple Toon/Shaders/STDefault.shader` — opaque toon (+ DepthNormals for Decal Layers)
 - `Assets/Settings/URP/` — pipeline asset and Forward+ renderer (includes Decal Renderer feature)
@@ -40,6 +40,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
 - **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
 - **Vision FOV must not use fixed multi-hit RaycastAll buffers:** a dense prop pile can exhaust the hit slots and report a clear line through walls. Keep iterative/wave single-hit casts that skip non-occluders (`VisionSubSystem` `RaycastCommand` waves + collider occluder cache).
+- **Vision map upload:** do not `new Color[]` / `SetPixels` on the LateUpdate path — dilate with persistent float scratch and upload R16 via `SetPixelData` (`Vision.VisionMap` was a multi-MB/frame GC hotspot).
 
 ## Depends on / Used by
 
