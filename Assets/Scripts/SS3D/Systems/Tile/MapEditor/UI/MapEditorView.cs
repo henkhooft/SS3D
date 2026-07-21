@@ -17,9 +17,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         /// <summary>Object library panel heights (px) for the three resize states.</summary>
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
         {
-            [PaletteMode.Min] = 52f,
-            [PaletteMode.Normal] = 200f,
-            [PaletteMode.Max] = 400f,
+            [PaletteMode.Min] = 40f,
+            [PaletteMode.Normal] = 190f,
+            [PaletteMode.Max] = 390f,
         };
 
         /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
@@ -189,9 +189,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _rightPopoverAnchor = toolbarWrap;
 
             _rightToolbar = CreateToolbarStrip(vertical: true);
-            _rightToolbar.Add(CreateIconButton(_icons?.ResetView, "Reset position", () => ResetViewRequested?.Invoke()));
-            _rightToolbar.Add(CreateIconButton(_icons?.Layers, "Layer view mode", () => TogglePopover("layers")));
-            _rightToolbar.Add(CreateIconButton(_icons?.Settings, "Map editor settings", () => TogglePopover("settings")));
+            _rightToolbar.Add(WrapWithHoverHint(
+                CreateIconButton(_icons?.ResetView, null, () => ResetViewRequested?.Invoke()),
+                "Reset view",
+                opensLeft: true));
+            _rightToolbar.Add(WrapWithHoverHint(
+                CreateIconButton(_icons?.Layers, null, () => TogglePopover("layers")),
+                "Layers",
+                opensLeft: true));
+            _rightToolbar.Add(WrapWithHoverHint(
+                CreateIconButton(_icons?.Settings, null, () => TogglePopover("settings")),
+                "Settings",
+                opensLeft: true));
             toolbarWrap.Add(_rightToolbar);
             region.Add(toolbarWrap);
 
@@ -771,13 +780,16 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             parent.Add(WrapWithHoverHint(btn, hintLabel));
         }
 
-        private static VisualElement WrapWithHoverHint(Button btn, string hintLabel)
+        private static VisualElement WrapWithHoverHint(Button btn, string hintLabel, bool opensLeft = false)
         {
             VisualElement wrap = new() { pickingMode = PickingMode.Ignore };
             wrap.AddToClassList("map-editor-toolbar-btn-wrap");
 
             Label hint = new(hintLabel) { pickingMode = PickingMode.Ignore };
             hint.AddToClassList("map-editor-toolbar-hint");
+            hint.AddToClassList(opensLeft
+                ? "map-editor-toolbar-hint--opens-left"
+                : "map-editor-toolbar-hint--opens-right");
             hint.style.display = DisplayStyle.None;
 
             btn.RegisterCallback<MouseEnterEvent>(_ => hint.style.display = DisplayStyle.Flex);
