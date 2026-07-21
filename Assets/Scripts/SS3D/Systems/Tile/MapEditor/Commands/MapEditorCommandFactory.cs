@@ -137,16 +137,18 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             MapEditorCommandDto dto, MapEditorCommandContext ctx)
         {
             SpawnPointRecord record = MapEditorSpawnCatalog.ToRecord(dto.AssetName, dto.Position, dto.Direction);
+            SpawnPointRecord previous = default;
             bool hadPrevious = ctx?.SpawnPoints != null &&
-                               ctx.SpawnPoints.TryGetAt(dto.Position, out SpawnPointRecord previous);
+                               ctx.SpawnPoints.TryGetAt(dto.Position, out previous);
             return new PlaceSpawnPointCommand(record, hadPrevious, previous);
         }
 
         private static ClearSpawnPointCommand CreateClearSpawnPoint(
             Vector3 position, MapEditorCommandContext ctx)
         {
+            SpawnPointRecord previous = default;
             bool hadPrevious = ctx?.SpawnPoints != null &&
-                               ctx.SpawnPoints.TryGetAt(position, out SpawnPointRecord previous);
+                               ctx.SpawnPoints.TryGetAt(position, out previous);
             return new ClearSpawnPointCommand(position, hadPrevious, previous);
         }
     }

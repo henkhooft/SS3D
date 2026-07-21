@@ -1,3 +1,4 @@
+using Coimbra;
 using SS3D.Core;
 using System.Collections.Generic;
 using UnityEngine;
@@ -96,7 +97,7 @@ namespace SS3D.Systems.Tile.SpawnPoints
             for (int i = 0; i < _pins.Count; i++)
             {
                 if (_pins[i] != null)
-                    Destroy(_pins[i]);
+                    _pins[i].Dispose(true);
             }
 
             _pins.Clear();
@@ -112,14 +113,14 @@ namespace SS3D.Systems.Tile.SpawnPoints
             stem.transform.SetParent(root.transform, false);
             stem.transform.localScale = new Vector3(0.08f, 0.45f, 0.08f);
             stem.transform.localPosition = Vector3.up * 0.45f;
-            Object.Destroy(stem.GetComponent<Collider>());
+            UnityEngine.Object.Destroy(stem.GetComponent<Collider>());
 
             GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             head.name = "Head";
             head.transform.SetParent(root.transform, false);
             head.transform.localScale = Vector3.one * 0.28f;
             head.transform.localPosition = Vector3.up * 0.95f;
-            Object.Destroy(head.GetComponent<Collider>());
+            UnityEngine.Object.Destroy(head.GetComponent<Collider>());
 
             Color color = ColorFor(record);
             ApplyColor(stem, color);
@@ -137,9 +138,13 @@ namespace SS3D.Systems.Tile.SpawnPoints
             if (renderer == null)
                 return;
 
-            Material material = new(Shader.Find("Universal Render Pipeline/Unlit")
-                                    ?? Shader.Find("Unlit/Color")
-                                    ?? Shader.Find("Sprites/Default"));
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+                shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+                shader = Shader.Find("Sprites/Default");
+
+            Material material = new(shader);
             material.color = color;
             renderer.sharedMaterial = material;
         }

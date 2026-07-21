@@ -530,13 +530,13 @@ namespace SS3D.Systems.Tile.TileMapCreator
             stem.transform.SetParent(root.transform, false);
             stem.transform.localScale = new Vector3(0.08f, 0.45f, 0.08f);
             stem.transform.localPosition = Vector3.up * 0.45f;
-            Object.Destroy(stem.GetComponent<Collider>());
+            UnityEngine.Object.Destroy(stem.GetComponent<Collider>());
 
             GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             head.transform.SetParent(root.transform, false);
             head.transform.localScale = Vector3.one * 0.28f;
             head.transform.localPosition = Vector3.up * 0.95f;
-            Object.Destroy(head.GetComponent<Collider>());
+            UnityEngine.Object.Destroy(head.GetComponent<Collider>());
 
             Color color = MapEditorSpawnCatalog.TryDecode(_selectedSpawnAssetName, out SpawnPointKind kind, out _, out _)
                           && kind == SpawnPointKind.Antagonist
@@ -558,9 +558,13 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (renderer == null)
                 return;
 
-            Material material = new(Shader.Find("Universal Render Pipeline/Unlit")
-                                    ?? Shader.Find("Unlit/Color")
-                                    ?? Shader.Find("Sprites/Default"));
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+                shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+                shader = Shader.Find("Sprites/Default");
+
+            Material material = new(shader);
             material.color = color;
             renderer.sharedMaterial = material;
         }
