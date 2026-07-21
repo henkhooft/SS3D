@@ -399,6 +399,7 @@ namespace SS3D.Systems.Tile
                     areaAfterLoad.EndDeferredAreaFlood();
                 }
             }
+        }
 
         [Server]
         public void ResetSave()
