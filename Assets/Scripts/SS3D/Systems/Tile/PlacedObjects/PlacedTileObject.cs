@@ -98,6 +98,13 @@ namespace SS3D.Systems.Tile
         [SyncVar(OnChange = nameof(SyncMapIdValue))]
         private int _syncMapId;
 
+        /// <summary>Remaining structural HP. Negative means uninitialized (treated as max on first damage).</summary>
+        [SyncVar]
+        private float _syncIntegrityRemaining = -1f;
+
+        [SyncVar]
+        private StructuralIntegrityStage _syncIntegrityStage = StructuralIntegrityStage.Intact;
+
         private IAdjacencyConnector _connector;
         private Vector2Int _worldOrigin;
         private bool _clientRegistered;
@@ -120,6 +127,11 @@ namespace SS3D.Systems.Tile
         public Direction Direction => _dir;
 
         public int MapId => _mapId;
+
+        /// <summary>Remaining structural HP. Negative when not yet initialized.</summary>
+        public float IntegrityRemaining => _syncIntegrityRemaining;
+
+        public StructuralIntegrityStage IntegrityStage => _syncIntegrityStage;
 
         public string NameString => _tileObjectSo.NameString;
 
@@ -302,6 +314,15 @@ namespace SS3D.Systems.Tile
 
             _clientRegistered = false;
             SubSystems.Get<TileSubSystem>()?.NotifyClientPlacedObjectStopped(this);
+        }
+
+        /// <summary>
+        /// Server (or EditMode) integrity write for structural turf.
+        /// </summary>
+        public void ServerSetIntegrity(float remaining, StructuralIntegrityStage stage)
+        {
+            _syncIntegrityRemaining = remaining;
+            _syncIntegrityStage = stage;
         }
 
         /// <summary>

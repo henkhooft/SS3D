@@ -4,7 +4,7 @@ overview: Implement design-aligned structural damage for walls, doors, and windo
 todos:
   - id: phase1-integrity
     content: "Phase 1: StructuralDamageSubSystem + stages, Destroyed→TryClearTile, Cracked airtightness, Area live local recompute, console hurt + EditMode tests"
-    status: pending
+    status: completed
   - id: phase2-melee
     content: "Phase 2: Melee connect → structural force; MeleeWeaponProfile.StructuralForce; living target preferred over wall"
     status: pending
@@ -22,7 +22,7 @@ todos:
     status: pending
   - id: docs-sync
     content: "On each phase ship: architecture effort, structural-destruction system map, INDEX + update-system-docs"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -212,3 +212,12 @@ Breaching-charge / timed-charge **placement** can use a minimal place-on-tile / 
 ## Doc deliverables (per phase ship)
 
 Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md`, INDEX `explosives-destruction` architecture + map columns, tile/area maps note live recompute + integrity hooks, combat map notes structural connect branch.
+
+## Implementation notes
+
+### Phase 1
+
+- Area live recompute is **deferred one Update tick** then full `RefloodAllAreaTilesPreservingMetadata` (not a true local-region flood). Immediate reflood inside `OnTileCleared` would still see the wall because TileMap notifies before removal.
+- Debris spawn skipped (log only) until rubble art exists.
+- EditMode tests could not be batch-run while the Unity Editor held the project lock; run `./Tools/run_editmode_tests.sh --filter StructuralDamageTests` (and `ClearingDoorBetweenRooms`) after closing the Editor.
+

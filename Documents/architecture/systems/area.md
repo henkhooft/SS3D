@@ -11,7 +11,7 @@ APC-seeded area flood-fill: each APC owns one `AreaRecord` and claims reachable 
 
 Per-consumer power gating and **area-scoped APC cell drain** via [electricity](electricity.md) `AreaApcPowerDistribution`: devices in an assigned area use their area APC's channels and cell, not circuit-wide OR or equal battery split. `AreaLightingState` (Normal/Emergency/Dark) is derived each electricity tick from the area APC's circuit stats and `AreaRecord.LightingSwitchOn`; a disabled lighting channel forces Dark regardless of cell charge. Transitions fire `OnAreaLightingStateChanged` and sync to clients via ObserversRpc. Wall `LightSwitchController` toggles `LightingSwitchOn` for its area. `LightPower` consumes area state for fixture on/off/emergency visuals; optional `DepartmentalLightTint` on `AreaRecord` tints normal-mode emission **and** drives client floor-corner stripes via `AreaFloorStripeView` (area-id grids + tint snapshot synced to observers).
 
-**Fork deviations from** [area.md](../../design/area.md): areas are APC-seeded (not generic auto-detection); unclaimed tiles have no fallback area; all doors block expansion regardless of open/closed state. Wall-mounted APCs seed flood fill from the walkable tile **in front of** `FacingDirection`, not from every cardinal neighbor.
+**Fork deviations from** [area.md](../../design/area.md): areas are APC-seeded (not generic auto-detection); unclaimed tiles have no fallback area; all doors block expansion regardless of open/closed state. Wall-mounted APCs seed flood fill from the walkable tile **in front of** `FacingDirection`, not from every cardinal neighbor. Live boundary recompute on structural Turf place/clear is **queued** (next Update) then full `RefloodAllAreaTilesPreservingMetadata` — not yet a true local-region flood ([structural-destruction](structural-destruction.md)).
 
 ## Start here
 
@@ -53,7 +53,8 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 ## Pitfalls
 
-- **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: `PersistenceSubSystem` / legacy `TileSubSystem.Load` wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood` (refloods after the full map exists, preserving AreaRecord metadata). Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
+- **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild used to be fully deferred. Fix: `PersistenceSubSystem` / legacy `TileSubSystem.Load` wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood` (refloods after the full map exists, preserving AreaRecord metadata). Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
+- **Live structural clear must not reflood inside `OnTileCleared`:** `TileMap` notifies before occupant removal. `AreaSubSystem` sets `_pendingLiveBoundaryRecompute` and flushes on next `UpdateEvent` ([structural-destruction](structural-destruction.md)).
 - **Light switch usable from across the room:** prefab had no collider, selection never resolved a point, and `RangeCheck` treated zero point as unlimited — see [interactions-framework](interactions-framework.md) Pitfalls. LightSwitch now has a BoxCollider; RangeCheck falls back to target transform.
 
 ## Depends on / Used by
@@ -68,4 +69,5 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Architecture effort: [2026-07_area-foundation](../2026-07_area-foundation.md)
 - Architecture effort: [2026-07_mi-area-electricity-debt](../2026-07_mi-area-electricity-debt.md)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
+- Related docs: [structural-destruction](structural-destruction.md)
 - Design (read-only): [Documents/design/area.md](../../design/area.md)

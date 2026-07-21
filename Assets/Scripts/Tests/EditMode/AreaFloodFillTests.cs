@@ -199,6 +199,32 @@ namespace EditorTests
         }
 
         [Test]
+        public void ClearingDoorBetweenRooms_LiveRecompute_LetsLeftApcClaimBothInteriors()
+        {
+            AreaTestContext context = AreaTestContext.CreateTwoRoomsWithDoor(
+                _instantiated,
+                leftOrigin: new Vector3(0, 0, 0),
+                rightOrigin: new Vector3(5, 0, 0),
+                roomSize: 5);
+
+            TestApc leftApc = context.PlaceApc(new Vector3(2, 0, 2));
+            TestApc rightApc = context.PlaceApc(new Vector3(7, 0, 2));
+            context.RebuildAll();
+
+            AreaId leftArea = context.GetApcAreaId(leftApc);
+            AreaId rightArea = context.GetApcAreaId(rightApc);
+            Assert.AreNotEqual(leftArea, rightArea);
+
+            Vector3 doorWorld = new Vector3(4, 0, 2);
+            context.ClearTurf(doorWorld);
+
+            // Left APC floods first (lower x) and can expand through the cleared door tile.
+            Assert.AreEqual(leftArea.Value, context.GetAreaId(leftApc.OriginTile));
+            Assert.AreEqual(leftArea.Value, context.GetAreaId(rightApc.OriginTile));
+            Assert.AreEqual(leftArea.Value, context.GetAreaId(new TileCoord(context.Map.MapId, 4, 2)));
+        }
+
+        [Test]
         public void WallMountedApcOnPerimeter_FloodsInteriorTiles()
         {
             AreaTestContext context = AreaTestContext.CreateRoom(_instantiated, origin: new Vector3(10, 0, 10), width: 5, height: 5);
@@ -489,6 +515,17 @@ namespace EditorTests
             }
 
             public void RebuildAll() => _areaSubSystem.RebuildAllAreasFromApcs();
+
+            public void ClearTurf(Vector3 worldPosition)
+            {
+                Assert.IsTrue(Query.TryGetOccupant(Query.WorldToTile(worldPosition, Map.MapId), TileLayer.Turf, Direction.North, out ITileOccupant occupant));
+                Assert.IsTrue(occupant is PlacedTileObject placed
+                    && (placed.GenericType == TileObjectGenericType.Wall || placed.GenericType == TileObjectGenericType.Door));
+                // Production notifies before removal and Area defers to next frame. EditMode clears
+                // first then refloods synchronously so occupancy matches the post-clear world.
+                Construction.TryClearTile(worldPosition, TileLayer.Turf, Direction.North);
+                _areaSubSystem.RequestLiveBoundaryRecompute();
+            }
 
             public void PlaceOpenFloorTile(Vector3 position) => PlacePlenum(this, position);
 
@@ -794,20 +831,6 @@ namespace EditorTests
                 UpdateOverlapWarnings();
             }
 
-            public void UnregisterApc(IAreaApcOrigin apc)
-            {
-                if (apc == null || !_registeredApcs.Remove(apc))
-                    return;
-
-                if (!_registry.TryGetApcArea(apc, out AreaId areaId))
-                    return;
-
-                _floodFill.ClearAreaTiles(areaId);
-                _registry.Unregister(areaId);
-                apc.SetMultipleApcsInArea(false);
-                UpdateOverlapWarnings();
-            }
-
             public void RebuildAllAreasFromApcs()
             {
                 _map.ClearAllAreaIds();
@@ -834,6 +857,43 @@ namespace EditorTests
                 }
 
                 _floodFill.AssignDoorTileAreas();
+                UpdateOverlapWarnings();
+            }
+
+            public void OnTileCleared(ITileOccupant occupant, TileCoord coord, TileLayer layer)
+            {
+                if (layer == TileLayer.Turf && ShouldRecomputeForOccupant(occupant))
+                    RequestLiveBoundaryRecompute();
+            }
+
+            public void RequestLiveBoundaryRecompute()
+            {
+                if (_deferAreaFlood || _registeredApcs.Count == 0)
+                    return;
+
+                RefloodAllAreaTilesPreservingMetadata();
+            }
+
+            private static bool ShouldRecomputeForOccupant(ITileOccupant occupant)
+            {
+                if (occupant is not PlacedTileObject placed)
+                    return false;
+
+                return placed.GenericType == TileObjectGenericType.Wall
+                    || placed.GenericType == TileObjectGenericType.Door;
+            }
+
+            public void UnregisterApc(IAreaApcOrigin apc)
+            {
+                if (apc == null || !_registeredApcs.Remove(apc))
+                    return;
+
+                if (!_registry.TryGetApcArea(apc, out AreaId areaId))
+                    return;
+
+                _floodFill.ClearAreaTiles(areaId);
+                _registry.Unregister(areaId);
+                apc.SetMultipleApcsInArea(false);
                 UpdateOverlapWarnings();
             }
 

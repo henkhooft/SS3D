@@ -9,7 +9,7 @@
 
 Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters.
 
-**Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work.
+**Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed) live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
 
 **Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Scripts were removed with the Map Editor; orphan `Assets/Content/Systems/UI/Systems/Construction/` prefabs (`ConstructionMenu`, slots, `DeleteIndicator`) and their `DefaultPrefabObjects` entry were purged so AssetAudit no longer sees missing scripts. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
@@ -25,7 +25,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - `Assets/Scripts/SS3D/Systems/Tile/TileQueryService.cs` — read-only tile queries (`ITileQueryService`)
 - `Assets/Scripts/SS3D/Systems/Tile/ITileMutationObserver.cs` — hook for systems reacting to tile changes
 - `Assets/Scripts/SS3D/Systems/Tile/IDynamicTileOccupant.cs` — runtime open/closed state (doors) for occupancy recompute
-- `Assets/Scripts/SS3D/Systems/Tile/TileOccupancyEvaluator.cs` — derives passability/vision flags from placed occupants
+- `Assets/Scripts/SS3D/Systems/Tile/TileOccupancyEvaluator.cs` — derives passability/vision flags from placed occupants; Cracked integrity → not airtight
+- `Assets/Scripts/SS3D/Systems/Tile/StructuralIntegrityStage.cs` — damage stages (owned with [structural-destruction](structural-destruction.md))
 - `Assets/Scripts/SS3D/Systems/Tile/TileChunk.cs` — per-tile `areaIds` and sparse `floorDecalIds`
 - `Assets/Scripts/SS3D/Systems/Tile/FloorVisuals/` — floor decal catalog, mesh helpers, `FloorDecalView`
 - `Assets/Scripts/SS3D/Systems/Tile/TileAssetCatalog.cs` — compact tile identity catalog
@@ -94,7 +95,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
 - Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
-- System map: [area](area.md)
+- System map: [area](area.md), [structural-destruction](structural-destruction.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - Plan: [map_editor_undo_redo.plan.md](../../plans/map_editor_undo_redo.plan.md)
