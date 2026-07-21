@@ -39,9 +39,10 @@ namespace SS3D.UI.MainHud
     /// into Main HUD.
     /// </para>
     /// <para>
-    /// The alert icon stack has no hunger/thirst/restrained/pressure/radiation trackers to bind to yet - it
-    /// always reports the all-clear <see cref="AlertStackState"/> until those systems exist, mirroring how
-    /// <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/> itself was built ahead of its own hookup.
+    /// The alert icon stack is live for health hazards (Bleeding, Dying, CardiacArrest, LowOxygen) via
+    /// <see cref="HumanHealthController.SnapshotChanged"/> and <see cref="HealthAlertStackMapper"/>. Atmos /
+    /// hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist —
+    /// F4 / <c>alertstack</c> remain a full-stack debug override when set.
     /// </para>
     /// <para>
     /// Self-bootstraps the same way <c>ScreenEffectsSubSystem</c> does, instead of living on a scene/prefab
@@ -77,9 +78,12 @@ namespace SS3D.UI.MainHud
         [SerializeField] private StyleSheet _equipmentGridStyle;
         [SerializeField] private StyleSheet _inventorySlotStyle;
         [SerializeField] private MainHudIconSet _icons;
+        [SerializeField] private AlertIconSet _alertIcons;
 
         private MainHudView _view;
+        private AlertStackState? _debugAlertOverride;
         private GameObject _localPlayer;
+        private HumanHealthController _healthController;
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
@@ -164,6 +168,7 @@ namespace SS3D.UI.MainHud
             _equipmentGridStyle = catalog.EquipmentGridStyle;
             _inventorySlotStyle = catalog.InventorySlotStyle;
             _icons = catalog.Icons;
+            _alertIcons = catalog.AlertIcons;
             ApplyDocumentPanelSettings(catalog.PanelSettings);
         }
 
@@ -320,7 +325,7 @@ namespace SS3D.UI.MainHud
                 _equipmentGridStyle, _inventorySlotStyle,
             };
 
-            _view = new MainHudView(styleSheets, _icons);
+            _view = new MainHudView(styleSheets, _icons, _alertIcons);
             _view.IntentToggleRequested += HandleIntentToggleRequested;
             _view.HandSelectedRequested += HandleHandSelectedRequested;
             _view.GearSlotClicked += HandleGearSlotClicked;
@@ -335,8 +340,89 @@ namespace SS3D.UI.MainHud
             _view.HandDragMoved += HandleHudDragMoved;
             _view.HandDragEnded += HandleHudDragEnded;
             _view.Attach(_document.rootVisualElement);
-            _view.SetAlertState(default);
+            RefreshAlerts();
         }
+
+        /// <summary>
+        /// Current debug override, if any - read by the <c>alertstack</c> console command so setting one
+        /// hazard doesn't wipe severities the debug menu or a previous command call already set.
+        /// </summary>
+        public AlertStackState DebugAlertOverride => _debugAlertOverride ?? default;
+
+        /// <summary>
+        /// Dev-only hook for <c>AlertStackDebugMenuView</c> (F4) and the <c>alertstack</c> console command to
+        /// force a full <see cref="AlertStackState"/> (replaces live health mapping while set). Clear to
+        /// re-apply health-driven hazards again.
+        /// </summary>
+        public void SetDebugAlertOverride(AlertStackState state)
+        {
+            _debugAlertOverride = state;
+            _view?.SetAlertState(state);
+        }
+
+        public void ClearDebugAlertOverride()
+        {
+            _debugAlertOverride = null;
+            RefreshAlerts();
+        }
+
+        /// <summary>
+        /// Pushes the debug override when set; otherwise maps the bound player's health snapshot onto
+        /// health hazard fields (other hazards stay <see cref="AlertSeverity.None"/>).
+        /// </summary>
+        private void RefreshAlerts()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            if (_debugAlertOverride.HasValue)
+            {
+                _view.SetAlertState(_debugAlertOverride.Value);
+                return;
+            }
+
+            if (_healthController == null)
+            {
+                _view.SetAlertState(default);
+                return;
+            }
+
+            _view.SetAlertState(ToAlertStackState(
+                HealthAlertStackMapper.Compute(_healthController.Snapshot)));
+        }
+
+        private void HandleHealthSnapshotChanged(HealthSnapshot snapshot)
+        {
+            if (_debugAlertOverride.HasValue)
+            {
+                return;
+            }
+
+            _view?.SetAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+        }
+
+        /// <summary>
+        /// Copies health signals into an <see cref="AlertStackState"/>; non-health fields stay None.
+        /// </summary>
+        private static AlertStackState ToAlertStackState(HealthAlertStackMapper.HealthAlertSignals signals)
+        {
+            return new AlertStackState
+            {
+                Bleeding = ToAlertSeverity(signals.Bleeding),
+                Dying = ToAlertSeverity(signals.Dying),
+                CardiacArrest = ToAlertSeverity(signals.CardiacArrest),
+                LowOxygen = ToAlertSeverity(signals.LowOxygen),
+            };
+        }
+
+        private static AlertSeverity ToAlertSeverity(HealthAlertStackMapper.Severity severity) => severity switch
+        {
+            HealthAlertStackMapper.Severity.Warning => AlertSeverity.Warning,
+            HealthAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
+            _ => AlertSeverity.None,
+        };
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
@@ -432,10 +518,17 @@ namespace SS3D.UI.MainHud
         private void BindLocalPlayer(GameObject playerObject)
         {
             _localPlayer = playerObject;
+            _healthController = _localPlayer.GetComponent<HumanHealthController>()
+                ?? _localPlayer.GetComponentInChildren<HumanHealthController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
             _hands = _localPlayer.GetComponentInChildren<Hands>();
             _intentProvider = _localPlayer.GetComponent<IIntentProvider>()
                 ?? _localPlayer.GetComponentInChildren<IIntentProvider>();
+
+            if (_healthController != null)
+            {
+                _healthController.SnapshotChanged += HandleHealthSnapshotChanged;
+            }
 
             if (_inventory != null)
             {
@@ -452,10 +545,16 @@ namespace SS3D.UI.MainHud
 
             RefreshEquipmentAndGear();
             RefreshIntent();
+            RefreshAlerts();
         }
 
         private void UnbindLocalPlayer()
         {
+            if (_healthController != null)
+            {
+                _healthController.SnapshotChanged -= HandleHealthSnapshotChanged;
+            }
+
             if (_inventory != null)
             {
                 _inventory.OnInventoryContainerAdded -= HandleInventoryChanged;
@@ -470,11 +569,13 @@ namespace SS3D.UI.MainHud
             }
 
             _localPlayer = null;
+            _healthController = null;
             _inventory = null;
             _hands = null;
             _intentProvider = null;
             _cachedIntent = null;
             _cachedSelectedHand = null;
+            RefreshAlerts();
         }
 
         private void EnsureMachineUiSubscription()
@@ -1172,6 +1273,27 @@ namespace SS3D.UI.MainHud
                 };
             }
 
+            if (_alertIcons.Fire == null)
+            {
+                _alertIcons = new AlertIconSet
+                {
+                    Fire = LoadAlertSprite("hot-fire"),
+                    Hot = LoadAlertSprite("hot-thermometer"),
+                    Cold = LoadAlertSprite("cold-thermometer"),
+                    LowPressure = LoadAlertSprite("pressure-low"),
+                    HighPressure = LoadAlertSprite("pressure-high"),
+                    Radiation = LoadAlertSprite("radiation-trefoil"),
+                    Hunger = LoadAlertSprite("hunger"),
+                    Thirst = LoadAlertSprite("thirst-droplet"),
+                    Pulling = LoadAlertSprite("pulling"),
+                    Restrained = LoadAlertSprite("restrained-cuffs"),
+                    LowOxygen = LoadAlertSprite("low-oxygen"),
+                    Dying = LoadAlertSprite("dying-heartbeat"),
+                    Bleeding = LoadAlertSprite("bleeding-droplet"),
+                    CardiacArrest = LoadAlertSprite("cardiac-arrest"),
+                };
+            }
+
             if (_document != null && _document.panelSettings == null)
             {
                 _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(
@@ -1183,6 +1305,12 @@ namespace SS3D.UI.MainHud
         {
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
                 $"{MainHudAssetPaths.IconRoot}{fileName}.png");
+        }
+
+        private static Sprite LoadAlertSprite(string fileName)
+        {
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                $"{MainHudAssetPaths.AlertIconRoot}{fileName}.png");
         }
 #endif
     }

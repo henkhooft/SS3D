@@ -26,5 +26,6 @@ namespace SS3D.UI.MainHud
             "Assets/Content/Systems/UI/MachineInterface/Components/InventorySlot.uss";
 
         public const string IconRoot = "Assets/Art/Graphics/UI/Containers/InventoryIcons/";
+        public const string AlertIconRoot = "Assets/Content/Systems/UI/MainHud/Icons/AlertStack/";
     }
 }

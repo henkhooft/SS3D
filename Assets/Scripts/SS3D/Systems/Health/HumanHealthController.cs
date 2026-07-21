@@ -9,8 +9,8 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.ScreenEffects;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace SS3D.Systems.Health
@@ -29,7 +29,6 @@ namespace SS3D.Systems.Health
         private Entity _entity;
         private WoundVfx _woundVfx;
         private HumanAnatomyController _anatomy;
-        private HealthAlertsView _healthAlertsView;
         private Ragdoll _ragdoll;
         private bool _deathTriggered;
         private bool _unconsciousRagdollActive;
@@ -40,6 +39,13 @@ namespace SS3D.Systems.Health
 
         [SyncVar]
         private HealthDebugDetail _debugDetail;
+
+        /// <summary>
+        /// Raised whenever the synced snapshot is assigned — from SyncVar OnChange and from
+        /// <see cref="PublishSnapshot"/> on the host (FishNet may skip OnChange for server assigns).
+        /// Main HUD and other local-owner consumers subscribe here.
+        /// </summary>
+        public event Action<HealthSnapshot> SnapshotChanged;
 
         public HealthSnapshot Snapshot => _snapshot;
 
@@ -99,12 +105,10 @@ namespace SS3D.Systems.Health
         public override void OnStartClient()
         {
             base.OnStartClient();
-            List<HealthAlertsView> alertViews = ViewLocator.Get<HealthAlertsView>();
-            _healthAlertsView = alertViews?.FirstOrDefault();
             if (_entity != null)
             {
-                _entity.OnMindChanged += AssignAlertsViewToControllable;
-                InitialAssignAlertsView();
+                _entity.OnMindChanged += HandleMindChangedForLocalFeedback;
+                InitialAssignLocalFeedback();
             }
 
             _woundVfx?.ApplySnapshot(_snapshot);
@@ -124,10 +128,9 @@ namespace SS3D.Systems.Health
         {
             if (_entity != null)
             {
-                _entity.OnMindChanged -= AssignAlertsViewToControllable;
+                _entity.OnMindChanged -= HandleMindChangedForLocalFeedback;
             }
 
-            _healthAlertsView?.UnassignViewFromPlayer(this);
             ClearScreenEffectsIfDriving();
 
             base.OnDestroyed();
@@ -426,8 +429,9 @@ namespace SS3D.Systems.Health
             // Do not rely on SyncVar OnChange for this — FishNet may not invoke it on the
             // server when assigning the snapshot, which left unconscious players walking.
             ApplyConsciousnessRagdoll(snapshot);
-            // Same host gap for local screen overlays.
+            // Same host gap for local screen overlays and HUD alert consumers.
             ApplyScreenEffectsFromSnapshot(snapshot);
+            SnapshotChanged?.Invoke(snapshot);
         }
 
         private void SyncSnapshot(HealthSnapshot oldValue, HealthSnapshot newValue, bool asServer)
@@ -435,11 +439,7 @@ namespace SS3D.Systems.Health
             _woundVfx?.ApplySnapshot(newValue);
             ApplySeveranceVisualsFromSnapshot(newValue);
             ApplyScreenEffectsFromSnapshot(newValue);
-
-            if (_healthAlertsView != null && IsLocalOwnerMind())
-            {
-                _healthAlertsView.Refresh();
-            }
+            SnapshotChanged?.Invoke(newValue);
         }
 
         [TargetRpc(RunLocally = true)]
@@ -571,25 +571,23 @@ namespace SS3D.Systems.Health
         }
 
         [Client]
-        private void AssignAlertsViewToControllable(Mind mind)
+        private void HandleMindChangedForLocalFeedback(Mind mind)
         {
             if (mind == null || !mind.IsOwner)
             {
-                _healthAlertsView?.UnassignViewFromPlayer(this);
                 ClearScreenEffectsIfDriving();
                 return;
             }
 
-            _healthAlertsView?.AssignViewToPlayer(this);
             ApplyScreenEffectsFromSnapshot(_snapshot);
         }
 
         [Client]
-        private void InitialAssignAlertsView()
+        private void InitialAssignLocalFeedback()
         {
             if (_entity.Mind != null && _entity.Mind.IsOwner)
             {
-                AssignAlertsViewToControllable(_entity.Mind);
+                HandleMindChangedForLocalFeedback(_entity.Mind);
             }
         }
 
