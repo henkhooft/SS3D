@@ -419,8 +419,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (_windowTitle != null)
             {
-                _windowTitle.text =
-                    $"Object Library — {MapEditorCatalog.GetModeLabel(_vm.CurrentMode)} / {MapEditorCatalog.GetSubcategoryLabel(_vm.CurrentSubcategory)}";
+                string mode = MapEditorCatalog.GetModeLabel(_vm.CurrentMode).ToUpperInvariant();
+                string sub = MapEditorCatalog.GetSubcategoryLabel(_vm.CurrentSubcategory).ToUpperInvariant();
+                _windowTitle.text = $"Object Library — {mode} / {sub}";
             }
         }
 
@@ -774,8 +775,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement icon = CreateIconElement(_icons?.GetModeIcon(mode));
             icon.AddToClassList("map-editor-mode-tab__icon");
-            Label label = new(MapEditorCatalog.GetModeLabel(mode));
+            Label label = new(MapEditorCatalog.GetModeLabel(mode).ToUpperInvariant());
             label.AddToClassList("map-editor-mode-tab__label");
+            label.pickingMode = PickingMode.Ignore;
             surface.Add(icon);
             surface.Add(label);
             tab.Add(surface);
@@ -794,8 +796,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(subcategory));
             icon.AddToClassList("map-editor-subcat-tab__icon");
-            Label label = new(MapEditorCatalog.GetSubcategoryLabel(subcategory));
+            Label label = new(MapEditorCatalog.GetSubcategoryLabel(subcategory).ToUpperInvariant());
             label.AddToClassList("map-editor-subcat-tab__label");
+            label.pickingMode = PickingMode.Ignore;
             surface.Add(icon);
             surface.Add(label);
             tab.Add(surface);

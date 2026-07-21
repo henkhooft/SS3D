@@ -34,15 +34,17 @@
     margin-right: 3px;
 }
 
-.map-editor-toolbar-strip--vertical {
-    flex-direction: column;
-}
-
 .map-editor-toolbar-strip--vertical > * {
     margin-left: 0;
     margin-right: 0;
     margin-top: 3px;
     margin-bottom: 3px;
+}
+
+.map-editor-toolbar-strip--vertical {
+    flex-direction: column;
+    padding-left: 6px;
+    padding-right: 6px;
 }
 
 .map-editor-icon-btn {
@@ -78,9 +80,10 @@
 }
 
 .map-editor-mode-tab__icon {
-    width: 18px;
-    height: 18px;
-    margin-bottom: 4px;
+    width: 16px;
+    height: 16px;
+    margin-bottom: 3px;
+    flex-shrink: 0;
 }
 
 .map-editor-mode-tab .map-editor-vector-icon {
@@ -93,14 +96,24 @@
 
 .map-editor-mode-tab__label {
     font-size: 11px;
-    white-space: normal;
+    letter-spacing: 1px;
+    white-space: nowrap;
     -unity-text-align: middle-center;
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
+    color: var(--ss3d-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
 }
 
 .map-editor-subcat-tab__icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 6px;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    flex-shrink: 0;
 }
 
 .map-editor-subcat-tab .map-editor-vector-icon {
@@ -112,12 +125,18 @@
 }
 
 .map-editor-subcat-tab__label {
-    font-size: 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
+    color: var(--ss3d-text-secondary);
+    margin: 0;
+    padding: 0;
 }
 
 .map-editor-search-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     opacity: 0.55;
 }
@@ -318,32 +337,55 @@
 
 .map-editor-mode-rail {
     width: 108px;
+    flex-shrink: 0;
+    flex-grow: 0;
     background-color: var(--ss3d-surface-panel);
     border-width: 1px;
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-md);
-    padding: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    justify-content: flex-start;
+    align-items: stretch;
+    align-self: stretch;
 }
 
 .map-editor-mode-tab {
     padding: 0;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    /* Do not use width: 100% — in UITK that ignores parent padding and flush-hits the rail edge. */
+    min-height: 0;
+    height: auto;
+    max-height: none;
+}
+
+.map-editor-mode-tab:last-child {
+    margin-bottom: 0;
 }
 
 .map-editor-mode-tab__surface {
     flex-direction: column;
     align-items: center;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    padding-left: 6px;
-    padding-right: 6px;
+    justify-content: center;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 2px;
+    padding-right: 2px;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
     border-radius: var(--ss3d-radius-sm);
     background-color: rgba(0, 0, 0, 0);
     color: var(--ss3d-text-secondary);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
 }
 
 .map-editor-mode-tab--active .map-editor-mode-tab__surface {
@@ -359,19 +401,27 @@
 .map-editor-subcat-tab {
     padding: 0;
     margin-right: 4px;
+    margin-bottom: 0;
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
+    min-height: 0;
+    height: 28px;
 }
 
 .map-editor-subcat-tab__surface {
     flex-direction: row;
     align-items: center;
-    padding: 6px 10px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 8px;
+    padding-right: 8px;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
     border-radius: var(--ss3d-radius-sm);
     background-color: rgba(0, 0, 0, 0);
     color: var(--ss3d-text-secondary);
+    height: 100%;
+    min-height: 0;
 }
 
 .map-editor-subcat-tab--active .map-editor-subcat-tab__surface {
@@ -391,8 +441,13 @@
     border-width: 1px;
     border-color: var(--ss3d-border-default);
     border-radius: var(--ss3d-radius-sm);
-    padding: 6px 10px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 8px;
+    padding-right: 8px;
     min-width: 220px;
+    min-height: 0;
+    height: 28px;
 }
 
 .map-editor-search-field {
@@ -400,7 +455,24 @@
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ss3d-text-primary);
-    margin-left: 8px;
+    margin-left: 6px;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-right: 0;
+    padding: 0;
+    min-height: 0;
+    height: 100%;
+    font-size: 12px;
+}
+
+.map-editor-search-field > .unity-base-field__input,
+.map-editor-search-field > .unity-text-field__input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    height: 100%;
 }
 
 .map-editor-library-header {
@@ -416,11 +488,14 @@
 .map-editor-library-header__title {
     color: var(--ss3d-text-primary);
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
-    font-size: 13px;
+    font-size: 18px;
     letter-spacing: 1px;
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 8px;
 }
 
 .map-editor-library-header__buttons {
