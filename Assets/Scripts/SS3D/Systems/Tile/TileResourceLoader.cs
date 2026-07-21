@@ -65,6 +65,12 @@ namespace SS3D.Systems.Tile
 	        foreach (GenericObjectSo asset in assets)
 	        {
                 GameObject prefab = Data.Assets.Get<GameObject>(asset.PrefabAsset);
+                if (prefab == null)
+                {
+                    tempIcons.Add(null);
+                    continue;
+                }
+
                 Transform prefabTransform = prefab.transform;
 		        Shader shader = Shader.Find("Unlit/ObjectIcon");
 

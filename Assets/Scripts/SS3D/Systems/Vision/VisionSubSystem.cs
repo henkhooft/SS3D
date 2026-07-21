@@ -91,6 +91,11 @@ namespace SS3D.Systems.Vision
 
         private bool _clientVisionInitialized;
 
+        /// <summary>
+        /// When true, FOV composite is dropped (map editor / other meta views). Cleared by the owner.
+        /// </summary>
+        private bool _suppressed;
+
         /// <summary>World-space origin used for casts and the shader's <c>_PlayerPos</c>.</summary>
         public Vector3 DetectionCenter
         {
@@ -162,7 +167,7 @@ namespace SS3D.Systems.Vision
 
         private void LateUpdate()
         {
-            if (!_clientVisionInitialized || !target)
+            if (VisionRenderContext.Suppressed || _suppressed || !_clientVisionInitialized || !target)
             {
                 StopVisionRendering();
                 return;
@@ -180,6 +185,17 @@ namespace SS3D.Systems.Vision
             DrawVisionMap(center);
 
             VisionRenderContext.Enabled = true;
+        }
+
+        /// <summary>
+        /// Pause client FOV composite (e.g. map editor). Owner must clear on exit.
+        /// </summary>
+        public void SetSuppressed(bool suppressed)
+        {
+            _suppressed = suppressed;
+            VisionRenderContext.Suppressed = suppressed;
+            if (suppressed)
+                StopVisionRendering();
         }
 
         /// <summary>

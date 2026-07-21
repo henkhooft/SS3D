@@ -120,6 +120,23 @@ void ST_AccumulateLight(
     }
 }
 
+// Global (not PerMaterial) — map editor / meta views set via Shader.SetGlobalFloat.
+float _SS3DAuthoringFullbright;
+
+float4 ST_EvaluateAuthoringFullbright(STSurfaceInput surface, half alphaMultiplier)
+{
+    float3 normal = normalize(surface.normalWS);
+    float3 viewDir = normalize(surface.viewDirWS);
+    float4 albedo = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, surface.uv) * _Color * _ColIntense + _ColBright;
+
+    // Soft view wrap so forms still read without depending on scene lights.
+    float wrap = saturate(dot(normal, viewDir) * 0.5 + 0.5);
+    float4 result = lerp(albedo * 0.62, albedo, wrap);
+    result.rgb += SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, surface.uv).rgb * _EmissionColor.rgb;
+    result.a = alphaMultiplier;
+    return result;
+}
+
 float4 ST_EvaluateLighting(
     STSurfaceInput surface,
     float4 positionCS,
@@ -127,6 +144,11 @@ float4 ST_EvaluateLighting(
     bool gateZeroLight,
     half alphaMultiplier)
 {
+    if (_SS3DAuthoringFullbright > 0.5)
+    {
+        return ST_EvaluateAuthoringFullbright(surface, alphaMultiplier);
+    }
+
     float4 result = 0.0;
 
     InputData inputData;

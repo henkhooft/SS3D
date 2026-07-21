@@ -116,7 +116,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | stub | Player subsystem and input routing |
-| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose; always-on chat UI Phase 0 purged (headless ChatSubSystem); audio/camera controllers |
+| Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose; always-on chat UI Phase 0 purged (headless ChatSubSystem); audio/camera; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending; path catalog; Dual Kawase blur + dim; DOTween bring-up/dismiss |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays; health drives dying/blood/oxy/concussion/unconscious + hit flash; `SetUiBackdropBlur` for machine UI; atmos temp/fire deferred; F2 debug Canvas condemned |
 | ID / access | [id-access](systems/id-access.md) | partial | Crew records, credential checks, doors, machine UI gates, dev console helpers |
@@ -136,6 +136,8 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
+| [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |
+| [2026-07_tile-overlay-replacement](2026-07_tile-overlay-replacement.md) | shipped |
 | [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
 | [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; polish in [animation-polish](2026-07_animation-polish.md)) |
@@ -149,6 +151,8 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
 | [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch; default Windows+bats prerelease; Linux/EditMode/smoke opt-in) |
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
+| [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
+| [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 
 ## Implementation plans
 
@@ -163,6 +167,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [areas_implementation_plan_c0639343.plan.md](../plans/areas_implementation_plan_c0639343.plan.md) | APC-seeded areas, flood-fill, power/lighting follow-ups |
 | [electricity_kwh_foundation_917ccdbc.plan.md](../plans/electricity_kwh_foundation_917ccdbc.plan.md) | kWh storage, priority shedding, HV cable grid rules |
 | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) | Layered persistence framework; Phase 1a/1b shipped, Phase 2 round snapshots pending |
+| [tile_overlay_replacement.plan.md](../plans/tile_overlay_replacement.plan.md) | Area floor stripes + sparse floor decals; Overlays layer removed |
 | [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation (+ polish notes) |
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
 | [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0–1 unified melee shipped (camera-ray connect, intent↔stance, reticle 2A); disarm/ranged/stamina/armor later |

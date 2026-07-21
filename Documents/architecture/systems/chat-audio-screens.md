@@ -1,5 +1,5 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
-> Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem
+> Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
 > Verified: 0b7a60e7d — 2026-07-19
 
@@ -7,7 +7,7 @@
 
 ## Overview
 
-In-game chat backend, local-speech UI, audio playback, and camera/screen controllers. (Navigation map not yet fully reviewed.)
+In-game chat backend, local-speech UI, audio playback, and camera/screen controllers. Camera pose is still multi-writer (`CameraFollow`, map-editor session, FOV tweens, ad-hoc `Camera.main`) — do not add new modal camera drivers that poke `CameraFollow` or `Camera.main` directly; planned fix is [camera ownership](../2026-07_camera-ownership.md) (dedicated manager / contexts, same ownership rule as input arbitration).
 
 **Always-on chat UI Phase 0 purged** per [comms.md](../../design/comms.md) + [agent-first composition](../2026-07_agent-first-composition.md): in-game/lobby chat windows, `ToggleChats`, tabs, and `InGameChatController` are gone. Do **not** resurrect UGUI chat chrome. `ChatSubSystem` remains headless (station alerts + future PDA/log / non-diegetic feed).
 
@@ -18,8 +18,9 @@ Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (
 - `Assets/Scripts/SS3D/Systems/Chat/ChatSubSystem.cs` — headless message hub (FishNet broadcast, server log file, `SendPlayerMessage` / `SendServerMessage*`). Channel SOs under `Assets/Content/Data/UI/Chat/Channels/`. Round/Entity still post station alerts here; with no UI subscribers those messages are fire-and-forget until the non-diegetic feed / PDA log lands.
 - `Assets/Scripts/SS3D/Systems/Comms/CommsSubSystem.cs` — local-speech system hub. Slice under `Assets/Scripts/SS3D/Systems/Comms/`: `LocalSpeechEmitter`, `LocalSpeechListener`, `LocalSpeechBubbleController` (overlay + compose), `LocalSpeechBubbleView`, `CrowdCapRanker`, `LocalSpeechConfig`. Radio/channels, non-diegetic feed, announcements, PDA log not built yet. F3 (`LocalSpeechDebugTrigger`) still cycles local test lines.
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — audio subsystem
-- `Assets/Scripts/SS3D/Systems/Screens/PlayerCameraSubSystem.cs` — player camera
-- `Assets/Scripts/SS3D/Systems/Screens/CameraSubSystem.cs` — camera subsystem
+- `Assets/Scripts/SS3D/Systems/Screens/PlayerCameraSubSystem.cs` — binds follow target on local player spawn
+- `Assets/Scripts/SS3D/Systems/Screens/CameraSubSystem.cs` — holds `PlayerCamera` Actor reference
+- `Assets/Scripts/SS3D/Systems/Screens/CameraFollow.cs` — gameplay orbit-follow; Coimbra `UpdateEvent` must guard `isActiveAndEnabled`
 
 ## Manual Editor setup required for the local speech slice
 
@@ -38,6 +39,7 @@ Scene/prefab placements for the local speech slice are already in `Game.unity` (
 - **Draft width measure:** do not call `TextField.MeasureTextSize` after setting `style.width` — it returns the laid-out width and hug-sizing stalls until a mode/wrap invalidation. Measure via an off-screen Label proxy instead.
 - **Draft TextField type:** do not rely on nested USS `font-size` / `color` on the TextField — `.font-body` (11px secondary) and UITK's input tree ignore those rules the same way they ignore `-unity-text-align`. Force size/color via `ApplyDraftTypeStyles` in `LocalSpeechBubbleView`.
 - **Draft head centering:** do not use USS `translate: -50%` on the draft chip — UITK keeps a stale translate transform while width changes every keystroke. Set `left = headX - width/2` in `ApplyDraftScreenPosition`.
+- **`CameraFollow` ignores `enabled = false`:** Coimbra `UpdateEvent` still invokes `HandleUpdate`. Without an `isActiveAndEnabled` early-out, follow overwrites any other driver every frame (map-editor orbit / hologram picks were the discovery case).
 
 ## Extension points
 
@@ -48,10 +50,12 @@ Scene/prefab placements for the local speech slice are already in `Game.unity` (
 ## Depends on / Used by
 
 - **Depends on:** [player-control](player-control.md), [inputs](inputs.md)
-- **Used by:** [rounds-lobby](rounds-lobby.md) (station alerts via `SendServerMessage`)
+- **Used by:** [tile](tile.md) (map editor), [interactions-runtime](interactions-runtime.md), [rounds-lobby](rounds-lobby.md) (station alerts via `SendServerMessage`)
 
 ## Related docs
 
 - Design (read-only): [Documents/design/comms.md](../../design/comms.md)
+- Architecture (planned): [2026-07_camera-ownership.md](../2026-07_camera-ownership.md)
+- Precedent: [2026-07_input-arbitration.md](../2026-07_input-arbitration.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [2026-07_input-arbitration](../2026-07_input-arbitration.md)

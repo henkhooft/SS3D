@@ -71,11 +71,13 @@ released. Definitions live in `InputSubSystem.BuildContexts()`.
 
 ## Pointer authority
 
-`InputInterface.IsPointerOverInterface()` returns true if the pointer is over any uGUI element
-(`EventSystem.IsPointerOverGameObject()`) or any registered, enabled UI Toolkit panel
-(`panel.Pick(RuntimePanelUtils.ScreenToPanel(...))` with bottom-left screen pixels — do not
-pre-flip Y). `InteractionController` world-click gates and `SelectionCamera` hover clearing both
-use it, so examine/outlines/clicks do not target world objects through registered UI Toolkit panels.
+`InputInterface.IsPointerOverInterface()` returns true if the pointer is over a pickable UI Toolkit
+element (`panel.Pick` on registered documents — honours `PickingMode.Ignore`) or a legacy uGUI
+graphic (`GraphicRaycaster` via `EventSystem.RaycastAll`). Do **not** use
+`EventSystem.IsPointerOverGameObject()` here: with UI Toolkit it hits the panel raycaster for the
+whole document and false-positives over Ignore layout. `InteractionController` world-click gates and
+`SelectionCamera` hover clearing both use `InputInterface`, so examine/outlines/clicks do not target
+world objects through registered UI Toolkit panels.
 Runtime documents register in setup: `RadialInteractionSubSystem`, `ArmedInteractionSubSystem`,
 `MachineInterfaceHost`, `MainHudSubSystem`.
 
