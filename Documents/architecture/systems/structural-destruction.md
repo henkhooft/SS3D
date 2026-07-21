@@ -29,6 +29,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 
 - **Area reflood must not run inside `OnTileCleared` synchronously:** `TileMap` notifies before the occupant is removed; immediate flood still sees the wall/door. Area queues `_pendingLiveBoundaryRecompute` and flushes next `UpdateEvent` (same class of bug as `AtmosTileObserver` defer).
 - **Cracked still blocks Area expansion:** only Destroyed (clear) opens boundaries; Cracked only flips `IsAirtight` for atmos.
+- **Do not bind TileQueryService at Awake:** `StructuralDamageSubSystem` self-bootstraps before `TileSubSystem` creates its map. Resolve query/construction lazily from the current `TileSubSystem` or `TryApply` always misses.
 
 ## Depends on / Used by
 

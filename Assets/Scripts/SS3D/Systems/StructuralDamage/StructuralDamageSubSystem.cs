@@ -12,6 +12,8 @@ namespace SS3D.Systems.StructuralDamage
     public sealed class StructuralDamageSubSystem : SubSystem
     {
         private StructuralDamageService _service;
+        private ITileQueryService _boundQuery;
+        private IConstructionService _boundConstruction;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -24,31 +26,57 @@ namespace SS3D.Systems.StructuralDamage
             host.AddComponent<StructuralDamageSubSystem>();
         }
 
-        public IStructuralDamageService Service => _service ??= CreateService();
-
-        protected override void OnAwake()
+        /// <summary>
+        /// Resolves against the current <see cref="TileSubSystem"/> map services.
+        /// Do not cache at Awake — tile map is created later in TileSubSystem.OnStart.
+        /// </summary>
+        public IStructuralDamageService Service
         {
-            base.OnAwake();
-            _service = CreateService();
+            get
+            {
+                EnsureServiceBound();
+                return _service;
+            }
         }
 
         public bool TryApplyStructuralDamage(TileCoord coord, float force, StructuralDamageSource source)
         {
-            return Service.TryApplyStructuralDamage(coord, force, source);
+            IStructuralDamageService service = Service;
+            return service != null && service.TryApplyStructuralDamage(coord, force, source);
         }
 
         public bool TryGetIntegrity(TileCoord coord, out StructuralIntegrityStage stage, out float remaining, out float max)
         {
-            return Service.TryGetIntegrity(coord, out stage, out remaining, out max);
+            stage = StructuralIntegrityStage.Intact;
+            remaining = 0f;
+            max = 0f;
+
+            IStructuralDamageService service = Service;
+            return service != null && service.TryGetIntegrity(coord, out stage, out remaining, out max);
         }
 
-        private static StructuralDamageService CreateService()
+        private void EnsureServiceBound()
         {
-            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
-            if (tiles == null)
-                return new StructuralDamageService(null, null);
+            if (!SubSystems.TryGet(out TileSubSystem tiles)
+                || tiles.QueryService == null
+                || tiles.Construction == null)
+            {
+                _service = null;
+                _boundQuery = null;
+                _boundConstruction = null;
+                return;
+            }
 
-            return new StructuralDamageService(tiles.QueryService, tiles.Construction);
+            if (_service != null
+                && ReferenceEquals(_boundQuery, tiles.QueryService)
+                && ReferenceEquals(_boundConstruction, tiles.Construction))
+            {
+                return;
+            }
+
+            _boundQuery = tiles.QueryService;
+            _boundConstruction = tiles.Construction;
+            _service = new StructuralDamageService(_boundQuery, _boundConstruction);
         }
     }
 }

@@ -5,6 +5,7 @@ using SS3D.Permissions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile;
+using System;
 using UnityEngine;
 
 namespace SS3D.Systems.IngameConsoleSystem.Commands
@@ -15,11 +16,10 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
     public class HurtStructureCommand : Command
     {
         private const float DefaultForce = 40f;
-        private const float TargetDistance = 1.25f;
 
         public override string ShortDescription => "Damage structural turf in front of you";
         public override string LongDescription =>
-            "Applies structural integrity damage to the wall/door/window on the tile ahead. Usage: hurtstructure [force] (default 40).";
+            "Applies structural integrity damage to the wall/door/window on the cardinal tile ahead of your standing tile. Usage: hurtstructure [force] (default 40).";
         public override string Usage => "[force]";
         public override ServerRoleTypes AccessLevel => ServerRoleTypes.Administrator;
         public override CommandType Type => CommandType.Server;
@@ -46,13 +46,10 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
             }
 
             TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
-            if (tiles == null)
+            if (tiles == null || tiles.CurrentMap == null || tiles.QueryService == null)
             {
-                return "TileSubSystem not registered";
+                return "TileSubSystem / map not ready";
             }
-
-            Vector3 target = entity.transform.position + entity.transform.forward * TargetDistance;
-            TileCoord coord = tiles.QueryService.WorldToTile(target);
 
             StructuralDamageSubSystem structural = SubSystems.Get<StructuralDamageSubSystem>();
             if (structural == null)
@@ -60,17 +57,24 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
                 return "StructuralDamageSubSystem not registered";
             }
 
-            if (!structural.TryApplyStructuralDamage(coord, force, StructuralDamageSource.Console))
+            // Standing-tile + one cardinal step ahead — not world-position + forward*distance,
+            // which often rounds back onto the floor underfoot or overshoots past the wall.
+            int mapId = tiles.CurrentMap.MapId;
+            TileCoord standing = tiles.QueryService.WorldToTile(entity.transform.position, mapId);
+            Direction facing = CardinalFromForward(entity.transform.forward);
+            TileCoord ahead = OffsetCardinal(standing, facing);
+
+            if (!structural.TryApplyStructuralDamage(ahead, force, StructuralDamageSource.Console))
             {
-                return $"No structural turf at {coord.Grid.x},{coord.Grid.y}";
+                return $"No structural turf ahead at {ahead.Grid.x},{ahead.Grid.y} map {mapId} (standing {standing.Grid.x},{standing.Grid.y} facing {facing})";
             }
 
-            if (!structural.TryGetIntegrity(coord, out StructuralIntegrityStage stage, out float remaining, out float max))
+            if (!structural.TryGetIntegrity(ahead, out StructuralIntegrityStage stage, out float remaining, out float max))
             {
-                return $"Structural Destroyed at {coord.Grid.x},{coord.Grid.y}";
+                return $"Structural Destroyed at {ahead.Grid.x},{ahead.Grid.y}";
             }
 
-            return $"Structure at {coord.Grid.x},{coord.Grid.y}: {stage} ({remaining:0.#}/{max:0.#})";
+            return $"Structure at {ahead.Grid.x},{ahead.Grid.y}: {stage} ({remaining:0.#}/{max:0.#})";
         }
 
         protected override CheckArgsResponse CheckArgs(string[] args)
@@ -84,12 +88,12 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
 
             if (args.Length == 1)
             {
-                if (!float.TryParse(args[0], out float force))
+                if (!float.TryParse(args[0], out float parsedForce))
                 {
                     return response.MakeInvalid("Invalid force amount");
                 }
 
-                if (force <= 0f)
+                if (parsedForce <= 0f)
                 {
                     return response.MakeInvalid("Force must be positive");
                 }
@@ -97,6 +101,29 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
 
             response.IsValid = true;
             return response;
+        }
+
+        private static Direction CardinalFromForward(Vector3 forward)
+        {
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+            {
+                return Direction.North;
+            }
+
+            forward.Normalize();
+            if (Mathf.Abs(forward.z) >= Mathf.Abs(forward.x))
+            {
+                return forward.z >= 0f ? Direction.North : Direction.South;
+            }
+
+            return forward.x >= 0f ? Direction.East : Direction.West;
+        }
+
+        private static TileCoord OffsetCardinal(TileCoord coord, Direction direction)
+        {
+            Tuple<int, int> offset = TileHelper.ToCardinalVector(direction);
+            return new TileCoord(coord.MapId, coord.Grid.x + offset.Item1, coord.Grid.y + offset.Item2);
         }
     }
 }
