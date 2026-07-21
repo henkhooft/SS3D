@@ -6,6 +6,7 @@ using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Tile;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics
@@ -15,6 +16,9 @@ namespace SS3D.Systems.Atmospherics
     /// </summary>
     public sealed class AtmosSubSystem : NetworkSubSystem
     {
+        private static readonly ProfilerMarker SimPerformanceMarker = new("SS3D.Atmos.Sim");
+        private static readonly ProfilerMarker UploadPerformanceMarker = new("SS3D.Atmos.Upload");
+
         [SerializeField] private GasRegistry _gasRegistry;
 
         private AtmosWorld _atmosWorld;
@@ -204,11 +208,20 @@ namespace SS3D.Systems.Atmospherics
         private void SimTick()
         {
             float started = Time.realtimeSinceStartup;
-            _simulation.Tick(AtmosConstants.TickInterval);
-            _pipeSimulation?.Tick(AtmosConstants.TickInterval);
-            _portRegistry.TickDevices(_pipeSimulation, _simulation, AtmosConstants.TickInterval);
+
+            using (SimPerformanceMarker.Auto())
+            {
+                _simulation.Tick(AtmosConstants.TickInterval);
+                _pipeSimulation?.Tick(AtmosConstants.TickInterval);
+                _portRegistry.TickDevices(_pipeSimulation, _simulation, AtmosConstants.TickInterval);
+            }
+
+            using (UploadPerformanceMarker.Auto())
+            {
+                _visualizationBridge?.PublishSnapshot();
+            }
+
             LastTickMilliseconds = (Time.realtimeSinceStartup - started) * 1000f;
-            _visualizationBridge?.PublishSnapshot();
         }
 
         public bool TryTransferPipeMoles(

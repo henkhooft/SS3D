@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SS3D.Interactions.Interfaces;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Interactions
@@ -9,6 +10,8 @@ namespace SS3D.Interactions
     /// </summary>
     public static class InteractionPipeline
     {
+        private static readonly ProfilerMarker DiscoverPerformanceMarker = new("SS3D.Interactions.Discover");
+
         public static List<InteractionEntry> GetViableInteractions(
             IInteractionSource source,
             List<IInteractionTarget> targets,
@@ -25,25 +28,28 @@ namespace SS3D.Interactions
             List<IInteractionTarget> targets,
             InteractionEvent interactionEvent)
         {
-            List<InteractionEntry> interactions = new();
-            Vector3 point = interactionEvent.Point;
-            GameObject targetGameObject = ResolveTargetGameObject(targets);
-
-            foreach (IInteractionTarget target in targets)
+            using (DiscoverPerformanceMarker.Auto())
             {
-                InteractionEvent e = new(source, target, point, interactionEvent.Normal);
-                IInteraction[] targetInteractions = target.CreateTargetInteractions(e);
+                List<InteractionEntry> interactions = new();
+                Vector3 point = interactionEvent.Point;
+                GameObject targetGameObject = ResolveTargetGameObject(targets);
 
-                foreach (IInteraction interaction in targetInteractions)
+                foreach (IInteractionTarget target in targets)
                 {
-                    interactions.Add(InteractionEntry.Create(target, interaction, targetGameObject));
+                    InteractionEvent e = new(source, target, point, interactionEvent.Normal);
+                    IInteraction[] targetInteractions = target.CreateTargetInteractions(e);
+
+                    foreach (IInteraction interaction in targetInteractions)
+                    {
+                        interactions.Add(InteractionEntry.Create(target, interaction, targetGameObject));
+                    }
                 }
+
+                source.CreateSourceInteractions(targets.ToArray(), interactions);
+                RebuildEntryIndices(interactions, targetGameObject);
+
+                return interactions;
             }
-
-            source.CreateSourceInteractions(targets.ToArray(), interactions);
-            RebuildEntryIndices(interactions, targetGameObject);
-
-            return interactions;
         }
 
         /// <summary>

@@ -46,9 +46,12 @@ writes `Logs/perf/_contract-fixture.md`.
 
 - In-game console `perf start/stop`
 - `Profiler.logFile` player / dedicated-server capture pipeline
-- Additional `ProfilerMarker`s beyond existing Vision markers
 - Continuous `ProfilerRecorder` budgets / smoke thresholds
 - Separate `perf_summarize.py` (export already aggregates)
+
+Gameplay `ProfilerMarker`s currently include Vision FOV, `SS3D.Interactions.Outline` /
+`Discover`, and `SS3D.Atmos.Sim` / `Upload` — extend via export `GameMarkerPrefixes` when
+adding domains outside `SS3D` / `Vision.` / `Atmos` / `FishNet`.
 
 ## Known gaps
 

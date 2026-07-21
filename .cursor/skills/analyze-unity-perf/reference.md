@@ -19,10 +19,19 @@ Matched into **SS3D / marker hits**:
 
 | Prefix / token | Notes |
 |----------------|-------|
-| `SS3D` | Starts-with |
-| `Vision.` | Existing markers in `VisionSubSystem` |
-| `Atmos` | Starts-with (atmos / Atmospherics samples) |
+| `SS3D` | Starts-with (`SS3D.Interactions.*`, `SS3D.Atmos.*`, URP `SS3D Atmos *`, …) |
+| `Vision.` | `Vision.ViewPoints` / `Vision.VisionMap` in `VisionSubSystem` |
+| `Atmos` | Starts-with (legacy / URP atmos samples); prefer `SS3D.Atmos.*` for gameplay ticks |
 | `FishNet` | Substring |
+
+### Gameplay markers (install intentionally)
+
+| Marker | Where |
+|--------|--------|
+| `Vision.ViewPoints` / `Vision.VisionMap` | `VisionSubSystem` |
+| `SS3D.Interactions.Outline` | `InteractionController` hover LateUpdate |
+| `SS3D.Interactions.Discover` | `InteractionPipeline.Discover` (click/radial/RPC) |
+| `SS3D.Atmos.Sim` / `SS3D.Atmos.Upload` | `AtmosSubSystem.SimTick` |
 
 ## Noise allowlist (usually not root cause)
 

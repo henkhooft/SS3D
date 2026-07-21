@@ -23,6 +23,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using Unity.Profiling;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Interactions
@@ -61,6 +62,8 @@ namespace SS3D.Systems.Interactions
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
         private readonly List<IInteractionTarget> _outlineTargets = new(8);
+
+        private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
 
@@ -1002,6 +1005,15 @@ namespace SS3D.Systems.Interactions
 
         [Client]
         private void RefreshInteractionOutline()
+        {
+            using (OutlinePerformanceMarker.Auto())
+            {
+                RefreshInteractionOutlineUnguarded();
+            }
+        }
+
+        [Client]
+        private void RefreshInteractionOutlineUnguarded()
         {
             Selectable current = _selectionSystem.GetCurrentSelectable();
             InteractionOutlineView.ClearPendingExcept(current);

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 0f152fb88 — 2026-07-21
+> Verified: a15807a6d — 2026-07-21
 
 # Interactions (runtime)
 
@@ -50,7 +50,7 @@ Structural Discover/source-list debt: [interactions-framework](interactions-fram
 ## Pitfalls
 
 - **Outline on every hover while holding an item:** `Item.CreateSourceInteractions` always discovers `Drop` with a null target. Outline evaluation must run `InteractionPipeline.FilterForOutline` (keep only `Target != null`) before treating Discover as "available." Prefer `TryEvaluateOutlineInteractability` on the LateUpdate path — it skips source-only discovery entirely.
-- **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers.
+- **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
 - **Outline on every hover with empty hands:** obsolete `Craft` on hands used to discover `OpenCraftingMenu` for every target. Holding an item switches the source to the item (no `Craft`), so the bug only showed empty-handed. Do not extend crafting — purge per [crafting](crafting.md); until then discover must stay gated.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`C` is double-bound:** Input System **Cancel Interaction** is still `<Keyboard>/c`; combat hardcodes `cKey` for Help/Harm toggle. Both fire on `C`. Rebind cancel (or route cancel through a different key) when cleaning inputs — do not assume Cancel owns `C` alone.
