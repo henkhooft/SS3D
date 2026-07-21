@@ -60,6 +60,7 @@ namespace SS3D.Systems.Interactions
 
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
+        private readonly List<IInteractionTarget> _outlineTargets = new(8);
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
 
@@ -1062,32 +1063,23 @@ namespace SS3D.Systems.Interactions
         {
             hasViableInteractions = false;
 
-            if (GetActiveInteractionSource() == null)
+            IInteractionSource source = GetActiveInteractionSource();
+            if (source == null)
             {
                 return false;
             }
 
             SelectionTargetUtility.TryResolveInteractionPoint(_camera, selectable, out Vector3 point, out Vector3 normal);
-            IInteractionSource source = GetActiveInteractionSource();
-            List<IInteractionTarget> targets = GetTargetsFromGameObject(source, selectable.gameObject);
-            InteractionEvent interactionEvent = new(source, targets.Count > 0 ? targets[0] : null, point, normal);
+            CollectTargetsInto(source, selectable.gameObject, _outlineTargets);
 
-            List<InteractionEntry> discovered = InteractionPipeline.FilterForOutline(
-                InteractionPipeline.Discover(source, targets, interactionEvent));
-            if (discovered.Count == 0)
-            {
-                return false;
-            }
-
-            List<InteractionEntry> viableInteractions = InteractionPipeline.FilterAndSort(
+            // Outline LateUpdate must not run full Discover (source-only Drop, ToArray, Filter lists).
+            return InteractionPipeline.TryEvaluateOutlineInteractability(
                 source,
-                discovered,
+                _outlineTargets,
                 point,
                 normal,
-                CurrentIntent);
-
-            hasViableInteractions = viableInteractions.Count > 0;
-            return true;
+                CurrentIntent,
+                out hasViableInteractions);
         }
 
         private void ClearInteractionOutline()
@@ -1111,15 +1103,40 @@ namespace SS3D.Systems.Interactions
         private List<IInteractionTarget> GetTargetsFromGameObject(IInteractionSource source, GameObject targetGameObject)
         {
             List<IInteractionTarget> targets = new();
+            CollectTargetsInto(source, targetGameObject, targets);
+            return targets;
+        }
 
-            // Get all target components which are not disabled and the source can interact with
-            targets.AddRange(targetGameObject.GetComponents<IInteractionTarget>().Where(x => (x as MonoBehaviour)?.enabled != false && source.CanInteractWithTarget(x)));
+        [ServerOrClient]
+        private static void CollectTargetsInto(
+            IInteractionSource source,
+            GameObject targetGameObject,
+            List<IInteractionTarget> targets)
+        {
+            targets.Clear();
+
+            // Interface GetComponents still allocates an array; avoid LINQ Where/ToList on top.
+            IInteractionTarget[] components = targetGameObject.GetComponents<IInteractionTarget>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                IInteractionTarget target = components[i];
+                if ((target as MonoBehaviour)?.enabled == false)
+                {
+                    continue;
+                }
+
+                if (!source.CanInteractWithTarget(target))
+                {
+                    continue;
+                }
+
+                targets.Add(target);
+            }
+
             if (targets.Count < 1)
             {
                 targets.Add(new InteractionTargetGameObject(targetGameObject));
             }
-
-            return targets;
         }
 
         [ServerOrClient]

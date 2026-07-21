@@ -46,6 +46,78 @@ namespace SS3D.Interactions
             return interactions;
         }
 
+        /// <summary>
+        /// Hover-outline probe: target-bound interactions only (no source-only Drop/etc.), no sort,
+        /// no wire-index rebuild. For LateUpdate feedback — not RPC dispatch.
+        /// </summary>
+        /// <returns>
+        /// False when nothing target-bound was discovered (caller should hide outline).
+        /// True when at least one target-bound interaction exists; <paramref name="hasViableInteractions"/>
+        /// distinguishes green vs yellow outline.
+        /// </returns>
+        public static bool TryEvaluateOutlineInteractability(
+            IInteractionSource source,
+            List<IInteractionTarget> targets,
+            Vector3 point,
+            Vector3 normal,
+            IntentType intent,
+            out bool hasViableInteractions)
+        {
+            hasViableInteractions = false;
+            bool hasTargetBound = false;
+
+            if (source == null || targets == null || targets.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (IInteractionTarget target in targets)
+            {
+                if (target == null)
+                {
+                    continue;
+                }
+
+                InteractionEvent discoverEvent = new(source, target, point, normal);
+                IInteraction[] targetInteractions = target.CreateTargetInteractions(discoverEvent);
+
+                foreach (IInteraction interaction in targetInteractions)
+                {
+                    hasTargetBound = true;
+
+                    if (hasViableInteractions)
+                    {
+                        continue;
+                    }
+
+                    InteractionEvent checkEvent = new(source, target, point, normal);
+                    if (!interaction.CanInteract(checkEvent))
+                    {
+                        continue;
+                    }
+
+                    if (!MatchesIntent(interaction, intent))
+                    {
+                        continue;
+                    }
+
+                    if (!source.CanExecuteInteraction(interaction))
+                    {
+                        continue;
+                    }
+
+                    hasViableInteractions = true;
+                }
+
+                if (hasTargetBound && hasViableInteractions)
+                {
+                    return true;
+                }
+            }
+
+            return hasTargetBound;
+        }
+
         public static List<InteractionEntry> FilterAndSort(
             IInteractionSource source,
             List<InteractionEntry> entries,
