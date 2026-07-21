@@ -725,12 +725,13 @@
 
 .map-editor-slot {
     width: 108px;
-    height: 110px;
+    height: 96px;
+    min-height: 0;
     flex-shrink: 0;
     align-items: center;
     justify-content: flex-start;
     margin: 4px;
-    padding: 8px 8px 6px;
+    padding: 5px 6px 3px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 1.5px;
     border-color: var(--ss3d-border-default);
@@ -742,17 +743,17 @@
 }
 
 .map-editor-slot__icon-frame {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
 }
 
 .map-editor-slot__icon {
-    width: 60px;
-    height: 60px;
+    width: 68px;
+    height: 68px;
     background-color: rgba(0, 0, 0, 0);
     border-radius: 6px;
     -unity-background-scale-mode: scale-to-fit;
@@ -771,7 +772,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    height: 12px;
+    min-height: 0;
     flex-shrink: 0;
+    flex-grow: 0;
     margin-top: 0;
     margin-bottom: 0;
     padding-top: 0;
