@@ -201,6 +201,8 @@ namespace EditorTests
         [Test]
         public void ClearingDoorBetweenRooms_LiveRecompute_LetsLeftApcClaimBothInteriors()
         {
+            // Fixture: door on left room's east wall at (4,2); right room still has its west wall at (5,2).
+            // Both must be cleared to open a walkable path between interiors.
             AreaTestContext context = AreaTestContext.CreateTwoRoomsWithDoor(
                 _instantiated,
                 leftOrigin: new Vector3(0, 0, 0),
@@ -215,13 +217,14 @@ namespace EditorTests
             AreaId rightArea = context.GetApcAreaId(rightApc);
             Assert.AreNotEqual(leftArea, rightArea);
 
-            Vector3 doorWorld = new Vector3(4, 0, 2);
-            context.ClearTurf(doorWorld);
+            context.ClearTurf(new Vector3(4, 0, 2));
+            context.ClearTurf(new Vector3(5, 0, 2));
 
-            // Left APC floods first (lower x) and can expand through the cleared door tile.
+            // Left APC floods first (lower x) and expands through the opening.
             Assert.AreEqual(leftArea.Value, context.GetAreaId(leftApc.OriginTile));
             Assert.AreEqual(leftArea.Value, context.GetAreaId(rightApc.OriginTile));
             Assert.AreEqual(leftArea.Value, context.GetAreaId(new TileCoord(context.Map.MapId, 4, 2)));
+            Assert.AreEqual(leftArea.Value, context.GetAreaId(new TileCoord(context.Map.MapId, 5, 2)));
         }
 
         [Test]
