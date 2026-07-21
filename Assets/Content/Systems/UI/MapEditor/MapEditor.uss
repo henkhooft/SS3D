@@ -45,6 +45,33 @@
     flex-direction: column;
     padding-left: 6px;
     padding-right: 6px;
+    overflow: visible;
+}
+
+.map-editor-toolbar-btn-wrap {
+    position: relative;
+    overflow: visible;
+}
+
+.map-editor-toolbar-hint {
+    position: absolute;
+    left: 100%;
+    margin-left: 8px;
+    top: 0;
+    height: 38px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: var(--ss3d-surface-panel);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    border-radius: var(--ss3d-radius-sm);
+    color: var(--ss3d-text-primary);
+    font-size: 12px;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
 }
 
 .map-editor-icon-btn {
@@ -179,9 +206,9 @@
     position: absolute;
 }
 
-.map-editor-region--top-left { left: 24px; top: 24px; }
+.map-editor-region--top-left { left: 24px; top: 24px; overflow: visible; }
 .map-editor-region--top-right { right: 24px; top: 24px; }
-.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 260px; }
+.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 200px; }
 
 .map-editor-right-column {
     flex-direction: column;
@@ -484,7 +511,7 @@
     align-items: center;
     justify-content: space-between;
     background-color: var(--ss3d-surface-panel-raised);
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-top-left-radius: var(--ss3d-radius-md);
     border-top-right-radius: var(--ss3d-radius-md);
 }
@@ -543,20 +570,21 @@
 .map-editor-library-body {
     flex-grow: 1;
     flex-shrink: 1;
-    padding: 14px;
+    padding: 10px;
 }
 
 .map-editor-grid {
-    flex-direction: row;
+    flex-direction: column;
+    flex-shrink: 0;
 }
 
 .map-editor-grid-scroll {
     flex-grow: 1;
-    margin-top: 10px;
+    margin-top: 6px;
 }
 
-.map-editor-grid-column {
-    flex-direction: column;
+.map-editor-grid-row {
+    flex-direction: row;
     flex-shrink: 0;
 }
 

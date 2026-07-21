@@ -18,13 +18,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
         {
             [PaletteMode.Min] = 52f,
-            [PaletteMode.Normal] = 260f,
-            [PaletteMode.Max] = 460f,
+            [PaletteMode.Normal] = 200f,
+            [PaletteMode.Max] = 400f,
         };
 
-        /// <summary>Object library grid row count per resize state (columns scroll horizontally).</summary>
-        private const int NormalGridRows = 2;
-        private const int MaxGridRows = 4;
+        /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
+        private const int NormalGridRows = 1;
+        private const int MaxGridRows = 3;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
@@ -147,23 +147,27 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _leftPopoverAnchor = region;
 
             _leftToolbar = CreateToolbarStrip(vertical: true);
-            AddToolButton(_leftToolbar, MapEditorTool.Edit, "Edit");
+            AddToolButton(_leftToolbar, MapEditorTool.Edit, "Construct");
             AddToolButton(_leftToolbar, MapEditorTool.Select, "Select");
-            AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper (copy object)");
+            AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper");
             AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete");
             AddSeparator(_leftToolbar, vertical: true);
 
-            Button undo = CreateIconButton(_icons?.Undo, "Undo", () => UndoRequested?.Invoke());
+            Button undo = CreateIconButton(_icons?.Undo, null, () => UndoRequested?.Invoke());
             undo.name = "undo-btn";
-            _leftToolbar.Add(undo);
+            _leftToolbar.Add(WrapWithHoverHint(undo, "Undo"));
 
-            Button redo = CreateIconButton(_icons?.Redo, "Redo", () => RedoRequested?.Invoke());
+            Button redo = CreateIconButton(_icons?.Redo, null, () => RedoRequested?.Invoke());
             redo.name = "redo-btn";
-            _leftToolbar.Add(redo);
+            _leftToolbar.Add(WrapWithHoverHint(redo, "Redo"));
             AddSeparator(_leftToolbar, vertical: true);
 
-            _leftToolbar.Add(CreateIconButton(_icons?.SaveMap, "Save map...", () => TogglePopover("saveMenu")));
-            _leftToolbar.Add(CreateIconButton(_icons?.OpenMap, "Open map selection", () => TogglePopover("maps")));
+            _leftToolbar.Add(WrapWithHoverHint(
+                CreateIconButton(_icons?.SaveMap, null, () => TogglePopover("saveMenu")),
+                "Save map"));
+            _leftToolbar.Add(WrapWithHoverHint(
+                CreateIconButton(_icons?.OpenMap, null, () => TogglePopover("maps")),
+                "Load map"));
 
             region.Add(_leftToolbar);
             _hudLayer.Add(region);
@@ -447,34 +451,36 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
-            IEnumerable<MapEditorCatalogEntry> entries =
-                _catalog.Query(_vm.CurrentMode, _vm.CurrentSubcategory, _vm.SearchText);
-
-            int rows = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
-            VisualElement column = null;
-            int inColumn = 0;
-            bool any = false;
-
-            foreach (MapEditorCatalogEntry entry in entries)
+            List<MapEditorCatalogEntry> entryList = new();
+            foreach (MapEditorCatalogEntry entry in _catalog.Query(
+                         _vm.CurrentMode, _vm.CurrentSubcategory, _vm.SearchText))
             {
-                any = true;
-                if (column == null || inColumn >= rows)
-                {
-                    column = new VisualElement { pickingMode = PickingMode.Position };
-                    column.AddToClassList("map-editor-grid-column");
-                    _grid.Add(column);
-                    inColumn = 0;
-                }
-
-                column.Add(BuildSlot(entry));
-                inColumn++;
+                entryList.Add(entry);
             }
 
-            if (!any)
+            if (entryList.Count == 0)
             {
                 Label empty = new($"No matches for \"{_vm.SearchText}\".");
                 empty.AddToClassList("map-editor-stub-message");
                 _grid.Add(empty);
+                return;
+            }
+
+            int rowCount = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
+            int columnCount = (entryList.Count + rowCount - 1) / rowCount;
+            int usedRows = Math.Min(rowCount, (entryList.Count + columnCount - 1) / columnCount);
+            VisualElement[] rows = new VisualElement[usedRows];
+            for (int rowIndex = 0; rowIndex < usedRows; rowIndex++)
+            {
+                VisualElement row = new() { pickingMode = PickingMode.Position };
+                row.AddToClassList("map-editor-grid-row");
+                rows[rowIndex] = row;
+                _grid.Add(row);
+            }
+
+            for (int index = 0; index < entryList.Count; index++)
+            {
+                rows[index / columnCount].Add(BuildSlot(entryList[index]));
             }
         }
 
@@ -758,11 +764,28 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
         }
 
-        private void AddToolButton(VisualElement parent, MapEditorTool tool, string tooltip)
+        private void AddToolButton(VisualElement parent, MapEditorTool tool, string hintLabel)
         {
-            Button btn = CreateIconButton(_icons?.GetToolIcon(tool), tooltip, () => ToolSelected?.Invoke(tool));
+            Button btn = CreateIconButton(_icons?.GetToolIcon(tool), null, () => ToolSelected?.Invoke(tool));
             _toolButtons[tool] = btn;
-            parent.Add(btn);
+            parent.Add(WrapWithHoverHint(btn, hintLabel));
+        }
+
+        private static VisualElement WrapWithHoverHint(Button btn, string hintLabel)
+        {
+            VisualElement wrap = new() { pickingMode = PickingMode.Ignore };
+            wrap.AddToClassList("map-editor-toolbar-btn-wrap");
+
+            Label hint = new(hintLabel) { pickingMode = PickingMode.Ignore };
+            hint.AddToClassList("map-editor-toolbar-hint");
+            hint.style.display = DisplayStyle.None;
+
+            btn.RegisterCallback<MouseEnterEvent>(_ => hint.style.display = DisplayStyle.Flex);
+            btn.RegisterCallback<MouseLeaveEvent>(_ => hint.style.display = DisplayStyle.None);
+
+            wrap.Add(btn);
+            wrap.Add(hint);
+            return wrap;
         }
 
         private Button CreateModeTab(MapEditorMode mode)
@@ -832,7 +855,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             Button btn = new(onClick);
             btn.AddToClassList("map-editor-icon-btn");
-            btn.tooltip = tooltip;
+            if (!string.IsNullOrEmpty(tooltip))
+                btn.tooltip = tooltip;
 
             VisualElement iconElement = CreateIconElement(icon);
             iconElement.AddToClassList("map-editor-icon-btn__icon");
