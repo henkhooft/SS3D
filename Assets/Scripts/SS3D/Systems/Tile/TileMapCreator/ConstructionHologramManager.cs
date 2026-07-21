@@ -928,14 +928,19 @@ namespace SS3D.Systems.Tile.TileMapCreator
             {
                 MaybeSwapDeleteGhostPrefab(hintAsset, position);
             }
-            else if (_deleteTargets.Count == 0 || hintAsset == "floor-decal")
+            else if (hintAsset == "floor-decal")
             {
-                if (_deleteGhostAssetName != null)
-                {
-                    DestroyHolograms();
-                    _deleteGhostAssetName = null;
-                    CreateDeleteMarkerHologram(position);
-                }
+                ResetDeleteGhostToMarker(position);
+            }
+            else if (_mapEditor.TryGetSubcategoryPrototypeAssetName(subcategory, out string prototype))
+            {
+                // Show a representative prefab for this subcategory immediately (e.g. Wall
+                // Attachments tab) — do not wait until the cursor finds a mounted object.
+                MaybeSwapDeleteGhostPrefab(prototype, position);
+            }
+            else
+            {
+                ResetDeleteGhostToMarker(position);
             }
 
             if (_holograms.Count > 0)
@@ -959,6 +964,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
                         ? $"Delete {label} ({_lastRegisteredDirection}) — R to change face"
                         : $"Delete {label}");
             }
+        }
+
+        private void ResetDeleteGhostToMarker(Vector3 position)
+        {
+            if (_deleteGhostAssetName == null && _holograms.Count > 0)
+                return;
+
+            DestroyHolograms();
+            _deleteGhostAssetName = null;
+            CreateDeleteMarkerHologram(position);
         }
 
         private void MaybeSwapDeleteGhostPrefab(string assetName, Vector3 position)

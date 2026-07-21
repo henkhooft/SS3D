@@ -786,12 +786,94 @@ namespace SS3D.Systems.Tile.MapEditor
             MapEditorLayerVisibility.Apply(_viewModel);
         }
 
-        private void OnModeSelected(MapEditorMode mode) => _viewModel.SetMode(mode);
+        private void OnModeSelected(MapEditorMode mode)
+        {
+            _viewModel.SetMode(mode);
+            SyncHologramToLibrarySelection();
+        }
 
         private void OnSubcategorySelected(MapEditorSubcategory sub)
         {
             _viewModel.SetSubcategory(sub);
-            _hologramManager.RefreshDeletePreview();
+            SyncHologramToLibrarySelection();
+        }
+
+        /// <summary>
+        /// Subcategory/mode tabs should update the ghost immediately — delete used to keep the
+        /// previous prefab until the cursor hovered a matching tile (wall mounts especially).
+        /// </summary>
+        private void SyncHologramToLibrarySelection()
+        {
+            if (IsDeleting)
+            {
+                _hologramManager.RefreshDeletePreview();
+                return;
+            }
+
+            if (CurrentTool != MapEditorTool.Edit)
+                return;
+
+            TrySelectFirstAssetInCurrentSubcategory();
+        }
+
+        /// <summary>
+        /// First placeable catalog entry for the active subcategory (skips Eraser / floor-decal slots).
+        /// Used as the Delete-tool ghost prototype when the cursor is not over a matching target.
+        /// </summary>
+        public bool TryGetSubcategoryPrototypeAssetName(MapEditorSubcategory subcategory, out string assetName)
+        {
+            assetName = null;
+            if (_catalog == null)
+                return false;
+
+            if (subcategory == MapEditorSubcategory.Overlays ||
+                MapEditorCatalog.IsScriptingSubcategory(subcategory) ||
+                MapEditorDeleteTargeting.RequiresSubcategorySelection(subcategory) ||
+                MapEditorDeleteTargeting.IsItemSubcategory(subcategory))
+                return false;
+
+            foreach (MapEditorCatalogEntry entry in _catalog.Query(_viewModel.CurrentMode, subcategory, null))
+            {
+                if (entry.IsEraser || MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _))
+                    continue;
+
+                assetName = entry.AssetName;
+                return !string.IsNullOrEmpty(assetName);
+            }
+
+            return false;
+        }
+
+        private void TrySelectFirstAssetInCurrentSubcategory()
+        {
+            MapEditorSubcategory sub = _viewModel.CurrentSubcategory;
+            if (_viewModel.SelectedEntry != null &&
+                !_viewModel.SelectedEntry.IsEraser &&
+                _viewModel.SelectedEntry.Subcategory == sub)
+            {
+                // Already holding something from this tab — keep it, but refresh the ghost.
+                HandleAssetSelected(_viewModel.SelectedEntry, _viewModel.SelectedAsset);
+                return;
+            }
+
+            foreach (MapEditorCatalogEntry entry in _catalog.Query(_viewModel.CurrentMode, sub, _viewModel.SearchText))
+            {
+                if (entry.IsEraser)
+                    continue;
+
+                GenericObjectSo asset = null;
+                if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _))
+                {
+                    HandleAssetSelected(entry, null);
+                    return;
+                }
+
+                _catalog.TryGetAsset(entry.AssetName, _tileSystem.Loader, out asset);
+                HandleAssetSelected(entry, asset);
+                return;
+            }
+
+            _hologramManager.ClearSelection();
         }
 
         private void OnSearchChanged(string text)

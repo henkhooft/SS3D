@@ -52,6 +52,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.
 - **Dropper / Select always copied Plenum:** tile-location arrays are enum-ordered with Plenum at index 0, so a naive foreach sampled the base tile under every click. Use `MapEditorCursorPick` (physics hit when available, else furniture→turf→plenum priority; prefer visible layer groups).
 - **Construct hologram lingered after switching to Select:** `OnToolSelected` only cleared when leaving Delete, and hologram `HandleUpdate` early-out for Select/Dropper/Move skipped `DestroyHolograms`, so the last ghost froze in-world. Clear selection on non-Edit tools; destroy leftovers in the inactive-tool early-out; restore the ghost when returning to Construct from the current library selection.
 - **Map Selection Load/Del did nothing (New Map worked):** `HandleUpdate` called `RefreshMapList()` every frame while the maps/save popover was open, so `PopulateLoadList` destroyed and recreated Load/Del mid-click (pointer-down/up never hit the same element). New Map is built once in `BuildMapsPopover`, so it kept working. Refresh only on popover open and after save/delete.
