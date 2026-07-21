@@ -420,43 +420,23 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void HandleSelectClick()
         {
-            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
-            TileMap map = _tileSystem.CurrentMap;
-            if (map == null)
+            if (!MapEditorCursorPick.TryPick(PickCamera, _tileSystem.CurrentMap, _viewModel,
+                    out PlacedTileObject placed, out PlacedItemObject item))
                 return;
 
-            if (map.TryGetTileLocations(position, out ITileLocation[] locations))
+            if (placed != null)
             {
-                foreach (ITileLocation location in locations)
-                {
-                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
-                    {
-                        GenericObjectSo asset = _tileSystem.GetAsset(placed.NameString);
-                        _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = placed.NameString }, asset);
-                        _viewModel.ShowToast($"Selected {placed.NameString} on {placed.Layer}");
-                        _toastTimer = 1.6f;
-                        return;
-                    }
-                }
-            }
-
-            if (PickCamera == null)
+                GenericObjectSo asset = _tileSystem.GetAsset(placed.NameString);
+                _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = placed.NameString }, asset);
+                _viewModel.ShowToast($"Selected {placed.NameString} on {placed.Layer}");
+                _toastTimer = 1.6f;
                 return;
-
-            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
-                ? Mouse.current.position.ReadValue()
-                : (Vector2)Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
-                if (item != null)
-                {
-                    GenericObjectSo asset = _tileSystem.GetAsset(item.NameString);
-                    _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = item.NameString }, asset);
-                    _viewModel.ShowToast($"Selected item {item.NameString}");
-                    _toastTimer = 1.6f;
-                }
             }
+
+            GenericObjectSo itemAsset = _tileSystem.GetAsset(item.NameString);
+            _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = item.NameString }, itemAsset);
+            _viewModel.ShowToast($"Selected item {item.NameString}");
+            _toastTimer = 1.6f;
         }
 
         /// <summary>
@@ -465,32 +445,11 @@ namespace SS3D.Systems.Tile.MapEditor
         /// </summary>
         private void HandleDropperClick()
         {
-            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
-            TileMap map = _tileSystem.CurrentMap;
-            if (map != null && map.TryGetTileLocations(position, out ITileLocation[] locations))
-            {
-                foreach (ITileLocation location in locations)
-                {
-                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
-                    {
-                        CopyIntoActiveSelection(placed.NameString);
-                        return;
-                    }
-                }
-            }
-
-            if (PickCamera == null)
+            if (!MapEditorCursorPick.TryPick(PickCamera, _tileSystem.CurrentMap, _viewModel,
+                    out PlacedTileObject placed, out PlacedItemObject item))
                 return;
 
-            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
-                ? Mouse.current.position.ReadValue()
-                : (Vector2)Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
-                if (item != null)
-                    CopyIntoActiveSelection(item.NameString);
-            }
+            CopyIntoActiveSelection(placed != null ? placed.NameString : item.NameString);
         }
 
         private void CopyIntoActiveSelection(string assetName)
@@ -517,47 +476,27 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void TryBeginMove()
         {
-            Vector3 position = TileHelper.GetPointedPosition(true, PickCamera);
-            TileMap map = _tileSystem.CurrentMap;
-            if (map == null)
+            if (!MapEditorCursorPick.TryPick(PickCamera, _tileSystem.CurrentMap, _viewModel,
+                    out PlacedTileObject placed, out PlacedItemObject item))
                 return;
 
-            if (map.TryGetTileLocations(position, out ITileLocation[] locations))
+            if (placed != null)
             {
-                foreach (ITileLocation location in locations)
-                {
-                    foreach (PlacedTileObject placed in location.GetAllPlacedObject())
-                    {
-                        _moveSource = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
-                        _moveAssetName = placed.NameString;
-                        _moveDirection = placed.Direction;
-                        _moveIsItem = false;
-                        _viewModel.ShowToast($"Moving {placed.NameString} — click destination");
-                        _toastTimer = 2f;
-                        return;
-                    }
-                }
-            }
-
-            if (PickCamera == null)
+                _moveSource = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
+                _moveAssetName = placed.NameString;
+                _moveDirection = placed.Direction;
+                _moveIsItem = false;
+                _viewModel.ShowToast($"Moving {placed.NameString} — click destination");
+                _toastTimer = 2f;
                 return;
-
-            Ray ray = PickCamera.ScreenPointToRay(Mouse.current != null
-                ? Mouse.current.position.ReadValue()
-                : (Vector2)Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                PlacedItemObject item = hit.collider.GetComponentInParent<PlacedItemObject>();
-                if (item != null)
-                {
-                    _moveSource = item.transform.position;
-                    _moveAssetName = item.NameString;
-                    _moveDirection = Direction.North;
-                    _moveIsItem = true;
-                    _viewModel.ShowToast($"Moving item {item.NameString} — click destination");
-                    _toastTimer = 2f;
-                }
             }
+
+            _moveSource = item.transform.position;
+            _moveAssetName = item.NameString;
+            _moveDirection = Direction.North;
+            _moveIsItem = true;
+            _viewModel.ShowToast($"Moving item {item.NameString} — click destination");
+            _toastTimer = 2f;
         }
 
         private void TryCompleteMove()
