@@ -25,6 +25,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
         private const int NormalGridRows = 1;
         private const int MaxGridRows = 3;
+        /// <summary>Slot width (108) plus horizontal margins (4 + 4).</summary>
+        private const float GridSlotOuterWidthPx = 116f;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
@@ -52,6 +54,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _activePopover;
 
         private PaletteMode _paletteMode = PaletteMode.Normal;
+        private float _lastGridViewportWidth;
 
         private readonly Dictionary<MapEditorTool, Button> _toolButtons = new();
         private readonly Dictionary<MapEditorMode, Button> _modeButtons = new();
@@ -136,6 +139,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void Destroy()
         {
             _vm.StateChanged -= Refresh;
+            _gridScroll?.UnregisterCallback<GeometryChangedEvent>(OnGridScrollGeometryChanged);
             _root?.RemoveFromHierarchy();
         }
 
@@ -324,10 +328,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toolsRow.Add(search);
 
             _gridScroll = new ScrollView(ScrollViewMode.Horizontal);
+            _gridScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             _gridScroll.AddToClassList("map-editor-grid-scroll");
             _grid = new VisualElement();
             _grid.AddToClassList("map-editor-grid");
             _gridScroll.Add(_grid);
+            _gridScroll.RegisterCallback<GeometryChangedEvent>(OnGridScrollGeometryChanged);
 
             _paletteBody.Add(toolsRow);
             _paletteBody.Add(_gridScroll);
@@ -476,7 +482,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
 
             int rowCount = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
-            int columnCount = (entryList.Count + rowCount - 1) / rowCount;
+            int maxColumns = GetMaxGridColumns();
+            int balancedColumns = (entryList.Count + rowCount - 1) / rowCount;
+            int columnCount = balancedColumns;
+            if (maxColumns > 0 && balancedColumns > maxColumns)
+                columnCount = maxColumns;
+
+            int requiredRows = (entryList.Count + columnCount - 1) / columnCount;
+            if (requiredRows > rowCount)
+            {
+                columnCount = balancedColumns;
+                requiredRows = rowCount;
+            }
+
             int usedRows = Math.Min(rowCount, (entryList.Count + columnCount - 1) / columnCount);
             VisualElement[] rows = new VisualElement[usedRows];
             for (int rowIndex = 0; rowIndex < usedRows; rowIndex++)
@@ -493,11 +511,43 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
         }
 
+        private void OnGridScrollGeometryChanged(GeometryChangedEvent evt)
+        {
+            if (_grid == null || _paletteMode == PaletteMode.Min)
+                return;
+
+            float width = _gridScroll.contentViewport.layout.width;
+            if (width <= 1f)
+                return;
+
+            if (Math.Abs(width - _lastGridViewportWidth) < 1f)
+                return;
+
+            _lastGridViewportWidth = width;
+            RebuildGrid();
+        }
+
+        private int GetMaxGridColumns()
+        {
+            float width = _gridScroll?.contentViewport?.layout.width ?? 0f;
+            if (width <= 1f)
+                width = _gridScroll?.layout.width ?? 0f;
+            if (width <= 1f)
+                return 0;
+
+            int columns = Math.Max(1, (int)(width / GridSlotOuterWidthPx));
+            while (columns > 1 && columns * GridSlotOuterWidthPx > width + 0.5f)
+                columns--;
+            return columns;
+        }
+
         private Button BuildSlot(MapEditorCatalogEntry entry)
         {
             GenericObjectSo asset = entry.IsEraser ? null : _loader.GetAsset(entry.AssetName);
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
             slot.AddToClassList("map-editor-slot");
+            if (!entry.IsEraser)
+                slot.tooltip = entry.AssetName;
             bool active = _vm.SelectedEntry != null &&
                           string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
             slot.EnableInClassList("map-editor-slot--active", active);
@@ -520,7 +570,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             Label label = new(entry.IsEraser ? "Eraser" : entry.AssetName)
             {
-                style = { whiteSpace = WhiteSpace.Normal },
+                pickingMode = PickingMode.Ignore,
             };
             label.AddToClassList("map-editor-slot__label");
 
@@ -560,24 +610,22 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 popover.AddToClassList("map-editor-popover--wide");
 
-            VisualElement window = CreateWindow(GetPopoverTitle(_vm.OpenPopover));
-            BuildPopoverContent(_vm.OpenPopover, window);
+            VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
+            VisualElement contentRoot = window.Q("popover-body");
+            BuildPopoverContent(_vm.OpenPopover, contentRoot);
             popover.Add(window);
-
-            Button close = new(() =>
-            {
-                _vm.OpenPopover = null;
-                RefreshPopover();
-            })
-            { text = "Close" };
-            close.style.marginTop = 8;
-            window.Add(close);
 
             anchor.Add(popover);
             _activePopover = popover;
 
             if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 RequestMapListRefresh();
+        }
+
+        private void ClosePopover()
+        {
+            _vm.OpenPopover = null;
+            RefreshPopover();
         }
 
         public void RequestMapListRefresh() => MapListRefreshRequested?.Invoke();
@@ -607,7 +655,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     _vm.EnsureLayerDefaults();
                     foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
                     {
-                        AddToggleRow(container, TileLayerCategoryMapping.GetDisplayName(category),
+                        AddSwitchRow(container, TileLayerCategoryMapping.GetDisplayName(category),
                             _vm.IsLayerCategoryVisible(category),
                             v => LayerCategoryVisibilityChanged?.Invoke(category, v));
                     }
@@ -631,12 +679,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     });
                     break;
                 case "settings":
-                    AddToggleRow(container, "Grid Snap", _vm.GridSnap, v =>
+                    AddSwitchRow(container, "Grid Snap", _vm.GridSnap, v =>
                     {
                         _vm.GridSnap = v;
                         GridSnapChanged?.Invoke(v);
                     });
-                    AddToggleRow(container, "Debug Overlay", _vm.DebugOverlay, v =>
+                    AddSwitchRow(container, "Debug Overlay", _vm.DebugOverlay, v =>
                     {
                         _vm.DebugOverlay = v;
                         DebugOverlayChanged?.Invoke(v);
@@ -702,12 +750,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void PopulateLoadList(IReadOnlyList<MapEditorMapEntry> maps)
         {
-            VisualElement window = _activePopover.Q(className: "map-editor-window");
-            if (window == null)
+            VisualElement body = _activePopover.Q(name: "popover-body");
+            if (body == null)
                 return;
 
             List<VisualElement> toRemove = new();
-            foreach (VisualElement child in window.Children())
+            foreach (VisualElement child in body.Children())
             {
                 if (child.ClassListContains("map-editor-map-row"))
                     toRemove.Add(child);
@@ -716,7 +764,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             foreach (VisualElement child in toRemove)
                 child.RemoveFromHierarchy();
 
-            int insertIndex = 1;
             foreach (MapEditorMapEntry map in maps)
             {
                 Button row = new(() => LoadMapRequested?.Invoke(map.Name));
@@ -738,7 +785,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
                 row.Add(name);
                 row.Add(actions);
-                window.Insert(insertIndex++, row);
+                body.Add(row);
             }
         }
 
@@ -919,12 +966,65 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return window;
         }
 
-        private static void AddToggleRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        private VisualElement CreatePopoverWindow(string title, Action onClose)
         {
-            Toggle toggle = new(label) { value = value };
-            toggle.AddToClassList("map-editor-toggle-row");
-            toggle.RegisterValueChangedCallback(evt => onChanged(evt.newValue));
-            parent.Add(toggle);
+            VisualElement window = new() { pickingMode = PickingMode.Position };
+            window.AddToClassList("map-editor-window");
+            window.AddToClassList("map-editor-popover-window");
+
+            // Clip layer only — never combine border-radius + overflow on the same element (UITK white block).
+            VisualElement clip = new() { pickingMode = PickingMode.Ignore };
+            clip.AddToClassList("map-editor-popover-window__clip");
+
+            VisualElement header = new() { pickingMode = PickingMode.Position };
+            header.AddToClassList("map-editor-popover-window__header");
+
+            Label titleLabel = new(title) { pickingMode = PickingMode.Ignore };
+            titleLabel.AddToClassList("map-editor-window__title");
+            header.Add(titleLabel);
+
+            Button closeBtn = new(onClose);
+            closeBtn.AddToClassList("map-editor-popover-close");
+            Label closeGlyph = new("\u00d7") { pickingMode = PickingMode.Ignore };
+            closeGlyph.AddToClassList("map-editor-popover-close__glyph");
+            closeBtn.Add(closeGlyph);
+            header.Add(closeBtn);
+
+            VisualElement body = new() { pickingMode = PickingMode.Position, name = "popover-body" };
+            body.AddToClassList("map-editor-popover-window__body");
+
+            clip.Add(header);
+            clip.Add(body);
+            window.Add(clip);
+            return window;
+        }
+
+        private static void AddSwitchRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        {
+            VisualElement row = new() { pickingMode = PickingMode.Position };
+            row.AddToClassList("map-editor-switch-row");
+
+            Label labelElement = new(label) { pickingMode = PickingMode.Ignore };
+            labelElement.AddToClassList("map-editor-switch-row__label");
+
+            VisualElement track = new() { pickingMode = PickingMode.Position };
+            track.AddToClassList("map-editor-switch");
+            track.EnableInClassList("map-editor-switch--on", value);
+
+            VisualElement thumb = new() { pickingMode = PickingMode.Ignore };
+            thumb.AddToClassList("map-editor-switch__thumb");
+            track.Add(thumb);
+
+            track.RegisterCallback<ClickEvent>(_ =>
+            {
+                bool next = !track.ClassListContains("map-editor-switch--on");
+                track.EnableInClassList("map-editor-switch--on", next);
+                onChanged(next);
+            });
+
+            row.Add(labelElement);
+            row.Add(track);
+            parent.Add(row);
         }
 
         private void RaiseCameraSettingsChanged() =>

@@ -235,6 +235,105 @@
     padding: 12px;
 }
 
+.map-editor-popover-window {
+    padding: 0;
+    background-color: var(--ss3d-surface-panel);
+}
+
+.map-editor-popover-window__clip {
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.map-editor-popover-window__header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--ss3d-surface-panel-raised);
+    padding: 8px 8px 8px 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--ss3d-border-default);
+}
+
+.map-editor-popover-window__header .map-editor-window__title {
+    margin-bottom: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.map-editor-popover-close {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-radius: var(--ss3d-radius-sm);
+}
+
+.map-editor-popover-close:hover {
+    background-color: var(--ss3d-surface-elevated);
+}
+
+.map-editor-popover-close__glyph {
+    font-size: 16px;
+    color: var(--ss3d-text-tertiary);
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+}
+
+.map-editor-popover-window__body {
+    background-color: var(--ss3d-surface-panel);
+    padding: 8px 12px 12px;
+}
+
+.map-editor-switch-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.map-editor-switch-row__label {
+    color: var(--ss3d-text-secondary);
+    font-size: 12px;
+}
+
+.map-editor-switch {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    background-color: var(--ss3d-surface-inset);
+}
+
+.map-editor-switch--on {
+    background-color: var(--ss3d-accent-rust);
+    border-color: var(--ss3d-accent-rust);
+}
+
+.map-editor-switch__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    background-color: var(--ss3d-text-primary);
+}
+
+.map-editor-switch--on .map-editor-switch__thumb {
+    left: 16px;
+}
+
 .map-editor-window__title {
     color: var(--ss3d-text-secondary);
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
@@ -602,17 +701,17 @@
 }
 
 .map-editor-slot {
-    width: 88px;
-    height: 104px;
+    width: 108px;
+    height: 110px;
     flex-shrink: 0;
     align-items: center;
     justify-content: flex-start;
     margin: 4px;
-    padding: 10px 6px 8px;
+    padding: 8px 8px 6px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 1.5px;
     border-color: var(--ss3d-border-default);
-    border-radius: var(--ss3d-radius-md);
+    border-radius: 8px;
 }
 
 .map-editor-slot--active {
@@ -620,31 +719,40 @@
 }
 
 .map-editor-slot__icon-frame {
-    width: 52px;
-    height: 52px;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
 }
 
 .map-editor-slot__icon {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     background-color: rgba(0, 0, 0, 0);
+    border-radius: 6px;
     -unity-background-scale-mode: scale-to-fit;
 }
 
 .map-editor-slot__icon--eraser {
     background-color: rgba(179, 51, 51, 0.35);
-    border-radius: var(--ss3d-radius-sm);
+    border-radius: 6px;
 }
 
 .map-editor-slot__label {
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--ss3d-text-secondary);
     -unity-text-align: middle-center;
-    white-space: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     max-width: 100%;
+    flex-shrink: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .map-editor-popover {
@@ -668,12 +776,6 @@
     width: 320px;
 }
 
-.map-editor-toggle-row {
-    margin-top: 4px;
-    margin-bottom: 4px;
-    color: var(--ss3d-text-primary);
-}
-
 .map-editor-slider-row {
     margin-top: 6px;
     margin-bottom: 6px;
@@ -691,11 +793,6 @@
 
 .map-editor-slider-row__slider {
     margin-top: 2px;
-}
-
-.map-editor-toggle-label {
-    color: var(--ss3d-text-secondary);
-    font-size: 13px;
 }
 
 .map-editor-map-row {
