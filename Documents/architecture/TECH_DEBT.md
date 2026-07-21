@@ -4,7 +4,7 @@
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
-one of the four layers in [SKILL.md](SKILL.md) — it doesn't replace the per-domain debt notes
+one of the four layers in [SKILL.md](../SKILL.md) — it doesn't replace the per-domain debt notes
 already living in system maps (`Documents/architecture/systems/*.md` **Pitfalls** / **Architecture
 smells** sections) or in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md);
 it indexes and ranks them so "what's the biggest structural risk right now" has one answer instead
