@@ -8,8 +8,9 @@ namespace SS3D.UI.MainHud.Components
     /// <summary>
     /// Hazards the alert icon stack can show. Base set matches main-hud.md §9; Bleeding and
     /// CardiacArrest are fork additions (health vitals) not yet in that design table.
-    /// Backend trackers only exist for none of these yet - severities are debug/console-only until
-    /// their systems exist (see <see cref="SS3D.UI.MainHud.MainHudSubSystem"/>'s debug override).
+    /// Health hazards (LowOxygen, Dying, Bleeding, CardiacArrest) are live via
+    /// <see cref="SS3D.Systems.Health.HealthAlertStackMapper"/>; other hazards stay None until
+    /// those systems exist (F4 / <c>alertstack</c> remain a full-stack debug override).
     /// </summary>
     public enum AlertHazard
     {
@@ -43,10 +44,9 @@ namespace SS3D.UI.MainHud.Components
 
     /// <summary>
     /// Which hazards are currently active on the local player, and at what severity. Every field defaults to
-    /// <see cref="AlertSeverity.None"/> (a healthy, unencumbered character shows an empty stack) - none of
-    /// these hazards have real trackers in <c>SS3D.Systems</c> yet, so <see cref="MainHudSubSystem"/> only
-    /// ever sets these via its debug override. Wire real trackers in here once they exist instead of adding a
-    /// parallel state model.
+    /// <see cref="AlertSeverity.None"/> (a healthy, unencumbered character shows an empty stack).
+    /// <see cref="MainHudSubSystem"/> fills health fields from <see cref="SS3D.Systems.Health.HealthAlertStackMapper"/>
+    /// unless a debug override is set; other systems should write into this struct the same way when they exist.
     /// </summary>
     public struct AlertStackState
     {

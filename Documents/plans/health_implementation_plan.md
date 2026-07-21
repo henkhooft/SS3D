@@ -592,6 +592,7 @@ health.md §8 + death-cloning §9 example A, end-to-end:
 ### Phase 6 (partial)
 
 - **Screen-space feedback shipped:** `HealthScreenEffectMapper` maps local-owner `HealthSnapshot` to dying/blood-loss/oxy/concussion/unconscious; `ApplyDamage` TargetRpc fires hit flash. EditMode: `HealthScreenEffectMapperTests`.
+- **Alert stack health-wired:** `HealthAlertStackMapper` + `HumanHealthController.SnapshotChanged` → `MainHudSubSystem` (Bleeding / Dying / CardiacArrest / LowOxygen). uGUI `HealthAlertsView` / PlayerCanvas chips purged. F4/`alertstack` remain full-stack debug override. EditMode: `HealthAlertStackMapperTests`.
 - Vitals cluster UITK and examine-self organ readout still open.
 - Blood decals / bleed VFX tuning already landed earlier in Phase 6 wound-visuals work.
 
