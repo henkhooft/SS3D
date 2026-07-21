@@ -9,13 +9,23 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         private readonly Vector3 _position;
         private readonly Direction _direction;
         private readonly bool _replaceExisting;
+        private readonly string _previousAssetName;
+        private readonly Direction _previousDirection;
 
-        public PlaceTileCommand(string assetName, Vector3 position, Direction direction, bool replaceExisting)
+        public PlaceTileCommand(
+            string assetName,
+            Vector3 position,
+            Direction direction,
+            bool replaceExisting,
+            string previousAssetName = null,
+            Direction previousDirection = Direction.North)
         {
             _assetName = assetName;
             _position = position;
             _direction = direction;
             _replaceExisting = replaceExisting;
+            _previousAssetName = previousAssetName;
+            _previousDirection = previousDirection;
         }
 
         public MapEditorCommandDto ToDto() =>
@@ -33,8 +43,20 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         public void Revert(MapEditorCommandContext ctx)
         {
             GenericObjectSo asset = ctx.ResolveAsset(_assetName);
-            if (asset is TileObjectSo tile)
-                ctx.Construction.TryClearTile(_position, tile.layer, _direction);
+            if (asset is not TileObjectSo tile)
+                return;
+
+            ctx.Construction.TryClearTile(_position, tile.layer, _direction);
+
+            if (string.IsNullOrEmpty(_previousAssetName))
+                return;
+
+            GenericObjectSo previous = ctx.ResolveAsset(_previousAssetName);
+            if (previous is TileObjectSo previousTile)
+            {
+                ctx.Construction.TryPlaceTile(
+                    previousTile, _position, _previousDirection, replaceExisting: true, skipBuildCheck: false);
+            }
         }
 
         private void Execute(MapEditorCommandContext ctx, Vector3 position, Direction direction)
@@ -122,11 +144,13 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
     {
         private readonly string _assetName;
         private readonly Vector3 _position;
+        private readonly Direction _direction;
 
-        public ClearItemCommand(string assetName, Vector3 position)
+        public ClearItemCommand(string assetName, Vector3 position, Direction direction = Direction.North)
         {
             _assetName = assetName;
             _position = position;
+            _direction = direction;
         }
 
         public MapEditorCommandDto ToDto() =>
@@ -135,6 +159,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
                 Kind = MapEditorCommandKind.ClearItem,
                 AssetName = _assetName,
                 Position = _position,
+                Direction = _direction,
             };
 
         public void Apply(MapEditorCommandContext ctx)
@@ -145,7 +170,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         }
 
         public void Revert(MapEditorCommandContext ctx) =>
-            new PlaceItemCommand(_assetName, _position, Direction.North).Apply(ctx);
+            new PlaceItemCommand(_assetName, _position, _direction).Apply(ctx);
     }
 
     public sealed class MoveTileCommand : IMapEditorCommand
@@ -192,6 +217,49 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
 
             ctx.Construction.TryClearTile(from, tile.layer, direction);
             ctx.Construction.TryPlaceTile(tile, to, direction, replaceExisting: false, skipBuildCheck: false);
+        }
+    }
+
+    /// <summary>
+    /// Sets a sparse floor-decal id (0 clears). Snapshots previous id for invertibility.
+    /// </summary>
+    public sealed class SetFloorDecalCommand : IMapEditorCommand
+    {
+        private readonly Vector3 _position;
+        private readonly ushort _decalId;
+        private readonly ushort _previousDecalId;
+
+        public SetFloorDecalCommand(Vector3 position, ushort decalId, ushort previousDecalId)
+        {
+            _position = position;
+            _decalId = decalId;
+            _previousDecalId = previousDecalId;
+        }
+
+        public MapEditorCommandDto ToDto() =>
+            new()
+            {
+                Kind = _decalId == 0 ? MapEditorCommandKind.ClearFloorDecal : MapEditorCommandKind.SetFloorDecal,
+                Position = _position,
+                DecalId = _decalId,
+            };
+
+        public void Apply(MapEditorCommandContext ctx)
+        {
+            if (ctx.Map == null)
+                return;
+
+            if (ctx.Map.TrySetFloorDecal(_position, _decalId))
+                ctx.NotifyFloorDecalsChanged();
+        }
+
+        public void Revert(MapEditorCommandContext ctx)
+        {
+            if (ctx.Map == null)
+                return;
+
+            if (ctx.Map.TrySetFloorDecal(_position, _previousDecalId))
+                ctx.NotifyFloorDecalsChanged();
         }
     }
 

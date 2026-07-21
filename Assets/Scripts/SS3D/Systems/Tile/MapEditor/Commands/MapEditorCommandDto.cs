@@ -12,6 +12,8 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         MoveTile,
         MoveItem,
         Compound,
+        SetFloorDecal,
+        ClearFloorDecal,
     }
 
     [Serializable]
@@ -24,6 +26,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         public Direction Direction;
         public Direction PreviousDirection;
         public bool ReplaceExisting;
+        public ushort DecalId;
     }
 
     [Serializable]

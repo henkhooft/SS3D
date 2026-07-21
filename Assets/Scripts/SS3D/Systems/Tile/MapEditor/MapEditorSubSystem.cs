@@ -147,8 +147,11 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!IsServer || _tileSystem?.CurrentMap == null || _tileSystem.Loader == null)
                 return;
 
-            _commandService.Bind(_tileSystem.CurrentMap, _tileSystem.Loader,
-                new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService));
+            _commandService.Bind(
+                _tileSystem.CurrentMap,
+                _tileSystem.Loader,
+                new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService),
+                () => _tileSystem.SyncFloorDecalsToClients());
         }
 
         protected override void OnEnabled()
@@ -378,12 +381,14 @@ namespace SS3D.Systems.Tile.MapEditor
                 }
 
                 if (!InputInterface.IsCapturingText)
+                {
                     HandleToolHotkeys();
 
-                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.zKey.wasPressedThisFrame)
-                    RpcUndo(LocalConnection);
-                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.yKey.wasPressedThisFrame)
-                    RpcRedo(LocalConnection);
+                    if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.zKey.wasPressedThisFrame)
+                        RpcUndo(LocalConnection);
+                    if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.yKey.wasPressedThisFrame)
+                        RpcRedo(LocalConnection);
+                }
             }
 
             if (_toastTimer > 0f)
@@ -797,9 +802,25 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            List<IMapEditorCommand> list = new();
+            if (commands == null || commands.Length == 0 || _commandService.Context == null)
+                return;
+
+            MapEditorCommandContext ctx = _commandService.Context;
+            List<IMapEditorCommand> list = new(commands.Length);
             foreach (MapEditorCommandDto dto in commands)
-                list.Add(FromDto(dto));
+            {
+                if (dto.Kind is MapEditorCommandKind.PlaceTile or MapEditorCommandKind.PlaceItem
+                    or MapEditorCommandKind.SetFloorDecal)
+                {
+                    MapEditorCommandFactory.TryCreatePlaceCommands(dto, ctx, list);
+                    continue;
+                }
+
+                list.Add(MapEditorCommandFactory.FromDto(dto, ctx));
+            }
+
+            if (list.Count == 0)
+                return;
 
             _commandService.ExecuteCompound(list);
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
@@ -835,7 +856,7 @@ namespace SS3D.Systems.Tile.MapEditor
             IMapEditorCommand command = isItem
                 ? new CompoundCommand(new IMapEditorCommand[]
                 {
-                    new ClearItemCommand(assetName, from),
+                    new ClearItemCommand(assetName, from, direction),
                     new PlaceItemCommand(assetName, to, direction),
                 })
                 : new MoveTileCommand(assetName, from, to, direction);
@@ -864,21 +885,5 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.ShowToast(message);
             _toastTimer = 1.6f;
         }
-
-        private static IMapEditorCommand FromDto(MapEditorCommandDto dto) =>
-            dto.Kind switch
-            {
-                MapEditorCommandKind.PlaceTile =>
-                    new PlaceTileCommand(dto.AssetName, dto.Position, dto.Direction, dto.ReplaceExisting),
-                MapEditorCommandKind.PlaceItem =>
-                    new PlaceItemCommand(dto.AssetName, dto.Position, dto.Direction),
-                MapEditorCommandKind.ClearTile =>
-                    new ClearTileCommand(dto.AssetName, dto.Position, dto.Direction),
-                MapEditorCommandKind.ClearItem =>
-                    new ClearItemCommand(dto.AssetName, dto.Position),
-                MapEditorCommandKind.MoveTile =>
-                    new MoveTileCommand(dto.AssetName, dto.PreviousPosition, dto.Position, dto.Direction),
-                _ => new PlaceTileCommand(dto.AssetName, dto.Position, dto.Direction, dto.ReplaceExisting),
-            };
     }
 }

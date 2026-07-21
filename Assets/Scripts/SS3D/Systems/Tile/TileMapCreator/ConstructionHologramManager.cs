@@ -10,6 +10,7 @@ using SS3D.Logging;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Utils;
 using System;
 using System.Collections.Generic;
@@ -576,18 +577,18 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         /// <summary>
         /// Place all objects on the tilemap that are at the same locations as existing holograms.
-        /// Invalid cells are skipped; toasts aggregated reasons once per gesture (not only the first failure).
+        /// Invalid cells are skipped; successful cells are submitted as one undoable compound.
         /// </summary>
         private void PlaceOnHolograms()
         {
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            if (tileSystem == null || (_selectedObject == null && _selectedFloorDecal == null))
+            if (tileSystem == null || _mapEditor == null || (_selectedObject == null && _selectedFloorDecal == null))
                 return;
 
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
-            int placed = 0;
             int skipped = 0;
             var skipMessages = new List<string>(4);
+            var commands = new List<MapEditorCommandDto>(Mathf.Max(1, _holograms.Count));
 
             void NoteSkip(string message)
             {
@@ -609,8 +610,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
                         return;
                     }
 
-                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, position);
-                    placed++;
+                    commands.Add(new MapEditorCommandDto
+                    {
+                        Kind = MapEditorCommandKind.SetFloorDecal,
+                        Position = position,
+                        DecalId = _selectedFloorDecal.Id,
+                    });
                     return;
                 }
 
@@ -623,10 +628,28 @@ namespace SS3D.Systems.Tile.TileMapCreator
                         NoteSkip(preview.PrimaryMessage);
                         return;
                     }
+
+                    commands.Add(new MapEditorCommandDto
+                    {
+                        Kind = MapEditorCommandKind.PlaceTile,
+                        AssetName = _selectedObject.NameString,
+                        Position = position,
+                        Direction = direction,
+                        ReplaceExisting = isReplacing,
+                    });
+                    return;
                 }
 
-                tileSystem.RpcPlaceObject(_selectedObject.NameString, position, direction, isReplacing);
-                placed++;
+                if (_selectedObject is ItemObjectSo)
+                {
+                    commands.Add(new MapEditorCommandDto
+                    {
+                        Kind = MapEditorCommandKind.PlaceItem,
+                        AssetName = _selectedObject.NameString,
+                        Position = position,
+                        Direction = direction,
+                    });
+                }
             }
 
             if (_holograms.Count == 0)
@@ -639,8 +662,11 @@ namespace SS3D.Systems.Tile.TileMapCreator
                     TryPlaceAt(buildGhost.TargetPosition, buildGhost.Direction);
             }
 
-            if (skipped > 0 && _mapEditor != null)
-                _mapEditor.ShowLocalToast(FormatSkippedPlacementToast(skipped, placed, skipMessages));
+            if (commands.Count > 0)
+                _mapEditor.SubmitCommands(commands.ToArray());
+
+            if (skipped > 0)
+                _mapEditor.ShowLocalToast(FormatSkippedPlacementToast(skipped, commands.Count, skipMessages));
         }
 
         private static string FormatSkippedPlacementToast(int skipped, int placed, List<string> skipMessages)
@@ -681,35 +707,49 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 return;
             }
 
+            var commands = new List<MapEditorCommandDto>(8);
+
             if (_holograms.Count == 0)
             {
-                ClearScopedAt(tileSystem, GetPlacementPoint(forceTileSnap: true), subcategory);
+                CollectScopedClear(tileSystem, GetPlacementPoint(forceTileSnap: true), subcategory, commands);
+            }
+            else
+            {
+                foreach (ConstructionHologram hologram in _holograms)
+                    CollectScopedClear(tileSystem, hologram.TargetPosition, subcategory, commands);
+            }
+
+            if (commands.Count == 0)
+            {
+                _mapEditor.ShowLocalToast(MapEditorDeleteTargeting.EmptyHint(subcategory, _lastRegisteredDirection));
                 return;
             }
 
-            int clearedTiles = 0;
-            foreach (ConstructionHologram hologram in _holograms)
-            {
-                if (ClearScopedAt(tileSystem, hologram.TargetPosition, subcategory))
-                    clearedTiles++;
-            }
-
-            if (clearedTiles == 0)
-                _mapEditor.ShowLocalToast(MapEditorDeleteTargeting.EmptyHint(subcategory, _lastRegisteredDirection));
+            _mapEditor.SubmitCommands(commands.ToArray());
         }
 
-        private bool ClearScopedAt(TileSubSystem tileSystem, Vector3 position, MapEditorSubcategory subcategory)
+        private bool CollectScopedClear(
+            TileSubSystem tileSystem,
+            Vector3 position,
+            MapEditorSubcategory subcategory,
+            List<MapEditorCommandDto> into)
         {
             TileMap map = tileSystem.CurrentMap;
             if (map == null)
                 return false;
+
+            int before = into.Count;
 
             if (subcategory == MapEditorSubcategory.Overlays)
             {
                 if (!map.TryGetFloorDecalId(position, out ushort decalId) || decalId == 0)
                     return false;
 
-                tileSystem.RpcClearFloorDecal(position);
+                into.Add(new MapEditorCommandDto
+                {
+                    Kind = MapEditorCommandKind.ClearFloorDecal,
+                    Position = position,
+                });
                 return true;
             }
 
@@ -723,22 +763,37 @@ namespace SS3D.Systems.Tile.TileMapCreator
             foreach (MapEditorDeleteTarget target in _deleteTargets)
             {
                 if (target.IsFloorDecal)
-                    tileSystem.RpcClearFloorDecal(position);
-                else
-                    tileSystem.RpcClearTileObject(target.AssetName, position, target.Direction);
+                {
+                    into.Add(new MapEditorCommandDto
+                    {
+                        Kind = MapEditorCommandKind.ClearFloorDecal,
+                        Position = position,
+                    });
+                    continue;
+                }
+
+                into.Add(new MapEditorCommandDto
+                {
+                    Kind = MapEditorCommandKind.ClearTile,
+                    AssetName = target.AssetName,
+                    Position = position,
+                    Direction = target.Direction,
+                });
             }
 
-            return true;
+            return into.Count > before;
         }
 
         private void EraseAtPointer()
         {
-            // Kept for older call sites; Delete uses ClearScopedAt via DeleteOnHolograms.
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
             if (tileSystem == null || _mapEditor == null)
                 return;
 
-            ClearScopedAt(tileSystem, GetPlacementPoint(forceTileSnap: true), _mapEditor.CurrentSubcategory);
+            var commands = new List<MapEditorCommandDto>(4);
+            CollectScopedClear(tileSystem, GetPlacementPoint(forceTileSnap: true), _mapEditor.CurrentSubcategory, commands);
+            if (commands.Count > 0)
+                _mapEditor.SubmitCommands(commands.ToArray());
         }
 
         private void RefreshHologram(ConstructionHologram hologram) =>
@@ -1039,20 +1094,41 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 ? Mouse.current.position.ReadValue()
                 : (Vector2)Input.mousePosition;
             Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
-            if (camera == null)
+            if (camera == null || _mapEditor == null)
                 return;
 
             Ray ray = camera.ScreenPointToRay(screenPosition);
-            if (Physics.Raycast(ray, out RaycastHit hitInfo))
+            if (!Physics.Raycast(ray, out RaycastHit hitInfo))
+                return;
+
+            PlacedItemObject placedItem = hitInfo.collider.gameObject.GetComponent<PlacedItemObject>();
+            if (placedItem == null)
+                return;
+
+            Direction direction = NearestCardinalDirection(placedItem.transform.rotation);
+            _mapEditor.SubmitCommands(new[]
             {
-                PlacedItemObject placedItem = hitInfo.collider.gameObject.GetComponent<PlacedItemObject>();
-                if (placedItem != null)
+                new MapEditorCommandDto
                 {
-                    SubSystems.Get<TileSubSystem>()?.RpcClearItemObject(
-                        placedItem.NameString,
-                        placedItem.gameObject.transform.position);
-                }
-            }
+                    Kind = MapEditorCommandKind.ClearItem,
+                    AssetName = placedItem.NameString,
+                    Position = placedItem.gameObject.transform.position,
+                    Direction = direction,
+                },
+            });
+        }
+
+        private static Direction NearestCardinalDirection(Quaternion rotation)
+        {
+            float y = rotation.eulerAngles.y;
+            int snapped = Mathf.RoundToInt(y / 90f) & 3;
+            return snapped switch
+            {
+                0 => Direction.North,
+                1 => Direction.East,
+                2 => Direction.South,
+                _ => Direction.West,
+            };
         }
     }
 }

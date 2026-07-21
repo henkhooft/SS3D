@@ -23,13 +23,17 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             set => _placementMode = value;
         }
 
-        public void Bind(TileMap map, TileResourceLoader loader, ConstructionService construction)
+        public void Bind(TileMap map, TileResourceLoader loader, ConstructionService construction,
+            System.Action floorDecalsChanged = null)
         {
             _context = new MapEditorCommandContext(map, loader, construction)
             {
                 PlacementMode = _placementMode,
+                FloorDecalsChanged = floorDecalsChanged,
             };
         }
+
+        public MapEditorCommandContext Context => _context;
 
         public void ClearHistory() => _undoStack.Clear();
 
@@ -83,7 +87,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         public static IMapEditorCommand FromClear(string assetName, Vector3 position, Direction direction, bool isItem)
         {
             return isItem
-                ? new ClearItemCommand(assetName, position)
+                ? new ClearItemCommand(assetName, position, direction)
                 : new ClearTileCommand(assetName, position, direction);
         }
     }
