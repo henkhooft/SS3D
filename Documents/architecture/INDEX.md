@@ -153,6 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
+| [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
 
 ## Implementation plans
 
