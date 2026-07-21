@@ -216,7 +216,7 @@
 
 .map-editor-region--top-left { left: 24px; top: 24px; overflow: visible; }
 .map-editor-region--top-right { right: 24px; top: 24px; overflow: visible; }
-.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 190px; }
+.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 210px; }
 
 .map-editor-right-column {
     flex-direction: column;

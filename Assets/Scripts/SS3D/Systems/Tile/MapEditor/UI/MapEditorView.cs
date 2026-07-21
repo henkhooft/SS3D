@@ -18,8 +18,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
         {
             [PaletteMode.Min] = 40f,
-            [PaletteMode.Normal] = 190f,
-            [PaletteMode.Max] = 390f,
+            [PaletteMode.Normal] = 210f,
+            [PaletteMode.Max] = 420f,
         };
 
         /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
