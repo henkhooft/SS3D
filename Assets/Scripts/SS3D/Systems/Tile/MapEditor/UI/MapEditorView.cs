@@ -559,15 +559,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private Button BuildSlot(MapEditorCatalogEntry entry)
         {
-            GenericObjectSo asset = entry.IsEraser ? null : _loader.GetAsset(entry.AssetName);
-            FloorDecalDefinition floorDecal = null;
-            if (!entry.IsEraser &&
-                MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId))
-            {
-                FloorDecalCatalog.Get()?.TryGet(decalId, out floorDecal);
-            }
-
+            ushort decalId = 0;
+            bool isFloorDecal = !entry.IsEraser &&
+                               MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out decalId);
             bool isSpawn = !entry.IsEraser && MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName);
+
+            // Virtual catalog keys (floor decals / spawn markers) are not TileResourceLoader assets.
+            GenericObjectSo asset = entry.IsEraser || isFloorDecal || isSpawn
+                ? null
+                : _loader.GetAsset(entry.AssetName);
+
+            FloorDecalDefinition floorDecal = null;
+            if (isFloorDecal)
+                FloorDecalCatalog.Get()?.TryGet(decalId, out floorDecal);
 
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
             slot.AddToClassList("map-editor-slot");
