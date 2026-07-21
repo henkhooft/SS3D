@@ -233,3 +233,9 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 - Design slow-leak deferred: `IsAirtight=false` does not open `BlockedEdges`; room↔room gas still sealed until a permeability path exists.
 - Prefab wiring via **SS3D → Structural Damage → Setup Wall Integrity Presentation** (and **SS3D → Localization → Examine → Add Structural Integrity Template Keys**). Doors deferred until airlocks bake `PlacedTileObject`.
 
+### Blast detonation VFX
+
+- Epicenter-only presentation after `ResolveBlast`: `TileSubSystem.RpcBlastDetonated` → `BlastVfxPresenter` (fireball wash matching atmos fire-core color, point light, optional boom clip, floor scorch DecalProjector, `CameraFollow.AddImpulse`, `TriggerBlastFlash`).
+- Does not write atmos GPU fire atlas / fake combustion. Boom clip on `BlastVfxCatalog` left null until SFX lands.
+- EditMode: `BlastVfxFalloffTests`. Manual: `blast` in Play Mode.
+

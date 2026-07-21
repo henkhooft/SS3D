@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: f5af8bff5 — 2026-07-21
+> Verified: 82c1fed63 — 2026-07-21
 
 # Tile / construction
 
@@ -17,7 +17,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
-- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point
+- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
 - `Assets/Scripts/SS3D/Systems/Tile/TileMap.cs` — tilemap data and mutation
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/AdjacencyEngine.cs` — queued adjacency recompute
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/TileAdjacencyView.cs` — local mesh/direction visuals

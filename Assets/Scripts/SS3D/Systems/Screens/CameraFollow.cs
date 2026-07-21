@@ -105,6 +105,9 @@ namespace SS3D.Systems.Screens
 
         private float _zoomSpeedMultiplier = 1f;
         private float _rotationSpeedMultiplier = 1f;
+        private float _shakeAmplitude;
+        private float _shakeDuration;
+        private float _shakeElapsed;
         // Limits
         private const float MinTransitionSpeed = 3f;
         private const float MaxTransitionSpeed = 6f;
@@ -258,6 +261,7 @@ namespace SS3D.Systems.Screens
             // Look at that part from the correct position
             Position = targetPosition + relativePosition;
             LookAt(targetPosition);
+            ApplyShakeOffset();
         }
         /// <summary>
         /// Move to the new target
@@ -281,6 +285,7 @@ namespace SS3D.Systems.Screens
             Position = Vector3.Lerp(Position, newPosition + newPositionOffset, _transitionSpeed * Time.deltaTime);
             Position += targetPosition - _prevTargetPosition;
             _prevTargetPosition = targetPosition;
+            ApplyShakeOffset();
         }
         /// <summary>
         /// Set variables for moving to the new target
@@ -315,6 +320,34 @@ namespace SS3D.Systems.Screens
             }
             TransitToNewTargetStart(newTarget);
             _target = newTarget;
+        }
+
+        /// <summary>
+        /// Short positional impulse (blast rumble). Stacks by taking the stronger amplitude/duration.
+        /// </summary>
+        public void AddImpulse(float amplitude, float duration)
+        {
+            if (amplitude <= 0f || duration <= 0f)
+                return;
+
+            _shakeAmplitude = Mathf.Max(_shakeAmplitude, amplitude);
+            _shakeDuration = Mathf.Max(_shakeDuration, duration);
+            _shakeElapsed = 0f;
+        }
+
+        private void ApplyShakeOffset()
+        {
+            if (_shakeDuration <= 0f || _shakeElapsed >= _shakeDuration)
+            {
+                _shakeAmplitude = 0f;
+                _shakeDuration = 0f;
+                return;
+            }
+
+            _shakeElapsed += Time.deltaTime;
+            float t = 1f - Mathf.Clamp01(_shakeElapsed / _shakeDuration);
+            Vector3 offset = UnityEngine.Random.insideUnitSphere * (_shakeAmplitude * t * t);
+            Position += offset;
         }
     }
 }

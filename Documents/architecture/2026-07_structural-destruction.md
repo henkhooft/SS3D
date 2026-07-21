@@ -1,5 +1,5 @@
 > Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (Area/atmos on Destroyed), §5 (crew brute), §1/§7 (world presentation)
-> Touches systems: structural-destruction, tile, area, atmospherics, health, examine
+> Touches systems: structural-destruction, tile, area, atmospherics, health, examine, screen-effects
 > Status: in-progress
 
 # Structural destruction — integrity + blast
@@ -40,12 +40,22 @@ Ship per-tile structural integrity for Turf walls/doors/windows and hop-based bl
 - Editor: **SS3D → Structural Damage → Setup Wall Integrity Presentation** (walls/windows with baked `PlacedTileObject`)
 - Atmos slow-leak **deferred** — keep binary `IsAirtight`; BlockedEdges still seal room↔room flow (documented fork)
 
+## Blast detonation VFX (post Phase 4)
+
+- `ResolveBlast` → `TileSubSystem.ServerNotifyBlastDetonated` → `RpcBlastDetonated` (`RunLocally`, no BufferLast) → `BlastVfxPresenter`
+- Epicenter fireball wash (atmos fire-core palette `(1, 0.55, 0.15)`), point light, boom clip (catalog), floor scorch DecalProjector
+- Distance-scaled `CameraFollow.AddImpulse` + `ScreenEffectsSubSystem.TriggerBlastFlash`
+- Catalog: `Assets/Resources/BlastVfxCatalog.asset`; content under `Assets/Content/WorldObjects/World/VFX/Structural/`
+- Editor: **SS3D → Structural Damage → Setup Blast VFX Assets**
+
 ## Deviations / notes
 
 - Phase 1 Area recompute is **full reflood preserving metadata**, deferred one Update tick because `TileMap` notifies clear **before** occupant removal (same pitfall as atmos). True local flood fill is follow-up.
 - Debris/rubble spawn not wired (no art path yet).
 - Blast hop rules duplicate atmos `CanFlow` bit checks locally (avoid `AtmosNeighbourBuilder` internal coupling).
 - No cracked wall mesh/decal art yet — provisional MPB tint only.
+- Blast VFX copies atmos fire *look* only — does not write `_AtmosFire` atlas or fake combustion.
+- Boom `AudioClip` on catalog left unassigned until SFX exists.
 - Doors: presentation/examine wait on baking `PlacedTileObject` onto airlock prefabs (Phase 1 SyncVar pitfall).
 - Items / repair: later phases in [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md).
 

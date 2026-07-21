@@ -9,6 +9,7 @@ using SS3D.Data.Persistence;
 using SS3D.Logging;
 using SS3D.Systems.Area;
 using SS3D.Systems.Persistence;
+using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.FloorVisuals;
 using System;
 using System.Collections;
@@ -312,6 +313,21 @@ namespace SS3D.Systems.Tile
             }
 
             view.ReplaceClientChunks(list);
+        }
+
+        /// <summary>
+        /// Server entry for blast detonation VFX. One-shot — do not BufferLast.
+        /// </summary>
+        [Server]
+        public void ServerNotifyBlastDetonated(Vector3 worldPosition, float yield)
+        {
+            RpcBlastDetonated(worldPosition, yield);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcBlastDetonated(Vector3 worldPosition, float yield)
+        {
+            BlastVfxPresenter.Play(worldPosition, yield);
         }
 
         [Serializable]

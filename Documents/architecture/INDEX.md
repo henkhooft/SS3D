@@ -45,7 +45,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | virology | [virology.md](../design/virology.md) — active | none yet | none yet |
 | atmospherics | [atmospherics.md](../design/atmospherics.md) — active | [atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) — shipped (partial); [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — planned | [atmospherics](systems/atmospherics.md) — partial |
 | chemistry | [chemistry.md](../design/chemistry.md) — active | none yet | [substances](systems/substances.md) — partial |
-| explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | [structural-destruction](2026-07_structural-destruction.md) — in-progress (Phase 1–4: integrity + melee + blast + presentation) | [structural-destruction](systems/structural-destruction.md) — partial |
+| explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | [structural-destruction](2026-07_structural-destruction.md) — in-progress (Phase 1–4 + blast detonation VFX) | [structural-destruction](systems/structural-destruction.md) — partial |
 | construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
 | creative-mode | [creative-mode.md](../design/creative-mode.md) — active | none yet | none yet |
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); polish handoff [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) (planned); palette emission sample fix shipped on Simple Toon | [rendering](systems/rendering.md) — partial |
@@ -112,7 +112,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, camera-ray connect (exclude self); `C`/chip toggles intent→stance; reticle lock-on + cross flash; disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
-| Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine stage lines; `hurtstructure` / `blast` |
+| Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine; epicenter blast VFX (fireball/light/scorch/shake/flash); `hurtstructure` / `blast` |
 | Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
@@ -155,7 +155,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
-| [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4: integrity + melee + blast + presentation) |
+| [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4 + blast detonation VFX) |
 
 ## Implementation plans
 

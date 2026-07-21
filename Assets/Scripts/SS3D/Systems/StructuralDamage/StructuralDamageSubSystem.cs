@@ -70,11 +70,25 @@ namespace SS3D.Systems.StructuralDamage
 
         /// <summary>
         /// Server blast BFS from <paramref name="epicenter"/>. No-op if tile services are unbound.
+        /// Broadcasts client VFX via <see cref="TileSubSystem"/> after resolution.
         /// </summary>
         public void ResolveBlast(TileCoord epicenter, float yield, float falloff)
         {
             IBlastResolutionService blast = Blast;
-            blast?.Resolve(epicenter, yield, falloff);
+            if (blast == null)
+                return;
+
+            blast.Resolve(epicenter, yield, falloff);
+
+            if (_boundQuery == null
+                || !SubSystems.TryGet(out TileSubSystem tiles)
+                || !tiles.IsServer)
+            {
+                return;
+            }
+
+            Vector3 world = _boundQuery.TileToWorld(epicenter);
+            tiles.ServerNotifyBlastDetonated(world, yield);
         }
 
         private void EnsureServiceBound()
