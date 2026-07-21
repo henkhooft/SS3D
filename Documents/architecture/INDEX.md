@@ -3,6 +3,7 @@
 Navigation hub for agents. Read this before broad code search. Open the relevant [system map](systems/) for entry points and key files.
 
 Authoring conventions: [Documents/SKILL.md](../SKILL.md). Agent rules: [AGENTS.md](../../AGENTS.md).
+Cross-cutting structural risk register: [TECH_DEBT.md](TECH_DEBT.md).
 
 ## Coverage table
 
@@ -178,6 +179,7 @@ per domain.
 
 | Resource | Path | Use when |
 |----------|------|----------|
+| Technical debt tracker | [TECH_DEBT.md](TECH_DEBT.md) | Prioritizing structural risk / code smells before picking up cleanup work |
 | Art asset index | [art-asset-index.md](../art-asset-index.md) | Locating or importing art from SS3D-Art |
 | Available for import | [art-available-for-import.json](../art-available-for-import.json) | Finding game-ready art not yet in `Assets/Art/` |
 | UI icon index | [icon-index.md](../icon-index.md) | Finding external game-icons SVGs for UI work |
