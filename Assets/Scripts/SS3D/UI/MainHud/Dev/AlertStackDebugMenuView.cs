@@ -15,20 +15,21 @@ namespace SS3D.UI.MainHud.Dev
     /// (see <see cref="MainHudSubSystem.SetDebugAlertOverride"/>). Toggle with F3 via
     /// <see cref="InputSubSystem.ToggleAlertStackDebug"/> (F2 is the condemned screen-effects uGUI menu).
     /// <para>
-    /// Built entirely at runtime via UI Toolkit with its own throwaway <see cref="PanelSettings"/> - no
-    /// prefab/scene/stylesheet dependency, and deliberately not a copy of
-    /// <c>ScreenEffectsDebugMenuView</c>'s uGUI shape: that panel is explicitly condemned (see
-    /// Documents/architecture/systems/screen-effects.md), so a new debug tool shouldn't extend it.
-    /// The document registers with <see cref="InputInterface"/> so pointer-over-panel blocks world clicks.
-    /// </para>
-    /// <para>
-    /// Namespace is <c>Dev</c> (not <c>Debug</c>) so it cannot shadow <see cref="UnityEngine.Debug"/> inside
-    /// <c>SS3D.UI.MainHud</c>.
+    /// Anchored top-left so it does not cover the live alert stack (top-right). Reuses the Main HUD
+    /// <see cref="PanelSettings"/> theme so labels actually render (a blank runtime PanelSettings has no font).
     /// </para>
     /// </summary>
     public sealed class AlertStackDebugMenuView : View
     {
         private static readonly AlertHazard[] Hazards = (AlertHazard[])Enum.GetValues(typeof(AlertHazard));
+
+        private static readonly Color PanelBg = new(0.07f, 0.07f, 0.09f, 0.94f);
+        private static readonly Color RowBg = new(0.14f, 0.14f, 0.16f, 1f);
+        private static readonly Color ButtonIdle = new(0.22f, 0.22f, 0.25f, 1f);
+        private static readonly Color ButtonOffActive = new(0.35f, 0.35f, 0.38f, 1f);
+        private static readonly Color ButtonWarnActive = new(0.75f, 0.55f, 0.15f, 1f);
+        private static readonly Color ButtonCritActive = new(0.75f, 0.2f, 0.2f, 1f);
+        private static readonly Color ClearBg = new(0.45f, 0.15f, 0.15f, 1f);
 
         private static bool s_bootstrapped;
 
@@ -121,6 +122,12 @@ namespace SS3D.UI.MainHud.Dev
             }
 
             _visible = !_visible;
+            if (_visible)
+            {
+                _state = SubSystems.Get<MainHudSubSystem>()?.DebugAlertOverride ?? default;
+                RefreshAllButtons();
+            }
+
             _panel.style.display = _visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
@@ -128,131 +135,183 @@ namespace SS3D.UI.MainHud.Dev
         {
             _state = SubSystems.Get<MainHudSubSystem>()?.DebugAlertOverride ?? default;
 
-            PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
-            settings.scaleMode = PanelScaleMode.ConstantPixelSize;
-
             _document = gameObject.AddComponent<UIDocument>();
-            _document.panelSettings = settings;
+            _document.panelSettings = ResolvePanelSettings();
             _document.sortingOrder = 2000f;
 
             _panel = new VisualElement();
-            // Qualify UITK Position: Actor exposes a Vector3 Position property that would otherwise win.
+            // Top-left: alert icons live in main-hud__zone--alerts (top-right).
             _panel.style.position = UnityEngine.UIElements.Position.Absolute;
             _panel.style.top = 16f;
-            _panel.style.right = 16f;
-            _panel.style.width = 260f;
+            _panel.style.left = 16f;
+            _panel.style.width = 360f;
+            _panel.style.maxHeight = Length.Percent(90);
             _panel.style.paddingLeft = 12f;
             _panel.style.paddingRight = 12f;
             _panel.style.paddingTop = 12f;
             _panel.style.paddingBottom = 12f;
-            _panel.style.backgroundColor = new Color(0.05f, 0.05f, 0.06f, 0.9f);
+            _panel.style.backgroundColor = PanelBg;
             _panel.style.borderTopLeftRadius = 6f;
             _panel.style.borderTopRightRadius = 6f;
             _panel.style.borderBottomLeftRadius = 6f;
             _panel.style.borderBottomRightRadius = 6f;
+            _panel.style.flexDirection = FlexDirection.Column;
 
-            _panel.Add(BuildLabel("Alert Stack (F3)", 16, FontStyle.Bold));
+            _panel.Add(BuildLabel("Alert Stack Debug (F3)", 15, FontStyle.Bold));
+            _panel.Add(BuildHint("Icons render top-right. Pick a severity per hazard."));
 
+            ScrollView list = new(ScrollViewMode.Vertical);
+            list.style.flexGrow = 1f;
+            list.style.marginTop = 8f;
             foreach (AlertHazard hazard in Hazards)
             {
-                _panel.Add(BuildRow(hazard));
+                list.Add(BuildRow(hazard));
             }
 
-            _panel.Add(BuildActionRow("Clear All", () =>
+            _panel.Add(list);
+
+            Button clear = new(() =>
             {
                 _state = default;
                 SubSystems.Get<MainHudSubSystem>()?.ClearDebugAlertOverride();
-                RebuildRowLabels();
-            }));
+                RefreshAllButtons();
+            })
+            {
+                text = "Clear all",
+            };
+            StyleButton(clear, ClearBg);
+            clear.style.marginTop = 10f;
+            clear.style.height = 28f;
+            _panel.Add(clear);
 
             _document.rootVisualElement.Add(_panel);
             InputInterface.RegisterDocument(_document);
         }
 
+        private static PanelSettings ResolvePanelSettings()
+        {
+            // Blank runtime PanelSettings has no theme/font — labels render as empty boxes.
+            MainHudAssetCatalog catalog =
+                Resources.Load<MainHudAssetCatalog>(MainHudAssetPaths.ResourcesCatalogName);
+            if (catalog?.PanelSettings != null)
+            {
+                return catalog.PanelSettings;
+            }
+
+            PanelSettings fallback = ScriptableObject.CreateInstance<PanelSettings>();
+            fallback.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            fallback.referenceResolution = new Vector2Int(1200, 800);
+            return fallback;
+        }
+
         private VisualElement BuildRow(AlertHazard hazard)
         {
             VisualElement row = new() { name = $"row-{hazard}" };
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.justifyContent = Justify.SpaceBetween;
-            row.style.alignItems = Align.Center;
-            row.style.marginTop = 4f;
+            row.style.flexDirection = FlexDirection.Column;
+            row.style.marginTop = 6f;
             row.style.paddingLeft = 8f;
             row.style.paddingRight = 8f;
-            row.style.paddingTop = 4f;
-            row.style.paddingBottom = 4f;
-            row.style.backgroundColor = new Color(0.15f, 0.15f, 0.17f, 1f);
-            row.style.borderTopLeftRadius = 4f;
-            row.style.borderTopRightRadius = 4f;
-            row.style.borderBottomLeftRadius = 4f;
-            row.style.borderBottomRightRadius = 4f;
-
-            row.Add(BuildLabel(hazard.ToString(), 12, FontStyle.Normal));
-
-            Label severityLabel = BuildLabel(SeverityText(_state[hazard]), 12, FontStyle.Bold);
-            severityLabel.name = $"severity-{hazard}";
-            severityLabel.style.color = SeverityColor(_state[hazard]);
-            row.Add(severityLabel);
-
-            row.RegisterCallback<ClickEvent>(_ =>
-            {
-                CycleSeverity(hazard);
-                severityLabel.text = SeverityText(_state[hazard]);
-                severityLabel.style.color = SeverityColor(_state[hazard]);
-                SubSystems.Get<MainHudSubSystem>()?.SetDebugAlertOverride(_state);
-            });
-
-            return row;
-        }
-
-        private VisualElement BuildActionRow(string text, Action onClick)
-        {
-            VisualElement row = new();
-            row.style.alignItems = Align.Center;
-            row.style.marginTop = 8f;
             row.style.paddingTop = 6f;
             row.style.paddingBottom = 6f;
-            row.style.backgroundColor = new Color(0.35f, 0.15f, 0.15f, 1f);
+            row.style.backgroundColor = RowBg;
             row.style.borderTopLeftRadius = 4f;
             row.style.borderTopRightRadius = 4f;
             row.style.borderBottomLeftRadius = 4f;
             row.style.borderBottomRightRadius = 4f;
 
-            row.Add(BuildLabel(text, 13, FontStyle.Bold));
-            row.RegisterCallback<ClickEvent>(_ => onClick());
+            row.Add(BuildLabel(HazardLabel(hazard), 12, FontStyle.Bold));
+
+            VisualElement buttons = new();
+            buttons.style.flexDirection = FlexDirection.Row;
+            buttons.style.marginTop = 4f;
+            buttons.style.justifyContent = Justify.SpaceBetween;
+
+            buttons.Add(BuildSeverityButton(hazard, AlertSeverity.None, "Off"));
+            if (hazard != AlertHazard.Dying)
+            {
+                buttons.Add(BuildSeverityButton(hazard, AlertSeverity.Warning, "Warning"));
+            }
+
+            buttons.Add(BuildSeverityButton(hazard, AlertSeverity.Critical, "Critical"));
+            row.Add(buttons);
             return row;
         }
 
-        private void RebuildRowLabels()
+        private Button BuildSeverityButton(AlertHazard hazard, AlertSeverity severity, string label)
+        {
+            Button button = new(() =>
+            {
+                SetSeverity(hazard, severity);
+                SubSystems.Get<MainHudSubSystem>()?.SetDebugAlertOverride(_state);
+                RefreshRowButtons(hazard);
+            })
+            {
+                text = label,
+                name = ButtonName(hazard, severity),
+            };
+
+            button.style.flexGrow = 1f;
+            button.style.marginRight = 4f;
+            button.style.height = 24f;
+            button.style.unityFontStyleAndWeight = FontStyle.Bold;
+            button.style.fontSize = 11;
+            ApplySeverityButtonStyle(button, hazard, severity);
+            return button;
+        }
+
+        private void RefreshAllButtons()
         {
             foreach (AlertHazard hazard in Hazards)
             {
-                Label severityLabel = _panel.Q<Label>($"severity-{hazard}");
-                if (severityLabel == null)
-                {
-                    continue;
-                }
-
-                severityLabel.text = SeverityText(_state[hazard]);
-                severityLabel.style.color = SeverityColor(_state[hazard]);
+                RefreshRowButtons(hazard);
             }
         }
 
-        private void CycleSeverity(AlertHazard hazard)
+        private void RefreshRowButtons(AlertHazard hazard)
         {
-            AlertSeverity next = _state[hazard] switch
+            RefreshOneButton(hazard, AlertSeverity.None);
+            if (hazard != AlertHazard.Dying)
             {
-                AlertSeverity.None => AlertSeverity.Warning,
-                AlertSeverity.Warning => AlertSeverity.Critical,
-                _ => AlertSeverity.None,
-            };
-
-            // Dying has no warning tier in the design (main-hud.md §9) - skip straight to Critical.
-            if (hazard == AlertHazard.Dying && next == AlertSeverity.Warning)
-            {
-                next = AlertSeverity.Critical;
+                RefreshOneButton(hazard, AlertSeverity.Warning);
             }
 
-            SetSeverity(hazard, next);
+            RefreshOneButton(hazard, AlertSeverity.Critical);
+        }
+
+        private void RefreshOneButton(AlertHazard hazard, AlertSeverity severity)
+        {
+            Button button = _panel.Q<Button>(ButtonName(hazard, severity));
+            if (button != null)
+            {
+                ApplySeverityButtonStyle(button, hazard, severity);
+            }
+        }
+
+        private void ApplySeverityButtonStyle(Button button, AlertHazard hazard, AlertSeverity severity)
+        {
+            bool active = _state[hazard] == severity;
+            Color bg = severity switch
+            {
+                AlertSeverity.Warning => active ? ButtonWarnActive : ButtonIdle,
+                AlertSeverity.Critical => active ? ButtonCritActive : ButtonIdle,
+                _ => active ? ButtonOffActive : ButtonIdle,
+            };
+            StyleButton(button, bg);
+        }
+
+        private static void StyleButton(Button button, Color background)
+        {
+            button.style.backgroundColor = background;
+            button.style.color = Color.white;
+            button.style.borderTopWidth = 0;
+            button.style.borderRightWidth = 0;
+            button.style.borderBottomWidth = 0;
+            button.style.borderLeftWidth = 0;
+            button.style.borderTopLeftRadius = 3f;
+            button.style.borderTopRightRadius = 3f;
+            button.style.borderBottomLeftRadius = 3f;
+            button.style.borderBottomRightRadius = 3f;
+            button.style.unityTextAlign = TextAnchor.MiddleCenter;
         }
 
         private void SetSeverity(AlertHazard hazard, AlertSeverity severity)
@@ -274,18 +333,16 @@ namespace SS3D.UI.MainHud.Dev
             }
         }
 
-        private static string SeverityText(AlertSeverity severity) => severity switch
-        {
-            AlertSeverity.Warning => "WARNING",
-            AlertSeverity.Critical => "CRITICAL",
-            _ => "off",
-        };
+        private static string ButtonName(AlertHazard hazard, AlertSeverity severity) =>
+            $"btn-{hazard}-{severity}";
 
-        private static Color SeverityColor(AlertSeverity severity) => severity switch
+        private static string HazardLabel(AlertHazard hazard) => hazard switch
         {
-            AlertSeverity.Warning => new Color(0.85f, 0.65f, 0.25f),
-            AlertSeverity.Critical => new Color(0.85f, 0.3f, 0.3f),
-            _ => new Color(0.6f, 0.6f, 0.6f),
+            AlertHazard.LowPressure => "Low pressure",
+            AlertHazard.HighPressure => "High pressure",
+            AlertHazard.LowOxygen => "Low oxygen",
+            AlertHazard.Dying => "Dying / critical",
+            _ => hazard.ToString(),
         };
 
         private static Label BuildLabel(string text, int fontSize, FontStyle fontStyle)
@@ -294,6 +351,15 @@ namespace SS3D.UI.MainHud.Dev
             label.style.color = Color.white;
             label.style.fontSize = fontSize;
             label.style.unityFontStyleAndWeight = fontStyle;
+            return label;
+        }
+
+        private static Label BuildHint(string text)
+        {
+            Label label = BuildLabel(text, 11, FontStyle.Normal);
+            label.style.color = new Color(0.7f, 0.7f, 0.72f);
+            label.style.marginTop = 2f;
+            label.style.whiteSpace = WhiteSpace.Normal;
             return label;
         }
     }
