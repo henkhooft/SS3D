@@ -11,6 +11,12 @@ using SS3D.Systems.Health;
 
 namespace SS3D.Systems.Inventory.Containers
 {
+    public enum HandSide : byte
+    {
+        Right = 0,
+        Left = 1,
+    }
+
     /// <summary>
     /// A hand is what an entity uses to grab and hold items, to interact with things in range.
     /// </summary>
@@ -30,10 +36,8 @@ namespace SS3D.Systems.Inventory.Containers
         // TODO: When AssetData is on, we should update this to not use this
         [SerializeField] private Sprite _pickupIcon;
 
-        /// <summary>
-        /// The item held in this hand, if it exists
-        /// </summary>
-        public Item ItemInHand => Container.Items.FirstOrDefault();
+        /// <summary>Left vs right — drives upper-body animation Mirror for Mixamo holds/swings.</summary>
+        [SerializeField] private HandSide _side = HandSide.Right;
 
         /// <summary>
         /// Point from where distances for interaction is computed.
@@ -44,6 +48,13 @@ namespace SS3D.Systems.Inventory.Containers
         /// the hands script controlling this hand.
         /// </summary>
         public Hands HandsController;
+
+        public HandSide Side => _side;
+
+        /// <summary>
+        /// The item held in this hand, if it exists
+        /// </summary>
+        public Item ItemInHand => Container.Items.FirstOrDefault();
 
         public Vector3 InteractionOrigin => _interactionOrigin.position;
 

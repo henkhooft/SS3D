@@ -5,7 +5,6 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
-using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
@@ -258,6 +257,19 @@ namespace SS3D.Systems.Health
         {
             _pools = HealthSimulation.ApplyOxyRelief(_pools, oxyRelief);
             PublishSnapshot();
+        }
+
+        /// <summary>
+        /// Forces the canonical brain-death trigger (Documents/design/health.md — death has
+        /// exactly one trigger, brain function reaching zero) instead of ghosting the entity
+        /// directly. Used by admin tooling so it doesn't bypass health state.
+        /// </summary>
+        [Server]
+        public void ForceBrainDeath()
+        {
+            OrganSimulation.SetOrganFunction(_organs, OrganType.Brain, 0f);
+            PublishSnapshot();
+            TriggerDeath();
         }
 
         [Server]

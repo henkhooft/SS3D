@@ -8,6 +8,7 @@ using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Screens;
+using SS3D.Systems.Stamina;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Actor = SS3D.Core.Behaviours.Actor;
@@ -58,6 +59,7 @@ namespace SS3D.Systems.Entities.Humanoid
         [SerializeField] private HumanoidLivingController _livingController;
         [SerializeField] private HumanoidBodyStateMachine _bodyStateMachine;
         [SerializeField] private HumanHealthController _healthController;
+        [SerializeField] private StaminaController _staminaController;
         /// <summary>World units/sec at full run (Speed animator param 1.0).</summary>
         [SerializeField] private float _movementSpeed = 5f;
         /// <summary>Matches HumanoidController walk animator value (0.3) so walk/run stay in sync.</summary>
@@ -96,6 +98,11 @@ namespace SS3D.Systems.Entities.Humanoid
             if (_healthController == null)
             {
                 _healthController = GetComponent<HumanHealthController>();
+            }
+
+            if (_staminaController == null)
+            {
+                _staminaController = GetComponent<StaminaController>();
             }
         }
 
@@ -286,7 +293,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
             if (md.Horizontal == 0f && md.Vertical == 0f)
             {
-                _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, 0f, tickDelta * _speedScaleLerp);
+                float idleT = Mathf.Clamp01(tickDelta * _speedScaleLerp);
+                _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, 0f, idleT);
                 _bodyStateMachine.SetLocomotionSpeed(0f);
                 _bodyStateMachine.SetLocomotionMode(LocomotionMode.Idle);
                 _livingController?.PublishPredictedLocomotionVelocity(0f, 0f);
@@ -300,13 +308,19 @@ namespace SS3D.Systems.Entities.Humanoid
 
             Vector3 moveDirection = GetCameraRelativeDirection(md.Horizontal, md.Vertical);
             float speedFactor = _healthController != null ? _healthController.Snapshot.MovementSpeedMultiplier : 1f;
-            float targetSpeedScale = GetTargetSpeedScale(md.IsRunning, _bodyStateMachine.CombatMode);
-            // Match AnimationOrchestrator gait easing — snapping run scale while VelZ still
-            // lerps from walk caused a combat walk→run surge then settle.
-            _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, targetSpeedScale, tickDelta * _speedScaleLerp);
+            float exertionFactor = _staminaController != null
+                ? Mathf.Lerp(1f, 0.55f, _staminaController.ExertionPenalty)
+                : 1f;
+            HumanoidCombatMode combatMode = _bodyStateMachine.CombatMode;
+            float targetSpeedScale = GetTargetSpeedScale(md.IsRunning, combatMode);
+            // Clamp t so hitch frames cannot extrapolate past the target (Mathf.Lerp t>1 overshoots).
+            float scaleT = Mathf.Clamp01(tickDelta * _speedScaleLerp);
+            _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, targetSpeedScale, scaleT);
 
-            float speed = _movementSpeed * speedFactor * _smoothedSpeedScale;
-            float animSpeed = md.IsRunning ? 1f : _walkSpeedFactor;
+            float speed = _movementSpeed * speedFactor * exertionFactor * _smoothedSpeedScale;
+            // Keep blend-tree gait locked to the same smoothed scale as world speed — snapping
+            // VelZ to 1 while displacement was still easing caused the combat walk→run surge.
+            float animSpeed = GetAnimSpeedForScale(_smoothedSpeedScale, combatMode);
 
             _characterController.Move(moveDirection * (tickDelta * speed));
 
@@ -348,6 +362,22 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             return isRunning ? 1f : _walkSpeedFactor;
+        }
+
+        /// <summary>
+        /// Maps smoothed world speed scale onto animator Vel magnitude (walk 0.3 … run 1.0).
+        /// </summary>
+        private float GetAnimSpeedForScale(float speedScale, HumanoidCombatMode combatMode)
+        {
+            float walkScale = GetTargetSpeedScale(false, combatMode);
+            float runScale = GetTargetSpeedScale(true, combatMode);
+            if (Mathf.Abs(runScale - walkScale) < 0.0001f)
+            {
+                return speedScale >= runScale ? 1f : _walkSpeedFactor;
+            }
+
+            float t = Mathf.Clamp01(Mathf.InverseLerp(walkScale, runScale, speedScale));
+            return Mathf.Lerp(_walkSpeedFactor, 1f, t);
         }
 
         [Reconcile]

@@ -51,7 +51,7 @@ A small always-on card, not a body diagram: an aggregate condition read plus fou
 | Low oxygen | Peripheral desaturation / cold tint |
 | High brute/burn pain | Red screen-edge pulse, intensity scales with damage |
 | On fire | Heat-shimmer distortion at screen edges |
-| Critical / dying | Slow heartbeat audio + a visual pulse synced to it |
+| Critical / dying | Slow heartbeat audio (personal tier, `audio.md` §4) + a visual pulse synced to it |
 
 This is diegetic in the same sense the hacking interface is diegetic — the player learns their own state the way they'd learn it in real life, by how things *feel*, with the panel as backup, not primary.
 

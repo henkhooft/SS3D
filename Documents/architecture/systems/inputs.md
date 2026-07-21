@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: bbfa2990c — 2026-07-18
+> Verified: 486cbf7db — 2026-07-19
 
 # Inputs
 
@@ -16,7 +16,9 @@ Central input layer wrapping the Unity Input System. Two responsibilities:
    writer, so dead keys, leaked input, and enabled/refcount desync are structurally impossible.
 2. **Pointer authority** — `InputInterface.IsPointerOverInterface()` is the one place that answers
    "is the pointer over UI", spanning uGUI (`GraphicRaycaster`) and UI Toolkit (`panel.Pick`).
-   Callers include interaction click gates and selection hover clearing (examine/outlines).
+   It is also true while `InputTextEntryScope` holds a text-capture (compose / focused fields) so
+   world clicks and selection clear for the whole typing session, not only when the cursor is over
+   the field. Callers include interaction click gates and selection hover clearing (examine/outlines).
 
 See the effort doc [2026-07_input-arbitration.md](../2026-07_input-arbitration.md) for the model,
 the context table, and the migration from the old refcount API.
@@ -25,7 +27,7 @@ the context table, and the migration from the old refcount API.
 
 - `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.cs` — owns `Controls`, builds the context table,
   exposes `PushContext` / `SuppressMap` / `SuppressAction` / `SuppressBinding` and the code-defined
-  `UiCancel` / `DetailedExamine` actions.
+  `UiCancel` / `DetailedExamine` / `OpenLocalSpeechCompose` actions.
 - `Assets/Scripts/SS3D/Systems/Inputs/InputArbiter.cs` — pure resolution engine (unit tested).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputContext.cs` — the context enum (value = priority).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputInterface.cs` — unified pointer query + document registry.

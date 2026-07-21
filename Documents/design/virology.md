@@ -59,7 +59,7 @@ Builds the item `examine.md` §11 flagged and left undesigned. A handheld tool, 
 
 Both resolve instantly — no minigame, consistent with the project's stance that information belongs behind a device, not a puzzle (`hacking-interface.md` §1). A successful scan returns disease id, current stage, and time remaining to the next stage — real values read off real state, not a coarse hint.
 
-**Before any scan, symptoms are the only signal, and only once incubation ends.** Past incubation, contagious-and-symptomatic stages render on the character model — a cough animation, a sound cue, a pallor or flush tint — the same diegetic-first rule wounds already follow (`health.md` §2). During incubation, nothing is visible at all without a scan; that silent window is the point, not an oversight.
+**Before any scan, symptoms are the only signal, and only once incubation ends.** Past incubation, contagious-and-symptomatic stages render on the character model — a cough animation, a sound cue (personal audio tier, `audio.md` §4), a pallor or flush tint — the same diegetic-first rule wounds already follow (`health.md` §2). During incubation, nothing is visible at all without a scan; that silent window is the point, not an oversight.
 
 ## 6. Treatment & cure
 
@@ -141,8 +141,8 @@ No new permanent chrome.
 
 ## 12. Companion edits flagged
 
-- `health.md` §9 — remove "disease/infection" from the out-of-scope list; point to this doc instead.
-- `chemistry.md` §13 — remove "disease/infection interactions"; cure reagents are ordinary recipes per §4 there, nothing further needed.
-- `surgery.md` §11 — "disease/infection risk from surgery" resolves as an ordinary contact-exposure vector (§3 here), not a bespoke surgical mechanic; repoint the citation rather than redesigning surgery.
-- `examine.md` §11 — the flagged "medical scanner tool" is now built in §5; repoint the citation.
+- `health.md` §9 — resolved: now points to this doc instead of listing disease/infection as a bare future item.
+- `chemistry.md` §13 — resolved: repointed to this doc; cure reagents remain ordinary recipes per §4 there.
+- `surgery.md` §11 — resolved: repointed to this doc's §3 (ordinary contact-exposure vector, not a bespoke surgical mechanic).
+- `examine.md` §11 and its worked example C — resolved: both repointed to this doc's §5.
 

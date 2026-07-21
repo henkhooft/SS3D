@@ -25,6 +25,24 @@ namespace SS3D.UI.MainHud
         /// </summary>
         public event Action<bool> HandSelectedRequested;
 
+        /// <summary>Fired when a gear-strip slot (belt/ID/pocket/back) is clicked.</summary>
+        public event Action<HandsGearStrip.GearSlot> GearSlotClicked;
+
+        /// <summary>Fired when an equipment-doll slot is clicked (equip/unequip vs active hand).</summary>
+        public event Action<EquipmentGrid.Slot> EquipmentSlotClicked;
+
+        public event Action<EquipmentGrid.Slot, Vector2> EquipmentDragStarted;
+        public event Action<EquipmentGrid.Slot, Vector2> EquipmentDragMoved;
+        public event Action<EquipmentGrid.Slot, Vector2> EquipmentDragEnded;
+
+        public event Action<HandsGearStrip.GearSlot, Vector2> GearDragStarted;
+        public event Action<HandsGearStrip.GearSlot, Vector2> GearDragMoved;
+        public event Action<HandsGearStrip.GearSlot, Vector2> GearDragEnded;
+
+        public event Action<HandsGearStrip.HandSlot, Vector2> HandDragStarted;
+        public event Action<HandsGearStrip.HandSlot, Vector2> HandDragMoved;
+        public event Action<HandsGearStrip.HandSlot, Vector2> HandDragEnded;
+
         private readonly StyleSheet[] _styleSheets;
         private readonly MainHudIconSet _icons;
 
@@ -33,6 +51,8 @@ namespace SS3D.UI.MainHud
         private EquipmentGrid _equipmentGrid;
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
+        private ZoneTargetReticle _zoneReticle;
+        private ZoneReticleDriver _zoneReticleDriver;
         private Sequence _visibilitySequence;
         private bool _visible;
         private float _scale = 1f;
@@ -68,6 +88,8 @@ namespace SS3D.UI.MainHud
             KillVisibilitySequence();
             _root?.RemoveFromHierarchy();
             _root = null;
+            _zoneReticle = null;
+            _zoneReticleDriver = null;
         }
 
         public void SetVisible(bool visible)
@@ -98,14 +120,52 @@ namespace SS3D.UI.MainHud
             _intentModule.SetIntent(intent);
         }
 
+        /// <summary>
+        /// Pushes aim / recovery / visibility into the reticle driver and paints one composed frame.
+        /// </summary>
+        public void ApplyZoneReticle(
+            bool visible,
+            Vector2 screenPosition,
+            string zoneLabel,
+            bool inRange,
+            float lockReadyProgress01,
+            bool recharging)
+        {
+            if (_zoneReticle == null || _zoneReticleDriver == null)
+            {
+                return;
+            }
+
+            _zoneReticleDriver.SetVisible(visible);
+            _zoneReticleDriver.SetAimInput(screenPosition, zoneLabel, inRange);
+            _zoneReticleDriver.SetRecoveryInput(lockReadyProgress01, recharging);
+            _zoneReticleDriver.Tick(out ZoneReticleFrame frame);
+            _zoneReticle.Apply(in frame);
+        }
+
+        public void NotifyZoneReticleConnectHit()
+        {
+            _zoneReticleDriver?.NotifyConnectHit();
+        }
+
         public void SetEquipmentIcon(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon)
         {
-            _equipmentGrid.SetIcon(slot, itemIcon);
+            SetEquipmentContents(slot, itemIcon, itemName: null);
+        }
+
+        public void SetEquipmentContents(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon, string itemName)
+        {
+            _equipmentGrid.SetContents(slot, itemIcon, itemName);
         }
 
         public void SetGearIcon(HandsGearStrip.GearSlot slot, UnityEngine.Sprite itemIcon)
         {
-            _handsGearStrip.SetGearIcon(slot, itemIcon);
+            SetGearContents(slot, itemIcon, itemName: null);
+        }
+
+        public void SetGearContents(HandsGearStrip.GearSlot slot, UnityEngine.Sprite itemIcon, string itemName)
+        {
+            _handsGearStrip.SetGearContents(slot, itemIcon, itemName);
         }
 
         public void SetHandIcons(UnityEngine.Sprite leftItemIcon, UnityEngine.Sprite rightItemIcon)
@@ -113,10 +173,28 @@ namespace SS3D.UI.MainHud
             _handsGearStrip.SetHandIcons(leftItemIcon, rightItemIcon);
         }
 
+        public void SetHandContents(
+            HandsGearStrip.HandSlot slot,
+            UnityEngine.Sprite itemIcon,
+            string itemName)
+        {
+            _handsGearStrip.SetHandContents(slot, itemIcon, itemName);
+        }
+
         public void SetActiveHand(bool leftIsActive)
         {
             _handsGearStrip.SetActiveHand(leftIsActive);
         }
+
+        /// <summary>Panel-space bounds of a gear slot, used to anchor its storage panel near the click.</summary>
+        public UnityEngine.Rect GetGearSlotWorldBound(HandsGearStrip.GearSlot slot)
+        {
+            return _handsGearStrip.GetGearSlotWorldBound(slot);
+        }
+
+        public EquipmentGrid Equipment => _equipmentGrid;
+
+        public HandsGearStrip HandsGear => _handsGearStrip;
 
         private void SetVisibleImmediate(bool visible)
         {
@@ -228,20 +306,35 @@ namespace SS3D.UI.MainHud
             VisualElement alertZone = BuildZone("main-hud__zone--alerts", _alertStack);
 
             _equipmentGrid = new EquipmentGrid(_icons);
+            _equipmentGrid.SlotClicked += slot => EquipmentSlotClicked?.Invoke(slot);
+            _equipmentGrid.SlotDragStarted += (slot, pos) => EquipmentDragStarted?.Invoke(slot, pos);
+            _equipmentGrid.SlotDragMoved += (slot, pos) => EquipmentDragMoved?.Invoke(slot, pos);
+            _equipmentGrid.SlotDragEnded += (slot, pos) => EquipmentDragEnded?.Invoke(slot, pos);
             VisualElement equipmentZone = BuildZone("main-hud__zone--equipment", _equipmentGrid);
 
             _handsGearStrip = new HandsGearStrip(_icons);
             _handsGearStrip.HandClickRequested += leftIsActive => HandSelectedRequested?.Invoke(leftIsActive);
+            _handsGearStrip.GearSlotClicked += slot => GearSlotClicked?.Invoke(slot);
+            _handsGearStrip.GearDragStarted += (slot, pos) => GearDragStarted?.Invoke(slot, pos);
+            _handsGearStrip.GearDragMoved += (slot, pos) => GearDragMoved?.Invoke(slot, pos);
+            _handsGearStrip.GearDragEnded += (slot, pos) => GearDragEnded?.Invoke(slot, pos);
+            _handsGearStrip.HandDragStarted += (slot, pos) => HandDragStarted?.Invoke(slot, pos);
+            _handsGearStrip.HandDragMoved += (slot, pos) => HandDragMoved?.Invoke(slot, pos);
+            _handsGearStrip.HandDragEnded += (slot, pos) => HandDragEnded?.Invoke(slot, pos);
             VisualElement handsGearZone = BuildZone("main-hud__zone--hands-gear", _handsGearStrip);
 
             _intentModule = new IntentModule();
             _intentModule.ToggleRequested += () => IntentToggleRequested?.Invoke();
             VisualElement intentZone = BuildZone("main-hud__zone--intent", _intentModule);
 
+            _zoneReticle = new ZoneTargetReticle();
+            _zoneReticleDriver = new ZoneReticleDriver();
+
             _root.Add(alertZone);
             _root.Add(equipmentZone);
             _root.Add(handsGearZone);
             _root.Add(intentZone);
+            _root.Add(_zoneReticle.Root);
         }
 
         private static VisualElement BuildZone(string className, VisualElement child)

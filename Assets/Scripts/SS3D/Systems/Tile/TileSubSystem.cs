@@ -7,6 +7,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Data.Management;
 using SS3D.Data.Persistence;
 using SS3D.Logging;
+using SS3D.Systems.Area;
 using SS3D.Systems.Persistence;
 using SS3D.Systems.Tile.FloorVisuals;
 using System;
@@ -355,7 +356,7 @@ namespace SS3D.Systems.Tile
             }
 
 	        SavedTileMap mapSave = LocalStorage.LoadMostRecentObject<SavedTileMap>(legacySavePath);
-            _currentMap.Load(mapSave);
+            LoadLegacyMap(mapSave);
             SyncFloorDecalsToClients();
         }
 
@@ -372,9 +373,32 @@ namespace SS3D.Systems.Tile
             }
 
             SavedTileMap mapSave = LocalStorage.LoadObject<SavedTileMap>(legacySavePath + "/" + mapName);
-            _currentMap.Load(mapSave);
+            LoadLegacyMap(mapSave);
             SyncFloorDecalsToClients();
         }
+
+        /// <summary>
+        /// Legacy flat-JSON load path (no PersistenceSubSystem). Still must defer area flood
+        /// until every tile object has been placed.
+        /// </summary>
+        private void LoadLegacyMap(SavedTileMap mapSave)
+        {
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                areaSubSystem.BeginDeferredAreaFlood();
+            }
+
+            try
+            {
+                _currentMap.Load(mapSave);
+            }
+            finally
+            {
+                if (SubSystems.TryGet(out AreaSubSystem areaAfterLoad))
+                {
+                    areaAfterLoad.EndDeferredAreaFlood();
+                }
+            }
 
         [Server]
         public void ResetSave()

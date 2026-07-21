@@ -100,7 +100,7 @@ No new permanent chrome — same discipline as everything else.
 |---|---|---|
 | 1 | Surgeon holds examine on a freshly extracted kidney | Raycast resolves to the organ item on the tray |
 | 2 | Panel appears | "Kidney — condition: damaged" — coarse read only, not a numeric function value |
-| 3 | Surgeon wants the exact number | Not available via examine — would need a medical scanner tool, not designed this pass (§11) |
+| 3 | Surgeon wants the exact number | Not available via examine — needs the medical scanner tool (`virology.md` §5) |
 
 ## 10. Integration notes
 
@@ -120,12 +120,12 @@ No new permanent chrome — same discipline as everything else.
 
 - Exact flavor text / description copy for every item, organ, and device (a content pass, not a design decision)
 - Exact examine range and any distance-based text truncation (balancing, not design)
-- A medical scanner tool for exact organ/vitals function values on another character — a plausible future item, not designed here
+- A medical scanner tool for exact organ/vitals function values on another character — built in `virology.md` §5
 - Examine of dead/unconscious characters differing from living ones (no distinction assumed this pass)
 - Any admin/observer-only omniscient examine variant — `observer.md`'s territory, not this doc's
 
 ## 12. Companion edits flagged
 
-- `cargo.md` §5, `disposal.md` §4/§9/§10, `surgery.md` §9, `id-access.md` §3, and `inventory-storage.md` §14 all currently cite "`main-hud.md` §15" for the examine system. Nothing functional changes in any of them — just repoint each citation at this doc (`examine.md`), since that's where the system actually lives now.
+- `cargo.md` §5/§10, `disposal.md` §4/§10, and `surgery.md` §3/§9 cited "`main-hud.md` §15" for the examine system — now repointed to this doc (§5, §7). `id-access.md` §3 and `inventory-storage.md` §14 had already been fixed independently.
 - `main-hud.md` never had a §15 to begin with. This doc resolves that gap rather than main HUD growing one; no edit needed there beyond, optionally, a one-line pointer to this doc from §6 where the reticle pattern examine reuses is first defined.
 

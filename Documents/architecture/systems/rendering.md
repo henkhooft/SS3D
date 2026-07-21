@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: a86b44505 — 2026-07-17
+> Verified: 4c9ba60cd — 2026-07-20
 
 # Rendering
 
@@ -34,6 +34,12 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 - Outline / auxiliary meshes that must not participate in pick: set rendering layer `SelectionRenderingLayers.ExcludeFromSelectionPick`.
 - World surface marks: stamp `DecalRenderingLayers.ReceiveWorldDecals` on receiver renderers; point floor `DecalProjector`s at `WorldFloorProjectorMask`. Custom opaque shaders must implement DepthNormals with `_WRITE_RENDERING_LAYERS` or Decal Layers will not exclude them.
 
+## Pitfalls
+
+- **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
+- **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
+- **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
+
 ## Depends on / Used by
 
 - **Used by:** [selection](selection.md), [atmospherics](atmospherics.md), [screen-effects](screen-effects.md) / [machine-interface](machine-interface.md) (UI backdrop blur)
@@ -43,4 +49,5 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 
 - [FORK_STATUS.md](../../FORK_STATUS.md) § URP migration
 - Plan: [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md)
+- Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)

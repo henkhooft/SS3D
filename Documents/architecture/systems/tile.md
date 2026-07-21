@@ -1,13 +1,17 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
-> Status: shipped
-> Verified: 888164239 — 2026-07-21
+> Status: partial
+> Verified: 76b48ad68 — 2026-07-21
 
 # Tile / construction
 
 ## Overview
 
 Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters.
+
+**Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work.
+
+**Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
 

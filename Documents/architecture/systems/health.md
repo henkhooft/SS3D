@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects wired; vitals HUD Phase 6 remainder)
-> Verified: ab8eff923 — 2026-07-17
+> Verified: 772b62dc0 — 2026-07-20
 
 # Health
 
@@ -11,7 +11,7 @@ Greenfield rewrite per [health_implementation_plan.md](../../plans/health_implem
 
 Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`. The atmosphere→oxygen coupling is still open: `HealthSimulation.LungIntake(atmosphereO2)` currently defaults to full O2 and should be fed the occupant's turf O2 ratio. Vitals cluster UITK and examine-self readout remain Phase 6.
 
-**Condemned UI:** `StaminaBar` on `PlayerCanvas` is disabled (obsolete chrome pending Main HUD / [stamina.md](../../design/stamina.md) vitals). Domain `StaminaController` remains and must tolerate a missing bar view.
+**Stamina Phase 7a core shipped:** see [stamina](stamina.md) — push-past-empty calls `ApplyOxyDebt`; obsolete `StaminaBar` purged from PlayerCanvas. Combat stamina costs still deferred.
 
 Phase 0d strips legacy health components from `Human.prefab` and rewires a thinner root — do not dual-stack or grow the mega-prefab ([agent-first composition](../2026-07_agent-first-composition.md), [health_implementation_plan.md](../../plans/health_implementation_plan.md) Phase 0d).
 
@@ -41,17 +41,18 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/DefibCommand.cs` — admin defib testing
 - `Assets/Scripts/SS3D/Systems/Health/HealthDebugController.cs` — IMGUI overlay (H) for full zone/organ/pool inspection
 - `Assets/Scripts/SS3D/Systems/Health/HealthDebugDetail.cs` — per-zone/per-organ SyncVar payload for debug UI
-- `Assets/Scripts/SS3D/Systems/Health/ZoneTargetResolver.cs` — point + combat raycast zone resolution, groin banding
+- `Assets/Scripts/SS3D/Systems/Health/ZoneTargetResolver.cs` — point + combat/hover raycast zone resolution, groin banding, reticle labels
 - `Assets/Scripts/SS3D/Systems/Health/HealthLayers.cs` — `BodyParts` layer mask for combat raycasts
 
 ## Extension points
 
 - `IHealthEffectModifier` — virology/chemistry/stamina deltas (Phase 7+)
-- `ApplyDamage(BodyZone, MeleeDamagePacket)` — melee combat input (Phase 4)
+- `ApplyDamage(BodyZone, MeleeDamagePacket)` — melee combat input (`MeleeDamagePacket` lives in Health)
 - `ApplyDamage(BodyZone, brute, burn)` — direct damage (console `hurt`, future sources)
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)
-- `ZoneTargetResolver.TryResolveCombatZone` — BodyParts raycast + groin banding for Harm hits
+- `ZoneTargetResolver.TryResolveCombatZone` — zone raycast + groin banding for Harm hits (`ZoneTargetCollider` is the contract; bones may be on Characters)
+- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + connect (exclude-self overload; AnatomyNode limb meshes; closest-point reach)
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 
@@ -66,18 +67,21 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Death skips ragdoll / keeps walk cycle:** `OnDisable` must not `Recover()` (ownership teardown stands the corpse up). Death uses `ServerDeathRagdoll` + observer reinforce: disable Animator/`AnimationOrchestrator`, enable bone physics. Do not rely on SyncVar OnChange alone from server `Kill()`.
 - **Unconscious presentation:** collapse on `!IsConscious` **or** `IsCardiacArrest`. Use `ApplyCollapseVisuals` + `RpcSetConsciousnessCollapsed` (same reinforce pattern as death). Coimbra `UpdateEvent` keeps firing after `enabled=false` — `AnimationOrchestrator.SetPosingSuppressed` must stop walk-param writes. Broader ownership: [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect Clear from other bodies:** only clear when `_drivingLocalScreenEffects` — other players' mind unassign must not wipe the local owner's Volume intensities.
+- **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).
 
 ## Depends on / Used by
 
 - **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md)
-- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp), `Hand` (arm debuff stub)
-- **Stamina:** `Assets/Scripts/SS3D/Systems/Stamina/` — bridge Phase 7a
+- **Used by:** [combat](combat.md) (melee zone hits), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp + `InjuredLeg` / injured-arm presentation), `Hand` (arm debuff stub)
+- **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; combat drains deferred
 
 ## Related docs
 
 - Design (read-only): [Documents/design/health.md](../../design/health.md), [main-hud.md](../../design/main-hud.md) §9, [stamina.md](../../design/stamina.md), [armor.md](../../design/armor.md)
 - Anatomy map: [health-anatomy-map.md](health-anatomy-map.md)
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
+- Stamina map: [stamina](stamina.md)
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **planned** single authority for collapse/death presentation
+- [2026-07_animation-polish](../2026-07_animation-polish.md) — limp/injured gait, severity idle, arm overlay, left-hand mirror
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [screen-effects](screen-effects.md)

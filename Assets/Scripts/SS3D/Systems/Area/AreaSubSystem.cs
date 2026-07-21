@@ -40,6 +40,13 @@ namespace SS3D.Systems.Area
         private bool _electricityTickSubscribed;
         private bool _templateRestoreActive;
 
+        /// <summary>
+        /// When true, <see cref="RegisterApc"/> queues APCs without flooding. Used while
+        /// <see cref="TileMap.Load"/> is still placing tiles across chunks — flooding mid-load
+        /// only claims tiles that already exist (often "front and right", never the unloaded side).
+        /// </summary>
+        private bool _deferAreaFlood;
+
         public override void OnStartServer()
         {
             base.OnStartServer();
@@ -93,6 +100,7 @@ namespace SS3D.Systems.Area
             tileSubSystem.RegisterTileMutationObserver(this);
 
             IsSetUp = true;
+            GameplayLightGuard.DisableOrphanSceneLights();
             OnSystemSetUp?.Invoke();
             SubscribeElectricityTicks();
         }
@@ -116,6 +124,16 @@ namespace SS3D.Systems.Area
         public bool TryGetLightingState(AreaId areaId, out AreaLightingState state)
         {
             return _lightingStates.TryGetValue(areaId, out state);
+        }
+
+        /// <summary>
+        /// Re-derives Normal/Emergency/Dark from APC channels and stats immediately (server).
+        /// Use after APC channel toggles instead of waiting for the next electricity tick.
+        /// </summary>
+        [Server]
+        public void RefreshAreaLightingStates()
+        {
+            UpdateAreaLightingStates();
         }
 
         public bool TryGetLightingStateForTile(TileCoord coord, out AreaLightingState state)
@@ -213,6 +231,62 @@ namespace SS3D.Systems.Area
 
         public IReadOnlyList<AreaRecord> GetAllAreas() => _registry.GetAllAreas();
 
+        /// <summary>
+        /// Suppress flood-fill while the station template is still placing tiles. Call
+        /// <see cref="EndDeferredAreaFlood"/> after load/restore completes.
+        /// </summary>
+        [Server]
+        public void BeginDeferredAreaFlood()
+        {
+            _deferAreaFlood = true;
+        }
+
+        /// <summary>
+        /// Recompute per-tile area ids from every registered APC now that the map is complete.
+        /// Preserves existing <see cref="AreaRecord"/> metadata (names, tags, tints, access, switches).
+        /// </summary>
+        [Server]
+        public void EndDeferredAreaFlood()
+        {
+            if (!_deferAreaFlood)
+            {
+                return;
+            }
+
+            _deferAreaFlood = false;
+
+            if (_floodFill == null || _map == null)
+            {
+                return;
+            }
+
+            if (_registeredApcs.Count == 0)
+            {
+                return;
+            }
+
+            // Template restore may have linked APCs to saved records without flooding.
+            // Mid-load RegisterApc may have queued APCs with no records yet.
+            bool anyLinked = false;
+            foreach (IAreaApcOrigin apc in _registeredApcs)
+            {
+                if (_registry.TryGetApcArea(apc, out _))
+                {
+                    anyLinked = true;
+                    break;
+                }
+            }
+
+            if (anyLinked)
+            {
+                RefloodAllAreaTilesPreservingMetadata();
+            }
+            else
+            {
+                RebuildAllAreasFromApcs();
+            }
+        }
+
         [Server]
         public void RegisterApc(IAreaApcOrigin apc)
         {
@@ -227,6 +301,12 @@ namespace SS3D.Systems.Area
                 TryCompleteTemplateRestore();
                 InvalidateElectricityConsumerIndex();
                 NotifyAreaVisualsChanged();
+                return;
+            }
+
+            // Map load still placing tiles — queue only; EndDeferredAreaFlood will flood once.
+            if (_deferAreaFlood)
+            {
                 return;
             }
 
@@ -341,6 +421,52 @@ namespace SS3D.Systems.Area
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
             NotifyAreaVisualsChanged();
+        }
+
+        /// <summary>
+        /// Clears tile area ids and floods again from registered APCs, keeping existing AreaRecords.
+        /// </summary>
+        [Server]
+        public void RefloodAllAreaTilesPreservingMetadata()
+        {
+            if (_floodFill == null || _map == null)
+            {
+                return;
+            }
+
+            _map.ClearAllAreaIds();
+            _overlapFlaggedApcs.Clear();
+
+            List<IAreaApcOrigin> apcs = _registeredApcs
+                .OrderBy(apc => apc.OriginTile.Grid.x)
+                .ThenBy(apc => apc.OriginTile.Grid.y)
+                .ToList();
+
+            var claimedTiles = new HashSet<TileCoord>();
+
+            foreach (IAreaApcOrigin apc in apcs)
+            {
+                if (!_registry.TryGetApcArea(apc, out AreaId areaId))
+                {
+                    // APC registered during deferred load without a saved record — allocate one.
+                    areaId = _registry.AllocateId();
+                    var record = new AreaRecord
+                    {
+                        Id = areaId,
+                        DisplayName = string.IsNullOrWhiteSpace(apc.DisplayName) ? "Unnamed Area" : apc.DisplayName,
+                        ParentTag = string.Empty,
+                        Apc = apc,
+                    };
+                    _registry.Register(record);
+                    _lightingSwitchOn[areaId] = record.LightingSwitchOn;
+                }
+
+                _floodFill.FloodFromApc(apc, areaId, claimedTiles);
+            }
+
+            _floodFill.AssignDoorTileAreas();
+            UpdateOverlapWarnings();
+            InvalidateElectricityConsumerIndex();
         }
 
         [Server]

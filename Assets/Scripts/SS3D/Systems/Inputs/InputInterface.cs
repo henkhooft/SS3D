@@ -13,11 +13,20 @@ namespace SS3D.Systems.Inputs
     /// (via panel picking). World-click gameplay gates must query this instead of talking to a
     /// single stack, otherwise clicks leak through UI Toolkit overlays (radial menu, machine
     /// interfaces) that the uGUI raycaster does not know about.
+    /// Also tracks text-entry capture depth so world interactions/selection clear while a field
+    /// holds <see cref="InputTextEntryScope"/> (compose, console fields, etc.).
     /// </summary>
     public static class InputInterface
     {
         private static readonly List<UIDocument> Documents = new();
         private static readonly List<RaycastResult> RaycastScratch = new();
+        private static int _textCaptureDepth;
+
+        /// <summary>
+        /// True while any <see cref="InputTextEntryScope"/> is active. World click/hover gates
+        /// should treat this like pointer-over-UI so typing cannot fire gameplay.
+        /// </summary>
+        public static bool IsCapturingText => _textCaptureDepth > 0;
 
         /// <summary>
         /// Registers a runtime UI Toolkit document so its panel participates in pointer queries.
@@ -55,19 +64,36 @@ namespace SS3D.Systems.Inputs
             Documents.Remove(document);
         }
 
+        /// <summary>Pushed by <see cref="InputTextEntryScope"/>; nested scopes are reference-counted.</summary>
+        public static void PushTextCapture()
+        {
+            _textCaptureDepth++;
+        }
+
+        /// <summary>Matched to <see cref="PushTextCapture"/>; never goes below zero.</summary>
+        public static void PopTextCapture()
+        {
+            if (_textCaptureDepth > 0)
+            {
+                _textCaptureDepth--;
+            }
+        }
+
         /// <summary>
         /// True when the pointer is over any uGUI graphic or any registered, pickable UI Toolkit
-        /// element. Does <b>not</b> use <see cref="EventSystem.IsPointerOverGameObject()"/> —
+        /// element, or when text entry is capturing keyboard (compose / focused fields).
+        /// Does <b>not</b> use <see cref="EventSystem.IsPointerOverGameObject()"/> —
         /// that path hits UI Toolkit's panel raycaster for the whole document, including
         /// <see cref="PickingMode.Ignore"/> layout roots, so fullscreen UITK shells (map editor)
         /// looked like invisible UI and canceled world clicks / placement releases.
         /// </summary>
         public static bool IsPointerOverInterface()
         {
-            if (IsPointerOverToolkitPanel())
-            {
+            if (IsCapturingText)
                 return true;
-            }
+
+            if (IsPointerOverToolkitPanel())
+                return true;
 
             return IsPointerOverLegacyGraphic();
         }
@@ -94,6 +120,16 @@ namespace SS3D.Systems.Inputs
             }
         }
 
+        /// <summary>
+        /// Current pointer position in bottom-left screen pixels (Input System mouse, with legacy fallback).
+        /// </summary>
+        public static Vector2 GetPointerScreenPosition()
+        {
+            return Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition;
+        }
+
         private static bool IsPointerOverToolkitPanel()
         {
             if (Documents.Count == 0)
@@ -101,9 +137,7 @@ namespace SS3D.Systems.Inputs
                 return false;
             }
 
-            Vector2 screenPosition = Mouse.current != null
-                ? Mouse.current.position.ReadValue()
-                : (Vector2)Input.mousePosition;
+            Vector2 screenPosition = GetPointerScreenPosition();
 
             for (int i = 0; i < Documents.Count; i++)
             {

@@ -68,7 +68,7 @@ Records live on the genetics console / crew records as a real, breakable databas
 ## 7. HUD & feedback touchpoints
 
 - **Critical/dying feedback** (heartbeat audio + synced pulse, `main-hud.md` §5) is unchanged and unextended here. The moment brain function hits zero, that feedback simply stops — the absence of the heartbeat is the tell, not a separate "you died" overlay stacked on top of it.
-- **Defib use:** a real diegetic shock effect, and the heartbeat audio picking back up on success — or the clean "no response" readout on the unit (§3) if not.
+- **Defib use:** a real diegetic shock effect, and the heartbeat audio (personal tier, `audio.md` §4) picking back up on success — or the clean "no response" readout on the unit (§3) if not.
 - **Cloning pod:** the same diegetic device-screen treatment as the fabricator (`hacking-interface.md` §2 pattern, reused via crafting §3) — record status, material/power check, running/stalled/complete states, identical visual language to the fabricator mockups already built.
 - **Clone-ready prompt:** the single narrow exception to the deferred ghost/observer UI, per §5.
 
@@ -122,6 +122,6 @@ Records live on the genetics console / crew records as a real, breakable databas
 - Exact numeric values — biomass cost, pod build time, defib charge capacity/recharge rate, cloning fidelity-loss amount, respawn time threshold (a balancing pass, not a design decision)
 - Antagonist- or gamemode-specific permadeath rules (server/gamemode policy, not a base mechanic)
 - Corpse decomposition over time (not modeled; husk/destruction is the only disqualifying condition, not elapsed time)
-- Cryogenics/cryo storage as a holding state for logged-off characters — flagged alongside cloning in `combat.md` §6, but it's a genuinely separate "pause" mechanic, not a revival path, and worth its own pass
+- Cryogenics/cryo storage as a holding state for logged-off characters — designed in `cryogenics.md`, a genuinely separate "pause" mechanic, not a revival path
 - Cybernetic revival paths beyond what `health.md` §9 already covers
 
