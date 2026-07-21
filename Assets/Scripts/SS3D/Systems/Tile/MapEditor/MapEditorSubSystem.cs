@@ -297,14 +297,14 @@ namespace SS3D.Systems.Tile.MapEditor
                 _lighting.Apply();
                 SetMouseOverUI(false);
                 _gameplayHud.SetVisible(false);
-                SpawnPointEditorView.EnsureExists().SetVisible(true);
+                SpawnPointEditorView.EnsureExists().SetEditorOpen(true);
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
             }
             else
             {
                 _gameplayHud.SetVisible(true);
-                SpawnPointEditorView.EnsureExists().SetVisible(false);
+                SpawnPointEditorView.EnsureExists().SetEditorOpen(false);
                 _hologramManager.DestroyHolograms();
                 _hologramManager.enabled = false;
                 _session.Exit();

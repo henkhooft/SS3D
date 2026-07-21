@@ -1,19 +1,24 @@
 using Coimbra;
 using SS3D.Core;
+using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile.TileMapCreator;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.SpawnPoints
 {
     /// <summary>
     /// Editor-only pin visuals for authored spawn markers while the map editor is open.
+    /// Gated by map-editor session and the Scripts layer-visibility toggle.
     /// </summary>
     public sealed class SpawnPointEditorView : MonoBehaviour
     {
         private static SpawnPointEditorView _instance;
         private readonly List<GameObject> _pins = new();
         private SpawnPointRegistry _boundRegistry;
-        private bool _visible;
+        private bool _editorOpen;
+        private bool _scriptsLayerVisible = true;
 
         public static SpawnPointEditorView EnsureExists()
         {
@@ -32,19 +37,28 @@ namespace SS3D.Systems.Tile.SpawnPoints
                 _instance.Rebuild();
         }
 
-        public void SetVisible(bool visible)
+        /// <summary>Map editor session open/closed. Pins only draw while open and Scripts is visible.</summary>
+        public void SetEditorOpen(bool open)
         {
-            _visible = visible;
-            if (visible)
+            _editorOpen = open;
+            if (open)
             {
+                _scriptsLayerVisible = TileLayerVisibilityService.IsGroupVisible(TileLayerCategory.Scripts);
                 BindRegistry();
-                Rebuild();
             }
             else
             {
-                ClearPins();
                 UnbindRegistry();
             }
+
+            Rebuild();
+        }
+
+        public static void SetScriptsLayerVisible(bool visible)
+        {
+            SpawnPointEditorView view = EnsureExists();
+            view._scriptsLayerVisible = visible;
+            view.Rebuild();
         }
 
         private void OnDestroy()
@@ -53,6 +67,8 @@ namespace SS3D.Systems.Tile.SpawnPoints
             if (_instance == this)
                 _instance = null;
         }
+
+        private bool ShouldShowPins => _editorOpen && _scriptsLayerVisible;
 
         private void BindRegistry()
         {
@@ -79,7 +95,7 @@ namespace SS3D.Systems.Tile.SpawnPoints
         private void Rebuild()
         {
             ClearPins();
-            if (!_visible)
+            if (!ShouldShowPins)
                 return;
 
             if (_boundRegistry == null)
@@ -105,7 +121,7 @@ namespace SS3D.Systems.Tile.SpawnPoints
 
         private static GameObject CreatePin(SpawnPointRecord record)
         {
-            var root = new GameObject($"SpawnPin_{Describe(record)}");
+            var root = new GameObject($"SpawnPin_{ShortLabel(record)}");
             root.transform.position = record.Position + Vector3.up * 0.15f;
 
             GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -122,14 +138,57 @@ namespace SS3D.Systems.Tile.SpawnPoints
             head.transform.localPosition = Vector3.up * 0.95f;
             UnityEngine.Object.Destroy(head.GetComponent<Collider>());
 
+            // Facing chevron so Direction is readable at a glance.
+            GameObject arrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            arrow.name = "Facing";
+            arrow.transform.SetParent(root.transform, false);
+            arrow.transform.localScale = new Vector3(0.08f, 0.08f, 0.35f);
+            arrow.transform.localPosition = new Vector3(0f, 0.2f, 0.25f);
+            UnityEngine.Object.Destroy(arrow.GetComponent<Collider>());
+
             Color color = ColorFor(record);
             ApplyColor(stem, color);
             ApplyColor(head, color);
+            ApplyColor(arrow, color);
 
             float yaw = DirectionToYaw(record.Direction);
             root.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
+            CreateLabel(root.transform, record, color);
+
             return root;
+        }
+
+        private static void CreateLabel(Transform parent, SpawnPointRecord record, Color accent)
+        {
+            var labelGo = new GameObject("Label");
+            labelGo.transform.SetParent(parent, false);
+            labelGo.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+
+            TextMeshPro tmp = labelGo.AddComponent<TextMeshPro>();
+            tmp.text = ShortLabel(record);
+            tmp.fontSize = 3.2f;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = Color.white;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Overflow;
+            tmp.rectTransform.sizeDelta = new Vector2(4f, 1f);
+
+            // Soft outline for contrast over bright floors.
+            tmp.outlineWidth = 0.25f;
+            tmp.outlineColor = new Color(0f, 0f, 0f, 0.85f);
+
+            // Accent underline bar under the text.
+            GameObject bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bar.name = "Accent";
+            bar.transform.SetParent(labelGo.transform, false);
+            bar.transform.localPosition = new Vector3(0f, -0.35f, 0f);
+            bar.transform.localScale = new Vector3(1.6f, 0.06f, 0.06f);
+            UnityEngine.Object.Destroy(bar.GetComponent<Collider>());
+            ApplyColor(bar, accent);
+
+            labelGo.AddComponent<SpawnPinBillboard>();
         }
 
         private static void ApplyColor(GameObject go, Color color)
@@ -154,10 +213,10 @@ namespace SS3D.Systems.Tile.SpawnPoints
                 ? new Color(0.25f, 0.75f, 1f, 0.95f)
                 : new Color(1f, 0.35f, 0.25f, 0.95f);
 
-        private static string Describe(SpawnPointRecord record) =>
+        private static string ShortLabel(SpawnPointRecord record) =>
             record.Kind == SpawnPointKind.Job
                 ? record.JobName
-                : record.AntagonistCategory.ToString();
+                : MapEditorSpawnCatalog.FormatAntagonist(record.AntagonistCategory);
 
         private static float DirectionToYaw(Direction direction) =>
             direction switch
@@ -172,5 +231,22 @@ namespace SS3D.Systems.Tile.SpawnPoints
                 Direction.NorthWest => 315f,
                 _ => 0f,
             };
+
+        /// <summary>Keeps world labels facing the active camera.</summary>
+        private sealed class SpawnPinBillboard : MonoBehaviour
+        {
+            private void LateUpdate()
+            {
+                Camera camera = Camera.main;
+                if (camera == null)
+                    return;
+
+                Vector3 toCamera = transform.position - camera.transform.position;
+                if (toCamera.sqrMagnitude < 0.0001f)
+                    return;
+
+                transform.rotation = Quaternion.LookRotation(toCamera.normalized, Vector3.up);
+            }
+        }
     }
 }

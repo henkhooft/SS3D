@@ -40,8 +40,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandService.cs` — server undo/redo command layer
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandFactory.cs` — DTO → invertible command (snapshots previous state)
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/ConstructionHologramManager.cs` — placement preview and drag batches
-- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity)
-- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` is catalog-backed, not a `TileLayer`)
+- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity); **Scripts** toggles spawn-marker pins
+- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
 
 ## Extension points
 
