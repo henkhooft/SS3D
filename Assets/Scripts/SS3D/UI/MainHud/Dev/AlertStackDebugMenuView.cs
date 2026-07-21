@@ -1,25 +1,29 @@
 using System;
-using Coimbra.Services.Events;
-using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
-using SS3D.UI.MainHud;
+using SS3D.Systems.Inputs;
 using SS3D.UI.MainHud.Components;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
-namespace SS3D.UI.MainHud.Debug
+namespace SS3D.UI.MainHud.Dev
 {
     /// <summary>
     /// Dev-only panel to force every Alert Icon Stack hazard through None/Warning/Critical, without needing
     /// the hunger/thirst/pressure/radiation/pulling/restrained/low-oxygen/dying trackers that don't exist yet
-    /// (see <see cref="MainHudSubSystem.SetDebugAlertOverride"/>). Toggle with F3 (F2 is screen effects).
+    /// (see <see cref="MainHudSubSystem.SetDebugAlertOverride"/>). Toggle with F3 via
+    /// <see cref="InputSubSystem.ToggleAlertStackDebug"/> (F2 is the condemned screen-effects uGUI menu).
     /// <para>
     /// Built entirely at runtime via UI Toolkit with its own throwaway <see cref="PanelSettings"/> - no
     /// prefab/scene/stylesheet dependency, and deliberately not a copy of
     /// <c>ScreenEffectsDebugMenuView</c>'s uGUI shape: that panel is explicitly condemned (see
     /// Documents/architecture/systems/screen-effects.md), so a new debug tool shouldn't extend it.
+    /// The document registers with <see cref="InputInterface"/> so pointer-over-panel blocks world clicks.
+    /// </para>
+    /// <para>
+    /// Namespace is <c>Dev</c> (not <c>Debug</c>) so it cannot shadow <see cref="UnityEngine.Debug"/> inside
+    /// <c>SS3D.UI.MainHud</c>.
     /// </para>
     /// </summary>
     public sealed class AlertStackDebugMenuView : View
@@ -47,24 +51,68 @@ namespace SS3D.UI.MainHud.Debug
         private VisualElement _panel;
         private AlertStackState _state;
         private bool _visible;
+        private InputSubSystem _inputSystem;
+        private bool _toggleBound;
 
-        protected override void OnAwake()
+        protected override void OnStart()
         {
-            base.OnAwake();
-
-            AddHandle(UpdateEvent.AddListener(HandleUpdate));
+            TryBindToggle();
         }
 
-        private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
+        protected override void OnEnabled()
         {
-            if (Keyboard.current == null || !Keyboard.current[Key.F3].wasPressedThisFrame)
+            base.OnEnabled();
+            TryBindToggle();
+        }
+
+        protected override void OnDisabled()
+        {
+            UnbindToggle();
+            base.OnDisabled();
+        }
+
+        protected override void OnDestroyed()
+        {
+            UnbindToggle();
+
+            if (_document != null)
+            {
+                InputInterface.UnregisterDocument(_document);
+            }
+
+            base.OnDestroyed();
+        }
+
+        private void TryBindToggle()
+        {
+            if (_toggleBound)
             {
                 return;
             }
 
-            // Built lazily on first press, same reasoning as ScreenEffectsDebugMenuView: this view
-            // bootstraps very early via RuntimeInitializeOnLoadMethod, before the real scene's own UI
-            // panels necessarily exist.
+            if (!SubSystems.TryGet(out _inputSystem) || _inputSystem.ToggleAlertStackDebug == null)
+            {
+                return;
+            }
+
+            _inputSystem.ToggleAlertStackDebug.performed += HandleToggle;
+            _toggleBound = true;
+        }
+
+        private void UnbindToggle()
+        {
+            if (!_toggleBound || _inputSystem == null)
+            {
+                return;
+            }
+
+            _inputSystem.ToggleAlertStackDebug.performed -= HandleToggle;
+            _toggleBound = false;
+            _inputSystem = null;
+        }
+
+        private void HandleToggle(InputAction.CallbackContext context)
+        {
             if (_document == null)
             {
                 BuildUi();
@@ -88,7 +136,8 @@ namespace SS3D.UI.MainHud.Debug
             _document.sortingOrder = 2000f;
 
             _panel = new VisualElement();
-            _panel.style.position = Position.Absolute;
+            // Qualify UITK Position: Actor exposes a Vector3 Position property that would otherwise win.
+            _panel.style.position = UnityEngine.UIElements.Position.Absolute;
             _panel.style.top = 16f;
             _panel.style.right = 16f;
             _panel.style.width = 260f;
@@ -117,6 +166,7 @@ namespace SS3D.UI.MainHud.Debug
             }));
 
             _document.rootVisualElement.Add(_panel);
+            InputInterface.RegisterDocument(_document);
         }
 
         private VisualElement BuildRow(AlertHazard hazard)

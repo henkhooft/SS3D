@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/
 > Entry points: ItemSubSystem, MainHudSubSystem
 > Status: partial
-> Verified: 1ddd6404a — 2026-07-21
+> Verified: 5f89c0b39 — 2026-07-21
 
 # Inventory
 
@@ -13,7 +13,7 @@ Items, containers, hands, and identification cards (`IDCard`, `PDA`). ID cards b
 
 **Main HUD (partial):** `SS3D.UI.MainHud` shows worn equipment (incl. gloves), gear strip, hands, and intent. Hold-to-self-examine from [main-hud.md](../../design/main-hud.md) §5 is **not** in the HUD — deferred to the general examine surface. Hand-well clicks call `HumanInventory.ActivateHand` (same as legacy slots). The HUD `UIDocument` is registered with [InputInterface](inputs.md) so pointer-over-HUD blocks world clicks. Visibility is owned by `MainHudSubSystem.ApplyVisibility`: local spawned body + in-game round, and **suppressed while** [machine-interface](machine-interface.md) is open (`InterfaceOpened` / `InterfaceClosed`). Show/hide uses the same DOTween bring-up as diegetic MI (opacity, scale, lift). Fork divergence from design (screens “on top” of HUD): chrome hides for diegetic focus. Styles/icons/`PanelSettings` load from a committed `MainHudAssetCatalog` via `Resources.Load` (rebuild: **SS3D → Main HUD → Rebuild Asset Catalog**) — Editor-only `AssetDatabase` is fallback only; standalone builds need the catalog asset.
 
-**Alert icon stack (main-hud.md §9):** `AlertIconStack.cs` renders all 12 hazards (Fire, Hot, Cold, LowPressure, HighPressure, Radiation, Hunger, Thirst, Pulling, Restrained, LowOxygen, Dying) with a real per-hazard `AlertSeverity` (None/Warning/Critical — Dying has no Warning tier). Icons are imported sprites (`Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`) wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`, same pattern as the equipment `MainHudIconSet`. Critical severity pulses a glow overlay via a looping DOTween (no CSS keyframe equivalent in UI Toolkit). No hazard has a real backend tracker yet (hunger/thirst/pressure/radiation/pulling/restrained/low-oxygen/dying trackers don't exist in `SS3D.Systems`) — severities are only ever set through `MainHudSubSystem.SetDebugAlertOverride`/`ClearDebugAlertOverride`, driven by the **F3** debug menu (`AlertStackDebugMenuView`, UI Toolkit, deliberately not modeled on the condemned `ScreenEffectsDebugMenuView` uGUI panel) or the `alertstack <hazard> <none|warning|critical>` console command.
+**Alert icon stack (main-hud.md §9):** `AlertIconStack.cs` renders all 12 hazards (Fire, Hot, Cold, LowPressure, HighPressure, Radiation, Hunger, Thirst, Pulling, Restrained, LowOxygen, Dying) with a real per-hazard `AlertSeverity` (None/Warning/Critical — Dying has no Warning tier). Icons are imported sprites (`Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`) wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`, same pattern as the equipment `MainHudIconSet`. Critical severity pulses a glow overlay via a looping DOTween (no CSS keyframe equivalent in UI Toolkit). No hazard has a real backend tracker yet (hunger/thirst/pressure/radiation/pulling/restrained/low-oxygen/dying trackers don't exist in `SS3D.Systems`) — severities are only ever set through `MainHudSubSystem.SetDebugAlertOverride`/`ClearDebugAlertOverride`, driven by the **F3** debug menu (`AlertStackDebugMenuView`: arbitrated `ToggleAlertStackDebug` + `InputInterface`-registered UITK panel, deliberately not modeled on the condemned `ScreenEffectsDebugMenuView` uGUI) or the `alertstack <hazard> <none|warning|critical>` console command.
 
 ## Start here
 
@@ -24,7 +24,7 @@ Items, containers, hands, and identification cards (`IDCard`, `PDA`). ID cards b
 - `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — Main HUD overlay bootstrap + bind
 - `Assets/Content/Systems/UI/MainHud/Resources/MainHudAssetCatalog.asset` — committed UITK refs for builds
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertIconStack.cs` — hazard/severity model + chip rendering
-- `Assets/Scripts/SS3D/UI/MainHud/Debug/AlertStackDebugMenuView.cs` — F3 debug menu (all hazards × severities)
+- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — F3 debug menu via `InputSubSystem.ToggleAlertStackDebug` + `InputInterface` (namespace `Dev`, not `Debug`, to avoid shadowing `UnityEngine.Debug`)
 - `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (lives in MainHud asm — Systems cannot reference MainHud)
 
 ## Extension points
@@ -37,6 +37,8 @@ Items, containers, hands, and identification cards (`IDCard`, `PDA`). ID cards b
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Main HUD → Rebuild Asset Catalog** and commit the asset (same pattern as Machine UI; second copy of that stack).
 - **Spawn/round catch-up can re-show HUD over MI:** always route through `ApplyVisibility()` (includes `_machineUiOpen`). Do not call bare `SetVisible(true)` from bind/round handlers. Do not hide HUD from `MachineInterfaceHost` — MainHud observes MI events (asmdef direction).
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
+- **Do not poll `Keyboard.current` for HUD debug toggles:** subscribe to an arbitrated `InputSubSystem` action (code-defined like `ToggleAlertStackDebug` / `UiCancel`) and register the panel's `UIDocument` with `InputInterface`.
+- **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug` for every type in `SS3D.UI.MainHud`. Use `Dev` (or similar). On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
 
 ## Depends on / Used by
 

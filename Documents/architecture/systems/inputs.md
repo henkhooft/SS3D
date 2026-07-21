@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: 56e4cd004 — 2026-07-17
+> Verified: 5f89c0b39 — 2026-07-21
 
 # Inputs
 
@@ -25,7 +25,7 @@ the context table, and the migration from the old refcount API.
 
 - `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.cs` — owns `Controls`, builds the context table,
   exposes `PushContext` / `SuppressMap` / `SuppressAction` / `SuppressBinding` and the code-defined
-  `UiCancel` / `DetailedExamine` actions.
+  `UiCancel` / `DetailedExamine` / `ToggleAlertStackDebug` actions.
 - `Assets/Scripts/SS3D/Systems/Inputs/InputArbiter.cs` — pure resolution engine (unit tested).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputContext.cs` — the context enum (value = priority).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputInterface.cs` — unified pointer query + document registry.
@@ -39,8 +39,10 @@ the context table, and the migration from the old refcount API.
 - **Need to temporarily block a key/map?** Use `SuppressBinding` / `SuppressMap` / `SuppressAction`
   and dispose the handle when done. Prefer disposing in `OnDisabled`/`OnDestroyed` so a missed
   pointer-exit or early disable can never strand the suppression.
-- **New runtime UI Toolkit panel that should block world clicks?** Call
-  `InputInterface.RegisterDocument` in setup and `UnregisterDocument` in teardown.
+- **Need a one-off debug/UI chord without regenerating `Controls.cs`?** Add a code-defined action on
+  `InputSubSystem`'s `System` map (see `UiCancel`, `DetailedExamine`, `ToggleAlertStackDebug`), include
+  it in the contexts that should enable it, and subscribe to `performed`. Register any UITK panel with
+  `InputInterface`.
 
 ## Conventions
 
