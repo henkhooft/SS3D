@@ -42,7 +42,7 @@ namespace SS3D.Systems.Entities.Editor
         public static void RemoveDevHacksBatch()
         {
             int removed = RemoveDevHacks();
-            Debug.Log($"[HumanPrefabHygiene] Removed {removed} dev-only component(s) from Human.prefab.");
+            UnityEngine.Debug.Log($"[HumanPrefabHygiene] Removed {removed} dev-only component(s) from Human.prefab.");
             if (Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
@@ -54,7 +54,7 @@ namespace SS3D.Systems.Entities.Editor
             GameObject prefabRoot = PrefabUtility.LoadPrefabContents(HumanPrefabPath);
             if (prefabRoot == null)
             {
-                Debug.LogError($"[HumanPrefabHygiene] Missing prefab: {HumanPrefabPath}");
+                UnityEngine.Debug.LogError($"[HumanPrefabHygiene] Missing prefab: {HumanPrefabPath}");
                 return 0;
             }
 
@@ -62,14 +62,14 @@ namespace SS3D.Systems.Entities.Editor
             {
                 if (!prefabRoot.TryGetComponent(out NetworkObject rootNetworkObject))
                 {
-                    Debug.LogError($"[HumanPrefabHygiene] No root NetworkObject on {HumanPrefabPath}");
+                    UnityEngine.Debug.LogError($"[HumanPrefabHygiene] No root NetworkObject on {HumanPrefabPath}");
                     return 0;
                 }
 
                 RagdollWhenPressingButton[] hacks = prefabRoot.GetComponentsInChildren<RagdollWhenPressingButton>(true);
                 foreach (RagdollWhenPressingButton hack in hacks)
                 {
-                    Object.DestroyImmediate(hack, true);
+                    UnityEngine.Object.DestroyImmediate(hack, true);
                 }
 
                 if (hacks.Length > 0)
