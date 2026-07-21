@@ -386,16 +386,21 @@ namespace SS3D.Systems.Tile.MapEditor
                 {
                     HandleToolHotkeys();
 
-                    if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.zKey.wasPressedThisFrame)
+                    if (IsChordModifierPressed(Keyboard.current) && Keyboard.current.zKey.wasPressedThisFrame)
                         RpcUndo(LocalConnection);
-                    if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.yKey.wasPressedThisFrame)
+                    if (IsChordModifierPressed(Keyboard.current) && Keyboard.current.yKey.wasPressedThisFrame)
                         RpcRedo(LocalConnection);
                 }
 
                 // File shortcuts work even while a search/save field is focused.
-                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.oKey.wasPressedThisFrame)
+                // Ctrl+Shift+O — Unity Editor steals plain Ctrl+O for File/Open Scene (read-only profile).
+                if (IsChordModifierPressed(Keyboard.current)
+                    && Keyboard.current.shiftKey.isPressed
+                    && Keyboard.current.oKey.wasPressedThisFrame)
                     HandleOpenMapHotkey();
-                if (Keyboard.current.ctrlKey.isPressed && Keyboard.current.sKey.wasPressedThisFrame)
+                if (IsChordModifierPressed(Keyboard.current)
+                    && !Keyboard.current.shiftKey.isPressed
+                    && Keyboard.current.sKey.wasPressedThisFrame)
                     HandleQuickSaveHotkey();
             }
 
@@ -660,7 +665,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private void HandleToolHotkeys()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard == null || keyboard.ctrlKey.isPressed || keyboard.altKey.isPressed)
+            if (keyboard == null || IsChordModifierPressed(keyboard) || keyboard.altKey.isPressed)
                 return;
 
             if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame)
@@ -672,6 +677,12 @@ namespace SS3D.Systems.Tile.MapEditor
             else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame)
                 OnToolSelected(MapEditorTool.Delete);
         }
+
+        private static bool IsChordModifierPressed(Keyboard keyboard) =>
+            keyboard != null
+            && (keyboard.ctrlKey.isPressed
+                || keyboard.leftCommandKey.isPressed
+                || keyboard.rightCommandKey.isPressed);
 
         private void HandleOpenMapHotkey()
         {

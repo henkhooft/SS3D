@@ -164,6 +164,10 @@ namespace SS3D.Systems.Tile.MapEditor
             if (keyboard == null)
                 return;
 
+            // Ctrl/Cmd/Alt chords (Ctrl+S save, Alt replace, etc.) must not also pan.
+            if (IsChordModifierPressed(keyboard))
+                return;
+
             // Pan in yaw space only — never from camera.forward (near-vertical pitch
             // collapses the flattened forward and sends WASD in random directions).
             float yawRad = _yaw * Mathf.Deg2Rad;
@@ -182,6 +186,12 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _focus.y = 0f;
         }
+
+        private static bool IsChordModifierPressed(Keyboard keyboard) =>
+            keyboard.ctrlKey.isPressed
+            || keyboard.altKey.isPressed
+            || keyboard.leftCommandKey.isPressed
+            || keyboard.rightCommandKey.isPressed;
 
         private void UpdateZoom()
         {
