@@ -18,7 +18,7 @@ namespace SS3D.UI.MainHud.Commands
         public override string ShortDescription => "Force an Alert Icon Stack hazard's severity";
         public override string Usage => "(hazard) (none|warning|critical)\n"
             + "hazards: fire, hot, cold, lowpressure, highpressure, radiation, hunger, thirst, pulling, "
-            + "restrained, lowoxygen, dying\n"
+            + "restrained, lowoxygen, dying, bleeding, cardiacarrest\n"
             + "example: alertstack fire critical";
         public override ServerRoleTypes AccessLevel => ServerRoleTypes.User;
         public override CommandType Type => CommandType.Client;
@@ -71,6 +71,8 @@ namespace SS3D.UI.MainHud.Commands
                 case AlertHazard.Restrained: state.Restrained = severity; break;
                 case AlertHazard.LowOxygen: state.LowOxygen = severity; break;
                 case AlertHazard.Dying: state.Dying = severity; break;
+                case AlertHazard.Bleeding: state.Bleeding = severity; break;
+                case AlertHazard.CardiacArrest: state.CardiacArrest = severity; break;
             }
         }
     }

@@ -22,6 +22,8 @@ namespace SS3D.UI.MainHud
         public Sprite Restrained;
         public Sprite LowOxygen;
         public Sprite Dying;
+        public Sprite Bleeding;
+        public Sprite CardiacArrest;
 
         public Sprite this[Components.AlertHazard hazard] => hazard switch
         {
@@ -37,6 +39,8 @@ namespace SS3D.UI.MainHud
             Components.AlertHazard.Restrained => Restrained,
             Components.AlertHazard.LowOxygen => LowOxygen,
             Components.AlertHazard.Dying => Dying,
+            Components.AlertHazard.Bleeding => Bleeding,
+            Components.AlertHazard.CardiacArrest => CardiacArrest,
             _ => null,
         };
     }

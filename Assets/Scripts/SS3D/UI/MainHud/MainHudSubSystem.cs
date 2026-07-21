@@ -611,6 +611,8 @@ namespace SS3D.UI.MainHud
                     Restrained = LoadAlertSprite("restrained-cuffs"),
                     LowOxygen = LoadAlertSprite("low-oxygen"),
                     Dying = LoadAlertSprite("dying-heartbeat"),
+                    Bleeding = LoadAlertSprite("bleeding-droplet"),
+                    CardiacArrest = LoadAlertSprite("cardiac-arrest"),
                 };
             }
 

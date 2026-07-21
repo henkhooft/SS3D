@@ -45,6 +45,8 @@ namespace SS3D.UI.MainHud
         [SerializeField] private Sprite _alertRestrained;
         [SerializeField] private Sprite _alertLowOxygen;
         [SerializeField] private Sprite _alertDying;
+        [SerializeField] private Sprite _alertBleeding;
+        [SerializeField] private Sprite _alertCardiacArrest;
 
         public PanelSettings PanelSettings => _panelSettings;
         public StyleSheet MainHudStyle => _mainHudStyle;
@@ -84,6 +86,8 @@ namespace SS3D.UI.MainHud
             Restrained = _alertRestrained,
             LowOxygen = _alertLowOxygen,
             Dying = _alertDying,
+            Bleeding = _alertBleeding,
+            CardiacArrest = _alertCardiacArrest,
         };
 
         public bool HasRequiredAssets(out string missingField)
@@ -116,7 +120,9 @@ namespace SS3D.UI.MainHud
                 || _alertPulling == null
                 || _alertRestrained == null
                 || _alertLowOxygen == null
-                || _alertDying == null)
+                || _alertDying == null
+                || _alertBleeding == null
+                || _alertCardiacArrest == null)
             {
                 missingField = "alert icon sprites";
                 return false;
@@ -168,6 +174,8 @@ namespace SS3D.UI.MainHud
             _alertRestrained = alertIcons.Restrained;
             _alertLowOxygen = alertIcons.LowOxygen;
             _alertDying = alertIcons.Dying;
+            _alertBleeding = alertIcons.Bleeding;
+            _alertCardiacArrest = alertIcons.CardiacArrest;
         }
 #endif
     }

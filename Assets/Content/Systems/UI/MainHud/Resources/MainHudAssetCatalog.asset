@@ -42,3 +42,5 @@ MonoBehaviour:
   _alertRestrained: {fileID: 21300000, guid: 2dfb5350e39c40088de56fa05e47f2b2, type: 3}
   _alertLowOxygen: {fileID: 21300000, guid: 4932236c496847daa69b79d2d8b2cb5c, type: 3}
   _alertDying: {fileID: 21300000, guid: ab8990ca57cd474a8e9c935fd243684e, type: 3}
+  _alertBleeding: {fileID: 21300000, guid: 1d2dbb9bb06c437b82ae213a5bca7a70, type: 3}
+  _alertCardiacArrest: {fileID: 21300000, guid: 5f3e03921ca04a2fb3b265376ea5ef90, type: 3}

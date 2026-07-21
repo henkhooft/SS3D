@@ -227,7 +227,8 @@ namespace SS3D.UI.MainHud.Dev
             buttons.style.justifyContent = Justify.SpaceBetween;
 
             buttons.Add(BuildSeverityButton(hazard, AlertSeverity.None, "Off"));
-            if (hazard != AlertHazard.Dying)
+            // Dying / cardiac arrest have no warning tier — off or critical only.
+            if (hazard != AlertHazard.Dying && hazard != AlertHazard.CardiacArrest)
             {
                 buttons.Add(BuildSeverityButton(hazard, AlertSeverity.Warning, "Warning"));
             }
@@ -270,7 +271,7 @@ namespace SS3D.UI.MainHud.Dev
         private void RefreshRowButtons(AlertHazard hazard)
         {
             RefreshOneButton(hazard, AlertSeverity.None);
-            if (hazard != AlertHazard.Dying)
+            if (hazard != AlertHazard.Dying && hazard != AlertHazard.CardiacArrest)
             {
                 RefreshOneButton(hazard, AlertSeverity.Warning);
             }
@@ -330,6 +331,8 @@ namespace SS3D.UI.MainHud.Dev
                 case AlertHazard.Restrained: _state.Restrained = severity; break;
                 case AlertHazard.LowOxygen: _state.LowOxygen = severity; break;
                 case AlertHazard.Dying: _state.Dying = severity; break;
+                case AlertHazard.Bleeding: _state.Bleeding = severity; break;
+                case AlertHazard.CardiacArrest: _state.CardiacArrest = severity; break;
             }
         }
 
@@ -342,6 +345,7 @@ namespace SS3D.UI.MainHud.Dev
             AlertHazard.HighPressure => "High pressure",
             AlertHazard.LowOxygen => "Low oxygen",
             AlertHazard.Dying => "Dying / critical",
+            AlertHazard.CardiacArrest => "Cardiac arrest",
             _ => hazard.ToString(),
         };
 

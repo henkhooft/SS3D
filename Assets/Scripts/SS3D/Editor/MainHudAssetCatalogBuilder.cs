@@ -68,6 +68,8 @@ namespace SS3D.Editor
                 Restrained = LoadRequiredAlertSprite("restrained-cuffs", missing),
                 LowOxygen = LoadRequiredAlertSprite("low-oxygen", missing),
                 Dying = LoadRequiredAlertSprite("dying-heartbeat", missing),
+                Bleeding = LoadRequiredAlertSprite("bleeding-droplet", missing),
+                CardiacArrest = LoadRequiredAlertSprite("cardiac-arrest", missing),
             };
 
             if (missing.Count > 0)

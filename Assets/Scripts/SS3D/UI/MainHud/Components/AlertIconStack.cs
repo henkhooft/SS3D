@@ -6,11 +6,10 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
-    /// The twelve hazards the main HUD design doc (§9) and the "Alert Icon Stack" mockup wire up: fire,
-    /// ambient heat, ambient cold, low/high pressure, radiation, hunger, thirst, pulling, restrained, low
-    /// oxygen and dying. Backend trackers only exist for none of these yet - hunger/thirst/restrained/
-    /// pressure/radiation/pulling/low-oxygen/dying are all debug/console-only until their systems exist
-    /// (see <see cref="SS3D.UI.MainHud.MainHudSubSystem"/>'s debug override).
+    /// Hazards the alert icon stack can show. Base set matches main-hud.md §9; Bleeding and
+    /// CardiacArrest are fork additions (health vitals) not yet in that design table.
+    /// Backend trackers only exist for none of these yet - severities are debug/console-only until
+    /// their systems exist (see <see cref="SS3D.UI.MainHud.MainHudSubSystem"/>'s debug override).
     /// </summary>
     public enum AlertHazard
     {
@@ -26,12 +25,14 @@ namespace SS3D.UI.MainHud.Components
         Restrained,
         LowOxygen,
         Dying,
+        Bleeding,
+        CardiacArrest,
     }
 
     /// <summary>
     /// How urgently a hazard reads: hidden, a plain amber warning, or a pulsing red critical.
-    /// <see cref="AlertHazard.Dying"/> never uses <see cref="Warning"/> - the mockup treats it as a state
-    /// with no lesser tier, it either isn't happening or it's critical.
+    /// <see cref="AlertHazard.Dying"/> and <see cref="AlertHazard.CardiacArrest"/> never use
+    /// <see cref="Warning"/> — they either aren't happening or they're critical.
     /// </summary>
     public enum AlertSeverity
     {
@@ -61,6 +62,8 @@ namespace SS3D.UI.MainHud.Components
         public AlertSeverity Restrained;
         public AlertSeverity LowOxygen;
         public AlertSeverity Dying;
+        public AlertSeverity Bleeding;
+        public AlertSeverity CardiacArrest;
 
         public AlertSeverity this[AlertHazard hazard] => hazard switch
         {
@@ -76,6 +79,8 @@ namespace SS3D.UI.MainHud.Components
             AlertHazard.Restrained => Restrained,
             AlertHazard.LowOxygen => LowOxygen,
             AlertHazard.Dying => Dying,
+            AlertHazard.Bleeding => Bleeding,
+            AlertHazard.CardiacArrest => CardiacArrest,
             _ => AlertSeverity.None,
         };
     }
@@ -102,6 +107,8 @@ namespace SS3D.UI.MainHud.Components
             (AlertHazard.Restrained, "Restrained"),
             (AlertHazard.LowOxygen, "Low Oxygen"),
             (AlertHazard.Dying, "Dying / Critical"),
+            (AlertHazard.Bleeding, "Bleeding"),
+            (AlertHazard.CardiacArrest, "Cardiac Arrest"),
         };
 
         private readonly AlertChip[] _chips;
