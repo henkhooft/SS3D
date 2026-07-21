@@ -182,6 +182,10 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 if (_placePressActive || _isDragging)
                     CancelPlacementGesture(resetHolograms: _selectedObject != null || _selectedFloorDecal != null ||
                         (_mapEditor != null && _mapEditor.IsDeleting));
+                // Non-construct tools (Select/Dropper/Move) used to leave the last ghost frozen in-world
+                // because this path returned without tearing holograms down.
+                if (_holograms.Count > 0)
+                    DestroyHolograms();
                 return;
             }
 

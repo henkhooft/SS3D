@@ -650,17 +650,33 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnToolSelected(MapEditorTool tool)
         {
-            MapEditorTool previous = _viewModel.CurrentTool;
             _viewModel.SetTool(tool);
 
-            if (tool == MapEditorTool.Delete)
+            switch (tool)
             {
-                _hologramManager.EnterDeleteMode();
+                case MapEditorTool.Delete:
+                    _hologramManager.EnterDeleteMode();
+                    break;
+                case MapEditorTool.Edit:
+                    RestoreConstructHologramFromSelection();
+                    break;
+                default:
+                    // Select / Dropper / Move — placement ghosts must not linger.
+                    _hologramManager.ClearSelection();
+                    break;
+            }
+        }
+
+        private void RestoreConstructHologramFromSelection()
+        {
+            MapEditorCatalogEntry entry = _viewModel.SelectedEntry;
+            if (entry == null)
+            {
+                _hologramManager.ClearSelection();
                 return;
             }
 
-            if (previous == MapEditorTool.Delete)
-                _hologramManager.ClearSelection();
+            HandleAssetSelected(entry, _viewModel.SelectedAsset);
         }
 
         private void HandleToolHotkeys()
