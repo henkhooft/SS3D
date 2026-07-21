@@ -174,7 +174,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             _leftToolbar.Add(WrapWithHoverHint(
                 CreateIconButton(_icons?.SaveMap, null, () => TogglePopover("saveMenu")),
-                "Save map [Ctrl+S]"));
+                "Save map [Ctrl+Shift+S]"));
             _leftToolbar.Add(WrapWithHoverHint(
                 CreateIconButton(_icons?.OpenMap, null, () => TogglePopover("maps")),
                 "Load map [Ctrl+Shift+O]"));
