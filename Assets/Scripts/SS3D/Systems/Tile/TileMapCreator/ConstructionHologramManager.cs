@@ -263,19 +263,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         /// <summary>
         /// Grow/shrink the active hologram list to match drag tiles without per-step Instantiate/Destroy.
-        /// Validity colors are skipped during drag (camera foreshortening reshuffles many tiles);
-        /// colors refresh for the single cursor hologram and after place.
+        /// Validity uses local <see cref="IConstructionService.TryPreviewTile"/> (same as the cursor ghost);
+        /// hover toasts stay off during drag to avoid spam.
         /// </summary>
         private void SyncDragHolograms(List<Vector3> tiles)
         {
-            ConstructionMode dragMode = _mapEditor != null && _mapEditor.IsDeleting
-                ? ConstructionMode.Delete
-                : ConstructionMode.Valid;
+            bool deleteMode = _mapEditor != null && _mapEditor.IsDeleting;
 
             while (_holograms.Count < tiles.Count)
             {
                 ConstructionHologram rented = RentHologram();
-                rented.ChangeHologramColor(dragMode);
                 _holograms.Add(rented);
             }
 
@@ -290,11 +287,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
             {
                 ConstructionHologram hologram = _holograms[i];
                 Vector3 tile = tiles[i];
-                if (hologram.TargetPosition == tile && hologram.ActiveSelf)
-                    continue;
+                if (hologram.TargetPosition != tile || !hologram.ActiveSelf)
+                {
+                    hologram.TargetPosition = tile;
+                    hologram.Hologram.transform.position = tile + new Vector3(0f, hologram.PlacementYOffset + 0.1f, 0f);
+                }
 
-                hologram.TargetPosition = tile;
-                hologram.Hologram.transform.position = tile + new Vector3(0f, hologram.PlacementYOffset + 0.1f, 0f);
+                if (deleteMode)
+                    hologram.ChangeHologramColor(ConstructionMode.Delete);
+                else
+                    RefreshHologram(hologram, reportHoverFeedback: false);
             }
         }
 
@@ -482,7 +484,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             ConstructionHologram hologram = new(tileObject, position, _lastRegisteredDirection, FloorVisualMesh.SurfaceLift);
             if (addToActive)
                 _holograms.Add(hologram);
-            RefreshHologram(hologram);
+            RefreshHologram(hologram, reportHoverFeedback: addToActive);
             return hologram;
         }
 
@@ -503,7 +505,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             tileObject.transform.position = hologram.TargetPosition + new Vector3(0, placementYOffset + 0.1f, 0);
             if (addToActive)
                 _holograms.Add(hologram);
-            RefreshHologram(hologram);
+            RefreshHologram(hologram, reportHoverFeedback: addToActive);
             return hologram;
         }
 
@@ -574,7 +576,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         /// <summary>
         /// Place all objects on the tilemap that are at the same locations as existing holograms.
-        /// Invalid cells are skipped; toasts the primary reason once per gesture (or skipped count when dragging).
+        /// Invalid cells are skipped; toasts aggregated reasons once per gesture (not only the first failure).
         /// </summary>
         private void PlaceOnHolograms()
         {
@@ -585,7 +587,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
             int placed = 0;
             int skipped = 0;
-            string skipReason = null;
+            var skipMessages = new List<string>(4);
+
+            void NoteSkip(string message)
+            {
+                skipped++;
+                if (string.IsNullOrEmpty(message))
+                    return;
+
+                if (!skipMessages.Contains(message))
+                    skipMessages.Add(message);
+            }
 
             void TryPlaceAt(Vector3 position, Direction direction)
             {
@@ -593,8 +605,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 {
                     if (!HasPlenumAt(tileSystem.CurrentMap, position))
                     {
-                        skipped++;
-                        skipReason ??= "Needs a plenum or catwalk underneath";
+                        NoteSkip(BuildFailMessages.Format(BuildFailReason.MissingOrInvalidPlenum));
                         return;
                     }
 
@@ -609,8 +620,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                         tileObjectSo, position, direction, isReplacing);
                     if (!preview.CanBuild)
                     {
-                        skipped++;
-                        skipReason ??= preview.PrimaryMessage;
+                        NoteSkip(preview.PrimaryMessage);
                         return;
                     }
                 }
@@ -630,12 +640,21 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
 
             if (skipped > 0 && _mapEditor != null)
-            {
-                string message = placed == 0 && skipped == 1
-                    ? skipReason
-                    : $"Skipped {skipped} tiles: {skipReason}";
-                _mapEditor.ShowLocalToast(message);
-            }
+                _mapEditor.ShowLocalToast(FormatSkippedPlacementToast(skipped, placed, skipMessages));
+        }
+
+        private static string FormatSkippedPlacementToast(int skipped, int placed, List<string> skipMessages)
+        {
+            if (skipMessages.Count == 0)
+                return skipped == 1 ? "Cannot place here" : $"Skipped {skipped} tiles";
+
+            if (placed == 0 && skipped == 1)
+                return skipMessages[0];
+
+            if (skipMessages.Count == 1)
+                return $"Skipped {skipped} tiles: {skipMessages[0]}";
+
+            return $"Skipped {skipped} tiles: {string.Join("; ", skipMessages)}";
         }
 
         /// <summary>
@@ -722,12 +741,15 @@ namespace SS3D.Systems.Tile.TileMapCreator
             ClearScopedAt(tileSystem, GetPlacementPoint(forceTileSnap: true), _mapEditor.CurrentSubcategory);
         }
 
+        private void RefreshHologram(ConstructionHologram hologram) =>
+            RefreshHologram(hologram, reportHoverFeedback: true);
+
         /// <summary>
         /// Update material of holograms based build (or anything else) mode and holograms position.
         /// Uses local <see cref="IConstructionService.TryPreviewTile"/> — never ServerRpc per ghost;
         /// drag used to spam RpcSendCanBuild and hitch so hard the path looked frozen.
         /// </summary>
-        private void RefreshHologram(ConstructionHologram hologram)
+        private void RefreshHologram(ConstructionHologram hologram, bool reportHoverFeedback)
         {
             if (_mapEditor != null && _mapEditor.IsDeleting)
             {
@@ -740,7 +762,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
                 bool canPlace = HasPlenumAt(tileSystem?.CurrentMap, hologram.TargetPosition);
                 hologram.ChangeHologramColor(canPlace ? ConstructionMode.Valid : ConstructionMode.Invalid);
-                ReportInvalidHover(canPlace ? null : "Needs a plenum or catwalk underneath");
+                if (reportHoverFeedback)
+                    ReportInvalidHover(canPlace ? null : BuildFailMessages.Format(BuildFailReason.MissingOrInvalidPlenum));
                 return;
             }
 
@@ -761,7 +784,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
             PreviewResult preview = constructionTiles.Construction
                 .TryPreviewTile(tileObjectSo, hologram.TargetPosition, hologram.Direction, isReplacing);
             hologram.ChangeHologramColor(preview.CanBuild ? ConstructionMode.Valid : ConstructionMode.Invalid);
-            ReportInvalidHover(preview.CanBuild ? null : preview.PrimaryMessage);
+            if (reportHoverFeedback)
+                ReportInvalidHover(preview.CanBuild ? null : preview.PrimaryMessage);
         }
 
         private void ReportInvalidHover(string message)

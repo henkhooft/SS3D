@@ -26,7 +26,7 @@ namespace SS3D.Systems.Tile
         public static string Format(BuildFailReason reason) =>
             reason switch
             {
-                BuildFailReason.LayerOccupied => "That layer is already occupied",
+                BuildFailReason.LayerOccupied => "That layer is already occupied — hold Alt to replace",
                 BuildFailReason.MissingOrInvalidPlenum => "Needs a plenum or catwalk underneath",
                 BuildFailReason.WallMountNeedsWall => "Wall mounts need a wall",
                 BuildFailReason.WallMountBlockedByNeighbourWall => "Blocked by a neighbouring wall",
