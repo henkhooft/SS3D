@@ -27,8 +27,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private const int MaxGridRows = 3;
         /// <summary>Slot width (108) + horizontal margins (8) + border (3).</summary>
         private const float GridSlotOuterWidthPx = 120f;
-        /// <summary>Slot height (96) + vertical margins (8) + border (3).</summary>
-        private const float GridSlotOuterHeightPx = 107f;
+        /// <summary>Slot height (104) + vertical margins (8) + border (3).</summary>
+        private const float GridSlotOuterHeightPx = 115f;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
