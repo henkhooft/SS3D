@@ -1,12 +1,12 @@
-> Implements: Documents/design/explosives-destruction.md §3 (structural stages), §4 (Area/atmos on Destroyed)
-> Touches systems: structural-destruction, tile, area, atmospherics
+> Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (Area/atmos on Destroyed), §5 (crew brute)
+> Touches systems: structural-destruction, tile, area, atmospherics, health
 > Status: in-progress
 
-# Structural destruction — Phase 1 integrity core
+# Structural destruction — integrity + blast
 
 ## Goal
 
-Ship per-tile structural integrity for Turf walls/doors/windows: Intact → Damaged → Cracked/venting → Destroyed, with Destroyed clearing the tile and Area live boundary recompute.
+Ship per-tile structural integrity for Turf walls/doors/windows and hop-based blast resolution that terminates in the same Apply path.
 
 ## Phase 1 shipped surface
 
@@ -24,11 +24,20 @@ Ship per-tile structural integrity for Turf walls/doors/windows: Intact → Dama
 - `MeleeHitInteraction` connect: living first, else `MeleeStructuralHitResolver` → `TryApplyStructuralDamage`
 - Crowbar 35 / hatchet 28 / fists 5 / knife 4 provisional force
 
+## Phase 3 shipped surface
+
+- `BlastResolutionService.Resolve(epicenter, yield, falloff)` — BFS, subtractive falloff, max-force revisit
+- Blocked-edge apply to structural turf; Destroyed mid-pass cascades in the same resolve
+- Crew chest brute on visited tiles (`EntitySubSystem.SpawnedPlayers` + `FindObjectsByType`)
+- Console: `blast [yield] [falloff]` (defaults 120 / 25)
+- EditMode: `BlastResolutionTests` (corridor, sealed door cascade, cracked wall blocks)
+
 ## Deviations / notes
 
 - Phase 1 Area recompute is **full reflood preserving metadata**, deferred one Update tick because `TileMap` notifies clear **before** occupant removal (same pitfall as atmos). True local flood fill is follow-up.
 - Debris/rubble spawn not wired (no art path yet).
-- Melee/blast/items/repair: later phases in [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md).
+- Blast hop rules duplicate atmos `CanFlow` bit checks locally (avoid `AtmosNeighbourBuilder` internal coupling).
+- Items / visuals / repair: later phases in [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md).
 
 ## Related
 

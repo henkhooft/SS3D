@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: phase3-blast
     content: "Phase 3: Blast BFS Resolve(epicenter, yield, falloff); cascade on Destroyed; crew brute; geometry EditMode tests"
-    status: pending
+    status: completed
   - id: phase4-presentation
     content: "Phase 4: World visuals for stages + examine; optional atmos slow-leak for Cracked"
     status: pending
@@ -71,7 +71,7 @@ flowchart LR
 ```
 
 - Place/clear + atmos refresh exist; **no HP/stages**, **no blast**, **Area `OnTileCleared` is empty** (`// Live boundary recompute deferred`).
-- Melee connect only hits `HumanHealthController` ([MeleeHitInteraction.cs](Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs)).
+- Melee connect prefers living zones, else structural Turf ([MeleeHitInteraction.cs](Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs)).
 - Walls/doors live on **Turf** ([TileOccupancyEvaluator.cs](Assets/Scripts/SS3D/Systems/Tile/TileOccupancyEvaluator.cs)).
 
 ---
