@@ -1,5 +1,6 @@
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Tile.FloorVisuals;
+using SS3D.Systems.Tile.SpawnPoints;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,6 +67,7 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             AppendFloorDecals(mapped);
+            AppendSpawnPlacements(mapped);
         }
 
         private void AppendFloorDecals(HashSet<string> mapped)
@@ -95,6 +97,48 @@ namespace SS3D.Systems.Tile.MapEditor
             }
         }
 
+        private void AppendSpawnPlacements(HashSet<string> mapped)
+        {
+            foreach (string jobName in MapEditorSpawnCatalog.DefaultJobNames)
+            {
+                string assetName = MapEditorSpawnCatalog.EncodeJob(jobName);
+                if (mapped.Contains(assetName))
+                    continue;
+
+                var entry = new MapEditorCatalogEntry
+                {
+                    AssetName = assetName,
+                    Mode = MapEditorMode.Scripting,
+                    Subcategory = MapEditorSubcategory.SpawnPlacements,
+                    SearchTags = new[] { "spawn", "job", jobName },
+                };
+                _entries.Add(entry);
+                _byAssetName[assetName] = entry;
+                mapped.Add(assetName);
+            }
+
+            foreach (AntagonistSpawnCategory category in Enum.GetValues(typeof(AntagonistSpawnCategory)))
+            {
+                string assetName = MapEditorSpawnCatalog.EncodeAntagonist(category);
+                if (mapped.Contains(assetName))
+                    continue;
+
+                var entry = new MapEditorCatalogEntry
+                {
+                    AssetName = assetName,
+                    Mode = MapEditorMode.Scripting,
+                    Subcategory = MapEditorSubcategory.SpawnPlacements,
+                    SearchTags = new[]
+                    {
+                        "spawn", "antag", "antagonist", MapEditorSpawnCatalog.FormatAntagonist(category),
+                    },
+                };
+                _entries.Add(entry);
+                _byAssetName[assetName] = entry;
+                mapped.Add(assetName);
+            }
+        }
+
         public bool TryGetEntry(string assetName, out MapEditorCatalogEntry entry) =>
             _byAssetName.TryGetValue(assetName, out entry);
 
@@ -108,7 +152,7 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             IEnumerable<MapEditorCatalogEntry> query = _entries.Where(e => e.Mode == mode && e.Subcategory == subcategory);
 
-            if (mode == MapEditorMode.Scripting)
+            if (mode == MapEditorMode.Scripting && subcategory != MapEditorSubcategory.SpawnPlacements)
                 return query;
 
             if (string.IsNullOrWhiteSpace(search))
@@ -123,6 +167,14 @@ namespace SS3D.Systems.Tile.MapEditor
         public static bool IsScriptingSubcategory(MapEditorSubcategory subcategory) =>
             subcategory is MapEditorSubcategory.Atmospherics
                 or MapEditorSubcategory.SpawnPlacements
+                or MapEditorSubcategory.RandomSpawners
+                or MapEditorSubcategory.Triggers;
+
+        /// <summary>
+        /// Scripting rails that still show the stub message (spawn placements are live).
+        /// </summary>
+        public static bool IsUnavailableScriptingSubcategory(MapEditorSubcategory subcategory) =>
+            subcategory is MapEditorSubcategory.Atmospherics
                 or MapEditorSubcategory.RandomSpawners
                 or MapEditorSubcategory.Triggers;
 

@@ -1,12 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
+> Verified: cb23f6549 — 2026-07-21
 
 # Persistence
 
 ## Overview
 
-Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure and area metadata; server meta currently covers admin permissions (with legacy `permissions.txt` import) and append-only round history JSONL. Round-config map pools and round snapshots are planned.
+Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure, area metadata, and authored spawn markers; server meta currently covers admin permissions (with legacy `permissions.txt` import) and append-only round history JSONL. Round-config map pools and round snapshots are planned.
 
 ## Start here
 
@@ -16,21 +17,28 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events
 - `Assets/Scripts/SS3D/Systems/Persistence/TileMapPersistenceContributor.cs` — tilemap + items chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/AreaPersistenceContributor.cs` — area metadata chunk
+- `Assets/Scripts/SS3D/Systems/Persistence/SpawnPointPersistenceContributor.cs` — spawn markers chunk (`spawn-points`, load order 110)
+- `Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/SavedSpawnPointRecord.cs` — spawn DTO payload
 - `Assets/Scripts/SS3D/Systems/Persistence/PermissionsPersistenceContributor.cs` — admin permissions chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/RoundHistoryStore.cs` — append-only round history JSONL
 - `Assets/Scripts/SS3D/Systems/Persistence/LegacyTileMapMigrator.cs` — flat tilemap JSON → envelope
 - `Assets/Scripts/SS3D/Systems/Persistence/LegacyPermissionsMigrator.cs` — `permissions.txt` → payload
 - `Assets/Scripts/SS3D/Data/Persistence/SavedPermissionsPayload.cs` — permissions envelope DTO
 - `Assets/Scripts/Tests/EditMode/PersistenceFrameworkTests.cs` — envelope round-trip, legacy tilemap migration, load order
+- `Assets/Scripts/Tests/EditMode/SpawnPointAuthoringTests.cs` — spawn registry / DTO / command invertibility
 - `Assets/Scripts/Tests/EditMode/ServerMetaPersistenceTests.cs` — permissions migration and round-history append
 
 ## Extension points
 
-- New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup.
+- New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup; add a `DeserializePayload` arm for the DTO type.
 - Station template save/load: `SaveStationTemplate` / `LoadStationTemplate` / `LoadMostRecentStationTemplate`.
 - Server meta: `LoadServerMeta` (server boot via `TileSubSystem`), `SaveServerMeta` (on `UserPermissionsChangedEvent`).
 - Round history: `AppendRoundHistory` — hooked from `RoundSubSystem.ProcessEndRound`.
 - **Deferred:** `RoundConfigPersistenceContributor` (blocked on round-config), round snapshot contributors (Phase 2), round-start `LoadStationTemplate(mapId)` from config pool.
+
+## Pitfalls
+
+- **Missing spawn chunk leaves stale markers:** tilemap restore calls `TileMap.Clear`, which clears `TileSubSystem.SpawnPoints`. Do not remove that clear — templates without `spawn-points` must start empty.
 
 ## Depends on / Used by
 
@@ -39,5 +47,6 @@ Layered contributor-based disk persistence for station templates and server meta
 
 ## Related docs
 
-- Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
-- Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor)
+- Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
+- Effort: [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md)
+- Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor); [creative-mode.md](../../design/creative-mode.md) §8–§9

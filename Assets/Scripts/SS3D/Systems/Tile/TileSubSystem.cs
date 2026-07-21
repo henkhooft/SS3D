@@ -10,6 +10,7 @@ using SS3D.Logging;
 using SS3D.Systems.Area;
 using SS3D.Systems.Persistence;
 using SS3D.Systems.Tile.FloorVisuals;
+using SS3D.Systems.Tile.SpawnPoints;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -35,9 +36,11 @@ namespace SS3D.Systems.Tile
         private TileMap _currentMap;
         private TileQueryService _queryService;
         private ConstructionService _constructionService;
+        private readonly SpawnPointRegistry _spawnPoints = new();
         public TileMap CurrentMap => _currentMap;
         public ITileQueryService QueryService => _queryService;
         public IConstructionService Construction => _constructionService;
+        public SpawnPointRegistry SpawnPoints => _spawnPoints;
 
         public event Action OnMapCreated;
 
@@ -405,9 +408,16 @@ namespace SS3D.Systems.Tile
         public void ResetSave()
         {
             _currentMap.Clear();
+            _spawnPoints.Clear();
             Save("UnnamedMap", true);
             Log.Warning(this, "Tilemap resetted. Existing savefile has been wiped");
         }
+
+        /// <summary>
+        /// Clears authored spawn markers. Called from <see cref="TileMap.Clear"/> so map wipe /
+        /// template restore cannot leave stale points when a template lacks a spawn chunk.
+        /// </summary>
+        public void ClearSpawnPoints() => _spawnPoints.Clear();
 
         public bool MapNameAlreadyExist(string name)
         {
