@@ -1,15 +1,17 @@
 using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Permissions;
-using SS3D.UI.MainHud;
+using SS3D.Systems.IngameConsoleSystem.Commands;
 using SS3D.UI.MainHud.Components;
 using System;
 
-namespace SS3D.Systems.IngameConsoleSystem.Commands
+namespace SS3D.UI.MainHud.Commands
 {
     /// <summary>
     /// Debug command to force an Alert Icon Stack hazard's severity on the caller's own HUD, without needing
     /// the hunger/thirst/pressure/radiation/pulling/restrained/low-oxygen/dying trackers that don't exist yet.
+    /// Lives in <c>SS3D.UI.MainHud</c> (not <c>SS3D.Systems</c>) because MainHud already references Systems;
+    /// the reverse would recreate the asmdef cycle that forced Main HUD into its own assembly.
     /// </summary>
     public class AlertStackCommand : Command
     {

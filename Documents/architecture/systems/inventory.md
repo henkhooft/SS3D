@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/
 > Entry points: ItemSubSystem, MainHudSubSystem
 > Status: partial
-> Verified: 624906c2b — 2026-07-18
+> Verified: 1ddd6404a — 2026-07-21
 
 # Inventory
 
@@ -25,17 +25,18 @@ Items, containers, hands, and identification cards (`IDCard`, `PDA`). ID cards b
 - `Assets/Content/Systems/UI/MainHud/Resources/MainHudAssetCatalog.asset` — committed UITK refs for builds
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertIconStack.cs` — hazard/severity model + chip rendering
 - `Assets/Scripts/SS3D/UI/MainHud/Debug/AlertStackDebugMenuView.cs` — F3 debug menu (all hazards × severities)
-- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AlertStackCommand.cs` — `alertstack` console command
+- `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (lives in MainHud asm — Systems cannot reference MainHud)
 
 ## Extension points
 
 - **New Main HUD stylesheet/icon:** add a path in `MainHudAssetPaths`, assign on `MainHudAssetCatalog`, run **SS3D → Main HUD → Rebuild Asset Catalog**, commit the SO (do not rely on Editor `AssetDatabase` in `MainHudSubSystem`). Do not invent a third Resources-catalog stack — shared helper is deferred under [ui-shell](ui-shell.md) § Future work.
-- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop the icon PNG under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`, wire the sprite through `MainHudAssetCatalog`/`MainHudAssetCatalogBuilder`/`MainHudSubSystem`'s editor fallback, then run **SS3D → Main HUD → Rebuild Asset Catalog**. Add a row to `AlertStackDebugMenuView` and a case to `AlertStackCommand` so it's testable before a real tracker exists.
+- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop the icon PNG under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`, wire the sprite through `MainHudAssetCatalog`/`MainHudAssetCatalogBuilder`/`MainHudSubSystem`'s editor fallback, then run **SS3D → Main HUD → Rebuild Asset Catalog**. Add a row to `AlertStackDebugMenuView` and a case to `AlertStackCommand` (in `SS3D.UI.MainHud`, not Systems) so it's testable before a real tracker exists.
 
 ## Pitfalls
 
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Main HUD → Rebuild Asset Catalog** and commit the asset (same pattern as Machine UI; second copy of that stack).
 - **Spawn/round catch-up can re-show HUD over MI:** always route through `ApplyVisibility()` (includes `_machineUiOpen`). Do not call bare `SetVisible(true)` from bind/round handlers. Do not hide HUD from `MachineInterfaceHost` — MainHud observes MI events (asmdef direction).
+- **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
 
 ## Depends on / Used by
 
