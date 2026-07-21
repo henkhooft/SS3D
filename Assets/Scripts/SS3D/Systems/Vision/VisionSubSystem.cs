@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using FishNet;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -65,8 +67,8 @@ namespace SS3D.Systems.Vision
         private float resolution = 3f;
 
         /// <summary>
-        /// Safety cap on how many non-occluder colliders a single ray may skip (furniture,
-        /// props, etc.) before giving up.
+        /// Cap on wave iterations that skip non-occluder colliders (furniture, props).
+        /// Each wave is one <see cref="RaycastCommand.ScheduleBatch"/> for all still-active rays.
         /// </summary>
         private const int MaxOccluderSkips = 64;
 
@@ -85,6 +87,21 @@ namespace SS3D.Systems.Vision
         private Color[] _pixelBuffer;
         private Entity _targetEntity;
         private int _wallsLayer = -1;
+
+        // Batched Physics casts (one wave per prop-skip). Persistent to avoid per-frame TempJob alloc.
+        private NativeArray<RaycastCommand> _rayCommands;
+        private NativeArray<RaycastHit> _rayHits;
+        private NativeArray<Vector3> _rayDirections;
+        private float[] _rayTraveled;
+        private int[] _activeRayIndices;
+
+        /// <summary>
+        /// Collider instance-id → occluder. Walls/doors are stable; cleared when oversized so
+        /// recycled instance IDs cannot stick forever after destroy/respawn churn.
+        /// </summary>
+        private readonly Dictionary<int, bool> _occluderByColliderId = new(256);
+
+        private const int OccluderCacheMaxEntries = 4096;
 
         private static readonly ProfilerMarker MapPerformanceMarker = new("Vision.VisionMap");
         private static readonly ProfilerMarker PointsPerformanceMarker = new("Vision.ViewPoints");
@@ -146,6 +163,7 @@ namespace SS3D.Systems.Vision
         protected override void OnDisabled()
         {
             StopVisionRendering();
+            DisposeCastBuffers();
 
             if (viewPoints.IsCreated)
                 viewPoints.Dispose();
@@ -156,6 +174,7 @@ namespace SS3D.Systems.Vision
                 visionMap = null;
             }
 
+            _occluderByColliderId.Clear();
             _clientVisionInitialized = false;
         }
 
@@ -298,87 +317,99 @@ namespace SS3D.Systems.Vision
             // collider) stays visible. Without this, walls paint black while still correctly
             // hiding everything beyond them.
             const float occluderSurfaceBias = 0.75f;
+            const float skin = 0.05f;
+
+            QueryParameters query = new(obstacleMask, false, QueryTriggerInteraction.Ignore, false);
 
             for (int i = 0; i < count; i++)
             {
-                Vector3 direction = DirectionFromAngle(angles[i], true);
-                if (TryFindNearestOccluder(origin, direction, out float hitDistance, out Vector3 hitNormal))
-                {
-                    float visibleDistance = Mathf.Min(hitDistance + occluderSurfaceBias, viewRange);
-                    resultArray[i] = new ViewCastInfo(
-                        true,
-                        origin + (direction * visibleDistance),
-                        visibleDistance,
-                        angles[i],
-                        hitNormal);
-                }
-                else
-                {
-                    resultArray[i] = new ViewCastInfo(
-                        false,
-                        origin + (direction * viewRange),
-                        viewRange,
-                        angles[i],
-                        Vector3.zero);
-                }
+                float rad = angles[i] * Mathf.Deg2Rad;
+                Vector3 direction = new(Mathf.Sin(rad), 0f, Mathf.Cos(rad));
+                _rayDirections[i] = direction;
+                _rayTraveled[i] = 0f;
+                _activeRayIndices[i] = i;
+                resultArray[i] = new ViewCastInfo(
+                    false,
+                    origin + (direction * viewRange),
+                    viewRange,
+                    angles[i],
+                    Vector3.zero);
             }
-        }
 
-        /// <summary>
-        /// Walk the ray, skipping furniture/props, until the nearest wall/door (or miss).
-        /// Uses iterative single-hit casts so a dense prop pile cannot exhaust a fixed hit
-        /// buffer and falsely report a clear line of sight through walls.
-        /// </summary>
-        private bool TryFindNearestOccluder(
-            Vector3 origin,
-            Vector3 direction,
-            out float occluderDistance,
-            out Vector3 occluderNormal)
-        {
-            const float skin = 0.05f;
-            float traveled = 0f;
-            Vector3 from = origin;
+            int activeCount = count;
 
-            for (int skip = 0; skip < MaxOccluderSkips; skip++)
+            // Wave schedule: all active rays cast together, then only non-occluder hits stay
+            // active and advance. Same semantics as iterative single-hit Physics.Raycast, but
+            // one ScheduleBatch per skip layer instead of ~stepCount sync casts.
+            for (int skip = 0; skip < MaxOccluderSkips && activeCount > 0; skip++)
             {
-                float remaining = viewRange - traveled;
-                if (remaining <= skin)
-                    break;
-
-                if (!Physics.Raycast(
-                        from,
-                        direction,
-                        out RaycastHit hit,
-                        remaining,
-                        obstacleMask,
-                        QueryTriggerInteraction.Ignore))
+                for (int a = 0; a < activeCount; a++)
                 {
-                    break;
+                    int ray = _activeRayIndices[a];
+                    float remaining = viewRange - _rayTraveled[ray];
+                    Vector3 from = origin + (_rayDirections[ray] * _rayTraveled[ray]);
+                    _rayCommands[a] = new RaycastCommand(from, _rayDirections[ray], query, remaining);
                 }
 
-                float distanceFromOrigin = traveled + hit.distance;
-                if (IsVisionOccluder(hit.collider))
+                NativeArray<RaycastCommand> commands = _rayCommands.GetSubArray(0, activeCount);
+                NativeArray<RaycastHit> hits = _rayHits.GetSubArray(0, activeCount);
+                RaycastCommand.ScheduleBatch(commands, hits, 32, 1, default(JobHandle)).Complete();
+
+                int nextActive = 0;
+                for (int a = 0; a < activeCount; a++)
                 {
-                    occluderDistance = distanceFromOrigin;
-                    occluderNormal = hit.normal;
-                    return true;
+                    int ray = _activeRayIndices[a];
+                    RaycastHit hit = hits[a];
+
+                    // Miss (or zero-distance sentinel): leave the default full-range result.
+                    if (hit.colliderInstanceID == 0)
+                        continue;
+
+                    float distanceFromOrigin = _rayTraveled[ray] + hit.distance;
+                    Collider collider = hit.collider;
+                    if (collider != null && IsVisionOccluder(collider))
+                    {
+                        float visibleDistance = Mathf.Min(distanceFromOrigin + occluderSurfaceBias, viewRange);
+                        resultArray[ray] = new ViewCastInfo(
+                            true,
+                            origin + (_rayDirections[ray] * visibleDistance),
+                            visibleDistance,
+                            angles[ray],
+                            hit.normal);
+                        continue;
+                    }
+
+                    // Advance past this non-occluder and keep searching for a wall/door.
+                    _rayTraveled[ray] = distanceFromOrigin + skin;
+                    if (viewRange - _rayTraveled[ray] > skin)
+                        _activeRayIndices[nextActive++] = ray;
                 }
 
-                // Advance past this non-occluder and keep searching for a wall/door.
-                traveled = distanceFromOrigin + skin;
-                from = origin + (direction * traveled);
+                activeCount = nextActive;
             }
-
-            occluderDistance = viewRange;
-            occluderNormal = Vector3.zero;
-            return false;
         }
 
         /// <summary>
         /// True for wall/door tile objects and anything on the Walls layer. Windows are
         /// intentionally see-through for FOV (same as SS13-style line of sight).
+        /// Results are cached by collider instance id — GetComponentInParent on ~1k rays
+        /// dominates ViewPoints when uncached.
         /// </summary>
         private bool IsVisionOccluder(Collider collider)
+        {
+            int id = collider.GetInstanceID();
+            if (_occluderByColliderId.TryGetValue(id, out bool cached))
+                return cached;
+
+            bool isOccluder = ClassifyVisionOccluder(collider);
+            if (_occluderByColliderId.Count >= OccluderCacheMaxEntries)
+                _occluderByColliderId.Clear();
+
+            _occluderByColliderId[id] = isOccluder;
+            return isOccluder;
+        }
+
+        private bool ClassifyVisionOccluder(Collider collider)
         {
             // Proximity / interaction triggers (e.g. airlock open volume) must never darken FOV.
             if (collider.isTrigger)
@@ -428,10 +459,27 @@ namespace SS3D.Systems.Vision
             if (viewPoints.IsCreated)
                 viewPoints.Dispose();
 
+            DisposeCastBuffers();
+
             viewPoints = new NativeArray<Vector3>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            _rayCommands = new NativeArray<RaycastCommand>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            _rayHits = new NativeArray<RaycastHit>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            _rayDirections = new NativeArray<Vector3>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            _rayTraveled = new float[count];
+            _activeRayIndices = new int[count];
             _viewCastResults = new ViewCastInfo[count];
             _angleBuffer = new float[count];
             _pixelBuffer = new Color[count];
+        }
+
+        private void DisposeCastBuffers()
+        {
+            if (_rayCommands.IsCreated)
+                _rayCommands.Dispose();
+            if (_rayHits.IsCreated)
+                _rayHits.Dispose();
+            if (_rayDirections.IsCreated)
+                _rayDirections.Dispose();
         }
 
         public struct ViewCastInfo
