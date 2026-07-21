@@ -41,7 +41,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         {
             GenericObjectSo asset = ctx.ResolveAsset(_assetName);
             if (asset is TileObjectSo tile)
-                ctx.Construction.TryPlaceTile(tile, position, direction, _replaceExisting, skipBuildCheck: true);
+                ctx.Construction.TryPlaceTile(tile, position, direction, _replaceExisting, skipBuildCheck: false);
         }
     }
 
@@ -191,7 +191,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             }
 
             ctx.Construction.TryClearTile(from, tile.layer, direction);
-            ctx.Construction.TryPlaceTile(tile, to, direction, replaceExisting: false, skipBuildCheck: true);
+            ctx.Construction.TryPlaceTile(tile, to, direction, replaceExisting: false, skipBuildCheck: false);
         }
     }
 

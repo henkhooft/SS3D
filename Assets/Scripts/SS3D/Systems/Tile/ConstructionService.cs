@@ -64,12 +64,13 @@ namespace SS3D.Systems.Tile
         public PreviewResult TryPreviewTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting)
         {
             if (_map == null || tileObject == null)
-                return new PreviewResult { CanBuild = false };
+                return PreviewResult.Failed();
 
-            return new PreviewResult
-            {
-                CanBuild = _map.CanBuild(tileObject, worldPosition, direction, replaceExisting),
-            };
+            BuildFailReason[] failures = _map.EvaluateBuild(tileObject, worldPosition, direction, replaceExisting);
+            if (failures.Length == 0)
+                return PreviewResult.Ok;
+
+            return PreviewResult.Failed(failures);
         }
 
         public SpawnResult SpawnIngredient(GameObject prefab, Vector3 nearWorldPosition, Direction direction = Direction.North,

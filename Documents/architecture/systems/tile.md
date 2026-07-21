@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 4e3033476 — 2026-07-21
+> Verified: 8295b64b7 — 2026-07-21
 
 # Tile / construction
 
@@ -30,6 +30,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - `Assets/Scripts/SS3D/Systems/Tile/FloorVisuals/` — floor decal catalog, mesh helpers, `FloorDecalView`
 - `Assets/Scripts/SS3D/Systems/Tile/TileAssetCatalog.cs` — compact tile identity catalog
 - `Assets/Scripts/SS3D/Systems/Tile/SingleTileLocation.cs` / `CardinalTileLocation.cs` — per-cell occupancy; `GetAllPlacedObject()` allocates a new `List`
+- `Assets/Scripts/SS3D/Systems/Tile/BuildChecker.cs` / `BuildFailReason.cs` — placement rules + toastable fail reasons
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorDeleteTargeting.cs` — subcategory → clear targets (wall-mount face via `Direction`)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSubSystem.cs` — full-screen map editor (admin-gated)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/UI/MapEditorView.cs` — UI Toolkit editor chrome
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorCatalog.cs` — object library taxonomy
@@ -44,11 +46,13 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - React to placement: implement `ITileMutationObserver` (see [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md)).
 - Dynamic passability: implement `IDynamicTileOccupant` and call `TileSubSystem.NotifyTileStateChanged` when state changes (see [furniture](furniture.md) airlocks).
 - HV cables (`CablesAdjacencyConnector`): underfloor Wire-layer runs link grid backbone devices only; see [electricity](electricity.md) `ElectricCableConnectivity`.
-- Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move; undo/redo via `MapEditorCommandService`. Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places sparse `floorDecalIds` via `RpcSetFloorDecal` / `RpcClearFloorDecal` (not `PlaceTileObject`). Scripting mode rail is UI-only stub in v1. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
+- Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move, Delete, Dropper; undo/redo via `MapEditorCommandService`. Placement hard-blocked by `BuildChecker` (`BuildFailReason` toasts). Delete/eraser scopes to library subcategory (`MapEditorDeleteTargeting`; wall-mount face = hologram direction). Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places/clears sparse `floorDecalIds` via `RpcSetFloorDecal` / `RpcClearFloorDecal` (not `PlaceTileObject`). Scripting mode rail is UI-only stub in v1. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
 - Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`); server boot also calls `LoadServerMeta`. Unknown/removed tile SO names are skipped on load.
 
 ## Pitfalls
 
+- **Map editor place used to ignore red holograms:** `skipBuildCheck: true` on `RpcPlaceObject` / place commands let invalid tiles commit anyway. Placement now runs `BuildChecker` (Alt replace still checks; only relaxes layer-occupied). Client skips invalid cells and toasts `BuildFailMessages` / `"Skipped N tiles: …"`. Hover shows the primary reason on the Selected Object hint (toast debounced ~0.5s).
+- **Map editor Delete cleared every layer:** `EraseAtPointer` wiped all `PlacedTileObject`s on the tile. Delete/eraser now scopes to the object-library **subcategory** via `MapEditorDeleteTargeting` (pipes ≠ disposals). Wall Attachments delete only the hologram face (R cycles). Overlays clear floor decals; Items mode still raycasts. Uncategorized → toast `"Select a subcategory to delete"`.
 - **`Dictionary<TileCoord, T>` / `HashSet<TileCoord>` GC on Mono:** without `IEquatable<TileCoord>` + `GetHashCode`, every lookup boxes via `ValueType.DefaultEquals` (~24 B). Prefer `TryGetPlacedObject` over `GetAllPlacedObject` on hot single-occupancy layers — the latter always allocates a new `List`.
 - **Icon generation under `-batchmode -nographics`:** `TileResourceLoader.LoadAssetsWithIcon` and `Item.GenerateIcon` use `RuntimePreviewGenerator` (camera → URP). On NullGfxDevice that throws GraphicsBuffer/Blitter exceptions and poisons multiplayer smoke-test logs. Both paths skip when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
 - **B does nothing / Map Editor missing:** `TileCreator.ToggleMenu` (`<Keyboard>/b`) is handled by `MapEditorSubSystem` on `MapEditorCanvas`, nested under `PlayerCanvas`. Never GUID-swap a nested PrefabInstance to a different prefab (ConstructionMenu → MapEditorCanvas once did this) — orphan `fileID`s leave Missing Prefab / SceneId-0 NetworkObjects, so the toggle listener never runs. Re-nest in the Editor or rewrite the PrefabInstance against the source's current local IDs. Map Editor is full-screen UITK, not a DynamicPanels "Construction" tab.
@@ -84,5 +88,6 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - System map: [area](area.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
+- Plan: [map_editor_build_delete.plan.md](../../plans/map_editor_build_delete.plan.md)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
 - Plan: [tile_overlay_replacement.plan.md](../../plans/tile_overlay_replacement.plan.md)

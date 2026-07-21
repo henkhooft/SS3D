@@ -205,7 +205,7 @@ namespace SS3D.Systems.Tile
                 return;
 
             GenericObjectSo tileObjectSo = GetAsset(genericObjectSoName);
-            PlaceObject(tileObjectSo, placePosition, dir, replaceExisting, skipBuildCheck: true);
+            PlaceObject(tileObjectSo, placePosition, dir, replaceExisting, skipBuildCheck: false);
         }
 
         /// <summary>

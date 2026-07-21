@@ -385,21 +385,40 @@ namespace SS3D.Systems.Tile
         /// <param name="dir">Direction the object is facing</param>
         /// <param name="replaceExisting">Replace an existing object</param>
         /// <returns></returns>
-        public bool CanBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
+        public bool CanBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting) =>
+            EvaluateBuild(tileObjectSo, placePosition, dir, replaceExisting).Length == 0;
+
+        /// <summary>
+        /// Aggregates <see cref="BuildChecker"/> failures across every cell the object occupies.
+        /// </summary>
+        public BuildFailReason[] EvaluateBuild(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir, bool replaceExisting)
         {
             List<Vector2Int> gridPositionList = tileObjectSo.GetGridOffsetList(dir);
+            var failures = new List<BuildFailReason>();
 
-            bool canBuild = true;
             foreach (Vector2Int gridOffset in gridPositionList)
             {
                 Vector3 gridPosition = new(placePosition.x + gridOffset.x, 0, placePosition.z + gridOffset.y);
                 TryGetTileLocations(gridPosition, out ITileLocation[] tileLocations);
 
-                canBuild &= BuildChecker.CanBuild(tileLocations, tileObjectSo, dir, gridPosition,
-                    GetNeighbourPlacedObjects(TileLayer.Turf, gridPosition), replaceExisting);
+                BuildFailReason[] cellFailures = BuildChecker.Evaluate(
+                    tileLocations,
+                    tileObjectSo,
+                    dir,
+                    gridPosition,
+                    GetNeighbourPlacedObjects(TileLayer.Turf, gridPosition),
+                    replaceExisting);
+
+                foreach (BuildFailReason failure in cellFailures)
+                {
+                    if (!failures.Contains(failure))
+                        failures.Add(failure);
+                }
             }
-            
-            return canBuild;
+
+            return failures.Count == 0
+                ? System.Array.Empty<BuildFailReason>()
+                : failures.ToArray();
         }
 
         public bool PlaceTileObject(TileObjectSo tileObjectSo, Vector3 placePosition, Direction dir,

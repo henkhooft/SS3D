@@ -75,6 +75,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetSubcategory(MapEditorSubcategory subcategory)
         {
             CurrentSubcategory = subcategory;
+            UpdateHint();
             NotifyChanged();
         }
 
@@ -117,9 +118,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void UpdateHint()
         {
-            if (IsEraserSelected && CurrentTool == MapEditorTool.Edit)
+            if ((IsEraserSelected && CurrentTool == MapEditorTool.Edit) || CurrentTool == MapEditorTool.Delete)
             {
-                SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to erase";
+                string label = MapEditorCatalog.GetSubcategoryLabel(CurrentSubcategory);
+                SelectedObjectHint = CurrentSubcategory == MapEditorSubcategory.WallAttachments
+                    ? $"Delete {label} — R to change face"
+                    : $"Delete {label} — drag a line, Shift+drag a rectangle";
                 return;
             }
 
@@ -144,12 +148,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (CurrentTool == MapEditorTool.Dropper)
             {
                 SelectedObjectHint = "Dropper tool active — click a placed object to copy it";
-                return;
-            }
-
-            if (CurrentTool == MapEditorTool.Delete)
-            {
-                SelectedObjectHint = "Delete tool active — click an object to remove it";
                 return;
             }
 

@@ -83,7 +83,28 @@ namespace SS3D.Systems.Tile.MapEditor
         public bool IsDeleting => _viewModel.CurrentTool == MapEditorTool.Delete ||
             (_viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit);
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
+        public MapEditorMode CurrentMode => _viewModel.CurrentMode;
+        public MapEditorSubcategory CurrentSubcategory => _viewModel.CurrentSubcategory;
         public bool GridSnapEnabled => _viewModel.GridSnap;
+
+        /// <summary>Client-local toast (placement blocked, delete miss, etc.).</summary>
+        public void ShowLocalToast(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+
+            _viewModel.ShowToast(message);
+            _toastTimer = 1.6f;
+        }
+
+        public void SetPlacementHint(string hint)
+        {
+            if (_viewModel.SelectedObjectHint == hint)
+                return;
+
+            _viewModel.SelectedObjectHint = hint;
+            _viewModel.NotifyChanged();
+        }
         public Camera PickCamera => _playerCamera != null ? _playerCamera : Camera.main;
 
         protected override void OnAwake()
@@ -306,7 +327,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             if (entry.IsEraser)
             {
-                _hologramManager.ClearSelection();
+                _hologramManager.EnterDeleteMode();
                 return;
             }
 
@@ -607,11 +628,16 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnToolSelected(MapEditorTool tool)
         {
+            MapEditorTool previous = _viewModel.CurrentTool;
             _viewModel.SetTool(tool);
 
-            // Delete always erases whatever is under the cursor — drop any lingering placement
-            // ghost from a previous Edit-tool selection.
             if (tool == MapEditorTool.Delete)
+            {
+                _hologramManager.EnterDeleteMode();
+                return;
+            }
+
+            if (previous == MapEditorTool.Delete)
                 _hologramManager.ClearSelection();
         }
 
@@ -677,7 +703,11 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnModeSelected(MapEditorMode mode) => _viewModel.SetMode(mode);
 
-        private void OnSubcategorySelected(MapEditorSubcategory sub) => _viewModel.SetSubcategory(sub);
+        private void OnSubcategorySelected(MapEditorSubcategory sub)
+        {
+            _viewModel.SetSubcategory(sub);
+            _hologramManager.RefreshDeletePreview();
+        }
 
         private void OnSearchChanged(string text)
         {

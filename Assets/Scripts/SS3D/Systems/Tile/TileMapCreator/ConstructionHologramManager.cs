@@ -64,6 +64,10 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private readonly List<ConstructionHologram> _hologramPool = new();
         private readonly List<Vector3> _dragTileBuffer = new();
         private readonly List<Vector2> _lineTileBuffer = new();
+        private readonly List<MapEditorDeleteTarget> _deleteTargets = new();
+        private float _invalidHoverToastCooldown;
+        private string _lastHoverFailMessage;
+        private string _deleteGhostAssetName;
         [SerializeField]
         private MapEditorSubSystem _mapEditor;
 
@@ -71,13 +75,39 @@ namespace SS3D.Systems.Tile.TileMapCreator
         {
             CancelPlacementGesture(resetHolograms: false);
             _selectedObject = null;
+            _selectedFloorDecal = null;
+            _deleteGhostAssetName = null;
             DestroyHolograms();
+        }
+
+        /// <summary>
+        /// Delete / eraser mode: keep a cursor ghost scoped to the library subcategory.
+        /// </summary>
+        public void EnterDeleteMode()
+        {
+            CancelPlacementGesture(resetHolograms: false);
+            _selectedObject = null;
+            _selectedFloorDecal = null;
+            _isPlacingItem = false;
+            _deleteGhostAssetName = null;
+            DestroyHolograms();
+            EnsureDeleteCursorHologram(GetPlacementPoint(forceTileSnap: true));
+        }
+
+        /// <summary>Re-resolve delete targets after subcategory / rotation changes.</summary>
+        public void RefreshDeletePreview()
+        {
+            if (_mapEditor == null || !_mapEditor.IsDeleting)
+                return;
+
+            RefreshDeleteCursorHologram(GetPlacementPoint(forceTileSnap: true));
         }
 
         public void SetSelectedObject(GenericObjectSo genericObjectSo)
         {
             CancelPlacementGesture(resetHolograms: false);
             _selectedFloorDecal = null;
+            _deleteGhostAssetName = null;
             _isPlacingItem = genericObjectSo switch
             {
                 TileObjectSo => false,
@@ -149,7 +179,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_mapEditor == null || !_mapEditor.IsActive || !IsActiveTool(_mapEditor.CurrentTool))
             {
                 if (_placePressActive || _isDragging)
-                    CancelPlacementGesture(resetHolograms: _selectedObject != null || _selectedFloorDecal != null);
+                    CancelPlacementGesture(resetHolograms: _selectedObject != null || _selectedFloorDecal != null ||
+                        (_mapEditor != null && _mapEditor.IsDeleting));
                 return;
             }
 
@@ -176,18 +207,31 @@ namespace SS3D.Systems.Tile.TileMapCreator
             // Bresenham path nearly every frame while left/right stayed stable.
             Vector2Int cursorTile = ToTile(position);
 
+            bool hasPlacementSelection = _selectedObject != null || _selectedFloorDecal != null;
+            bool deleteMode = _mapEditor != null && _mapEditor.IsDeleting;
+
             // Move hologram, that sticks to the mouse. Currently it exists only if player is not dragging.
             if (_holograms.Count == 1 && !_isDragging)
             {
                 _holograms.First().TargetPosition = position;
                 if (cursorTile != ToTile(_lastSnappedPosition))
                 {
-                    RefreshHologram(_holograms.First());
+                    if (deleteMode)
+                        RefreshDeleteCursorHologram(position);
+                    else
+                        RefreshHologram(_holograms.First());
                 }
             }
+            else if (deleteMode && _holograms.Count == 0 && !_isDragging)
+            {
+                EnsureDeleteCursorHologram(position);
+            }
+
+            if (_invalidHoverToastCooldown > 0f)
+                _invalidHoverToastCooldown -= updateEvent.DeltaTime;
 
             bool squareDrag = _controls.SquareDrag.IsPressed();
-            if (_isDragging && (_selectedObject != null || _selectedFloorDecal != null) &&
+            if (_isDragging && (hasPlacementSelection || deleteMode) &&
                 (!_hasDragEndTile || cursorTile != _lastDragEndTile || squareDrag != _lastSquareDrag))
             {
                 _lastDragEndTile = cursorTile;
@@ -267,7 +311,10 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_selectedFloorDecal != null)
                 return CreateFloorDecalHologram(Vector3.zero, addToActive: false);
 
-            return CreateHologram(_selectedObject.PrefabAsset, Vector3.zero, addToActive: false);
+            if (_selectedObject != null)
+                return CreateHologram(_selectedObject.PrefabAsset, Vector3.zero, addToActive: false);
+
+            return CreateDeleteMarkerHologram(Vector3.zero, addToActive: false);
         }
 
         private void ReturnHologram(ConstructionHologram hologram)
@@ -370,6 +417,14 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void ResetHologramsToCursor()
         {
+            if (_mapEditor != null && _mapEditor.IsDeleting)
+            {
+                DestroyHolograms();
+                _deleteGhostAssetName = null;
+                EnsureDeleteCursorHologram(GetPlacementPoint(forceTileSnap: true));
+                return;
+            }
+
             if (_selectedFloorDecal != null)
             {
                 DestroyHolograms();
@@ -397,7 +452,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 hologram.SetNextRotation();
                 RefreshHologram(hologram);
             }
-            _lastRegisteredDirection = _holograms.First().Direction;
+
+            if (_holograms.Count > 0)
+                _lastRegisteredDirection = _holograms.First().Direction;
+
+            if (_mapEditor != null && _mapEditor.IsDeleting)
+            {
+                RefreshDeleteCursorHologram(GetPlacementPoint(forceTileSnap: true));
+                _mapEditor.SetPlacementHint(
+                    $"Delete {MapEditorCatalog.GetSubcategoryLabel(_mapEditor.CurrentSubcategory)} ({_lastRegisteredDirection}) — R to change face");
+            }
         }
 
         public ConstructionHologram CreateFloorDecalHologram(Vector3 position, bool addToActive = true)
@@ -476,6 +540,13 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
 
             DestroyHolograms();
+            _deleteGhostAssetName = null;
+
+            if (_mapEditor.IsDeleting)
+            {
+                EnsureDeleteCursorHologram(GetPlacementPoint(forceTileSnap: true));
+                return;
+            }
 
             if (_selectedFloorDecal != null)
             {
@@ -503,6 +574,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         /// <summary>
         /// Place all objects on the tilemap that are at the same locations as existing holograms.
+        /// Invalid cells are skipped; toasts the primary reason once per gesture (or skipped count when dragging).
         /// </summary>
         private void PlaceOnHolograms()
         {
@@ -511,88 +583,143 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 return;
 
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
+            int placed = 0;
+            int skipped = 0;
+            string skipReason = null;
 
-            if (_holograms.Count == 0)
-            {
-                Vector3 position = GetPlacementPoint();
-                if (_selectedFloorDecal != null)
-                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, position);
-                else
-                    tileSystem.RpcPlaceObject(_selectedObject.NameString, position, _lastRegisteredDirection, isReplacing);
-                return;
-            }
-
-            foreach (ConstructionHologram buildGhost in _holograms)
+            void TryPlaceAt(Vector3 position, Direction direction)
             {
                 if (_selectedFloorDecal != null)
                 {
-                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, buildGhost.TargetPosition);
-                    continue;
+                    if (!HasPlenumAt(tileSystem.CurrentMap, position))
+                    {
+                        skipped++;
+                        skipReason ??= "Needs a plenum or catwalk underneath";
+                        return;
+                    }
+
+                    tileSystem.RpcSetFloorDecal(_selectedFloorDecal.Id, position);
+                    placed++;
+                    return;
                 }
 
-                tileSystem.RpcPlaceObject(_selectedObject.NameString, buildGhost.TargetPosition, buildGhost.Direction, isReplacing);
+                if (_selectedObject is TileObjectSo tileObjectSo && tileSystem.Construction != null)
+                {
+                    PreviewResult preview = tileSystem.Construction.TryPreviewTile(
+                        tileObjectSo, position, direction, isReplacing);
+                    if (!preview.CanBuild)
+                    {
+                        skipped++;
+                        skipReason ??= preview.PrimaryMessage;
+                        return;
+                    }
+                }
+
+                tileSystem.RpcPlaceObject(_selectedObject.NameString, position, direction, isReplacing);
+                placed++;
+            }
+
+            if (_holograms.Count == 0)
+            {
+                TryPlaceAt(GetPlacementPoint(), _lastRegisteredDirection);
+            }
+            else
+            {
+                foreach (ConstructionHologram buildGhost in _holograms)
+                    TryPlaceAt(buildGhost.TargetPosition, buildGhost.Direction);
+            }
+
+            if (skipped > 0 && _mapEditor != null)
+            {
+                string message = placed == 0 && skipped == 1
+                    ? skipReason
+                    : $"Skipped {skipped} tiles: {skipReason}";
+                _mapEditor.ShowLocalToast(message);
             }
         }
 
         /// <summary>
-        /// Delete all objects, that are at the same locations as existing holograms.
+        /// Delete objects matching the current library subcategory at hologram tiles.
         /// </summary>
         private void DeleteOnHolograms()
         {
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            if (tileSystem == null)
+            if (tileSystem == null || _mapEditor == null)
                 return;
 
-            if (_selectedFloorDecal != null)
-            {
-                foreach (ConstructionHologram hologram in _holograms)
-                    tileSystem.RpcClearFloorDecal(hologram.TargetPosition);
+            MapEditorSubcategory subcategory = _mapEditor.CurrentSubcategory;
 
+            if (MapEditorDeleteTargeting.RequiresSubcategorySelection(subcategory))
+            {
+                _mapEditor.ShowLocalToast("Select a subcategory to delete");
                 return;
             }
 
-            if (_isPlacingItem)
+            if (MapEditorDeleteTargeting.IsItemSubcategory(subcategory) ||
+                _mapEditor.CurrentMode == MapEditorMode.Items)
             {
                 FindAndDeleteItem();
                 return;
             }
 
-            if (_holograms.Count > 0 && _selectedObject != null)
+            if (_holograms.Count == 0)
             {
-                foreach (ConstructionHologram hologram in _holograms)
-                {
-                    tileSystem.RpcClearTileObject(_selectedObject.NameString, hologram.TargetPosition, hologram.Direction);
-                }
-
+                ClearScopedAt(tileSystem, GetPlacementPoint(forceTileSnap: true), subcategory);
                 return;
             }
 
-            EraseAtPointer();
+            int clearedTiles = 0;
+            foreach (ConstructionHologram hologram in _holograms)
+            {
+                if (ClearScopedAt(tileSystem, hologram.TargetPosition, subcategory))
+                    clearedTiles++;
+            }
+
+            if (clearedTiles == 0)
+                _mapEditor.ShowLocalToast(MapEditorDeleteTargeting.EmptyHint(subcategory, _lastRegisteredDirection));
+        }
+
+        private bool ClearScopedAt(TileSubSystem tileSystem, Vector3 position, MapEditorSubcategory subcategory)
+        {
+            TileMap map = tileSystem.CurrentMap;
+            if (map == null)
+                return false;
+
+            if (subcategory == MapEditorSubcategory.Overlays)
+            {
+                if (!map.TryGetFloorDecalId(position, out ushort decalId) || decalId == 0)
+                    return false;
+
+                tileSystem.RpcClearFloorDecal(position);
+                return true;
+            }
+
+            if (!map.TryGetTileLocations(position, out ITileLocation[] locations))
+                return false;
+
+            MapEditorDeleteTargeting.Resolve(subcategory, _lastRegisteredDirection, locations, _deleteTargets);
+            if (_deleteTargets.Count == 0)
+                return false;
+
+            foreach (MapEditorDeleteTarget target in _deleteTargets)
+            {
+                if (target.IsFloorDecal)
+                    tileSystem.RpcClearFloorDecal(position);
+                else
+                    tileSystem.RpcClearTileObject(target.AssetName, position, target.Direction);
+            }
+
+            return true;
         }
 
         private void EraseAtPointer()
         {
+            // Kept for older call sites; Delete uses ClearScopedAt via DeleteOnHolograms.
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            TileMap map = tileSystem?.CurrentMap;
-            if (map == null)
+            if (tileSystem == null || _mapEditor == null)
                 return;
 
-            Vector3 position = GetPlacementPoint(forceTileSnap: true);
-            if (!map.TryGetTileLocations(position, out ITileLocation[] locations))
-                return;
-
-            bool clearedAny = false;
-            foreach (ITileLocation location in locations)
-            {
-                foreach (PlacedTileObject placed in location.GetAllPlacedObject())
-                {
-                    tileSystem.RpcClearTileObject(placed.NameString, position, placed.Direction);
-                    clearedAny = true;
-                }
-            }
-
-            if (!clearedAny)
-                FindAndDeleteItem();
+            ClearScopedAt(tileSystem, GetPlacementPoint(forceTileSnap: true), _mapEditor.CurrentSubcategory);
         }
 
         /// <summary>
@@ -607,9 +734,13 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 hologram.ChangeHologramColor(ConstructionMode.Delete);
                 return;
             }
+
             if (_selectedFloorDecal != null)
             {
-                hologram.ChangeHologramColor(ConstructionMode.Valid);
+                TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+                bool canPlace = HasPlenumAt(tileSystem?.CurrentMap, hologram.TargetPosition);
+                hologram.ChangeHologramColor(canPlace ? ConstructionMode.Valid : ConstructionMode.Invalid);
+                ReportInvalidHover(canPlace ? null : "Needs a plenum or catwalk underneath");
                 return;
             }
 
@@ -619,17 +750,169 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 return;
             }
 
-            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            if (tileSystem?.Construction == null)
+            TileSubSystem constructionTiles = SubSystems.Get<TileSubSystem>();
+            if (constructionTiles?.Construction == null)
             {
                 hologram.ChangeHologramColor(ConstructionMode.Valid);
                 return;
             }
 
             bool isReplacing = _controls.Replace.phase == InputActionPhase.Performed;
-            bool canBuild = tileSystem.Construction
-                .TryPreviewTile(tileObjectSo, hologram.TargetPosition, hologram.Direction, isReplacing).CanBuild;
-            hologram.ChangeHologramColor(canBuild ? ConstructionMode.Valid : ConstructionMode.Invalid);
+            PreviewResult preview = constructionTiles.Construction
+                .TryPreviewTile(tileObjectSo, hologram.TargetPosition, hologram.Direction, isReplacing);
+            hologram.ChangeHologramColor(preview.CanBuild ? ConstructionMode.Valid : ConstructionMode.Invalid);
+            ReportInvalidHover(preview.CanBuild ? null : preview.PrimaryMessage);
+        }
+
+        private void ReportInvalidHover(string message)
+        {
+            if (_mapEditor == null)
+                return;
+
+            if (string.IsNullOrEmpty(message))
+            {
+                if (_lastHoverFailMessage != null)
+                {
+                    _lastHoverFailMessage = null;
+                    _mapEditor.SetPlacementHint(
+                        "Edit tool active — drag a line, Shift+drag a rectangle to place");
+                }
+
+                return;
+            }
+
+            _mapEditor.SetPlacementHint(message);
+
+            if (message == _lastHoverFailMessage && _invalidHoverToastCooldown > 0f)
+                return;
+
+            _lastHoverFailMessage = message;
+            _invalidHoverToastCooldown = 0.5f;
+            _mapEditor.ShowLocalToast(message);
+        }
+
+        private static bool HasPlenumAt(TileMap map, Vector3 worldPosition)
+        {
+            if (map == null)
+                return false;
+
+            return map.TryGetTileLocation(TileLayer.Plenum, worldPosition, out ITileLocation plenum)
+                   && !plenum.IsFullyEmpty();
+        }
+
+        private void EnsureDeleteCursorHologram(Vector3 position)
+        {
+            if (_holograms.Count == 0)
+                CreateDeleteMarkerHologram(position);
+
+            RefreshDeleteCursorHologram(position);
+        }
+
+        private void RefreshDeleteCursorHologram(Vector3 position)
+        {
+            if (_holograms.Count == 0)
+            {
+                CreateDeleteMarkerHologram(position);
+            }
+
+            ConstructionHologram hologram = _holograms[0];
+            hologram.TargetPosition = position;
+            if (_holograms.Count == 1)
+                _lastRegisteredDirection = hologram.Direction;
+
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            TileMap map = tileSystem?.CurrentMap;
+            MapEditorSubcategory subcategory = _mapEditor.CurrentSubcategory;
+            _deleteTargets.Clear();
+
+            string hintAsset = null;
+            if (map != null && subcategory == MapEditorSubcategory.Overlays)
+            {
+                if (map.TryGetFloorDecalId(position, out ushort id) && id != 0)
+                {
+                    _deleteTargets.Add(MapEditorDeleteTarget.FloorDecal);
+                    hintAsset = "floor-decal";
+                }
+            }
+            else if (map != null && map.TryGetTileLocations(position, out ITileLocation[] locations))
+            {
+                MapEditorDeleteTargeting.Resolve(subcategory, _lastRegisteredDirection, locations, _deleteTargets);
+                if (_deleteTargets.Count > 0 && !_deleteTargets[0].IsFloorDecal)
+                    hintAsset = _deleteTargets[0].AssetName;
+            }
+
+            if (_deleteTargets.Count > 0 && hintAsset != null && hintAsset != "floor-decal")
+            {
+                MaybeSwapDeleteGhostPrefab(hintAsset, position);
+            }
+            else if (_deleteTargets.Count == 0 || hintAsset == "floor-decal")
+            {
+                if (_deleteGhostAssetName != null)
+                {
+                    DestroyHolograms();
+                    _deleteGhostAssetName = null;
+                    CreateDeleteMarkerHologram(position);
+                }
+            }
+
+            if (_holograms.Count > 0)
+            {
+                ConstructionMode mode = _deleteTargets.Count > 0 ? ConstructionMode.Delete : ConstructionMode.Invalid;
+                _holograms[0].ChangeHologramColor(mode);
+            }
+
+            if (_deleteTargets.Count == 0)
+            {
+                string empty = MapEditorDeleteTargeting.RequiresSubcategorySelection(subcategory)
+                    ? "Select a subcategory to delete"
+                    : MapEditorDeleteTargeting.EmptyHint(subcategory, _lastRegisteredDirection);
+                _mapEditor.SetPlacementHint(empty);
+            }
+            else
+            {
+                string label = MapEditorCatalog.GetSubcategoryLabel(subcategory);
+                _mapEditor.SetPlacementHint(
+                    subcategory == MapEditorSubcategory.WallAttachments
+                        ? $"Delete {label} ({_lastRegisteredDirection}) — R to change face"
+                        : $"Delete {label}");
+            }
+        }
+
+        private void MaybeSwapDeleteGhostPrefab(string assetName, Vector3 position)
+        {
+            if (_deleteGhostAssetName == assetName && _holograms.Count > 0)
+                return;
+
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            GenericObjectSo asset = tileSystem?.GetAsset(assetName);
+            if (asset?.PrefabAsset == null)
+                return;
+
+            Direction dir = _holograms.Count > 0 ? _holograms[0].Direction : _lastRegisteredDirection;
+            _lastRegisteredDirection = dir;
+            DestroyHolograms();
+            CreateHologram(asset.PrefabAsset, position);
+            if (_holograms.Count > 0)
+                _holograms[0].ChangeHologramColor(ConstructionMode.Delete);
+
+            _deleteGhostAssetName = assetName;
+        }
+
+        private ConstructionHologram CreateDeleteMarkerHologram(Vector3 position, bool addToActive = true)
+        {
+            Material material = FloorVisualMesh.CreateCutoutMaterial(
+                FloorVisualMesh.GetStripeCornerTexture(),
+                new Color(1f, 0.35f, 0.35f, 0.65f));
+            GameObject marker = FloorVisualMesh.CreateQuadObject(
+                "DeleteHologramMarker",
+                null,
+                position,
+                material);
+            ConstructionHologram hologram = new(marker, position, _lastRegisteredDirection, FloorVisualMesh.SurfaceLift);
+            hologram.ChangeHologramColor(ConstructionMode.Delete);
+            if (addToActive)
+                _holograms.Add(hologram);
+            return hologram;
         }
 
         /// <summary>

@@ -43,6 +43,22 @@ namespace SS3D.Systems.Tile
     public readonly struct PreviewResult
     {
         public bool CanBuild { get; init; }
+        public BuildFailReason[] Failures { get; init; }
+
+        public static PreviewResult Ok => new()
+        {
+            CanBuild = true,
+            Failures = System.Array.Empty<BuildFailReason>(),
+        };
+
+        public static PreviewResult Failed(params BuildFailReason[] failures) =>
+            new()
+            {
+                CanBuild = false,
+                Failures = failures ?? System.Array.Empty<BuildFailReason>(),
+            };
+
+        public string PrimaryMessage => BuildFailMessages.FormatPrimary(Failures);
     }
 
     public readonly struct SpawnResult
