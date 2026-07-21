@@ -72,7 +72,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Play Mode / Editor verification still required** for this clean-slate pass (catalog present; compile/Play Mode not run in implementing session).
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
 - **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
-- **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right).
+- **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right). Hotkey debug panels in general are [TECH_DEBT.md](../TECH_DEBT.md) § 1.13 — prefer `alertstack` / console commands over new F-keys.
 
 ## Depends on / Used by
 

@@ -47,6 +47,8 @@ the context table, and the migration from the old refcount API.
   `InputSubSystem`'s `System` map (see `UiCancel`, `OpenLocalSpeechCompose`, `ToggleAlertStackDebug`),
   include it in the contexts that should enable it, and subscribe to `performed`. F3 is owned by
   [chat-audio-screens](chat-audio-screens.md) `LocalSpeechDebugTrigger` — alert-stack debug uses **F4**.
+  Prefer a console command first; hotkey debug panels are tracked debt —
+  [TECH_DEBT.md](../TECH_DEBT.md) § 1.13.
 
 ## Conventions
 
