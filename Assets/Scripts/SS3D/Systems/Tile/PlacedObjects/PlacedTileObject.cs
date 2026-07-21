@@ -128,10 +128,19 @@ namespace SS3D.Systems.Tile
 
         public int MapId => _mapId;
 
-        /// <summary>Remaining structural HP. Negative when not yet initialized.</summary>
-        public float IntegrityRemaining => _syncIntegrityRemaining;
+        /// <summary>
+        /// Local integrity when SyncVars cannot be written (no NetworkObject / not spawned).
+        /// EditMode tests and map tiles missing a NetworkObject use this path.
+        /// </summary>
+        private float _localIntegrityRemaining = -1f;
+        private StructuralIntegrityStage _localIntegrityStage = StructuralIntegrityStage.Intact;
+        private bool _integrityUsesLocal;
 
-        public StructuralIntegrityStage IntegrityStage => _syncIntegrityStage;
+        /// <summary>Remaining structural HP. Negative when not yet initialized.</summary>
+        public float IntegrityRemaining => _integrityUsesLocal ? _localIntegrityRemaining : _syncIntegrityRemaining;
+
+        public StructuralIntegrityStage IntegrityStage =>
+            _integrityUsesLocal ? _localIntegrityStage : _syncIntegrityStage;
 
         public string NameString => _tileObjectSo.NameString;
 
@@ -321,8 +330,31 @@ namespace SS3D.Systems.Tile
         /// </summary>
         public void ServerSetIntegrity(float remaining, StructuralIntegrityStage stage)
         {
+            // FishNet SyncVar setters call SyncBase.IsNetworkInitialized, which touches
+            // NetworkBehaviour.IsServer → _networkObjectCache with no null check. Guard like SetDirection.
+            if (!CanWriteIntegritySyncVars())
+            {
+                _integrityUsesLocal = true;
+                _localIntegrityRemaining = remaining;
+                _localIntegrityStage = stage;
+                return;
+            }
+
+            _integrityUsesLocal = false;
             _syncIntegrityRemaining = remaining;
             _syncIntegrityStage = stage;
+        }
+
+        private bool CanWriteIntegritySyncVars()
+        {
+            // Woven setter writes the field and skips SyncVar.SetValue when not playing (EditMode tests).
+            if (!UnityEngine.Application.isPlaying)
+                return true;
+
+            // NetworkObject here is NetworkBehaviour's cached ref — null when PlacedTileObject was
+            // AddComponent'd at runtime (doors/floors) and never SerializeComponents'd. Writing SyncVars
+            // then NREs inside FishNet SyncBase.IsNetworkInitialized.
+            return NetworkObject != null && NetworkObject.IsSpawned && IsServer;
         }
 
         /// <summary>

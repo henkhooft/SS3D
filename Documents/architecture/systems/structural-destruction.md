@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/ (integrity stage + occupancy)
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: 418530c65 — 2026-07-21
+> Verified: 5f8b740d2 — 2026-07-21
 
 # Structural destruction
 
@@ -37,6 +37,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - **Structural melee ray length ≠ hand range:** camera aim rays must cast ~8m (like living zones), then check `RangeLimit` from the **entity root** (not the swinging hand bone) to the hit/closest point. Hand-bone reach during windup often fails adjacent walls; cardinal-ahead is the last fallback.
 - **Blast BFS keeps max force per tile:** weaker revisit paths are skipped; a stronger cascade path must still enqueue.
 - **Blast hop checks mirror atmos `CanFlow` locally:** do not call `AtmosNeighbourBuilder` (`internal`); keep the BlockedEdges bit test in `BlastResolutionService`.
+- **Never assign integrity SyncVars without a spawned NetworkObject:** FishNet `SyncBase.IsNetworkInitialized` NREs when `_networkObjectCache` is null (common for door/floor prefabs that get `PlacedTileObject` via `AddComponent` at place time). `ServerSetIntegrity` falls back to local fields when the NB cache is missing or not spawned (same guard pattern as `SetDirection`). Server damage/clear still works; clients will not see stage SyncVars on those tiles until prefabs bake `PlacedTileObject`.
 
 ## Depends on / Used by
 
