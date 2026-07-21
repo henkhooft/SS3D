@@ -150,7 +150,6 @@
 
 .map-editor-separator--vertical {
     height: 1px;
-    width: auto;
     margin-top: 2px;
     margin-bottom: 2px;
     margin-left: 0;
@@ -162,7 +161,7 @@
 }
 
 .map-editor-region--top-left { left: 24px; top: 24px; }
-.map-editor-region--top-right { right: 24px; top: 24px; width: auto; }
+.map-editor-region--top-right { right: 24px; top: 24px; }
 .map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 260px; }
 
 .map-editor-right-column {
@@ -184,7 +183,7 @@
 
 .map-editor-window__title {
     color: var(--ss3d-text-secondary);
-    -unity-font-definition: initial;
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
     font-size: 12px;
     margin-bottom: 8px;
     letter-spacing: 1px;
@@ -193,7 +192,7 @@
 
 .map-editor-popover-label {
     color: var(--ss3d-text-secondary);
-    font-size: var(--ss3d-text-body-sm, 12px);
+    font-size: 12px;
     margin-bottom: 4px;
 }
 
@@ -311,10 +310,6 @@
 
 .map-editor-camera-dial__zoom-row > .map-editor-camera-dial__btn {
     position: relative;
-    left: auto;
-    top: auto;
-    right: auto;
-    bottom: auto;
     margin-left: 3px;
     margin-right: 3px;
 }
@@ -345,7 +340,7 @@
     padding-left: 6px;
     padding-right: 6px;
     border-width: 1px;
-    border-color: transparent;
+    border-color: rgba(0, 0, 0, 0);
     border-radius: var(--ss3d-radius-sm);
     background-color: rgba(0, 0, 0, 0);
     color: var(--ss3d-text-secondary);
@@ -373,7 +368,7 @@
     align-items: center;
     padding: 6px 10px;
     border-width: 1px;
-    border-color: transparent;
+    border-color: rgba(0, 0, 0, 0);
     border-radius: var(--ss3d-radius-sm);
     background-color: rgba(0, 0, 0, 0);
     color: var(--ss3d-text-secondary);
@@ -402,7 +397,7 @@
 
 .map-editor-search-field {
     flex-grow: 1;
-    background-color: transparent;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ss3d-text-primary);
     margin-left: 8px;
@@ -420,7 +415,7 @@
 
 .map-editor-library-header__title {
     color: var(--ss3d-text-primary);
-    -unity-font-definition: initial;
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
     font-size: 13px;
     letter-spacing: 1px;
     text-overflow: ellipsis;
@@ -455,7 +450,7 @@
 }
 
 .map-editor-header-icon-btn:hover {
-    background-color: var(--ss3d-btn-highlighted-bg, var(--ss3d-surface-elevated));
+    background-color: var(--ss3d-surface-elevated);
 }
 
 .map-editor-header-icon-btn--active {
@@ -540,11 +535,13 @@
 }
 
 .map-editor-popover--anchor-right {
-    left: calc(100% + 8px);
+    left: 100%;
+    margin-left: 8px;
 }
 
 .map-editor-popover--anchor-left {
-    right: calc(100% + 8px);
+    right: 100%;
+    margin-right: 8px;
 }
 
 .map-editor-popover--wide {
@@ -613,7 +610,7 @@
 
 .map-editor-map-badge {
     font-size: 11px;
-    color: var(--ss3d-feedback-info-text, var(--ss3d-text-primary));
+    color: var(--ss3d-text-primary);
     background-color: var(--ss3d-feedback-info-bg);
     border-width: 1px;
     border-color: var(--ss3d-feedback-info-border);
@@ -623,7 +620,7 @@
 }
 
 .map-editor-map-badge--warning {
-    color: var(--ss3d-feedback-warning-text, var(--ss3d-text-primary));
+    color: var(--ss3d-text-primary);
     background-color: var(--ss3d-feedback-warning-bg);
     border-color: var(--ss3d-feedback-warning-border);
 }
