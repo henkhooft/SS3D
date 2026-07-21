@@ -71,6 +71,12 @@ namespace AssetAudit
             bool allRelevantMonoBehavioursAreOnTheRightLayer = true;
             foreach (MonoBehaviour mono in behaviours)
             {
+                // Missing scripts appear as null entries; PrefabsDoNotHaveMissingScripts covers those.
+                if (mono == null)
+                {
+                    continue;
+                }
+
                 Type monoType = mono.GetType();
                 RequiredLayerAttribute attribute = Attribute.GetCustomAttribute(monoType, typeof(RequiredLayerAttribute)) as RequiredLayerAttribute;
                 if (attribute == null)

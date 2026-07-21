@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 3fe7aa22f — 2026-07-21
+> Verified: f5af8bff5 — 2026-07-21
 
 # Tile / construction
 
@@ -11,7 +11,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 **Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work.
 
-**Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+**Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Scripts were removed with the Map Editor; orphan `Assets/Content/Systems/UI/Systems/Construction/` prefabs (`ConstructionMenu`, slots, `DeleteIndicator`) and their `DefaultPrefabObjects` entry were purged so AssetAudit no longer sees missing scripts. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
 
