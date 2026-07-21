@@ -632,6 +632,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             _activePopover?.RemoveFromHierarchy();
             _activePopover = null;
+            HideToolbarHints();
 
             if (string.IsNullOrEmpty(_vm.OpenPopover))
                 return;
@@ -643,7 +644,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 _ => _rightPopoverAnchor,
             };
 
-            VisualElement popover = new();
+            VisualElement popover = new() { pickingMode = PickingMode.Position };
             popover.AddToClassList("map-editor-popover");
             popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
                 ? "map-editor-popover--anchor-right"
@@ -661,6 +662,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 RequestMapListRefresh();
+        }
+
+        private void HideToolbarHints()
+        {
+            if (_root == null)
+                return;
+
+            _root.Query(className: "map-editor-toolbar-hint").ForEach(hint =>
+            {
+                hint.style.display = DisplayStyle.None;
+            });
         }
 
         private void ClosePopover()
@@ -740,6 +752,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             newMapBtn.AddToClassList("map-editor-action-btn");
             newMapBtn.style.marginBottom = 8;
             container.Add(newMapBtn);
+
+            VisualElement listRoot = new() { pickingMode = PickingMode.Position, name = "map-load-list" };
+            container.Add(listRoot);
         }
 
         private void BuildSavePopover(VisualElement container)
@@ -792,43 +807,45 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void PopulateLoadList(IReadOnlyList<MapEditorMapEntry> maps)
         {
-            VisualElement body = _activePopover.Q(name: "popover-body");
-            if (body == null)
+            VisualElement listRoot = _activePopover.Q(name: "map-load-list");
+            if (listRoot == null)
                 return;
 
-            List<VisualElement> toRemove = new();
-            foreach (VisualElement child in body.Children())
-            {
-                if (child.ClassListContains("map-editor-map-row"))
-                    toRemove.Add(child);
-            }
-
-            foreach (VisualElement child in toRemove)
-                child.RemoveFromHierarchy();
+            listRoot.Clear();
 
             foreach (MapEditorMapEntry map in maps)
             {
-                Button row = new(() => LoadMapRequested?.Invoke(map.Name));
+                string mapName = map.Name;
+
+                VisualElement row = new() { pickingMode = PickingMode.Position };
                 row.AddToClassList("map-editor-map-row");
+
                 Label name = new(map.DisplayLabel) { pickingMode = PickingMode.Ignore };
                 name.AddToClassList("map-editor-map-name");
+                name.style.flexGrow = 1f;
+                name.style.flexShrink = 1f;
 
-                Button delete = new(() => DeleteMapRequested?.Invoke(map.Name)) { text = "Del" };
+                // Same constructor pattern as New Map — do not use --primary (width:100%).
+                Button load = new(() => RequestLoadMap(mapName)) { text = "Load" };
+                load.AddToClassList("map-editor-action-btn");
+
+                Button delete = new(() => DeleteMapRequested?.Invoke(mapName)) { text = "Del" };
                 delete.AddToClassList("map-editor-action-btn");
-                delete.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
-
-                VisualElement actions = new() { pickingMode = PickingMode.Position };
-                actions.style.flexDirection = FlexDirection.Row;
-                actions.style.alignItems = Align.Center;
-                Label badge = new("Load") { pickingMode = PickingMode.Ignore };
-                badge.AddToClassList("map-editor-map-badge");
-                actions.Add(badge);
-                actions.Add(delete);
 
                 row.Add(name);
-                row.Add(actions);
-                body.Add(row);
+                row.Add(load);
+                row.Add(delete);
+                listRoot.Add(row);
             }
+        }
+
+        private void RequestLoadMap(string mapName)
+        {
+            if (string.IsNullOrWhiteSpace(mapName))
+                return;
+
+            LoadMapRequested?.Invoke(mapName);
+            ClosePopover();
         }
 
         private void PopulateOverwriteList(IReadOnlyList<MapEditorMapEntry> maps)

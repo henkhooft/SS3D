@@ -411,8 +411,9 @@ namespace SS3D.Systems.Tile.MapEditor
                     _viewModel.ClearToast();
             }
 
-            if (_viewModel.OpenPopover is "maps" or "saveMenu")
-                RefreshMapList();
+            // Do NOT RefreshMapList every frame — PopulateLoadList destroys/recreates Load/Del
+            // buttons, so pointer-down never meets pointer-up on the same element (New Map
+            // worked because it is built once in BuildMapsPopover). Refresh on open / after save/delete.
         }
 
         private void RefreshMapList() => _view?.PopulateMapList(_persistence.ListMaps());
@@ -747,7 +748,32 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnLoadMapRequested(string name)
         {
             RememberQuickSaveName(name);
+            // Immediate local feedback — TargetToast only runs if the ServerRpc auth path succeeds.
+            _viewModel.ShowToast($"Loading {name}…");
+            _toastTimer = 1.6f;
+
+            if (IsServer)
+            {
+                ApplyLoadMap(name, LocalConnection);
+                return;
+            }
+
             RpcLoadMap(name, LocalConnection);
+        }
+
+        private void ApplyLoadMap(string mapName, NetworkConnection conn)
+        {
+            if (!MapEditorPermissions.TryAuthorize(conn))
+            {
+                TargetToast(conn, "Not authorized to load maps.");
+                return;
+            }
+
+            Log.Information(this, "Map editor loading template {mapName}", Logs.Important, mapName);
+            _persistence.Load(mapName);
+            _commandService.ClearHistory();
+            TargetSyncUndoState(conn, 0, 0);
+            TargetToast(conn, $"Loaded {mapName}.");
         }
 
         private void OnDeleteMapRequested(string name) => RpcDeleteMap(name, LocalConnection);
@@ -833,13 +859,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcLoadMap(string mapName, NetworkConnection conn = null)
         {
-            if (!MapEditorPermissions.TryAuthorize(conn))
-                return;
-
-            _persistence.Load(mapName);
-            _commandService.ClearHistory();
-            TargetSyncUndoState(conn, 0, 0);
-            TargetToast(conn, $"Loaded {mapName}.");
+            ApplyLoadMap(mapName, conn);
         }
 
         [ServerRpc(RequireOwnership = false)]
