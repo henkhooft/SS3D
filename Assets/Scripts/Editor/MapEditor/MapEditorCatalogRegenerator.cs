@@ -39,7 +39,8 @@ namespace SS3D.Editor.MapEditor
 
             foreach (GenericObjectSo asset in assets.OrderBy(a => a.NameString))
             {
-                entries.Add(MapEditorCatalogHeuristics.Infer(asset));
+                string path = UnityAssetDatabase.GetAssetPath(asset);
+                entries.Add(MapEditorCatalogHeuristics.Infer(asset, path));
             }
 
             catalog.Entries = entries;

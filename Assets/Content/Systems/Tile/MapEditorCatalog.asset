@@ -62,12 +62,16 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - Backpack
     IsEraser: 0
   - AssetName: BikeHorn
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - BikeHorn
     IsEraser: 0
   - AssetName: Blender
     Mode: 0
@@ -80,18 +84,24 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - Boombox
     IsEraser: 0
   - AssetName: BrutePatch
     Mode: 2
-    Subcategory: 13
+    Subcategory: 11
     SearchTags:
     - item
+    - medical
+    - BrutePatch
     IsEraser: 0
   - AssetName: BurnPatch
     Mode: 2
-    Subcategory: 13
+    Subcategory: 11
     SearchTags:
     - item
+    - medical
+    - BurnPatch
     IsEraser: 0
   - AssetName: Cables
     Mode: 1
@@ -120,9 +130,11 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: Crowbar
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Crowbar
     IsEraser: 0
   - AssetName: Cryotube
     Mode: 0
@@ -156,33 +168,43 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: DonkPocket
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - DonkPocket
     IsEraser: 0
   - AssetName: Doodad
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - Doodad
     IsEraser: 0
   - AssetName: ElectricalCable
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - ElectricalCable
     IsEraser: 0
   - AssetName: ElectricalWire
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - ElectricalWire
     IsEraser: 0
   - AssetName: FacewearGasMask
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - FacewearGasMask
     IsEraser: 0
   - AssetName: FancyCarpetRed
     Mode: 0
@@ -199,15 +221,19 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: FlashlightBlue
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - FlashlightBlue
     IsEraser: 0
   - AssetName: FloorTile
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - FloorTile
     IsEraser: 0
   - AssetName: FuelTank
     Mode: 0
@@ -229,57 +255,75 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: GlassReinforcedSheet
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - GlassReinforcedSheet
     IsEraser: 0
   - AssetName: GlassShard
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - GlassShard
     IsEraser: 0
   - AssetName: GlassSheet
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - GlassSheet
     IsEraser: 0
   - AssetName: GloveInsulated
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - GloveInsulated
     IsEraser: 0
   - AssetName: Hatchet
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Hatchet
     IsEraser: 0
   - AssetName: Headset
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - Headset
     IsEraser: 0
   - AssetName: HeadsetSecurity
     Mode: 2
-    Subcategory: 13
+    Subcategory: 12
     SearchTags:
     - item
+    - security
+    - HeadsetSecurity
     IsEraser: 0
   - AssetName: HealthScanner
     Mode: 2
-    Subcategory: 13
+    Subcategory: 11
     SearchTags:
     - item
+    - medical
+    - HealthScanner
     IsEraser: 0
   - AssetName: IDCard
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - IDCard
     IsEraser: 0
   - AssetName: JukeboxBlueGreen
     Mode: 0
@@ -292,30 +336,40 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - JumpsuitBotany
     IsEraser: 0
   - AssetName: JumpsuitEngineer
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - JumpsuitEngineer
     IsEraser: 0
   - AssetName: JumpsuitGrey
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - JumpsuitGrey
     IsEraser: 0
   - AssetName: JumpsuitSecurity
     Mode: 2
-    Subcategory: 13
+    Subcategory: 12
     SearchTags:
     - item
+    - security
+    - JumpsuitSecurity
     IsEraser: 0
   - AssetName: KitchenKnife
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - KitchenKnife
     IsEraser: 0
   - AssetName: Lattice
     Mode: 0
@@ -361,27 +415,35 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: MatterBin
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - MatterBin
     IsEraser: 0
   - AssetName: MedicalPatch
     Mode: 2
-    Subcategory: 13
+    Subcategory: 11
     SearchTags:
     - item
+    - medical
+    - MedicalPatch
     IsEraser: 0
   - AssetName: Medkit
     Mode: 2
-    Subcategory: 13
+    Subcategory: 11
     SearchTags:
     - item
+    - medical
+    - Medkit
     IsEraser: 0
   - AssetName: MicroLaser
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - MicroLaser
     IsEraser: 0
   - AssetName: Microwave
     Mode: 0
@@ -397,21 +459,27 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: Mug
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - Mug
     IsEraser: 0
   - AssetName: Multitool
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Multitool
     IsEraser: 0
   - AssetName: NuclearAuthenticationDisk
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - NuclearAuthenticationDisk
     IsEraser: 0
   - AssetName: NukeCart
     Mode: 0
@@ -442,6 +510,8 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - OxygenTank
     IsEraser: 0
   - AssetName: PacManGenerator
     Mode: 0
@@ -454,6 +524,8 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - PDA
     IsEraser: 0
   - AssetName: Plant0
     Mode: 0
@@ -472,6 +544,8 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - PlasmaTank
     IsEraser: 0
   - AssetName: PlasticChair
     Mode: 0
@@ -503,6 +577,8 @@ MonoBehaviour:
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - Poster
     IsEraser: 0
   - AssetName: PosterHorizontal
     Mode: 0
@@ -518,15 +594,19 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: PowerCell
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - PowerCell
     IsEraser: 0
   - AssetName: PowerCellAdmin
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - PowerCellAdmin
     IsEraser: 0
   - AssetName: PowerCellCharger
     Mode: 0
@@ -536,9 +616,11 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: ScrewdriverBlue
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - ScrewdriverBlue
     IsEraser: 0
   - AssetName: Scrubber
     Mode: 0
@@ -554,9 +636,11 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: SecurityIDCard
     Mode: 2
-    Subcategory: 13
+    Subcategory: 12
     SearchTags:
     - item
+    - security
+    - SecurityIDCard
     IsEraser: 0
   - AssetName: SecurityLocker
     Mode: 0
@@ -566,21 +650,27 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: SecurityPDA
     Mode: 2
-    Subcategory: 13
+    Subcategory: 12
     SearchTags:
     - item
+    - security
+    - SecurityPDA
     IsEraser: 0
   - AssetName: ShoeHiTops
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - ShoeHiTops
     IsEraser: 0
   - AssetName: ShoeJackboots
     Mode: 2
-    Subcategory: 13
+    Subcategory: 12
     SearchTags:
     - item
+    - security
+    - ShoeJackboots
     IsEraser: 0
   - AssetName: Sink
     Mode: 0
@@ -608,45 +698,59 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: SodaCanBeepsSoda
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanBeepsSoda
     IsEraser: 0
   - AssetName: SodaCanBeepyLime
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanBeepyLime
     IsEraser: 0
   - AssetName: SodaCanCannedAir
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanCannedAir
     IsEraser: 0
   - AssetName: SodaCanCannedLaughter
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanCannedLaughter
     IsEraser: 0
   - AssetName: SodaCanCola
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanCola
     IsEraser: 0
   - AssetName: SodaCanDukePurpleTea
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanDukePurpleTea
     IsEraser: 0
   - AssetName: SodaCanTonic
     Mode: 2
-    Subcategory: 13
+    Subcategory: 9
     SearchTags:
     - item
+    - food
+    - SodaCanTonic
     IsEraser: 0
   - AssetName: SolarPanel
     Mode: 0
@@ -668,27 +772,35 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: SteelGirderUnbolted
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - SteelGirderUnbolted
     IsEraser: 0
   - AssetName: SteelReinforcedSheet
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - SteelReinforcedSheet
     IsEraser: 0
   - AssetName: SteelRod
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - SteelRod
     IsEraser: 0
   - AssetName: SteelSheet
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - SteelSheet
     IsEraser: 0
   - AssetName: SteelWall
     Mode: 0
@@ -716,9 +828,11 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: Sunglasses
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Sunglasses
     IsEraser: 0
   - AssetName: TableBoozeDispenser
     Mode: 0
@@ -870,21 +984,27 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: Toolbelt
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Toolbelt
     IsEraser: 0
   - AssetName: ToolboxBlue
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - ToolboxBlue
     IsEraser: 0
   - AssetName: TruckerCap
     Mode: 2
     Subcategory: 13
     SearchTags:
     - item
+    - misc
+    - TruckerCap
     IsEraser: 0
   - AssetName: VendorHotDrinks
     Mode: 0
@@ -930,31 +1050,41 @@ MonoBehaviour:
     IsEraser: 0
   - AssetName: Welder
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Welder
     IsEraser: 0
   - AssetName: Wirecutters
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Wirecutters
     IsEraser: 0
   - AssetName: WoodLog
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - WoodLog
     IsEraser: 0
   - AssetName: WoodPlank
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - WoodPlank
     IsEraser: 0
   - AssetName: Wrench
     Mode: 2
-    Subcategory: 13
+    Subcategory: 10
     SearchTags:
     - item
+    - tool
+    - Wrench
     IsEraser: 0

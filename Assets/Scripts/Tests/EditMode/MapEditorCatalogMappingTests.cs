@@ -22,7 +22,7 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
-        public void Infer_ItemObject_MapsToItemsMisc()
+        public void Infer_ItemObject_WithoutHints_MapsToItemsMisc()
         {
             ItemObjectSo item = ScriptableObject.CreateInstance<ItemObjectSo>();
 
@@ -30,6 +30,22 @@ namespace SS3D.Tests.EditMode
 
             Assert.AreEqual(MapEditorMode.Items, entry.Mode);
             Assert.AreEqual(MapEditorSubcategory.Misc, entry.Subcategory);
+        }
+
+        [TestCase("Crowbar", null, MapEditorSubcategory.Tools)]
+        [TestCase("SodaCanCola", null, MapEditorSubcategory.FoodDrink)]
+        [TestCase("DonkPocket", null, MapEditorSubcategory.FoodDrink)]
+        [TestCase("BrutePatch", null, MapEditorSubcategory.Medical)]
+        [TestCase("Medkit", null, MapEditorSubcategory.Medical)]
+        [TestCase("M4", null, MapEditorSubcategory.Security)]
+        [TestCase("JumpsuitSecurity", null, MapEditorSubcategory.Security)]
+        [TestCase("Backpack", null, MapEditorSubcategory.Misc)]
+        [TestCase("HealthScanner", "Assets/Content/Data/TileMap/Resources/Items/Functional/Tools/Medical/HealthScanner.asset", MapEditorSubcategory.Medical)]
+        [TestCase("Wrench", "Assets/Content/Data/TileMap/Resources/Items/Functional/Tools/Engineering/Wrench.asset", MapEditorSubcategory.Tools)]
+        [TestCase("SteelSheet", "Assets/Content/Data/TileMap/Resources/Items/Functional/Materials/SteelSheet.asset", MapEditorSubcategory.Tools)]
+        public void ClassifyItem_MapsExpectedSubcategory(string name, string path, MapEditorSubcategory expected)
+        {
+            Assert.AreEqual(expected, MapEditorCatalogHeuristics.ClassifyItem(name, path));
         }
 
         [Test]

@@ -155,6 +155,11 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void UpdatePan(float deltaTime)
         {
+            // Session polls Keyboard directly (MapEditor context masks Movement). While a UITK
+            // TextField holds InputTextEntryScope, WASD must not pan the camera.
+            if (InputInterface.IsCapturingText)
+                return;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
                 return;

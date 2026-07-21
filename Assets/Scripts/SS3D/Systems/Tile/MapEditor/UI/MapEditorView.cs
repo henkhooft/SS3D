@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
 using SS3D.Systems.Tile.TileMapCreator;
@@ -49,6 +50,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _grid;
         private TextField _searchField;
         private TextField _saveNameField;
+        private readonly InputTextEntryScope _textEntry = new();
         private Label _windowTitle;
         private Label _toast;
         private VisualElement _leftPopoverAnchor;
@@ -141,6 +143,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public void Destroy()
         {
+            _textEntry.Exit();
             _vm.StateChanged -= Refresh;
             _gridScroll?.UnregisterCallback<GeometryChangedEvent>(OnGridScrollGeometryChanged);
             _root?.RemoveFromHierarchy();
@@ -322,6 +325,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _searchField.textEdition.placeholder = "Search tags, names, keyword";
             _searchField.textEdition.hidePlaceholderOnFocus = true;
             _searchField.RegisterValueChangedCallback(evt => SearchChanged?.Invoke(evt.newValue));
+            WireTextEntryField(_searchField);
             VisualElement searchIcon = CreateIconElement(_icons?.Search);
             searchIcon.AddToClassList("map-editor-search-icon");
             search.Add(searchIcon);
@@ -358,6 +362,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             reveal.name = "reveal-ui-btn";
             reveal.style.display = DisplayStyle.None;
             _root.Add(reveal);
+        }
+
+        private void WireTextEntryField(TextField field)
+        {
+            if (field == null)
+                return;
+
+            field.RegisterCallback<FocusInEvent>(_ => _textEntry.Enter());
+            field.RegisterCallback<FocusOutEvent>(_ => _textEntry.Exit());
         }
 
         private void TogglePaletteMode(PaletteMode extreme)
@@ -729,6 +742,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _saveNameField = new TextField { value = string.IsNullOrEmpty(_vm.SaveMapName) ? "Untitled Map" : _vm.SaveMapName };
             _saveNameField.AddToClassList("map-editor-search-field");
             _saveNameField.RegisterValueChangedCallback(evt => _vm.SaveMapName = evt.newValue);
+            WireTextEntryField(_saveNameField);
             nameField.Add(_saveNameField);
             container.Add(nameField);
 

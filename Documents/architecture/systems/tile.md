@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 8cc8c28c2 — 2026-07-21
+> Verified: 4e3033476 — 2026-07-21
 
 # Tile / construction
 
@@ -61,6 +61,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
   inside that authority — unflipped picks map the upper screen onto the Object Library.
   Camera zoom polls `Mouse.current.scroll` directly (MapEditor context masks Input System Zoom);
   gate it with the same `InputInterface` query so wheel over the Object Library ScrollView does not zoom.
+  Search/save TextFields hold `InputTextEntryScope` on focus; session pan gates on
+  `InputInterface.IsCapturingText` so WASD does not move the camera while typing.
 - **Authoring darkness:** Scene lights cannot fullbright Simple Toon (dark rooms stay black; boosting the sun only blows out already-lit spots). `MapEditorLighting` sets shader global `_SS3DAuthoringFullbright` and `VisionRenderContext.Suppressed` for the session.
 - **Placement release canceled over “empty” screen:** `InputInterface` must not use `EventSystem.IsPointerOverGameObject()` with a registered fullscreen UITK document — the panel raycaster hits the whole shell. Use `panel.Pick` (Ignore-aware) + uGUI `GraphicRaycaster` only; see [inputs](inputs.md) Pitfalls.
 - **Drag path worse on vertical/diagonal / camera angle:** the bottom Object Library region used `PickingMode.Position` over a full-width band, so hover reported UI whenever the cursor was in the lower third — vertical mouse motion and camera framing into that band froze drag and blocked click-hold place. Regions are `Ignore`; only library/windows/slots/buttons pick. Do not freeze drag picks on `MouseOverUI`.
