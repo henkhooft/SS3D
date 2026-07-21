@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.SpawnPoints;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,6 +28,10 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
                     CreateSetFloorDecal(dto.Position, dto.DecalId, ctx),
                 MapEditorCommandKind.ClearFloorDecal =>
                     CreateSetFloorDecal(dto.Position, 0, ctx),
+                MapEditorCommandKind.PlaceSpawnPoint =>
+                    CreatePlaceSpawnPoint(dto, ctx),
+                MapEditorCommandKind.ClearSpawnPoint =>
+                    CreateClearSpawnPoint(dto.Position, ctx),
                 _ => CreatePlaceTile(dto, ctx),
             };
         }
@@ -37,7 +42,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             List<IMapEditorCommand> into)
         {
             if (dto.Kind is not (MapEditorCommandKind.PlaceTile or MapEditorCommandKind.PlaceItem
-                or MapEditorCommandKind.SetFloorDecal))
+                or MapEditorCommandKind.SetFloorDecal or MapEditorCommandKind.PlaceSpawnPoint))
             {
                 into.Add(FromDto(dto, ctx));
                 return true;
@@ -68,6 +73,22 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
                     return false;
 
                 into.Add(CreateSetFloorDecal(dto.Position, dto.DecalId, ctx));
+                return true;
+            }
+
+            if (dto.Kind == MapEditorCommandKind.PlaceSpawnPoint)
+            {
+                if (ctx.Map == null || ctx.SpawnPoints == null)
+                    return false;
+
+                if (!ctx.Map.TryGetTileLocation(TileLayer.Plenum, dto.Position, out ITileLocation plenum)
+                    || plenum.IsFullyEmpty())
+                    return false;
+
+                if (!MapEditorSpawnCatalog.TryDecode(dto.AssetName, out _, out _, out _))
+                    return false;
+
+                into.Add(CreatePlaceSpawnPoint(dto, ctx));
                 return true;
             }
 
@@ -110,6 +131,23 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
                 previous = existing;
 
             return new SetFloorDecalCommand(position, decalId, previous);
+        }
+
+        private static PlaceSpawnPointCommand CreatePlaceSpawnPoint(
+            MapEditorCommandDto dto, MapEditorCommandContext ctx)
+        {
+            SpawnPointRecord record = MapEditorSpawnCatalog.ToRecord(dto.AssetName, dto.Position, dto.Direction);
+            bool hadPrevious = ctx?.SpawnPoints != null &&
+                               ctx.SpawnPoints.TryGetAt(dto.Position, out SpawnPointRecord previous);
+            return new PlaceSpawnPointCommand(record, hadPrevious, previous);
+        }
+
+        private static ClearSpawnPointCommand CreateClearSpawnPoint(
+            Vector3 position, MapEditorCommandContext ctx)
+        {
+            bool hadPrevious = ctx?.SpawnPoints != null &&
+                               ctx.SpawnPoints.TryGetAt(position, out SpawnPointRecord previous);
+            return new ClearSpawnPointCommand(position, hadPrevious, previous);
         }
     }
 }

@@ -13,13 +13,14 @@ Replace the legacy TileMap Creator (DynamicPanels docked tab) with a full-screen
 - Full-screen UI Toolkit editor: tools (Select / Edit / Move), undo/redo, object library, save/load popovers, layer visibility, hide UI, settings
 - Server-authoritative placement via existing `ConstructionService`; command layer for undo
 - Admin-only permissions (`IMapEditorAuthorizer` extensible for creative-mode Builder role)
-- Scripting & Placements mode rail: UI stub only (no spawn/trigger/atmos backends)
+- Scripting & Placements mode rail: UI stub only in v1 (spawn authoring later shipped separately)
 
 ## Out of scope (v1)
 
 - Camera options popover
 - Creative-mode instant placement, area merge/split tool, round-config map pool save
-- Spawn placements, random spawners, triggers, atmos turf preset painting
+- Random spawners, triggers, atmos turf preset painting
+- Spawn placements — **shipped later** in [2026-07_spawn-point-authoring](2026-07_spawn-point-authoring.md) (authoring + save; runtime resolution still deferred)
 
 ## Key files
 
@@ -32,3 +33,4 @@ Replace the legacy TileMap Creator (DynamicPanels docked tab) with a full-screen
 
 - Round-config map pool integration (blocked on round-config + persistence Phase 1b)
 - Creative-mode gamemode pool entry and Builder role authorizer
+- Runtime role→spawn-point resolution (`EntitySubSystem`)

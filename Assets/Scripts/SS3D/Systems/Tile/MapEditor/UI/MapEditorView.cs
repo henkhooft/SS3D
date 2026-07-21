@@ -480,11 +480,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             _grid.Clear();
 
-            if (_vm.CurrentMode == MapEditorMode.Scripting ||
-                MapEditorCatalog.IsScriptingSubcategory(_vm.CurrentSubcategory))
+            if (_vm.CurrentMode == MapEditorMode.Scripting &&
+                MapEditorCatalog.IsUnavailableScriptingSubcategory(_vm.CurrentSubcategory))
             {
                 Label stub = new(
-                    "Not available yet — spawn and trigger authoring is a later pass.")
+                    "Not available yet — trigger and atmos scripting is a later pass.")
                 {
                     style = { whiteSpace = WhiteSpace.Normal },
                 };
@@ -567,10 +567,19 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 FloorDecalCatalog.Get()?.TryGet(decalId, out floorDecal);
             }
 
+            bool isSpawn = !entry.IsEraser && MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName);
+
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
             slot.AddToClassList("map-editor-slot");
             if (!entry.IsEraser)
-                slot.tooltip = floorDecal != null ? floorDecal.DisplayName : entry.AssetName;
+            {
+                if (floorDecal != null)
+                    slot.tooltip = floorDecal.DisplayName;
+                else if (isSpawn)
+                    slot.tooltip = MapEditorSpawnCatalog.DisplayName(entry.AssetName);
+                else
+                    slot.tooltip = entry.AssetName;
+            }
             bool active = _vm.SelectedEntry != null &&
                           string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
             slot.EnableInClassList("map-editor-slot--active", active);
@@ -597,7 +606,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             string labelText = entry.IsEraser
                 ? "Eraser"
-                : floorDecal != null ? floorDecal.DisplayName : entry.AssetName;
+                : floorDecal != null
+                    ? floorDecal.DisplayName
+                    : isSpawn
+                        ? MapEditorSpawnCatalog.DisplayName(entry.AssetName)
+                        : entry.AssetName;
             Label label = new(labelText)
             {
                 pickingMode = PickingMode.Ignore,

@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.SpawnPoints;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.MapEditor.Commands
@@ -260,6 +261,104 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
 
             if (ctx.Map.TrySetFloorDecal(_position, _previousDecalId))
                 ctx.NotifyFloorDecalsChanged();
+        }
+    }
+
+    /// <summary>
+    /// Places or replaces a spawn marker. Snapshots the previous marker at the tile for undo.
+    /// </summary>
+    public sealed class PlaceSpawnPointCommand : IMapEditorCommand
+    {
+        private readonly SpawnPointRecord _record;
+        private readonly bool _hadPrevious;
+        private readonly SpawnPointRecord _previous;
+
+        public PlaceSpawnPointCommand(SpawnPointRecord record, bool hadPrevious, SpawnPointRecord previous)
+        {
+            _record = record;
+            _hadPrevious = hadPrevious;
+            _previous = previous;
+        }
+
+        public MapEditorCommandDto ToDto() =>
+            new()
+            {
+                Kind = MapEditorCommandKind.PlaceSpawnPoint,
+                AssetName = EncodeAssetName(_record),
+                Position = _record.Position,
+                Direction = _record.Direction,
+            };
+
+        public void Apply(MapEditorCommandContext ctx)
+        {
+            if (ctx.SpawnPoints == null)
+                return;
+
+            if (ctx.SpawnPoints.TryPlace(_record))
+                ctx.NotifySpawnPointsChanged();
+        }
+
+        public void Revert(MapEditorCommandContext ctx)
+        {
+            if (ctx.SpawnPoints == null)
+                return;
+
+            if (_hadPrevious)
+            {
+                if (ctx.SpawnPoints.TryPlace(_previous))
+                    ctx.NotifySpawnPointsChanged();
+                return;
+            }
+
+            if (ctx.SpawnPoints.TryClearAt(_record.Position, out _))
+                ctx.NotifySpawnPointsChanged();
+        }
+
+        private static string EncodeAssetName(SpawnPointRecord record) =>
+            record.Kind == SpawnPointKind.Job
+                ? MapEditorSpawnCatalog.EncodeJob(record.JobName)
+                : MapEditorSpawnCatalog.EncodeAntagonist(record.AntagonistCategory);
+    }
+
+    /// <summary>
+    /// Clears a spawn marker. Snapshots the cleared record for undo.
+    /// </summary>
+    public sealed class ClearSpawnPointCommand : IMapEditorCommand
+    {
+        private readonly Vector3 _position;
+        private readonly bool _hadPrevious;
+        private readonly SpawnPointRecord _previous;
+
+        public ClearSpawnPointCommand(Vector3 position, bool hadPrevious, SpawnPointRecord previous)
+        {
+            _position = position;
+            _hadPrevious = hadPrevious;
+            _previous = previous;
+        }
+
+        public MapEditorCommandDto ToDto() =>
+            new()
+            {
+                Kind = MapEditorCommandKind.ClearSpawnPoint,
+                Position = _position,
+            };
+
+        public void Apply(MapEditorCommandContext ctx)
+        {
+            if (ctx.SpawnPoints == null)
+                return;
+
+            if (ctx.SpawnPoints.TryClearAt(_position, out _))
+                ctx.NotifySpawnPointsChanged();
+        }
+
+        public void Revert(MapEditorCommandContext ctx)
+        {
+            if (ctx.SpawnPoints == null || !_hadPrevious)
+                return;
+
+            if (ctx.SpawnPoints.TryPlace(_previous))
+                ctx.NotifySpawnPointsChanged();
         }
     }
 

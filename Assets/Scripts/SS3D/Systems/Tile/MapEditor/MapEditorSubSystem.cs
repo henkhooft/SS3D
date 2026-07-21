@@ -13,6 +13,7 @@ using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
 using SS3D.Systems.Tile.MapEditor.UI;
+using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
@@ -153,7 +154,9 @@ namespace SS3D.Systems.Tile.MapEditor
                 _tileSystem.CurrentMap,
                 _tileSystem.Loader,
                 new ConstructionService(_tileSystem.CurrentMap, _tileSystem.QueryService),
-                () => _tileSystem.SyncFloorDecalsToClients());
+                () => _tileSystem.SyncFloorDecalsToClients(),
+                _tileSystem.SpawnPoints,
+                () => SpawnPointEditorView.RefreshAll());
         }
 
         protected override void OnEnabled()
@@ -294,12 +297,14 @@ namespace SS3D.Systems.Tile.MapEditor
                 _lighting.Apply();
                 SetMouseOverUI(false);
                 _gameplayHud.SetVisible(false);
+                SpawnPointEditorView.EnsureExists().SetVisible(true);
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
             }
             else
             {
                 _gameplayHud.SetVisible(true);
+                SpawnPointEditorView.EnsureExists().SetVisible(false);
                 _hologramManager.DestroyHolograms();
                 _hologramManager.enabled = false;
                 _session.Exit();
@@ -341,6 +346,13 @@ namespace SS3D.Systems.Tile.MapEditor
                 _viewModel.CurrentTool == MapEditorTool.Edit)
             {
                 _hologramManager.SetSelectedFloorDecal(definition);
+                return;
+            }
+
+            if (MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName) &&
+                _viewModel.CurrentTool == MapEditorTool.Edit)
+            {
+                _hologramManager.SetSelectedSpawnPoint(entry.AssetName);
                 return;
             }
 
@@ -862,7 +874,8 @@ namespace SS3D.Systems.Tile.MapEditor
                     continue;
 
                 GenericObjectSo asset = null;
-                if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _))
+                if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _) ||
+                    MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName))
                 {
                     HandleAssetSelected(entry, null);
                     return;
@@ -920,8 +933,10 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _tileSystem.CurrentMap.Clear();
+            _tileSystem.ClearSpawnPoints();
             _commandService.ClearHistory();
             _hologramManager.DestroyHolograms();
+            SpawnPointEditorView.RefreshAll();
             TargetSyncUndoState(conn, 0, 0);
             TargetToast(conn, "Started a new empty map.");
         }
@@ -947,7 +962,7 @@ namespace SS3D.Systems.Tile.MapEditor
             foreach (MapEditorCommandDto dto in commands)
             {
                 if (dto.Kind is MapEditorCommandKind.PlaceTile or MapEditorCommandKind.PlaceItem
-                    or MapEditorCommandKind.SetFloorDecal)
+                    or MapEditorCommandKind.SetFloorDecal or MapEditorCommandKind.PlaceSpawnPoint)
                 {
                     MapEditorCommandFactory.TryCreatePlaceCommands(dto, ctx, list);
                     continue;
