@@ -1,12 +1,15 @@
 > Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: planned
+> Status: in-progress (Phase 0 tooling written, pending an Editor run + Play Mode verification; Phase 2 done; Phase 1 deprioritized; Phase 3 ready but not started)
 
 # Human.prefab decomposition
 
 Ranked #1 structural risk in [TECH_DEBT.md](TECH_DEBT.md) §1.1. This effort turns "strip-and-rewire via
-Editor tooling" from a one-off precedent into a repeatable, machine-checked convention, and schedules
-the specific extraction that shrinks the prefab today.
+Editor tooling" from a one-off precedent into a repeatable, machine-checked convention, and fixes the
+concrete hygiene debt found on `Human.prefab` along the way (Phase 0). Phase 1's original organ-extraction
+scope turned out to be based on a wrong assumption and is deprioritized; Phase 2 (recipe convention) is
+done. Phase 3 (domain strip-and-rewire, starting with inventory's hands wiring) is ready for whoever
+picks the in-progress inventory-storage redesign back up.
 
 ## Problem
 
@@ -36,13 +39,20 @@ previously undocumented problems, not just the general size complaint:
    `ContainerInteractive` from `HumanHead`/`HumanTorso`. It does not exist anywhere in the working tree
    or git history — the strip was done by hand, and there is currently no way to safely re-run it if it
    regresses.
-4. **Organs are copy-pasted GameObjects, not prefabs.** Unlike the ten body-part prefabs
-   (`HumanArmLeft`, `HumanTorso`, `HumanHead`, etc. under `HumanBodyParts/`, correctly wired as
-   `PrefabInstance`s), every organ (`HumanBrain`, `HumanHeart`, `HumanLungLeft/Right`, `HumanStomach`,
-   `HumanLiver`, `HumanAppendix`, `HumanIntestineLarge/Small` under `HumanOrgans/`) is inlined directly
-   into `Human.prefab`'s YAML with no `PrefabInstance` reference, and duplicated again inline in
-   `TestHuman.prefab`. Editing an organ means hand-editing the mega-prefab (twice) even though a
-   correctly-referenced sibling prefab already exists on disk.
+4. **Organs are copy-pasted visual meshes, not prefabs — but they are not duplicates of `HumanOrgans/*.prefab`.**
+   Each organ inlined in `Human.prefab` (`HumanBrain`, `HumanHeart`, `HumanLungLeft/Right`,
+   `HumanStomach`, `HumanLiver`, `HumanAppendix`, `HumanIntestineLarge/Small`, duplicated again in
+   `TestHuman.prefab`) is a bare `Transform` + `SkinnedMeshRenderer` — the in-body decorative mesh rigged
+   to the skeleton, nothing else. `HumanOrgans/*.prefab` (e.g. `HumanHeart.prefab`) is a *different*
+   thing: a standalone networked item (`NetworkObject`, `Rigidbody`, `Item`, `OrganInstance`, `Selectable`)
+   representing the organ once surgically removed. `health-anatomy-map.md` already documents this
+   duality for Liver ("inline on Human.prefab + item prefab") as current state, not a flagged bug — it's
+   true of every organ, just previously unstated as a general pattern. **This means "replace the inline
+   mesh with a `PrefabInstance` of `HumanOrgans/*.prefab`" is the wrong fix** — you cannot sensibly nest
+   a `NetworkObject`+`Rigidbody`+`Item` prefab as a bone-rigged decorative mesh inside an animated body.
+   The only real duplication is the ~9 × 2-component inline mesh itself, copy-pasted between
+   `Human.prefab` and `TestHuman.prefab` (~150–200 lines total) — real but minor, not the size driver.
+   Deprioritized; see Phase 1.
 5. A dev-only hack, `Assets/Scripts/SS3D/Hacks/RagdollWhenPressingButton.cs`, is attached directly to
    production `Human.prefab` — the same class of leftover `combat.md` already flags for
    `CombatDummyBootstrap` ("not on Human.prefab, `AddComponent`'d only on spawn").
@@ -58,9 +68,9 @@ copy-pasted organ from landing on `Human.prefab` in review.
 - A machine-checked gate (EditMode test in the existing headless CI run) that fails a PR which adds an
   unreviewed component, reintroduces a debug-only hack, or leaves a missing-script reference — closing
   "enforcement is convention only."
-- Organs converted to true nested prefabs, matching the pattern already used correctly for body parts.
-- The four gaps above fixed as part of the same pass, since they're concrete debt on the exact prefab
-  this effort touches, not separate work.
+- The hygiene gaps found in the initial audit (missing-script drift, the never-built strip tool, the
+  dev-only hack) fixed as part of the same pass, since they're concrete debt on the exact prefab this
+  effort touches, not separate work.
 
 ## Non-goals
 
@@ -99,36 +109,54 @@ environment has no Unity Editor to run `PrefabUtility` or verify compilation. `H
 carries both denylist assertions as `[Ignore]`d until a maintainer runs the two menu items in the Editor,
 confirms Play Mode still works (movement, hands, `spawndummy`, examine, speech), and re-enables them.
 
-### Phase 1 — True prefab-ize the organs
+### Phase 1 — Organ mesh de-duplication (deprioritized)
 
-- Write a reusable C# Editor tool (`Assets/Scripts/SS3D/Systems/Health/Editor/OrganPrefabExtract.cs`
-  or similar) using `PrefabUtility.LoadPrefabContents` / `SaveAsPrefabAsset` /
-  `InstantiatePrefab` that: finds each inline organ GameObject on `Human.prefab`, reconciles it against
-  the existing (currently orphaned) prefab asset under `HumanOrgans/`, and replaces the inline copy
-  with a proper `PrefabInstance` reference. Repeat for `TestHuman.prefab`.
-- This tool is the first concrete instance of the Phase 2 recipe convention below, and by itself is the
-  single largest line-count reduction available on `Human.prefab` without touching any component logic.
+**Revised after investigation — do not implement as originally scoped.** The original plan here was
+"replace the inline organ mesh with a `PrefabInstance` of `HumanOrgans/*.prefab`" — wrong, per Problem
+item 4 above: those are different prefabs for different roles (in-body decorative mesh vs. standalone
+networked item), not two copies of the same thing. The only real, much smaller win available is
+extracting each inline `Transform`+`SkinnedMeshRenderer` mesh into its own tiny visual-only prefab (no
+`NetworkObject`) so `Human.prefab`/`TestHuman.prefab` reference one shared asset instead of two
+independent copies (~150–200 lines total, not a meaningful size lever). Left unscheduled — pick up only
+if `Human.prefab`/`TestHuman.prefab` visual drift between the two organ copies becomes an actual problem.
 
-### Phase 2 — Name the recipe convention
+### Phase 2 — Name the recipe convention — done this pass
 
-- Document (here and in `entities.md`) what a "recipe" is: a `PrefabUtility`-based Editor menu item
+- Documented (here and in `entities.md`) what a "recipe" is: a `PrefabUtility`-based Editor menu item
   under `SS3D/<Domain>/<Verb>`, one per domain, that attaches or verifies a domain's wiring on an
-  entity prefab — generalizing the pattern already used by `MeleePrefabSetup.cs`,
-  `StorageContainerPrefabSetup.cs`, and the two tools added in Phases 0–1.
-- Add one aggregator menu item (`SS3D/Entities/Run All Prefab Recipes`) that calls every registered
-  recipe in sequence, so an agent doesn't need tribal knowledge of which of the 5+ scattered menu items
-  exists or needs re-running after a merge.
-- No behavior change — this phase is discoverability and naming, not new extraction.
+  entity prefab — generalizing the pattern `MeleePrefabSetup.cs` and `StorageContainerPrefabSetup.cs`
+  already used, now also followed by `HumanPrefabHygiene.cs` and `BodyPartContainerInteractiveStrip.cs`
+  (Phase 0).
+- Added `HumanPrefabRecipes.cs` (`Assets/Scripts/SS3D/Systems/Entities/Editor/`,
+  `SS3D/Entities/Run All Human Prefab Recipes`) as the single aggregator entry point — calls
+  `HumanPrefabHygiene.RemoveDevHacks()` and `BodyPartContainerInteractiveStrip.StripAll()` in sequence.
+  Scoped deliberately to recipes that mutate `Human.prefab`/its nested body-part prefabs; `MeleePrefabSetup`
+  (hand tools) and `StorageContainerPrefabSetup` (backpacks/lockers) already exist and follow the same
+  convention independently — not folded in here since they have nothing to do with Human.prefab
+  decomposition specifically.
+- No behavior change — this phase is discoverability and naming, not new extraction. Still needs the
+  same Editor run + Play Mode verification as Phase 0 before the `[Ignore]`d tests can be re-enabled.
 
-### Phase 3 — Domain strip-and-rewire, scheduled not forced
+### Phase 3 — Domain strip-and-rewire, scheduled not forced (ready, not started)
 
-- Flag inventory's "Human hands wiring remains prefab composition debt" ([inventory.md](systems/inventory.md))
-  as the next concrete candidate, since [2026-07_inventory-storage-redesign.md](2026-07_inventory-storage-redesign.md)
-  is already in-progress and touches entity wiring — recommend it adopt the Phase 2 recipe convention
-  now rather than drift further.
-- Every other domain directly on `Human.prefab` (movement/animation, combat, comms, examine, stamina,
-  substances) keeps the existing policy: strip-and-rewire happens when that domain's own redesign
-  touches entity wiring, using a Phase 2-style recipe tool instead of raw YAML.
+**Inventory/storage is the concrete next candidate, and its redesign is already underway** —
+[2026-07_inventory-storage-redesign.md](2026-07_inventory-storage-redesign.md) is `in-progress` (clean-slate
+data model, panel, Main HUD equip/drag, stamina 7a, and old-UI purge already shipped; Play Mode
+verification pending — see [INDEX.md](INDEX.md) coverage table). [inventory.md](systems/inventory.md)
+already names "Human hands wiring remains prefab composition debt" as open. When that redesign next
+touches entity wiring (rather than as a standalone task disconnected from it), it should:
+
+- Adopt the Phase 2 recipe convention (a `HandsPrefabSetup`-style `PrefabUtility` tool under
+  `Assets/Scripts/SS3D/Systems/Inventory/.../Editor/`, registered in `HumanPrefabRecipes.cs`) instead of
+  hand-editing `HumanHandLeft`/`HumanHandRight` wiring directly.
+- Reuse the nested-`NetworkObject`-aware behaviour-collection pattern from `HumanPrefabHygiene`/
+  `BodyPartContainerInteractiveStrip` if it needs to add/remove any `NetworkBehaviour` on the hands.
+
+Every other domain directly on `Human.prefab` (movement/animation, combat, comms, examine, stamina,
+substances) keeps the existing policy: strip-and-rewire happens when that domain's own redesign touches
+entity wiring, using a Phase 2-style recipe tool instead of raw YAML. Nothing to implement here until
+one of those redesigns is ready to touch entity wiring — this phase is deliberately "ready" (convention
+and tooling pattern exist), not "started."
 
 ## Verification
 
@@ -139,8 +167,8 @@ confirms Play Mode still works (movement, hands, `spawndummy`, examine, speech),
   `health.md`/`combat.md`/`inventory.md`.
 - Run the new EditMode test locally via Test Runner, then confirm it passes in
   `editmodetestrunner.yml` CI.
-- Track `Human.prefab` line count and distinct `m_Script` type count before/after Phase 1 as the
-  quantifiable signal (currently 15,604 lines / 39 types).
+- After running `SS3D/Entities/Run All Human Prefab Recipes`, re-enable the two `[Ignore]`d assertions
+  in `HumanPrefabIntegrityTests` and confirm they pass.
 
 ## Related docs
 
