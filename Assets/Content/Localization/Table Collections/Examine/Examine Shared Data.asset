@@ -1187,6 +1187,14 @@ MonoBehaviour:
     m_Key: examine.identification.role
     m_Metadata:
       m_Items: []
+  - m_Id: 257390954000543744
+    m_Key: examine.structural.damaged
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257390954025709568
+    m_Key: examine.structural.cracked
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

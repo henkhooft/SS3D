@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: phase4-presentation
     content: "Phase 4: World visuals for stages + examine; optional atmos slow-leak for Cracked"
-    status: pending
+    status: completed
   - id: phase5-items
     content: "Phase 5: Grenade, breaching charge, timed charge + defuse, remote detonator → Blast Resolve; proximity alert"
     status: pending
@@ -226,4 +226,10 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 - Living zone connect still preferred; structural only when body resolve fails.
 - `MeleeWeaponProfile.StructuralForce` with `ResolveStructuralForce()` fallback (`BruteDamage * 0.75`) for prefabs serialized before the field existed. Re-run **SS3D → Combat → Setup Melee Prefabs** to stamp crowbar/hatchet/knife profiles.
 - Connect uses `MeleeStructuralHitResolver` (physics raycast to `PlacedTileObject`, then aim-ray tile sampling). Cast ~8m from camera like living zones, then apply hand range to the hit — do not use hand range as camera-ray max distance.
+
+### Phase 4
+
+- No cracked wall art in repo — provisional `MaterialPropertyBlock` `_Color` tint + `WindLight` hiss at Cracked.
+- Design slow-leak deferred: `IsAirtight=false` does not open `BlockedEdges`; room↔room gas still sealed until a permeability path exists.
+- Prefab wiring via **SS3D → Structural Damage → Setup Wall Integrity Presentation** (and **SS3D → Localization → Examine → Add Structural Integrity Template Keys**). Doors deferred until airlocks bake `PlacedTileObject`.
 

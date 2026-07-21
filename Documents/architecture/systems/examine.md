@@ -28,8 +28,8 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 ## Extension points
 
 - Add `SimpleExaminable`, `ImageExaminable`, or subclass `ExaminableBase` on world objects.
-- Dynamic lines: implement `IExamineContentProvider` (see `IdentificationCardExaminable`).
-- Editor: `SS3D/Localization/Examine/` menus for JSON export/import (`Editor/ExamineLocalizationExporter.cs`).
+- Dynamic lines: implement `IExamineContentProvider` (see `IdentificationCardExaminable`, `StructuralIntegrityExaminable`).
+- Editor: `SS3D/Localization/Examine/` menus for JSON export/import and template keys (`Editor/ExamineIdentificationKeySetup.cs`).
 
 ## Depends on / Used by
 

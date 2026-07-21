@@ -1,5 +1,5 @@
-> Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (Area/atmos on Destroyed), §5 (crew brute)
-> Touches systems: structural-destruction, tile, area, atmospherics, health
+> Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (Area/atmos on Destroyed), §5 (crew brute), §1/§7 (world presentation)
+> Touches systems: structural-destruction, tile, area, atmospherics, health, examine
 > Status: in-progress
 
 # Structural destruction — integrity + blast
@@ -32,12 +32,22 @@ Ship per-tile structural integrity for Turf walls/doors/windows and hop-based bl
 - Console: `blast [yield] [falloff]` (defaults 120 / 25)
 - EditMode: `BlastResolutionTests` (corridor, sealed door cascade, cracked wall blocks)
 
+## Phase 4 shipped surface
+
+- `StructuralIntegrityPresenter` — MPB `_Color` tint (Damaged darken / Cracked red-brown) + optional `WindLight` loop at Cracked
+- `PlacedTileObject` integrity SyncVar OnChange + explicit host `Apply` from `ServerSetIntegrity`
+- `StructuralIntegrityExaminable` — Damaged/Cracked examine sections (fallback English; table keys via Examine menu)
+- Editor: **SS3D → Structural Damage → Setup Wall Integrity Presentation** (walls/windows with baked `PlacedTileObject`)
+- Atmos slow-leak **deferred** — keep binary `IsAirtight`; BlockedEdges still seal room↔room flow (documented fork)
+
 ## Deviations / notes
 
 - Phase 1 Area recompute is **full reflood preserving metadata**, deferred one Update tick because `TileMap` notifies clear **before** occupant removal (same pitfall as atmos). True local flood fill is follow-up.
 - Debris/rubble spawn not wired (no art path yet).
 - Blast hop rules duplicate atmos `CanFlow` bit checks locally (avoid `AtmosNeighbourBuilder` internal coupling).
-- Items / visuals / repair: later phases in [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md).
+- No cracked wall mesh/decal art yet — provisional MPB tint only.
+- Doors: presentation/examine wait on baking `PlacedTileObject` onto airlock prefabs (Phase 1 SyncVar pitfall).
+- Items / repair: later phases in [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md).
 
 ## Related
 

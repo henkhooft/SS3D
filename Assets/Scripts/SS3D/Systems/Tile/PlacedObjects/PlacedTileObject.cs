@@ -9,6 +9,7 @@ using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Rendering.URP;
+using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.Connections;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
@@ -102,7 +103,7 @@ namespace SS3D.Systems.Tile
         [SyncVar]
         private float _syncIntegrityRemaining = -1f;
 
-        [SyncVar]
+        [SyncVar(OnChange = nameof(SyncIntegrityStage))]
         private StructuralIntegrityStage _syncIntegrityStage = StructuralIntegrityStage.Intact;
 
         private IAdjacencyConnector _connector;
@@ -167,6 +168,7 @@ namespace SS3D.Systems.Tile
             base.OnStartClient();
             StampWorldDecalReceivers(gameObject);
             ApplySyncedIdentity();
+            NotifyIntegrityPresentation(IntegrityStage);
         }
 
         /// <summary>
@@ -202,6 +204,7 @@ namespace SS3D.Systems.Tile
             PublishIdentityToNetwork();
             NetworkObject.OnObserversActive += HandleObserversActive;
             RefreshHostVisibility();
+            NotifyIntegrityPresentation(IntegrityStage);
         }
 
         public override void OnStopServer()
@@ -337,12 +340,29 @@ namespace SS3D.Systems.Tile
                 _integrityUsesLocal = true;
                 _localIntegrityRemaining = remaining;
                 _localIntegrityStage = stage;
+                NotifyIntegrityPresentation(stage);
                 return;
             }
 
             _integrityUsesLocal = false;
             _syncIntegrityRemaining = remaining;
             _syncIntegrityStage = stage;
+            // Host/server: SyncVar OnChange may not fire on assign — apply presentation explicitly.
+            NotifyIntegrityPresentation(stage);
+        }
+
+        private void SyncIntegrityStage(StructuralIntegrityStage _, StructuralIntegrityStage next, bool asServer)
+        {
+            if (asServer)
+                return;
+
+            NotifyIntegrityPresentation(next);
+        }
+
+        private void NotifyIntegrityPresentation(StructuralIntegrityStage stage)
+        {
+            if (TryGetComponent(out StructuralIntegrityPresenter presenter))
+                presenter.Apply(stage);
         }
 
         private bool CanWriteIntegritySyncVars()
