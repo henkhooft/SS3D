@@ -86,6 +86,52 @@ namespace SS3D.Systems.Entities.Editor
             }
         }
 
+        [MenuItem("SS3D/Entities/Resync Human Prefab Against Body Parts")]
+        public static void ResyncMenu()
+        {
+            ResyncNestedPrefabInstances();
+            EditorUtility.DisplayDialog(
+                "Human Prefab Hygiene",
+                "Human.prefab reloaded and resaved against the current state of its nested body-part prefabs.",
+                "OK");
+        }
+
+        /// <summary>
+        /// Reloads <c>Human.prefab</c> against the current on-disk state of its nested body-part prefabs
+        /// and rewrites the root <see cref="NetworkObject"/>'s behaviour list to match, then resaves.
+        /// Needed because destroying a <see cref="NetworkBehaviour"/> directly on a nested prefab asset
+        /// (e.g. <c>BodyPartContainerInteractiveStrip</c> editing <c>HumanHead.prefab</c>/`HumanTorso.prefab`
+        /// on their own) does not retroactively update <c>Human.prefab</c>'s own stripped mirror of that
+        /// instance — that mirror only refreshes the next time <c>Human.prefab</c> itself is reloaded and
+        /// resaved. Always run this after any recipe that removes a component from a body-part prefab. See
+        /// entities.md § Pitfalls.
+        /// </summary>
+        public static void ResyncNestedPrefabInstances()
+        {
+            GameObject prefabRoot = PrefabUtility.LoadPrefabContents(HumanPrefabPath);
+            if (prefabRoot == null)
+            {
+                UnityEngine.Debug.LogError($"[HumanPrefabHygiene] Missing prefab: {HumanPrefabPath}");
+                return;
+            }
+
+            try
+            {
+                if (!prefabRoot.TryGetComponent(out NetworkObject rootNetworkObject))
+                {
+                    UnityEngine.Debug.LogError($"[HumanPrefabHygiene] No root NetworkObject on {HumanPrefabPath}");
+                    return;
+                }
+
+                RebuildNetworkBehaviours(rootNetworkObject);
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
         /// <summary>
         /// Rewrites the root <see cref="NetworkObject"/>'s <c>_networkBehaviours</c> list and each
         /// behaviour's <c>_componentIndexCache</c> after removing a component, mirroring FishNet's own

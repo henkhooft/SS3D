@@ -1,6 +1,6 @@
 > Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: in-progress (Phase 0 tooling written, pending an Editor run + Play Mode verification; Phase 2 done; Phase 1 deprioritized; Phase 3 ready but not started)
+> Status: in-progress (Phase 0 verified in-Editor, one more resync run pending — see Phase 0 status note; Phase 2 done; Phase 1 deprioritized; Phase 3 ready but not started)
 
 # Human.prefab decomposition
 
@@ -100,14 +100,21 @@ copy-pasted organ from landing on `Human.prefab` in review.
   denylist (starting with anything under `SS3D/Hacks/`) is present. Wire it into
   `.github/workflows/editmodetestrunner.yml` (already runs EditMode headlessly — no new CI plumbing).
 
-**Status (this pass):** missing-script cache fixed and verified (safe text-level correction, no
-structural risk — see entities.md § Pitfalls). `HumanPrefabHygiene.cs` and
-`BodyPartContainerInteractiveStrip.cs` are written and follow the corrected nested-`NetworkObject`-aware
-recipe pattern (see entities.md § Pitfalls for why the original `StorageContainerPrefabSetup` pattern
-would have silently dropped nested body-part behaviours), but **have not been executed** — this
-environment has no Unity Editor to run `PrefabUtility` or verify compilation. `HumanPrefabIntegrityTests`
-carries both denylist assertions as `[Ignore]`d until a maintainer runs the two menu items in the Editor,
-confirms Play Mode still works (movement, hands, `spawndummy`, examine, speech), and re-enables them.
+**Status:** done and verified in the Editor. The owner ran the recipe tools; `RagdollWhenPressingButton`
+is confirmed gone from `Human.prefab` and root `ContainerInteractive` confirmed gone from
+`HumanHead.prefab`/`HumanTorso.prefab` — both `HumanPrefabIntegrityTests` assertions are re-enabled
+(no longer `[Ignore]`d) and pass.
+
+Running the tools surfaced one more real bug: `BodyPartContainerInteractiveStrip` edits
+`HumanHead.prefab`/`HumanTorso.prefab` directly, but `Human.prefab`'s own stripped mirror of those
+instances doesn't refresh until `Human.prefab` itself is reloaded and resaved — so `Human.prefab` was
+left with 2 dangling stripped mirrors pointing at the now-deleted `ContainerInteractive` instances.
+Fixed by adding `HumanPrefabHygiene.ResyncNestedPrefabInstances()` (menu:
+**SS3D → Entities → Resync Human Prefab Against Body Parts**), which `HumanPrefabRecipes.RunAllMenu`
+now always calls last regardless of what the other recipes changed — see entities.md § Pitfalls.
+**One more Editor run of `SS3D → Entities → Run All Human Prefab Recipes` (or the resync menu item
+alone) is needed to clean up the 2 already-dangling mirrors on the currently-committed `Human.prefab`**,
+then re-verify Play Mode (movement, hands, `spawndummy`, examine, speech).
 
 ### Phase 1 — Organ mesh de-duplication (deprioritized)
 

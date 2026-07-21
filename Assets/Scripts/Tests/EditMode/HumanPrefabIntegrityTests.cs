@@ -31,9 +31,6 @@ namespace EditorTests
         }
 
         [Test]
-        [Ignore("RagdollWhenPressingButton still present on Human.prefab — run SS3D/Entities/Remove Dev-Only " +
-            "Hacks From Human Prefab in the Editor, verify in Play Mode, then re-enable this test. See " +
-            "2026-07_human-prefab-decomposition.md Phase 0.")]
         public void HumanPrefab_HasNoDevOnlyHackComponents()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
@@ -46,9 +43,6 @@ namespace EditorTests
 
         [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanHead.prefab")]
         [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanTorso.prefab")]
-        [Ignore("ContainerInteractive still present on HumanHead/HumanTorso roots — run SS3D/Inventory/Strip " +
-            "Head/Torso ContainerInteractive in the Editor, verify in Play Mode, then re-enable this test. See " +
-            "2026-07_human-prefab-decomposition.md Phase 0.")]
         public void BodyPart_HasNoRootContainerInteractive(string prefabPath)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
