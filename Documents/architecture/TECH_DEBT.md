@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-22
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -285,6 +285,26 @@ moves) are not started.
 
 - Related: [asset-organization.md](systems/asset-organization.md), [data-codegen.md](systems/data-codegen.md)
   § Architecture smells (same one-off-Editor-menu root cause)
+
+### 1.15 Addressables configured but unused — every asset eager-loaded into RAM
+
+**Blast radius: high (whole-game memory footprint) — trend: scheduled but not started**
+
+21 Addressables groups are configured under `Assets/Content/Addressables/` (Items, Materials,
+Sounds, InteractionIcons, CraftingRecipes, UIElements, etc.), but they are only ever used as an
+editor-time curation source: `AssetDatabase.LoadAssetsFromAssetGroup()` copies each group entry's
+real `Object` reference into a serialized dictionary, and `Assets.Get<T>` is a synchronous read
+against those hard references. No `Addressables.LoadAssetAsync`/`Instantiate*` call exists anywhere
+in `Assets/Scripts` — grepped and confirmed 2026-07-21. Every configured asset is therefore pulled
+into RAM the moment its owning database loads and stays resident for the process lifetime, the exact
+problem upstream tracks as [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494)
+("excessive memory usage," up to 600MB) with an open, unreviewed rewrite attempt at
+[RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500) — this fork has the same root cause,
+reached via a different (Addressables-group-as-metadata) route. Migration scoped in
+[2026-07_addressables-expansion-migration.md](2026-07_addressables-expansion-migration.md); not yet
+started.
+
+- Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 
 ---
 
