@@ -1,5 +1,5 @@
 > Code paths: Assets/Art/, Assets/Content/, Assets/Scripts/, Assets/Editor/, Assets/Settings/, Assets/Resources/
-> Entry points: Tools/generate_art_index.py, Tools/generate_icon_index.py
+> Entry points: Tools/generate_art_index.py, Tools/generate_icon_index.py, Assets/Scripts/Tests/AssetAudit/AssetTaxonomyTests.cs
 > Status: stub
 > Verified: b329ad1a — 2026-07-22
 
@@ -37,6 +37,12 @@ doc, then re-run `generate_art_index.py` / `generate_icon_index.py` so the gener
 
 ## Pitfalls
 
+- **This is CI-enforced, not just documented.** `AssetTaxonomyTests.cs` (EditMode, runs via the existing
+  `editmodetestrunner.yml` on every PR) fails on new raw-art files under `Content/`, new icon images outside
+  `Art/Icons/`, new "Misc" folders, or new first-party asmdefs outside `Scripts/`. Pre-existing violations are
+  grandfathered by exact path in `AssetAuditUtilities.cs` — when a Phase 1/2 migration item in the taxonomy
+  doc ships, remove the matching grandfather entry so the test tightens; never add an entry to make a new
+  violation pass.
 - **Icon scatter has already happened once** (8+ locations audited in the taxonomy doc) — don't add a ninth.
   If an icon doesn't fit `Art/Icons/<Source>/`, that's a sign the source taxonomy needs a new bucket, not a
   reason to drop it next to the consuming system.

@@ -126,11 +126,20 @@ its current home at `Assets/FishNet/`. Candidate for deletion after confirming n
 ### Phase 0 — Docs & guardrails (no file moves)
 
 - [x] This doc + the `asset-organization` system map (this change).
-- [ ] Update `AGENTS.md` § Finding UI icons to state the single-source-of-truth rule and the icon-image vs.
+- [x] Update `AGENTS.md` § Finding UI icons to state the single-source-of-truth rule and the icon-image vs.
       icon-catalog-ScriptableObject distinction.
-- [ ] Add a `TECH_DEBT.md` entry pointing here (done alongside this doc).
-- [ ] Extend `Tools/generate_icon_index.py` to also index the current stray icon locations (§1) so the index
+- [x] Add a `TECH_DEBT.md` entry pointing here.
+- [x] Extend `Tools/generate_icon_index.py` to also index the current stray icon locations (§1) so the index
       is accurate immediately, independent of when the physical consolidation lands.
+- [x] **CI enforcement:** `Assets/Scripts/Tests/AssetAudit/AssetTaxonomyTests.cs` (EditMode, runs on every PR
+      via the existing `editmodetestrunner.yml` — no workflow change needed) fails on any *new*:
+      - raw art file type (image/audio/model/font extension) added under `Assets/Content/`
+      - icon image (SVG, or PNG with "icon" in the path) added outside `Assets/Art/Icons/`
+      - new folder literally named "Misc"
+      - first-party `.asmdef` outside `Assets/Scripts/`
+      Every violation catalogued in §1–§8 above is grandfathered by exact path/prefix in
+      `AssetAuditUtilities.cs` so the test suite is green today; **shrink a grandfather list entry when its
+      matching Phase 1/2 checklist item below ships — never add to one to make a new violation pass.**
 
 ### Phase 1 — Low-risk consolidation (asset+`.meta` pairs moved together, no code changes expected)
 
@@ -147,6 +156,8 @@ not just a file move — enumerate call sites before each move in this phase.
       (removes the redundant nesting from §6).
 - [ ] Delete the orphaned `Scripts/External/FishNet/` meta-only stubs after confirming no real files remain.
 - [ ] Disposition the five Misc folders: recategorize contents or give the bucket a real name.
+- [ ] Move `Content/WorldObjects/World/VFX/Health/splatter.png` → `Art/Textures/World/` (or the relevant
+      VFX-texture convention), fixing the material reference that consumes it.
 
 ### Phase 2 — Reference-sensitive moves (code + Addressables/catalog updates required)
 
