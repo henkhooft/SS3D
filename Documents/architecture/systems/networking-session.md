@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 7b41eddf4 — 2026-07-22
+> Verified: 722667cc2 — 2026-07-22
 
 # Networking (session)
 
@@ -15,7 +15,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Editor/ServerBuildScript.cs` — `SS3D/Build/Dedicated Server (Linux)` menu item and CI build method
 - `Assets/Scripts/SS3D/Editor/ClientBuildScript.cs` — `SS3D/Build/Client (Linux)` menu item; now also `-buildMethod`/`-customBuildPath`-invocable from CI, mirroring `ServerBuildScript`
 - `Assets/Scripts/SS3D/Editor/ClientAndServerBuildScript.cs` — `SS3D/Build/Client + Dedicated Server (Linux)` menu item; batchmode entry `BuildBothBatch` used by `Tools/build_client_and_server.sh`
-- `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — self-bootstrapping (no scene edit), drives a headless process through a `-testscript=` script using the same client→server broadcast/RPC APIs the lobby UI calls; no-op unless that flag is set. Client `wait_connected` also waits until `PlayerSubSystem` exists (FishNet connects before Game finishes loading additively).
+- `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — self-bootstrapping (no scene edit), drives a headless process through a `-testscript=` script using the same client→server broadcast/RPC APIs the lobby UI calls; no-op unless that flag is set. Client `wait_connected` also waits until an authorized Player ckey exists. When `-testscript=` is set, owns first join + `reconnect` (`IntroUIHelper` skips auto-join).
 - `Testing/multiplayer/run_smoketest.sh` — the actual multiplayer test harness: launches a real server + N real client processes and asserts on their logs; see [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md)
 - `Testing/multiplayer/tools/known_unity_bad.patterns` — unity.log denylist (hard-fail); pair with `known_unity_noise.patterns` (triage-only)
 - `Builds/start_ss3d_server.sh`, `Builds/start_ss3d_client.sh`, `Builds/Start_SS3D_*.bat` — local / Windows-prerelease launch scripts
@@ -42,6 +42,8 @@ FishNet session management — host/join, network type and port settings. Distin
 - **`TileResourceLoader` / `Item.GenerateIcon` preview cameras break `-nographics` clients.** `RuntimePreviewGenerator` recreates URP on NullGfxDevice → GraphicsBuffer/Blitter spam that fails the harness exception check. Skip icon generation when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
 - **Destroyed `BasicElectricDevice` throws on `TileObject` during server teardown.** Accessing `.gameObject` on a destroyed component NREs inside electricity FixedUpdate after `StopConnection`; `TileObject` now returns null when `this` is Unity-destroyed so area/APC lookups bail cleanly.
 - **FishNet SyncVar writes on pure clients are LogWarnings, not exceptions.** Smoke used to pass while `unity.log` filled with `Cannot complete operation as server when server is not active` (e.g. injury SyncVars from `HumanoidBodyStateBridge`). Harness now hard-fails on `tools/known_unity_bad.patterns`; fix with `IsServer` guards, never by allowlisting as noise. See [entities.md](entities.md).
+- **In-process `disconnect`/`reconnect` must not reload Boot.** FishNet `DefaultScene` offline is Boot; `StopConnection` → `LoadScene(Boot)` while NetworkManager is DDOL duplicates managers and (with leaked `ApplicationInitializing` listeners — always `AddHandle(...)`) storms Intro/`SkipIntro` joins (`Failed to start the client connection… already starting/started`). Staying in Game also fails: networked objects never resync and `GetCkey` stays empty even when the server reclaims the body. Automation redirects offline to `Empty.unity` for the gap, re-joins via `ClientManager.StartConnection` + CLI `NetworkSettings`, then restores Boot offline.
+- **`-testscript=` clients: `IntroUIHelper` must not auto-`StartNetworkSession`.** SkipIntro would otherwise race Automation's owned join/reconnect. Automation starts the first client session from `HandleApplicationInitializing`.
 
 ## Depends on / Used by
 

@@ -48,13 +48,17 @@ Manual / partial:
   — never simulated input, never the `#if UNITY_EDITOR`-only stub broadcasts on
   `ReadyPlayersSubSystem`/`RoundSubSystem` (those don't compile into a real built player/server).
   Instructions: `wait_connected`, `ready`, `start_round`, `wait_round <state>`, `embark`,
+  `assert_embarked` (waits until this connection owns a spawned `Entity` — unlike `embark`,
+  which only fires the spawn/reclaim request without confirming it landed), `reconnect`
+  (client-only; redirects DefaultScene offline to `Empty.unity`, then re-joins via
+  `ClientManager.StartConnection` with CLI `NetworkSettings` — see networking-session Pitfalls),
   `console <command line>` (routes through `CommandsController.ClientProcessCommand`),
   `wait_seconds <n>`, `disconnect`.
 - `TestSignal.cs` — emits `"Test signal {signal} {payload}"` through the existing Serilog
   pipeline (new `Logs.Testing` category) as a deterministic readiness/completion vocabulary
-  (`ServerReady`, `ClientConnected`, `RoundStateChanged`, `PlayerEmbarked`, `ScriptComplete`,
-  `ScriptFailed:<reason>`) — replaces `Thread.Sleep`/`GameObject.Find` polling with something a
-  harness can wait on deterministically.
+  (`ServerReady`, `ClientConnected`, `RoundStateChanged`, `PlayerEmbarked`, `EmbarkVerified`,
+  `ScriptComplete`, `ScriptFailed:<reason>`) — replaces `Thread.Sleep`/`GameObject.Find` polling
+  with something a harness can wait on deterministically.
 - `-testscript=` plumbed through `CommandLineArgs.cs` → `CommandLineArgsSubSystem.cs` →
   `ApplicationSettings.TestScriptPath`, same pattern as the existing `-skipintro` etc.
 - `Assets/Settings/LogSettings.asset`: `UseCompactJsonFormatter` flipped `0` → `1`. It already had
@@ -98,6 +102,12 @@ Manual / partial:
   `Ongoing` and client 0 has already embarked. Ports
   `KnownIssueReproduction/Issue1002_LateJoinFails_HostPerspective.cs`'s
   `ClientCanEmbarkAfterRoundStartWhenHostHasAlreadyEmbarked` case as a real two-process run.
+- `scenarios/reconnect{,-client}.txt` — single client embarks, confirms it controls a spawned
+  body (`assert_embarked`), disconnects, reconnects with the same ckey, and confirms it
+  regained control of that same body rather than being left with no controllable entity while
+  the old one sits ownerless in the world. Regression coverage for the disconnect/reconnect
+  ownership fix in `PlayerSubSystem.ProcessPlayerDisconnect`/`ProcessAuthorizePlayer` and
+  `EntitySubSystem.TryReclaimEntity` — see [player-control.md](systems/player-control.md).
 - `scenarios/atmos-client-sync{,-client}.txt` — regression coverage for
   [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md): the
   client embarks, runs `console atmosdebug heat 500` (new `AtmosDebugCommand` — headless
@@ -120,8 +130,8 @@ Manual / partial:
 ### CI
 - `.github/workflows/develop-release.yml` — **manual** gated path: EditMode → Linux
   server+client builds (separate `buildsPath` dirs, `versioning: None`) → `basic-round` +
-  `late-join 2` + `atmos-client-sync` → Windows client zip with `Builds/Start_SS3D_*.bat` →
-  GitHub prerelease. See
+  `late-join 2` + `reconnect` + `atmos-client-sync` → Windows client zip with
+  `Builds/Start_SS3D_*.bat` → GitHub prerelease. See
   [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
 - `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke only (`workflow_dispatch` or PR
   label `test:multiplayer`); no longer runs on every `develop` push. Same build scripts and
@@ -195,11 +205,22 @@ possible here):
 - PID-tracked cleanup: an unrelated background process survives a harness run; no harness
   process lingers afterward (verified via PID pattern anchored to the run's own staged path, not
   a global name match).
+- `scenarios/reconnect{,-client}.txt` (added later, same technique): a mock binary that
+  interprets the DSL opcodes and emits matching `Test signal` lines confirms
+  `run_smoketest.sh reconnect` resolves the new scenario files (numbered-then-default fallback),
+  stages/ports/permissions all still work, and the client log shows the expected
+  `ClientConnected → RoundStateChanged Ongoing → PlayerEmbarked → EmbarkVerified →
+  ClientConnected → EmbarkVerified → ScriptComplete` sequence around the `disconnect`/`reconnect`
+  pair. This only proves the shell orchestration and DSL plumbing accept the new instructions —
+  it does not exercise the real `AutomationSubSystem.Reconnect`/`IsEmbarked` C# or the
+  `PlayerSubSystem`/`EntitySubSystem` server logic they drive, which still needs a real build
+  (see below).
 
 **Not yet verified: a real `AutomationSubSystem`/`ServerBuildScript`/`ClientBuildScript` build**
 (this session had no Unity Editor to build with). Next step for whoever picks this up: run
 `SS3D/Build/Dedicated Server (Linux)` and `SS3D/Build/Client (Linux)` from the Editor, then
-`./Testing/multiplayer/run_smoketest.sh basic-round` locally, and a `workflow_dispatch` run of
+`./Testing/multiplayer/run_smoketest.sh basic-round` locally, `./Testing/multiplayer/run_smoketest.sh
+reconnect` (new — also needs its first real-build run), and a `workflow_dispatch` run of
 `multiplayer-smoke-test.yml` in CI, before relying on the `push: develop`/labeled-PR triggers as
 a real merge gate.
 

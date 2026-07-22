@@ -116,7 +116,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
-| Player control | [player-control](systems/player-control.md) | stub | Player subsystem and input routing |
+| Player control | [player-control](systems/player-control.md) | partial | Player subsystem, connect/authorize/disconnect lifecycle (incl. reconnect-to-body), and input routing |
 | Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose; always-on chat UI Phase 0 purged (headless ChatSubSystem); audio/camera; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending; path catalog; Dual Kawase blur + dim; DOTween bring-up/dismiss |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays; health drives dying/blood/oxy/concussion/unconscious + hit flash; `SetUiBackdropBlur` for machine UI; atmos temp/fire deferred; F2 debug Canvas condemned |

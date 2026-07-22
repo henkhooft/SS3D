@@ -35,6 +35,14 @@ namespace SS3D.Systems.Intro
         {
             ApplicationSettings applicationSettings = ScriptableSettings.GetOrFind<ApplicationSettings>();
 
+            // Multiplayer harness drives join/reconnect via AutomationSubSystem (-testscript=).
+            // Auto-starting here races that path: disconnect reloads Boot → Intro → SkipIntro
+            // StartNetworkSession while the script's reconnect is still pending.
+            if (!string.IsNullOrEmpty(applicationSettings.TestScriptPath))
+            {
+                return;
+            }
+
              if (applicationSettings.SkipIntro)
              {
                  Destroy(_temporaryAudioSource);

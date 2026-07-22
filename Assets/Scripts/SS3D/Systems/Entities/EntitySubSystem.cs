@@ -181,6 +181,33 @@ namespace SS3D.Systems.Entities
         }
 
         /// <summary>
+        /// Reconnects a returning player to the body they were controlling before they disconnected.
+        /// The body itself is never despawned on disconnect (see <see cref="HandleRoundStateUpdated"/>/
+        /// <see cref="DestroySpawnedPlayers"/> - it only happens at round end), it's simply left ownerless
+        /// in the world. This re-links it to the new connection instead of leaving it stranded and the
+        /// reconnecting player stuck without a controllable entity.
+        /// </summary>
+        [Server]
+        public bool TryReclaimEntity(Player player, NetworkConnection conn)
+        {
+            Entity entity = _spawnedPlayers.Find(e => e.Mind?.player == player);
+            if (entity == null)
+            {
+                return false;
+            }
+
+            entity.GiveOwnership(conn);
+            entity.Mind?.GiveOwnership(conn);
+            conn.SetFirstObject(entity.NetworkObject);
+
+            RpcInvokeClientSpawned(entity.Owner);
+
+            Log.Information(this, "Reconnected {ckey} to their existing body {entity}", Logs.ServerOnly, player.Ckey, entity.name);
+
+            return true;
+        }
+
+        /// <summary>
         /// Spawns a mindless Human for combat/interaction testing. Server-owned; no mind or loadout.
         /// </summary>
         [Server]

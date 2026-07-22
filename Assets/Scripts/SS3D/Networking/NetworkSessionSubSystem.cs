@@ -2,6 +2,7 @@ using Coimbra;
 using Coimbra.Services.Events;
 using FishNet;
 using FishNet.Managing;
+using FishNet.Transporting;
 using SS3D.Application.Events;
 using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
@@ -29,7 +30,7 @@ namespace SS3D.Networking
 #if UNITY_SERVER
             // Dedicated servers skip the Intro scene (the only place that otherwise calls
             // StartNetworkSession), so start listening for connections here instead.
-            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+            AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
 #endif
         }
 
@@ -132,12 +133,16 @@ namespace SS3D.Networking
         /// </summary>
         private static void StopAutoStartedConnections(NetworkManager networkManager)
         {
-            if (networkManager.ClientManager.Started)
+            // Started alone misses Starting — a second StartNetworkSession during Starting
+            // skips Stop and StartConnection returns false ("already starting/started").
+            LocalConnectionState clientState = networkManager.TransportManager.Transport.GetConnectionState(false);
+            if (clientState == LocalConnectionState.Starting || clientState == LocalConnectionState.Started)
             {
                 networkManager.ClientManager.StopConnection();
             }
 
-            if (networkManager.ServerManager.Started)
+            LocalConnectionState serverState = networkManager.TransportManager.Transport.GetConnectionState(true);
+            if (serverState == LocalConnectionState.Starting || serverState == LocalConnectionState.Started)
             {
                 Log.Warning(typeof(NetworkSessionSubSystem),
                     "Stopping a server that was already started (often UNITY_SERVER / Dedicated Server build target auto-start). Switch the Editor build target to Standalone for normal Host play.");
