@@ -1,21 +1,40 @@
 #!/usr/bin/env python3
-"""Generate an index of external game-icons available for UI work."""
+"""Generate an index of icon assets available for UI work.
+
+Scans every known icon location in the repo, not just the primary external-icons
+pack directory. See Documents/architecture/2026-07_asset-file-structure-taxonomy.md
+for why icons currently live in more than one place and the plan to consolidate them
+under Assets/Art/Icons/ over time — this script indexes the current reality so the
+index stays useful in the meantime.
+"""
 
 from __future__ import annotations
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ICONS_ROOT = REPO_ROOT / "Assets" / "Art" / "Icons" / "external icons"
 OUTPUT_JSON = REPO_ROOT / "Documents" / "icon-index.json"
 OUTPUT_MD = REPO_ROOT / "Documents" / "icon-index.md"
-LICENSE_FILE = ICONS_ROOT / "license.txt"
+LICENSE_FILE = REPO_ROOT / "Assets" / "Art" / "Icons" / "external icons" / "license.txt"
 
 ICON_EXTENSIONS = {"svg", "png"}
+
+# (source label, root dir relative to REPO_ROOT). Ordered roughly by size.
+# Non-"external" sources are audited scatter, not the intended long-term home —
+# see the taxonomy doc's Phase 1 for the planned consolidation into Assets/Art/Icons/.
+ICON_ROOTS: list[tuple[str, str]] = [
+    ("external", "Assets/Art/Icons/external icons"),
+    ("map-editor", "Assets/Art/Icons/map-editor"),
+    ("heroicons", "Assets/Art/Graphics/UI/Misc/Heroicons"),
+    ("interaction-icons", "Assets/Art/Graphics/UI/Interactions/InteractionIcons"),
+    ("inventory-icons", "Assets/Art/Graphics/UI/Containers/InventoryIcons"),
+    ("rendered-icons", "Assets/Art/Graphics/Misc/RenderedIcons"),
+    ("alert-stack", "Assets/Content/Systems/UI/MainHud/Icons/AlertStack"),
+]
 
 
 @dataclass
@@ -23,6 +42,7 @@ class IconRecord:
     name: str
     stem: str
     extension: str
+    source: str
     pack: str
     path: str
     tags: list[str]
@@ -35,56 +55,70 @@ def slug_tags(stem: str) -> list[str]:
     return [part for part in stem.lower().split("-") if part]
 
 
-def walk_external_icons() -> list[IconRecord]:
+def walk_icon_roots() -> list[IconRecord]:
     records: list[IconRecord] = []
 
-    if not ICONS_ROOT.is_dir():
-        return records
-
-    for file_path in sorted(ICONS_ROOT.rglob("*")):
-        if not file_path.is_file() or file_path.name.endswith(".meta"):
-            continue
-        if file_path.suffix.lstrip(".").lower() not in ICON_EXTENSIONS:
+    for source, rel_root in ICON_ROOTS:
+        root = REPO_ROOT / rel_root
+        if not root.is_dir():
             continue
 
-        pack = file_path.parent.name
-        relative = file_path.relative_to(REPO_ROOT / "Assets" / "Art" / "Icons")
-        stem = file_path.stem
+        for file_path in sorted(root.rglob("*")):
+            if not file_path.is_file() or file_path.name.endswith(".meta"):
+                continue
+            if file_path.suffix.lstrip(".").lower() not in ICON_EXTENSIONS:
+                continue
 
-        records.append(
-            IconRecord(
-                name=file_path.name,
-                stem=stem,
-                extension=file_path.suffix.lstrip(".").lower(),
-                pack=pack,
-                path=f"Assets/Art/Icons/{relative.as_posix()}",
-                tags=slug_tags(stem),
+            pack = file_path.parent.name
+            stem = file_path.stem
+            relative = file_path.relative_to(REPO_ROOT)
+
+            records.append(
+                IconRecord(
+                    name=file_path.name,
+                    stem=stem,
+                    extension=file_path.suffix.lstrip(".").lower(),
+                    source=source,
+                    pack=pack,
+                    path=relative.as_posix(),
+                    tags=slug_tags(stem),
+                )
             )
-        )
 
     return records
 
 
 def build_pack_stats(records: list[IconRecord]) -> list[dict]:
-    counts = Counter(record.pack for record in records)
+    counts = Counter(record.pack for record in records if record.source == "external")
     return [
         {"pack": pack, "count": count}
         for pack, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     ]
 
 
+def build_source_stats(records: list[IconRecord]) -> list[dict]:
+    counts = Counter(record.source for record in records)
+    return [
+        {"source": source, "count": counts.get(source, 0), "root": root}
+        for source, root in ICON_ROOTS
+    ]
+
+
 def render_markdown(payload: dict) -> str:
     summary = payload["summary"]
     packs = payload["packs"][:15]
+    sources = payload["sources"]
 
     lines = [
-        "# External icon index (agent reference)",
+        "# Icon index (agent reference)",
         "",
         "> Generated by `Tools/generate_icon_index.py`. Re-run after adding icons.",
         "",
-        "Catalog of [game-icons.net](https://game-icons.net) SVG icons in",
-        "`Assets/Art/Icons/external icons/`. Use these freely when building UI —",
-        "panels, HUD, machine interfaces, inventory, chat, and interaction menus.",
+        "Catalog of icon assets across the repo. The majority are",
+        "[game-icons.net](https://game-icons.net) SVGs under `Assets/Art/Icons/external icons/`,",
+        "but several other icon sets currently live elsewhere (audited in",
+        "[2026-07_asset-file-structure-taxonomy.md](architecture/2026-07_asset-file-structure-taxonomy.md));",
+        "this index covers all of them so it stays accurate ahead of that consolidation.",
         "",
         f"**Generated:** {payload['generated_at']}",
         "",
@@ -96,13 +130,13 @@ def render_markdown(payload: dict) -> str:
         "- You want an icon for a tool, machine, body part, or game concept",
         "- You need to check whether a suitable icon already exists in the project",
         "",
-        "These are SVG source files. Import into Unity and assign as sprites or",
-        "VectorImage (UI Toolkit) as needed for your UI pipeline.",
+        "**All new icon assets belong under `Assets/Art/Icons/<Source>/`** — never add a new icon",
+        "folder under `Graphics/` or `Content/Systems/*`; see the taxonomy doc linked above.",
         "",
         "## Agent workflow",
         "",
-        "1. Search [`icon-index.json`](icon-index.json) by `stem`, `tags`, or `pack`.",
-        "2. Use the `path` field as the Unity asset path.",
+        "1. Search [`icon-index.json`](icon-index.json) by `stem`, `tags`, `pack`, or `source`.",
+        "2. Use the `path` field as the repo-relative asset path.",
         "3. Prefer descriptive tag matches (e.g. `welder`, `power`, `medical`).",
         "4. Regenerate after adding icons: `python3 Tools/generate_icon_index.py`.",
         "",
@@ -118,6 +152,9 @@ def render_markdown(payload: dict) -> str:
         "# List icons in a contributor pack",
         'jq \'.icons[] | select(.pack == \"delapouite\")\' Documents/icon-index.json',
         "",
+        "# List icons from a non-external-icons source (e.g. the alert-stack HUD set)",
+        'jq \'.icons[] | select(.source == \"alert-stack\")\' Documents/icon-index.json',
+        "",
         "# Quick grep by keyword",
         'grep -i "wrench" Documents/icon-index.json',
         "```",
@@ -127,14 +164,31 @@ def render_markdown(payload: dict) -> str:
         "| Metric | Count |",
         "|--------|------:|",
         f"| Total icons | {summary['total_icons']} |",
-        f"| Contributor packs | {summary['pack_count']} |",
+        f"| Sources | {summary['source_count']} |",
+        f"| Contributor packs (`external` source) | {summary['pack_count']} |",
         f"| SVG icons | {summary['svg_count']} |",
         "",
-        "## Top contributor packs",
+        "## By source",
         "",
-        "| Pack | Icons |",
-        "|------|------:|",
+        "| Source | Count | Root |",
+        "|--------|------:|------|",
     ]
+
+    for src in sources:
+        lines.append(f"| {src['source']} | {src['count']} | `{src['root']}` |")
+
+    lines.extend(
+        [
+            "",
+            "Every source except `external` and `map-editor` is audited scatter, not the intended",
+            "home — see the taxonomy doc's Phase 1 for the planned move into `Assets/Art/Icons/`.",
+            "",
+            "## Top contributor packs (`external` source)",
+            "",
+            "| Pack | Icons |",
+            "|------|------:|",
+        ]
+    )
 
     for pack in packs:
         lines.append(f"| {pack['pack']} | {pack['count']} |")
@@ -145,22 +199,18 @@ def render_markdown(payload: dict) -> str:
     lines.extend(
         [
             "",
-            "## Location",
-            "",
-            "```",
-            "Assets/Art/Icons/external icons/<pack>/<icon-name>.svg",
-            "```",
-            "",
-            "Icons are grouped by original game-icons.net contributor (e.g. `delapouite`,",
-            "`lorc`, `caro-asercion`). Filename stems use kebab-case and map to searchable tags.",
+            "Icons in the `external` source are grouped by original game-icons.net contributor",
+            "(e.g. `delapouite`, `lorc`, `caro-asercion`). Filename stems use kebab-case and map to",
+            "searchable tags.",
             "",
             "Full data: [`icon-index.json`](icon-index.json)",
             "",
             "## License",
             "",
-            "Icons are from [game-icons.net](https://game-icons.net) under CC BY 3.0 (some CC0).",
-            "See `Assets/Art/Icons/external icons/license.txt` for contributor attribution.",
-            "Include \"Icons made by {author}\" in derivative work per the license.",
+            "`external` source icons are from [game-icons.net](https://game-icons.net) under CC BY 3.0",
+            "(some CC0). See `Assets/Art/Icons/external icons/license.txt` for contributor attribution.",
+            "Include \"Icons made by {author}\" in derivative work per the license. Other sources carry",
+            "whatever license applied when they were added — check before reusing outside this project.",
             "",
             "## Regenerating",
             "",
@@ -171,7 +221,8 @@ def render_markdown(payload: dict) -> str:
             "## Related",
             "",
             "- [art-asset-index.md](art-asset-index.md) — models, textures, sounds",
-            "- [AGENTS.md](../../AGENTS.md) — agent navigation",
+            "- [architecture/2026-07_asset-file-structure-taxonomy.md](architecture/2026-07_asset-file-structure-taxonomy.md) — icon-scatter audit + consolidation plan",
+            "- [AGENTS.md](../AGENTS.md) — agent navigation",
             "",
         ]
     )
@@ -181,18 +232,17 @@ def render_markdown(payload: dict) -> str:
 
 def build_payload(records: list[IconRecord]) -> dict:
     packs = build_pack_stats(records)
+    sources = build_source_stats(records)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "purpose": (
-            "Agent reference for locating external game-icons SVGs available for UI work."
+            "Agent reference for locating icon assets across the repo, including sets outside "
+            "Assets/Art/Icons/ pending consolidation (see the asset-file-structure-taxonomy doc)."
         ),
-        "source": {
-            "root": "Assets/Art/Icons/external icons",
-            "origin": "https://game-icons.net",
-            "license": "Assets/Art/Icons/external icons/license.txt",
-        },
+        "sources": sources,
         "summary": {
             "total_icons": len(records),
+            "source_count": len(sources),
             "pack_count": len(packs),
             "svg_count": sum(1 for item in records if item.extension == "svg"),
         },
@@ -202,7 +252,7 @@ def build_payload(records: list[IconRecord]) -> dict:
 
 
 def main() -> None:
-    records = walk_external_icons()
+    records = walk_icon_roots()
     payload = build_payload(records)
 
     OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -214,7 +264,10 @@ def main() -> None:
         handle.write(render_markdown(payload))
 
     summary = payload["summary"]
-    print(f"Wrote {OUTPUT_JSON} ({summary['total_icons']} icons, {summary['pack_count']} packs)")
+    print(
+        f"Wrote {OUTPUT_JSON} ({summary['total_icons']} icons, "
+        f"{summary['source_count']} sources, {summary['pack_count']} external packs)"
+    )
     print(f"Wrote {OUTPUT_MD}")
 
 

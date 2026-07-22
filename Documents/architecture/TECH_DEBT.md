@@ -248,6 +248,27 @@ UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when tha
 
 - Related: [inputs.md](systems/inputs.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
 
+### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
+
+**Blast radius: low individually, high in aggregate — trend: scheduled but not started**
+
+The intended `Assets/Art/` (raw art, by type then domain) vs. `Assets/Content/` (game data/composition) split
+is sound, but a full audit found icon image assets alone living in at least eight separate locations
+(`Art/Graphics/UI/Misc/Heroicons`, `Art/Graphics/UI/Interactions/InteractionIcons`,
+`Art/Graphics/UI/Containers/InventoryIcons`, `Art/Graphics/Misc/RenderedIcons`,
+`Content/Systems/UI/MainHud/Icons/AlertStack`, plus a folder-name collision between the Art-side
+`InteractionIcons/` PNGs and a `Content/Systems/UI/Systems/Interactions/InteractionIcons/` ScriptableObject
+catalog of the same name), five separate "Misc" dumping-ground folders, and no written rule for when a
+ScriptableObject belongs in `Content/Data/` versus next to the system that owns it. Left alone, every new
+feature adds another icon folder or another Misc bucket instead of following a convention, because no
+convention was ever written down.
+[2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md) documents the full audit,
+the target taxonomy, and a 3-phase migration plan (docs → low-risk renames → reference-sensitive moves); only
+Phase 0 (docs/tooling) has landed.
+
+- Related: [asset-organization.md](systems/asset-organization.md), [data-codegen.md](systems/data-codegen.md)
+  § Architecture smells (same one-off-Editor-menu root cause)
+
 ---
 
 ## 2. Hot-path GC / performance debt (tracked, partially paid down)
