@@ -27,12 +27,38 @@ namespace SS3D.Systems.IngameConsoleSystem
 
         protected override void OnStart()
         {
-            IEnumerable<Type> commands = Assembly.GetAssembly(typeof(Command)).GetTypes().Where(iType =>
-                iType.IsClass && iType.IsSubclassOf(typeof(Command)) && !iType.IsAbstract);
-            foreach (Type command in commands)
+            // Scan every loaded assembly, not just SS3D.Systems: UI assemblies (e.g. SS3D.UI.MainHud)
+            // may host Command subclasses that cannot live in Systems without recreating an asmdef cycle
+            // (MainHud → Systems already; Systems → MainHud is forbidden).
+            foreach (Type command in DiscoverCommandTypes())
             {
                 Command instance = (Command)Activator.CreateInstance(command);
                 _allCommands.Add(GetCommandName(command), instance);
+            }
+        }
+
+        private static IEnumerable<Type> DiscoverCommandTypes()
+        {
+            Type commandBase = typeof(Command);
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException e)
+                {
+                    types = e.Types.Where(t => t != null).ToArray();
+                }
+
+                foreach (Type type in types)
+                {
+                    if (type.IsClass && !type.IsAbstract && type.IsSubclassOf(commandBase))
+                    {
+                        yield return type;
+                    }
+                }
             }
         }
 

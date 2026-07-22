@@ -8,7 +8,7 @@ current review capacity supports.
 This document is the plain-language divergence log. It is updated periodically — not per-commit.
 For doc authoring conventions see [SKILL.md](SKILL.md).
 
-**Last updated:** 2026-07-18
+**Last updated:** 2026-07-21
 
 ---
 
@@ -19,10 +19,10 @@ For doc authoring conventions see [SKILL.md](SKILL.md).
 | Default branch | `develop` | `develop` |
 | Unity version | 2021.3.15f1 | **6000.3.16f1** (Unity 6) |
 | Render pipeline | Built-in | **URP 17** |
-| Release channel | Tagged releases on GitHub | **No releases** — build from source |
+| Release channel | Tagged releases on GitHub | **Manual prereleases** via `develop-release.yml` (Windows zip + bats by default; Linux / EditMode / smoke opt-in) — day-to-day still build-from-source |
 | Documentation | GitBook ([ss3d.gitbook.io](https://ss3d.gitbook.io/dev-guide/)) | `Documents/design/` + `Documents/architecture/` + system maps |
-| Commits ahead of upstream | — | **~424** (0 behind as of last fetch) |
-| Files changed vs upstream | — | ~13k files, +1.35M / −77.5k lines |
+| Commits ahead of upstream | — | **~641** (0 behind as of 2026-07-21 refetch) |
+| Files changed vs upstream | — | ~13.7k files, +1.45M / −107k lines |
 
 ### Shipped gameplay
 
@@ -34,17 +34,22 @@ Coverage means how much of the design intent is playable today, not “code exis
 |---|---|---|
 | [Selection + examine](#selection-api-1387) | shipped | Shader mesh picking; hover tooltips; Shift-hold detailed examine (text/image) |
 | [Interactions + radial menu](#interactions-hardening-and-radial-menu) | shipped | Hardened multiplayer interactions; three-tier UITK radial; armed Tier-2 targeting |
-| [Main HUD](#main-hud-ui-toolkit) | partial | Gear/hands/intent UITK overlay; legacy inventory chrome disabled; vitals/self-examine still pending |
+| [Main HUD](#main-hud-ui-toolkit) | partial | Gear/hands/intent UITK overlay; real on-demand storage panels (see Inventory row); zone reticle for melee; vitals/self-examine still pending |
+| [Inventory & storage](#inventory-and-storage-redesign) | partial | Clean-slate Container model: weight, size-class fit, stacking, locks; on-demand panel with drag-drop; backpack/toolbelt/locker wired; Play Mode verification pending |
+| [Comms](#comms-local-speech-and-crowd-cap) | partial | Local speech chips with distance/occlusion tiers, T-compose, crowd cap; radio/channels, non-diegetic feed, PDA log still open |
+| [Disposal](#disposal-item-network) | partial | BFS pipe routing, chute/outlet transit, SizeClass gate; pipe crafting, Cargo hook, player transit deferred |
 | [Health](#health-rewrite) | partial | Two-tier damage, organs, bleeding, critical/defib, field treatments, limb severing; vitals HUD pending |
-| [Combat](#combat-melee-vertical-slice) | partial | Harm-intent melee (fists, crowbar) with windup/zones; blocking and ranged not built |
-| [Body animation](#player-body-animation-foundation) | partial | Peaceful / melee / ranged stance locomotion + aim IK; combat hit presentation still thin |
+| [Combat](#combat-phase-0-1-clean-slate-melee) | partial | Phase 0–1 clean-slate melee: Harm always swings, camera-ray connect, reticle lock-on/flash, intent↔stance; disarm/ranged/armor/blocking not built |
+| [Body animation](#player-body-animation-foundation) | partial | Peaceful / melee / ranged stance + aim IK; injured limp gait, left-hand mirror, swing variants (animation polish) |
 | [Screen effects](#screen-space-effects) | partial | Dying/blood/oxy/concussion/unconscious + hit flash from health; atmos temp/fire not wired |
 | [Vision / FOV](#vision-fov) | shipped | Hard black fog-of-war from viewpoint raycasts |
+| [Station lighting (URP)](#urp-lighting-phase-1) | partial | Fixture-driven half-toon Forward+ look (zero ambient, dual fixture lights, emergency dim); visual plate polish still open |
 | [Areas + station power](#area-foundation) | partial | APC-seeded areas, kWh cells, channel shedding, area lights/switches; live remesh pending |
 | [Machine interfaces](#machine-interfaces) | shipped | Diegetic UITK APC/SMES/atmos ports/vending; engineering ID swipe on gated panels |
 | [Atmospherics](#atmospherics-ecs-foundation) | partial | Turf gas ECS + fire; pipe networks, vents/scrubbers/pumps/air alarms; client VFX sync pending |
 | [ID / access](#id-access-foundation) | partial | Crew records, door + machine gates, ID console; auth logs / broader design pending |
-| [Tilemap / construction](#tilemap-and-adjacency-engine) | shipped | Adjacency engine, construction service, AOI tile sync, build-menu layer visibility |
+| [Tilemap / construction](#tilemap-and-adjacency-engine) | shipped | Adjacency engine, construction service, AOI tile sync, layer visibility |
+| [Map Editor](#map-editor-replacement) | partial | Full-screen UITK Map Editor replaces TileMap Creator; creative-mode Builder / instant place / round-config pool deferred |
 | [Rounds](#game-lifecycle-hardening) | shipped | Single-flight round state machine (join/start/end races hardened) |
 
 Details and deferred work for each row live under [Shipped on `develop`](#shipped-on-develop).
@@ -81,19 +86,25 @@ milestones, and gameplay specs for this fork live in `Documents/`.
 
 ### GitHub automation
 
-Upstream-only workflows (milestones, roadmap, release packaging helpers, Discord notifications)
+Upstream-only workflows (milestones, roadmap, Discord notifications, old packaging helpers)
 were **removed** from this fork. Remaining workflows:
 
-- [main.yml](../.github/workflows/main.yml) — **manual** (`workflow_dispatch`) Windows client build
-  plus a **dedicated Linux server** job (`build-server`) that boots the binary headlessly as a
-  smoke test; this fork does not publish releases
+- [develop-release.yml](../.github/workflows/develop-release.yml) — **manual** (`workflow_dispatch`)
+  Windows client → GitHub **prerelease** (zip + launch bats) by default; Linux client/server,
+  EditMode, and multiplayer smoke are opt-in inputs — see
+  [2026-07_ci-develop-release-pipeline.md](architecture/2026-07_ci-develop-release-pipeline.md)
 - [editmodetestrunner.yml](../.github/workflows/editmodetestrunner.yml) — EditMode tests on push to
   `develop`, PRs (`pull_request_target`), and manual dispatch; forces Node 24 for JS actions;
   validates `UNITY_LICENSE` / `UNITY_SERIAL` secrets before running
+- [multiplayer-smoke-test.yml](../.github/workflows/multiplayer-smoke-test.yml) — opt-in headless
+  multiplayer smoke (`basic-round` / `late-join`) against a real dedicated-server + client build
 
 Doc layer redesign (coverage table, strip prototyping prompts from design docs) merged via PR #2.
 Agent-first composition policy and UI path-catalog conventions live under
-[architecture/](architecture/) (see shipped sections below).
+[architecture/](architecture/) (see shipped sections below). A design/implementation alignment
+audit (PR #18) fixed code that had drifted from its design doc. Design-docs integration (PR #21)
+added antagonist / audio / networking / player-accounts specs. Cross-cutting structural debt lives
+in [TECH_DEBT.md](architecture/TECH_DEBT.md) (PR #25).
 
 ---
 
@@ -132,10 +143,38 @@ Merged via `archive/feature-urp-migration` (through `develop-unity6`). Includes:
 Upstream remains on the Built-in render pipeline with no equivalent URP assets or selection-pick
 render features.
 
+### URP lighting Phase 1
+
+**Paths:** `Assets/Content/Resources/Simple Toon/`, fixture / `LightPower` behaviours,
+`Assets/Settings/URP/`
+
+Fixture-driven half-toon station lighting on URP 17 Forward+ (merged via PR #24,
+`feature/urp-lighting-phase1-v2`):
+
+- Zero ambient / no main directional light; gameplay Volume + SSAO on the Forward+ renderer
+- Half-toon lighting in `STLighting.hlsl` with soft-near attenuation for fill hotspots
+- Dual fixture lights (Spot + PointFill) on tubes/bulbs; emergency mode is short-range spot-only
+  (fill off) so unpowered rooms read as power-starved
+- Floor derivative normals; inventory icon previews get temporary lights so icons stay readable
+  under fixture-only scene lighting
+
+Visual plate matching upstream Built-in reference screenshots is **not** finished — handoff in
+[2026-07_urp-lighting-look-polish.md](architecture/2026-07_urp-lighting-look-polish.md).
+Plan: [urp_lighting_look_plan_d42c32f5.plan.md](plans/urp_lighting_look_plan_d42c32f5.plan.md).
+System map: [rendering.md](architecture/systems/rendering.md).
+
 ### Analyzer tooling
 
 StyleCop analyzers disabled in the project (2026-07-14) to reduce friction on AI-assisted edits.
 EditMode test CI still runs on push and PR.
+
+### Technical debt tracker
+
+**Path:** [TECH_DEBT.md](architecture/TECH_DEBT.md)
+
+Project-wide register of structural risks (mega-prefab, collapse authority, interaction Discover
+contract, condemned crafting, etc.) ranked by blast radius — not a fourth doc layer; indexes
+system-map Pitfalls and agent-first composition debt. Merged via PR #25.
 
 ---
 
@@ -158,6 +197,9 @@ Merged from `archive/feature-1387-selection-api`. Cursor picking misalignment fi
 **Post-merge polish** (PR #5): hover flicker and outline bleed into item icons fixed by excluding
 outline shells from the pick pass via `SelectionRenderingLayers` (lives in `Rendering.URP` to avoid
 assembly cycles); green outline cleared on item pickup.
+
+**Post-merge polish** (PR #17): `ClosestPoint` no longer called on non-convex `MeshCollider`s
+(was throwing/misbehaving on some selectable meshes).
 
 ### Detailed examine (#1394)
 
@@ -229,6 +271,10 @@ Removed FastScriptReload and repaired Game scene missing scripts.
 
 Merged from `archive/feature-interactions`.
 
+**Post-merge polish** (PR #17): outline now shows only for objects with a target-bound interaction;
+range enforced when an interaction point is missing; Craft discovery gated behind a check, with the
+underlying interaction-architecture smells documented rather than silently worked around.
+
 ### Tilemap and adjacency engine
 
 **Paths:** `SS3D.Systems.Tile`, `SS3D.Systems.Tile.Connections`
@@ -249,6 +295,31 @@ Major refactor of the construction tilemap:
 
 Merged from `archive/feature-tilemap-system-refactor` and
 `archive/tilemap-layer-visibility` (build-menu layer toggles).
+
+The in-game **Map Editor** (below) replaces the legacy TileMap Creator uGUI for admin authoring;
+layer visibility is shared with the editor toolbar.
+
+### Map Editor replacement
+
+**Paths:** `SS3D.Systems.Tile.MapEditor`, `Assets/Content/Systems/UI/MapEditor/`
+
+Full-screen **UI Toolkit** Map Editor replacing the DynamicPanels TileMap Creator tab
+(merged via PR #26, `claude/map-editor-creative-mode-8pp6qj`):
+
+- Tools: Select / Edit / Move / Delete / Dropper; undoable compound place/delete/decal commands
+- Admin-gated via `IMapEditorAuthorizer` (default `AdminMapEditorAuthorizer`); catalog regenerated
+  from Editor menu
+- Layer visibility, overlays subcategory (sparse floor decals), save/load local station templates
+- Orphan TileMap Creator UI prefabs purged so AssetAudit no longer sees missing scripts
+- Creative-mode extension hooks reserved (`MapEditorPlacementMode`, round-config save target,
+  Area tool stub) — see [map-editor-creative-hooks.md](architecture/systems/map-editor-creative-hooks.md)
+
+Deferred: creative-mode Builder role / instant placement, area merge/split tool, round-config map
+pool save, Scripting & Placements backends.
+
+Architecture: [2026-07_map-editor-replacement.md](architecture/2026-07_map-editor-replacement.md).
+System map: [tile.md](architecture/systems/tile.md). Design:
+[creative-mode.md](design/creative-mode.md).
 
 ### Game lifecycle hardening
 
@@ -301,6 +372,9 @@ the ID/access foundation shipped for APC/SMES/atmos panels.
 **Post-merge polish** (PR #4): refresh-driven UI teardown no longer drops Take/vend click handlers;
 `MachinePowerConsumer` no longer sticks at “in use” wattage after vend.
 
+**Backdrop blur** (PR #14): diegetic panels blur the world behind them via Dual Kawase blur plus a
+dark dim, replacing an earlier depth-of-field approach.
+
 `MachineInterfaceHost` disables `UIDocument` when closed to avoid interfering with the selection
 pick pass. Diegetic panels mount the full cloned UXML `TemplateContainer` so attached style sheets
 apply at runtime. UI Toolkit masking rule: never combine `border-radius` and `overflow: hidden` on
@@ -308,7 +382,8 @@ the same element — split painted and clipping layers (`DiegeticDeviceShell`, `
 
 Merged from `archive/machine-ui` (APC/SMES networking),
 `archive/feature-diegetic-screen-ui-framework` (diegetic shell + vending), and
-`atmos-pipes` (APC/SMES diegetic redesign + atmos device panels). Plan:
+`atmos-pipes` (APC/SMES diegetic redesign + atmos device panels). Backdrop blur merged via PR #14
+(`cursor/diegetic-ui-backdrop-blur`). Plan:
 [diegetic_screen_ui_framework_643c2e6f.plan.md](plans/diegetic_screen_ui_framework_643c2e6f.plan.md).
 System map: [machine-interface.md](architecture/systems/machine-interface.md).
 
@@ -341,6 +416,9 @@ ports). Architecture:
 [electricity_kwh_foundation_917ccdbc.plan.md](plans/electricity_kwh_foundation_917ccdbc.plan.md).
 
 Deferred: live tile-mutation recompute; editor merge/split UI.
+
+**Post-merge polish** (PR #17): `PowerStatus` flicker fixed so airlocks can actually close;
+APC flood-fill now deferred until station template load finishes, instead of racing it.
 
 ### Atmospherics ECS foundation
 
@@ -438,7 +516,8 @@ Layered contributor-based disk persistence replacing the monolithic tilemap JSON
 EditMode tests: `PersistenceFrameworkTests`, `ServerMetaPersistenceTests`; updated
 `AreaFloodFillTests` for template restore.
 
-Merged from `archive/feature-persistence-framework`. System map:
+Merged from `archive/feature-persistence-framework`. Design:
+[persistence-save.md](design/persistence-save.md). System map:
 [persistence.md](architecture/systems/persistence.md). Plan:
 [persistence_architecture_design_2fe61864.plan.md](plans/persistence_architecture_design_2fe61864.plan.md).
 
@@ -469,14 +548,24 @@ Body-state-driven humanoid animation replacing thin Speed-blend + ad-hoc Animato
 - **`HumanoidCombatController`** / inventory bridge — Melee/Ranged stance from held-item traits;
   `C` toggles Peaceful ↔ combat stance
 
-This is **stance and locomotion presentation only** — [combat.md](design/combat.md) hit resolution,
-windup, and damage are not implemented. Blend/timing polish remains animator-owned where possible.
+This is **stance and locomotion presentation** — hit resolution, windup, and damage live under
+[Combat](#combat-phase-0-1-clean-slate-melee). Blend/timing polish remains animator-owned where
+possible.
 
 Architecture: [2026-07_player-body-animation.md](architecture/2026-07_player-body-animation.md).
 Plan: [animation_system_design_250de599.plan.md](plans/animation_system_design_250de599.plan.md).
 System map: [entities.md](architecture/systems/entities.md).
 
 Merged from `feature/animation-system` onto `develop`.
+
+**Post-merge polish** (PR #17): removed a duplicate `_bodyStateMachine` component on the ghost
+controller.
+
+**Animation polish** (PR #22, `cursor/male-injured-pack-mixamo-clips`): melee Upper Body torso
+authority + Mixamo swing variants; injured limp gait from Male Injured Pack (all stances);
+left-hand Upper Body mirror; arm-injury additive overlay; combat gait sync with world speed.
+Shelved Misc / Probably Not clip packs for future collapse/presentation work.
+Architecture: [2026-07_animation-polish.md](architecture/2026-07_animation-polish.md).
 
 ### Screen-space effects
 
@@ -521,18 +610,29 @@ virology/chemistry modifiers.
 
 Merged via PR #12 (`health-rewrite`). System map: [health.md](architecture/systems/health.md).
 
-### Combat — melee vertical slice
+### Combat — Phase 0–1 clean-slate melee
 
 **Paths:** `SS3D.Systems.Combat`
 
-Phase 4 melee on top of the health rewrite and body-animation stance foundation:
+Clean-slate rewrite per [combat.md](design/combat.md) /
+[combat_implementation_plan.md](plans/combat_implementation_plan.md) (merged via PR #23,
+`cursor/combat-plan-clean-slate`). Marks the earlier thin melee vertical slice condemned and
+replaces the hit path:
 
-- Harm-intent **`MeleeHitInteraction`** with per-weapon windup/recovery (`MeleeWeaponProfile`)
-- Zone hits via `ZoneTargetResolver` on the `BodyParts` layer → `HumanHealthController.ApplyDamage`
-- First weapons: empty-hand fists (`HandHit`) and crowbar (`MeleeWeaponItemExtension`)
+- **Harm primary always swings** (windup → connect → recovery + stamina) via `CmdRunMeleeSwing` —
+  no collider required at click; misses still consume the full swing
+- Zone damage at **connect** from the client-synced **camera** aim ray (`CmdSyncMeleeAim`),
+  excluding self; fallback to body aim when no ray was synced
+- Weapons: empty-hand fists (`HandMeleeExtension`), improvised held items, dedicated tool profiles
+  (crowbar / hatchet / kitchen knife via `MeleeWeaponItemExtension`)
+- **Intent ↔ stance:** `C` / HUD intent chip toggles Help/Harm; Harm enters combat stance;
+  Harm is combat-exclusive (no fall-through to Drop / MI mid-fight)
+- **Melee HUD feedback:** zone reticle lock-on recharge during recovery; white cross flash on
+  successful connect (`MeleeConnectFeedback` / `MeleeRecoveryFeedback`)
+- Admin test tool: console `spawndummy` (mindless Human ahead)
 
-Blocking and ranged accuracy from [combat.md](design/combat.md) are **not** implemented.
-Stance/aim presentation remains under entities body animation.
+Deferred: disarm/grab, ranged, armor, blocking; broader combat stamina (block/fire). Stance/aim
+presentation remains under entities body animation.
 
 Plan: [combat_implementation_plan.md](plans/combat_implementation_plan.md).
 System map: [combat.md](architecture/systems/combat.md).
@@ -566,6 +666,68 @@ Partial player HUD overlay from [main-hud.md](design/main-hud.md):
 
 Merged via PR #10. System map: [inventory.md](architecture/systems/inventory.md) (player HUD slice).
 
+### Inventory and storage redesign
+
+**Paths:** `SS3D.Systems.Inventory`, `Assets/Content/Systems/UI/MainHud/StoragePanel/`
+
+Clean-slate rewrite per [inventory-storage.md](design/inventory-storage.md), replacing the
+placeholder inventory data model:
+
+- **Container primitive** — real weight (recursive through nested containers), a five-tier
+  size-class fit-check, stackable identical items, minimal ID-locked containers
+- **On-demand storage panel** — opens per-container from the gear strip or a world object; drag-drop
+  between panels and hands reuses the Tier 3 combine convention; locker access gated on the door
+- **Main HUD wiring** — worn item names on HUD slots, drag-to-world drop, backpack/toolbelt/locker
+  hookup, gear-strip PDA well renamed to Pocket
+- **Old UI purge** — legacy inventory uGUI fully removed, not just disabled
+- **Stamina bridge (Phase 7a)** — `CarriedWeight` feeds the stamina regen function
+
+Merged via PR #16 (`claude/inventory-architecture-redesign-6q9527`). Architecture:
+[2026-07_inventory-storage-redesign.md](architecture/2026-07_inventory-storage-redesign.md).
+System map: [inventory.md](architecture/systems/inventory.md).
+
+Deferred: Play Mode verification, uniform-specific pocket variance, standalone "quick loot everything."
+
+### Comms — local speech and crowd cap
+
+**Paths:** `SS3D.Systems.Chat` (headless `ChatSubSystem`), Main HUD local-speech UI
+
+Vertical slice 1 of [comms.md](design/comms.md):
+
+- **Local speech chips** — world-anchored subtitle bubbles at the speaker's head, not a chat-log line
+- **Distance/occlusion tiers** and **crowd cap** — nearest speakers get bubbles, the rest compress
+  into a "+N more talking nearby" chip
+- **T-compose** — on-demand input box, momentary chrome, matching the intent-module fading-hint pattern
+- **Always-on chat UI Phase 0 purged** — the old scrolling chat box is gone; `ChatSubSystem` runs
+  headless, ready for the non-diegetic feed and PDA log to build on
+
+Merged via PR #20 (`claude/crowd-cap-chat-plan-o8v03z`). System map:
+[chat-audio-screens.md](architecture/systems/chat-audio-screens.md).
+
+Deferred: radio/non-positional channels, whisper/shout distance tiers, non-diegetic feed (OOC/dead
+chat/announcements), PDA history log, voice compatibility.
+
+### Disposal — item network
+
+**Paths:** `SS3D.Systems.Disposal`
+
+Physical BFS-routed pipe network per [disposal.md](design/disposal.md), replacing BYOND's
+instant off-map transit:
+
+- **Pipe network routing** — BFS connectivity across placed pipe segments, same technique class as
+  Area's flood fill and electricity's backbone
+- **Chute entry** — SizeClass gate (shares inventory-storage's five-tier field, not a bespoke check)
+- **Transit and outlets** — item travels the routed path at a real pace; outlet eject animation,
+  spit-delay timing, and main-outlet arrival fixed for items with no wired space-ejection point
+- **Interaction polish** — Dispose click priority, recycle icon registered
+
+Merged via PR #19 (`claude/disposal-implementation-plan-4wh4hr`). Architecture:
+[2026-07_disposal-item-network.md](architecture/2026-07_disposal-item-network.md).
+System map: [disposal.md](architecture/systems/disposal.md).
+
+Deferred: pipe crafting/placement UI (now designed in
+[creative-mode.md](design/creative-mode.md) §4), the Cargo export hook, Phase 2 player transit.
+
 ### Input arbitration
 
 **Paths:** `SS3D.Systems.Inputs`
@@ -588,15 +750,35 @@ System map: [inputs.md](architecture/systems/inputs.md).
 
 Genuine Server-subtarget Linux build (not a client launched with `-serveronly`):
 
-- Editor menus / CI (`SS3D/Build/Dedicated Server`, `Client`) and `main.yml` `build-server` smoke boot
+- Editor menus / CI (`SS3D/Build/Dedicated Server`, `Client`) and
+  `develop-release.yml` Linux build / opt-in smoke (also `multiplayer-smoke-test.yml`)
 - Runtime skips Intro/Launcher, defaults `NetworkType.DedicatedServer`, disables cameras/audio and
   spawned renderers/lights under `#if UNITY_SERVER`
 - Docker Compose + start scripts under `Builds/`
 
 Known gaps: selection outline and drop interaction against a real client still broken (not
-root-caused); no automated multiplayer harness yet.
+root-caused). An automated multiplayer harness now exists — see below.
 
 Architecture: [2026-07_headless-dedicated-server.md](architecture/2026-07_headless-dedicated-server.md).
+
+### Multiplayer test harness
+
+**Paths:** Headless multiplayer test scripts, dedicated-server + client launch tooling
+
+Replaces the brittle PlayMode-based multiplayer test with a real headless harness that boots a
+dedicated server and one or more real clients:
+
+- Automated round-start auth and permission seeding for smoke runs
+- Log-signal detection for round lifecycle (replacing timing-based waits) plus a combined build menu
+- A reconnect scenario (disconnect ownership cleanup, reconnecting a player to their own body) —
+  see also `claude/player-join-leave-arch-z5zzmm`, in progress, below
+- Regression coverage extended for atmospherics client-visualization sync (in progress, below)
+
+Merged via PR #15 (`claude/multiplayer-test-harness-l90540`). Architecture:
+[2026-07_multiplayer-test-harness.md](architecture/2026-07_multiplayer-test-harness.md).
+
+Known gaps: mouse/screen-space interaction and pocket/container round-trip regressions not yet
+covered; not yet verified against a real Unity build.
 
 ### Agent-first composition and UI path catalogs
 
@@ -636,20 +818,46 @@ specs or document explicit deviations.
 | [comms.md](design/comms.md) | Diegetic speech subtitles with distance/occlusion; visual radio channel selector |
 | [main-hud.md](design/main-hud.md) | Minimal chrome HUD — 3D body vitals, cut targeting doll, intent chording |
 | [hacking-interface.md](design/hacking-interface.md) | Field diagnostic unit (FDU) — diegetic 7-panel tool; discovery by physical access |
+| [objectives.md](design/objectives.md) | Steal/assassinate/escape resolved against real system state (possession, death, Area occupancy) — no hidden roll |
+| [round-end.md](design/round-end.md) | Reveal, summary, and transition; evac shuttle call/countdown/point-of-no-return |
+| [creative-mode.md](design/creative-mode.md) | In-game map editor: object placement, utility routing, bulk tools, undo, spawn-point authoring |
+| [persistence-save.md](design/persistence-save.md) | Four-layer save model — station templates, server meta, player meta, automatic round-snapshot recovery |
+| [admin-tools.md](design/admin-tools.md) | Permission tiers, ahelp, stealth observation, world intervention, moderation — every action logged |
+| [cryogenics.md](design/cryogenics.md) | Physical cryo pod as a real pause mechanic for logged-off characters, distinct from death/respawn |
+| [disposal.md](design/disposal.md) | Physical BFS-routed pipe network replacing instant off-map transit; Cargo export hook |
+| [inventory-storage.md](design/inventory-storage.md) | One Container primitive for backpacks/crates/lockers — weight, size-class fit, stacking, locks |
+| [networking.md](design/networking.md) | Connection lifecycle — disconnect, reconnect, capacity (PR #21) |
+| [audio.md](design/audio.md) | Diegetic SFX, per-area ambience, personal cues (PR #21) |
+| [player-accounts.md](design/player-accounts.md) | Delegated identity model closing deferred account gaps (PR #21) |
+| [antagonist-content.md](design/antagonist-content.md) | Traitor uplink, Malf-AI, Nuclear Operatives MVP team gamemode (PR #21) |
 
 Machine interfaces, the radial interaction menu, screen-space overlays, and the Main HUD overlay
 partially implement [main-hud.md](design/main-hud.md) (tiered interactions, intent, diegetic machine
-control, Volume-based screen feedback, gear/hands strip — drag-combine Tier 3, vitals cluster, and
-atmos wiring for screen effects still pending). **Area foundation** partially implements
-[area.md](design/area.md) (APC-seeded flood-fill, area-scoped power/lighting, air-alarm area device
-discovery — live mutation recompute and editor merge/split still pending). **ID / access foundation**
-partially implements [id-access.md](design/id-access.md) (crew records, door and machine UI gates,
-ID console — auth logs and broader design coverage still pending). **Health rewrite** partially
-implements [health.md](design/health.md) (Phases 1–5b; Phase 6+ deferred). **Combat** partially
-implements [combat.md](design/combat.md) (Phase 4 melee only). **Player body animation** implements
-stance/locomotion presentation; it is not full combat. **Vision FOV** has no dedicated design doc —
-it is a rendering feature under [rendering-lighting.md](design/rendering-lighting.md) territory.
-The rest of these specs remain design-only.
+control, Volume-based screen feedback, gear/hands strip + melee zone reticle — drag-combine Tier 3,
+vitals cluster, and atmos wiring for screen effects still pending). **Area foundation** partially
+implements [area.md](design/area.md) (APC-seeded flood-fill, area-scoped power/lighting, air-alarm
+area device discovery — live mutation recompute and editor merge/split still pending).
+**ID / access foundation** partially implements [id-access.md](design/id-access.md) (crew records,
+door and machine UI gates, ID console — auth logs and broader design coverage still pending).
+**Health rewrite** partially implements [health.md](design/health.md) (Phases 1–5b; Phase 6+
+deferred). **Combat** partially implements [combat.md](design/combat.md) (Phase 0–1 clean-slate
+melee; Phases 2–7 pending). **Player body animation** implements stance/locomotion plus injured
+limp polish; it is not full combat. **Vision FOV** has no dedicated design doc — it is a rendering
+feature under [rendering-lighting.md](design/rendering-lighting.md) territory. **URP lighting
+Phase 1** partially implements that same lighting look; plate polish remains open.
+**Persistence foundation** partially implements [persistence-save.md](design/persistence-save.md)
+(station templates and server meta shipped; player meta and the automatic round-snapshot
+crash-recovery safety net that doc designs are still pending). **Comms** partially implements
+[comms.md](design/comms.md) (local speech chips, distance/occlusion, crowd cap; radio/channels,
+non-diegetic feed, and PDA log still open). **Disposal** partially implements
+[disposal.md](design/disposal.md) (BFS pipe routing and transit shipped; pipe placement now has a
+real path via [creative-mode.md](design/creative-mode.md) §4, but the Cargo export hook and Phase 2
+player transit remain). **Inventory and storage redesign** partially implements
+[inventory-storage.md](design/inventory-storage.md) (Container primitive, on-demand panel, Main HUD
+wiring, and the stamina bridge shipped; Play Mode verification pending). **Map Editor** partially
+implements [creative-mode.md](design/creative-mode.md) (admin full-screen authoring shipped;
+Builder role, instant place, and round-config pool deferred). The rest of these specs remain
+design-only.
 
 ---
 
@@ -660,18 +868,28 @@ before assuming commit counts.
 
 | Branch | Ahead / behind `develop` | System | Notes |
 |---|---|---|---|
-| `cursor/diegetic-ui-backdrop-blur` | 2 / 0 | Machine UI + screen-effects | Dual Kawase world blur + dark scrim behind diegetic panels |
-| `feature/inventory-storage` | 9 / 290 | Inventory + storage UI | Gear/hands strip largely superseded by Main HUD PR #10; rebase before continuing |
-| `feature/urp-lighting-phase1` | 2 / 301 | URP lighting visual foundation | Forward+ fixture fixes, unitless intensity handling |
-| `feature/map-editor-replacement` | 10 / 180 | TileMap Creator / creative | Click-to-place and editor input work |
-| `feature/character-creator` | 3 / 170 | Character customizer | Layout + URP preview polish |
-| `claude/crowd-cap-chat-plan-o8v03z` | 4 / 57 | Comms | Early chat/crowd-cap integration spike |
-| `claude/atmospherics-client-viz-sync-ejkbw4` | 1 / 115 | Atmospherics | Client VFX sync spike ([effort doc](architecture/2026-07_atmos-client-visualization-sync.md)) |
-| `claude/multiplayer-test-harness-l90540` | 1 / 57 | Networking | Automated multiplayer harness spike |
+| `claude/icon-stack-impl-amql37` | 9 / 0 | Main HUD / Health | Alert stack icons wired to `HealthSnapshot`; purges remaining uGUI vitals chips |
+| `claude/crafting-system-plan-uyc4of` | 3 / 101 | Crafting | Phase 0 purge + Phase 1 freeform recipe / Tier 3 combine; rebuild of condemned crafting |
+| `claude/human-prefab-debt-plan-u1199p` | 1 / 0 | Entities | Plan for `Human.prefab` mega-prefab decomposition (TECH_DEBT §1.1) |
+| `claude/atmospherics-client-viz-sync-ejkbw4` | 3 / 137 | Atmospherics | Client-visualization sync Phase 1 + harness regression coverage ([effort doc](architecture/2026-07_atmos-client-visualization-sync.md)) |
+| `claude/player-join-leave-arch-z5zzmm` | 3 / 154 | Networking | Disconnect ownership cleanup + reconnect-to-own-body; adds a reconnect scenario to the multiplayer harness |
+| `claude/vitals-scan-result-alt-ui-ez50ba` | 2 / 210 | Health / Main HUD | Health scanner machine interface (alternate vitals-scan-result UI) |
+| `claude/ui-toolkit-architecture-ybt2qv` | 1 / 164 | UI shell | UI Toolkit shell scaffolding; migrates radial/armed interaction UI onto it |
+| `feature/map-editor-replacement` | 10 / 397 | TileMap Creator / creative | Click-to-place and editor input work; **superseded** by shipped Map Editor (PR #26) — safe to abandon |
+| `feature/tilemap-overlay` | 2 / 390 | Tilemap visuals | Area floor stripes + sparse decals — partially overtaken by Map Editor overlays / Area mesh stripes on `develop` |
+| `feature/character-creator` | 3 / 387 | Character customizer | Layout + URP preview polish |
+| `feature/inventory-storage` | 9 / 507 | Inventory + storage UI | Superseded by the shipped inventory redesign (PR #16); likely safe to abandon |
+| `feature/urp-lighting-phase1` | 2 / 518 | URP lighting | Superseded by shipped Phase 1 (PR #24 / `feature/urp-lighting-phase1-v2`) |
 
 Merged and retired from this table: `health-rewrite` (PR #12), vision FOV (PR #11; old
 `feature/vision-urp-tilemap` abandoned), `feature/performance-improvements` (PR #13),
-`feature/mi-path-catalog` (catalog wedge on `develop`).
+`feature/mi-path-catalog` (catalog wedge on `develop`), `cursor/diegetic-ui-backdrop-blur` (PR #14),
+`claude/multiplayer-test-harness-l90540` (PR #15), `claude/inventory-architecture-redesign-6q9527`
+(PR #16), `cursor/fix-airlock-close-and-apc-area-load` (PR #17), `claude/design-doc-alignment-audit-wsyn1d`
+(PR #18), `claude/disposal-implementation-plan-4wh4hr` (PR #19), `claude/crowd-cap-chat-plan-o8v03z`
+(PR #20), `claude/design-docs-integration-n072cq` (PR #21), `cursor/male-injured-pack-mixamo-clips`
+(PR #22), `cursor/combat-plan-clean-slate` (PR #23), `feature/urp-lighting-phase1-v2` (PR #24),
+`claude/game-architecture-debt-cakjgx` (PR #25), `claude/map-editor-creative-mode-8pp6qj` (PR #26).
 
 ---
 
@@ -706,20 +924,27 @@ Recent `develop` merges that did **not** use an `archive/*` branch rename (GitHu
 feature merge): EditMode test race (#1), docs structure redesign (#2), Unity license CI cleanup (#3),
 vending polish (#4), selection/outline flicker (#5), screen-space effects (#6), Simple Toon palette
 emission (#7), input arbitration (#8 / #9), Main HUD UITK (#10), vision FOV hard mask (#11), health
-rewrite + combat melee + screen-effect health wiring (#12), hot-path performance (#13), player body
-animation (`feature/animation-system`), headless dedicated server tooling, agent-first composition
-policy, machine UI / Main HUD path catalogs.
+rewrite + early combat melee + screen-effect health wiring (#12), hot-path performance (#13), player
+body animation (`feature/animation-system`), headless dedicated server tooling, agent-first
+composition policy, machine UI / Main HUD path catalogs, diegetic UI backdrop blur (#14),
+multiplayer test harness (#15), inventory and storage redesign (#16), airlock/APC +
+selection/interaction bugfix batch (#17), design/implementation alignment audit (#18), disposal
+item-network (#19), comms local-speech and crowd-cap (#20), design-docs integration —
+antagonists/audio/networking/accounts (#21), animation polish / injured limp (#22), combat Phase
+0–1 clean-slate melee (#23), URP lighting Phase 1 (#24), TECH_DEBT tracker (#25), Map Editor
+replacement (#26).
 
 ---
 
 ## What upstream still has that we don't automatically inherit
 
-- Official releases and the [ss3d.space](https://ss3d.space/) download channel
+- Official releases and the [ss3d.space](https://ss3d.space/) download channel (this fork's
+  prereleases are manual GitHub Actions cuts, not the same channel)
 - GitBook documentation and devblogs
 - Active milestone/project board automation
 - Discord CI notifications
-- Whatever lands on `upstream/develop` after our fork point (currently 0 commits behind, but
-  this will change as upstream moves)
+- Whatever lands on `upstream/develop` after our fork point (currently **0** commits behind as of
+  2026-07-21)
 
 When pulling from upstream, expect conflicts in: ProjectSettings, materials/shaders, render
 pipeline config, tilemap/construction code, interaction/selection code, and any system listed

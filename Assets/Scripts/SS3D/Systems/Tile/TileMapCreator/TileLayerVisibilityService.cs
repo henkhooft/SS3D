@@ -1,4 +1,5 @@
 using SS3D.Core;
+using SS3D.Systems.Tile.SpawnPoints;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -98,6 +99,15 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 ApplyItems(visible);
                 return;
             }
+
+            if (TileLayerCategoryMapping.IsScriptsCategory(category))
+            {
+                SpawnPointEditorView.SetScriptsLayerVisible(visible);
+                return;
+            }
+
+            if (TileLayerCategoryMapping.IsFloorDecalsCategory(category))
+                return;
 
             TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
             TileMap map = tileSystem?.CurrentMap;

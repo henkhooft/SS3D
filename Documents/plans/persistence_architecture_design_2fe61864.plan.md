@@ -410,6 +410,7 @@ Deferred until accounts/auth exist, but design for it now:
 
 | Doc | Relevance |
 | --- | --------- |
+| [persistence-save.md](../design/persistence-save.md) | Design spec (new) — four-layer model (station templates, server meta, player meta, round snapshots) this plan implements; Phase 2 is that doc's §6 |
 | [areas_implementation_plan_c0639343.plan.md](areas_implementation_plan_c0639343.plan.md) | Complete — Phase 1a prerequisite |
 | [electricity_kwh_foundation_917ccdbc.plan.md](electricity_kwh_foundation_917ccdbc.plan.md) | Shipped — Phase 2 electricity contributor uses kWh model |
 | [2026-07_atmos-ecs-foundation.md](../architecture/2026-07_atmos-ecs-foundation.md) | Shipped — Phase 2 atmospherics contributor source |

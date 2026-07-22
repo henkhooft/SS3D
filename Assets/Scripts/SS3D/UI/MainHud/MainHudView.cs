@@ -45,21 +45,25 @@ namespace SS3D.UI.MainHud
 
         private readonly StyleSheet[] _styleSheets;
         private readonly MainHudIconSet _icons;
+        private readonly AlertIconSet _alertIcons;
 
         private VisualElement _root;
         private AlertIconStack _alertStack;
         private EquipmentGrid _equipmentGrid;
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
+        private ZoneTargetReticle _zoneReticle;
+        private ZoneReticleDriver _zoneReticleDriver;
         private Sequence _visibilitySequence;
         private bool _visible;
         private float _scale = 1f;
         private float _translateY;
 
-        public MainHudView(StyleSheet[] styleSheets, MainHudIconSet icons)
+        public MainHudView(StyleSheet[] styleSheets, MainHudIconSet icons, AlertIconSet alertIcons)
         {
             _styleSheets = styleSheets;
             _icons = icons;
+            _alertIcons = alertIcons;
         }
 
         public void Attach(VisualElement overlayRoot)
@@ -86,6 +90,8 @@ namespace SS3D.UI.MainHud
             KillVisibilitySequence();
             _root?.RemoveFromHierarchy();
             _root = null;
+            _zoneReticle = null;
+            _zoneReticleDriver = null;
         }
 
         public void SetVisible(bool visible)
@@ -114,6 +120,34 @@ namespace SS3D.UI.MainHud
         public void SetIntent(IntentType intent)
         {
             _intentModule.SetIntent(intent);
+        }
+
+        /// <summary>
+        /// Pushes aim / recovery / visibility into the reticle driver and paints one composed frame.
+        /// </summary>
+        public void ApplyZoneReticle(
+            bool visible,
+            Vector2 screenPosition,
+            string zoneLabel,
+            bool inRange,
+            float lockReadyProgress01,
+            bool recharging)
+        {
+            if (_zoneReticle == null || _zoneReticleDriver == null)
+            {
+                return;
+            }
+
+            _zoneReticleDriver.SetVisible(visible);
+            _zoneReticleDriver.SetAimInput(screenPosition, zoneLabel, inRange);
+            _zoneReticleDriver.SetRecoveryInput(lockReadyProgress01, recharging);
+            _zoneReticleDriver.Tick(out ZoneReticleFrame frame);
+            _zoneReticle.Apply(in frame);
+        }
+
+        public void NotifyZoneReticleConnectHit()
+        {
+            _zoneReticleDriver?.NotifyConnectHit();
         }
 
         public void SetEquipmentIcon(EquipmentGrid.Slot slot, UnityEngine.Sprite itemIcon)
@@ -270,7 +304,7 @@ namespace SS3D.UI.MainHud
 
         private void BuildTree()
         {
-            _alertStack = new AlertIconStack();
+            _alertStack = new AlertIconStack(_alertIcons);
             VisualElement alertZone = BuildZone("main-hud__zone--alerts", _alertStack);
 
             _equipmentGrid = new EquipmentGrid(_icons);
@@ -295,10 +329,14 @@ namespace SS3D.UI.MainHud
             _intentModule.ToggleRequested += () => IntentToggleRequested?.Invoke();
             VisualElement intentZone = BuildZone("main-hud__zone--intent", _intentModule);
 
+            _zoneReticle = new ZoneTargetReticle();
+            _zoneReticleDriver = new ZoneReticleDriver();
+
             _root.Add(alertZone);
             _root.Add(equipmentZone);
             _root.Add(handsGearZone);
             _root.Add(intentZone);
+            _root.Add(_zoneReticle.Root);
         }
 
         private static VisualElement BuildZone(string className, VisualElement child)

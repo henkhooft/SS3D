@@ -35,6 +35,11 @@ namespace SS3D.Systems.Tile
         private Vector3 _originPosition;
         private List<TileGrid> _tileGridList;
         private ushort[] _areaIds;
+        private ushort[] _floorDecalIds;
+
+        public Vector2Int ChunkKey => _chunkKey;
+
+        public Vector3 OriginPosition => _originPosition;
 
         public static TileChunk Create(Vector2Int chunkKey, Vector3 originPosition)
         {
@@ -209,6 +214,72 @@ namespace SS3D.Systems.Tile
             return copy;
         }
 
+        private void EnsureFloorDecalIds()
+        {
+            if (_floorDecalIds != null)
+                return;
+
+            _floorDecalIds = new ushort[ChunkSize * ChunkSize];
+        }
+
+        public ushort GetFloorDecalId(int localX, int localY)
+        {
+            if (_floorDecalIds == null || localX < 0 || localY < 0 || localX >= ChunkSize || localY >= ChunkSize)
+                return 0;
+
+            return _floorDecalIds[localY * ChunkSize + localX];
+        }
+
+        public void SetFloorDecalId(int localX, int localY, ushort id)
+        {
+            if (localX < 0 || localY < 0 || localX >= ChunkSize || localY >= ChunkSize)
+                return;
+
+            EnsureFloorDecalIds();
+            _floorDecalIds[localY * ChunkSize + localX] = id;
+        }
+
+        public void SetFloorDecalIds(ushort[] ids)
+        {
+            if (ids == null || ids.Length != ChunkSize * ChunkSize)
+                return;
+
+            EnsureFloorDecalIds();
+            Array.Copy(ids, _floorDecalIds, ids.Length);
+        }
+
+        public void ClearFloorDecalIds()
+        {
+            if (_floorDecalIds == null)
+                return;
+
+            Array.Clear(_floorDecalIds, 0, _floorDecalIds.Length);
+        }
+
+        public bool HasAnyFloorDecalIds()
+        {
+            if (_floorDecalIds == null)
+                return false;
+
+            foreach (ushort id in _floorDecalIds)
+            {
+                if (id != 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public ushort[] CopyFloorDecalIds()
+        {
+            if (_floorDecalIds == null)
+                return null;
+
+            var copy = new ushort[_floorDecalIds.Length];
+            Array.Copy(_floorDecalIds, copy, _floorDecalIds.Length);
+            return copy;
+        }
+
         public List<ITileLocation> GetTileLocations(int x, int y)
         {
 
@@ -277,6 +348,7 @@ namespace SS3D.Systems.Tile
                 originPosition = _originPosition,
                 chunkKey = _chunkKey,
                 areaIds = HasAnyAreaIds() ? CopyAreaIds() : null,
+                floorDecalIds = HasAnyFloorDecalIds() ? CopyFloorDecalIds() : null,
             };
 
             return saveObject;

@@ -21,7 +21,11 @@ namespace SS3D.Systems.Area
 
         public event Action<AreaId, bool> OnAreaLightingSwitchChanged;
 
+        public event Action OnAreaVisualsDirty;
+
         public bool IsSetUp { get; private set; }
+
+        public AreaFloorVisualCache FloorVisualCache { get; } = new();
 
         private readonly AreaRegistry _registry = new();
         private readonly List<IAreaApcOrigin> _registeredApcs = new();
@@ -36,6 +40,13 @@ namespace SS3D.Systems.Area
         private bool _electricityTickSubscribed;
         private bool _templateRestoreActive;
 
+        /// <summary>
+        /// When true, <see cref="RegisterApc"/> queues APCs without flooding. Used while
+        /// <see cref="TileMap.Load"/> is still placing tiles across chunks — flooding mid-load
+        /// only claims tiles that already exist (often "front and right", never the unloaded side).
+        /// </summary>
+        private bool _deferAreaFlood;
+
         public override void OnStartServer()
         {
             base.OnStartServer();
@@ -47,15 +58,26 @@ namespace SS3D.Systems.Area
                 CompleteSetup(tileSubSystem);
         }
 
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (!IsServer)
+                FloorVisualCache.OnDirty += HandleFloorVisualCacheDirty;
+        }
+
         protected override void OnDestroyed()
         {
             if (SubSystems.TryGet(out TileSubSystem tileSubSystem))
                 tileSubSystem.OnMapCreated -= HandleTileMapCreated;
 
+            FloorVisualCache.OnDirty -= HandleFloorVisualCacheDirty;
             UnsubscribeElectricityTicks();
             SubSystems.Get<TileSubSystem>()?.UnregisterTileMutationObserver(this);
             base.OnDestroyed();
         }
+
+        private void HandleFloorVisualCacheDirty() => OnAreaVisualsDirty?.Invoke();
 
         private void HandleTileMapCreated()
         {
@@ -78,6 +100,7 @@ namespace SS3D.Systems.Area
             tileSubSystem.RegisterTileMutationObserver(this);
 
             IsSetUp = true;
+            GameplayLightGuard.DisableOrphanSceneLights();
             OnSystemSetUp?.Invoke();
             SubscribeElectricityTicks();
         }
@@ -101,6 +124,16 @@ namespace SS3D.Systems.Area
         public bool TryGetLightingState(AreaId areaId, out AreaLightingState state)
         {
             return _lightingStates.TryGetValue(areaId, out state);
+        }
+
+        /// <summary>
+        /// Re-derives Normal/Emergency/Dark from APC channels and stats immediately (server).
+        /// Use after APC channel toggles instead of waiting for the next electricity tick.
+        /// </summary>
+        [Server]
+        public void RefreshAreaLightingStates()
+        {
+            UpdateAreaLightingStates();
         }
 
         public bool TryGetLightingStateForTile(TileCoord coord, out AreaLightingState state)
@@ -198,6 +231,62 @@ namespace SS3D.Systems.Area
 
         public IReadOnlyList<AreaRecord> GetAllAreas() => _registry.GetAllAreas();
 
+        /// <summary>
+        /// Suppress flood-fill while the station template is still placing tiles. Call
+        /// <see cref="EndDeferredAreaFlood"/> after load/restore completes.
+        /// </summary>
+        [Server]
+        public void BeginDeferredAreaFlood()
+        {
+            _deferAreaFlood = true;
+        }
+
+        /// <summary>
+        /// Recompute per-tile area ids from every registered APC now that the map is complete.
+        /// Preserves existing <see cref="AreaRecord"/> metadata (names, tags, tints, access, switches).
+        /// </summary>
+        [Server]
+        public void EndDeferredAreaFlood()
+        {
+            if (!_deferAreaFlood)
+            {
+                return;
+            }
+
+            _deferAreaFlood = false;
+
+            if (_floodFill == null || _map == null)
+            {
+                return;
+            }
+
+            if (_registeredApcs.Count == 0)
+            {
+                return;
+            }
+
+            // Template restore may have linked APCs to saved records without flooding.
+            // Mid-load RegisterApc may have queued APCs with no records yet.
+            bool anyLinked = false;
+            foreach (IAreaApcOrigin apc in _registeredApcs)
+            {
+                if (_registry.TryGetApcArea(apc, out _))
+                {
+                    anyLinked = true;
+                    break;
+                }
+            }
+
+            if (anyLinked)
+            {
+                RefloodAllAreaTilesPreservingMetadata();
+            }
+            else
+            {
+                RebuildAllAreasFromApcs();
+            }
+        }
+
         [Server]
         public void RegisterApc(IAreaApcOrigin apc)
         {
@@ -211,6 +300,13 @@ namespace SS3D.Systems.Area
                 UpdateOverlapWarnings();
                 TryCompleteTemplateRestore();
                 InvalidateElectricityConsumerIndex();
+                NotifyAreaVisualsChanged();
+                return;
+            }
+
+            // Map load still placing tiles — queue only; EndDeferredAreaFlood will flood once.
+            if (_deferAreaFlood)
+            {
                 return;
             }
 
@@ -236,6 +332,7 @@ namespace SS3D.Systems.Area
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -255,6 +352,7 @@ namespace SS3D.Systems.Area
             apc.SetMultipleApcsInArea(false);
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -291,6 +389,7 @@ namespace SS3D.Systems.Area
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -318,6 +417,53 @@ namespace SS3D.Systems.Area
 
             var claimedTiles = BuildClaimedTilesExcluding(areaId);
             _floodFill.FloodFromApc(apc, areaId, claimedTiles);
+            _floodFill.AssignDoorTileAreas();
+            UpdateOverlapWarnings();
+            InvalidateElectricityConsumerIndex();
+            NotifyAreaVisualsChanged();
+        }
+
+        /// <summary>
+        /// Clears tile area ids and floods again from registered APCs, keeping existing AreaRecords.
+        /// </summary>
+        [Server]
+        public void RefloodAllAreaTilesPreservingMetadata()
+        {
+            if (_floodFill == null || _map == null)
+            {
+                return;
+            }
+
+            _map.ClearAllAreaIds();
+            _overlapFlaggedApcs.Clear();
+
+            List<IAreaApcOrigin> apcs = _registeredApcs
+                .OrderBy(apc => apc.OriginTile.Grid.x)
+                .ThenBy(apc => apc.OriginTile.Grid.y)
+                .ToList();
+
+            var claimedTiles = new HashSet<TileCoord>();
+
+            foreach (IAreaApcOrigin apc in apcs)
+            {
+                if (!_registry.TryGetApcArea(apc, out AreaId areaId))
+                {
+                    // APC registered during deferred load without a saved record — allocate one.
+                    areaId = _registry.AllocateId();
+                    var record = new AreaRecord
+                    {
+                        Id = areaId,
+                        DisplayName = string.IsNullOrWhiteSpace(apc.DisplayName) ? "Unnamed Area" : apc.DisplayName,
+                        ParentTag = string.Empty,
+                        Apc = apc,
+                    };
+                    _registry.Register(record);
+                    _lightingSwitchOn[areaId] = record.LightingSwitchOn;
+                }
+
+                _floodFill.FloodFromApc(apc, areaId, claimedTiles);
+            }
+
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
             InvalidateElectricityConsumerIndex();
@@ -349,6 +495,7 @@ namespace SS3D.Systems.Area
 
             record.HasDepartmentalLightTint = true;
             record.DepartmentalLightTint = tint;
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -381,6 +528,8 @@ namespace SS3D.Systems.Area
 
             record.HasDepartmentalLightTint = false;
             record.DepartmentalLightTint = default;
+            if (IsServer)
+                NotifyAreaVisualsChanged();
         }
 
         public SavedAreaRecord[] BuildSavedAreaRecords()
@@ -454,6 +603,7 @@ namespace SS3D.Systems.Area
             LinkRegisteredApcsDuringTemplateRestore();
             UpdateAreaLightingStates();
             TryCompleteTemplateRestore();
+            NotifyAreaVisualsChanged();
         }
 
         [Server]
@@ -728,6 +878,101 @@ namespace SS3D.Systems.Area
             {
                 electricitySubSystem.InvalidateAreaConsumerIndex();
             }
+        }
+
+        [Server]
+        private void NotifyAreaVisualsChanged()
+        {
+            if (_map == null)
+                return;
+
+            var tintList = new List<(ushort areaId, bool hasTint, Color tint)>();
+            foreach (AreaRecord record in _registry.GetAllAreas())
+            {
+                tintList.Add((
+                    record.Id.Value,
+                    record.HasDepartmentalLightTint,
+                    record.DepartmentalLightTint));
+            }
+
+            var chunkList = new List<(Vector2Int chunkKey, ushort[] areaIds)>();
+            var rpcChunks = new List<SyncedChunkAreaIds>();
+            foreach (TileChunk chunk in _map.GetAllChunks())
+            {
+                ushort[] areaIds = chunk.CopyAreaIds();
+                if (areaIds == null)
+                    continue;
+
+                Vector2Int chunkKey = _map.GetKey(chunk.GetWorldPosition(0, 0));
+                chunkList.Add((chunkKey, areaIds));
+                rpcChunks.Add(new SyncedChunkAreaIds
+                {
+                    chunkKeyX = chunkKey.x,
+                    chunkKeyY = chunkKey.y,
+                    areaIds = areaIds,
+                });
+            }
+
+            FloorVisualCache.ReplaceAll(tintList, chunkList);
+            OnAreaVisualsDirty?.Invoke();
+
+            var rpcTints = new SyncedAreaTint[tintList.Count];
+            for (int i = 0; i < tintList.Count; i++)
+            {
+                (ushort areaId, bool hasTint, Color tint) = tintList[i];
+                rpcTints[i] = new SyncedAreaTint
+                {
+                    areaId = areaId,
+                    hasTint = hasTint,
+                    tint = tint,
+                };
+            }
+
+            RpcSyncAreaFloorVisuals(rpcTints, rpcChunks.ToArray());
+        }
+
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncAreaFloorVisuals(SyncedAreaTint[] tints, SyncedChunkAreaIds[] chunks)
+        {
+            if (IsServer)
+                return;
+
+            var tintList = new List<(ushort areaId, bool hasTint, Color tint)>();
+            if (tints != null)
+            {
+                foreach (SyncedAreaTint tint in tints)
+                    tintList.Add((tint.areaId, tint.hasTint, tint.tint));
+            }
+
+            var chunkList = new List<(Vector2Int chunkKey, ushort[] areaIds)>();
+            if (chunks != null)
+            {
+                foreach (SyncedChunkAreaIds chunk in chunks)
+                {
+                    chunkList.Add((
+                        new Vector2Int(chunk.chunkKeyX, chunk.chunkKeyY),
+                        chunk.areaIds));
+                }
+            }
+
+            FloorVisualCache.ReplaceAll(tintList, chunkList);
+            OnAreaVisualsDirty?.Invoke();
+        }
+
+        [Serializable]
+        private struct SyncedAreaTint
+        {
+            public ushort areaId;
+            public bool hasTint;
+            public Color tint;
+        }
+
+        [Serializable]
+        private struct SyncedChunkAreaIds
+        {
+            public int chunkKeyX;
+            public int chunkKeyY;
+            public ushort[] areaIds;
         }
     }
 }

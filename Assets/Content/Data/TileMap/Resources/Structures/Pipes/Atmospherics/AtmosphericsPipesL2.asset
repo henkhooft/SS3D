@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PrefabAsset: {fileID: 11400000, guid: 654481f628e6c374da829aa5f008d7dd, type: 2}
   icon: {fileID: 0}
-  layer: 10
+  layer: 9
   genericType: 1
   specificType: 0
   width: 1

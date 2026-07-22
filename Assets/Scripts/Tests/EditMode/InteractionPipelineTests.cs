@@ -45,6 +45,42 @@ namespace EditorTests
         }
 
         [Test]
+        public void FilterAndSort_HarmExcludesUnrestrictedWorldVerbs()
+        {
+            StubInteractionSource source = new();
+            List<InteractionEntry> entries = new()
+            {
+                CreateEntry(new HarmOnlyInteraction(), "Hit"),
+                CreateEntry("Pickup", 10),
+                CreateEntry("Drop", 5),
+            };
+
+            List<InteractionEntry> viable = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Harm);
+
+            Assert.AreEqual(1, viable.Count);
+            Assert.AreEqual("Hit", viable[0].Interaction.GetGenericName());
+        }
+
+        [Test]
+        public void FilterAndSort_HelpExcludesHarmOnlyInteractions()
+        {
+            StubInteractionSource source = new();
+            List<InteractionEntry> entries = new()
+            {
+                CreateEntry(new HarmOnlyInteraction(), "Hit"),
+                CreateEntry("Open", 20),
+            };
+
+            List<InteractionEntry> help = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Help);
+            List<InteractionEntry> harm = InteractionPipeline.FilterAndSort(source, entries, Vector3.zero, Vector3.up, IntentType.Harm);
+
+            Assert.AreEqual(1, help.Count);
+            Assert.AreEqual("Open", help[0].Interaction.GetGenericName());
+            Assert.AreEqual(1, harm.Count);
+            Assert.AreEqual("Hit", harm[0].Interaction.GetGenericName());
+        }
+
+        [Test]
         public void TryResolve_MatchesTargetComponentIndex()
         {
             CreateGameObject(out GameObject targetObject, out TargetComponent firstTarget);
@@ -94,6 +130,60 @@ namespace EditorTests
             InteractionIdentifier second = new("Open", 1);
 
             Assert.AreNotEqual(first, second);
+        }
+
+        [Test]
+        public void FilterForOutline_ExcludesSourceOnlyEntries()
+        {
+            StubInteractionTarget target = new();
+            List<InteractionEntry> entries = new()
+            {
+                new InteractionEntry(null, new NamedInteraction("Drop", 5), InteractionIdentifier.SourceOnlyTargetIndex),
+                new InteractionEntry(target, new NamedInteraction("Pickup", 10), InteractionIdentifier.SyntheticTargetIndex),
+            };
+
+            List<InteractionEntry> outlineEntries = InteractionPipeline.FilterForOutline(entries);
+
+            Assert.AreEqual(1, outlineEntries.Count);
+            Assert.AreEqual("Pickup", outlineEntries[0].Interaction.GetGenericName());
+        }
+
+        [Test]
+        public void TryEvaluateOutlineInteractability_IgnoresSourceOnlyAndReportsViable()
+        {
+            StubInteractionSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+
+            bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
+                source,
+                targets,
+                Vector3.zero,
+                Vector3.up,
+                IntentType.Help,
+                out bool hasViable);
+
+            Assert.IsTrue(found);
+            Assert.IsTrue(hasViable);
+        }
+
+        [Test]
+        public void TryEvaluateOutlineInteractability_HarmHidesUnrestrictedWorldVerbs()
+        {
+            StubInteractionSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+
+            bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
+                source,
+                targets,
+                Vector3.zero,
+                Vector3.up,
+                IntentType.Harm,
+                out bool hasViable);
+
+            Assert.IsTrue(found);
+            Assert.IsFalse(hasViable);
         }
 
         [Test]
@@ -157,6 +247,18 @@ namespace EditorTests
         private sealed class StubInteractionTarget : IInteractionTarget
         {
             public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => System.Array.Empty<IInteraction>();
+        }
+
+        private sealed class OfferingTarget : IInteractionTarget
+        {
+            private readonly IInteraction[] _interactions;
+
+            public OfferingTarget(params IInteraction[] interactions)
+            {
+                _interactions = interactions;
+            }
+
+            public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => _interactions;
         }
 
         private sealed class TargetComponent : MonoBehaviour, IInteractionTarget

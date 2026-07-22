@@ -12,6 +12,9 @@ using SS3D.Logging;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Combat;
+using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
@@ -20,6 +23,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using Unity.Profiling;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Interactions
@@ -51,8 +55,15 @@ namespace SS3D.Systems.Interactions
         private InteractionReference _serverActiveReference;
         private IInteractionSource _serverActiveSource;
 
+        private Vector3 _meleeAimRayOrigin;
+        private Vector3 _meleeAimPoint;
+        private bool _hasMeleeAimRay;
+
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
+        private readonly List<IInteractionTarget> _outlineTargets = new(8);
+
+        private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
 
@@ -96,6 +107,7 @@ namespace SS3D.Systems.Interactions
             }
 
             RefreshActiveInteractionTracking();
+            TrySyncMeleeAimDuringSwing();
         }
 
         private void LateUpdate()
@@ -181,16 +193,16 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            // Melee combat preview: LMB (Run Primary) swings instead of world interactions.
-            HumanoidCombatController combat = GetComponent<HumanoidCombatController>();
-            if (combat != null && combat.TryHandlePrimaryAttack())
-            {
-                return;
-            }
-
             if (_armedSystem.IsArmed)
             {
                 TryResolveArmedInteraction();
+                return;
+            }
+
+            // Harm is combat-exclusive: attempt a swing and never fall through to Drop/Open/MI.
+            if (CurrentIntent == IntentType.Harm)
+            {
+                TryRunMeleeSwingPrimary();
                 return;
             }
 
@@ -216,11 +228,144 @@ namespace SS3D.Systems.Interactions
             CmdRunInteraction(networkTarget, interactionEvent.Point, interaction.Id.GenericName, interaction.Id.TargetComponentIndex);
         }
 
+        /// <summary>
+        /// Starts windup/swing/recovery for Harm primary regardless of hover target.
+        /// Damage (if any) is applied at connect from synced aim.
+        /// </summary>
+        [Client]
+        private bool TryRunMeleeSwingPrimary()
+        {
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                return false;
+            }
+
+            if (!hit.CanStartSwing(source))
+            {
+                return false;
+            }
+
+            // Optimistic lock so rapid clicks cannot queue another Cmd before the TargetRpc arrives.
+            BeginLocalSwingCycle(source, hit.Profile);
+
+            InteractionEvent swingEvent = new(source, null);
+            TryPlayMeleeSwingTelegraph(hit);
+            // No world-space LoadingBar — windup is swing telegraph; recovery is reticle lock-on recharge.
+            TrySyncMeleeAimToServer();
+            CmdRunMeleeSwing();
+            return true;
+        }
+
+        [Client]
+        private static void BeginLocalSwingCycle(IInteractionSource source, MeleeWeaponProfile profile)
+        {
+            Hand hand = null;
+            if (source?.GetRootSource() is Hand rootHand)
+            {
+                hand = rootHand;
+            }
+            else if (source != null)
+            {
+                hand = source.GetComponentInTree<Hand>();
+            }
+
+            if (hand == null)
+            {
+                return;
+            }
+
+            if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            {
+                tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
+            }
+
+            tracker.BeginSwingCycle(profile.WindupSeconds, profile.RecoverySeconds);
+        }
+
+        [ServerRpc]
+        private void CmdRunMeleeSwing()
+        {
+            if (CurrentIntent != IntentType.Harm)
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!hit.CanStartSwing(source))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            InteractionEvent swingEvent = new(source, null);
+            InteractionReference reference = source.Interact(swingEvent, hit);
+            TrackActiveInteraction(source, reference, hit);
+            RpcExecuteMeleeSwing(reference.Id);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcExecuteMeleeSwing(int referenceId)
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            {
+                return;
+            }
+
+            InteractionEvent swingEvent = new(source, null);
+            source.ClientInteract(swingEvent, hit, new InteractionReference(referenceId));
+            _clientActiveSource = source;
+            _clientActiveReferenceId = referenceId;
+            TrySyncMeleeAimToServer();
+        }
+
+        [ServerOrClient]
+        private bool TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source)
+        {
+            hit = null;
+            source = GetActiveInteractionSource();
+            if (source == null)
+            {
+                return false;
+            }
+
+            MeleeWeaponProfile profile = ResolveMeleeProfile(source);
+            hit = new MeleeHitInteraction(profile);
+            return true;
+        }
+
+        [ServerOrClient]
+        private static MeleeWeaponProfile ResolveMeleeProfile(IInteractionSource source)
+        {
+            if (source is Item item)
+            {
+                if (item.TryGetComponent(out MeleeWeaponItemExtension dedicated))
+                {
+                    return dedicated.Profile;
+                }
+
+                return MeleeWeaponProfile.Improvised;
+            }
+
+            return MeleeWeaponProfile.Fists;
+        }
+
         [Client]
         public void RequestToggleIntent()
         {
             _ownerIntent = _ownerIntent == IntentType.Harm ? IntentType.Help : IntentType.Harm;
             CmdSetIntent(_ownerIntent);
+            ApplyCombatModeForIntent(_ownerIntent);
         }
 
         public override void OnStartClient()
@@ -230,6 +375,7 @@ namespace SS3D.Systems.Interactions
             if (IsOwner)
             {
                 _ownerIntent = _currentIntent;
+                ApplyCombatModeForIntent(_ownerIntent);
             }
         }
 
@@ -238,7 +384,62 @@ namespace SS3D.Systems.Interactions
             if (IsOwner)
             {
                 _ownerIntent = newValue;
+                ApplyCombatModeForIntent(newValue);
             }
+        }
+
+        /// <summary>
+        /// Harm always enters combat stance; Help returns to peaceful. Owner-driven Cmd.
+        /// </summary>
+        [Client]
+        private void ApplyCombatModeForIntent(IntentType intent)
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidBodyStateMachine body))
+            {
+                return;
+            }
+
+            if (intent == IntentType.Harm)
+            {
+                HumanoidCombatMode stance = HumanoidCombatMode.Melee;
+                if (TryGetComponent(out HumanoidBodyStateBridge bridge))
+                {
+                    stance = bridge.ResolveCombatStance();
+                }
+
+                if (body.CombatMode != stance)
+                {
+                    body.CmdSetCombatMode(stance);
+                }
+            }
+            else if (body.CombatMode.IsCombat())
+            {
+                body.CmdSetCombatMode(HumanoidCombatMode.Peaceful);
+            }
+        }
+
+        /// <summary>
+        /// Plays melee swing telegraph on the owning client when Run Primary dispatches a Hit.
+        /// Windup timing on the interaction matches <see cref="Combat.MeleeWeaponProfile.WindupSeconds"/>.
+        /// </summary>
+        private void TryPlayMeleeSwingTelegraph(IInteraction interaction)
+        {
+            if (interaction is not MeleeHitInteraction)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.AttackSwing);
         }
 
         [Client]
@@ -530,7 +731,7 @@ namespace SS3D.Systems.Interactions
             List<InteractionEntry> viableInteractions = GetViableInteractionsFromTarget(targetGameObject, point, out InteractionEvent interactionEvent);
             InteractionIdentifier id = new(genericName, targetComponentIndex);
 
-            if (!InteractionEntry.TryResolve(viableInteractions, id, out InteractionEntry interaction))
+            if (!TryResolveDispatchedInteraction(viableInteractions, id, out InteractionEntry interaction))
             {
                 Log.Error(this, "Failed to resolve interaction {genericName} at target index {targetIndex} on {target}",
                     Logs.Generic, genericName, targetComponentIndex, targetGameObject);
@@ -574,7 +775,7 @@ namespace SS3D.Systems.Interactions
                 List<InteractionEntry> viableInteractions = GetViableInteractionsFromTarget(targetGameObject, point, out InteractionEvent interactionEvent);
                 InteractionIdentifier id = new(genericName, targetComponentIndex);
 
-                if (!InteractionEntry.TryResolve(viableInteractions, id, out InteractionEntry interaction))
+                if (!TryResolveDispatchedInteraction(viableInteractions, id, out InteractionEntry interaction))
                 {
                     Log.Warning(this, "Observer failed to resolve interaction {genericName} at target index {targetIndex}",
                         Logs.Generic, genericName, targetComponentIndex);
@@ -636,6 +837,34 @@ namespace SS3D.Systems.Interactions
             interactionEvent = new InteractionEvent(source, targets[0], point, normal);
 
             return InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
+        }
+
+        /// <summary>
+        /// Resolves a client-dispatched interaction. Exact <see cref="InteractionIdentifier"/> match first;
+        /// falls back to generic name when the client hovered a child Selectable (body part) but the RPC
+        /// revalidates against the parent NetworkObject root (different target-component indices).
+        /// </summary>
+        private static bool TryResolveDispatchedInteraction(
+            List<InteractionEntry> viableInteractions,
+            InteractionIdentifier id,
+            out InteractionEntry interaction)
+        {
+            if (InteractionEntry.TryResolve(viableInteractions, id, out interaction))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < viableInteractions.Count; i++)
+            {
+                if (string.Equals(viableInteractions[i].Id.GenericName, id.GenericName, System.StringComparison.Ordinal))
+                {
+                    interaction = viableInteractions[i];
+                    return true;
+                }
+            }
+
+            interaction = default;
+            return false;
         }
 
         [ServerOrClient]
@@ -777,6 +1006,15 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void RefreshInteractionOutline()
         {
+            using (OutlinePerformanceMarker.Auto())
+            {
+                RefreshInteractionOutlineUnguarded();
+            }
+        }
+
+        [Client]
+        private void RefreshInteractionOutlineUnguarded()
+        {
             Selectable current = _selectionSystem.GetCurrentSelectable();
             InteractionOutlineView.ClearPendingExcept(current);
 
@@ -837,31 +1075,23 @@ namespace SS3D.Systems.Interactions
         {
             hasViableInteractions = false;
 
-            if (GetActiveInteractionSource() == null)
+            IInteractionSource source = GetActiveInteractionSource();
+            if (source == null)
             {
                 return false;
             }
 
             SelectionTargetUtility.TryResolveInteractionPoint(_camera, selectable, out Vector3 point, out Vector3 normal);
-            IInteractionSource source = GetActiveInteractionSource();
-            List<IInteractionTarget> targets = GetTargetsFromGameObject(source, selectable.gameObject);
-            InteractionEvent interactionEvent = new(source, targets.Count > 0 ? targets[0] : null, point, normal);
+            CollectTargetsInto(source, selectable.gameObject, _outlineTargets);
 
-            List<InteractionEntry> discovered = InteractionPipeline.Discover(source, targets, interactionEvent);
-            if (discovered.Count == 0)
-            {
-                return false;
-            }
-
-            List<InteractionEntry> viableInteractions = InteractionPipeline.FilterAndSort(
+            // Outline LateUpdate must not run full Discover (source-only Drop, ToArray, Filter lists).
+            return InteractionPipeline.TryEvaluateOutlineInteractability(
                 source,
-                discovered,
+                _outlineTargets,
                 point,
                 normal,
-                CurrentIntent);
-
-            hasViableInteractions = viableInteractions.Count > 0;
-            return true;
+                CurrentIntent,
+                out hasViableInteractions);
         }
 
         private void ClearInteractionOutline()
@@ -885,15 +1115,40 @@ namespace SS3D.Systems.Interactions
         private List<IInteractionTarget> GetTargetsFromGameObject(IInteractionSource source, GameObject targetGameObject)
         {
             List<IInteractionTarget> targets = new();
+            CollectTargetsInto(source, targetGameObject, targets);
+            return targets;
+        }
 
-            // Get all target components which are not disabled and the source can interact with
-            targets.AddRange(targetGameObject.GetComponents<IInteractionTarget>().Where(x => (x as MonoBehaviour)?.enabled != false && source.CanInteractWithTarget(x)));
+        [ServerOrClient]
+        private static void CollectTargetsInto(
+            IInteractionSource source,
+            GameObject targetGameObject,
+            List<IInteractionTarget> targets)
+        {
+            targets.Clear();
+
+            // Interface GetComponents still allocates an array; avoid LINQ Where/ToList on top.
+            IInteractionTarget[] components = targetGameObject.GetComponents<IInteractionTarget>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                IInteractionTarget target = components[i];
+                if ((target as MonoBehaviour)?.enabled == false)
+                {
+                    continue;
+                }
+
+                if (!source.CanInteractWithTarget(target))
+                {
+                    continue;
+                }
+
+                targets.Add(target);
+            }
+
             if (targets.Count < 1)
             {
                 targets.Add(new InteractionTargetGameObject(targetGameObject));
             }
-
-            return targets;
         }
 
         [ServerOrClient]
@@ -1026,6 +1281,7 @@ namespace SS3D.Systems.Interactions
         {
             _serverActiveReference = null;
             _serverActiveSource = null;
+            ClearMeleeAimPoint();
         }
 
         private void ClearClientActiveInteractionTracking()
@@ -1053,12 +1309,155 @@ namespace SS3D.Systems.Interactions
             }
         }
 
+        /// <summary>
+        /// Client-synced camera aim ray for the active melee swing (matches zone reticle; not hand bone).
+        /// </summary>
+        [Server]
+        public bool TryGetMeleeAimRay(out Ray aimRay)
+        {
+            aimRay = default;
+            if (!_hasMeleeAimRay)
+            {
+                return false;
+            }
+
+            Vector3 direction = _meleeAimPoint - _meleeAimRayOrigin;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return false;
+            }
+
+            aimRay = new Ray(_meleeAimRayOrigin, direction.normalized);
+            return true;
+        }
+
+        [Server]
+        public void ClearMeleeAimPoint()
+        {
+            _hasMeleeAimRay = false;
+            _meleeAimRayOrigin = default;
+            _meleeAimPoint = default;
+        }
+
+        private void TrySyncMeleeAimDuringSwing()
+        {
+            if (_clientActiveReferenceId < 0 || CurrentIntent != IntentType.Harm)
+            {
+                return;
+            }
+
+            TrySyncMeleeAimToServer();
+        }
+
+        private void TrySyncMeleeAimToServer()
+        {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            if (!TryGetComponent(out HumanoidController humanoid))
+            {
+                return;
+            }
+
+            if (!humanoid.TryGetCombatAimRay(out Ray aimRay, out Vector3 aimPoint))
+            {
+                return;
+            }
+
+            CmdSyncMeleeAim(aimRay.origin, aimPoint);
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        private void CmdSyncMeleeAim(Vector3 rayOrigin, Vector3 aimPoint)
+        {
+            _meleeAimRayOrigin = rayOrigin;
+            _meleeAimPoint = aimPoint;
+            _hasMeleeAimRay = true;
+        }
+
         [TargetRpc]
         private void TargetRejectInteraction(NetworkConnection connection)
         {
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
+        }
+
+        /// <summary>
+        /// Server → owning client: melee swing cycle lock started (windup+recovery). Mirrors the
+        /// server tracker onto the client Hand so CanStartSwing / HUD bracket recharge work off-host.
+        /// </summary>
+        [Server]
+        public void ServerNotifyMeleeRecovery(Hand hand, float cycleSeconds)
+        {
+            if (Owner == null || cycleSeconds <= 0f)
+            {
+                return;
+            }
+
+            int handIndex = -1;
+            if (hand != null && hand.HandsController is Hands hands)
+            {
+                handIndex = hands.PlayerHands.IndexOf(hand);
+            }
+
+            TargetNotifyMeleeRecovery(Owner, handIndex, cycleSeconds);
+        }
+
+        [TargetRpc]
+        private void TargetNotifyMeleeRecovery(NetworkConnection connection, int handIndex, float cycleSeconds)
+        {
+            Hand hand = ResolveLocalHand(handIndex);
+            if (hand != null)
+            {
+                if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+                {
+                    tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
+                }
+
+                // Full cycle already summed on the server (windup + recovery).
+                tracker.BeginSwingCycle(0f, cycleSeconds);
+            }
+
+            MeleeRecoveryFeedback.NotifyLocalRecoveryStarted(cycleSeconds);
+        }
+
+        /// <summary>
+        /// Server → owning client: melee connect applied damage. HUD cross-flash; whiffs stay silent.
+        /// </summary>
+        [Server]
+        public void ServerNotifyMeleeConnectHit()
+        {
+            if (Owner == null)
+            {
+                return;
+            }
+
+            TargetNotifyMeleeConnectHit(Owner);
+        }
+
+        [TargetRpc]
+        private void TargetNotifyMeleeConnectHit(NetworkConnection connection)
+        {
+            MeleeConnectFeedback.NotifyLocalConnectHitLanded();
+        }
+
+        private Hand ResolveLocalHand(int handIndex)
+        {
+            Hands hands = GetComponentInChildren<Hands>();
+            if (hands == null)
+            {
+                return null;
+            }
+
+            if (handIndex >= 0 && handIndex < hands.PlayerHands.Count)
+            {
+                return hands.PlayerHands[handIndex];
+            }
+
+            return hands.SelectedHand;
         }
 
         private bool TryValidateGameplayGates(IInteraction interaction, InteractionEvent interactionEvent)

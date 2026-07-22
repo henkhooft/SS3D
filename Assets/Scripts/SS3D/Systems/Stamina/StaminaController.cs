@@ -15,7 +15,7 @@ namespace SS3D.Systems.Stamina
     /// Phase 7a-core stamina: health-modulated regen, carried-weight encumbrance, sprint drain,
     /// push-past-empty → oxy debt. No permanent bar (Documents/design/stamina.md).
     /// </summary>
-    public class StaminaController : NetworkActor
+    public class StaminaController : NetworkActor, IHealthEffectModifier
     {
         /// <summary>Carried weight at which max/regen are halved (placeholder balancing).</summary>
         private const float ReferenceEncumbranceWeight = 40f;
@@ -32,6 +32,7 @@ namespace SS3D.Systems.Stamina
         private IStamina _stamina;
         private HumanHealthController _health;
         private HumanInventory _inventory;
+        private float _pendingOxyDebt;
 
         public float CurrentStamina => _currentStamina;
 
@@ -66,6 +67,7 @@ namespace SS3D.Systems.Stamina
             RefreshModifiers();
             _currentStamina = _stamina.Current;
             _exertionPenalty = _stamina.ExertionPenalty;
+            _health?.RegisterModifier(this);
         }
 
         public override void OnStartClient()
@@ -91,6 +93,7 @@ namespace SS3D.Systems.Stamina
         {
             base.OnDestroyed();
             UnsubscribeFromEvents();
+            _health?.UnregisterModifier(this);
         }
 
         private void SubscribeToEvents()
@@ -143,6 +146,11 @@ namespace SS3D.Systems.Stamina
             PublishState();
         }
 
+        /// <summary>
+        /// Accumulates overdraw as a pending health-effect delta instead of calling
+        /// HumanHealthController directly, so it flows through the IHealthEffectModifier
+        /// seam the health plan designates for stamina overdraw (health_implementation_plan.md).
+        /// </summary>
         [Server]
         private void ApplyOverdrawOxyDebt()
         {
@@ -152,7 +160,20 @@ namespace SS3D.Systems.Stamina
                 return;
             }
 
-            _health.ApplyOxyDebt(overdraw * OverdrawOxyDebtScale);
+            _pendingOxyDebt += overdraw * OverdrawOxyDebtScale;
+        }
+
+        /// <inheritdoc/>
+        [Server]
+        public void ApplyTick(ref SystemicPools pools, OrganState[] organs)
+        {
+            if (_pendingOxyDebt <= 0f)
+            {
+                return;
+            }
+
+            pools = HealthSimulation.ApplyOxyDebt(pools, _pendingOxyDebt);
+            _pendingOxyDebt = 0f;
         }
 
         [Server]

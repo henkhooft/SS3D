@@ -8,6 +8,7 @@ using SS3D.Permissions;
 using SS3D.Permissions.Events;
 using SS3D.Systems.Area;
 using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.SpawnPoints;
 using FishNet;
 using System;
 using System.Collections.Generic;
@@ -125,6 +126,7 @@ namespace SS3D.Systems.Persistence
             RegisterContributor(new AreaPersistenceContributor(
                 () => SubSystems.Get<AreaSubSystem>(),
                 () => SubSystems.Get<TileSubSystem>()));
+            RegisterContributor(new SpawnPointPersistenceContributor(() => SubSystems.Get<TileSubSystem>()));
             RegisterContributor(new PermissionsPersistenceContributor(() => SubSystems.Get<PermissionSubSystem>()));
         }
 
@@ -238,18 +240,35 @@ namespace SS3D.Systems.Persistence
                 TemplateName = templateName,
             };
 
-            foreach (IPersistenceContributor contributor in GetContributors(PersistenceLayer.StationTemplate))
+            // APCs spawn mid-tile-placement and would flood against an incomplete map (missing
+            // chunks look like empty space). Defer flood until every contributor has finished.
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
-                PersistenceChunk chunk = envelope.chunks?.FirstOrDefault(
-                    candidate => candidate.contributorId == contributor.ContributorId);
+                areaSubSystem.BeginDeferredAreaFlood();
+            }
 
-                if (chunk == null || string.IsNullOrEmpty(chunk.payloadJson))
+            try
+            {
+                foreach (IPersistenceContributor contributor in GetContributors(PersistenceLayer.StationTemplate))
                 {
-                    continue;
-                }
+                    PersistenceChunk chunk = envelope.chunks?.FirstOrDefault(
+                        candidate => candidate.contributorId == contributor.ContributorId);
 
-                object payload = DeserializePayload(contributor, chunk.payloadJson);
-                contributor.Restore(payload, context);
+                    if (chunk == null || string.IsNullOrEmpty(chunk.payloadJson))
+                    {
+                        continue;
+                    }
+
+                    object payload = DeserializePayload(contributor, chunk.payloadJson);
+                    contributor.Restore(payload, context);
+                }
+            }
+            finally
+            {
+                if (SubSystems.TryGet(out AreaSubSystem areaAfterRestore))
+                {
+                    areaAfterRestore.EndDeferredAreaFlood();
+                }
             }
 
             OnAfterRestore?.Invoke(PersistenceLayer.StationTemplate);
@@ -287,6 +306,7 @@ namespace SS3D.Systems.Persistence
             {
                 TileMapPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedTileMap>(payloadJson),
                 AreaPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedAreaChunkPayload>(payloadJson),
+                SpawnPointPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedSpawnPointChunkPayload>(payloadJson),
                 PermissionsPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedPermissionsPayload>(payloadJson),
                 _ => payloadJson,
             };

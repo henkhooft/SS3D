@@ -23,5 +23,7 @@ namespace SS3D.Systems.Tile
         public ISavedTileLocation[] savedTiles;
 
         public ushort[] areaIds;
+
+        public ushort[] floorDecalIds;
     }
 }

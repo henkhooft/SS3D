@@ -9,6 +9,7 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Items;
 using UnityEditor;
 using UnityEngine;
@@ -157,6 +158,14 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void HandleDropHeldItem(InputAction.CallbackContext context)
         {
+            // Drop is a Help-mode world verb; Harm is combat-exclusive (melee / future combat chords).
+            IIntentProvider intentProvider = GetComponentInParent<IIntentProvider>()
+                ?? GetComponent<IIntentProvider>();
+            if (intentProvider != null && intentProvider.CurrentIntent != IntentType.Help)
+            {
+                return;
+            }
+
             SelectedHand.CmdDropHeldItem();
         }
 

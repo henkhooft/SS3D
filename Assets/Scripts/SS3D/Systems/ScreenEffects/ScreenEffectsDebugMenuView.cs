@@ -2,6 +2,7 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Inputs;
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -44,6 +45,11 @@ namespace SS3D.Systems.ScreenEffects
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
+            if (InputInterface.IsCapturingText)
+            {
+                return;
+            }
+
             if (Keyboard.current == null || !Keyboard.current[Key.F2].wasPressedThisFrame)
             {
                 return;

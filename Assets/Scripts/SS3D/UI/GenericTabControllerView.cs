@@ -15,13 +15,27 @@ namespace SS3D.UI
             base.OnStart();
 
             SetupTabs();
-            HandleTabButtonPressed(_tabs[0]);
+            GenericTabView first = _tabs?.FirstOrDefault(tab => tab != null);
+            if (first != null)
+            {
+                HandleTabButtonPressed(first);
+            }
         }
 
         private void SetupTabs()
         {
+            if (_tabs == null)
+            {
+                return;
+            }
+
             foreach (GenericTabView tab in _tabs)
             {
+                if (tab == null || tab.Button == null)
+                {
+                    continue;
+                }
+
                 tab.Button.onClick.AddListener(() => HandleTabButtonPressed(tab));
             }
         }
