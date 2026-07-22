@@ -43,11 +43,24 @@ hand-edit — a wrong YAML edit silently desyncs `fileID` references with no com
 [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) makes this a named
 prefab-composition-debt item and forbids "add one more behaviour" as a feature path, and the health
 rewrite's Phase 0d demonstrated the only accepted mitigation (strip-and-rewire via Editor tooling,
-not organic growth). But enforcement is **convention only** — nothing stops a future PR from adding
-a 127th component. Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) that
-would make even the rewire tool-mediated has never been scheduled.
+not organic growth). Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) is now
+partly paid down: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
+turned strip-and-rewire into a repeatable `PrefabUtility` recipe convention
+(`HumanPrefabHygiene`/`BodyPartContainerInteractiveStrip`/`HumanPrefabRecipes`), added a CI-checked
+missing-script/dev-hack/`ContainerInteractive` gate (`HumanPrefabIntegrityTests`, passing), and fixed
+the concrete hygiene bugs the audit found (stale missing-script GUID caches, the never-built
+`BodyPartContainerInteractiveStrip.cs` tool `inventory.md`/`combat.md` cited, a dev-only hack shipping
+on production `Human.prefab`). **Enforcement is now partially machine-checked** (the EditMode test
+catches regressions on those specific items) but still not comprehensive — nothing stops a future PR
+from adding a 127th *unrelated* component; only the denylisted/known-bad ones are caught. The organ
+prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
+and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
+on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
+`HandsPrefabSetup` (**SS3D → Inventory → Wire Human Hands**). Every other domain directly on
+`Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
+forced — pick up each when its own redesign next touches entity wiring.
 
-- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab)
+- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 
