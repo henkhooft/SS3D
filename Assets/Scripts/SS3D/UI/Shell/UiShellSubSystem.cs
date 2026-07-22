@@ -121,7 +121,9 @@ namespace SS3D.UI.Shell
             foreach (UiLayer layer in LayerOrder)
             {
                 VisualElement layerRoot = new() { name = $"ui-shell-layer-{layer}" };
-                layerRoot.style.position = Position.Absolute;
+                // Fully qualified: SubSystem inherits Actor.Position (a Vector3 instance property),
+                // which shadows the UnityEngine.UIElements.Position enum for an unqualified reference here.
+                layerRoot.style.position = UnityEngine.UIElements.Position.Absolute;
                 layerRoot.style.left = 0;
                 layerRoot.style.top = 0;
                 layerRoot.style.right = 0;
