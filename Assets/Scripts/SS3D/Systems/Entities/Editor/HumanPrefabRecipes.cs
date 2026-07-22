@@ -26,6 +26,7 @@ namespace SS3D.Systems.Entities.Editor
         {
             int devHacksRemoved = HumanPrefabHygiene.RemoveDevHacks();
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
+            bool handsRewired = HandsPrefabSetup.Wire();
 
             // Recipes that remove a component directly on a nested body-part prefab (e.g. the strip
             // above) don't retroactively refresh Human.prefab's own stripped mirror of that instance —
@@ -37,6 +38,7 @@ namespace SS3D.Systems.Entities.Editor
                 "Human Prefab Recipes",
                 $"Removed {devHacksRemoved} dev-only component(s).\n" +
                 $"Stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s).\n" +
+                $"Hands wiring: {(handsRewired ? "rewired" : "already correct")}.\n" +
                 "Resynced Human.prefab against its body-part prefabs.",
                 "OK");
         }
@@ -46,11 +48,13 @@ namespace SS3D.Systems.Entities.Editor
         {
             int devHacksRemoved = HumanPrefabHygiene.RemoveDevHacks();
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
+            bool handsRewired = HandsPrefabSetup.Wire();
             HumanPrefabHygiene.ResyncNestedPrefabInstances();
 
             UnityEngine.Debug.Log(
                 $"[HumanPrefabRecipes] Removed {devHacksRemoved} dev-only component(s); " +
                 $"stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s); " +
+                $"hands wiring {(handsRewired ? "rewired" : "already correct")}; " +
                 "resynced Human.prefab against its body-part prefabs.");
 
             if (Application.isBatchMode)

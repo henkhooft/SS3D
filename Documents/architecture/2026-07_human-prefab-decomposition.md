@@ -1,6 +1,6 @@
 > Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: in-progress (Phase 0 done and verified; Phase 2 done; Phase 1 deprioritized; Phase 3 ready but not started — see Phase 3 for the concrete next candidate)
+> Status: in-progress (Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring)
 
 # Human.prefab decomposition
 
@@ -8,8 +8,9 @@ Ranked #1 structural risk in [TECH_DEBT.md](TECH_DEBT.md) §1.1. This effort tur
 Editor tooling" from a one-off precedent into a repeatable, machine-checked convention, and fixes the
 concrete hygiene debt found on `Human.prefab` along the way (Phase 0). Phase 1's original organ-extraction
 scope turned out to be based on a wrong assumption and is deprioritized; Phase 2 (recipe convention) is
-done. Phase 3 (domain strip-and-rewire, starting with inventory's hands wiring) is ready for whoever
-picks the in-progress inventory-storage redesign back up.
+done; Phase 3 (domain strip-and-rewire) has its first concrete instance done — inventory's hands wiring
+is now recipe-managed. Remaining Phase 3 domains stay scheduled-not-forced, picked up as their own
+redesigns touch entity wiring.
 
 ## Problem
 
@@ -144,26 +145,23 @@ if `Human.prefab`/`TestHuman.prefab` visual drift between the two organ copies b
 - No behavior change — this phase is discoverability and naming, not new extraction. Still needs the
   same Editor run + Play Mode verification as Phase 0 before the `[Ignore]`d tests can be re-enabled.
 
-### Phase 3 — Domain strip-and-rewire, scheduled not forced (ready, not started)
+### Phase 3 — Domain strip-and-rewire
 
-**Inventory/storage is the concrete next candidate, and its redesign is already underway** —
-[2026-07_inventory-storage-redesign.md](2026-07_inventory-storage-redesign.md) is `in-progress` (clean-slate
-data model, panel, Main HUD equip/drag, stamina 7a, and old-UI purge already shipped; Play Mode
-verification pending — see [INDEX.md](INDEX.md) coverage table). [inventory.md](systems/inventory.md)
-already names "Human hands wiring remains prefab composition debt" as open. When that redesign next
-touches entity wiring (rather than as a standalone task disconnected from it), it should:
-
-- Adopt the Phase 2 recipe convention (a `HandsPrefabSetup`-style `PrefabUtility` tool under
-  `Assets/Scripts/SS3D/Systems/Inventory/.../Editor/`, registered in `HumanPrefabRecipes.cs`) instead of
-  hand-editing `HumanHandLeft`/`HumanHandRight` wiring directly.
-- Reuse the nested-`NetworkObject`-aware behaviour-collection pattern from `HumanPrefabHygiene`/
-  `BodyPartContainerInteractiveStrip` if it needs to add/remove any `NetworkBehaviour` on the hands.
+**Hands wiring — done this pass.** The debt inventory.md named was concrete: `Human.prefab`'s `Hands`
+component carries `PlayerHands` (`[SerializeField] public List<Hand>`), a 2-entry reference list manually
+wired by dragging `fileID`s into the Inspector, with no recipe tool to reproduce or verify it. Currently
+correctly wired (Left then Right — `Hands.OnStartServer` selects `PlayerHands.FirstOrDefault()` as the
+initial active hand, so order is load-bearing, not cosmetic). Added `HandsPrefabSetup.cs`
+(`Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/`, **SS3D → Inventory → Wire Human Hands**),
+registered in `HumanPrefabRecipes.cs`. No `NetworkBehaviour` add/remove involved (`PlayerHands` is a
+plain reference list, not part of FishNet's `_networkBehaviours` bookkeeping), so no resync step needed
+for this one. `HumanPrefabIntegrityTests.HumanPrefab_HandsAreWiredLeftThenRight` guards both membership
+and order.
 
 Every other domain directly on `Human.prefab` (movement/animation, combat, comms, examine, stamina,
 substances) keeps the existing policy: strip-and-rewire happens when that domain's own redesign touches
-entity wiring, using a Phase 2-style recipe tool instead of raw YAML. Nothing to implement here until
-one of those redesigns is ready to touch entity wiring — this phase is deliberately "ready" (convention
-and tooling pattern exist), not "started."
+entity wiring, using a Phase 2-style recipe tool instead of raw YAML. Nothing forced here — pick up the
+next one when its owning redesign is ready to touch entity wiring.
 
 ## Verification
 
@@ -172,10 +170,10 @@ and tooling pattern exist), not "started."
 - Host Play Mode smoke pass per existing system-map testing notes: movement, health zone hits, hands/
   equip, `spawndummy` (combat), examine, local speech — the same paths already named in
   `health.md`/`combat.md`/`inventory.md`.
-- Run the new EditMode test locally via Test Runner, then confirm it passes in
-  `editmodetestrunner.yml` CI.
-- After running `SS3D/Entities/Run All Human Prefab Recipes`, re-enable the two `[Ignore]`d assertions
-  in `HumanPrefabIntegrityTests` and confirm they pass.
+- Run `HumanPrefabIntegrityTests` locally via Test Runner, then confirm it passes in
+  `editmodetestrunner.yml` CI — done, all assertions passing, none `[Ignore]`d.
+- Play Mode smoke pass for hands specifically after running `HandsPrefabSetup`: swap hands, drop item,
+  pick up item in each hand, confirm the correct hand is active on spawn.
 
 ## Related docs
 

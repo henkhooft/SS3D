@@ -54,9 +54,11 @@ on production `Human.prefab`). **Enforcement is now partially machine-checked** 
 catches regressions on those specific items) but still not comprehensive — nothing stops a future PR
 from adding a 127th *unrelated* component; only the denylisted/known-bad ones are caught. The organ
 prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
-and was deprioritized. Phase 3 (domain strip-and-rewire, starting with inventory's hands wiring) is
-scheduled but not started — ready for whoever next touches entity wiring as part of the in-progress
-[2026-07_inventory-storage-redesign.md](2026-07_inventory-storage-redesign.md).
+and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
+on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
+`HandsPrefabSetup` (**SS3D → Inventory → Wire Human Hands**). Every other domain directly on
+`Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
+forced — pick up each when its own redesign next touches entity wiring.
 
 - Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
 

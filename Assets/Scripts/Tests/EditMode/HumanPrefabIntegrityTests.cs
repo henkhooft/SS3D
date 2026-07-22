@@ -52,5 +52,23 @@ namespace EditorTests
                 prefab.TryGetComponent(out ContainerInteractive _),
                 $"{prefabPath} root must not expose a world ContainerInteractive (combat/examine targeting clarity).");
         }
+
+        [Test]
+        public void HumanPrefab_HandsAreWiredLeftThenRight()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
+            Assert.IsNotNull(prefab, $"Could not load prefab at {HumanPrefabPath}");
+
+            Assert.IsTrue(prefab.TryGetComponent(out Hands hands), "Human.prefab must have a Hands component.");
+            Assert.IsNotNull(hands.PlayerHands, "Hands.PlayerHands must not be null.");
+            Assert.AreEqual(2, hands.PlayerHands.Count, "Hands.PlayerHands must reference exactly one Left and one Right hand.");
+            Assert.IsNotNull(hands.PlayerHands[0], "Hands.PlayerHands[0] must not be a dangling reference.");
+            Assert.IsNotNull(hands.PlayerHands[1], "Hands.PlayerHands[1] must not be a dangling reference.");
+
+            // Hands.OnStartServer selects PlayerHands.FirstOrDefault() as the initial active hand —
+            // order matters, not just membership. See HandsPrefabSetup remarks.
+            Assert.AreEqual(HandSide.Left, hands.PlayerHands[0].Side, "Hands.PlayerHands[0] must be the Left hand (initial active hand).");
+            Assert.AreEqual(HandSide.Right, hands.PlayerHands[1].Side, "Hands.PlayerHands[1] must be the Right hand.");
+        }
     }
 }

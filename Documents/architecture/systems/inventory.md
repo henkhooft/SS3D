@@ -21,7 +21,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
 
-**Hands wiring on `Human.prefab` remains prefab composition debt** ([agent-first composition](../2026-07_agent-first-composition.md)). Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — the strip tool was only actually built in [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 0 (earlier text here claiming it was already stripped was wrong; `ContainerInteractive` was still live on both roots). Run menu **SS3D → Inventory → Strip Head/Torso ContainerInteractive** in the Editor, then verify in Play Mode, before relying on this being fixed.
+**Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is now recipe-managed via **SS3D → Inventory → Wire Human Hands** (`HandsPrefabSetup`, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. Currently correctly wired; the tool is a safety net, re-run if it ever drifts. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** if it regresses (fixed and verified as of Phase 0).
 
 ## Start here
 
@@ -30,6 +30,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandsPrefabSetup.cs` — **SS3D → Inventory → Wire Human Hands**, (re)wires `Hands.PlayerHands`
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
 - `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle inputs + `StoragePanelHost` viewer bind
 - `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneReticleDriver.cs` — composes `ZoneReticleFrame` (aim + recovery + flash clock)

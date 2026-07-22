@@ -105,7 +105,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, lighting state, wall light switches |
 | Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
-| Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring remains prefab debt |
+| Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
 | Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances + injured limp/severity/mirror; Harm intent → combat stance; shelved Misc/Probably Not clips; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
 | Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md); limp/`InjuredLeg`/arm injury → body anim ([animation-polish](2026-07_animation-polish.md)); zone resolve exclude-self + AnatomyNode for melee |
@@ -153,7 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
-| [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention done and verified in-Editor; Phase 1 organs deprioritized; Phase 3 hands-wiring ready for the in-progress inventory-storage redesign) |
+| [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
 
 ## Implementation plans
 

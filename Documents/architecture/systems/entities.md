@@ -26,7 +26,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
-- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single entry point for every `Human.prefab`-targeting recipe tool (dev-hack removal, ContainerInteractive strip); add new Human-prefab recipes here rather than leaving them as undiscoverable one-off menu items
+- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single entry point for every `Human.prefab`-targeting recipe tool (dev-hack removal, ContainerInteractive strip, hands wiring); add new Human-prefab recipes here rather than leaving them as undiscoverable one-off menu items
 
 ## Extension points
 
