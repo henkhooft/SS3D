@@ -59,7 +59,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 ## Pitfalls
 
 - **Never assign `Inactive` then `Powered` in the same tick.** `PowerStatus` is a SyncVar; OnChange fires on every real transition. Furniture (notably [furniture](furniture.md) airlocks) treats `Inactive` as a power-loss edge. Clear-then-set every ~0.2s tick restarts close timers forever. `PowerAreaConsumers` must write the final status once (and skip no-ops). Cable path in `Circuit` already does single-assignment — keep area path aligned. Test: `PowerAreaConsumers_AssignsFinalStatusOnceWithoutFlicker`.
-- **Client light fixtures ignore APC / wall-switch toggles:** Do not gate `LightPower` subscriptions on `ElectricitySubSystem.IsSetUp` or `AreaSubSystem.IsSetUp` (server-only). Clients refresh from `PowerStatus` SyncVars + [area](area.md) `RpcSyncAreaLighting`; host `ApcController.OnChannelsChanged` refreshes fixtures only when `asServer`.
+- **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/`IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.
 
 ## Depends on / Used by
 

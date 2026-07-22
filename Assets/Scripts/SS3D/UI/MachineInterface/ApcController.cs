@@ -387,7 +387,6 @@ namespace SS3D.UI.MachineInterface
         {
             if (!asServer)
             {
-                // Pure clients apply fixture visuals from RpcSyncAreaLighting + PowerStatus SyncVars.
                 return;
             }
 
@@ -397,6 +396,7 @@ namespace SS3D.UI.MachineInterface
             }
 
             RefreshAllViewers();
+            // Server recomputes fixture visuals and SyncVars them to clients.
             LightPower.RefreshAllFixtures();
         }
     }

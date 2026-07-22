@@ -58,7 +58,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 - **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood`. Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
 - **Light switch usable from across the room:** prefab had no collider, selection never resolved a point, and `RangeCheck` treated zero point as unlimited — see [interactions-framework](interactions-framework.md) Pitfalls. LightSwitch now has a BoxCollider; RangeCheck falls back to target transform.
-- **Client fixtures stay stuck on/off (host OK):** `AreaSubSystem` flood-fill / `IsSetUp` is server-only. Pure clients must not wait on `IsSetUp` to subscribe; resolve area via `TryResolveAreaIdForDevice` + floor-cache; lighting via `RpcSyncAreaLighting` (BufferLast full snapshot). Per-area lighting RPCs drop all but the last area for late joiners. `LightPower` treats synced `AreaLightingState` as already encoding APC lighting channel + wall switch when no APC registry exists.
+- **Client fixtures stay stuck on/off (host OK):** Host fixture logic can read the area APC; pure clients cannot. `LightPower` is a `NetworkActor` with SyncVar `_fixtureVisual` — server computes Off/Normal/Emergency, clients only apply. Do not gate client visuals on `AreaSubSystem.IsSetUp` or re-derive emit from floor-cache alone.
 
 ## Depends on / Used by
 
