@@ -169,13 +169,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, SmesInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, SmesInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private SmesInterfaceSnapshot BuildSnapshot()
