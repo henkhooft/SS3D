@@ -1,7 +1,11 @@
 using System;
+using SS3D.Systems.Health;
 
 namespace SS3D.Systems.Combat
 {
+    /// <summary>
+    /// Melee timing and damage profile. Interim lethality — retune after armor (combat plan Phase 5).
+    /// </summary>
     [Serializable]
     public struct MeleeWeaponProfile
     {
@@ -9,6 +13,7 @@ namespace SS3D.Systems.Combat
         public float BurnDamage;
         public float WindupSeconds;
         public float RecoverySeconds;
+        public float StaminaCost;
         public bool CanSever;
 
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
@@ -18,7 +23,19 @@ namespace SS3D.Systems.Combat
             BruteDamage = 8f,
             BurnDamage = 0f,
             WindupSeconds = 0.25f,
-            RecoverySeconds = 0.35f,
+            RecoverySeconds = 0.7f,
+            StaminaCost = 8f,
+            CanSever = false,
+        };
+
+        /// <summary>Low-base fallback for any held item without a dedicated profile.</summary>
+        public static MeleeWeaponProfile Improvised => new()
+        {
+            BruteDamage = 6f,
+            BurnDamage = 0f,
+            WindupSeconds = 0.3f,
+            RecoverySeconds = 1.6f,
+            StaminaCost = 10f,
             CanSever = false,
         };
 
@@ -27,7 +44,8 @@ namespace SS3D.Systems.Combat
             BruteDamage = 18f,
             BurnDamage = 0f,
             WindupSeconds = 0.35f,
-            RecoverySeconds = 0.5f,
+            RecoverySeconds = 1.0f,
+            StaminaCost = 12f,
             CanSever = false,
         };
 
@@ -36,7 +54,8 @@ namespace SS3D.Systems.Combat
             BruteDamage = 16f,
             BurnDamage = 0f,
             WindupSeconds = 0.3f,
-            RecoverySeconds = 0.45f,
+            RecoverySeconds = 0.9f,
+            StaminaCost = 11f,
             CanSever = true,
         };
 
@@ -45,7 +64,8 @@ namespace SS3D.Systems.Combat
             BruteDamage = 12f,
             BurnDamage = 0f,
             WindupSeconds = 0.2f,
-            RecoverySeconds = 0.35f,
+            RecoverySeconds = 0.7f,
+            StaminaCost = 9f,
             CanSever = true,
         };
     }

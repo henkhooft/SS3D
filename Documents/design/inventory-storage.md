@@ -46,7 +46,7 @@ This doc is the natural home for a size-class taxonomy other docs have already a
 
 **Fit check:** a container declares the largest size class it accepts. An item fits if its size class is at or below that ceiling — flat, binary, no partial-fit fuzziness. A satchel capped at small can't take a fire extinguisher no matter how many empty slots it has; the extinguisher goes in a hand or on the back instead. Same "physical logic over hidden math" instinct armor's absorption values already run on.
 
-**Companion edit flagged:** `disposal.md` §2 should reference this same five-tier field for its chute accept-check rather than an unnamed "collider class" (§14).
+`disposal.md` §2 now references this same five-tier field for its chute accept-check rather than an unnamed "collider class" (§14).
 
 ## 5. Stacking
 
@@ -133,12 +133,12 @@ No new permanent chrome — same discipline as every doc in this project.
 - Uniform-specific pocket variance (a uniform with more or fewer pockets than the standard two) — the built-in pocket slots are uniform this pass
 - Item degradation/durability for non-armor items sitting in storage
 - A standalone "quick loot everything" bulk-transfer action — a plausible UX convenience, not load-bearing for the system's shape
-- Persistence of container contents across rounds (persistence & accounts' job, cross-cutting infra, same carve-out every other doc gives it)
+- Persistence of container contents across rounds — round snapshots are the mechanism (`persistence-save.md` §6), but the exact captured shape of item/container state is this doc's own future work, not that doc's
 - Visual bulge/silhouette changes on a character model based on how full their bag is — a nice-to-have, not required for the panel-based approach to work
 
 ## 14. Companion edits flagged
 
-- `disposal.md` §2 — its chute accept-check should reference this doc's five-tier size-class field (§4) rather than an unnamed "collider class."
+- `disposal.md` §2 — its chute accept-check now references this doc's five-tier size-class field (§4) rather than an unnamed "collider class." Resolved.
 - `main-hud.md` — several existing docs (`cargo.md` §5, `disposal.md` §4/§9, `surgery.md` §9, `id-access.md` §3) already cite an "examine system" at main HUD §15 that isn't present in the current main HUD doc (which currently ends at §14). Not this doc's gap to fix, but worth closing — this doc's own examine-adjacent behavior (crate-style manifests, worn-item visibility) assumes it exists too.
 - `cargo.md` §5 and `disposal.md` §2 — both crates and locked disposal units are describable as instances of this doc's Container primitive (§2). No functional change needed in either doc; flagging only so future lockable containers get built against this shared shape instead of a third one-off.
 

@@ -3,8 +3,9 @@
 #
 # Launches a real headless dedicated-server process and N real headless client processes (all
 # -batchmode -nographics, no display dependency), drives each through a scripted scenario via
-# the in-game AutomationSubSystem (-testscript=), and fails on any uncaught exception or
-# Error/Fatal log entry in any process's logs - replacing the old brittle PlayMode harness
+# the in-game AutomationSubSystem (-testscript=), and fails on any uncaught exception,
+# known-bad unity.log pattern (tools/known_unity_bad.patterns), or Error/Fatal log entry
+# in any process's logs - replacing the old brittle PlayMode harness
 # (Thread.Sleep readiness, Windows-only window tiling, hardcoded port, global process-name
 # kill). See Documents/architecture/2026-07_multiplayer-test-harness.md.
 #
@@ -187,6 +188,11 @@ for ((i = 0; i < ${#CHECK_LABELS[@]}; i++)); do
 
     if ! check_unity_log_for_exceptions "$unitylog"; then
         echo "error: exception found in $label's Unity log ($unitylog)" >&2
+        FAILED=1
+    fi
+
+    if ! check_unity_log_for_bad_patterns "$unitylog"; then
+        echo "error: known-bad pattern found in $label's Unity log ($unitylog)" >&2
         FAILED=1
     fi
 

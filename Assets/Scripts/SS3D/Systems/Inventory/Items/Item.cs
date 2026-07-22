@@ -13,6 +13,10 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Interactions;
+using SS3D.Systems.Combat;
+using SS3D.Systems.Combat.Interactions;
+using SS3D.Systems.Entities;
+using SS3D.Systems.Health;
 using SS3D.Systems.Selection;
 using System.Linq;
 using UnityEngine;
@@ -352,6 +356,34 @@ namespace SS3D.Systems.Inventory.Items
             DropInteraction dropInteraction = new();
 
             interactions.Add(new InteractionEntry(null, dropInteraction));
+
+            // Improvised melee for any held item without a dedicated weapon profile.
+            if (TryGetComponent(out MeleeWeaponItemExtension _))
+            {
+                return;
+            }
+
+            var improvisedHit = new MeleeHitInteraction(MeleeWeaponProfile.Improvised);
+            if (!improvisedHit.CanStartSwing(this))
+            {
+                return;
+            }
+
+            foreach (IInteractionTarget target in targets)
+            {
+                if (target is not IGameObjectProvider provider)
+                {
+                    continue;
+                }
+
+                Entity entity = provider.GameObject.GetComponentInParent<Entity>();
+                if (entity == null || entity.GetComponentInChildren<HumanHealthController>() == null)
+                {
+                    continue;
+                }
+
+                interactions.Add(new InteractionEntry(target, improvisedHit));
+            }
         }
 
         /// <summary>

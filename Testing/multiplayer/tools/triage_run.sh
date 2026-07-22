@@ -6,8 +6,9 @@
 #   ./Testing/multiplayer/tools/triage_run.sh latest
 #
 # Prints: process inventory + sizes, Test signal timeline, ScriptFailed payloads,
-# JSON Error/Fatal lines, and unity.log exception hits classified as real vs known noise
-# (see known_unity_noise.patterns). Exit 0 always when the run dir exists — this is a
+# JSON Error/Fatal lines, unity.log denylist hits (known_unity_bad.patterns — harness
+# hard-fail), and unity.log exception hits classified as real vs known noise
+# (known_unity_noise.patterns). Exit 0 always when the run dir exists — this is a
 # reporter, not a pass/fail gate (run_smoketest.sh owns that).
 
 set -uo pipefail
@@ -16,6 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 RUNS_ROOT="$REPO_ROOT/Testing/multiplayer/.runs"
 NOISE_FILE="$SCRIPT_DIR/known_unity_noise.patterns"
+BAD_FILE="$SCRIPT_DIR/known_unity_bad.patterns"
 
 TARGET="${1:?Usage: triage_run.sh <run-id|path|latest>}"
 
@@ -57,6 +59,17 @@ load_noise_patterns() {
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
         NOISE_PATTERNS+=("$line")
     done < "$NOISE_FILE"
+}
+
+load_bad_patterns() {
+    BAD_PATTERNS=()
+    if [[ ! -f "$BAD_FILE" ]]; then
+        return 0
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        BAD_PATTERNS+=("$line")
+    done < "$BAD_FILE"
 }
 
 is_known_noise() {
@@ -157,6 +170,26 @@ triage_process() {
         echo "  (none)"
     fi
 
+    echo "unity_bad_patterns:"
+    if [[ ! -f "$unity_log" ]]; then
+        echo "  (no unity.log)"
+    elif ((${#BAD_PATTERNS[@]} == 0)); then
+        echo "  (no denylist loaded)"
+    else
+        local any_bad=0
+        local pat count
+        for pat in "${BAD_PATTERNS[@]}"; do
+            count="$(grep -cE -- "$pat" "$unity_log" 2>/dev/null || true)"
+            if [[ "${count:-0}" -gt 0 ]]; then
+                any_bad=1
+                echo "  ${count}×  $pat  (would fail harness)"
+            fi
+        done
+        if (( any_bad == 0 )); then
+            echo "  (none)"
+        fi
+    fi
+
     echo "unity_exceptions:"
     if [[ ! -f "$unity_log" ]]; then
         echo "  (no unity.log)"
@@ -215,6 +248,7 @@ main() {
     local run_dir
     run_dir="$(resolve_run_dir "$TARGET")" || exit 1
     load_noise_patterns
+    load_bad_patterns
 
     local run_id
     run_id="$(basename "$run_dir")"
@@ -225,6 +259,7 @@ main() {
     echo "path: $run_dir"
     echo "total_size: $(human_bytes "${total_bytes:-0}") (apparent; player binaries usually hardlinked to Builds/)"
     echo "noise_allowlist: $NOISE_FILE (${#NOISE_PATTERNS[@]} patterns)"
+    echo "bad_denylist: $BAD_FILE (${#BAD_PATTERNS[@]} patterns)"
 
     local procs=()
     if [[ -d "$run_dir/server" ]]; then
@@ -247,8 +282,9 @@ main() {
     echo
     echo "── verdict hints ──"
     echo "1. Prefer ScriptFailed payload + last Test signal over unity.log prose."
-    echo "2. If only known_noise exceptions remain, fix source or (after rebuild) consider harness allowlist — do not grow patterns casually."
-    echo "3. Agent: never cat full unity.log; open JSON around failing signal, then ±40 lines of unity.log."
+    echo "2. unity_bad_patterns hits fail the harness (known_unity_bad.patterns) — fix source, do not allowlist."
+    echo "3. If only known_noise exceptions remain, fix source or (after rebuild) consider harness allowlist — do not grow patterns casually."
+    echo "4. Agent: never cat full unity.log; open JSON around failing signal, then ±40 lines of unity.log."
 }
 
 main

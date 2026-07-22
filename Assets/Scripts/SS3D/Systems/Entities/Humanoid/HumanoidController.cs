@@ -304,10 +304,13 @@ namespace SS3D.Systems.Entities.Humanoid
         protected abstract void MovePlayer();
         
         /// <summary>
-        /// Process the player movement input, smoothing it
+        /// Process the player movement input, smoothing it.
         /// </summary>
-        /// <returns></returns>
-        protected void ProcessPlayerInput()
+        /// <param name="publishSpeed">
+        /// When false, skip OnSpeedChanged — used when predicted movement owns gait/speed publish
+        /// so Update does not snap Speed/Vel ahead of the smoothed tick.
+        /// </param>
+        protected void ProcessPlayerInput(bool publishSpeed = true)
         {
             EnsureInputReady();
 
@@ -324,7 +327,10 @@ namespace SS3D.Systems.Entities.Humanoid
             Input = Vector2.ClampMagnitude(new Vector2(x, y), inputFilteredSpeed);
             SmoothedInput = Vector2.Lerp(SmoothedInput, Input, Time.deltaTime * (_lerpMultiplier / 10));
 
-            OnSpeedChanged(Input.magnitude != 0 ? inputFilteredSpeed : 0);
+            if (publishSpeed)
+            {
+                OnSpeedChanged(Input.magnitude != 0 ? inputFilteredSpeed : 0);
+            }
         }
 
         /// <summary>
@@ -399,13 +405,11 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Resolves combat aim from the camera mouse ray (3D hit or fallback distance).
-        /// Body yaw uses the planar component; pitch is elevation to the aim point.
+        /// Camera mouse ray used for combat aim and zone reticle (same ray connect damage should use).
         /// </summary>
-        public bool TryGetCombatAim(out float yaw, out float pitch, out Vector3 aimPoint)
+        public bool TryGetCombatAimRay(out Ray aimRay, out Vector3 aimPoint)
         {
-            yaw = 0f;
-            pitch = 0f;
+            aimRay = default;
             aimPoint = Position;
 
             if (_camera == null)
@@ -424,11 +428,29 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            aimRay = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
             const float maxDistance = 100f;
             const float fallbackDistance = 20f;
 
-            if (!TryResolveAimPoint(ray, maxDistance, fallbackDistance, out aimPoint))
+            if (!TryResolveAimPoint(aimRay, maxDistance, fallbackDistance, out aimPoint))
+            {
+                return false;
+            }
+
+            return aimRay.direction.sqrMagnitude >= 0.0001f;
+        }
+
+        /// <summary>
+        /// Resolves combat aim from the camera mouse ray (3D hit or fallback distance).
+        /// Body yaw uses the planar component; pitch is elevation to the aim point.
+        /// </summary>
+        public bool TryGetCombatAim(out float yaw, out float pitch, out Vector3 aimPoint)
+        {
+            yaw = 0f;
+            pitch = 0f;
+            aimPoint = Position;
+
+            if (!TryGetCombatAimRay(out Ray ray, out aimPoint))
             {
                 return false;
             }

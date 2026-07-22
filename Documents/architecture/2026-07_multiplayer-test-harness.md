@@ -79,16 +79,18 @@ Manual / partial:
 - `lib/logwait.sh` — polls the structured JSON logs for `Test signal` lines via `jq`; checks
   Unity's own `-logFile` output for uncaught-exception signatures (structured logs only capture
   what goes through the `Log` wrapper — crashes/NREs surface through Unity's own log, not
-  Serilog) and the JSON logs for any `Error`/`Fatal`-level entry.
+  Serilog), **known-bad LogWarning/prose patterns** (`tools/known_unity_bad.patterns` — e.g.
+  FishNet SyncVar writes on a pure client), and the JSON logs for any `Error`/`Fatal`-level entry.
 - `tools/triage_run.sh <run-id|path|latest>` — agent/human-facing summary of a `.runs/<id>/`
-  directory: Test signal timeline, `ScriptFailed` payloads, JSON Error/Fatal, and unity.log
-  exception hits classified against `tools/known_unity_noise.patterns` (headless Blitter/shader
-  spam etc.). Does not dump full `unity.log`. Cursor skills:
+  directory: Test signal timeline, `ScriptFailed` payloads, JSON Error/Fatal, unity.log
+  denylist hits (`known_unity_bad.patterns`), and exception hits classified against
+  `tools/known_unity_noise.patterns` (headless Blitter/shader spam etc.). Does not dump full
+  `unity.log`. Cursor skills:
   `.cursor/skills/multiplayer-smoke-e2e/SKILL.md` (build → smoke → triage → fix),
   `.cursor/skills/run-multiplayer-smoke/SKILL.md` (kick off `run_smoketest.sh`),
   `.cursor/skills/triage-multiplayer-smoke/SKILL.md` (summarize a run). The harness fail gate
-  does **not** yet use the noise allowlist — triage reports noise separately so a
-  `ScriptFailed` root cause is not buried under icon-gen stacks.
+  uses the **bad** denylist; the **noise** allowlist is triage-only so a `ScriptFailed` root
+  cause is not buried under icon-gen stacks.
 - `Tools/build_client_and_server.sh` — batchmode Unity build of both Linux binaries via
   `ClientAndServerBuildScript.BuildBothBatch`.
 - `scenarios/basic-round{,-client}.txt` — connect, ready, start round (client-side, pre-seeded
@@ -106,6 +108,19 @@ Manual / partial:
   the old one sits ownerless in the world. Regression coverage for the disconnect/reconnect
   ownership fix in `PlayerSubSystem.ProcessPlayerDisconnect`/`ProcessAuthorizePlayer` and
   `EntitySubSystem.TryReclaimEntity` — see [player-control.md](systems/player-control.md).
+- `scenarios/atmos-client-sync{,-client}.txt` — regression coverage for
+  [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md): the
+  client embarks, runs `console atmosdebug heat 500` (new `AtmosDebugCommand` — headless
+  equivalent of `AtmosDebugController`'s GUI buttons, since a `-batchmode` client can't click
+  one) at its own tile to force a fresh dirty chunk, waits for the next atmos tick, then runs
+  `console atmosclientstatus assert` (new `AtmosClientStatusCommand`, `CommandType.Offline`) —
+  it emits a `Test signal AtmosClientSnapshotValid|Invalid` either way, and *throws* when
+  `assert` is passed and the snapshot isn't valid, which `AutomationSubSystem`'s existing
+  try/catch turns into a `ScriptFailed` the harness already treats as a failure. No new DSL
+  instruction or `run_smoketest.sh` changes needed — this reuses the same "distinctive signal /
+  exception-on-`console`" idioms every other check in the harness already relies on. Because
+  Phase 1 has no late-join bootstrap, the forced heat-add is what makes this deterministic
+  regardless of how long the server had been running before this client connected.
 - Permissions: `run_smoketest.sh` clears staged `Data/ServerMeta/permissions.json` (Builds often
   ship one), then seeds `Config/permissions.txt` with each client's ckey as `Administrator` —
   a real dedicated server has no Editor session to grant this by hand, and `start_round` is
@@ -115,8 +130,9 @@ Manual / partial:
 ### CI
 - `.github/workflows/develop-release.yml` — **manual** gated path: EditMode → Linux
   server+client builds (separate `buildsPath` dirs, `versioning: None`) → `basic-round` +
-  `late-join 2` + `reconnect` → Windows client zip with `Builds/Start_SS3D_*.bat` → GitHub
-  prerelease. See [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
+  `late-join 2` + `reconnect` + `atmos-client-sync` → Windows client zip with
+  `Builds/Start_SS3D_*.bat` → GitHub prerelease. See
+  [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
 - `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke only (`workflow_dispatch` or PR
   label `test:multiplayer`); no longer runs on every `develop` push. Same build scripts and
   harness as the release workflow’s smoke stage.
@@ -166,6 +182,9 @@ Manual / partial:
   rare missing-script lines; server emits Dedicated Server Optimizations shader messages. Prefer
   source fixes (icon skip already mapped) over growing `known_unity_noise.patterns`. Harness
   still fails on any `Exception:` until an allowlist is wired into `logwait.sh` deliberately.
+  Separately, `known_unity_bad.patterns` is a **hard-fail denylist** for non-exception LogWarning
+  prose that must never appear (FishNet "Cannot complete operation as server when server is not
+  active" — pure-client SyncVar writes). Do not move denylist entries into the noise allowlist.
 - **Not yet verified against a real Unity build in this environment** — see Verification below.
 
 ## Verification

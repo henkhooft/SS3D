@@ -1,83 +1,134 @@
+using DG.Tweening;
+using SS3D.UI.MainHud;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
-    /// The seven hazards the main HUD design doc (§9) and mockup wire up: fire, ambient heat, low pressure,
-    /// ambient cold, hunger, thirst and restrained. Pressure/radiation/pulling and the "warning vs critical"
-    /// variant per hazard exist in the full "Alert Icon Stack" spec but aren't driven by this HUD yet.
+    /// Hazards the alert icon stack can show. Base set matches main-hud.md §9; Bleeding and
+    /// CardiacArrest are fork additions (health vitals) not yet in that design table.
+    /// Health hazards (LowOxygen, Dying, Bleeding, CardiacArrest) are live via
+    /// <see cref="SS3D.Systems.Health.HealthAlertStackMapper"/>; other hazards stay None until
+    /// those systems exist (F4 / <c>alertstack</c> remain a full-stack debug override).
     /// </summary>
     public enum AlertHazard
     {
         Fire,
         Hot,
-        LowPressure,
         Cold,
+        LowPressure,
+        HighPressure,
+        Radiation,
         Hunger,
         Thirst,
+        Pulling,
         Restrained,
+        LowOxygen,
+        Dying,
+        Bleeding,
+        CardiacArrest,
     }
 
     /// <summary>
-    /// Which hazards are currently active on the local player. Every field defaults to false (a healthy,
-    /// unencumbered character shows an empty stack) - hunger/thirst/restrained/pressure trackers don't exist
-    /// in <c>SS3D.Systems</c> yet, so <see cref="SS3D.UI.MainHud.MainHudSubSystem"/> currently never sets these
-    /// true. Wire real trackers in here once they exist instead of adding a parallel state model.
+    /// How urgently a hazard reads: hidden, a plain amber warning, or a pulsing red critical.
+    /// <see cref="AlertHazard.Dying"/> and <see cref="AlertHazard.CardiacArrest"/> never use
+    /// <see cref="Warning"/> — they either aren't happening or they're critical.
+    /// </summary>
+    public enum AlertSeverity
+    {
+        None,
+        Warning,
+        Critical,
+    }
+
+    /// <summary>
+    /// Which hazards are currently active on the local player, and at what severity. Every field defaults to
+    /// <see cref="AlertSeverity.None"/> (a healthy, unencumbered character shows an empty stack).
+    /// <see cref="MainHudSubSystem"/> fills health fields from <see cref="SS3D.Systems.Health.HealthAlertStackMapper"/>
+    /// unless a debug override is set; other systems should write into this struct the same way when they exist.
     /// </summary>
     public struct AlertStackState
     {
-        public bool Fire;
-        public bool Hot;
-        public bool LowPressure;
-        public bool Cold;
-        public bool Hunger;
-        public bool Thirst;
-        public bool Restrained;
+        public AlertSeverity Fire;
+        public AlertSeverity Hot;
+        public AlertSeverity Cold;
+        public AlertSeverity LowPressure;
+        public AlertSeverity HighPressure;
+        public AlertSeverity Radiation;
+        public AlertSeverity Hunger;
+        public AlertSeverity Thirst;
+        public AlertSeverity Pulling;
+        public AlertSeverity Restrained;
+        public AlertSeverity LowOxygen;
+        public AlertSeverity Dying;
+        public AlertSeverity Bleeding;
+        public AlertSeverity CardiacArrest;
 
-        public bool this[AlertHazard hazard] => hazard switch
+        public AlertSeverity this[AlertHazard hazard] => hazard switch
         {
             AlertHazard.Fire => Fire,
             AlertHazard.Hot => Hot,
-            AlertHazard.LowPressure => LowPressure,
             AlertHazard.Cold => Cold,
+            AlertHazard.LowPressure => LowPressure,
+            AlertHazard.HighPressure => HighPressure,
+            AlertHazard.Radiation => Radiation,
             AlertHazard.Hunger => Hunger,
             AlertHazard.Thirst => Thirst,
+            AlertHazard.Pulling => Pulling,
             AlertHazard.Restrained => Restrained,
-            _ => false,
+            AlertHazard.LowOxygen => LowOxygen,
+            AlertHazard.Dying => Dying,
+            AlertHazard.Bleeding => Bleeding,
+            AlertHazard.CardiacArrest => CardiacArrest,
+            _ => AlertSeverity.None,
         };
     }
 
     /// <summary>
     /// Top-right icon-only hazard stack. Only active hazards render; hovering any icon reveals its label.
-    /// Fire/LowPressure/Restrained render with the "critical" glow border, the rest with the plain "warning"
-    /// border - matching the fixed severities used in the Main HUD mockup.
+    /// Each chip re-styles between the plain "warning" border and the pulsing "critical" glow based on its
+    /// live <see cref="AlertSeverity"/>, matching the Main HUD mockup.
     /// </summary>
     [UxmlElement]
     public partial class AlertIconStack : VisualElement
     {
-        private static readonly (AlertHazard Hazard, string Label, bool Critical)[] Chips =
+        private static readonly (AlertHazard Hazard, string Label)[] Chips =
         {
-            (AlertHazard.Fire, "Fire", true),
-            (AlertHazard.Hot, "Hot", false),
-            (AlertHazard.LowPressure, "Low Pressure", true),
-            (AlertHazard.Cold, "Cold", false),
-            (AlertHazard.Hunger, "Hunger", false),
-            (AlertHazard.Thirst, "Thirst", false),
-            (AlertHazard.Restrained, "Restrained", true),
+            (AlertHazard.Fire, "Fire"),
+            (AlertHazard.Hot, "Hot"),
+            (AlertHazard.Cold, "Cold"),
+            (AlertHazard.LowPressure, "Low Pressure"),
+            (AlertHazard.HighPressure, "High Pressure"),
+            (AlertHazard.Radiation, "Radiation"),
+            (AlertHazard.Hunger, "Hunger"),
+            (AlertHazard.Thirst, "Thirst"),
+            (AlertHazard.Pulling, "Pulling"),
+            (AlertHazard.Restrained, "Restrained"),
+            (AlertHazard.LowOxygen, "Low Oxygen"),
+            (AlertHazard.Dying, "Dying / Critical"),
+            (AlertHazard.Bleeding, "Bleeding"),
+            (AlertHazard.CardiacArrest, "Cardiac Arrest"),
         };
 
         private readonly AlertChip[] _chips;
 
+        // Parameterless ctor required by [UxmlElement]; real construction happens via the icon-set overload,
+        // called from MainHudView once the catalog's AlertIconSet is available.
         public AlertIconStack()
+            : this(default)
+        {
+        }
+
+        public AlertIconStack(AlertIconSet icons)
         {
             AddToClassList("alert-icon-stack");
 
             _chips = new AlertChip[Chips.Length];
             for (int i = 0; i < Chips.Length; i++)
             {
-                (AlertHazard hazard, string label, bool critical) = Chips[i];
-                AlertChip chip = new(hazard, label, critical);
+                (AlertHazard hazard, string label) = Chips[i];
+                AlertChip chip = new(hazard, label, icons[hazard]);
                 _chips[i] = chip;
                 Add(chip);
             }
@@ -87,184 +138,117 @@ namespace SS3D.UI.MainHud.Components
         {
             foreach (AlertChip chip in _chips)
             {
-                chip.style.display = state[chip.Hazard] ? DisplayStyle.Flex : DisplayStyle.None;
+                chip.SetSeverity(state[chip.Hazard]);
             }
         }
 
         private sealed class AlertChip : VisualElement
         {
+            private const float BorderPulseDuration = 0.5f;
+
+            // #b94848 (--ss3d-feedback-danger) at low vs full alpha — only the stroke blinks.
+            private static readonly Color BorderCriticalDim = new(0.725f, 0.282f, 0.282f, 0.25f);
+            private static readonly Color BorderCriticalBright = new(0.9f, 0.32f, 0.32f, 1f);
+
             public AlertHazard Hazard { get; }
 
-            public AlertChip(AlertHazard hazard, string label, bool critical)
+            private readonly VisualElement _box;
+            private Tween _borderTween;
+            private float _borderPulse;
+            private AlertSeverity _severity;
+
+            public AlertChip(AlertHazard hazard, string label, Sprite icon)
             {
                 Hazard = hazard;
                 AddToClassList("alert-chip");
-                EnableInClassList("alert-chip--critical", critical);
                 style.display = DisplayStyle.None;
 
-                VisualElement box = new();
-                box.AddToClassList("alert-chip__box");
-                box.Add(new AlertGlyph(hazard));
+                _box = new VisualElement();
+                _box.AddToClassList("alert-chip__box");
+
+                VisualElement glyph = new();
+                glyph.AddToClassList("alert-chip__glyph");
+                glyph.pickingMode = PickingMode.Ignore;
+                if (icon != null)
+                {
+                    glyph.style.backgroundImage = new StyleBackground(icon);
+                }
+
+                _box.Add(glyph);
 
                 Label chipLabel = new(label);
                 chipLabel.AddToClassList("alert-chip__label");
                 chipLabel.AddToClassList("font-arcade");
                 chipLabel.pickingMode = PickingMode.Ignore;
 
-                Add(box);
+                Add(_box);
                 Add(chipLabel);
 
                 RegisterCallback<PointerEnterEvent>(_ => AddToClassList("alert-chip--hovered"));
                 RegisterCallback<PointerLeaveEvent>(_ => RemoveFromClassList("alert-chip--hovered"));
-            }
-        }
-
-        /// <summary>
-        /// Draws a small flat single-color silhouette per hazard directly via Painter2D, so the alert stack
-        /// doesn't depend on new binary icon assets - consistent with the project's "flat, single-color, tinted
-        /// at runtime" icon convention, just generated instead of imported.
-        /// </summary>
-        private sealed class AlertGlyph : VisualElement
-        {
-            private const float Size = 26f;
-
-            private readonly AlertHazard _hazard;
-
-            public AlertGlyph(AlertHazard hazard)
-            {
-                _hazard = hazard;
-                style.width = Size;
-                style.height = Size;
-                pickingMode = PickingMode.Ignore;
-                generateVisualContent += OnGenerateVisualContent;
+                RegisterCallback<DetachFromPanelEvent>(_ => StopBorderPulse());
             }
 
-            private void OnGenerateVisualContent(MeshGenerationContext context)
+            public void SetSeverity(AlertSeverity severity)
             {
-                Color color = resolvedStyle.color;
-                Painter2D painter = context.painter2D;
-                painter.strokeColor = color;
-                painter.fillColor = color;
-                painter.lineWidth = 1.6f;
-
-                switch (_hazard)
+                if (_severity == severity)
                 {
-                    case AlertHazard.Fire:
-                        DrawFlame(painter);
-                        break;
-                    case AlertHazard.Hot:
-                        DrawThermometer(painter);
-                        break;
-                    case AlertHazard.LowPressure:
-                        DrawChevronsDown(painter);
-                        break;
-                    case AlertHazard.Cold:
-                        DrawSnowflake(painter);
-                        break;
-                    case AlertHazard.Hunger:
-                        DrawFood(painter);
-                        break;
-                    case AlertHazard.Thirst:
-                        DrawDroplet(painter);
-                        break;
-                    case AlertHazard.Restrained:
-                        DrawCuffs(painter);
-                        break;
+                    return;
+                }
+
+                _severity = severity;
+                style.display = severity == AlertSeverity.None ? DisplayStyle.None : DisplayStyle.Flex;
+                EnableInClassList("alert-chip--critical", severity == AlertSeverity.Critical);
+
+                if (severity == AlertSeverity.Critical)
+                {
+                    StartBorderPulse();
+                }
+                else
+                {
+                    StopBorderPulse();
                 }
             }
 
-            private static void DrawFlame(Painter2D p)
+            // Pulses only the box's rounded border color. UITK has no CSS keyframe equivalent, so DOTween
+            // drives it the same way MainHudView drives show/hide.
+            private void StartBorderPulse()
             {
-                p.BeginPath();
-                p.MoveTo(new Vector2(13, 3));
-                p.BezierCurveTo(new Vector2(16, 9), new Vector2(9, 12), new Vector2(9, 17));
-                p.BezierCurveTo(new Vector2(9, 21), new Vector2(12, 23), new Vector2(15, 23));
-                p.BezierCurveTo(new Vector2(19, 23), new Vector2(22, 20), new Vector2(20, 15));
-                p.BezierCurveTo(new Vector2(19.5f, 18), new Vector2(17, 19), new Vector2(16, 17));
-                p.BezierCurveTo(new Vector2(15, 15), new Vector2(17, 12), new Vector2(13, 3));
-                p.ClosePath();
-                p.Fill();
+                StopBorderPulse();
+                _borderPulse = 0f;
+                ApplyBorderColor(BorderCriticalDim);
+                _borderTween = DOTween.To(
+                        () => _borderPulse,
+                        value =>
+                        {
+                            _borderPulse = value;
+                            ApplyBorderColor(Color.Lerp(BorderCriticalDim, BorderCriticalBright, value));
+                        },
+                        1f,
+                        BorderPulseDuration)
+                    .SetLoops(-1, LoopType.Yoyo)
+                    .SetEase(Ease.InOutSine)
+                    .SetUpdate(true);
             }
 
-            private static void DrawThermometer(Painter2D p)
+            private void StopBorderPulse()
             {
-                p.BeginPath();
-                p.MoveTo(new Vector2(11, 5));
-                p.LineTo(new Vector2(11, 16));
-                p.Arc(new Vector2(13, 18), 3.2f, new Angle(210, AngleUnit.Degree), new Angle(120, AngleUnit.Degree));
-                p.LineTo(new Vector2(15, 5));
-                p.Arc(new Vector2(13, 5), 2, new Angle(0, AngleUnit.Degree), new Angle(180, AngleUnit.Degree));
-                p.ClosePath();
-                p.Stroke();
-
-                p.BeginPath();
-                p.Arc(new Vector2(13, 18), 2.4f, new Angle(0, AngleUnit.Degree), new Angle(360, AngleUnit.Degree));
-                p.Fill();
+                _borderTween?.Kill();
+                _borderTween = null;
+                _borderPulse = 0f;
+                // Drop inline overrides so USS warning/critical border-color applies again.
+                _box.style.borderTopColor = StyleKeyword.Null;
+                _box.style.borderRightColor = StyleKeyword.Null;
+                _box.style.borderBottomColor = StyleKeyword.Null;
+                _box.style.borderLeftColor = StyleKeyword.Null;
             }
 
-            private static void DrawChevronsDown(Painter2D p)
+            private void ApplyBorderColor(Color color)
             {
-                p.BeginPath();
-                p.MoveTo(new Vector2(6, 8));
-                p.LineTo(new Vector2(13, 14));
-                p.LineTo(new Vector2(20, 8));
-                p.Stroke();
-
-                p.BeginPath();
-                p.MoveTo(new Vector2(6, 15));
-                p.LineTo(new Vector2(13, 21));
-                p.LineTo(new Vector2(20, 15));
-                p.Stroke();
-            }
-
-            private static void DrawSnowflake(Painter2D p)
-            {
-                Vector2 center = new(13, 13);
-                for (int i = 0; i < 3; i++)
-                {
-                    float angle = i * 60f * Mathf.Deg2Rad;
-                    Vector2 dir = new(Mathf.Cos(angle), Mathf.Sin(angle));
-                    p.BeginPath();
-                    p.MoveTo(center - dir * 9f);
-                    p.LineTo(center + dir * 9f);
-                    p.Stroke();
-                }
-            }
-
-            private static void DrawFood(Painter2D p)
-            {
-                p.BeginPath();
-                p.Arc(new Vector2(13, 13), 8f, new Angle(30, AngleUnit.Degree), new Angle(330, AngleUnit.Degree));
-                p.LineTo(new Vector2(13, 13));
-                p.ClosePath();
-                p.Fill();
-            }
-
-            private static void DrawDroplet(Painter2D p)
-            {
-                p.BeginPath();
-                p.MoveTo(new Vector2(13, 3));
-                p.BezierCurveTo(new Vector2(19, 11), new Vector2(21, 15), new Vector2(21, 17.5f));
-                p.Arc(new Vector2(13, 17.5f), 8f, new Angle(0, AngleUnit.Degree), new Angle(180, AngleUnit.Degree));
-                p.BezierCurveTo(new Vector2(5, 15), new Vector2(7, 11), new Vector2(13, 3));
-                p.ClosePath();
-                p.Fill();
-            }
-
-            private static void DrawCuffs(Painter2D p)
-            {
-                p.BeginPath();
-                p.Arc(new Vector2(9, 15), 4.2f, new Angle(0, AngleUnit.Degree), new Angle(360, AngleUnit.Degree));
-                p.Stroke();
-
-                p.BeginPath();
-                p.Arc(new Vector2(18, 15), 4.2f, new Angle(0, AngleUnit.Degree), new Angle(360, AngleUnit.Degree));
-                p.Stroke();
-
-                p.BeginPath();
-                p.MoveTo(new Vector2(12.6f, 15));
-                p.LineTo(new Vector2(14.4f, 15));
-                p.Stroke();
+                _box.style.borderTopColor = color;
+                _box.style.borderRightColor = color;
+                _box.style.borderBottomColor = color;
+                _box.style.borderLeftColor = color;
             }
         }
     }

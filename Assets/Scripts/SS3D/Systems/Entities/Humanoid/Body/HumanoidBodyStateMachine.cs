@@ -27,6 +27,12 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         [SyncVar(OnChange = nameof(SyncAimPitch))]
         private float _aimPitch;
 
+        /// <summary>Synced combat aim yaw (degrees). Used for melee connect-frame raycasts.</summary>
+        public float AimYaw => _aimYaw;
+
+        /// <summary>Synced combat aim pitch (degrees). Used for melee connect-frame raycasts.</summary>
+        public float AimPitch => _aimPitch;
+
         [SyncVar(OnChange = nameof(SyncMovementSpeed))]
         private float _movementSpeed;
 
@@ -35,6 +41,9 @@ namespace SS3D.Systems.Entities.Humanoid.Body
 
         [SyncVar(OnChange = nameof(SyncInjuredArmRight))]
         private float _injuredArmRight;
+
+        [SyncVar(OnChange = nameof(SyncInjuredLeg))]
+        private float _injuredLeg;
 
         [SyncVar(OnChange = nameof(SyncTriggerSequence))]
         private byte _triggerSequence;
@@ -158,14 +167,54 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             PublishSnapshot();
         }
 
+        public void SetMirrorUpperBody(bool mirror)
+        {
+            if (_snapshot.MirrorUpperBody == mirror)
+            {
+                return;
+            }
+
+            _snapshot.MirrorUpperBody = mirror;
+            PublishSnapshot();
+        }
+
         public void SetInjuredArms(float left, float right)
         {
-            _injuredArmLeft = Mathf.Clamp01(left);
-            _injuredArmRight = Mathf.Clamp01(right);
-            if (IsServer)
+            // SyncVars are server-authoritative. Assigning on a pure client spam-logs
+            // FishNet "Cannot complete operation as server when server is not active."
+            if (!IsServer)
             {
-                ApplyLocalSnapshot();
+                return;
             }
+
+            float clampedLeft = Mathf.Clamp01(left);
+            float clampedRight = Mathf.Clamp01(right);
+            if (Mathf.Approximately(_injuredArmLeft, clampedLeft)
+                && Mathf.Approximately(_injuredArmRight, clampedRight))
+            {
+                return;
+            }
+
+            _injuredArmLeft = clampedLeft;
+            _injuredArmRight = clampedRight;
+            ApplyLocalSnapshot();
+        }
+
+        public void SetInjuredLeg(float injuredLeg)
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            float clamped = Mathf.Clamp01(injuredLeg);
+            if (Mathf.Approximately(_injuredLeg, clamped))
+            {
+                return;
+            }
+
+            _injuredLeg = clamped;
+            ApplyLocalSnapshot();
         }
 
         public void SetDragging(bool isDragging)
@@ -214,9 +263,10 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         }
 
         [ServerRpc]
-        public void CmdFireTrigger(AnimationTriggerId trigger)
+        public void CmdFireTrigger(AnimationTriggerId trigger, byte attackVariant)
         {
             _snapshot.ActiveTrigger = trigger;
+            _snapshot.AttackVariant = (byte)(attackVariant & 0x3);
             _triggerSequence++;
             ApplyLocalSnapshot();
         }
@@ -376,6 +426,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             _snapshot.AimPitch = _aimPitch;
             _snapshot.InjuredArmLeft = _injuredArmLeft;
             _snapshot.InjuredArmRight = _injuredArmRight;
+            _snapshot.InjuredLeg = _injuredLeg;
             _orchestrator?.ApplySnapshot(_snapshot);
             OnSnapshotChanged?.Invoke(_snapshot);
         }
@@ -383,7 +434,13 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         private void RebuildSnapshotFromSyncVars()
         {
             _snapshot = BodyAnimationSnapshot.Unpack(
-                _packedSnapshot, _aimYaw, _aimPitch, _movementSpeed, _injuredArmLeft, _injuredArmRight);
+                _packedSnapshot,
+                _aimYaw,
+                _aimPitch,
+                _movementSpeed,
+                _injuredArmLeft,
+                _injuredArmRight,
+                _injuredLeg);
 
             if (TryGetComponent(out Ragdoll ragdoll) && ragdoll.IsKnockedDown)
             {
@@ -427,6 +484,12 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         }
 
         private void SyncInjuredArmRight(float prev, float next, bool asServer)
+        {
+            if (Mathf.Approximately(prev, next)) return;
+            RebuildSnapshotFromSyncVars();
+        }
+
+        private void SyncInjuredLeg(float prev, float next, bool asServer)
         {
             if (Mathf.Approximately(prev, next)) return;
             RebuildSnapshotFromSyncVars();

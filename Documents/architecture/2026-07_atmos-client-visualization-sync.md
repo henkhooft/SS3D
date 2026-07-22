@@ -1,6 +1,6 @@
 > Implements: Documents/design/atmospherics.md §10 (gas rendering — client visibility)
 > Touches systems: atmospherics, rendering, networking-session
-> Status: planned
+> Status: shipped (Phase 1: dirty-chunk sync; AOI, bandwidth caps, and late-join bootstrap deferred to Phase 2)
 
 # Atmospherics Client Visualization Sync
 
@@ -8,17 +8,22 @@
 
 Make gas scatter, plasma glow, heat distortion, and fire visuals visible to **pure clients**, not only the host/server process. Simulation stays server-authoritative; clients receive enough grid visualization data to feed the existing GPU renderer.
 
-## Current state
+## Current state (post Phase 1)
 
 | Piece | Server / host | Pure client |
 |---|---|---|
 | `AtmosSimulation` tick | yes | no |
 | `AtmosVisualizationBridge.PublishSnapshot` | yes (after each tick) | no |
 | `AtmosGpuUploader` atlas build | yes | no |
+| `AtmosDirtyChunkTracker` + `AtmosChunkPatchBuilder` | yes (after each tick) | no |
+| `AtmosChunkPatch` `ObserversRpc` | sends dirty chunks | receives dirty chunks |
+| `AtmosClientVisualizationBridge` / `AtmosClientAtlas` | n/a | yes (builds atlas from patches) |
 | `AtmosCamera` render request | yes | yes (on `PlayerCamera.prefab`) |
-| `AtmosRendererFeature` draw | yes (when snapshot present) | no (empty `AtmosRenderContext`) |
+| `AtmosRendererFeature` draw | yes (when snapshot present) | yes (once at least one chunk patch has arrived) |
 
-The render path is already client-ready: `AtmosCamera` → `AtmosRenderContext` → `AtmosRendererFeature`. The missing layer is **network transport** from the authoritative snapshot to each client.
+The render path was already client-ready: `AtmosCamera` → `AtmosRenderContext` → `AtmosRendererFeature`. Phase 1 adds the missing **network transport** layer: `AtmosSubSystem` now tracks which 16×16 chunks changed meaningfully each tick (`AtmosDirtyChunkTracker`), builds a small per-chunk payload (`AtmosChunkPatchBuilder`), and broadcasts it to observers (`ObserversRpc`). Pure clients apply patches into their own `AtmosClientAtlas` (via `AtmosClientVisualizationBridge`) and feed the same `AtmosRenderContext.SetSnapshot` path the host already used.
+
+Known Phase-1 limitation: a client that joins after gas state has stabilized only sees chunks that change again after it connects (no AOI or late-join bootstrap yet — see Phase 2).
 
 ## Why a quick fix is not enough
 
@@ -55,12 +60,12 @@ Thin sync layer on top of existing types — no renderer rewrite.
 
 ## Phases
 
-| Phase | Deliverable |
-|---|---|
-| 0 | Effort doc + system-map gap noted (this doc) |
-| 1 | Dirty-chunk tracking on server; client bridge applies patches; visuals work in dedicated-server + client |
-| 2 | AOI-scoped sends, bandwidth cap, late-join bootstrap |
-| 3 | Optional: active-region-only atlas bounds, delta encoding |
+| Phase | Deliverable | Status |
+|---|---|---|
+| 0 | Effort doc + system-map gap noted (this doc) | done |
+| 1 | Dirty-chunk tracking on server; client bridge applies patches; visuals work in dedicated-server + client | done |
+| 2 | AOI-scoped sends, bandwidth cap, late-join bootstrap | planned |
+| 3 | Optional: active-region-only atlas bounds, delta encoding | planned |
 
 ## Out of scope
 
@@ -69,9 +74,22 @@ Thin sync layer on top of existing types — no renderer rewrite.
 - Generic VFX framework (particles, decals unrelated to turf grid)
 - Liquid/solid phase rendering (separate future work per design §10)
 
-## Documented fork deviation (until shipped)
+## Documented fork deviation (until Phase 2)
 
-- Atmospherics VFX is **host/server-only** in multiplayer. Pure clients see no fog, fire, or plasma glow despite `AtmosRendererFeature` and `AtmosCamera` being wired.
+- Pure clients that join **after** gas state has settled won't see already-stable atmos visuals until the next meaningful change ticks a chunk dirty again — there's no late-join bootstrap or AOI scoping yet (Phase 2). Newly-changing chunks (fires, breaches, venting) sync immediately.
+
+## Verification
+
+- EditMode: `Assets/Scripts/Tests/EditMode/Atmospherics/Atmos{DirtyChunkTracker,ChunkPatchBuilder,ChunkPatchSerializer,ClientAtlas}Tests.cs`.
+- Multiplayer test harness (real headless server + pure-client process, not just EditMode):
+  `Testing/multiplayer/scenarios/atmos-client-sync{,-client}.txt`, run via
+  `./Testing/multiplayer/run_smoketest.sh atmos-client-sync`. The client embarks, forces a fresh
+  dirty chunk with the new `atmosdebug heat` console command (headless equivalent of
+  `AtmosDebugController`'s GUI buttons), then asserts its own `AtmosRenderContext` snapshot is
+  valid with `atmosclientstatus assert` — a real regression check that a pure client receives
+  and applies chunk patches, not just that the render path compiles. Wired into
+  `develop-release.yml` and `multiplayer-smoke-test.yml`. See
+  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md).
 
 ## Related docs
 
@@ -79,3 +97,5 @@ Thin sync layer on top of existing types — no renderer rewrite.
 - Prior effort: [2026-07_atmos-ecs-foundation.md](2026-07_atmos-ecs-foundation.md)
 - Design (read-only): [atmospherics.md](../design/atmospherics.md) §10
 - [rendering.md](systems/rendering.md) — `AtmosRenderContext` / `AtmosRendererFeature`
+- [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — headless
+  server+client regression coverage (`atmos-client-sync` scenario)

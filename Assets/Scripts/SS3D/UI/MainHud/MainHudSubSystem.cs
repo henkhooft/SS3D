@@ -6,13 +6,18 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Screens;
 using SS3D.UI.MachineInterface;
 using SS3D.UI.MainHud.Components;
 using SS3D.UI.MachineInterface.Components;
@@ -29,13 +34,15 @@ namespace SS3D.UI.MainHud
     /// <para>
     /// Hidden until a local spawned body exists during an in-game round; hidden again when the round leaves
     /// Ongoing/Ending (same spawn/round gate idea as <c>GameScreensController</c>). Also suppressed while a
-    /// diegetic machine panel is open — visibility authority stays here (observes
-    /// <see cref="MachineInterfaceSubSystem"/>); machine UI must not call into Main HUD.
+    /// diegetic machine panel or the map editor is open — visibility authority stays here (observes
+    /// <see cref="MachineInterfaceSubSystem"/> / <see cref="MapEditorSubSystem"/>); those UIs must not call
+    /// into Main HUD.
     /// </para>
     /// <para>
-    /// The alert icon stack has no hunger/thirst/restrained/pressure/radiation trackers to bind to yet - it
-    /// always reports the all-clear <see cref="AlertStackState"/> until those systems exist, mirroring how
-    /// <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/> itself was built ahead of its own hookup.
+    /// The alert icon stack is live for health hazards (Bleeding, Dying, CardiacArrest, LowOxygen) via
+    /// <see cref="HumanHealthController.SnapshotChanged"/> and <see cref="HealthAlertStackMapper"/>. Atmos /
+    /// hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist —
+    /// F4 / <c>alertstack</c> remain a full-stack debug override when set.
     /// </para>
     /// <para>
     /// Self-bootstraps the same way <c>ScreenEffectsSubSystem</c> does, instead of living on a scene/prefab
@@ -71,16 +78,23 @@ namespace SS3D.UI.MainHud
         [SerializeField] private StyleSheet _equipmentGridStyle;
         [SerializeField] private StyleSheet _inventorySlotStyle;
         [SerializeField] private MainHudIconSet _icons;
+        [SerializeField] private AlertIconSet _alertIcons;
 
         private MainHudView _view;
+        private AlertStackState? _debugAlertOverride;
         private GameObject _localPlayer;
+        private HumanHealthController _healthController;
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
+        private IntentType? _cachedIntent;
         private Hand _cachedSelectedHand;
         private bool _machineUiOpen;
         private bool _subscribedToMachineUi;
         private MachineInterfaceSubSystem _machineUi;
+        private bool _mapEditorOpen;
+        private bool _subscribedToMapEditor;
+        private MapEditorSubSystem _mapEditor;
 
         protected override void OnAwake()
         {
@@ -99,6 +113,7 @@ namespace SS3D.UI.MainHud
 
             BuildView();
             InputInterface.RegisterDocument(_document);
+            MeleeConnectFeedback.LocalConnectHitLanded += HandleMeleeConnectHitLanded;
 
             // Subscribe in OnAwake (same as PlayerCameraSubSystem): on pure clients the mind sync
             // often fires LocalPlayerObjectChanged before SubSystem OnStart would run.
@@ -153,6 +168,7 @@ namespace SS3D.UI.MainHud
             _equipmentGridStyle = catalog.EquipmentGridStyle;
             _inventorySlotStyle = catalog.InventorySlotStyle;
             _icons = catalog.Icons;
+            _alertIcons = catalog.AlertIcons;
             ApplyDocumentPanelSettings(catalog.PanelSettings);
         }
 
@@ -177,12 +193,15 @@ namespace SS3D.UI.MainHud
         {
             base.OnStart();
             EnsureMachineUiSubscription();
+            EnsureMapEditorSubscription();
             TryBindExistingLocalPlayer();
         }
 
         protected override void OnDestroyed()
         {
+            MeleeConnectFeedback.LocalConnectHitLanded -= HandleMeleeConnectHitLanded;
             UnsubscribeMachineUi();
+            UnsubscribeMapEditor();
             UnbindLocalPlayer();
             _view?.Detach();
             InputInterface.UnregisterDocument(_document);
@@ -192,6 +211,7 @@ namespace SS3D.UI.MainHud
         private void Update()
         {
             EnsureMachineUiSubscription();
+            EnsureMapEditorSubscription();
 
             // Late-joining clients can miss one-shot spawn events (SyncList Complete is ignored in
             // EntitySubSystem; mind may sync before Mind.player is linked). Keep trying until bound.
@@ -206,6 +226,95 @@ namespace SS3D.UI.MainHud
             }
 
             RefreshActiveHand();
+            RefreshIntent();
+            RefreshZoneReticle();
+        }
+
+        private void RefreshZoneReticle()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            bool visible = _localPlayer != null
+                && IsRoundInGame()
+                && !_machineUiOpen
+                && _intentProvider != null
+                && _intentProvider.CurrentIntent == IntentType.Harm
+                && !(SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed);
+
+            Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
+            string zoneLabel = string.Empty;
+            bool inRange = false;
+
+            // Do not gate on IsPointerOverInterface — leftover uGUI canvases can keep it true
+            // while the pointer is still over the world (same pitfall as StoragePanel world-drop).
+            if (visible
+                && SubSystems.TryGet(out CameraSubSystem cameras)
+                && cameras.PlayerCamera != null
+                && cameras.PlayerCamera.TryGetComponent(out Camera camera))
+            {
+                Ray ray = camera.ScreenPointToRay(screenPosition);
+                HumanHealthController selfHealth = _localPlayer != null
+                    ? _localPlayer.GetComponentInChildren<HumanHealthController>()
+                    : null;
+                if (ZoneTargetResolver.TryResolveHoverZone(
+                        ray,
+                        selfHealth,
+                        out BodyZone zone,
+                        out _,
+                        out _,
+                        out Collider zoneCollider))
+                {
+                    zoneLabel = ZoneTargetResolver.GetReticleLabel(zone);
+                    inRange = IsHoveredZoneInRange(zoneCollider);
+                }
+            }
+
+            TryGetSelectedHandRecovery(out float lockReadyProgress01, out bool recharging);
+            _view.ApplyZoneReticle(
+                visible,
+                screenPosition,
+                zoneLabel,
+                inRange,
+                lockReadyProgress01,
+                recharging);
+        }
+
+        private void HandleMeleeConnectHitLanded()
+        {
+            _view?.NotifyZoneReticleConnectHit();
+        }
+
+        private bool TryGetSelectedHandRecovery(out float readyProgress01, out bool recharging)
+        {
+            readyProgress01 = 1f;
+            recharging = false;
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null || !hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            {
+                return false;
+            }
+
+            recharging = tracker.IsRecovering;
+            readyProgress01 = tracker.ReadyProgress01;
+            return true;
+        }
+
+        private bool IsHoveredZoneInRange(Collider zoneCollider)
+        {
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
+            }
+
+            return ZoneTargetResolver.IsMeleeZoneReachInRange(
+                hand.InteractionOrigin,
+                hand.GetInteractionRange(),
+                zoneCollider);
         }
 
         private void BuildView()
@@ -216,7 +325,7 @@ namespace SS3D.UI.MainHud
                 _equipmentGridStyle, _inventorySlotStyle,
             };
 
-            _view = new MainHudView(styleSheets, _icons);
+            _view = new MainHudView(styleSheets, _icons, _alertIcons);
             _view.IntentToggleRequested += HandleIntentToggleRequested;
             _view.HandSelectedRequested += HandleHandSelectedRequested;
             _view.GearSlotClicked += HandleGearSlotClicked;
@@ -231,8 +340,89 @@ namespace SS3D.UI.MainHud
             _view.HandDragMoved += HandleHudDragMoved;
             _view.HandDragEnded += HandleHudDragEnded;
             _view.Attach(_document.rootVisualElement);
-            _view.SetAlertState(default);
+            RefreshAlerts();
         }
+
+        /// <summary>
+        /// Current debug override, if any - read by the <c>alertstack</c> console command so setting one
+        /// hazard doesn't wipe severities the debug menu or a previous command call already set.
+        /// </summary>
+        public AlertStackState DebugAlertOverride => _debugAlertOverride ?? default;
+
+        /// <summary>
+        /// Dev-only hook for <c>AlertStackDebugMenuView</c> (F4) and the <c>alertstack</c> console command to
+        /// force a full <see cref="AlertStackState"/> (replaces live health mapping while set). Clear to
+        /// re-apply health-driven hazards again.
+        /// </summary>
+        public void SetDebugAlertOverride(AlertStackState state)
+        {
+            _debugAlertOverride = state;
+            _view?.SetAlertState(state);
+        }
+
+        public void ClearDebugAlertOverride()
+        {
+            _debugAlertOverride = null;
+            RefreshAlerts();
+        }
+
+        /// <summary>
+        /// Pushes the debug override when set; otherwise maps the bound player's health snapshot onto
+        /// health hazard fields (other hazards stay <see cref="AlertSeverity.None"/>).
+        /// </summary>
+        private void RefreshAlerts()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            if (_debugAlertOverride.HasValue)
+            {
+                _view.SetAlertState(_debugAlertOverride.Value);
+                return;
+            }
+
+            if (_healthController == null)
+            {
+                _view.SetAlertState(default);
+                return;
+            }
+
+            _view.SetAlertState(ToAlertStackState(
+                HealthAlertStackMapper.Compute(_healthController.Snapshot)));
+        }
+
+        private void HandleHealthSnapshotChanged(HealthSnapshot snapshot)
+        {
+            if (_debugAlertOverride.HasValue)
+            {
+                return;
+            }
+
+            _view?.SetAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+        }
+
+        /// <summary>
+        /// Copies health signals into an <see cref="AlertStackState"/>; non-health fields stay None.
+        /// </summary>
+        private static AlertStackState ToAlertStackState(HealthAlertStackMapper.HealthAlertSignals signals)
+        {
+            return new AlertStackState
+            {
+                Bleeding = ToAlertSeverity(signals.Bleeding),
+                Dying = ToAlertSeverity(signals.Dying),
+                CardiacArrest = ToAlertSeverity(signals.CardiacArrest),
+                LowOxygen = ToAlertSeverity(signals.LowOxygen),
+            };
+        }
+
+        private static AlertSeverity ToAlertSeverity(HealthAlertStackMapper.Severity severity) => severity switch
+        {
+            HealthAlertStackMapper.Severity.Warning => AlertSeverity.Warning,
+            HealthAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
+            _ => AlertSeverity.None,
+        };
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
@@ -328,10 +518,17 @@ namespace SS3D.UI.MainHud
         private void BindLocalPlayer(GameObject playerObject)
         {
             _localPlayer = playerObject;
+            _healthController = _localPlayer.GetComponent<HumanHealthController>()
+                ?? _localPlayer.GetComponentInChildren<HumanHealthController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
             _hands = _localPlayer.GetComponentInChildren<Hands>();
             _intentProvider = _localPlayer.GetComponent<IIntentProvider>()
                 ?? _localPlayer.GetComponentInChildren<IIntentProvider>();
+
+            if (_healthController != null)
+            {
+                _healthController.SnapshotChanged += HandleHealthSnapshotChanged;
+            }
 
             if (_inventory != null)
             {
@@ -348,10 +545,16 @@ namespace SS3D.UI.MainHud
 
             RefreshEquipmentAndGear();
             RefreshIntent();
+            RefreshAlerts();
         }
 
         private void UnbindLocalPlayer()
         {
+            if (_healthController != null)
+            {
+                _healthController.SnapshotChanged -= HandleHealthSnapshotChanged;
+            }
+
             if (_inventory != null)
             {
                 _inventory.OnInventoryContainerAdded -= HandleInventoryChanged;
@@ -366,10 +569,13 @@ namespace SS3D.UI.MainHud
             }
 
             _localPlayer = null;
+            _healthController = null;
             _inventory = null;
             _hands = null;
             _intentProvider = null;
+            _cachedIntent = null;
             _cachedSelectedHand = null;
+            RefreshAlerts();
         }
 
         private void EnsureMachineUiSubscription()
@@ -417,13 +623,58 @@ namespace SS3D.UI.MainHud
             ApplyVisibility();
         }
 
+        private void EnsureMapEditorSubscription()
+        {
+            if (_subscribedToMapEditor)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out MapEditorSubSystem mapEditor))
+            {
+                return;
+            }
+
+            _mapEditor = mapEditor;
+            _mapEditor.EditorOpened += HandleMapEditorOpened;
+            _mapEditor.EditorClosed += HandleMapEditorClosed;
+            _subscribedToMapEditor = true;
+            _mapEditorOpen = _mapEditor.IsActive;
+            ApplyVisibility();
+        }
+
+        private void UnsubscribeMapEditor()
+        {
+            if (!_subscribedToMapEditor || _mapEditor == null)
+            {
+                return;
+            }
+
+            _mapEditor.EditorOpened -= HandleMapEditorOpened;
+            _mapEditor.EditorClosed -= HandleMapEditorClosed;
+            _mapEditor = null;
+            _subscribedToMapEditor = false;
+        }
+
+        private void HandleMapEditorOpened()
+        {
+            _mapEditorOpen = true;
+            ApplyVisibility();
+        }
+
+        private void HandleMapEditorClosed()
+        {
+            _mapEditorOpen = false;
+            ApplyVisibility();
+        }
+
         /// <summary>
-        /// Single visibility gate: spawn/round eligibility and machine-UI suppress.
+        /// Single visibility gate: spawn/round eligibility and modal suppress (machine UI / map editor).
         /// Call instead of bare show so catch-up cannot re-show chrome over an open panel.
         /// </summary>
         private void ApplyVisibility()
         {
-            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen;
+            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen;
             _view?.SetVisible(shouldShow);
         }
 
@@ -769,7 +1020,18 @@ namespace SS3D.UI.MainHud
 
         private void RefreshIntent()
         {
+            if (_view == null)
+            {
+                return;
+            }
+
             IntentType intent = _intentProvider?.CurrentIntent ?? IntentType.Help;
+            if (_cachedIntent == intent)
+            {
+                return;
+            }
+
+            _cachedIntent = intent;
             _view.SetIntent(intent);
         }
 
@@ -1011,6 +1273,27 @@ namespace SS3D.UI.MainHud
                 };
             }
 
+            if (_alertIcons.Fire == null)
+            {
+                _alertIcons = new AlertIconSet
+                {
+                    Fire = LoadAlertSprite("hot-fire"),
+                    Hot = LoadAlertSprite("hot-thermometer"),
+                    Cold = LoadAlertSprite("cold-thermometer"),
+                    LowPressure = LoadAlertSprite("pressure-low"),
+                    HighPressure = LoadAlertSprite("pressure-high"),
+                    Radiation = LoadAlertSprite("radiation-trefoil"),
+                    Hunger = LoadAlertSprite("hunger"),
+                    Thirst = LoadAlertSprite("thirst-droplet"),
+                    Pulling = LoadAlertSprite("pulling"),
+                    Restrained = LoadAlertSprite("restrained-cuffs"),
+                    LowOxygen = LoadAlertSprite("low-oxygen"),
+                    Dying = LoadAlertSprite("dying-heartbeat"),
+                    Bleeding = LoadAlertSprite("bleeding-droplet"),
+                    CardiacArrest = LoadAlertSprite("cardiac-arrest"),
+                };
+            }
+
             if (_document != null && _document.panelSettings == null)
             {
                 _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(
@@ -1022,6 +1305,12 @@ namespace SS3D.UI.MainHud
         {
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
                 $"{MainHudAssetPaths.IconRoot}{fileName}.png");
+        }
+
+        private static Sprite LoadAlertSprite(string fileName)
+        {
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(
+                $"{MainHudAssetPaths.AlertIconRoot}{fileName}.png");
         }
 #endif
     }

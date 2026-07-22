@@ -8,6 +8,14 @@ namespace SS3D.Systems.Entities.Humanoid
     /// </summary>
     public class HumanoidIkController : MonoBehaviour
     {
+        private const int UpperBodyLayer = 1;
+        private static readonly int[] AttackSwingStateHashes =
+        {
+            Animator.StringToHash("Attack Swing"),
+            Animator.StringToHash("Attack Swing Downward"),
+            Animator.StringToHash("Attack Swing Backhand"),
+        };
+
         [SerializeField] private HumanoidRigReferences _rig;
         [SerializeField] private Transform _lookAtTarget;
         [SerializeField] private float _headLookWeight = 0.65f;
@@ -20,7 +28,6 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private bool _combatLookActive;
         private float _meleeAttackIkBlend;
-        private float _meleeAttackIkBlendTarget;
         private float _aimYaw;
         private float _aimPitch;
         private bool _hasWorldAimPoint;
@@ -48,21 +55,6 @@ namespace SS3D.Systems.Entities.Humanoid
                 _hasWorldAimPoint = false;
                 _hasSmoothedLookTarget = false;
                 _meleeAttackIkBlend = 0f;
-                _meleeAttackIkBlendTarget = 0f;
-            }
-        }
-
-        /// <summary>
-        /// While a melee swing plays, torso look-at eases out; head keeps aiming at the target.
-        /// Upper-body mask is arms-only so the swing clip cannot counter-rotate the head.
-        /// </summary>
-        public void SetMeleeAttackActive(bool active)
-        {
-            _meleeAttackIkBlendTarget = active ? 1f : 0f;
-            if (active)
-            {
-                // Snappy suppress at swing start; release is smoothed in OnAnimatorIK.
-                _meleeAttackIkBlend = 1f;
             }
         }
 
@@ -118,9 +110,11 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
+            // Swing clip owns spine/chest (upper-body mask); suppress torso look-at while Attack Swing plays.
+            float swingTarget = IsUpperBodyAttackSwing() ? 1f : 0f;
             _meleeAttackIkBlend = Mathf.MoveTowards(
                 _meleeAttackIkBlend,
-                _meleeAttackIkBlendTarget,
+                swingTarget,
                 Time.deltaTime * _meleeIkBlendLerp);
 
             Vector3 desiredTarget = _hasWorldAimPoint
@@ -144,13 +138,39 @@ namespace SS3D.Systems.Entities.Humanoid
                 _lookAtTarget.position = _smoothedLookTarget;
             }
 
-            // SetLookAtWeight(global, body, head).
-            // Swing clip is arms-only (head masked out) — keep head aiming at the target while
-            // torso look-at eases out so Mixamo counter-rotation does not yank the head.
+            // SetLookAtWeight(global, body, head). Head stays on aim; body weight eases out during swing.
             float bodyWeight = Mathf.Lerp(_torsoLookWeight, 0f, _meleeAttackIkBlend);
-            float headWeight = _headLookWeight;
-            _animator.SetLookAtWeight(1f, bodyWeight, headWeight);
+            _animator.SetLookAtWeight(1f, bodyWeight, _headLookWeight);
             _animator.SetLookAtPosition(_smoothedLookTarget);
+        }
+
+        private bool IsUpperBodyAttackSwing()
+        {
+            if (_animator.layerCount <= UpperBodyLayer)
+            {
+                return false;
+            }
+
+            if (IsAttackSwingState(_animator.GetCurrentAnimatorStateInfo(UpperBodyLayer)))
+            {
+                return true;
+            }
+
+            return _animator.IsInTransition(UpperBodyLayer)
+                && IsAttackSwingState(_animator.GetNextAnimatorStateInfo(UpperBodyLayer));
+        }
+
+        private static bool IsAttackSwingState(AnimatorStateInfo info)
+        {
+            for (int i = 0; i < AttackSwingStateHashes.Length; i++)
+            {
+                if (info.shortNameHash == AttackSwingStateHashes[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Vector3 AimDirection(float yawDegrees, float pitchDegrees)

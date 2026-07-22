@@ -12,7 +12,7 @@ The first server-side system in this pass, and a genuinely different kind of des
 
 ## 2. Job list
 
-Grouped by department (Command, Security, Engineering, Medical, Science, Cargo, Service, Civilian) — pure information architecture, not engine-dependent, so it's kept as-is. Each entry shows the job name, department color (muted, matching the existing status-color palette), and a slot count (e.g. "Engineer — 2/4", "Captain — 0/1").
+Grouped by department (Command, Security, Engineering, Medical, Science, Cargo, Service, Civilian) — pure information architecture, not engine-dependent, so it's kept as-is. Each entry shows the job name, department color (muted, matching the existing status-color palette), and a slot count (e.g. "Engineer — 2/4", "Captain — 0/1"). Each job record also carries an access-level-set field, populated from id/access's job→access table (`id-access.md` §5) the moment a job resolves — lobby reads this table, it doesn't author it.
 
 **Locked jobs stay visible, not hidden.** A playtime-gated job (e.g. "Chief Engineer — requires 10 hours as Engineer") shows grayed out with the real requirement stated, rather than disappearing from the list entirely — the same "real, visible reason" rule armor's absorption values and the hacking interface's failure states already follow. A new player should be able to see the whole game's shape, including the parts they can't access yet, not discover job tiers exist by their absence.
 
@@ -36,7 +36,7 @@ A separate section, visually distinct from the job list — this is an eligibili
 
 ## 5. Resolution — one pass, not a scramble
 
-At round start — timer expiry, or an admin/host override (touches in-round admin tools, a separate pass) — every player's preference list resolves server-side in a single allocation pass: try each player's highest-ranked still-open job, respecting slot caps, moving down their list as needed.
+At round start — timer expiry, or an admin/host override (`admin-tools.md` §6) — every player's preference list resolves server-side in a single allocation pass: try each player's highest-ranked still-open job, respecting slot caps, moving down their list as needed.
 
 **A guaranteed fallback role** (Assistant/Civilian-equivalent) exists specifically so nobody comes out of resolution unable to join at all — the one hard guarantee the algorithm has to honor.
 
@@ -62,11 +62,12 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 
 | Element | Touches existing / needed system |
 |---|---|
-| Job unlock/playtime gating | Persistence & accounts (cross-cutting infra — not designed here) |
+| Job unlock/playtime gating | Player meta layer (`persistence-save.md` §5) |
 | Gamemode-dependent job/antag availability | Round config & gamemode selection (separate pass, assumed to have already run) |
-| Resolution trigger override | In-round admin tools (separate pass) |
+| Resolution trigger override | `admin-tools.md` §6 |
 | Observer/spectate entry | Deferred ghost/observer UI (`main-hud.md` §13) |
 | Character identity | Full appearance/loadout customization (separate pass, not designed here) |
+| Spawn resolution | Creative mode's spawn-point authoring (`creative-mode.md` §8) — job-tagged points on a drawn map, previously unaddressed/assumed infra |
 
 ## 10. Worked examples
 
@@ -91,9 +92,9 @@ This screen doesn't inherit main HUD's minimal-permanent-chrome rule, and that's
 ## 11. Out of scope for this pass
 
 - Round configuration & gamemode selection itself (separate pass — this doc assumes a gamemode has already been chosen upstream)
-- In-round admin tools, including manual override of round start or resolution (separate pass)
+- The admin toolkit itself, beyond the resolution-override trigger point — designed in `admin-tools.md` §6
 - Full character appearance/loadout customization (separate pass)
 - The exact fairness/weighting algorithm inside preference resolution (a balancing/backend decision, not a design one)
-- The persistence/accounts system underlying playtime-gated jobs (cross-cutting infra, assumed to exist)
+- Real authentication underlying a stable per-player key — designed in `player-accounts.md` (`persistence-save.md` §5 treats it as a black box the same way this doc's job-list data is read, not authored)
 - The observer/ghost UI itself (already deferred in `main-hud.md` §13 — this doc only adds the entry point)
 

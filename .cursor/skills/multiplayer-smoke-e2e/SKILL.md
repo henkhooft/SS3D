@@ -70,8 +70,9 @@ Skip build only when the user says builds are current, or passes `--skip-build`.
 ./Testing/multiplayer/tools/triage_run.sh <RUN_ID|latest>
 ```
 
-Follow **triage-multiplayer-smoke** order: `script_failed` → signals → json errors → real
-unity exceptions → known_noise. Dig with `jq` / small `rg` windows only.
+Follow **triage-multiplayer-smoke** order: `script_failed` → signals → json errors →
+`unity_bad_patterns` (denylist hard-fail) → real unity exceptions → known_noise.
+Dig with `jq` / small `rg` windows only.
 
 If the run **PASSED**: stop — report PASS + run id. No fix loop.
 

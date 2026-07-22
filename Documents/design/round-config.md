@@ -38,13 +38,15 @@ What crosses over to lobby is narrower: a resolved set of active antagonist *cat
 
 ## 5. Admin-facing config screen
 
-The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, precondition editor (min/max player count) — same visual language as the rest of this project, explicitly not the classic browser-rendered checkbox table. Settings persist across rounds — this ties into the persistence/accounts cross-cutting infra already flagged as separate, not-designed-here in `lobby.md` §11.
+The pool (gamemodes, then maps) shown as a list: enable toggle, weight field, precondition editor (min/max player count) — same visual language as the rest of this project, explicitly not the classic browser-rendered checkbox table. Settings persist across rounds as server meta (`persistence-save.md` §4) — this doc authors the pool contents, that doc is what actually keeps them on disk between rounds.
 
 **A read-only history log** — the last N rounds' drawn mode, drawn map, and whether fallback triggered — sits alongside the pool editor. Real, inspectable data an admin tuning weights over time can actually look at, rather than adjusting numbers against a black box. Same "give real information instead of a hidden mechanism" instinct that's run through this entire project, just applied to server tuning instead of player-facing systems.
 
+**Map pool entries get a spawn-coverage check.** Before an admin enables a saved map, the config screen checks that map's tagged spawn points (`creative-mode.md` §8) against the currently active job list and flags any job with zero coverage — real, inspectable information surfaced before a round can fail at resolution, not a crew member discovering mid-round-start that their job has nowhere to spawn.
+
 ## 6. What this doesn't decide
 
-- **Which specific crew member becomes which antag** within a chosen gamemode. That's the gamemode's own runtime logic, and it varies enormously by mode — the same way this project treats the material silo or the R&D tech tree as existing systems it hooks into rather than redesigns, this doc treats "how a gamemode picks its antags from the eligible, opted-in crew" as that mode's business, not round config's.
+- **Which specific crew member becomes which antag** within a chosen gamemode. That's the gamemode's own runtime logic, and it varies enormously by mode — the same way this project treats the material silo or the R&D tech tree as existing systems it hooks into rather than redesigns, this doc treats "how a gamemode picks its antags from the eligible, opted-in crew" as that mode's business, not round config's — now designed in `antagonist-content.md` §2.
 - **Dynamic/threat-budget-style modes** — a meta-mode that spawns a scaling mix of threats against a budget rather than drawing one fixed gamemode. The pool-and-weight shape here could plausibly host that later as a more sophisticated pool entry, but it isn't designed as one now.
 - **Round length and end conditions.** That's `round-end summary & transition`'s territory — a separate, still-open pass.
 
@@ -58,10 +60,10 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 |---|---|
 | Antag-category handoff | Special/antagonist opt-in section (`lobby.md` §4) — this doc resolves what populates it |
 | Job-list deltas (rare) | Job list (`lobby.md` §2) |
-| Config persistence | Persistence & accounts, cross-cutting infra (not designed here) |
+| Config persistence | Server meta layer (`persistence-save.md` §4) |
 | Round-start / fallback logging | Server logging, cross-cutting infra (not designed here) |
 | Admin override of a draw | In-round admin tools (separate pass) |
-| Per-gamemode antag assignment | Gamemode's own runtime logic (not designed here) |
+| Per-gamemode antag assignment | `antagonist-content.md` §2 |
 
 ## 9. Worked examples
 
@@ -93,9 +95,9 @@ A light, explicitly advisory poll — map preference is the natural candidate, s
 ## 10. Out of scope for this pass
 
 - Round length and end conditions (`round-end summary & transition`, a separate still-open pass)
-- The per-gamemode antag-assignment algorithm — who specifically becomes what, within a chosen mode (that mode's own logic)
+- The exact antagonist-count ratio and eligibility exclusions within the assignment mechanism `antagonist-content.md` §2 now defines — a balancing/content decision, not this doc's
 - Dynamic/threat-budget-style meta-gamemodes (a plausible future extension of the pool shape, not designed as one here)
-- Persistence/accounts and server logging themselves (cross-cutting infra, assumed to exist)
+- Server logging itself, and real player-account authentication (`persistence-save.md` §5 covers the save-layer shape; `player-accounts.md` is where authentication itself is designed)
 - Exact weight values and precondition thresholds (a balancing pass, not a design decision)
-- The full admin toolkit — ahelp, player management, audit logging, stealth observation (`in-round admin tools`, a separate pass; this doc only needs a config screen, not the whole toolkit)
+- The full admin toolkit — ahelp, player management, audit logging, stealth observation — designed in `admin-tools.md`; this doc only needs its own config screen (§5), not the whole toolkit
 

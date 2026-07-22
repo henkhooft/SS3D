@@ -13,8 +13,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
         Furniture,
         WallMounts,
         WiresAndPipes,
-        Overlays,
+        FloorDecals,
         Items,
+        Scripts,
     }
 
     /// <summary>
@@ -33,8 +34,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 TileLayerCategory.Furniture => "Furniture",
                 TileLayerCategory.WallMounts => "Wall mounts",
                 TileLayerCategory.WiresAndPipes => "Wires and pipes",
-                TileLayerCategory.Overlays => "Overlays",
+                TileLayerCategory.FloorDecals => "Floor decals",
                 TileLayerCategory.Items => "Items",
+                TileLayerCategory.Scripts => "Scripts",
                 _ => category.ToString(),
             };
 
@@ -50,6 +52,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         public static bool IsItemsCategory(TileLayerCategory category) =>
             category == TileLayerCategory.Items;
+
+        public static bool IsFloorDecalsCategory(TileLayerCategory category) =>
+            category == TileLayerCategory.FloorDecals;
+
+        public static bool IsScriptsCategory(TileLayerCategory category) =>
+            category == TileLayerCategory.Scripts;
 
         public static IReadOnlyList<TileLayer> GetLayers(TileLayerCategory category) =>
             category switch
@@ -67,8 +75,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
                     TileLayer.PipeSurface,
                     TileLayer.PipeMiddle,
                 },
-                TileLayerCategory.Overlays => new[] { TileLayer.Overlays },
+                TileLayerCategory.FloorDecals => Array.Empty<TileLayer>(),
                 TileLayerCategory.Items => Array.Empty<TileLayer>(),
+                TileLayerCategory.Scripts => Array.Empty<TileLayer>(),
                 _ => Array.Empty<TileLayer>(),
             };
 
@@ -76,7 +85,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         {
             foreach (TileLayerCategory candidate in AllCategories)
             {
-                if (IsItemsCategory(candidate))
+                if (IsItemsCategory(candidate) || IsFloorDecalsCategory(candidate) || IsScriptsCategory(candidate))
                     continue;
 
                 foreach (TileLayer mappedLayer in GetLayers(candidate))

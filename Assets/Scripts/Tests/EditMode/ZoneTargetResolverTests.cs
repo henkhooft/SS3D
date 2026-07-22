@@ -25,5 +25,17 @@ namespace EditorTests
             BodyZone zone = ZoneTargetResolver.ResolveGroinBand(BodyZone.Head, 0.1f);
             Assert.AreEqual(BodyZone.Head, zone);
         }
+
+        [Test]
+        public void GetReticleLabelUsesReadableNames()
+        {
+            Assert.AreEqual("Head", ZoneTargetResolver.GetReticleLabel(BodyZone.Head));
+            Assert.AreEqual("Chest", ZoneTargetResolver.GetReticleLabel(BodyZone.Chest));
+            Assert.AreEqual("Left Arm", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftArm));
+            Assert.AreEqual("Right Arm", ZoneTargetResolver.GetReticleLabel(BodyZone.RightArm));
+            Assert.AreEqual("Left Leg", ZoneTargetResolver.GetReticleLabel(BodyZone.LeftLeg));
+            Assert.AreEqual("Right Leg", ZoneTargetResolver.GetReticleLabel(BodyZone.RightLeg));
+            Assert.AreEqual("Groin", ZoneTargetResolver.GetReticleLabel(BodyZone.Groin));
+        }
     }
 }

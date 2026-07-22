@@ -13,6 +13,7 @@ using SS3D.Engine.Chat;
 using SS3D.Logging;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Health;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
@@ -204,6 +205,33 @@ namespace SS3D.Systems.Entities
             Log.Information(this, "Reconnected {ckey} to their existing body {entity}", Logs.ServerOnly, player.Ckey, entity.name);
 
             return true;
+        }
+
+        /// <summary>
+        /// Spawns a mindless Human for combat/interaction testing. Server-owned; no mind or loadout.
+        /// </summary>
+        [Server]
+        public Entity ServerSpawnCombatDummy(Vector3 position, Quaternion rotation)
+        {
+            if (_humanPrefab == null || _humanPrefab.Count == 0)
+            {
+                Log.Error(this, "No human prefab configured on EntitySubSystem", Logs.ServerOnly);
+                return null;
+            }
+
+            Entity prefab = _humanPrefab[0];
+            Entity entity = Instantiate(prefab, position, rotation);
+            ServerManager.Spawn(entity.NetworkObject);
+
+            if (!entity.TryGetComponent(out CombatDummyBootstrap bootstrap))
+            {
+                bootstrap = entity.gameObject.AddComponent<CombatDummyBootstrap>();
+            }
+
+            bootstrap.ConfigureAsDummy();
+
+            Log.Information(this, "Spawned combat dummy at {position}", Logs.ServerOnly, position);
+            return entity;
         }
 
         /// <summary>

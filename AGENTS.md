@@ -29,7 +29,15 @@ When building UI that needs icon sprites (buttons, HUD, panels, machine interfac
 
 1. Read [Documents/icon-index.md](Documents/icon-index.md).
 2. Search [Documents/icon-index.json](Documents/icon-index.json) by name, tag, or pack.
-3. Icons live in `Assets/Art/Icons/external icons/` — game-icons.net SVGs grouped by contributor.
+3. Icons live in `Assets/Art/Icons/` — game-icons.net SVGs grouped by contributor under `external icons/`, plus
+   Heroicons, interaction/inventory/alert-stack icon sets, and rendered icons (see index for exact subfolders).
+
+**All icon image assets (SVG/PNG) belong under `Assets/Art/Icons/` — never add a new icon folder under
+`Graphics/` or `Content/Systems/*`.** A ScriptableObject that wraps icon assets for code lookup (an icon
+*catalog*, not the image itself) is fine to keep next to the system that owns it, but must not share a folder
+name with the Art-side image folder it wraps. See
+[2026-07_asset-file-structure-taxonomy.md](Documents/architecture/2026-07_asset-file-structure-taxonomy.md)
+for the full audit and the rest of the asset-placement taxonomy (prefabs, ScriptableObject data, etc.).
 
 Regenerate with `python3 Tools/generate_icon_index.py` after adding icons.
 

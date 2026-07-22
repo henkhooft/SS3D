@@ -8,7 +8,8 @@ namespace SS3D.Systems.Tile
     /// </summary>
     public interface IConstructionService
     {
-        PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting);
+        PlaceResult TryPlaceTile(TileObjectSo tileObject, Vector3 worldPosition, Direction direction, bool replaceExisting,
+            bool skipBuildCheck = false);
 
         PlaceResult TryPlaceItem(ItemObjectSo itemObject, Vector3 worldPosition, Quaternion rotation, GameObject existingItem = null);
 
@@ -42,6 +43,22 @@ namespace SS3D.Systems.Tile
     public readonly struct PreviewResult
     {
         public bool CanBuild { get; init; }
+        public BuildFailReason[] Failures { get; init; }
+
+        public static PreviewResult Ok => new()
+        {
+            CanBuild = true,
+            Failures = System.Array.Empty<BuildFailReason>(),
+        };
+
+        public static PreviewResult Failed(params BuildFailReason[] failures) =>
+            new()
+            {
+                CanBuild = false,
+                Failures = failures ?? System.Array.Empty<BuildFailReason>(),
+            };
+
+        public string PrimaryMessage => BuildFailMessages.FormatPrimary(Failures);
     }
 
     public readonly struct SpawnResult

@@ -115,6 +115,11 @@ namespace SS3D.Systems.Atmospherics
             return _coordToIndex.TryGetValue(coord, out cellIndex);
         }
 
+        public bool TryGetChunkIndex(Vector2Int chunkKey, out int chunkIndex)
+        {
+            return _chunkKeyToIndex.TryGetValue(chunkKey, out chunkIndex);
+        }
+
         public bool TryGetCellTemperature(TileCoord coord, out float temperature)
         {
             temperature = 0f;
