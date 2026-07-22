@@ -78,6 +78,20 @@ namespace SS3D.Systems.Electricity
             RefreshVisuals();
         }
 
+        private void Update()
+        {
+            // SubSystems / NetworkObjects may spawn after LightPower.Start on pure clients.
+            if (!_areaLightingSubscribed)
+            {
+                TrySubscribeAreaLighting();
+            }
+
+            if (!_electricityTickSubscribed)
+            {
+                TrySubscribeElectricityTick();
+            }
+        }
+
         private void OnDestroy()
         {
             if (_consumer != null)
@@ -139,13 +153,13 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (!areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record))
+            if (!areaSubSystem.TryResolveAreaIdForDevice(_consumer.TileObject, out AreaId areaId))
             {
                 return;
             }
 
             _hasArea = true;
-            _areaId = record.Id;
+            _areaId = areaId;
         }
 
         private void TrySubscribeAreaLighting()
@@ -155,30 +169,16 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (areaSubSystem.IsSetUp)
-            {
-                areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
-                _areaLightingSubscribed = true;
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp += HandleAreaSystemSetup;
+            // Do not wait for IsSetUp — pure clients never flood-fill / set IsSetUp, but still
+            // receive floor-cache + lighting snapshots and need these subscriptions.
+            areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
+            areaSubSystem.FloorVisualCache.OnDirty += HandleFloorVisualCacheDirty;
+            _areaLightingSubscribed = true;
+            CacheAreaId();
         }
 
-        private void HandleAreaSystemSetup()
+        private void HandleFloorVisualCacheDirty()
         {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
-            {
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
-            if (!_areaLightingSubscribed)
-            {
-                areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
-                _areaLightingSubscribed = true;
-            }
-
             CacheAreaId();
             RefreshVisuals();
         }
@@ -190,10 +190,10 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
             if (_areaLightingSubscribed)
             {
                 areaSubSystem.OnAreaLightingStateChanged -= HandleAreaLightingStateChanged;
+                areaSubSystem.FloorVisualCache.OnDirty -= HandleFloorVisualCacheDirty;
                 _areaLightingSubscribed = false;
             }
         }
@@ -225,46 +225,21 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (electricitySubSystem.IsSetUp)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp += HandleElectricitySystemSetup;
-        }
-
-        private void HandleElectricitySystemSetup()
-        {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
-            {
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (!_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-            }
-
-            RefreshVisuals();
+            // Subscribe immediately — OnTick is ObserversRpc'd from the server; pure clients
+            // never set ElectricitySubSystem.IsSetUp.
+            electricitySubSystem.OnTick += HandleElectricityTick;
+            _electricityTickSubscribed = true;
         }
 
         private void UnsubscribeElectricityTick()
         {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (!_electricityTickSubscribed || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick -= HandleElectricityTick;
-                _electricityTickSubscribed = false;
-            }
+            electricitySubSystem.OnTick -= HandleElectricityTick;
+            _electricityTickSubscribed = false;
         }
 
         private void HandleElectricityTick()
@@ -353,16 +328,11 @@ namespace SS3D.Systems.Electricity
         }
 
         /// <summary>
-        /// Lighting fixtures must belong to an area APC. PowerGate passthrough (no APC) is treated as off
-        /// unless the dev bypass is active for tilemap authoring.
+        /// Lighting fixtures must belong to an area. On host, APC channel flags are checked live.
+        /// On pure clients the synced <see cref="AreaLightingState"/> already encodes channel + wall switch.
         /// </summary>
         private bool IsFixtureLightingChannelOpen()
         {
-            if (!PowerGate.IsChannelOpen(_consumer))
-            {
-                return false;
-            }
-
             if (_consumer is not IElectricDevice device)
             {
                 return _respectDevBypass && LightingDevBypass.IsActive;
@@ -373,7 +343,13 @@ namespace SS3D.Systems.Electricity
                 return _respectDevBypass && LightingDevBypass.IsActive;
             }
 
-            if (areaSubSystem.TryGetEffectiveApcForDevice(device, out _))
+            if (areaSubSystem.TryGetEffectiveApcForDevice(device, out IApcChannelSource apc))
+            {
+                return PowerGate.IsChannelEnabled(_consumer.Channel, apc.Channels);
+            }
+
+            // Pure client: membership from floor cache + lighting snapshot (no APC registry).
+            if (_hasArea && areaSubSystem.TryGetLightingState(_areaId, out _))
             {
                 return true;
             }
@@ -387,11 +363,9 @@ namespace SS3D.Systems.Electricity
             if (_applyDepartmentalLightTint
                 && _hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
-                && _consumer?.TileObject != null
-                && areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record)
-                && record.HasDepartmentalLightTint)
+                && areaSubSystem.TryGetDepartmentalLightTint(_areaId, out Color tint))
             {
-                emission = MultiplyColor(_poweredEmission, record.DepartmentalLightTint);
+                emission = MultiplyColor(_poweredEmission, tint);
             }
 
             ApplyLightState(_light, _poweredIntensity, _poweredRange, _poweredLightColor);

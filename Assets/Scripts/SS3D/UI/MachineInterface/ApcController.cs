@@ -385,16 +385,18 @@ namespace SS3D.UI.MachineInterface
 
         private void OnChannelsChanged(ApcControlFlags oldValue, ApcControlFlags newValue, bool asServer)
         {
-            if (asServer)
+            if (!asServer)
             {
-                if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
-                {
-                    areaSubSystem.RefreshAreaLightingStates();
-                }
-
-                RefreshAllViewers();
+                // Pure clients apply fixture visuals from RpcSyncAreaLighting + PowerStatus SyncVars.
+                return;
             }
 
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                areaSubSystem.RefreshAreaLightingStates();
+            }
+
+            RefreshAllViewers();
             LightPower.RefreshAllFixtures();
         }
     }

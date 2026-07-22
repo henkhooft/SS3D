@@ -87,6 +87,24 @@ namespace SS3D.Systems.Area
             return true;
         }
 
+        /// <summary>
+        /// Resolves a world-grid tile to its synced area id (chunk key math matches <c>TileMap.GetKey</c>).
+        /// </summary>
+        public bool TryGetAreaIdForWorldGrid(Vector2Int worldGrid, out ushort areaId)
+        {
+            areaId = AreaId.None;
+            int size = TileConstants.ChunkSize;
+            int chunkX = (int)Math.Floor(worldGrid.x / (double)size);
+            int chunkY = (int)Math.Floor(worldGrid.y / (double)size);
+            int localX = worldGrid.x - chunkX * size;
+            int localY = worldGrid.y - chunkY * size;
+
+            if (!TryGetAreaId(new Vector2Int(chunkX, chunkY), localX, localY, out areaId))
+                return false;
+
+            return areaId != AreaId.None;
+        }
+
         public IEnumerable<KeyValuePair<Vector2Int, ushort[]>> EnumerateChunks() => _chunkAreaIds;
     }
 }

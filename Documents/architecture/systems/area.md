@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: add2ad2c9 — 2026-07-18
+> Verified: 20f4fbaa7 — 2026-07-22
 
 # Area
 
@@ -9,13 +9,13 @@
 
 APC-seeded area flood-fill: each APC owns one `AreaRecord` and claims reachable floor tiles with a per-chunk `ushort[]` area-id layer. Walls and doors block expansion; unclaimed tiles stay `AreaId.None`. Live boundary recompute on tile mutation is deferred — rebuild runs on map load and APC place/remove only. Area metadata persists via [persistence](persistence.md) `AreaPersistenceContributor`; template restore uses `BeginTemplateRestore` / `RestoreFromSave` / `EndTemplateRestore` so saved display names, tints, access bits, and `lightingSwitchOn` survive when APCs are already placed.
 
-Per-consumer power gating and **area-scoped APC cell drain** via [electricity](electricity.md) `AreaApcPowerDistribution`: devices in an assigned area use their area APC's channels and cell, not circuit-wide OR or equal battery split. `AreaLightingState` (Normal/Emergency/Dark) is derived each electricity tick from the area APC's circuit stats and `AreaRecord.LightingSwitchOn`; a disabled lighting channel forces Dark regardless of cell charge. Transitions fire `OnAreaLightingStateChanged` and sync to clients via ObserversRpc. Wall `LightSwitchController` toggles `LightingSwitchOn` for its area. `LightPower` consumes area state for fixture on/off/emergency visuals; optional `DepartmentalLightTint` on `AreaRecord` tints normal-mode emission **and** drives client floor-corner stripes via `AreaFloorStripeView` (area-id grids + tint snapshot synced to observers).
+Per-consumer power gating and **area-scoped APC cell drain** via [electricity](electricity.md) `AreaApcPowerDistribution`: devices in an assigned area use their area APC's channels and cell, not circuit-wide OR or equal battery split. `AreaLightingState` (Normal/Emergency/Dark) is derived each electricity tick from the area APC's circuit stats and `AreaRecord.LightingSwitchOn`; a disabled lighting channel forces Dark regardless of cell charge. Transitions fire `OnAreaLightingStateChanged` and sync to clients via a **BufferLast full lighting snapshot** (`RpcSyncAreaLighting`) — not per-area RPCs (those only retain the last area for late joiners). Wall `LightSwitchController` toggles `LightingSwitchOn` for its area. `LightPower` consumes area state for fixture on/off/emergency visuals; optional `DepartmentalLightTint` on `AreaRecord` tints normal-mode emission **and** drives client floor-corner stripes via `AreaFloorStripeView` (area-id grids + tint snapshot synced to observers). Pure clients have no flood-fill registry: fixture/switch code resolves area ids via `TryResolveAreaIdForDevice` → `AreaFloorVisualCache`.
 
 **Fork deviations from** [area.md](../../design/area.md): areas are APC-seeded (not generic auto-detection); unclaimed tiles have no fallback area; all doors block expansion regardless of open/closed state. Wall-mounted APCs seed flood fill from the walkable tile **in front of** `FacingDirection`, not from every cardinal neighbor.
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Area/AreaSubSystem.cs` — registry, APC lifecycle, rebuild orchestration; `BeginDeferredAreaFlood` / `EndDeferredAreaFlood` around station template load
+- `Assets/Scripts/SS3D/Systems/Area/AreaSubSystem.cs` — registry, APC lifecycle, rebuild; `TryResolveAreaIdForDevice` / lighting snapshot sync
 - `Assets/Scripts/SS3D/Systems/Area/AreaFloodFillService.cs` — BFS from APC seeds, door-tile post-pass
 - `Assets/Scripts/SS3D/Systems/Area/AreaBoundaryEvaluator.cs` — walkability and expansion blocking rules
 - `Assets/Scripts/SS3D/Systems/Area/AreaRegistry.cs` — `AreaRecord` storage and APC reverse lookup
@@ -26,35 +26,39 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - `Assets/Scripts/SS3D/Systems/Area/AreaLightFixturePolicy.cs` — fixture emit policy (Normal/Emergency/Dark)
 - `Assets/Scripts/SS3D/Systems/Area/LightFixtureCapability.cs` — `NormalOnly` / `EmergencyCapable` fixture tag
 - `Assets/Scripts/SS3D/Systems/Area/AreaFloorStripeView.cs` — client mesh floor corners from departmental tint
-- `Assets/Scripts/SS3D/Systems/Area/AreaFloorVisualCache.cs` — host/client cache of areaIds + tints for stripe rendering
+- `Assets/Scripts/SS3D/Systems/Area/AreaFloorVisualCache.cs` — host/client cache of areaIds + tints; `TryGetAreaIdForWorldGrid`
+- `Assets/Scripts/SS3D/Systems/Area/AreaDeviceTileResolver.cs` — wall-mount front-tile + floor-cache area resolve
 - `Assets/Scripts/SS3D/Systems/Area/AreaDevSettings.cs` — dev toggle (`SS3D → Dev → Areas → Show Area Gizmos`)
-- `Assets/Scripts/SS3D/Systems/Area/AreaDebugGizmoDrawer.cs` — Scene-view tile overlay, APC labels, and linked device diagnostics (host/server map only)
+- `Assets/Scripts/SS3D/Systems/Area/AreaDebugGizmoDrawer.cs` — Scene-view tile overlay, APC labels (host/server map only)
 - `Assets/Scripts/Tests/EditMode/AreaFloodFillTests.cs` — flood-fill and boundary edit-mode tests
+- `Assets/Scripts/Tests/EditMode/Area/AreaFloorVisualCacheTests.cs` — client cache world-grid lookup
 - `Assets/Scripts/Tests/EditMode/ElectricityTests/AreaLightFixturePolicyTests.cs` — fixture policy tests
 - `Assets/Scripts/Tests/EditMode/ElectricityTests/AreaLightingStateDeriverTests.cs` — lighting state + wall-switch-off → Dark
 
 ## Extension points
 
 - Resolve area for a tile: `AreaSubSystem.TryGetAreaForTile` / `ITileQueryService.TryGetAreaId`.
-- Resolve area for wall-mounted devices: `AreaSubSystem.TryGetAreaForDevice` (always uses the tile in front of `Direction`, even if the wall tile has an area id).
+- Resolve area for wall-mounted devices: `AreaSubSystem.TryGetAreaForDevice` (tile in front of `Direction`).
+- Client / no-registry area id: `TryResolveAreaIdForDevice` (live registry, else `FloorVisualCache`).
 - Register APC origins: implement `IAreaApcOrigin` (see `ApcController`).
 - Server rename/tag API: `AreaSubSystem.RenameArea`, `SetParentTag` (no editor UI yet).
 - Resolve effective APC for a device: `AreaSubSystem.TryGetEffectiveApcForDevice`.
 - Area rebuild / APC lifecycle invalidates electricity's per-APC consumer index via `ElectricitySubSystem.InvalidateAreaConsumerIndex`.
 - Query lighting by tile: `IAreaLightingStateSource.TryGetLightingStateForTile`.
-- Subscribe to area lighting transitions: `AreaSubSystem.OnAreaLightingStateChanged`.
-- Toggle area fixture lighting: `AreaSubSystem.ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting **breaker** in machine interface).
-- Subscribe to wall-switch changes: `AreaSubSystem.OnAreaLightingSwitchChanged`.
-- Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); also refreshes floor stripe visuals (`OnAreaVisualsDirty` + ObserversRpc snapshot).
+- Subscribe to area lighting transitions: `OnAreaLightingStateChanged` (do **not** gate on `IsSetUp` — pure clients never set it).
+- Toggle area fixture lighting: `ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting breaker in MI).
+- Subscribe to wall-switch changes: `OnAreaLightingSwitchChanged`.
+- Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); clients read via `TryGetDepartmentalLightTint`.
 - Fixture visuals: `LightPower` + `AreaLightFixturePolicy` + `LightFixtureCapability` on prefabs.
-- Dev bypass (`SS3D → Dev → Lighting → Always Power Light Fixtures`) treats fixtures as powered but still respects APC channel toggles and area Normal/Emergency/Dark policy.
-- Template restore: `BeginTemplateRestore` → `RestoreFromSave` → APC registration → `EndTemplateRestore` (see `AreaFloodFillTests.TemplateRestore_WithRegisteredApc_PreservesSavedMetadata`).
+- Dev bypass (`SS3D → Dev → Lighting → Always Power Light Fixtures`) treats fixtures as powered but still respects APC channels and area Normal/Emergency/Dark policy.
+- Template restore: `BeginTemplateRestore` → `RestoreFromSave` → APC registration → `EndTemplateRestore`.
 - **Not yet wired:** fixture subset authoring on `AreaRecord`.
 
 ## Pitfalls
 
-- **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: `PersistenceSubSystem` / legacy `TileSubSystem.Load` wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood` (refloods after the full map exists, preserving AreaRecord metadata). Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
+- **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood`. Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
 - **Light switch usable from across the room:** prefab had no collider, selection never resolved a point, and `RangeCheck` treated zero point as unlimited — see [interactions-framework](interactions-framework.md) Pitfalls. LightSwitch now has a BoxCollider; RangeCheck falls back to target transform.
+- **Client fixtures stay stuck on/off (host OK):** `AreaSubSystem` flood-fill / `IsSetUp` is server-only. Pure clients must not wait on `IsSetUp` to subscribe; resolve area via `TryResolveAreaIdForDevice` + floor-cache; lighting via `RpcSyncAreaLighting` (BufferLast full snapshot). Per-area lighting RPCs drop all but the last area for late joiners. `LightPower` treats synced `AreaLightingState` as already encoding APC lighting channel + wall switch when no APC registry exists.
 
 ## Depends on / Used by
 
