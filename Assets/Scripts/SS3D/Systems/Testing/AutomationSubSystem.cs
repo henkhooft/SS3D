@@ -42,10 +42,22 @@ namespace SS3D.Systems.Testing
     {
         private const float DefaultWaitTimeoutSeconds = 30f;
 
+        /// <summary>
+        /// Used as FishNet DefaultScene offline during an in-process client reconnect so Game
+        /// unloads without reloading Boot (which would duplicate the DDOL NetworkManager).
+        /// </summary>
+        private const string EmptyOfflineScenePath = "Assets/Content/Scenes/Empty.unity";
+
         private RoundState _currentRoundState = RoundState.Stopped;
         private bool _clientConnected;
         private bool _serverStarted;
         private bool _scriptStarted;
+
+        /// <summary>
+        /// FishNet <see cref="DefaultScene"/> offline path saved while redirected to Empty for
+        /// in-process reconnect. Empty when not redirected.
+        /// </summary>
+        private string _suppressedOfflineScene;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -64,7 +76,7 @@ namespace SS3D.Systems.Testing
         {
             base.OnAwake();
 
-            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+            AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
         }
 
         private void HandleApplicationInitializing(ref EventContext context, in ApplicationInitializing e)
@@ -88,6 +100,13 @@ namespace SS3D.Systems.Testing
 
             SubscribeToConnectionEvents();
             AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
+
+            // IntroUIHelper skips auto-join when -testscript= is set so disconnect/reconnect
+            // is not raced by SkipIntro. Kick off the first client session here instead.
+            if (!IsServerRole())
+            {
+                SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
+            }
 
             StartCoroutine(RunScript(applicationSettings.TestScriptPath));
         }
@@ -279,7 +298,7 @@ namespace SS3D.Systems.Testing
                     // (same ip/port/ckey NetworkSessionSubSystem resolved at startup), simulating
                     // a disconnected player rejoining rather than a brand-new client. Must follow
                     // a "disconnect" for the same role; only valid for a client script.
-                    Reconnect();
+                    yield return Reconnect();
                     break;
 
                 case "console":
@@ -343,17 +362,25 @@ namespace SS3D.Systems.Testing
             return entitySystem.TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out _);
         }
 
-        private void Reconnect()
+        private IEnumerator Reconnect()
         {
             if (IsServerRole())
             {
                 throw new InvalidOperationException("'reconnect' is a client-only instruction.");
             }
 
-            // The real, full reconnect path (not a raw ClientManager.StartConnection) - the same
-            // one SS3D.Systems.Intro.IntroUIHelper uses, re-reading the NetworkSettings this
-            // process already resolved from -ip=/-port=/-ckey= at startup.
-            SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
+            // Disconnect is async (Stopping → Stopped). Starting while still Stopping makes
+            // ClientManager.StartConnection return false and spam NetworkSession errors.
+            yield return WaitUntil(IsClientFullyStopped, DefaultWaitTimeoutSeconds, "reconnect_stopped");
+
+            // NetworkSessionSubSystem lives on Boot and is gone after the first online load
+            // (and after Empty offline). Re-join with the same CLI-resolved NetworkSettings.
+            StartClientConnectionFromSettings();
+
+            // Offline was redirected to Empty for the reconnect gap; restore Boot so a later
+            // disconnect still goes through DefaultScene's normal offline path.
+            yield return WaitUntil(() => _clientConnected, DefaultWaitTimeoutSeconds, "reconnect_started");
+            RestoreOfflineScene();
         }
 
         private void RunConsoleCommand(string commandLine)
@@ -378,8 +405,79 @@ namespace SS3D.Systems.Testing
             }
             else
             {
+                // DefaultScene offline = Boot.unity. StopConnection → LoadScene(Boot) as Single
+                // while NetworkManager is DontDestroyOnLoad → duplicate managers + Init/Intro
+                // storms. Staying in Game (pointing offline at Game) also fails: networked
+                // scene objects never resync and wait_lobby never sees a ckey. Use Empty.unity
+                // so Game unloads cleanly without re-entering Boot's ApplicationInitializer.
+                RedirectOfflineSceneToEmpty();
                 networkManager.ClientManager.StopConnection();
             }
+        }
+
+        private static bool IsClientFullyStopped()
+        {
+            NetworkManager networkManager = InstanceFinder.NetworkManager;
+            if (networkManager == null)
+            {
+                return true;
+            }
+
+            LocalConnectionState state = networkManager.TransportManager.Transport.GetConnectionState(false);
+            return state == LocalConnectionState.Stopped;
+        }
+
+        private void StartClientConnectionFromSettings()
+        {
+            NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
+            NetworkManager networkManager = InstanceFinder.NetworkManager;
+
+            LocalPlayer.UpdateCkey(networkSettings.Ckey);
+
+            bool started = networkManager.ClientManager.StartConnection(
+                networkSettings.ServerAddress,
+                networkSettings.ServerPort);
+
+            if (!started)
+            {
+                throw new InvalidOperationException(
+                    $"Reconnect failed to StartConnection on {networkSettings.ServerAddress}:{networkSettings.ServerPort}.");
+            }
+        }
+
+        private void RedirectOfflineSceneToEmpty()
+        {
+            DefaultScene defaultScene = InstanceFinder.NetworkManager.GetComponent<DefaultScene>();
+            if (defaultScene == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_suppressedOfflineScene))
+            {
+                _suppressedOfflineScene = defaultScene.GetOfflineScene();
+            }
+
+            defaultScene.SetOfflineScene(EmptyOfflineScenePath);
+        }
+
+        private void RestoreOfflineScene()
+        {
+            if (string.IsNullOrEmpty(_suppressedOfflineScene))
+            {
+                return;
+            }
+
+            DefaultScene defaultScene = InstanceFinder.NetworkManager != null
+                ? InstanceFinder.NetworkManager.GetComponent<DefaultScene>()
+                : null;
+
+            if (defaultScene != null)
+            {
+                defaultScene.SetOfflineScene(_suppressedOfflineScene);
+            }
+
+            _suppressedOfflineScene = null;
         }
 
         private IEnumerator WaitUntil(Func<bool> condition, float timeoutSeconds, string label)

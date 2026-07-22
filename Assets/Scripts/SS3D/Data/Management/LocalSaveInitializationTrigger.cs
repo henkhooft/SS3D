@@ -14,7 +14,7 @@ namespace SS3D.Data.Management
         {
             base.OnAwake();
 
-            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+            AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
         }
 
         private void HandleApplicationInitializing(ref EventContext context, in ApplicationInitializing e)

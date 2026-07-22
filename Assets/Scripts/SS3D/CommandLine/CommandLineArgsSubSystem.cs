@@ -27,7 +27,7 @@ namespace SS3D.CommandLine
         {
             base.OnAwake();
 
-            ApplicationPreInitializing.AddListener(HandleApplicationPreInitializing);
+            AddHandle(ApplicationPreInitializing.AddListener(HandleApplicationPreInitializing));
         }
 
         private void HandleApplicationPreInitializing(ref EventContext context, in ApplicationPreInitializing e)

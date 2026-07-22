@@ -50,10 +50,10 @@ Manual / partial:
   Instructions: `wait_connected`, `ready`, `start_round`, `wait_round <state>`, `embark`,
   `assert_embarked` (waits until this connection owns a spawned `Entity` — unlike `embark`,
   which only fires the spawn/reclaim request without confirming it landed), `reconnect`
-  (client-only; re-opens the connection via `NetworkSessionSubSystem.StartNetworkSession()`
-  using the ip/port/ckey this process already resolved at startup — the same full path
-  `IntroUIHelper` uses, not a raw `ClientManager.StartConnection`), `console <command line>`
-  (routes through `CommandsController.ClientProcessCommand`), `wait_seconds <n>`, `disconnect`.
+  (client-only; redirects DefaultScene offline to `Empty.unity`, then re-joins via
+  `ClientManager.StartConnection` with CLI `NetworkSettings` — see networking-session Pitfalls),
+  `console <command line>` (routes through `CommandsController.ClientProcessCommand`),
+  `wait_seconds <n>`, `disconnect`.
 - `TestSignal.cs` — emits `"Test signal {signal} {payload}"` through the existing Serilog
   pipeline (new `Logs.Testing` category) as a deterministic readiness/completion vocabulary
   (`ServerReady`, `ClientConnected`, `RoundStateChanged`, `PlayerEmbarked`, `EmbarkVerified`,
