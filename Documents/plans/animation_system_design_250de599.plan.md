@@ -331,3 +331,16 @@ struct BodyAnimationSnapshot {
 ### Combat stance packs (follow-up)
 
 Base locomotion is three FreeformCartesian2D blends switched by animator int `CombatStance` (0 Peaceful / 1 Melee / 2 Ranged). Packs: Locomotion Pack, Pro Melee Axe Pack, Basic Shooter Pack. `HumanoidCombatMode` is packed in 2 snapshot bits; `C` toggles Peaceful ↔ Melee/Ranged from held-item traits. Editor menu: **SS3D → Animation → Rebuild Combat Stance Blend Trees**. After importing new pack FBX metas, reimport in Unity then run that menu so Mixamo `Mix_*` clips resolve. See [2026-07_player-body-animation.md](../architecture/2026-07_player-body-animation.md).
+
+### Animation polish (2026-07)
+
+Shipped in [2026-07_animation-polish.md](../architecture/2026-07_animation-polish.md):
+
+- Upper Body mask includes spine/chest; AttackSwing is trigger + exit-time + `AttackVariant` 0–2 (no C# swing timers).
+- Fourth base state **Injured Locomotion** from Male Injured Pack; `LimpSide != 0` from any combat stance; `InjuredLeg` idle severity (stumble) + limp-gated Jump/Turn/Wave.
+- `HumanoidBodyStateBridge` drives `InjuredArmLeft`/`Right` and `InjuredLeg` from zone brute; Additive weight scales; rare severe-limp Emote → Injured Wave.
+- Left active hand → `MirrorUpperBody` on Upper Body holds/swings only.
+- Predicted combat gait syncs world scale with anim `VelZ`.
+- Rebuild menu remaps AttackSwing / Flinch / Empty Additive / limp oneshots; flag file `artifacts/force-rebuild-animator.flag` for Editor-held projects (must be user-writable).
+- Shelved unwired clips under `Assets/Art/Animations/Misc/` and `Probably Not/`.
+- **Not done:** Jump/Turn90 input bindings (`PlayLocomotionTrigger` unused); feet stance mirror; body-presentation collapse clips.

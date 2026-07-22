@@ -128,6 +128,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _camera: {fileID: 4559952172929818808}
   _cameraFollow: {fileID: 4559952172929818818}
+  _volume: {fileID: 4387917767973724163}
+  _lobbyVolumeProfile: {fileID: 11400000, guid: 61e94ccd28ce40bf18843b5aceb2efb3, type: 2}
+  _gameplayVolumeProfile: {fileID: 11400000, guid: c4e8b1f72d9a4e3b8f6a2c5d1e7b9043, type: 2}
 --- !u!114 &4559952172929818818
 MonoBehaviour:
   m_ObjectHideFlags: 0

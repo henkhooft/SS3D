@@ -6,6 +6,7 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions.UI;
 using SS3D.Systems.Selection;
+using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -13,20 +14,18 @@ using UnityEngine.UIElements;
 namespace SS3D.Systems.Interactions
 {
     /// <summary>
-    /// Client-side armed interaction state and overlay for Tier 2/3 radial selections.
+    /// Client-side armed interaction state and overlay for Tier 2/3 radial selections. Attaches into
+    /// the shared <see cref="UiShellSubSystem"/> overlay layer instead of owning a private UIDocument.
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
     public sealed class ArmedInteractionSubSystem : SubSystem
     {
         public event Func<Selectable, ArmedTargetEvaluation> EvaluateTarget;
 
-        [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _overlayStyleSheet;
 
         private ArmedInteractionOverlayView _overlayView;
         private SelectionSubSystem _selectionSystem;
         private ArmedInteractionState _state;
-        private bool _overlayReady;
 
         public bool IsArmed => _state != null;
 
@@ -35,17 +34,6 @@ namespace SS3D.Systems.Interactions
         protected override void OnAwake()
         {
             base.OnAwake();
-
-            if (_document == null)
-            {
-                _document = GetComponent<UIDocument>();
-            }
-
-#if UNITY_EDITOR
-            EnsureEditorAssets();
-#endif
-            ShutdownDocument();
-            InputInterface.RegisterDocument(_document);
 
             _selectionSystem = SubSystems.Get<SelectionSubSystem>();
         }
@@ -64,15 +52,14 @@ namespace SS3D.Systems.Interactions
 
         protected override void OnDestroyed()
         {
-            InputInterface.UnregisterDocument(_document);
             _overlayView?.Detach();
-            ShutdownDocument();
+            _overlayView = null;
             base.OnDestroyed();
         }
 
         private void Update()
         {
-            if (!IsArmed || !EnsureDocumentActive())
+            if (!IsArmed || !EnsureOverlayView())
             {
                 return;
             }
@@ -98,7 +85,7 @@ namespace SS3D.Systems.Interactions
                 Label = label,
             };
 
-            if (!EnsureDocumentActive())
+            if (!EnsureOverlayView())
             {
                 _state = null;
                 return;
@@ -118,7 +105,6 @@ namespace SS3D.Systems.Interactions
 
             _state = null;
             _overlayView?.Hide();
-            ShutdownDocument();
         }
 
         private void HandleSelectableChanged()
@@ -164,70 +150,25 @@ namespace SS3D.Systems.Interactions
             return $"{label} — {targetName} →";
         }
 
-        private bool EnsureDocumentActive()
+        private bool EnsureOverlayView()
         {
-            if (_document == null)
-            {
-                return false;
-            }
-
-            if (!_document.enabled)
-            {
-                _document.enabled = true;
-                _overlayReady = false;
-            }
-
-            return EnsureOverlay();
-        }
-
-        private bool EnsureOverlay()
-        {
-            if (_overlayReady && _overlayView != null)
+            if (_overlayView != null)
             {
                 return true;
             }
 
-            VisualElement root = _document.rootVisualElement;
-            if (root == null)
+            if (!SubSystems.TryGet(out UiShellSubSystem uiShell) || !uiShell.TryGetLayer(UiLayer.Overlay, out VisualElement layerRoot))
             {
-                Debug.LogError("ArmedInteractionSubSystem requires PanelSettings on UIDocument.", this);
+                Debug.LogError("ArmedInteractionSubSystem could not find the UiShellSubSystem overlay layer.", this);
                 return false;
             }
 
-            _overlayView?.Detach();
+            // See RadialInteractionSubSystem for why this register is never paired with an unregister here.
+            InputInterface.RegisterDocument(uiShell.Document);
+
             _overlayView = new ArmedInteractionOverlayView(_overlayStyleSheet);
-            _overlayView.Attach(root);
-            _overlayReady = true;
+            _overlayView.Attach(layerRoot);
             return true;
         }
-
-        private void ShutdownDocument()
-        {
-            _overlayReady = false;
-            _overlayView?.Detach();
-            _overlayView = null;
-
-            if (_document != null)
-            {
-                _document.enabled = false;
-            }
-        }
-
-#if UNITY_EDITOR
-        private void EnsureEditorAssets()
-        {
-            if (_overlayStyleSheet == null)
-            {
-                _overlayStyleSheet = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(
-                    "Assets/Content/Systems/UI/Interactions/ArmedInteractionOverlay/ArmedInteractionOverlay.uss");
-            }
-
-            if (_document != null && _document.panelSettings == null)
-            {
-                _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(
-                    "Assets/Content/Systems/UI/Interactions/RadialInteractionMenu/HudOverlayPanelSettings.asset");
-            }
-        }
-#endif
     }
 }

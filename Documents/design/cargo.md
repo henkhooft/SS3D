@@ -45,13 +45,13 @@ A history tab on the console — same "real, inspectable data" instinct round co
 
 Every order ships inside a real crate item — its own collision, moved by hand or a hand truck the same way any heavy object already gets moved, not teleported into a player's hands.
 
-**The manifest is printed on the crate**, visible via examine without opening it (`main-hud.md` §15) — "Contents: 5× Advanced Medkit." World-carries-the-information, same rule armor wear and wound state already follow; no separate UI popup needed to know roughly what's inside.
+**The manifest is printed on the crate**, visible via examine without opening it (`examine.md` §5, §7) — "Contents: 5× Advanced Medkit." World-carries-the-information, same rule armor wear and wound state already follow; no separate UI popup needed to know roughly what's inside.
 
 **Opening is a real action** — crowbar pry for a standard crate, matching the tool-possession-as-gate convention already used everywhere (`surgery.md` §7). Some crates (weapons, restricted chemistry) are ID-locked instead. That lock isn't a new mechanic: an ID-locked crate is simply another entry in the FDU's existing device taxonomy (`hacking-interface.md` §3) — crew see "locked," a hacker sees the raw access bitmask, the same reuse the AI core and cyborg chassis already got (`ai-cyborgs.md` §5) rather than a bespoke crate-lock system.
 
 ## 6. The cargo shuttle
 
-Reuses the shuttle framework wholesale (`shuttles.md`) — this doc doesn't touch movement, docking, or collision. It's a new roster entry alongside the sketches already in that doc's §10 (a companion edit there, the same way rendering/lighting flagged its own companion edit to Area).
+Reuses the shuttle framework wholesale (`shuttles.md`) — this doc doesn't touch movement, docking, or collision. It's a new roster entry alongside the sketches already in that doc's §10, which now points back here (a companion edit there, the same way rendering/lighting flagged its own companion edit to Area).
 
 **Default behavior:** docked at cargo bay. A **call button at the console** sends it on a round trip to the off-station trade dock and back — a short, real transit time, not an instant swap. This is deliberately smaller than the evac shuttle's call/timer/point-of-no-return shape (`shuttles.md` §9) — a supply run, not an evacuation decision — so it's just autopilot-out, dock, autopilot-back.
 
@@ -91,9 +91,9 @@ No new permanent chrome.
 | Approval-pending notification | PDA notification chip (`pda.md` §6) — resolves that doc's §10 deferred hook, in bounded form |
 | Budget ledger | Same real-inspectable-transaction discipline as round config's admin log (`round-config.md` §5) and the AI's audit trail (`ai-cyborgs.md` §4) |
 | Crate as physical object | Existing heavy-object move convention; tool-possession-as-gate for prying (`surgery.md` §7) |
-| Crate manifest | Examine system (`main-hud.md` §15) |
+| Crate manifest | Examine system (`examine.md` §5, §7) |
 | ID-locked crate | FDU device taxonomy, reused wholesale (`hacking-interface.md` §3), same pattern as AI core/cyborg chassis (`ai-cyborgs.md` §5) |
-| Cargo shuttle | Shuttle framework (`shuttles.md`) — new roster entry, companion edit needed at §10 there |
+| Cargo shuttle | Shuttle framework (`shuttles.md` §10) — new roster entry, that doc now points back here |
 | Manual shuttle hijack | Existing helm/collision model (`shuttles.md` §6, §9) |
 | Export appraisal / pricing | To-be-authored price table (balancing pass, not designed here) |
 | Mining ore as sellable/sourced good | Future mining doc; material silo (`crafting.md` §5) as the alternate destination |
@@ -134,6 +134,6 @@ No new permanent chrome.
 - The export price table (same — balancing, not designed here)
 - Department-specific sub-budgets, as opposed to one shared station budget — a plausible server-configurable variant, not load-bearing for this design, same category as lobby's optional ready-toggle
 - Black-market or antag-specific ordering variants (a gamemode-specific extension, not a base mechanic)
-- Persistence of the budget across rounds (persistence & accounts' job, cross-cutting infra)
+- Persistence of the budget across rounds — server meta layer (`persistence-save.md` §4)
 - Full server-side transaction logging beyond the console's own ledger tab (server logging, cross-cutting infra)
 

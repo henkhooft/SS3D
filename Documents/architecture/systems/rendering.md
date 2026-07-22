@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: a86b44505 — 2026-07-17
+> Verified: 23cb4d2d5 — 2026-07-21
 
 # Rendering
 
@@ -11,7 +11,7 @@ URP rendering extensions for this fork. The selection pick pass ([selection](sel
 
 Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles.
 
-Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `Entity.ViewPoint` (`VisionSubSystem` → `_VisionMap`) and composited by `VisionRendererFeature`. Unseen areas are fully opaque black, not soft fog. Each ray iteratively skips furniture/props until the nearest wall/door (non-window); a capped multi-hit batch previously filled with props and leaked vision through walls. Triggers and inventory preview cameras are ignored.
+Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts from `Entity.ViewPoint` (`VisionSubSystem` → `_VisionMap`) and composited by `VisionRendererFeature`. Unseen areas are fully opaque black, not soft fog. Rays advance in `RaycastCommand` waves, skipping furniture/props until the nearest wall/door (non-window); a capped multi-hit buffer previously filled with props and leaked vision through walls. Triggers and inventory preview cameras are ignored.
 
 ## Start here
 
@@ -23,7 +23,7 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 - `Assets/Scripts/SS3D/Rendering/URP/AtmosRenderContext.cs` — shared GPU snapshot for atmos shaders
 - `Assets/Scripts/SS3D/Rendering/URP/VisionRendererFeature.cs` — FOV mask + hard black composite
 - `Assets/Scripts/SS3D/Rendering/URP/UiBackdropBlurRendererFeature.cs` — Dual Kawase world blur behind diegetic machine UI
-- `Assets/Scripts/SS3D/Systems/Vision/VisionSubSystem.cs` — client `RaycastCommand` batch → `_VisionMap`
+- `Assets/Scripts/SS3D/Systems/Vision/VisionSubSystem.cs` — client `RaycastCommand` waves → R16 `_VisionMap` (occluder cache; float dilate + `SetPixelData`)
 - `Assets/Content/Resources/Simple Toon/Shaders/STLighting.hlsl` — half-toon lighting + palette emission sample
 - `Assets/Content/Resources/Simple Toon/Shaders/STDefault.shader` — opaque toon (+ DepthNormals for Decal Layers)
 - `Assets/Settings/URP/` — pipeline asset and Forward+ renderer (includes Decal Renderer feature)
@@ -37,6 +37,10 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 ## Pitfalls
 
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
+- **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
+- **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
+- **Vision FOV must not use fixed multi-hit RaycastAll buffers:** a dense prop pile can exhaust the hit slots and report a clear line through walls. Keep iterative/wave single-hit casts that skip non-occluders (`VisionSubSystem` `RaycastCommand` waves + collider occluder cache).
+- **Vision map upload:** do not `new Color[]` / `SetPixels` on the LateUpdate path — dilate with persistent float scratch and upload R16 via `SetPixelData` (`Vision.VisionMap` was a multi-MB/frame GC hotspot).
 
 ## Depends on / Used by
 
@@ -47,4 +51,5 @@ Client FOV / fog-of-war is a hard black mask driven by physics raycasts from `En
 
 - [FORK_STATUS.md](../../FORK_STATUS.md) § URP migration
 - Plan: [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md)
+- Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)

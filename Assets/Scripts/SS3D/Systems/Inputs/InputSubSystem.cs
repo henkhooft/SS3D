@@ -27,9 +27,21 @@ namespace SS3D.Systems.Inputs
         /// <summary>Held while inspecting (Shift). Bound in code, arbitrated by the Gameplay context.</summary>
         public InputAction DetailedExamine => _detailedExamine;
 
+        /// <summary>Opens local-speech compose (T). Bound in code, arbitrated by the Gameplay context.</summary>
+        public InputAction OpenLocalSpeechCompose => _openLocalSpeechCompose;
+
+        /// <summary>
+        /// Toggle the Alert Icon Stack debug panel (F4). Bound in code like <see cref="UiCancel"/> —
+        /// avoid editing the generated <see cref="Controls"/> asset for one-off debug chords.
+        /// F3 is reserved for <c>LocalSpeechDebugTrigger</c> (local chat test lines).
+        /// </summary>
+        public InputAction ToggleAlertStackDebug => _toggleAlertStackDebug;
+
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
+        private InputAction _openLocalSpeechCompose;
+        private InputAction _toggleAlertStackDebug;
 
         private InputArbiter _arbiter;
 
@@ -87,6 +99,11 @@ namespace SS3D.Systems.Inputs
             _detailedExamine = _systemMap.AddAction("DetailedExamine", InputActionType.Button);
             _detailedExamine.AddBinding("<Keyboard>/leftShift");
             _detailedExamine.AddBinding("<Keyboard>/rightShift");
+            _openLocalSpeechCompose = _systemMap.AddAction(
+                "OpenLocalSpeechCompose", InputActionType.Button, "<Keyboard>/t");
+            // F3 = LocalSpeechDebugTrigger; F2 = screen-effects debug (condemned uGUI).
+            _toggleAlertStackDebug = _systemMap.AddAction(
+                "ToggleAlertStackDebug", InputActionType.Button, "<Keyboard>/f4");
         }
 
         private List<InputAction> CollectAllActions()
@@ -117,23 +134,30 @@ namespace SS3D.Systems.Inputs
 
             InputAction consoleOpen = Inputs.Console.Open;
             InputAction tileToggle = Inputs.TileCreator.ToggleMenu;
-            InputAction sendChat = Inputs.Other.SendChatMessage;
 
             return new Dictionary<InputContext, InputContextDefinition>
             {
-                // System actions only: menu toggle (in Other), open console, open build menu.
+                // System actions only: menu toggle (in Other), open console, open build menu,
+                // plus code-defined debug toggles that share Other's availability.
                 [InputContext.Global] = new InputContextDefinition(
                     new[] { other },
-                    new[] { consoleOpen, tileToggle }),
+                    new[] { consoleOpen, tileToggle, _toggleAlertStackDebug }),
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
-                    new[] { consoleOpen, tileToggle, _detailedExamine }),
+                    new[] { consoleOpen, tileToggle, _detailedExamine, _openLocalSpeechCompose, _toggleAlertStackDebug }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(
                     new[] { movement, camera, tile, other },
-                    new[] { consoleOpen, _detailedExamine }),
+                    new[] { consoleOpen, _detailedExamine, _toggleAlertStackDebug }),
+
+                // Map Editor: it polls Keyboard/Mouse directly for its own free-fly camera, so
+                // Movement/Camera must be masked here too (unlike TileMenu) to avoid the normal
+                // character/camera fighting it every frame.
+                [InputContext.MapEditor] = new InputContextDefinition(
+                    new[] { tile, other },
+                    new[] { consoleOpen }),
 
                 // Machine panel captures movement/camera; Escape closes via UiCancel (Other masked).
                 [InputContext.MachineUI] = new InputContextDefinition(
@@ -144,15 +168,11 @@ namespace SS3D.Systems.Inputs
                     new[] { console },
                     System.Array.Empty<InputAction>()),
 
-                // Generic text field focused: everything off.
+                // Text field focused (local-speech compose, future feed fields): everything off;
+                // Enter/Escape handled by UITK KeyDownEvent, not Input System actions.
                 [InputContext.TextEntry] = new InputContextDefinition(
                     System.Array.Empty<InputActionMap>(),
                     System.Array.Empty<InputAction>()),
-
-                // Chat field focused: everything off except sending the message being typed.
-                [InputContext.ChatEntry] = new InputContextDefinition(
-                    System.Array.Empty<InputActionMap>(),
-                    new[] { sendChat }),
             };
         }
 

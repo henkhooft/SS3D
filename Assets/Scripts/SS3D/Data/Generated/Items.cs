@@ -153,12 +153,6 @@ namespace SS3D.Data.Generated
         public const string TileGrey = "7a47e5b68d8bab647b3f99ee3af524c7";
         public const string TileGreyDark = "6873d7cf62d6ebc42966423161b799f1";
         public const string TileKitchen = "5ecf13819099b014eb5f731155540586";
-        public const string TileOverlayBlue = "821d0946be816bb42a0eed24631d57ee";
-        public const string TileOverlayBrown = "3a7b793253e1a0f4587097192998c361";
-        public const string TileOverlayGreen = "b3e652487789fe54d8d24245d5962c3a";
-        public const string TileOverlayOrange = "6cd51fc127b8aac40b2accd3e2666202";
-        public const string TileOverlayPurple = "14df766b77b0daf4b82ad93125f66782";
-        public const string TileOverlayRed = "5e24183c4537dcf47b16fde5ab1ce0ea";
         public const string TilePlating = "8686fbdb413e33b4395a775c4f2ba990";
         public const string TileReinforced = "df4cf328d472de046bcbc073cbda2868";
         public const string TileWhite = "61201f10ccc2856459a9de99d9cdc52e";

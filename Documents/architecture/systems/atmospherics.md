@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: 8d5428105 — 2026-07-17
+> Verified: a15807a6d — 2026-07-21
 
 # Atmospherics
 
@@ -11,7 +11,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop, waits for tilemap, wires observer + visualization
+- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop, waits for tilemap, wires observer + visualization (`SS3D.Atmos.Sim` / `Upload` markers)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSimulation.cs` — native cell buffers, active-cell scheduling, job dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Bridge/AtmosTileObserver.cs` — `ITileMutationObserver`; refreshes cells on placement, clear, and door state
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ShareGasJob.cs` — pressure-driven mole sharing

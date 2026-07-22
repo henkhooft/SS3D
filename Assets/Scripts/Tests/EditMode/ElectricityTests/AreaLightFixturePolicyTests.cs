@@ -7,9 +7,9 @@ namespace EditorTests
     public class AreaLightFixturePolicyTests
     {
         [Test]
-        public void WithoutArea_UsesConsumerPowerStatus()
+        public void WithoutArea_NeverEmits()
         {
-            Assert.IsTrue(AreaLightFixturePolicy.ShouldEmitLight(
+            Assert.IsFalse(AreaLightFixturePolicy.ShouldEmitLight(
                 hasArea: false,
                 AreaLightingState.Dark,
                 LightFixtureCapability.NormalOnly,

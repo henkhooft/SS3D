@@ -20,7 +20,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 ## Extension points
 
-- Combat drains: call `ServerDepleteStamina` / existing consume path from combat verbs (deferred).
+- Combat drains: melee swings call `ServerDepleteStamina` via `MeleeWeaponProfile.StaminaCost` ([combat](combat.md)); block/fire drains still deferred.
 - Compact HUD indicator near vitals: Main HUD / Phase 6 — do not revive `StaminaBarView`.
 
 ## Pitfalls

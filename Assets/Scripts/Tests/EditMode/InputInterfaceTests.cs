@@ -22,5 +22,25 @@ namespace EditorTests
             // No EventSystem and no registered documents in an isolated EditMode run.
             Assert.IsFalse(InputInterface.IsPointerOverInterface());
         }
+
+        [Test]
+        public void TextCaptureMakesPointerOverInterfaceTrue()
+        {
+            Assert.IsFalse(InputInterface.IsCapturingText);
+
+            InputInterface.PushTextCapture();
+            try
+            {
+                Assert.IsTrue(InputInterface.IsCapturingText);
+                Assert.IsTrue(InputInterface.IsPointerOverInterface());
+            }
+            finally
+            {
+                InputInterface.PopTextCapture();
+            }
+
+            Assert.IsFalse(InputInterface.IsCapturingText);
+            Assert.IsFalse(InputInterface.IsPointerOverInterface());
+        }
     }
 }

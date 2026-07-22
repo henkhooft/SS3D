@@ -1,30 +1,30 @@
 ---
 name: Combat Implementation Plan
-overview: Build combat.md on top of the now-integrated foundations — the health rewrite (Phases 0–5b, zone damage + ApplyDamage), body-state animation (stance packs, swing triggers, aim IK), screen-space effects, and the atmos turf sim. Phase 4 melee already lands hits; this plan finishes melee, wires the foundation hookups, adds ranged, intent/disarm/grab, and the stamina/armor cross-system layer.
+overview: Clean-slate combat build-out per combat.md. Phase 0 purges the obsolete Systems/Combat prototype (no dual-stack). Phase 1 ships unified melee MVP on health zone APIs + HumanoidCombatController. Later phases add disarm/grab, ranged, stamina drains, armor, optional blocking, and hardening.
 todos:
-  - id: phase0-foundation-wiring
-    content: "Phase 0: Verify merge + smoke-test; screen-effects←health shipped; remaining: turf O2 into LungIntake; marry melee swing animation to windup/recovery"
-    status: pending
-  - id: phase1-melee-complete
-    content: "Phase 1: Melee to MVP — intent (help/harm) gating on the hit path already shipped (MeleeHitInteraction.AllowedIntent + InteractionPipeline enforcement); remaining: lethality tuning to 'a handful of solid hits', improvised-weapon fallback for any held item"
-    status: pending
+  - id: phase0-purge
+    content: "Phase 0: Purge Assets/Scripts/SS3D/Systems/Combat/, weapon MeleeWeaponItemExtension prefab wiring, InteractionController melee-stance LMB intercept, orphaned IntentController; leave HumanoidCombatController + stance packs; compile-clean"
+    status: completed
+  - id: phase1-unified-melee
+    content: "Phase 1: Unified melee MVP — Harm click → windup/recovery + RequestAttack + zone ApplyDamage; fists + improvised any-held-item + dedicated tool profiles; Help does not swing"
+    status: completed
   - id: phase2-disarm-grab
-    content: "Phase 2: Ctrl-disarm (strip weapon from hands) and Alt-grab (positioning control) as modifier+click interactions on the existing IntentController"
+    content: "Phase 2: Ctrl-disarm (force-strip hands) and Alt-grab (positioning) per main-hud.md §7"
     status: pending
   - id: phase3-ranged
-    content: "Phase 3: Ranged weapon vertical slice — weapon-intrinsic accuracy cone (recoil climb, movement bloom, range falloff, narrow-when-still), hitscan default, reload/cooldown, LOS via shared occlusion raycast"
+    content: "Phase 3: Ranged vertical slice — weapon accuracy cone, hitscan default, reload/cooldown, shared LOS occlusion helper (no parallel raycast)"
     status: pending
-  - id: phase4-stamina-bridge
-    content: "Phase 4: Stamina<->oxy bridge (sprint/swing/sustained-fire drain; push-past-empty -> real oxy debt) per stamina.md; gate combat verbs on stamina"
+  - id: phase4-stamina
+    content: "Phase 4: Combat stamina drains (swing/fire/block) via StaminaController; push-past-empty already → ApplyOxyDebt"
     status: pending
   - id: phase5-armor
-    content: "Phase 5: Per-zone armor absorption before limb damage + seal breach, per armor.md; finalize combat damage numbers once mitigation exists"
+    content: "Phase 5: Per-zone armor absorption before limb damage + seal breach per armor.md; retune combat damage numbers"
     status: pending
   - id: phase6-blocking
-    content: "Phase 6 (optional for MVP): Equipment-tied timed blocking (riot shield) — reduce/negate a hit inside a timing window"
+    content: "Phase 6 (optional for MVP): Equipment-tied timed blocking (riot shield)"
     status: pending
   - id: phase7-hardening
-    content: "Phase 7: EditMode/PlayMode tests for accuracy cone, disarm, damage-into-health; update system maps + INDEX"
+    content: "Phase 7: EditMode/PlayMode tests; update-system-docs (combat map condemned → partial/shipped); INDEX sync"
     status: pending
 isProject: false
 ---
@@ -42,101 +42,166 @@ redesigned:
 | [main-hud.md](../design/main-hud.md) §7 | Intent / combat-verb chording — help/harm, Ctrl disarm, Alt grab |
 | [health.md](../design/health.md) | Per-limb brute/burn/oxy model damage feeds into |
 | [stamina.md](../design/stamina.md) | Stamina drain on combat actions; push-past-empty → oxy debt |
-| [armor.md](../design/armor.md) | Per-zone absorption before limb damage |
+| [armor.md](../design/armor.md) | Per-zone absorption before limb damage (deferred) |
 | [death-cloning-respawn.md](../design/death-cloning-respawn.md) | What a lethal hit resolves into (round-end/observer) |
 
-## Why now — the foundations are in place
+## Strategic shift: clean-slate (condemned prototype)
 
-This plan exists because the four blocks combat builds on all landed:
+The Phase 4 melee slice under `Assets/Scripts/SS3D/Systems/Combat/` is **condemned /
+obsolete**. It is a disconnected prototype, not a foundation to extend:
 
-- **Health rewrite** (Phases 0–5b) — `HumanHealthController.ApplyDamage(BodyZone, MeleeDamagePacket)`,
-  the zone/organ/systemic model, critical/death, and the `ZoneTargetResolver` raycast. See
-  [systems/health.md](../architecture/systems/health.md).
-- **Body-state animation** — Peaceful/Melee/Ranged stance packs, aim look-at IK, and melee swing
-  triggers via `HumanoidCombatController` / `AnimationOrchestrator`. See
-  [systems/entities.md](../architecture/systems/entities.md) and
-  [2026-07_player-body-animation.md](../architecture/2026-07_player-body-animation.md).
-- **Screen-space effects** — Volume overlays + hit flash, ready to drive from health. See
-  [systems/screen-effects.md](../architecture/systems/screen-effects.md).
-- **Atmospherics** — turf O2 available to feed oxygen debt. See
-  [systems/atmospherics.md](../architecture/systems/atmospherics.md).
+- Melee-stance LMB in `InteractionController` plays swing animation via
+  `HumanoidCombatController.TryHandlePrimaryAttack` and **returns without running hit
+  resolution** — anim and damage are two parallel half-systems.
+- `HandHit` (fists) was never prefab-wired.
+- `MeleeWeaponProfile` windup/recovery is not married to the swing telegraph.
+- Improvised-any-item, ranged, disarm/grab, armor, and combat stamina drains were never
+  built.
 
-**Phase 4 already ships zone-targeted melee** (`SS3D.Systems.Combat`: `MeleeHitInteraction`,
-`MeleeWeaponProfile` with windup/recovery, `HandHit`, fists + crowbar). This plan finishes the
-model rather than starting it.
+**No dual-stack rule:** Phase 0 deletes the Combat folder and related wiring. New melee is
+written fresh against the keep-list below. Do not slim, bridge, or run old
+`MeleeHitInteraction` alongside a replacement.
 
-## What is already built (do not rebuild)
+See system map: [systems/combat.md](../architecture/systems/combat.md) (`Status: condemned`).
 
-- Melee hit resolution: aim ray → `ZoneTargetResolver.TryResolveCombatZone` → `ApplyDamage`.
-- Per-weapon `MeleeWeaponProfile` (brute/burn, `WindupSeconds`, `RecoverySeconds`, `CanSever`) and
-  `MeleeRecoveryTracker` (blocks follow-up swings).
-- Limb severing on sharp weapons (health Phase 5b).
-- Intent framework: `SS3D.Interactions.IntentController` / `IntentType` / `IIntentProvider` /
-  `IIntentRestrictedInteraction` — present, needs to gate the hit path and drive the HUD.
-- Combat stance switching from held-item traits (`HumanoidBodyStateBridge.ResolveCombatStance`).
+### Keep (do not purge)
+
+| Piece | Why |
+|-------|-----|
+| `HumanHealthController.ApplyDamage` / damage packet into health | Health owns damage intake |
+| `ZoneTargetResolver` / `BodyParts` / `ZoneTargetCollider` | Health zone targeting (health plan Phase 4) |
+| `HumanoidCombatController`, stance packs, `AnimationOrchestrator.PlayAttackTrigger` | Presentation hooks from [player-body-animation](../architecture/2026-07_player-body-animation.md) |
+| Help/Harm via Main HUD + `IIntentRestrictedInteraction` | Intent gating |
+| `StaminaController.ServerDepleteStamina` / `ApplyOxyDebt` | Ready; combat drains are Phase 4 of *this* plan |
+| Screen hit-flash via health → `ScreenEffectsSubSystem` | Already wired |
+
+### Redesign (wiring only)
+
+Keep `HumanoidCombatController` + stance/swing APIs. **Redesign click ownership:** new combat
+owns the primary-attack path and calls `RequestAttack` as feedback. Presentation must not
+consume LMB alone (that was the condemned preview intercept).
+
+## Foundations ready (build on these)
+
+- **Health** (Phases 0–5b) — zone model, `ApplyDamage`, severing, screen-effects from snapshot.
+  See [systems/health.md](../architecture/systems/health.md).
+- **Body-state animation** — Peaceful/Melee/Ranged stance, aim IK, swing triggers. See
+  [systems/entities.md](../architecture/systems/entities.md).
+- **Stamina Phase 7a core** — regen, encumbrance, sprint, overdraw→oxy; combat drains deferred.
+  See [systems/stamina.md](../architecture/systems/stamina.md).
+- **Intent Help/Harm** — Main HUD + pipeline `IIntentRestrictedInteraction`.
 
 ## Phases
 
-### Phase 0 — Foundation wiring (do first)
+### Phase 0 — Purge obsolete combat (first code PR)
 
-1. **Verify the merge.** Open the project on `health-rewrite`, confirm a clean compile, and
-   smoke-test humanoid movement + limp (the merge rerouted gait/limp off the deleted
-   `FeetController` onto `HumanHealthController.Snapshot.MovementSpeedMultiplier` /
-   `GetZoneBruteFraction`). See merge commit for the exact resolution.
-2. ~~**Screen-effects ← health**~~ — **shipped** (`HealthScreenEffectMapper` + hit-flash TargetRpc).
-3. **Atmos → oxygen.** Feed the occupant's turf O2 ratio into `HealthSimulation.LungIntake(atmosphereO2)`
-   (currently defaults to `1f`). This makes suffocation/low-pressure real and gives combat stakes in
-   breached areas.
-4. **Marry swing animation to windup/recovery.** The swing telegraph (animation) and
-   `MeleeWeaponProfile.WindupSeconds`/`RecoverySeconds` (data) exist separately — align them so the
-   visible wind-back matches the mechanical window (`combat.md` §2).
+Delete condemned code and restore a clean interaction primary-click path:
 
-### Phase 1 — Melee to MVP-complete
+1. Delete `Assets/Scripts/SS3D/Systems/Combat/` (all types: `MeleeHitInteraction`,
+   `MeleeWeaponItemExtension`, `HandHit`, `MeleeWeaponProfile`, `MeleeDamagePacket`,
+   `MeleeRecoveryTracker`, etc.).
+2. Strip `MeleeWeaponItemExtension` from Crowbar / Hatchet / KitchenKnife prefabs (prefer
+   Editor/`PrefabUtility`; do not hand-grow `Human.prefab`).
+3. Remove melee-stance LMB intercept in `InteractionController` that calls
+   `TryHandlePrimaryAttack` and returns — primary click returns to the normal interaction
+   pipeline until Phase 1 owns it.
+4. Delete orphaned uGUI `IntentController` if still unreferenced (Main HUD owns intent).
+5. Leave `HumanoidCombatController` + stance packs + `RequestAttack` / swing triggers intact.
+6. Compile-clean; smoke humanoid movement + Help/Harm toggle.
 
-- Gate the hit path on **intent**: harm-intent targeted hits only; help-intent click does not swing.
-- Tune lethality to `combat.md` §4 ("a handful of solid hits, not a DPS race").
-- **Improvised weapons** (`combat.md` §2): any held item swings at a low base `MeleeWeaponProfile`;
-  dedicated tools a step above; purpose-built weapons above that.
+### Phase 1 — Unified melee MVP (first shippable combat)
+
+Single primary path per [combat.md](../design/combat.md) §2:
+
+- **Harm click always swings** (windup → connect → recovery + stamina), even with no
+  collider under the reticle. Help-intent click does not swing.
+- At **connect**, resolve zone from synced aim → `ApplyDamage` if in range; misses still
+  pay recovery. Call `HumanoidCombatController.RequestAttack` so the telegraph matches
+  `WindupSeconds` / `RecoverySeconds`.
+- **Fists** + **improvised fallback** for any held item (low base profile) + dedicated
+  profiles a step above for crowbar (and 1–2 tools).
+- Interim lethality toward combat.md §4 (“a handful of solid hits”) — **final numbers wait
+  on armor (Phase 5)**.
+- HUD zone-label chip ([main-hud.md](../design/main-hud.md) §6) shipped on Main HUD
+  (`ZoneTargetReticle` + `TryResolveHoverZone`).
 
 ### Phase 2 — Disarm and grab
 
-- `Ctrl`-disarm and `Alt`-grab as modifier+click interactions on `IntentController` (`main-hud.md` §7).
-- Disarm strips the weapon from the target's hands; grab controls positioning. Both do real tactical
-  work against ranged/melee respectively (`combat.md` §4).
+- `Ctrl`-disarm and `Alt`-grab as modifier+click interactions ([main-hud.md](../design/main-hud.md)
+  §7).
+- Disarm: server force-strip from target's hands (inventory primitives exist; no combat verb
+  yet). Grab: positioning control. Both do real tactical work ([combat.md](../design/combat.md)
+  §4).
 
-### Phase 3 — Ranged (the net-new system)
+### Phase 3 — Ranged
 
-- Weapon-intrinsic **accuracy cone** (`combat.md` §3): base spread widening with recoil climb,
-  movement bloom, and range falloff; narrowing when still/braced. Readable via recoil kick + reticle
-  bloom — no hidden roll.
-- **Hitscan** default for small arms; reserve projectile travel for thrown/heavy ordnance.
+- Weapon-intrinsic **accuracy cone** ([combat.md](../design/combat.md) §3): base spread,
+  recoil climb, movement bloom, range falloff; narrow when still/braced. Readable via recoil
+  + reticle bloom — no hidden roll.
+- **Hitscan** default for small arms (confirm against FishNet prediction at start of this
+  phase); projectile travel for thrown/heavy later.
 - Reload / cooldown pacing.
-- **Line-of-sight** reuses the shared occlusion raycast (same system as comms occlusion / hacking
-  discovery) — one raycast system, no parallel implementation (`combat.md` §3).
+- **Line-of-sight:** extract a **shared** occlusion helper (comms / drop / combat consumers) —
+  one raycast system, no parallel implementation.
 
-### Phase 4 — Stamina ↔ oxy bridge
+### Phase 4 — Combat stamina drains
 
-- Per `stamina.md`: sprint, swing, block, and sustained fire drain stamina; pushing past empty draws
-  real oxy debt into the health model (health plan Phase 7a). Gate combat verbs on stamina.
+- Per [stamina.md](../design/stamina.md): swing, block, and sustained fire drain via
+  `StaminaController.ServerDepleteStamina`; push-past-empty already draws oxy debt. Gate or
+  soft-penalize combat verbs as design requires (core Phase 7a does not hard-lock at zero).
 
 ### Phase 5 — Armor
 
-- Per-zone flat absorption before limb damage + binary seal breach (`armor.md` §2). Reuse the same
-  per-zone coverage check for defib pad contact (`death-cloning-respawn.md` §3). Finalize combat
-  damage numbers once mitigation exists (`combat.md` §6).
+- Per-zone flat absorption before limb damage + binary seal breach ([armor.md](../design/armor.md)).
+- Retune combat damage numbers once mitigation exists ([combat.md](../design/combat.md) §6).
 
 ### Phase 6 — Blocking (optional for MVP)
 
-- Equipment-tied timed block (riot shield) reducing/negating a hit within a window (`combat.md` §2).
+- Equipment-tied timed block (riot shield) reducing/negating a hit within a window
+  ([combat.md](../design/combat.md) §2).
 
 ### Phase 7 — Hardening
 
-- EditMode tests for the accuracy cone and damage-into-health; PlayMode for disarm + a full melee/ranged
-  skirmish (`combat.md` §7 worked example). Run `update-system-docs` to sync
-  [systems/combat.md](../architecture/systems/combat.md) and INDEX.
+- EditMode tests for damage-into-health and (later) accuracy cone; PlayMode for melee
+  skirmish and disarm when those phases land ([combat.md](../design/combat.md) §7).
+- Run `update-system-docs`: combat map condemned → partial/shipped; INDEX coverage sync.
 
-## Open questions (from combat.md §6, surfaced not decided)
+## Explicitly out of Phase 0–1
 
-- Hitscan vs. projectile split — recommended hitscan-by-default, confirm against FishNet prediction.
-- Armor mitigation must land before final damage tuning.
-- No skill/training accuracy modifier is assumed to exist.
+- Armor, ranged, disarm/grab, combat stamina drains
+- Atmos → `HealthSimulation.LungIntake` (health/atmos follow-up)
+- Body-presentation-authority rewrite; vitals HUD
+- Skill/training accuracy modifiers ([combat.md](../design/combat.md) §6 / §8)
+
+## Open questions (surfaced, not decided here)
+
+- Hitscan vs. projectile for Phase 3 — recommended hitscan-by-default; confirm FishNet.
+- Armor must land before final damage tuning.
+- No skill/training accuracy modifier assumed.
+
+## Implementation notes
+
+- **2026-07-19:** Plan rewritten from “finish Phase 4 melee” to clean-slate. Prior plan
+  assumed `MeleeHitInteraction` / fists / crowbar were keepable foundation; code audit found
+  that slice condemned (stance LMB ≠ damage, unwired fists, windup ≠ anim). Presentation
+  (`HumanoidCombatController` + stance packs) deliberately **kept**. Doc pass only — no
+  gameplay C# until Phase 0 executes.
+- **2026-07-19 (Phase 0–1):** Purged obsolete Combat prototype + orphaned `IntentController`;
+  moved `MeleeDamagePacket` into Health; rebuilt unified Hit path with
+  `RequestAttack` telegraph on Run Primary; fists on hand prefabs; improvised fallback on
+  `Item`; dedicated profiles on crowbar/hatchet/knife. Editor menu
+  `SS3D/Combat/Setup Melee Prefabs` for PrefabUtility re-wiring. Lethality interim until armor.
+- **2026-07-19 (test dummy):** Admin console `spawndummy` → `EntitySubSystem.ServerSpawnCombatDummy`
+  (mindless Human + `CombatDummyBootstrap`). See [systems/combat.md](../architecture/systems/combat.md) Testing.
+- **2026-07-20 (connect damage fix):** Swings ran but never damaged — (1) cancel-on-move used the
+  hand bone so swing anim aborted windup before `StartDelayed`; (2) connect resolved from
+  stance `AimYaw`/`AimPitch`, which stay stale outside combat stance. Fix: melee move-check
+  uses entity root; owner syncs mouse aim via `CmdSyncMeleeAim` for connect resolve.
+- **2026-07-20 (targeting + intent):** Connect uses camera ray + exclude-self + closest-point
+  reach + AnatomyNode limb meshes. `C`/HUD chip toggle Help/Harm; Harm forces combat stance.
+  Reticle: lock-on recharge from `MeleeRecoveryTracker` + cross flash on land. HUD intent
+  polls `CurrentIntent` (interim; prefer `IntentChanged` later). `C` still also Cancel
+  Interaction in `Controls.inputed` — input conflict open.
+- **2026-07-20 (Harm exclusivity):** Unrestricted interactions are Help-default in
+  `MatchesIntent`; Harm primary always returns after the melee attempt (no Drop/Open
+  fall-through); Drop hotkey requires Help.

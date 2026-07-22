@@ -27,6 +27,12 @@ namespace SS3D.Interactions
         protected bool HasStarted { get; private set; }
 
         /// <summary>
+        /// When true, moving farther than CharacterMoveCheck tolerance cancels the windup.
+        /// Melee overrides to false so walking does not abort connect/recovery.
+        /// </summary>
+        protected virtual bool CancelOnMove => true;
+
+        /// <summary>
         /// The interval in seconds in which CanInteract is checked
         /// </summary>
         protected float CheckInterval { get; set; }
@@ -36,7 +42,7 @@ namespace SS3D.Interactions
         /// Creates a client-side interaction object for this interaction
         /// </summary>
         /// <param name="interactionEvent">The interaction event</param>
-        public IClientInteraction CreateClient(InteractionEvent interactionEvent)
+        public virtual IClientInteraction CreateClient(InteractionEvent interactionEvent)
         {
             // Don't create client interaction if delay too small
             if (Math.Abs(Delay) < 0.1f)
@@ -79,8 +85,10 @@ namespace SS3D.Interactions
         public virtual bool Update(InteractionEvent interactionEvent, InteractionReference reference)
         {
             if (HasStarted
-                && interactionEvent.Source.GetRootSource() is IGameObjectProvider provider
-                && !InteractionExtensions.CharacterMoveCheck(_startPosition, provider.GameObject.transform.position))
+                && CancelOnMove
+                && !InteractionExtensions.CharacterMoveCheck(
+                    _startPosition,
+                    ResolveMoveCheckPosition(interactionEvent)))
             {
                 interactionEvent.Source.CancelInteraction(reference);
                 return true;
@@ -128,12 +136,23 @@ namespace SS3D.Interactions
         /// <param name="interactionEvent">The interaction event</param>
         protected abstract void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference);
 
-        protected void CaptureStartPosition(InteractionEvent interactionEvent)
+        /// <summary>
+        /// World position used for cancel-on-move. Override when the source transform is a moving bone
+        /// (e.g. hand during a swing anim) so the character root is checked instead.
+        /// </summary>
+        protected virtual Vector3 ResolveMoveCheckPosition(InteractionEvent interactionEvent)
         {
             if (interactionEvent.Source.GetRootSource() is IGameObjectProvider provider)
             {
-                _startPosition = provider.GameObject.transform.position;
+                return provider.GameObject.transform.position;
             }
+
+            return _startPosition;
+        }
+
+        protected void CaptureStartPosition(InteractionEvent interactionEvent)
+        {
+            _startPosition = ResolveMoveCheckPosition(interactionEvent);
         }
 
         protected void StartCounter()
