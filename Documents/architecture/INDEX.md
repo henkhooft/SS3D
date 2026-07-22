@@ -153,7 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
-| [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene tooling written, pending Editor run; Phase 2 recipe convention done; Phase 1 organs deprioritized; Phase 3 hands-wiring ready for the in-progress inventory-storage redesign) |
+| [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention done and verified in-Editor; Phase 1 organs deprioritized; Phase 3 hands-wiring ready for the in-progress inventory-storage redesign) |
 
 ## Implementation plans
 
