@@ -15,8 +15,9 @@
 }
 
 .main-hud__zone--alerts {
-    top: var(--ss3d-space-5);
-    right: var(--ss3d-space-5);
+    /* Inset farther than other chrome so the stack doesn't hug the corner. */
+    top: 48px;
+    right: 48px;
     flex-direction: row;
 }
 

@@ -51,9 +51,9 @@ released. Definitions live in `InputSubSystem.BuildContexts()`.
 
 | Context | Priority | Enables |
 |---|---|---|
-| `Global` | 0 | `Other` map; `Console.Open`; `TileCreator.ToggleMenu` |
-| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine`; `OpenLocalSpeechCompose` |
-| `TileMenu` | 20 | `Movement`, `Camera`, `TileCreator`, `Other`; `Console.Open`; `DetailedExamine` (world interactions/hotkeys dropped) |
+| `Global` | 0 | `Other` map; `Console.Open`; `TileCreator.ToggleMenu`; `ToggleAlertStackDebug` |
+| `Gameplay` | 10 | `Movement`, `Camera`, `Interactions`, `Hotkeys`, `Other`; `Console.Open`; `TileCreator.ToggleMenu`; `DetailedExamine`; `OpenLocalSpeechCompose`; `ToggleAlertStackDebug` |
+| `TileMenu` | 20 | `Movement`, `Camera`, `TileCreator`, `Other`; `Console.Open`; `DetailedExamine`; `ToggleAlertStackDebug` (world interactions/hotkeys dropped) |
 | `MachineUI` | 30 | `Hotkeys`, `Interactions`; `UiCancel` (Escape). `Movement`/`Camera`/`Other` masked so Escape closes the panel instead of toggling the lobby |
 | `Console` | 40 | `Console` map only |
 | `TextEntry` | 50 | nothing (field focused; typing via UITK/uGUI; Enter/Escape via UITK for local-speech compose) |

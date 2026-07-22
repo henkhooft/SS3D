@@ -8,6 +8,7 @@ using SS3D.Permissions;
 using SS3D.Permissions.Events;
 using SS3D.Systems.Area;
 using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.SpawnPoints;
 using FishNet;
 using System;
 using System.Collections.Generic;
@@ -125,6 +126,7 @@ namespace SS3D.Systems.Persistence
             RegisterContributor(new AreaPersistenceContributor(
                 () => SubSystems.Get<AreaSubSystem>(),
                 () => SubSystems.Get<TileSubSystem>()));
+            RegisterContributor(new SpawnPointPersistenceContributor(() => SubSystems.Get<TileSubSystem>()));
             RegisterContributor(new PermissionsPersistenceContributor(() => SubSystems.Get<PermissionSubSystem>()));
         }
 
@@ -304,6 +306,7 @@ namespace SS3D.Systems.Persistence
             {
                 TileMapPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedTileMap>(payloadJson),
                 AreaPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedAreaChunkPayload>(payloadJson),
+                SpawnPointPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedSpawnPointChunkPayload>(payloadJson),
                 PermissionsPersistenceContributor.ContributorIdValue => JsonUtility.FromJson<SavedPermissionsPayload>(payloadJson),
                 _ => payloadJson,
             };

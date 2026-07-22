@@ -149,6 +149,44 @@ namespace EditorTests
         }
 
         [Test]
+        public void TryEvaluateOutlineInteractability_IgnoresSourceOnlyAndReportsViable()
+        {
+            StubInteractionSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+
+            bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
+                source,
+                targets,
+                Vector3.zero,
+                Vector3.up,
+                IntentType.Help,
+                out bool hasViable);
+
+            Assert.IsTrue(found);
+            Assert.IsTrue(hasViable);
+        }
+
+        [Test]
+        public void TryEvaluateOutlineInteractability_HarmHidesUnrestrictedWorldVerbs()
+        {
+            StubInteractionSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+
+            bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
+                source,
+                targets,
+                Vector3.zero,
+                Vector3.up,
+                IntentType.Harm,
+                out bool hasViable);
+
+            Assert.IsTrue(found);
+            Assert.IsFalse(hasViable);
+        }
+
+        [Test]
         public void TryResolve_ReturnsFalseWhenIdentifierNotFound()
         {
             List<InteractionEntry> entries = new()
@@ -209,6 +247,18 @@ namespace EditorTests
         private sealed class StubInteractionTarget : IInteractionTarget
         {
             public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => System.Array.Empty<IInteraction>();
+        }
+
+        private sealed class OfferingTarget : IInteractionTarget
+        {
+            private readonly IInteraction[] _interactions;
+
+            public OfferingTarget(params IInteraction[] interactions)
+            {
+                _interactions = interactions;
+            }
+
+            public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => _interactions;
         }
 
         private sealed class TargetComponent : MonoBehaviour, IInteractionTarget

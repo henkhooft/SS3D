@@ -26,7 +26,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | hacking-interface | [hacking-interface.md](../design/hacking-interface.md) — active | none yet | none yet |
 | combat | [combat.md](../design/combat.md) — active | [player-body-animation](2026-07_player-body-animation.md) — shipped (stance/locomotion); [animation-polish](2026-07_animation-polish.md) — shipped (melee torso, limp, mirror, swing variants); [combat_implementation_plan](../plans/combat_implementation_plan.md) — Phase 0–1 shipped (unified melee); Phases 2–7 pending | [combat](systems/combat.md) — partial |
 | stamina | [stamina.md](../design/stamina.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — Phase 7a core shipped with inventory clean-slate (combat drains deferred) | [stamina](systems/stamina.md) — partial |
-| health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — planned; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired) | [health](systems/health.md) — partial |
+| health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — planned; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired); Main HUD alert stack health-wired (vitals UITK still open) | [health](systems/health.md) — partial |
 | armor | [armor.md](../design/armor.md) — active | none yet | none yet |
 | inventory-storage | [inventory-storage.md](../design/inventory-storage.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — in-progress (clean-slate: data model + panel + Main HUD equip/drag + stamina 7a + old UI purge shipped; Play Mode verification pending) | [inventory](systems/inventory.md) — partial |
 | examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — partial (character-examine target type §7 unimplemented) |
@@ -47,7 +47,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | chemistry | [chemistry.md](../design/chemistry.md) — active | none yet | [substances](systems/substances.md) — partial |
 | explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | none yet | none yet |
 | construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
-| creative-mode | [creative-mode.md](../design/creative-mode.md) — active | none yet | none yet |
+| creative-mode | [creative-mode.md](../design/creative-mode.md) — active | [spawn-point-authoring](2026-07_spawn-point-authoring.md) — shipped (authoring + save; runtime resolution deferred); map editor foundation in [map-editor-replacement](2026-07_map-editor-replacement.md) | [tile](systems/tile.md) — partial (Spawn Placements); [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) |
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); polish handoff [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) (planned); palette emission sample fix shipped on Simple Toon | [rendering](systems/rendering.md) — partial |
 | shuttles | [shuttles.md](../design/shuttles.md) — active | none yet | none yet |
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
@@ -87,11 +87,12 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | UI shell | [ui-shell](systems/ui-shell.md) | stub | Target UITK composition root; MI + Main HUD path catalogs shipped (duplicated); shared catalog helper + full shell deferred |
 | Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; see map § Architecture smells |
 | Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references; one-off Editor rebuild menus are tracked debt |
-| Persistence | [persistence](systems/persistence.md) | partial | Contributor-based station templates and server meta (permissions, round history) |
+| Persistence | [persistence](systems/persistence.md) | partial | Contributor-based station templates (tilemap, areas, spawn-points) and server meta (permissions, round history) |
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | Permissions | [permissions](systems/permissions.md) | partial | Admin permission checks; persisted via [persistence](systems/persistence.md) envelope with legacy txt fallback |
-| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; client FOV hard mask (`VisionRendererFeature` + raycast `_VisionMap`) |
+| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; client FOV hard mask (`VisionRendererFeature` + batched raycast `_VisionMap`) |
+| Asset organization | [asset-organization](systems/asset-organization.md) | stub | Art/Content/Data folder taxonomy; icon/prefab/ScriptableObject placement rules; audit + migration plan in [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) |
 
 ## Gameplay
 
@@ -100,7 +101,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial menu, armed interactions, outlines; Harm melee swing + intent↔stance; `C` double-bound with Cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
-| Tile / construction | [tile](systems/tile.md) | partial | Tilemap, adjacency, single-step construction placement; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys; staged build ladder (construction.md §1-2) unbuilt |
+| Tile / construction | [tile](systems/tile.md) | partial | Tilemap, adjacency, single-step construction placement; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys; staged build ladder (construction.md §1-2) unbuilt; Map Editor Spawn Placements authoring + `spawn-points` template chunk shipped (runtime role→point deferred) |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; GPU fog/fire on server/host only — client VFX sync planned; tick GC pitfalls documented (upload/pipes) |
 | Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, lighting state, wall light switches |
 | Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals |
@@ -137,6 +138,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |
+| [2026-07_spawn-point-authoring](2026-07_spawn-point-authoring.md) | shipped (authoring + save; runtime resolution deferred) |
 | [2026-07_tile-overlay-replacement](2026-07_tile-overlay-replacement.md) | shipped |
 | [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
@@ -154,6 +156,8 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 | [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
+| [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
+| [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
 
 ## Implementation plans
 
@@ -169,6 +173,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [electricity_kwh_foundation_917ccdbc.plan.md](../plans/electricity_kwh_foundation_917ccdbc.plan.md) | kWh storage, priority shedding, HV cable grid rules |
 | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) | Layered persistence framework; Phase 1a/1b shipped, Phase 2 round snapshots pending |
 | [tile_overlay_replacement.plan.md](../plans/tile_overlay_replacement.plan.md) | Area floor stripes + sparse floor decals; Overlays layer removed |
+| [spawn_point_authoring.plan.md](../plans/spawn_point_authoring.plan.md) | Map Editor spawn markers + station-template save (runtime resolve deferred) |
 | [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md) | Player body / layered animation foundation (+ polish notes) |
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
 | [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0–1 unified melee shipped (camera-ray connect, intent↔stance, reticle 2A); disarm/ranged/stamina/armor later |

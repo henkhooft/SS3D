@@ -36,6 +36,21 @@ namespace SS3D.UI.MainHud
         [SerializeField] private Sprite _iconPocket;
         [SerializeField] private Sprite _iconBack;
 
+        [SerializeField] private Sprite _alertFire;
+        [SerializeField] private Sprite _alertHot;
+        [SerializeField] private Sprite _alertCold;
+        [SerializeField] private Sprite _alertLowPressure;
+        [SerializeField] private Sprite _alertHighPressure;
+        [SerializeField] private Sprite _alertRadiation;
+        [SerializeField] private Sprite _alertHunger;
+        [SerializeField] private Sprite _alertThirst;
+        [SerializeField] private Sprite _alertPulling;
+        [SerializeField] private Sprite _alertRestrained;
+        [SerializeField] private Sprite _alertLowOxygen;
+        [SerializeField] private Sprite _alertDying;
+        [SerializeField] private Sprite _alertBleeding;
+        [SerializeField] private Sprite _alertCardiacArrest;
+
         public PanelSettings PanelSettings => _panelSettings;
         public StyleSheet MainHudStyle => _mainHudStyle;
         public StyleSheet AlertIconStackStyle => _alertIconStackStyle;
@@ -60,6 +75,24 @@ namespace SS3D.UI.MainHud
             Back = _iconBack,
         };
 
+        public AlertIconSet AlertIcons => new()
+        {
+            Fire = _alertFire,
+            Hot = _alertHot,
+            Cold = _alertCold,
+            LowPressure = _alertLowPressure,
+            HighPressure = _alertHighPressure,
+            Radiation = _alertRadiation,
+            Hunger = _alertHunger,
+            Thirst = _alertThirst,
+            Pulling = _alertPulling,
+            Restrained = _alertRestrained,
+            LowOxygen = _alertLowOxygen,
+            Dying = _alertDying,
+            Bleeding = _alertBleeding,
+            CardiacArrest = _alertCardiacArrest,
+        };
+
         public bool HasRequiredAssets(out string missingField)
         {
             if (_panelSettings == null)
@@ -79,6 +112,25 @@ namespace SS3D.UI.MainHud
                 return false;
             }
 
+            if (_alertFire == null
+                || _alertHot == null
+                || _alertCold == null
+                || _alertLowPressure == null
+                || _alertHighPressure == null
+                || _alertRadiation == null
+                || _alertHunger == null
+                || _alertThirst == null
+                || _alertPulling == null
+                || _alertRestrained == null
+                || _alertLowOxygen == null
+                || _alertDying == null
+                || _alertBleeding == null
+                || _alertCardiacArrest == null)
+            {
+                missingField = "alert icon sprites";
+                return false;
+            }
+
             missingField = null;
             return true;
         }
@@ -92,7 +144,8 @@ namespace SS3D.UI.MainHud
             StyleSheet handsGearStripStyle,
             StyleSheet equipmentGridStyle,
             StyleSheet inventorySlotStyle,
-            MainHudIconSet icons)
+            MainHudIconSet icons,
+            AlertIconSet alertIcons)
         {
             _panelSettings = panelSettings;
             _mainHudStyle = mainHudStyle;
@@ -113,6 +166,20 @@ namespace SS3D.UI.MainHud
             _iconId = icons.Id;
             _iconPocket = icons.Pocket;
             _iconBack = icons.Back;
+            _alertFire = alertIcons.Fire;
+            _alertHot = alertIcons.Hot;
+            _alertCold = alertIcons.Cold;
+            _alertLowPressure = alertIcons.LowPressure;
+            _alertHighPressure = alertIcons.HighPressure;
+            _alertRadiation = alertIcons.Radiation;
+            _alertHunger = alertIcons.Hunger;
+            _alertThirst = alertIcons.Thirst;
+            _alertPulling = alertIcons.Pulling;
+            _alertRestrained = alertIcons.Restrained;
+            _alertLowOxygen = alertIcons.LowOxygen;
+            _alertDying = alertIcons.Dying;
+            _alertBleeding = alertIcons.Bleeding;
+            _alertCardiacArrest = alertIcons.CardiacArrest;
         }
 #endif
     }

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 1cc5ff7b2 — 2026-07-20
+> Verified: 96dcd3c57 — 2026-07-21
 
 # Inventory
 
@@ -23,6 +23,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is now recipe-managed via **SS3D → Inventory → Wire Human Hands** (`HandsPrefabSetup`, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. Currently correctly wired; the tool is a safety net, re-run if it ever drifts. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** if it regresses (fixed and verified as of Phase 0).
 
+**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). Atmos / hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist. **F4** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
@@ -32,12 +34,16 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandsPrefabSetup.cs` — **SS3D → Inventory → Wire Human Hands**, (re)wires `Hands.PlayerHands`
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
-- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle inputs + `StoragePanelHost` viewer bind
+- `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle + health alert bind + `StoragePanelHost` viewer bind
 - `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneReticleDriver.cs` — composes `ZoneReticleFrame` (aim + recovery + flash clock)
 - `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneTargetReticle.cs` — dumb `Apply(frame)` painter (styles in `MainHud.uss`)
 - `Assets/Scripts/SS3D/UI/MainHud/Components/IntentModule.cs` — Help/Harm segmented toggle
 - `Assets/Scripts/SS3D/UI/StoragePanel/StoragePanelHost.cs` — multi-panel manager, HUD drop targets, drag-drop
 - `Assets/Content/Systems/UI/StoragePanel/Resources/StoragePanelAssetCatalog.asset` — committed UITK refs
+- `Assets/Scripts/SS3D/UI/MainHud/Components/AlertIconStack.cs` — hazard/severity model + chip rendering
+- `Assets/Scripts/SS3D/Systems/Health/HealthAlertStackMapper.cs` — health → alert signals (Main HUD copies into stack state)
+- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — F4 alert debug menu (`ToggleAlertStackDebug`; namespace `Dev` not `Debug`)
+- `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (MainHud asm)
 
 ## Extension points
 
@@ -45,6 +51,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Storage Panel → Rebuild Asset Catalog**.
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip with **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
+- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Icons/AlertStack/`, wire catalog/builder/editor fallback, rebuild catalog; add F4 debug row + `AlertStackCommand` case.
 
 ## Pitfalls
 
@@ -65,10 +72,13 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Gear-strip panels open above the anchor:** `StoragePanelHost.PositionPanel` flips above when the anchor is near the bottom (belt/ID/pocket/back). Do not set `style.top = gearBound.y` without that clamp — the strip sits on the screen edge.
 - **Sticky `_dragMoved` blocks hand clicks:** HUD WireDrag must clear `_dragMoved` on every PointerDown *before* the empty-slot early-out. After dragging an item out of a hand, the well is empty so the next press never re-entered the old reset path and ClickEvent kept ignoring hand switches.
 - **Play Mode / Editor verification still required** for this clean-slate pass (catalog present; compile/Play Mode not run in implementing session).
+- **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
+- **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
+- **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right). Hotkey debug panels in general are [TECH_DEBT.md](../TECH_DEBT.md) § 1.13 — prefer `alertstack` / console commands over new F-keys.
 
 ## Depends on / Used by
 
-- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md), [id-access](id-access.md), [stamina](stamina.md) (encumbrance consumer), [machine-interface](machine-interface.md) (open/close suppress)
+- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md), [id-access](id-access.md), [stamina](stamina.md) (encumbrance consumer), [health](health.md) (alert stack signals), [machine-interface](machine-interface.md) (open/close suppress)
 - **Used by:** [examine](examine.md), [player-control](player-control.md), [id-access](id-access.md), [stamina](stamina.md), [combat](combat.md) (zone reticle / intent chip)
 - **Catalog pattern:** [ui-shell](ui-shell.md), [machine-interface](machine-interface.md)
 

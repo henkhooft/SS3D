@@ -30,10 +30,18 @@ namespace SS3D.Systems.Inputs
         /// <summary>Opens local-speech compose (T). Bound in code, arbitrated by the Gameplay context.</summary>
         public InputAction OpenLocalSpeechCompose => _openLocalSpeechCompose;
 
+        /// <summary>
+        /// Toggle the Alert Icon Stack debug panel (F4). Bound in code like <see cref="UiCancel"/> —
+        /// avoid editing the generated <see cref="Controls"/> asset for one-off debug chords.
+        /// F3 is reserved for <c>LocalSpeechDebugTrigger</c> (local chat test lines).
+        /// </summary>
+        public InputAction ToggleAlertStackDebug => _toggleAlertStackDebug;
+
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
         private InputAction _openLocalSpeechCompose;
+        private InputAction _toggleAlertStackDebug;
 
         private InputArbiter _arbiter;
 
@@ -93,6 +101,9 @@ namespace SS3D.Systems.Inputs
             _detailedExamine.AddBinding("<Keyboard>/rightShift");
             _openLocalSpeechCompose = _systemMap.AddAction(
                 "OpenLocalSpeechCompose", InputActionType.Button, "<Keyboard>/t");
+            // F3 = LocalSpeechDebugTrigger; F2 = screen-effects debug (condemned uGUI).
+            _toggleAlertStackDebug = _systemMap.AddAction(
+                "ToggleAlertStackDebug", InputActionType.Button, "<Keyboard>/f4");
         }
 
         private List<InputAction> CollectAllActions()
@@ -126,19 +137,20 @@ namespace SS3D.Systems.Inputs
 
             return new Dictionary<InputContext, InputContextDefinition>
             {
-                // System actions only: menu toggle (in Other), open console, open build menu.
+                // System actions only: menu toggle (in Other), open console, open build menu,
+                // plus code-defined debug toggles that share Other's availability.
                 [InputContext.Global] = new InputContextDefinition(
                     new[] { other },
-                    new[] { consoleOpen, tileToggle }),
+                    new[] { consoleOpen, tileToggle, _toggleAlertStackDebug }),
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
-                    new[] { consoleOpen, tileToggle, _detailedExamine, _openLocalSpeechCompose }),
+                    new[] { consoleOpen, tileToggle, _detailedExamine, _openLocalSpeechCompose, _toggleAlertStackDebug }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(
                     new[] { movement, camera, tile, other },
-                    new[] { consoleOpen, _detailedExamine }),
+                    new[] { consoleOpen, _detailedExamine, _toggleAlertStackDebug }),
 
                 // Map Editor: it polls Keyboard/Mouse directly for its own free-fly camera, so
                 // Movement/Camera must be masked here too (unlike TileMenu) to avoid the normal

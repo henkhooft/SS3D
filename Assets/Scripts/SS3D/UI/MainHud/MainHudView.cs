@@ -45,6 +45,7 @@ namespace SS3D.UI.MainHud
 
         private readonly StyleSheet[] _styleSheets;
         private readonly MainHudIconSet _icons;
+        private readonly AlertIconSet _alertIcons;
 
         private VisualElement _root;
         private AlertIconStack _alertStack;
@@ -58,10 +59,11 @@ namespace SS3D.UI.MainHud
         private float _scale = 1f;
         private float _translateY;
 
-        public MainHudView(StyleSheet[] styleSheets, MainHudIconSet icons)
+        public MainHudView(StyleSheet[] styleSheets, MainHudIconSet icons, AlertIconSet alertIcons)
         {
             _styleSheets = styleSheets;
             _icons = icons;
+            _alertIcons = alertIcons;
         }
 
         public void Attach(VisualElement overlayRoot)
@@ -302,7 +304,7 @@ namespace SS3D.UI.MainHud
 
         private void BuildTree()
         {
-            _alertStack = new AlertIconStack();
+            _alertStack = new AlertIconStack(_alertIcons);
             VisualElement alertZone = BuildZone("main-hud__zone--alerts", _alertStack);
 
             _equipmentGrid = new EquipmentGrid(_icons);

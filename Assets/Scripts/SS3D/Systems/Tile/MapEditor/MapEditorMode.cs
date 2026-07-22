@@ -36,7 +36,7 @@ namespace SS3D.Systems.Tile.MapEditor
         Security,
         Misc,
 
-        // Scripting (UI stub in v1)
+        // Scripting (Spawn Placements shipped; other rails stubbed)
         Atmospherics,
         SpawnPlacements,
         RandomSpawners,
