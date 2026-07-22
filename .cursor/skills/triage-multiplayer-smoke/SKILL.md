@@ -39,8 +39,10 @@ CI artifacts unpack to the same layout.
 1. **`script_failed`** — automation instruction + exception text (primary cause).
 2. **`signals`** — how far the scenario got (`ServerReady` → `ClientConnected` → …).
 3. **`json_error_fatal`** — Serilog Error/Fatal (often empty when the fail is Unity-only).
-4. **`unity_exceptions` → `real`** — uncaught exceptions the harness greps for.
-5. **`known_noise`** — allowlisted headless spam (see `tools/known_unity_noise.patterns`).
+4. **`unity_bad_patterns`** — denylist hits from `tools/known_unity_bad.patterns` (harness
+   hard-fail; e.g. FishNet SyncVar writes on a pure client). Fix source; never allowlist as noise.
+5. **`unity_exceptions` → `real`** — uncaught exceptions the harness greps for.
+6. **`known_noise`** — allowlisted headless spam (see `tools/known_unity_noise.patterns`).
    Counts only; not the failure unless `real` is empty and harness still exited 1.
 
 ## Step 3: Dig only if needed
@@ -57,8 +59,11 @@ CI artifacts unpack to the same layout.
 - Prefer **fixing the source** (e.g. skip icon gen in batchmode) over growing the allowlist.
 - Add a line to `Testing/multiplayer/tools/known_unity_noise.patterns` only after confirming
   the message is benign under `-batchmode -nographics` / dedicated server.
-- `run_smoketest.sh` does **not** yet use this allowlist — triage reports noise separately so
-  agents do not chase Blitter stacks when `ScriptFailed` already explains the fail.
+- **`known_unity_bad.patterns` is the opposite** — harness hard-fails if matched (FishNet
+  client SyncVar writes, etc.). Never move a denylist entry into the noise allowlist.
+- `run_smoketest.sh` uses the bad denylist via `check_unity_log_for_bad_patterns`; the noise
+  allowlist is triage-only so agents do not chase Blitter stacks when `ScriptFailed` already
+  explains the fail.
 - Record new silent headless pitfalls on the relevant system map when you hit them.
 
 ## Do not

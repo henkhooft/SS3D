@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: c74429e16 — 2026-07-18
+> Verified: 7b41eddf4 — 2026-07-22
 
 # Networking (session)
 
@@ -17,6 +17,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Editor/ClientAndServerBuildScript.cs` — `SS3D/Build/Client + Dedicated Server (Linux)` menu item; batchmode entry `BuildBothBatch` used by `Tools/build_client_and_server.sh`
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — self-bootstrapping (no scene edit), drives a headless process through a `-testscript=` script using the same client→server broadcast/RPC APIs the lobby UI calls; no-op unless that flag is set. Client `wait_connected` also waits until `PlayerSubSystem` exists (FishNet connects before Game finishes loading additively).
 - `Testing/multiplayer/run_smoketest.sh` — the actual multiplayer test harness: launches a real server + N real client processes and asserts on their logs; see [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md)
+- `Testing/multiplayer/tools/known_unity_bad.patterns` — unity.log denylist (hard-fail); pair with `known_unity_noise.patterns` (triage-only)
 - `Builds/start_ss3d_server.sh`, `Builds/start_ss3d_client.sh`, `Builds/Start_SS3D_*.bat` — local / Windows-prerelease launch scripts
 - `Dockerfile`, `docker-compose.yml` — containerized server deployment
 - `.github/workflows/develop-release.yml` — manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in ([2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md))
@@ -40,6 +41,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - **After `ScriptComplete`, hard-exit — do not `Application.Quit`.** Quit still unloads scenes and re-enters `ApplicationInitializing`, so NetworkSession re-joins and (without a guard) automation re-runs → harness Error/Fatal + RoleSubSystem duplicate-key. `AutomationSubSystem` runs the script once and `Environment.Exit(0)` after emitting the final signal.
 - **`TileResourceLoader` / `Item.GenerateIcon` preview cameras break `-nographics` clients.** `RuntimePreviewGenerator` recreates URP on NullGfxDevice → GraphicsBuffer/Blitter spam that fails the harness exception check. Skip icon generation when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
 - **Destroyed `BasicElectricDevice` throws on `TileObject` during server teardown.** Accessing `.gameObject` on a destroyed component NREs inside electricity FixedUpdate after `StopConnection`; `TileObject` now returns null when `this` is Unity-destroyed so area/APC lookups bail cleanly.
+- **FishNet SyncVar writes on pure clients are LogWarnings, not exceptions.** Smoke used to pass while `unity.log` filled with `Cannot complete operation as server when server is not active` (e.g. injury SyncVars from `HumanoidBodyStateBridge`). Harness now hard-fails on `tools/known_unity_bad.patterns`; fix with `IsServer` guards, never by allowlisting as noise. See [entities.md](entities.md).
 
 ## Depends on / Used by
 

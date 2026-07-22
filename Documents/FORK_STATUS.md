@@ -432,6 +432,10 @@ Server-authoritative open-tile gas simulation on the turf grid:
   `IDynamicTileOccupant` reopens/closes gas paths when doors move
 - **GPU visualization** — `AtmosGpuUploader` → pressure/temperature/composition/fire textures;
   `AtmosRendererFeature` scatter + plasma glow + heat distortion passes
+- **Client VFX sync** — `AtmosDirtyChunkTracker` + `AtmosChunkPatchBuilder` broadcast per-chunk
+  patches to pure clients; `AtmosClientVisualizationBridge`/`AtmosClientAtlas` rebuild the same
+  atlas client-side (Phase 1; AOI + late-join bootstrap still deferred — see
+  [2026-07_atmos-client-visualization-sync.md](architecture/2026-07_atmos-client-visualization-sync.md))
 - **Debug** — `AtmosDebugController` overlay; shader debug views on renderer feature
 
 EditMode tests under `Assets/Scripts/Tests/EditMode/Atmospherics/`.
@@ -440,7 +444,7 @@ Merged from `archive/feature-atmos-ecs`. Architecture:
 [2026-07_atmos-ecs-foundation.md](architecture/2026-07_atmos-ecs-foundation.md).
 
 Deferred: liquid/solid phase buffers, valves, liquid pipe networks, pipe failures, chemistry
-integration, **client VFX sync** (server/host only today — see
+integration, atmos client VFX sync AOI scoping + late-join bootstrap (Phase 2 of
 [2026-07_atmos-client-visualization-sync.md](architecture/2026-07_atmos-client-visualization-sync.md)).
 
 ### Atmospherics pipe machinery

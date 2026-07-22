@@ -5,6 +5,10 @@
 # Requires jq. Reads the compact-JSON Serilog file sink (Assets/Settings/LogSettings.asset ->
 # UseCompactJsonFormatter) rather than scraping human-readable log prose.
 
+_LOGWAIT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Override with SS3D_UNITY_BAD_PATTERNS if needed (tests / local experiments).
+_UNITY_BAD_PATTERNS_DEFAULT="$_LOGWAIT_LIB_DIR/../tools/known_unity_bad.patterns"
+
 # wait_for_signal <json_log_path> <signal_name> <timeout_seconds>
 # Polls for a "Test signal <signal_name>" line (see SS3D.Systems.Testing.TestSignal) instead of
 # a fixed Thread.Sleep or a scene GameObject.Find poll loop.
@@ -78,6 +82,31 @@ check_unity_log_for_exceptions() {
     fi
 
     return 0
+}
+
+# check_unity_log_for_bad_patterns <unity_logfile_path>
+# Hard-fail denylist for high-signal LogWarning / prose that is not an Exception: line.
+# Patterns: Testing/multiplayer/tools/known_unity_bad.patterns (or SS3D_UNITY_BAD_PATTERNS).
+# Distinct from known_unity_noise.patterns (triage-only exception allowlist).
+check_unity_log_for_bad_patterns() {
+    local log_path="$1"
+    local patterns_file="${SS3D_UNITY_BAD_PATTERNS:-$_UNITY_BAD_PATTERNS_DEFAULT}"
+    local pat count failed=0
+
+    if [[ ! -f "$log_path" || ! -f "$patterns_file" ]]; then
+        return 0
+    fi
+
+    while IFS= read -r pat || [[ -n "$pat" ]]; do
+        [[ -z "$pat" || "$pat" =~ ^[[:space:]]*# ]] && continue
+        count="$(grep -cE -- "$pat" "$log_path" 2>/dev/null || true)"
+        if [[ "${count:-0}" -gt 0 ]]; then
+            echo "error: unity.log matched bad pattern (${count}×): $pat" >&2
+            failed=1
+        fi
+    done < "$patterns_file"
+
+    return "$failed"
 }
 
 dump_logs() {

@@ -180,16 +180,33 @@ namespace SS3D.Systems.Entities.Humanoid.Body
 
         public void SetInjuredArms(float left, float right)
         {
-            _injuredArmLeft = Mathf.Clamp01(left);
-            _injuredArmRight = Mathf.Clamp01(right);
-            if (IsServer)
+            // SyncVars are server-authoritative. Assigning on a pure client spam-logs
+            // FishNet "Cannot complete operation as server when server is not active."
+            if (!IsServer)
             {
-                ApplyLocalSnapshot();
+                return;
             }
+
+            float clampedLeft = Mathf.Clamp01(left);
+            float clampedRight = Mathf.Clamp01(right);
+            if (Mathf.Approximately(_injuredArmLeft, clampedLeft)
+                && Mathf.Approximately(_injuredArmRight, clampedRight))
+            {
+                return;
+            }
+
+            _injuredArmLeft = clampedLeft;
+            _injuredArmRight = clampedRight;
+            ApplyLocalSnapshot();
         }
 
         public void SetInjuredLeg(float injuredLeg)
         {
+            if (!IsServer)
+            {
+                return;
+            }
+
             float clamped = Mathf.Clamp01(injuredLeg);
             if (Mathf.Approximately(_injuredLeg, clamped))
             {
@@ -197,10 +214,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             }
 
             _injuredLeg = clamped;
-            if (IsServer)
-            {
-                ApplyLocalSnapshot();
-            }
+            ApplyLocalSnapshot();
         }
 
         public void SetDragging(bool isDragging)
