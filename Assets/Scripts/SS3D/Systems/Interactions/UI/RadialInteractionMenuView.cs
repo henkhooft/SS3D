@@ -4,6 +4,8 @@ using DG.Tweening;
 using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
+using SS3D.UI.Shell;
+using SS3D.UI.Shell.Animation;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -12,7 +14,7 @@ namespace SS3D.Systems.Interactions.UI
     /// <summary>
     /// UI Toolkit view for the radial interaction menu.
     /// </summary>
-    public sealed class RadialInteractionMenuView
+    public sealed class RadialInteractionMenuView : IUiSurface
     {
         public const float MenuDiameter = 240f;
         private const float PetalSize = 52f;
@@ -24,14 +26,20 @@ namespace SS3D.Systems.Interactions.UI
         private readonly Sprite _closeIcon;
         private readonly int _maxPetals;
 
+        private readonly PanelAnimator _animator = new(new PanelAnimatorConfig
+        {
+            Duration = ShowDuration,
+            OpenScaleFrom = 0f,
+            OpenTranslateYFrom = 0f,
+            Ease = Ease.OutCirc,
+        });
+
         private readonly List<RadialInteractionPetal> _petalPool = new();
 
         private VisualElement _overlayRoot;
         private VisualElement _menuRoot;
         private VisualElement _petalLayer;
         private VisualElement _closeButton;
-
-        private Sequence _showSequence;
 
         public RadialInteractionMenuView(StyleSheet menuStyleSheet, Sprite missingIcon, Sprite closeIcon, int maxPetals = 12)
         {
@@ -46,9 +54,9 @@ namespace SS3D.Systems.Interactions.UI
 
         public float MenuHeight => MenuDiameter;
 
-        public void Attach(VisualElement overlayRoot)
+        public void Attach(VisualElement layerRoot)
         {
-            _overlayRoot = overlayRoot;
+            _overlayRoot = new VisualElement { name = "radial-interaction-menu-surface" };
             _overlayRoot.style.flexGrow = 1;
             _overlayRoot.pickingMode = PickingMode.Ignore;
 
@@ -57,18 +65,20 @@ namespace SS3D.Systems.Interactions.UI
                 _overlayRoot.styleSheets.Add(_menuStyleSheet);
             }
 
+            layerRoot.Add(_overlayRoot);
+
             BuildMenuTree();
             SetOverlayInteractive(false);
         }
 
         public void Detach()
         {
-            _showSequence?.Kill();
-            _menuRoot?.RemoveFromHierarchy();
+            _animator.CancelImmediate();
             _menuRoot = null;
             _petalLayer = null;
             _closeButton = null;
             _petalPool.Clear();
+            _overlayRoot?.RemoveFromHierarchy();
             _overlayRoot = null;
         }
 
@@ -82,20 +92,7 @@ namespace SS3D.Systems.Interactions.UI
             PopulatePetals(interactions, interactionEvent);
             PositionAt(screenPosition);
             SetOverlayInteractive(true);
-
-            _showSequence?.Kill();
-            _menuRoot.style.opacity = 0;
-            float scaleValue = 0f;
-            _menuRoot.style.scale = new Scale(new Vector3(scaleValue, scaleValue, 1f));
-
-            _showSequence = DOTween.Sequence();
-            _showSequence.Append(DOTween.To(() => _menuRoot.style.opacity.value, value => _menuRoot.style.opacity = value, 1f, ShowDuration)
-                .SetEase(Ease.OutCirc));
-            _showSequence.Join(DOTween.To(() => scaleValue, value =>
-            {
-                scaleValue = value;
-                _menuRoot.style.scale = new Scale(new Vector3(value, value, 1f));
-            }, 1f, ShowDuration).SetEase(Ease.OutCirc));
+            _animator.PlayOpen(_menuRoot);
         }
 
         public void Hide(Action onComplete = null)
@@ -106,17 +103,7 @@ namespace SS3D.Systems.Interactions.UI
                 return;
             }
 
-            _showSequence?.Kill();
-            float hideScale = 1f;
-            _showSequence = DOTween.Sequence();
-            _showSequence.Append(DOTween.To(() => _menuRoot.style.opacity.value, value => _menuRoot.style.opacity = value, 0f, ShowDuration)
-                .SetEase(Ease.OutCirc));
-            _showSequence.Join(DOTween.To(() => hideScale, value =>
-            {
-                hideScale = value;
-                _menuRoot.style.scale = new Scale(new Vector3(value, value, 1f));
-            }, 0f, ShowDuration).SetEase(Ease.OutCirc));
-            _showSequence.OnComplete(() =>
+            _animator.PlayClose(_menuRoot, onComplete: () =>
             {
                 ClearPetals();
                 SetOverlayInteractive(false);

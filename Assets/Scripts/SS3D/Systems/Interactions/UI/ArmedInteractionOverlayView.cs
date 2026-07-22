@@ -1,3 +1,4 @@
+using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -7,7 +8,7 @@ namespace SS3D.Systems.Interactions.UI
     /// <summary>
     /// UI Toolkit overlay for armed Tier 2/3 interactions (reticle, action chip, invalid feedback).
     /// </summary>
-    public sealed class ArmedInteractionOverlayView
+    public sealed class ArmedInteractionOverlayView : IUiSurface
     {
         private const float ReticleSize = 26f;
         private const float ChipOffsetY = 24f;
@@ -26,9 +27,9 @@ namespace SS3D.Systems.Interactions.UI
             _styleSheet = styleSheet;
         }
 
-        public void Attach(VisualElement overlayRoot)
+        public void Attach(VisualElement layerRoot)
         {
-            _overlayRoot = overlayRoot;
+            _overlayRoot = new VisualElement { name = "armed-interaction-overlay-surface" };
             _overlayRoot.style.flexGrow = 1;
             _overlayRoot.pickingMode = PickingMode.Ignore;
 
@@ -37,18 +38,21 @@ namespace SS3D.Systems.Interactions.UI
                 _overlayRoot.styleSheets.Add(_styleSheet);
             }
 
+            layerRoot.Add(_overlayRoot);
+
             BuildOverlayTree();
             SetVisible(false);
         }
 
         public void Detach()
         {
-            _overlayRoot = null;
             _reticle = null;
             _chip = null;
             _chipLabel = null;
             _chipHint = null;
             _cantBadge = null;
+            _overlayRoot?.RemoveFromHierarchy();
+            _overlayRoot = null;
         }
 
         public void Show(string chipLabel)

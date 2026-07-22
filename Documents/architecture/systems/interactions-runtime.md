@@ -11,6 +11,8 @@ Client-side interaction routing: discovers available interactions from the curre
 
 **Intent gate:** unrestricted verbs (Drop, Open, MI, …) are **Help-default** via `InteractionPipeline.MatchesIntent`. Harm is combat-exclusive (`IIntentRestrictedInteraction`); primary never falls through to world verbs when a swing cannot start. Drop hotkey also requires Help.
 
+Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay layer (see [ui-shell](ui-shell.md)) instead of owning a private `UIDocument` — `RadialInteractionSubSystem`/`ArmedInteractionSubSystem` no longer require `[RequireComponent(typeof(UIDocument))]`; `RadialInteractionMenuView`'s open/close tween runs through the shared `PanelAnimator`.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — primary click, radial dispatch, intent sync (+ combat stance), Harm melee swing, armed resolution, outline feedback
