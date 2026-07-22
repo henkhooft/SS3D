@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-22
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -43,11 +43,24 @@ hand-edit — a wrong YAML edit silently desyncs `fileID` references with no com
 [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) makes this a named
 prefab-composition-debt item and forbids "add one more behaviour" as a feature path, and the health
 rewrite's Phase 0d demonstrated the only accepted mitigation (strip-and-rewire via Editor tooling,
-not organic growth). But enforcement is **convention only** — nothing stops a future PR from adding
-a 127th component. Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) that
-would make even the rewire tool-mediated has never been scheduled.
+not organic growth). Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) is now
+partly paid down: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
+turned strip-and-rewire into a repeatable `PrefabUtility` recipe convention
+(`HumanPrefabHygiene`/`BodyPartContainerInteractiveStrip`/`HumanPrefabRecipes`), added a CI-checked
+missing-script/dev-hack/`ContainerInteractive` gate (`HumanPrefabIntegrityTests`, passing), and fixed
+the concrete hygiene bugs the audit found (stale missing-script GUID caches, the never-built
+`BodyPartContainerInteractiveStrip.cs` tool `inventory.md`/`combat.md` cited, a dev-only hack shipping
+on production `Human.prefab`). **Enforcement is now partially machine-checked** (the EditMode test
+catches regressions on those specific items) but still not comprehensive — nothing stops a future PR
+from adding a 127th *unrelated* component; only the denylisted/known-bad ones are caught. The organ
+prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
+and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
+on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
+`HandsPrefabSetup` (**SS3D → Inventory → Wire Human Hands**). Every other domain directly on
+`Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
+forced — pick up each when its own redesign next touches entity wiring.
 
-- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab)
+- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 
@@ -272,6 +285,26 @@ moves) are not started.
 
 - Related: [asset-organization.md](systems/asset-organization.md), [data-codegen.md](systems/data-codegen.md)
   § Architecture smells (same one-off-Editor-menu root cause)
+
+### 1.15 Addressables configured but unused — every asset eager-loaded into RAM
+
+**Blast radius: high (whole-game memory footprint) — trend: scheduled but not started**
+
+21 Addressables groups are configured under `Assets/Content/Addressables/` (Items, Materials,
+Sounds, InteractionIcons, CraftingRecipes, UIElements, etc.), but they are only ever used as an
+editor-time curation source: `AssetDatabase.LoadAssetsFromAssetGroup()` copies each group entry's
+real `Object` reference into a serialized dictionary, and `Assets.Get<T>` is a synchronous read
+against those hard references. No `Addressables.LoadAssetAsync`/`Instantiate*` call exists anywhere
+in `Assets/Scripts` — grepped and confirmed 2026-07-21. Every configured asset is therefore pulled
+into RAM the moment its owning database loads and stays resident for the process lifetime, the exact
+problem upstream tracks as [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494)
+("excessive memory usage," up to 600MB) with an open, unreviewed rewrite attempt at
+[RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500) — this fork has the same root cause,
+reached via a different (Addressables-group-as-metadata) route. Migration scoped in
+[2026-07_addressables-expansion-migration.md](2026-07_addressables-expansion-migration.md); not yet
+started.
+
+- Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 
 ---
 

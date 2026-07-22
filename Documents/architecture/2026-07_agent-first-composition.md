@@ -79,7 +79,7 @@ Named only — separate architecture efforts when scheduled:
 | (a) Subsystem bootstrap + `NetworkSystemsHub` | Empty Boot/Game of per-system GameObjects |
 | (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](2026-07_mi-path-catalog.md)), Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)), and shared scaffolding + radial/armed migration ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md)). **Still deferred:** migrating MI/Main HUD/Storage Panel onto the shared `UiShellSubSystem` + `UiAssetCatalogBase` ([ui-shell](systems/ui-shell.md) § Future work) |
 | (c) Main-HUD UITK slice | **Partial:** player overlay (`MainHudSubSystem` — hands, gear, equipment, intent) + `MainHudAssetCatalog` Resources load; vitals/alerts/self-examine and Phase 0 uGUI purge still open — see [inventory](systems/inventory.md) |
-| (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits |
+| (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits — scheduled: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md) (planned) |
 
 ## Related docs
 

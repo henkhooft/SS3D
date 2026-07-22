@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/
 > Entry points: AssetDatabase, AssetDatabasesCodeGenerator
 > Status: stub
-> Verified: 23d4f8d58 — 2026-07-19
+> Verified: b329ad1a — 2026-07-21
 
 # Data / codegen
 
@@ -24,6 +24,7 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 ## Architecture smells
 
 1. **One-off Editor rebuild menus keep multiplying.** Feature work often lands a new `MenuItem` that clones/rewrites assets then registers them (`InteractionIconSpriteBuilder`, MI/Main HUD path-catalog rebuild menus — same pattern called out under [ui-shell](ui-shell.md)). Each fixes a local import/codegen gap but accumulates debt: GUID preservation hacks, `Sprite.Create` vs Instantiate pitfalls, asmdef wiring, and “did anyone run the menu?” drift. Target: one shared import → Addressables → `AssetDatabase.LoadAssetsFromAssetGroup` → codegen path; delete per-feature rebuild scripts as categories migrate onto it. Do not add another one-shot importer without updating this smell.
+2. **Addressables groups exist but are never loaded async — every configured asset is eager-loaded into RAM.** `AssetDatabase.LoadAssetsFromAssetGroup()` copies each `AddressableAssetGroup` entry's real `Object` reference into a serialized dictionary at editor time; `Assets.Get<T>` is a sync read against those hard references. No `Addressables.LoadAssetAsync`/`Instantiate*` call exists anywhere in `Assets/Scripts`. Same root cause as upstream [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494) ("excessive memory usage"), reached via a different route. Migration scoped in [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md) — do not extend this database further as if Addressables already provides on-demand loading; it doesn't yet.
 
 ## Pitfalls
 
@@ -37,3 +38,4 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 
 - [INDEX.md](../INDEX.md)
 - Related catalog debt: [ui-shell](ui-shell.md) § Future work (shared path-catalog helper)
+- [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md) — planned async loading migration
