@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 772b62dc0 — 2026-07-20
+> Verified: 39135e03b — 2026-07-22
 
 # Entities
 
@@ -46,6 +46,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Injured oneshots:** Jump / Turn90 / Emote while limping → Injured Jump / Turn / Wave (Base Layer); healthy oneshots require `LimpSide == 0`. **Jump/Turn90 are not bound in `Controls.inputactions`** and nothing calls `PlayLocomotionTrigger` yet — presentation only.
 - **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement owns loco.
 - **Batch rebuild while Editor open:** run the rebuild menu, or drop a **user-writable** `artifacts/force-rebuild-animator.flag` (root-owned flags fail to delete and skip rebuild). Batchmode cannot open a held project.
+- **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
 
 ## Depends on / Used by
 
