@@ -244,28 +244,21 @@ UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when tha
 
 ### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
 
-**Blast radius: low individually, high in aggregate — trend: scheduled but not started**
+**Blast radius: low individually, high in aggregate — trend: Phase 1 icons done; leftovers scheduled**
 
 The intended `Assets/Art/` (raw art, by type then domain) vs. `Assets/Content/` (game data/composition) split
-is sound, but a full audit found icon image assets alone living in at least eight separate locations
-(`Art/Graphics/UI/Misc/Heroicons`, `Art/Graphics/UI/Interactions/InteractionIcons`,
-`Art/Graphics/UI/Containers/InventoryIcons`, `Art/Graphics/Misc/RenderedIcons`,
-`Content/Systems/UI/MainHud/Icons/AlertStack`, plus a folder-name collision between the Art-side
-`InteractionIcons/` PNGs and a `Content/Systems/UI/Systems/Interactions/InteractionIcons/` ScriptableObject
-catalog of the same name), five separate "Misc" dumping-ground folders, and no written rule for when a
-ScriptableObject belongs in `Content/Data/` versus next to the system that owns it. Left alone, every new
-feature adds another icon folder or another Misc bucket instead of following a convention, because no
-convention was ever written down.
-[2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md) documents the full audit,
-the target taxonomy, and a 3-phase migration plan (docs → low-risk renames → reference-sensitive moves); Phase
-0 (docs/tooling) has landed, including a CI-enforced guardrail — `AssetTaxonomyTests.cs` (EditMode, runs on
-every PR via the existing `editmodetestrunner.yml`) fails on any *new* raw-art file under `Content/`, icon
-image outside `Art/Icons/`, "Misc" folder, or first-party asmdef outside `Scripts/`; all current violations are
-explicitly grandfathered so this only blocks fresh drift, not the existing backlog. Phases 1–2 (the physical
-moves) are not started.
+is sound. Phase 0 (docs/tooling + CI `AssetTaxonomyTests`) and **Phase 1 icon consolidation** have landed:
+icon images now live under `Assets/Art/Icons/` (`External/`, `Heroicons/`, `Inventory/`, `Alerts/`,
+`Rendered/`, `map-editor/`). `Graphics/Misc` and `Graphics/UI/Misc` were disposed with those moves.
+Still open from Phase 1: flatten `Content/Systems/UI/Systems/`, delete orphaned `Scripts/External/FishNet/`
+stubs, disposition animation/localization Misc folders, move `splatter.png`. Phase 2 still owns the
+InteractionIcons Art/Content folder-name collision, Substances → `Content/Data/`, and first-party
+`Assets/Editor/` → `Scripts/SS3D/Editor/`. Grandfather lists in `AssetAuditUtilities.cs` shrank for the
+shipped icon moves — do not grow them for new violations.
 
 - Related: [asset-organization.md](systems/asset-organization.md), [data-codegen.md](systems/data-codegen.md)
-  § Architecture smells (same one-off-Editor-menu root cause)
+  § Architecture smells (same one-off-Editor-menu root cause),
+  [2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md)
 
 ### 1.15 Addressables configured but unused — every asset eager-loaded into RAM
 

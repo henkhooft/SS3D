@@ -45,35 +45,29 @@ namespace AssetAudit
         };
 
         // Raw art file types currently living under Assets/Content/ instead of Assets/Art/.
-        // Taxonomy doc Phase 1/2.
+        // Taxonomy doc Phase 1 leftover (splatter.png).
         private static readonly string[] ContentRawArtGrandfather =
         {
-            "Assets/Content/Systems/UI/MainHud/Icons/AlertStack/",
             "Assets/Content/WorldObjects/World/VFX/Health/splatter.png",
         };
 
         // Icon image files (svg, or png with "icon" in the path) living outside
-        // Assets/Art/Icons/. Taxonomy doc Phase 1.
+        // Assets/Art/Icons/. Phase 1 icons consolidated; InteractionIcons + CloseIcon +
+        // TMP sprite sheets remain for Phase 2.
         private static readonly string[] ScatteredIconGrandfather =
         {
-            "Assets/Art/Graphics/UI/Misc/Heroicons/",
             "Assets/Art/Graphics/UI/Interactions/InteractionIcons/",
             "Assets/Art/Graphics/UI/Interactions/RadialMenu/CloseIcon.png",
-            "Assets/Art/Graphics/UI/Containers/InventoryIcons/",
-            "Assets/Art/Graphics/Misc/RenderedIcons/",
             "Assets/Art/Font/SpriteAssets/SpriteSheetIcons.png",
             "Assets/Art/Font/SpriteAssets/SpriteSheetRenderedIcons.png",
-            "Assets/Content/Systems/UI/MainHud/Icons/AlertStack/",
         };
 
-        // Folders literally named "Misc". Taxonomy doc Phase 1 ("disposition the five Misc
-        // folders"); this list has exactly those five and should shrink to empty, never grow.
+        // Folders literally named "Misc". Phase 1 disposed Graphics/Misc and Graphics/UI/Misc;
+        // animation + localization leftovers remain.
         private static readonly string[] UndocumentedMiscFolderGrandfather =
         {
             "Assets/Art/Animations/Misc",
             "Assets/Art/Animations/Probably Not/Misc",
-            "Assets/Art/Graphics/Misc",
-            "Assets/Art/Graphics/UI/Misc",
             "Assets/Content/Localization/Table Collections/Misc",
         };
 

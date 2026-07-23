@@ -1,6 +1,6 @@
 > Implements: (infra tooling — no design-doc section)
 > Touches systems: data-codegen, ui-shell, entities, core-subsystems, and every Content/Systems/* UI surface
-> Status: planned
+> Status: partial
 
 # Asset & file structure taxonomy (Jul 2026)
 
@@ -14,8 +14,9 @@ ScriptableObject belongs in `Content/Data/` versus living next to the system tha
 first full audit pass: catalog every current inconsistency, define the ruleset going forward, and phase in
 fixes ordered by risk (docs first, safe renames next, reference-sensitive moves last).
 
-**This doc is the plan, not the execution.** Each phase below is a separate, reviewable change; Phase 2+ moves
-touch GUID/path references in a Unity project with no CLI build/test flow (`CLAUDE.md`), so each needs an
+**This doc is the plan and progress tracker.** Phase 0 and Phase 1 icon consolidation have shipped;
+remaining Phase 1 leftovers and Phase 2+ are separate, reviewable changes. Phase 2+ moves touch
+GUID/path references in a Unity project with no CLI build/test flow (`CLAUDE.md`), so each needs an
 Editor Play Mode smoke check before merging — don't batch phases together to save review passes.
 
 ## Current inventory (audit @ `b329ad1a`, 2026-07-22)
@@ -31,17 +32,22 @@ Editor Play Mode smoke check before merging — don't batch phases together to s
 
 ### 1. Icon scatter
 
-All 4,219 `.svg` files live under `Assets/Art/Icons/` as intended, but icon-like image assets also exist in:
+**Audit snapshot @ `b329ad1a` (pre–Phase 1).** Phase 1 icon consolidation (`3fe823a15`) moved the starred
+items into `Assets/Art/Icons/`; strike-through paths below are historical. Still open: InteractionIcons
+Art/Content name collision (Phase 2) and TMP sprite sheets.
 
-- `Assets/Art/Graphics/UI/Misc/Heroicons/` — 460 files, a second vendored icon set outside `Icons/`.
-- `Assets/Art/Graphics/UI/Interactions/InteractionIcons/` — 51 PNGs, plus `.../RadialMenu/CloseIcon.png`.
-- `Assets/Art/Graphics/UI/Containers/InventoryIcons/` — 19 files.
-- `Assets/Art/Graphics/Misc/RenderedIcons/` — 13 files.
-- `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` — 14 PNGs (bleeding, cardiac-arrest, hunger, etc.) — a
-  live gameplay icon set stored under `Content/Systems`, not `Art/`, at all.
+All 4,219 `.svg` files already lived under `Assets/Art/Icons/` (now `External/` after rename). Icon-like
+image assets also existed in:
+
+- ~~`Assets/Art/Graphics/UI/Misc/Heroicons/`~~ → `Assets/Art/Icons/Heroicons/` ★
+- `Assets/Art/Graphics/UI/Interactions/InteractionIcons/` — 51 PNGs, plus `.../RadialMenu/CloseIcon.png`
+  (Phase 2).
+- ~~`Assets/Art/Graphics/UI/Containers/InventoryIcons/`~~ → `Assets/Art/Icons/Inventory/` ★
+- ~~`Assets/Art/Graphics/Misc/RenderedIcons/`~~ → `Assets/Art/Icons/Rendered/` ★
+- ~~`Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`~~ → `Assets/Art/Icons/Alerts/` ★
 - `Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/` — 51 `.asset` ScriptableObject wrappers
   that **share the exact folder name** with the Art-side PNG folder above, in a different tree, wrapping a
-  different asset kind. This is the sharpest collision in the audit.
+  different asset kind. This is the sharpest collision in the audit (Phase 2).
 - `Assets/Content/Systems/UI/MapEditor/MapEditorIcons.asset`, `.../Font/SpriteAssets/TMPSpriteAssetIcons.asset` —
   more icon-catalog ScriptableObjects mirroring raw PNGs elsewhere.
 - Vendored editor-toolbar icons in `Scripts/External/DOTween`, `Scripts/External/Hierarchy 2`,
@@ -75,8 +81,10 @@ documented rule for which bucket a new ScriptableObject should land in.
 
 ### 5. Five "Misc" dumping grounds
 
-`Art/Animations/Misc`, `Art/Animations/Probably Not/Misc`, `Art/Graphics/Misc`, `Art/Graphics/UI/Misc`,
+`Art/Animations/Misc`, `Art/Animations/Probably Not/Misc`, ~~`Art/Graphics/Misc`~~, ~~`Art/Graphics/UI/Misc`~~,
 `Content/Localization/Table Collections/Misc` — the classic signal of a taxonomy with no place for edge cases.
+Graphics Misc folders were emptied/removed with Phase 1 icon moves (`Windows/` → `Graphics/UI/Windows/`,
+overlays → `Graphics/UI/Chrome/`).
 
 ### 6. Structural mistake
 
@@ -85,8 +93,8 @@ documented rule for which bucket a new ScriptableObject should land in.
 
 ### 7. Naming inconsistency
 
-Spaces vs. PascalCase: `Assets/UI Toolkit`, `Art/Icons/external icons` (lowercase+spaced — this one is
-in-house-named, not vendor-named), `Content/Localization/Table Collections`. Most other spaced folders
+Spaces vs. PascalCase: `Assets/UI Toolkit`, ~~`Art/Icons/external icons`~~ (renamed `External/` in Phase 1),
+`Content/Localization/Table Collections`. Most other spaced folders
 (`Basic Shooter Pack`, `Pro Melee Axe Pack`, `TextMesh Pro`, `Hierarchy 2`) are asset-store/vendor pack names
 and should be left alone, same as we don't rename `Assets/FishNet/`.
 
@@ -149,13 +157,16 @@ references intact. Still verify in the Editor after each batch: some code paths 
 `Resources.Load(path)` or Addressables address keys, which **are** path-sensitive and need a source-level fix,
 not just a file move — enumerate call sites before each move in this phase.
 
-- [ ] `Art/Icons/external icons/` → `Art/Icons/External/` (rename + fix `generate_icon_index.py`'s `ICONS_ROOT`).
-- [ ] `Heroicons`, `InventoryIcons`, `RenderedIcons` → `Art/Icons/<Source>/`.
-- [ ] `Content/Systems/UI/MainHud/Icons/AlertStack/` → `Art/Icons/Alerts/`, fix the handful of UXML/code refs.
+- [x] `Art/Icons/external icons/` → `Art/Icons/External/` (rename + fix `generate_icon_index.py`'s `ICONS_ROOT`).
+- [x] `Heroicons`, `InventoryIcons`, `RenderedIcons` → `Art/Icons/<Source>/`
+      (`Heroicons/`, `Inventory/`, `Rendered/`). Coupled: emptied `Graphics/Misc` and
+      `Graphics/UI/Misc` (Windows → `Graphics/UI/Windows/`, loose overlays → `Graphics/UI/Chrome/`).
+- [x] `Content/Systems/UI/MainHud/Icons/AlertStack/` → `Art/Icons/Alerts/`, fix the handful of UXML/code refs.
 - [ ] Flatten `Content/Systems/UI/Systems/` → `Content/Systems/UI/Crafting/` + `Content/Systems/UI/Interactions/`
       (removes the redundant nesting from §6).
 - [ ] Delete the orphaned `Scripts/External/FishNet/` meta-only stubs after confirming no real files remain.
-- [ ] Disposition the five Misc folders: recategorize contents or give the bucket a real name.
+- [ ] Disposition remaining Misc folders: `Art/Animations/Misc`, `Art/Animations/Probably Not/Misc`,
+      `Content/Localization/Table Collections/Misc` (`Graphics/Misc` and `Graphics/UI/Misc` done with icon moves).
 - [ ] Move `Content/WorldObjects/World/VFX/Health/splatter.png` → `Art/Textures/World/` (or the relevant
       VFX-texture convention), fixing the material reference that consumes it.
 
@@ -178,8 +189,9 @@ not just a file move — enumerate call sites before each move in this phase.
 
 ## Out of scope for this pass
 
-- Physically executing Phase 1+ (separate, reviewable PRs; each needs an Editor Play Mode smoke check before
-  merge since there's no CLI build/test flow for this project).
+- Completing remaining Phase 1 leftovers (Systems flatten, FishNet stubs, animation/localization Misc,
+  splatter) and Phase 2+ — separate, reviewable PRs; each needs an Editor Play Mode smoke check before
+  merge since there's no CLI build/test flow for this project.
 - Re-litigating the Art/Content split itself — the concept is sound; the problem audited here is inconsistent
   adherence, not the taxonomy's design.
 - The upstream `RE-SS3D/SS3D-Art` repo's own internal organization.

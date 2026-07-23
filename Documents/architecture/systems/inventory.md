@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 96dcd3c57 — 2026-07-21
+> Verified: 3fe823a15 — 2026-07-23
 
 # Inventory
 
@@ -23,7 +23,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is now recipe-managed via **SS3D → Inventory → Wire Human Hands** (`HandsPrefabSetup`, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. Currently correctly wired; the tool is a safety net, re-run if it ever drifts. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** if it regresses (fixed and verified as of Phase 0).
 
-**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). Atmos / hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist. **F4** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged.
+**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Art/Icons/Alerts/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). Atmos / hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist. **F4** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged.
 
 ## Start here
 
@@ -51,7 +51,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Storage Panel → Rebuild Asset Catalog**.
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip with **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
-- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Icons/AlertStack/`, wire catalog/builder/editor fallback, rebuild catalog; add F4 debug row + `AlertStackCommand` case.
+- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Assets/Art/Icons/Alerts/`, wire catalog/builder/editor fallback, rebuild catalog; add F4 debug row + `AlertStackCommand` case.
 
 ## Pitfalls
 
