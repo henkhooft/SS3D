@@ -62,6 +62,17 @@ namespace SS3D.Systems.Audio
         private void HandlePlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
             _listenerTarget = e.PlayerHasObject ? e.PlayerObject : null;
+
+            if (_listenerTarget == null)
+            {
+                // No body to be "in an area" — fade to silence and forget the last-resolved area
+                // so the next spawn (a fresh map's AreaIds can numerically collide with the old
+                // ones) always re-resolves instead of assuming nothing changed. Mirrors
+                // HealthScreenEffectMapper.Clear on HumanHealthController's own destroy/ownership
+                // loss: the driving consumer clears the shared presentation state it was pushing.
+                _lastResolvedAreaId = null;
+                BeginCrossfade(string.Empty);
+            }
         }
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)

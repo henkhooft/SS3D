@@ -101,6 +101,14 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `OutputAudioMixerGroup` reference to give them (unlike the pool's `SFXAudioSource.prefab` /
   `MusicAudioSource.prefab`, which are pre-wired in the Editor). They output to Master until Phase 0
   wires a runtime-loadable mixer group reference.
+- **A process-wide DDOL subsystem outlives any one player body.** `AmbienceSubSystem` never gets
+  destroyed/recreated across disconnect/respawn/map-reload the way a `NetworkSubSystem` on the hub
+  does, so it must clear its own `_lastResolvedAreaId`/`_currentTrackId` when
+  `LocalPlayerObjectChanged` reports no body — otherwise (a) ambience keeps looping the last live
+  area's track forever with nothing to poll, and (b) a fresh map's `AreaId`s can numerically collide
+  with the old ones, silently skipping the correct crossfade on respawn. Mirrors
+  `HumanHealthController.ClearScreenEffectsIfDriving`: the driving consumer clears shared
+  presentation state on ownership loss, not the shared subsystem watching for disconnect.
 
 ## Depends on / Used by
 
