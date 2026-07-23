@@ -1,60 +1,62 @@
 > Implements: [Documents/design/health.md](../design/health.md) (consciousness / death presentation), [Documents/design/death-cloning-respawn.md](../design/death-cloning-respawn.md) (corpse / ghost handoff)
 > Touches systems: entities, health
-> Status: planned
+> Status: shipped
 
 # Body presentation authority
 
-Future refactor. Banked after the health-rewrite collapse bugs (death crash, upright walk-cycle corpses, unconsciousness that blocked movement but never ragdolled).
+Shipped refactor. Banked after the health-rewrite collapse bugs (death crash, upright walk-cycle corpses, unconsciousness that blocked movement but never ragdolled).
 
-## Problem
+## Problem (historical)
 
-**Nobody owns humanoid body presentation as a single authority.** Health, ragdoll, animator orchestration, body-state snapshots, limp bridging, living/predicted movement, and FishNet lifecycle all write the same body independently.
+**Nobody owned humanoid body presentation as a single authority.** Health, ragdoll, animator orchestration, body-state snapshots, limp bridging, living/predicted movement, and FishNet lifecycle all wrote the same body independently. Dual death/unconscious reinforce RPCs papered over SyncVar-OnChange gaps.
 
-“Collapse” was implemented as scattered side effects: disable a component, set a SyncVar, hope `OnChange` runs on the server, hope Coimbra stops updating, hope ownership teardown does not `Recover()`. Death only looked correct after an explicit observers reinforce RPC; unconsciousness failed while using the fragile path.
+## Lessons (still binding)
 
-## Lessons (binding for interim patches)
-
-1. **One writer for collapsed/dead presentation.** Health emits intent (`Alive` / `Collapsed` / `Dead`). One presentation layer applies it (ragdoll on, animator suppressed, movement off). Other systems *read* that state — they do not invent their own collapse behavior.
-2. **Do not use transport quirks as control flow.** `ServerRpc` from server is a no-op. SyncVar `OnChange` may not fire on the server when assigning. `OnDisable` during ownership/network teardown is not “recover.” Prefer explicit server methods + observers RPCs (or one replicated presentation enum).
-3. **`enabled = false` is insufficient with Coimbra `UpdateEvent`.** Listeners keep firing after disable — use unsubscribe or an explicit suppress flag (`AnimationOrchestrator.SetPosingSuppressed`).
-4. **Match gameplay words to signals.** “Lose consciousness” is not only `!IsConscious` — cardiac arrest can still report conscious until brain ≤10%. Collapse rules must be intentional.
+1. **One writer for collapsed/dead presentation.** Health emits intent (`BodyPresentationIntent.FromSnapshot`). `Ragdoll` applies via replicated `BodyPresentationState`.
+2. **Do not use transport quirks as control flow.** `ServerRpc` from server is a no-op. SyncVar `OnChange` may not fire on the server when assigning. `OnDisable` during ownership/network teardown is not “recover.” Apply in `ServerSetPresentation` **and** `OnStartNetwork` / OnChange.
+3. **`enabled = false` is insufficient with Coimbra `UpdateEvent`.** Use `AnimationOrchestrator.SetPosingSuppressed`.
+4. **Match gameplay words to signals.** Cardiac arrest can still report conscious until brain ≤10% — collapse must OR cardiac.
 5. **Lifecycle contracts are sacred.** `OnAwake` → `base.OnAwake()`, never `base.Awake()` (ghost stack-overflow).
 
-## Current interim (do not grow)
-
-Working but stopgap paths on `health-rewrite`:
-
-- Death: `Ragdoll.ServerDeathRagdoll` + `Human.RpcApplyDeathRagdoll`
-- Unconscious / cardiac arrest: `HumanHealthController.ApplyConsciousnessRagdoll` + `RpcSetConsciousnessCollapsed` → `Ragdoll.ApplyCollapseVisuals`
-- Animator: `SetPosingSuppressed` + disable Orchestrator / BodyStateMachine while down
-
-**Do not** add a third collapse path (another SyncVar-only or LivingController-only special case). Extend the shared collapse visuals API or wait for this refactor.
-
-## Target architecture
+## Shipped architecture
 
 | Layer | Owns |
 |-------|------|
-| Health | Intent only: conscious / cardiac arrest / dead (and eventually a single `BodyPresentationIntent` or similar) |
-| Body presentation (new or elevated) | One replicated state + apply: ragdoll physics, animator suppress, movement gate, stand-up |
-| AnimationOrchestrator / BodyStateBridge | Pose *only* when presentation allows; never fight ragdoll |
-| `Human.Kill` / ghost | Mind transfer + component teardown *after* presentation is `Dead` |
+| Health | Intent only via `BodyPresentationIntent` → `Ragdoll.ServerSetPresentation` (Collapsed/Locomotion). Death ignored here — `Human.Kill` sets Dead. |
+| `Ragdoll` | Replicated `BodyPresentationState` (`Locomotion` / `Collapsed` / `Dead`) + `ApplyPresentation` (physics, animator suppress, movement gate, stand-up). |
+| AnimationOrchestrator / BodyStateBridge / LivingController | Read `Ragdoll.Presentation`; never invent Health consciousness rules. |
+| `Human.Kill` / ghost | `ServerDeathRagdoll` **before** mind transfer; component teardown after. |
 
-Suggested shape (refine when commissioned):
+### API surface
 
-1. Replicated `BodyPresentationState` (`Locomotion` / `Collapsed` / `Dead`) on the humanoid root.
-2. Single applier (`BodyPresentationController` or fold into a slimmed `Ragdoll` + orchestrator contract) that observers run identically to the server.
-3. Movement (`HumanoidLivingController` / predicted) and limp bridge early-out on presentation ≠ `Locomotion`.
-4. Remove death-only vs unconscious-only duplicate RPCs once the shared state exists.
-5. Phase 0: delete `OnDisable → Recover`, ServerRpc-as-server-death calls, and SyncVar-OnChange-as-sole-collapse triggers.
+- `BodyPresentationState` — enum on humanoid root SyncVar inside `Ragdoll`
+- `Ragdoll.ServerSetPresentation(state, timed?, addSeconds?)` — sole server writer
+- `Ragdoll.ServerDeathRagdoll` / `ServerKnockdownTimeless` / `ServerKnockdown` / `ServerRecover` — thin wrappers
+- `BodyPresentationIntent.FromSnapshot` — Health mapping (EditMode: `BodyPresentationIntentTests`)
 
-## Out of scope for this note
+### Do not
 
-- Prefab strip of `Human.prefab` (that remains [agent-first composition](2026-07_agent-first-composition.md) / health Phase 0d).
+- Add a parallel collapse RPC or SyncVar-only path.
+- Gate `ServerSetPresentation` on `Ragdoll.enabled` (prefab may ship disabled; applier enables for Update/AlignToHips).
+- Call `Recover()` from `OnDisable`.
+
+## Play Mode smoke checklist
+
+- [ ] Host: go unconscious → ragdoll → wake → stand-up
+- [ ] Cardiac arrest while still reporting conscious → collapsed
+- [ ] Death after unconscious → stays Dead; no walk cycle
+- [ ] Late-join observer sees existing corpse collapsed
+- [ ] Ownership / mind-swap teardown does not stand the corpse up
+- [ ] Admin `ragdoll` timed knockdown recovers without Health fighting it
+
+## Out of scope
+
+- Prefab strip of `Human.prefab` ([agent-first composition](2026-07_agent-first-composition.md) / health Phase 0d).
 - Ghost controller / mind-swap redesign beyond presentation handoff.
-- Full animation system redesign ([player-body-animation](2026-07_player-body-animation.md) remains the locomotion foundation).
+- Full animation system redesign ([player-body-animation](2026-07_player-body-animation.md)).
 
 ## Related
 
 - System maps: [entities](systems/entities.md), [health](systems/health.md)
 - Plan context: [health_implementation_plan.md](../plans/health_implementation_plan.md)
-- Triggering incidents: health-rewrite death/unconscious ragdoll work (commits through `d6d269dea`)
+- TECH_DEBT §1.2 — resolved with this effort

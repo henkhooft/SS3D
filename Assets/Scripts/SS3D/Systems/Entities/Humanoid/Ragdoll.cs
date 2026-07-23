@@ -12,7 +12,9 @@ using UnityEngine;
 namespace SS3D.Systems.Entities.Humanoid
 {
     /// <summary>
-    /// Component for character's gameobject, that controlls ragdoll
+    /// Sole owner of humanoid body presentation (locomotion / collapsed / dead): ragdoll physics,
+    /// animator suppress, and movement gating. Health and combat write intent via
+    /// <see cref="ServerSetPresentation"/>; other systems read <see cref="Presentation"/>.
     /// </summary>
 	public class Ragdoll : NetworkBehaviour
 	{
@@ -61,9 +63,15 @@ namespace SS3D.Systems.Entities.Humanoid
         /// Bones Transforms (position and rotation) during the Ragdoll state
         /// </summary>
         private BoneTransform[] _ragdollBones;
-        [NonSerialized]
-        [SyncVar(OnChange = nameof(OnSyncKnockdown))]
-        public bool IsKnockedDown;
+
+        [SyncVar(OnChange = nameof(OnSyncPresentation))]
+        private BodyPresentationState _presentation = BodyPresentationState.Locomotion;
+
+        /// <summary>Replicated presentation authority. Prefer this over inventing collapse rules elsewhere.</summary>
+        public BodyPresentationState Presentation => _presentation;
+
+        /// <summary>True when presentation is not locomotion (collapsed or dead).</summary>
+        public bool IsKnockedDown => _presentation != BodyPresentationState.Locomotion;
 
         public event Action<bool> OnKnockdownChanged;
         [field: NonSerialized]
@@ -83,6 +91,7 @@ namespace SS3D.Systems.Entities.Humanoid
         /// and must not call Recover() back into a walking pose.
         /// </summary>
         private bool _deathRagdoll;
+        private bool _lastNotifiedKnockedDown;
 
         private void Awake()
         {
@@ -93,19 +102,23 @@ namespace SS3D.Systems.Entities.Humanoid
             ToggleSyncRagdoll(false);
         }
 
-        private void OnSyncKnockdown(bool prev, bool next, bool asServer)
+        private void OnSyncPresentation(BodyPresentationState prev, BodyPresentationState next, bool asServer)
 		{
-			if (prev == next) return;
-            OnKnockdownChanged?.Invoke(next);
-            if (next)
-			{
-                Knockdown();
-            }
-			else if (!_deathRagdoll)
+			if (prev == next)
             {
-				BonesReset();
-			}
+                return;
+            }
+
+            if (next == BodyPresentationState.Dead)
+            {
+                _deathRagdoll = true;
+                _isKnockdownTimed = false;
+            }
+
+            NotifyKnockdownIfChanged(next);
+            ApplyPresentation(next, applyImpulse: false);
 		}
+
         public override void OnStartNetwork()
 		{
 			base.OnStartNetwork();
@@ -122,6 +135,18 @@ namespace SS3D.Systems.Entities.Humanoid
             CacheRagdollParts();
             ToggleKinematic(true);
             ToggleSyncRagdoll(false);
+
+            // Late join / host: do not rely on SyncVar OnChange alone for the initial value.
+            if (_presentation != BodyPresentationState.Locomotion)
+            {
+                if (_presentation == BodyPresentationState.Dead)
+                {
+                    _deathRagdoll = true;
+                }
+
+                enabled = true;
+                ApplyPresentation(_presentation, applyImpulse: false);
+            }
         }
 
         private void CacheRagdollParts()
@@ -166,12 +191,13 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private void Update()
 		{
-            if (IsServer && _isKnockdownTimed && IsKnockedDown)
+            if (IsServer && _isKnockdownTimed && IsKnockedDown && !_deathRagdoll)
             {
                 _knockdownTimer -= Time.deltaTime;
                 if (_knockdownTimer <= 0)
                 {
-                    Recover();
+                    // Must call ServerRecover — Recover() is a ServerRpc and is a no-op from server.
+                    ServerRecover();
                 }
             }
             switch (_currentState)
@@ -192,38 +218,86 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         private void WalkingBehavior() { }
+
+        /// <summary>
+        /// Server write of presentation authority. Dead is sticky. Do not gate on <c>enabled</c> —
+        /// Human.prefab ships this component disabled until collapse needs Update/AlignToHips.
+        /// </summary>
+        [Server]
+        public void ServerSetPresentation(BodyPresentationState state, bool timed = false, float addSeconds = 0f)
+        {
+            if (_presentation == BodyPresentationState.Dead && state != BodyPresentationState.Dead)
+            {
+                return;
+            }
+
+            if (state == BodyPresentationState.Dead)
+            {
+                _deathRagdoll = true;
+                _isKnockdownTimed = false;
+                _knockdownTimer = 0f;
+            }
+            else if (state == BodyPresentationState.Collapsed)
+            {
+                if (timed)
+                {
+                    _isKnockdownTimed = true;
+                    _knockdownTimer += addSeconds;
+                }
+                else
+                {
+                    _isKnockdownTimed = false;
+                }
+            }
+            else
+            {
+                if (_deathRagdoll)
+                {
+                    return;
+                }
+
+                _isKnockdownTimed = false;
+                _knockdownTimer = 0f;
+            }
+
+            EnsureAnimatorCached();
+            // Prefab may ship disabled; AlignToHips / timed recover need Update.
+            enabled = true;
+
+            BodyPresentationState previous = _presentation;
+            bool applyImpulse = state == BodyPresentationState.Collapsed
+                && previous == BodyPresentationState.Locomotion;
+
+            // Assign even when unchanged so death can reinforce an already-collapsed body.
+            // FishNet may skip OnChange when the value is unchanged or on server assign.
+            if (previous != state)
+            {
+                _presentation = state;
+                NotifyKnockdownIfChanged(state);
+            }
+
+            ApplyPresentation(state, applyImpulse);
+        }
+
+        private void NotifyKnockdownIfChanged(BodyPresentationState state)
+        {
+            bool nextKnocked = state != BodyPresentationState.Locomotion;
+            if (_lastNotifiedKnockedDown == nextKnocked)
+            {
+                return;
+            }
+
+            _lastNotifiedKnockedDown = nextKnocked;
+            OnKnockdownChanged?.Invoke(nextKnocked);
+        }
         
         /// <summary>
-        /// Permanent knockdown for death. Applies visuals immediately on the server (do not rely
-        /// solely on SyncVar OnChange) and blocks Recover from standing the corpse up.
+        /// Permanent knockdown for death. Thin wrapper over <see cref="ServerSetPresentation"/>.
         /// </summary>
         [Server]
         public void ServerDeathRagdoll()
         {
-            if (!enabled && !_deathRagdoll)
-            {
-                // Component may already be mid-teardown; still force the pose if possible.
-            }
-
-            _deathRagdoll = true;
-            _isKnockdownTimed = false;
-            EnsureAnimatorCached();
-
-            if (!IsKnockedDown)
-            {
-                IsKnockedDown = true;
-            }
-
-            // FishNet SyncVar OnChange can be deferred or skipped when already dirty; death
-            // must not wait on it or the animator keeps driving a walk cycle.
-            if (_currentState != RagdollState.Ragdoll)
-            {
-                Knockdown();
-            }
-            else
-            {
-                ReinforceRagdollPose();
-            }
+            ServerSetPresentation(BodyPresentationState.Dead);
         }
 
         /// <summary>
@@ -233,20 +307,7 @@ namespace SS3D.Systems.Entities.Humanoid
         [Server]
         public void ServerKnockdownTimeless()
         {
-            if (!enabled)
-            {
-                return;
-            }
-
-            _isKnockdownTimed = false;
-            EnsureAnimatorCached();
-            if (!IsKnockedDown)
-            {
-                IsKnockedDown = true;
-            }
-
-            // Always force collapse visuals — same path death uses via observer RPC.
-            ApplyCollapseVisuals();
+            ServerSetPresentation(BodyPresentationState.Collapsed);
         }
 
         /// <summary>
@@ -264,23 +325,7 @@ namespace SS3D.Systems.Entities.Humanoid
         [Server]
         public void ServerKnockdown(float seconds)
         {
-            if (!enabled)
-            {
-                return;
-            }
-
-            _isKnockdownTimed = true;
-            _knockdownTimer += seconds;
-            EnsureAnimatorCached();
-            if (!IsKnockedDown)
-            {
-                IsKnockedDown = true;
-            }
-
-            if (_currentState != RagdollState.Ragdoll)
-            {
-                Knockdown();
-            }
+            ServerSetPresentation(BodyPresentationState.Collapsed, timed: true, addSeconds: seconds);
         }
 
         /// <summary>
@@ -315,31 +360,62 @@ namespace SS3D.Systems.Entities.Humanoid
                 _networkAnimatorInitiallyEnabled = _networkAnimator != null && _networkAnimator.enabled;
             }
         }
-        
-        private void Knockdown()
+
+        private void ApplyPresentation(BodyPresentationState state, bool applyImpulse)
         {
             EnsureAnimatorCached();
-            Vector3 movement = _humanoidLivingController != null
-                ? _humanoidLivingController.TargetMovement * 3f
-                : Vector3.zero;
+            CacheRagdollParts();
+            // Prefab may ship disabled; Update/AlignToHips must run on all peers while down.
+            enabled = true;
+
+            if (state == BodyPresentationState.Locomotion)
+            {
+                if (_deathRagdoll)
+                {
+                    return;
+                }
+
+                if (_currentState == RagdollState.Ragdoll
+                    || _currentState == RagdollState.BonesReset
+                    || _currentState == RagdollState.StandingUp)
+                {
+                    BonesReset();
+                }
+                else
+                {
+                    EnableAnimationDrivers();
+                    ToggleController(true);
+                    ToggleAnimator(true);
+                    ToggleKinematic(true);
+                    ToggleSyncRagdoll(false);
+                    _currentState = RagdollState.Walking;
+                }
+
+                return;
+            }
+
+            // Collapsed or Dead
+            if (state == BodyPresentationState.Dead)
+            {
+                _deathRagdoll = true;
+                _isKnockdownTimed = false;
+            }
 
             ApplyCollapseVisuals();
 
-            if (movement.sqrMagnitude > 0.01f && _ragdollParts != null)
+            if (applyImpulse
+                && _humanoidLivingController != null
+                && _ragdollParts != null)
             {
-                foreach (Transform part in _ragdollParts)
+                Vector3 movement = _humanoidLivingController.TargetMovement * 3f;
+                if (movement.sqrMagnitude > 0.01f)
                 {
-                    part.GetComponent<Rigidbody>().AddForce(movement, ForceMode.VelocityChange);
+                    foreach (Transform part in _ragdollParts)
+                    {
+                        part.GetComponent<Rigidbody>().AddForce(movement, ForceMode.VelocityChange);
+                    }
                 }
             }
-        }
-
-        private void ReinforceRagdollPose()
-        {
-            ToggleAnimator(false);
-            DisableAnimationDrivers();
-            ToggleKinematic(false);
-            ToggleSyncRagdoll(true);
         }
 
         private void DisableAnimationDrivers()
@@ -376,9 +452,9 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Force collapsed pose on server and observers. Does not depend on SyncVar OnChange.
+        /// Force collapsed pose. Called only from <see cref="ApplyPresentation"/>.
         /// </summary>
-        public void ApplyCollapseVisuals()
+        private void ApplyCollapseVisuals()
         {
             EnsureAnimatorCached();
             CacheRagdollParts();
@@ -388,17 +464,6 @@ namespace SS3D.Systems.Entities.Humanoid
             ToggleAnimator(false);
             DisableAnimationDrivers();
             ToggleKinematic(false);
-        }
-
-        /// <summary>
-        /// Client/host reinforce after death RPC — stops animator drivers and enables physics
-        /// without requiring ownership (corpse is usually unowned after mind-swap).
-        /// </summary>
-        public void ApplyObserverDeathRagdoll()
-        {
-            _deathRagdoll = true;
-            _isKnockdownTimed = false;
-            ApplyCollapseVisuals();
         }
 
         private void RagdollBehavior()
@@ -455,7 +520,12 @@ namespace SS3D.Systems.Entities.Humanoid
             ToggleSyncRagdoll(false);
             
             // Only the owner handles ragdoll's physics
-            if (!IsOwner) return;
+            if (!IsOwner)
+            {
+                // Observers still clear posing suppress so walk params do not stick.
+                EnableAnimationDrivers();
+                return;
+            }
             ToggleKinematic(true);
             PopulatePartsTransforms(_ragdollBones);
             PopulateStandUpPartsTransforms(_standUpBones, IsFacingDown ? _standUpFaceDownClip : _standUpFaceUpClip);
@@ -555,13 +625,7 @@ namespace SS3D.Systems.Entities.Humanoid
         [Server]
         public void ServerRecover()
         {
-            if (_deathRagdoll)
-            {
-                return;
-            }
-
-            IsKnockedDown = false;
-            _knockdownTimer = 0f;
+            ServerSetPresentation(BodyPresentationState.Locomotion);
         }
 
         [ServerRpc(RequireOwnership = false)]

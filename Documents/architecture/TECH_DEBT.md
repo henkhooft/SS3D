@@ -64,20 +64,7 @@ forced — pick up each when its own redesign next touches entity wiring.
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 
-**Blast radius: high — trend: scheduled but not started**
-
-Health, `Ragdoll`, `AnimationOrchestrator`, `HumanoidBodyStateBridge`, and movement controllers each
-independently write "is this body collapsed/dead" behavior. The interim implementation leans on
-transport quirks as control flow — `ServerRpc` from server is a no-op, SyncVar `OnChange` may not
-fire on the server, `OnDisable` during network teardown is not "recover" — each of which has already
-caused a shipped bug (death re-triggering every tick, ghost stack-overflow, corpses standing back up,
-unconscious players walking). [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md)
-documents the target architecture (single replicated `BodyPresentationState` + one applier) and
-explicitly says **do not add a third collapse path** while it's pending — but it is `Status: planned`
-with no owner or date, so every new health/combat feature that touches consciousness is one incident
-away from adding that third path anyway.
-
-- Related: [health.md](systems/health.md) § Pitfalls, [entities.md](systems/entities.md) § Body presentation debt
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.3 Interaction `Discover` has no contract
 
@@ -336,6 +323,16 @@ not quality problems.
 
 *(Move items here with the PR/commit that closed them, so the register shows real progress rather
 than only growing. Keep a one-line stub under the old §1.x number so external citations still resolve.)*
+
+### 1.2 Body presentation authority — 2026-07-23
+
+`Ragdoll` owns replicated `BodyPresentationState` (`Locomotion` / `Collapsed` / `Dead`) and is the
+sole applier. Health writes intent via `BodyPresentationIntent`; dual death/unconscious reinforce
+RPCs removed. Movement / bridge / orchestrator read `Presentation`.
+
+- **Closed by:** this session's body-presentation refactor (TECH_DEBT 1.2 plan); bump with PR when merged.
+- **Not in this close:** ghost/mind-swap redesign; collapse animation content; prefab strip.
+- Related: [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), [health.md](systems/health.md), [entities.md](systems/entities.md)
 
 ### 1.6 Crafting dead-code purge — 2026-07-23
 

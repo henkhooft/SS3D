@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects + alert stack wired; vitals HUD Phase 6 remainder)
-> Verified: 96dcd3c57 — 2026-07-21
+> Verified: dd676f05a — 2026-07-23
 
 # Health
 
@@ -15,11 +15,12 @@ Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot`
 
 Phase 0d strips legacy health components from `Human.prefab` and rewires a thinner root — do not dual-stack or grow the mega-prefab ([agent-first composition](../2026-07_agent-first-composition.md), [health_implementation_plan.md](../../plans/health_implementation_plan.md) Phase 0d).
 
-**Body presentation debt:** Health owns vitals intent (conscious / cardiac arrest / dead); it must not grow a third collapse path. Ragdoll, animator, and movement still share presentation via interim RPCs — refactor per [2026-07_body-presentation-authority.md](../2026-07_body-presentation-authority.md).
+**Body presentation:** Health emits collapse intent only (`BodyPresentationIntent` → `Ragdoll.ServerSetPresentation`). Death is `Human.Kill` → `ServerDeathRagdoll`. Do not add a parallel collapse path — see [2026-07_body-presentation-authority.md](../2026-07_body-presentation-authority.md) (shipped).
 
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Health/HumanHealthController.cs` — server tick, damage/treatment, organ registration, snapshot SyncVar + `SnapshotChanged`
+- `Assets/Scripts/SS3D/Systems/Health/BodyPresentationIntent.cs` — snapshot → `BodyPresentationState` (Collapsed / Locomotion / Dead mapping)
 - `Assets/Scripts/SS3D/Systems/Health/HealthScreenEffectMapper.cs` — local-owner snapshot → `ScreenEffectsSubSystem` intensities
 - `Assets/Scripts/SS3D/Systems/Health/HealthAlertStackMapper.cs` — snapshot → health alert signals (no MainHud types); Main HUD copies into `AlertStackState`
 - `Assets/Scripts/SS3D/Systems/Health/HumanAnatomyController.cs` — limb severance visuals, world drops, head mind-swap (Phase 5b)
@@ -57,6 +58,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 - Alert stack: emit via `SnapshotChanged`; map with `HealthAlertStackMapper` only — [inventory](inventory.md) Main HUD owns `AlertStackState` / icon rendering.
+- Body presentation: map vitals with `BodyPresentationIntent.FromSnapshot` and call `Ragdoll.ServerSetPresentation` — never apply ragdoll/animator visuals from Health.
 
 ## Pitfalls
 
@@ -66,8 +68,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Bleed particles float beside the limb:** do not parent VFX to `AnatomyNode` roots first — those prefab pivots do not follow the skinned mesh. Prefer `ZoneTargetCollider` bone transforms (see `WoundVfx.EnsureAnchors`).
 - **Death re-triggers every health tick:** `TickHealth` must latch death (`_deathTriggered`) and stop ticking; otherwise `Human.Kill()` re-runs every second (ghost spam / dispose races). `WoundVfx` also clears and disables on `HealthState.Dead`.
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
-- **Death skips ragdoll / keeps walk cycle:** `OnDisable` must not `Recover()` (ownership teardown stands the corpse up). Death uses `ServerDeathRagdoll` + observer reinforce: disable Animator/`AnimationOrchestrator`, enable bone physics. Do not rely on SyncVar OnChange alone from server `Kill()`.
-- **Unconscious presentation:** collapse on `!IsConscious` **or** `IsCardiacArrest`. Use `ApplyCollapseVisuals` + `RpcSetConsciousnessCollapsed` (same reinforce pattern as death). Coimbra `UpdateEvent` keeps firing after `enabled=false` — `AnimationOrchestrator.SetPosingSuppressed` must stop walk-param writes. Broader ownership: [body-presentation-authority](../2026-07_body-presentation-authority.md).
+- **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Cardiac arrest collapses even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect Clear from other bodies:** only clear when `_drivingLocalScreenEffects` — other players' mind unassign must not wipe the local owner's Volume intensities.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
 - **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).
@@ -75,7 +76,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 ## Depends on / Used by
 
 - **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md)
-- **Used by:** [combat](combat.md) (melee zone hits), [inventory](inventory.md) (Main HUD alert stack), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement/consciousness/limp + `InjuredLeg` / injured-arm presentation), `Hand` (arm debuff stub)
+- **Used by:** [combat](combat.md) (melee zone hits), [inventory](inventory.md) (Main HUD alert stack), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement multiplier / limp + `InjuredLeg` / injured-arm presentation), `Hand` (arm debuff stub)
 - **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; combat drains deferred
 
 ## Related docs
@@ -84,7 +85,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - Anatomy map: [health-anatomy-map.md](health-anatomy-map.md)
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
 - Stamina map: [stamina](stamina.md)
-- [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **planned** single authority for collapse/death presentation
+- [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** single authority for collapse/death presentation
 - [2026-07_animation-polish](../2026-07_animation-polish.md) — limp/injured gait, severity idle, arm overlay, left-hand mirror
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [screen-effects](screen-effects.md)

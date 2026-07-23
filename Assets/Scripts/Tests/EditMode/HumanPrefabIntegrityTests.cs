@@ -41,6 +41,17 @@ namespace EditorTests
             Assert.AreEqual(0, hacks.Length, "Human.prefab must not ship SS3D.Hacks debug components to players.");
         }
 
+        [Test]
+        public void HumanPrefab_HasRagdollPresentationAuthority()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
+            Assert.IsNotNull(prefab, $"Could not load prefab at {HumanPrefabPath}");
+
+            Assert.IsTrue(
+                prefab.TryGetComponent(out SS3D.Systems.Entities.Humanoid.Ragdoll _),
+                "Human.prefab must keep Ragdoll as the body presentation authority.");
+        }
+
         [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanHead.prefab")]
         [TestCase("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanTorso.prefab")]
         public void BodyPart_HasNoRootContainerInteractive(string prefabPath)
