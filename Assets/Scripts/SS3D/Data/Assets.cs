@@ -68,6 +68,16 @@ namespace SS3D.Data
             for (int index = 0; index < assetDatabases.Count; index++)
             {
                 AssetDatabase database = assetDatabases[index];
+                if (database == null || string.IsNullOrEmpty(database.DatabaseID))
+                {
+                    Log.Warning(
+                        typeof(Assets),
+                        "IncludedAssetDatabases[{index}] is missing or has no DatabaseID; skipping (stale settings entry?)",
+                        Logs.Important,
+                        index);
+                    continue;
+                }
+
                 Databases.Add(database.DatabaseID, database);
             }
 
