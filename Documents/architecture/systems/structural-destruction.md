@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/ (integrity stage + occupancy + blast VFX Rpc)
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: 82c1fed63 — 2026-07-21
+> Verified: 818aaab59 — 2026-07-23
 
 # Structural destruction
 
@@ -31,7 +31,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 
 ## Extension points
 
-- Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, blast hops, chemistry, etc. — one apply path.
+- Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, ranged hitscan, blast hops, chemistry, etc. — one apply path. Sources include `StructuralDamageSource.Melee` / `Ranged` / `Blast` / `Console`.
 - Call `StructuralDamageSubSystem.ResolveBlast(epicenter, yield, falloff)` from grenades/charges (Phase 5) — also broadcasts blast VFX.
 - Override max HP per SO via `TileObjectSo.structuralMaxIntegrity` (> 0).
 - Wall/window prefabs: **SS3D → Structural Damage → Setup Wall Integrity Presentation**.

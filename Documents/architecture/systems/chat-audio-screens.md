@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
 > Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: ab79afee2 — 2026-07-23
+> Verified: 818aaab59 — 2026-07-23
 
 # Chat / audio / screens
 
