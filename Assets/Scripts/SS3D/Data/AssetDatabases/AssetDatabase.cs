@@ -38,6 +38,16 @@ namespace SS3D.Data.AssetDatabases
 
         public string DatabaseID;
 
+        /// <summary>
+        /// EagerSerialized keeps hard Object refs in <see cref="Assets"/>. AddressablesAsync loads by GUID at runtime.
+        /// </summary>
+        public AssetDatabaseLoadMode LoadMode = AssetDatabaseLoadMode.EagerSerialized;
+
+        /// <summary>
+        /// GUID keys for <see cref="AssetDatabaseLoadMode.AddressablesAsync"/> databases (no hard Object refs).
+        /// </summary>
+        public List<string> AssetKeys = new();
+
 #if UNITY_EDITOR
         /// <summary>
         /// The asset group that constitutes this AssetDatabase, the system gets every asset from it and adds to an asset list.
@@ -46,16 +56,26 @@ namespace SS3D.Data.AssetDatabases
 #endif
         
         /// <summary>
-        /// All loaded assets that will be included in the built game.
+        /// All loaded assets that will be included in the built game (EagerSerialized mode only).
         /// </summary>
         public SerializableDictionary<string, Object> Assets;
 
 #if UNITY_EDITOR
         /// <summary>
-        /// Loads all the assets from the asset group to the Assets list.
+        /// Loads all the assets from the asset group to the Assets list (or AssetKeys for async mode).
         /// </summary>
         public void LoadAssetsFromAssetGroup()
         {
+            if (LoadMode == AssetDatabaseLoadMode.AddressablesAsync)
+            {
+                AssetKeys = AssetGroup != null
+                    ? AssetGroup.entries.Select(entry => entry.guid).ToList()
+                    : new List<string>();
+                Assets = new SerializableDictionary<string, Object>();
+                EditorUtility.SetDirty(this);
+                return;
+            }
+
             Assets = new SerializableDictionary<string, Object>();
 
             foreach (AddressableAssetEntry entry in AssetGroup.entries)
@@ -77,6 +97,18 @@ namespace SS3D.Data.AssetDatabases
         public T Get<T>([NotNull] string id)
             where T : Object
         {
+            if (LoadMode == AssetDatabaseLoadMode.AddressablesAsync)
+            {
+                if (AssetProvider.TryGetCached<T>(id, out T cached))
+                {
+                    return cached;
+                }
+
+                Log.Error(
+                    $"{nameof(AssetDatabase)} Asset of {id} is not found in the Addressables cache for {DatabaseName} (was PreloadAddressableDatabases called?).");
+                return null;
+            }
+
             if (!Assets.TryGetValue(id, out Object asset))
             {
                 Log.Error($"{nameof(AssetDatabase)} Asset of {id} is not found on the {DatabaseName} database.");
@@ -94,6 +126,11 @@ namespace SS3D.Data.AssetDatabases
         public bool TryGet<T>([NotNull] string index, [CanBeNull] out T asset)
             where T : Object
         {
+            if (LoadMode == AssetDatabaseLoadMode.AddressablesAsync)
+            {
+                return AssetProvider.TryGetCached(index, out asset);
+            }
+
             bool hasValue = Assets.TryGetValue(index, out Object foundValue);
 
             asset = foundValue as T;
@@ -144,7 +181,20 @@ namespace SS3D.Data.AssetDatabases
                 return;
             }
 
-            DatabaseScriptCreator.CreateAtPath(DatabaseAssetPath, DatabaseName, Assets.Values.ToList(), DatabaseAssetNamespaceName);
+            List<Object> codegenAssets;
+            if (LoadMode == AssetDatabaseLoadMode.AddressablesAsync && AssetGroup != null)
+            {
+                codegenAssets = AssetGroup.entries
+                    .Select(entry => entry.MainAsset)
+                    .Where(asset => asset != null)
+                    .ToList();
+            }
+            else
+            {
+                codegenAssets = Assets != null ? Assets.Values.ToList() : new List<Object>();
+            }
+
+            DatabaseScriptCreator.CreateAtPath(DatabaseAssetPath, DatabaseName, codegenAssets, DatabaseAssetNamespaceName);
         }
 
         public bool AddToAddressables([NotNull] Object asset)
@@ -179,7 +229,22 @@ namespace SS3D.Data.AssetDatabases
 
             settings.CreateOrMoveEntry(guid, AssetGroup);
 
-            Add(asset);
+            if (LoadMode == AssetDatabaseLoadMode.AddressablesAsync)
+            {
+                if (AssetKeys == null)
+                {
+                    AssetKeys = new List<string>();
+                }
+
+                if (!AssetKeys.Contains(guid))
+                {
+                    AssetKeys.Add(guid);
+                }
+            }
+            else
+            {
+                Add(asset);
+            }
 
             EditorUtility.SetDirty(asset);
             EditorUtility.SetDirty(this);

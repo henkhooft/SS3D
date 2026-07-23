@@ -88,6 +88,11 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            // Disappear unsubscribes to avoid double-fires during close; the UiShell-backed view
+            // is reused (unlike the old private UIDocument path that destroyed on hide), so each
+            // show must re-bind or petal/close clicks silently no-op after the first close.
+            BindMenuViewHandlers();
+
             Vector2 screenPos = Mouse.current.position.ReadValue();
             _menuView.Show(_interactions, _event, screenPos);
         }
@@ -161,9 +166,22 @@ namespace SS3D.Systems.Interactions
 
             _menuView = new RadialInteractionMenuView(_menuStyleSheet, _missingIcon, _closeIconSprite, _maxPetals);
             _menuView.Attach(layerRoot);
+            BindMenuViewHandlers();
+            return true;
+        }
+
+        private void BindMenuViewHandlers()
+        {
+            if (_menuView == null)
+            {
+                return;
+            }
+
+            // Idempotent: safe if already bound or if Disappear already cleared them.
+            _menuView.InteractionSelected -= HandleInteractionSelected;
+            _menuView.CloseRequested -= HandleCloseRequested;
             _menuView.InteractionSelected += HandleInteractionSelected;
             _menuView.CloseRequested += HandleCloseRequested;
-            return true;
         }
 
         private void DetachMenuView()

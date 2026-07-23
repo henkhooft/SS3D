@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Interactions/
 > Entry points: IInteraction, IInteractionSource, IInteractionTarget, InteractionPipeline, InteractionIdentifier
 > Status: shipped
-> Verified: 97254ee1d — 2026-07-23
+> Verified: 71d2a9224 — 2026-07-23
 
 # Interactions (framework)
 
@@ -27,7 +27,7 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IIntentRestrictedInteraction.cs` — Help/Harm gate (unrestricted = Help-default; Harm must opt in)
 - `Assets/Scripts/SS3D/Interactions/Interfaces/ITargetedInteraction.cs` — armed-mode second-click targeting
 - `Assets/Scripts/SS3D/Interactions/DelayedInteraction.cs` — timed interaction base class
-- `Assets/Scripts/SS3D/Interactions/InteractionIconLookup.cs` — resolves radial/menu sprites from `InteractionIcons`
+- `Assets/Scripts/SS3D/Interactions/InteractionIconLookup.cs` — resolves radial/menu sprites from `InteractionIcons` (`AddressablesAsync` DB; sync Get needs warmup — [data-codegen](data-codegen.md) pitfalls)
 
 ## Extension points
 
@@ -35,7 +35,7 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - Add `InteractionTargetBehaviour` (or `InteractionTargetNetworkBehaviour`) to world objects that should receive interactions.
 - Implement `IInteractionTierProvider` to control radial menu tier (instant vs armed targeted).
 - Use `Requirement` and `IInteractionRangeLimit` / `RangeLimit` for gating.
-- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
+- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); that DB is `AddressablesAsync` (warm-preloaded). Expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
 - Replicated state changes in `Start()` must go through networked components (`NetworkedOpenable.SetOpenState`, `SyncVar` toggles), not local-only animator writes.
 - Prefer gating `IInteractionSourceExtension.GetSourceInteractions` on a real availability check (like `HandMeleeExtension`), not unconditional `Add` — see smells below.
 

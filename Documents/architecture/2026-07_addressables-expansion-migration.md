@@ -1,6 +1,6 @@
 > Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells #1
 > Touches systems: data-codegen, ui-shell, networking-session, machine-interface, inventory
-> Status: planned
+> Status: in-progress (Phases 1–3 done; 4–6 open)
 
 # Addressables expansion & migration
 
@@ -13,7 +13,7 @@ every configured asset being hard-referenced into RAM at startup.
 Upstream tracks this exact problem as
 [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494) ("Excessive memory usage" — up to
 600MB from `AssetDatabase.Assets` directly referencing everything from the start) and has an open,
-unreviewed 249-commit rewrite attempting to fix it:
+unreviewed rewrite attempting to fix it:
 [RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500) ("Make adressables great again").
 
 This fork has the identical root cause today, independently of upstream's PR. Investigated
@@ -21,40 +21,21 @@ This fork has the identical root cause today, independently of upstream's PR. In
 
 ## Current state (this fork)
 
-- **Addressables package is present and configured.** `com.unity.addressables` 2.9.1 (Unity 6),
-  active settings at `Assets/Content/Addressables/AddressableAssetSettings.asset`, with **21
-  configured groups** (Items, Materials, Sounds, ParticlesEffects, InteractionIcons,
-  CraftingRecipes (purged with TECH_DEBT 1.6), UIElements, Settings, Scenes, Built In Data, Default Local Group, plus the
-  Localization package's auto-managed locale/table groups).
-- **But nothing loads through Addressables at runtime.** Grepped `Assets/Scripts` for
-  `Addressables.Load*` / `Addressables.Instantiate*` / any async Addressables API — zero call
-  sites. Groups exist purely as an **editor-time curation source**.
-- **What actually happens:** `AssetDatabase.LoadAssetsFromAssetGroup()`
-  (`Assets/Scripts/SS3D/Data/AssetDatabases/AssetDatabase.cs:57`) walks an `AddressableAssetGroup`'s
-  entries and copies the real `Object` references into a `SerializableDictionary<string, Object>
-  Assets` field serialized directly onto the `AssetDatabase` ScriptableObject. Runtime lookup
-  (`Assets.Get<T>` in `Assets/Scripts/SS3D/Data/Assets.cs`) is a synchronous dictionary read against
-  those already-loaded, hard-referenced objects.
-- **Net effect:** every asset in every configured group is eagerly pulled into RAM the moment its
-  owning `AssetDatabase` loads, and stays resident for the process lifetime — functionally identical
-  to upstream's #1494, just reached via a different (Addressables-group-as-source-list) route
-  instead of raw inspector references.
-- **Orphaned cruft:** `Assets/AddressableAssetsData/` (Unity's default settings location) still
-  exists alongside the real, active settings folder — leftover duplicate from before settings were
-  repointed to `Assets/Content/Addressables/`. Should be deleted as part of any Addressables work
-  here, not left as a second source of truth.
+- **Addressables package is present and configured.** `com.unity.addressables` **2.9.1** pinned
+  directly in `Packages/manifest.json` (Unity 6), active settings at
+  `Assets/Content/Addressables/AddressableAssetSettings.asset`, with **22 configured groups**
+  (Items, Materials, Sounds, ParticlesEffects, InteractionIcons, UIElements, Settings, Scenes,
+  Built In Data, Default Local Group, plus Localization package locale/table groups). CraftingRecipes
+  group was purged with TECH_DEBT 1.6.
+- **Runtime Addressables loading exists for InteractionIcons only (Phase 3).** Other databases still
+  use eager `AssetDatabase.Assets` hard refs + sync `Assets.Get`. Shared infrastructure:
+  `AssetHandle<T>` / `AssetProvider` / `Assets.GetAsync` / `AssetDatabaseLoadMode.AddressablesAsync`.
+- **Orphaned cruft removed (Phase 1):** `Assets/AddressableAssetsData/` deleted; single settings root
+  is `Assets/Content/Addressables/`.
 - **Already-acknowledged debt pointing at this gap:**
-  [data-codegen.md](systems/data-codegen.md) § Architecture smells names the target as "one shared
-  import → Addressables → `AssetDatabase.LoadAssetsFromAssetGroup` → codegen path" — but that target
-  is itself still the eager/sync pattern described above, not true async loading.
-  [ui-shell.md](systems/ui-shell.md) has since shipped `UiShellSubSystem` +
-  `UiAssetCatalogBase`/`UiCatalogRuntimeLoader` (Phase 0-1 of
-  [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)) with radial/armed migrated
-  onto it, but that effort's own scope explicitly excludes Addressables — MI/Main HUD/Storage Panel
-  still each own a `Resources.Load`-based catalog pending their later migration phases. The shared
-  scaffolding an Addressables-backed catalog would build on now already exists, which changes Phase
-  6 below from "design a shared helper" to "migrate onto the one that shipped." [TECH_DEBT.md](TECH_DEBT.md)
-  § 1.5 tracks the Editor-rebuild-menu symptom of the same underlying gap.
+  [data-codegen.md](systems/data-codegen.md) § Architecture smells,
+  [ui-shell.md](systems/ui-shell.md) / [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
+  (MI/Main HUD/Storage still `Resources.Load`), [TECH_DEBT.md](TECH_DEBT.md) § 1.5 / § 1.15.
 
 ## What upstream PR #1500 offers (and why not to merge it wholesale)
 
@@ -95,17 +76,30 @@ like upstream — not the diff.
    isolation and has no networked-spawn dependency (e.g. `InteractionIcons` — UI-only, no FishNet
    path) before touching anything that gates a networked prefab spawn (`Items`).
 
-## Phases (proposed — sequencing, not yet scheduled)
+## Phases
 
-1. **Cleanup + baseline** — delete orphaned `Assets/AddressableAssetsData/`; confirm build-pipeline
-   settings (Scriptable Build Pipeline, per [FORK_STATUS.md](../FORK_STATUS.md) § Unity 6 upgrade)
-   are still correct for actual bundle builds (today they've never been exercised for real streaming,
-   only for entries-as-metadata).
-2. **Async handle infrastructure** — add `AssetHandle<T>` / ref-counted provider layer alongside the
-   existing sync `Assets.Get<T>` (both live briefly, not a big-bang cutover).
-3. **First migration slice: `InteractionIcons`** — no network-spawn coupling, exercises the async
-   path end-to-end (load → display → release) in a low-risk surface. Validates the model before
-   touching gameplay-critical databases.
+1. **Cleanup + baseline** — **done (2026-07-23).** Deleted orphaned `Assets/AddressableAssetsData/`;
+   pinned `com.unity.addressables` 2.9.1 in manifest; confirmed settings:
+   - Active settings: `Assets/Content/Addressables/` (`DefaultObject` GUID points here).
+   - `m_ActivePlayerDataBuilderIndex: 3` = PackedMode; `m_BuildRemoteCatalog: 0`; local profiles only.
+   - **`m_BuildAddressablesWithPlayerBuild: 0` kept** — do not flip without verifying CI/player build
+     scripts. Content builds remain an explicit Editor step (Addressables Groups window → Build →
+     New Build → Default Build Script) or a future pipeline hook.
+   - **Baseline verification checklist:**
+     - [ ] Editor Play Mode still resolves Localization Addressables (indirect; already working).
+     - [ ] Manual Addressables content build against `Content/Addressables` succeeds (no missing-schema).
+     - [ ] InteractionIcons radial icons visible after Phase 3 preload (Editor Play Mode).
+     - Player-build streaming is **not** proven by Editor Play Mode alone (Editor fast-path can mask
+       failures) — see Open questions.
+2. **Async handle infrastructure** — **done (2026-07-23).** `AssetHandle<T>`, `AssetProvider`,
+   `IAssetLoadBackend` / `AddressablesLoadBackend`, `Assets.GetAsync`, EditMode
+   `AssetProviderTests` (ref-count share, double-release, missing key, preload cache, concurrent dedupe).
+   Sync `Assets.Get` remains for non-migrated DBs.
+3. **First migration slice: `InteractionIcons`** — **done (2026-07-23).**
+   `LoadMode = AddressablesAsync`; GUID keys in `AssetKeys`; serialized `Assets` dict emptied;
+   warm preload at `ApplicationInitializing` via `Assets.PreloadAddressableDatabases()`;
+   sync `Get` / `InteractionIconLookup` read the Addressables cache; sprite builder still authors
+   PNGs→Sprites into the Addressables group (no longer relies on eager SO refs for runtime).
 4. **Network-spawn-coupled databases (`Items`, `Materials`)** — requires the
    FishNet preload-ordering design from Target model §3 to land first.
 5. **Remove sync `Assets.Get<T>` path** once all call sites are migrated; delete the now-redundant
@@ -139,17 +133,15 @@ like upstream — not the diff.
 
 ## Open questions / risks
 
-- **Bundle build verification.** Because nothing has ever actually streamed through Addressables
-  here, the content-bundle build path (vs. the current "everything ships as a hard reference,
-  Addressables entries are inert metadata") is unverified end-to-end. Needs a real build-and-run
-  pass, not just Editor Play Mode (which can silently mask load failures via the Editor's
-  fast-path asset resolution).
+- **Bundle build verification.** Content-bundle build path still needs a real player build-and-run
+  pass; Editor Play Mode can mask load failures via the Editor fast-path. Checklist above tracks the
+  manual content build; CI gate not yet added.
 - **Dedicated server implications.** `UNITY_SERVER` builds ([FORK_STATUS.md](../FORK_STATUS.md) §
   Headless dedicated server) skip renderers/audio but still need correct gameplay assets — async
-  loading changes startup-order assumptions there too.
-- **No test coverage exists yet** for async load failure/retry paths; EditMode tests should cover
-  the handle/ref-count logic in isolation the same way `InputArbiterTests` does for input
-  arbitration ([2026-07_input-arbitration.md](2026-07_input-arbitration.md) § Tests).
+  loading changes startup-order assumptions there too (InteractionIcons preload is client-UI-only,
+  low risk; Items migration will not be).
+- **Test coverage:** EditMode `AssetProviderTests` cover handle/ref-count with a fake backend.
+  End-to-end Addressables load in Play Mode / player build still manual.
 
 ## Explicit non-goals (this doc)
 

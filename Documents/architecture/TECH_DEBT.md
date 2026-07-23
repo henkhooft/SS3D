@@ -260,23 +260,19 @@ shipped icon moves — do not grow them for new violations.
   § Architecture smells (same one-off-Editor-menu root cause),
   [2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md)
 
-### 1.15 Addressables configured but unused — every asset eager-loaded into RAM
+### 1.15 Addressables async loading partial — most DBs still eager-loaded
 
-**Blast radius: high (whole-game memory footprint) — trend: scheduled but not started**
+**Blast radius: high (whole-game memory footprint) — trend: Phases 1–3 done; rest scheduled**
 
-21 Addressables groups are configured under `Assets/Content/Addressables/` (Items, Materials,
-Sounds, InteractionIcons, UIElements, etc.), but they are only ever used as an
-editor-time curation source: `AssetDatabase.LoadAssetsFromAssetGroup()` copies each group entry's
-real `Object` reference into a serialized dictionary, and `Assets.Get<T>` is a synchronous read
-against those hard references. No `Addressables.LoadAssetAsync`/`Instantiate*` call exists anywhere
-in `Assets/Scripts` — grepped and confirmed 2026-07-21. Every configured asset is therefore pulled
-into RAM the moment its owning database loads and stays resident for the process lifetime, the exact
-problem upstream tracks as [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494)
-("excessive memory usage," up to 600MB) with an open, unreviewed rewrite attempt at
-[RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500) — this fork has the same root cause,
-reached via a different (Addressables-group-as-metadata) route. Migration scoped in
-[2026-07_addressables-expansion-migration.md](2026-07_addressables-expansion-migration.md); not yet
-started.
+21+ Addressables groups under `Assets/Content/Addressables/` were historically editor-curation only.
+**Phases 1–3 shipped (2026-07-23)** per
+[2026-07_addressables-expansion-migration.md](2026-07_addressables-expansion-migration.md): orphan
+`AddressableAssetsData/` removed; `com.unity.addressables` 2.9.1 pinned; `AssetHandle`/`AssetProvider`
++ `Assets.GetAsync` dual-path live; **InteractionIcons** migrated to `AddressablesAsync` (GUID keys,
+warm preload, no eager SO hard refs). Items/Materials/Sounds/etc. still eager-load — Phase 4 needs
+FishNet preload ordering; Phase 5 deletes sync `Assets.Get`; Phase 6 retires UI `Resources.Load`
+catalogs. Same root cause as upstream [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494)
+until remaining DBs migrate.
 
 - Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 

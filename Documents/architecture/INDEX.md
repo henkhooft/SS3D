@@ -85,8 +85,8 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Networking (session) | [networking-session](systems/networking-session.md) | partial | SessionState FSM + Empty offline; NetworkSystemsHub holds Game SubSystems; harness + headless |
 | Scene management | [scene-management](systems/scene-management.md) | stub | SceneSubSystem DDOL; `Scenes.Empty` offline after first Online |
 | UI shell | [ui-shell](systems/ui-shell.md) | partial | UITK composition root; `UiShellSubSystem` + shared catalog/animator/binder scaffolding shipped, radial + armed migrated; MI/Main HUD path catalogs still separate (duplicated), migration deferred |
-| Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; see map § Architecture smells |
-| Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references; one-off Editor rebuild menus are tracked debt; Addressables configured but unused (all assets eager-loaded) — migration planned: [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) |
+| Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; InteractionIcons via AddressablesAsync preload |
+| Data / codegen | [data-codegen](systems/data-codegen.md) | partial | Asset databases + generated refs; InteractionIcons on Addressables async path; other DBs still eager; catalog rebuild menus still debt — [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) Phases 1–3 done |
 | Persistence | [persistence](systems/persistence.md) | partial | Station templates + server meta; restore resets world-readiness epoch and notifies TileMapLoaded |
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
@@ -98,13 +98,13 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial menu, armed interactions, outlines; Harm melee swing + intent↔stance; `C` double-bound with Cancel |
+| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines; Harm melee + intent↔stance; `C` double-bound with Cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; GPU VFX server/host only (client sync planned) |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |
-| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; awaits AreasFlooded → ElectricityReady; client LightPower SyncVar |
+| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; Pacman vibrate captures rest yaw on enable |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
@@ -159,7 +159,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 | [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
-| [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) | planned (async AssetHandle loading to replace eager-loaded AssetDatabase; scoping only, no code yet) |
+| [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) | in-progress (Phases 1–3 done: cleanup, AssetHandle/provider, InteractionIcons pilot; Phases 4–6 open) |
 | [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
 
 ## Implementation plans
