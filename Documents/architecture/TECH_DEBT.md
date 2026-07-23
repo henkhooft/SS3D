@@ -313,25 +313,33 @@ started.
 
 - Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 
-### 1.16 No session lifecycle — disconnect reloads Boot and storms init
+### 1.16 No formal session/world lifecycle contract — one symptom fixed, structural gap remains
 
-**Blast radius: high — trend: stable by bandage; fix scheduled**
+**Blast radius: high — trend: symptom fixed 2026-07-23 (PR #36); structural contract still open**
 
-FishNet `DefaultScene` uses **offline = Boot** (`Boot.unity:281-288`), so any disconnect reloads Boot
+FishNet `DefaultScene` used **offline = Boot** (`Boot.unity:281-288`), so any disconnect reloaded Boot
 as a *Single* scene under the DontDestroyOnLoad `NetworkManager` → duplicate managers +
-`ApplicationInitializerSubSystem.OnStart()` re-fires the whole
-`ApplicationPreInitializing → Initializing → Initialized` chain (the "Boot storm"), which re-drives
-`IntroUIHelper`/`SkipIntro` into repeated `StartNetworkSession` ("already starting/started"). There is
-no session FSM — `NetworkSessionSubSystem` is imperative start/stop with no state, retry, or backoff,
-and the only `ServerConnectionView` Retry button is cosmetic. The lone mitigation is a **harness-only**
-Empty-offline redirect in `AutomationSubSystem`; normal play still storms. This is the same class of
-"act before the prerequisite is real" as 1.7 (bootstrap) and the world-readiness races (round start /
-client flood-fill divergence) — one hole, two faces.
-[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 1 is the scheduled fix
-(explicit session FSM; offline is never Boot after the first join); Phase 2 covers the world-readiness
-face. Still `planned`.
+`ApplicationInitializerSubSystem.OnStart()` re-firing the whole
+`ApplicationPreInitializing → Initializing → Initialized` chain (the "Boot storm"), re-driving
+`IntroUIHelper`/`SkipIntro` into repeated `StartNetworkSession` ("already starting/started"). **PR #36
+(`cursor/client-light-fixture-sync` → `develop`, 2026-07-23) fixed this concrete symptom**: new
+`ClientConnectionRecovery.cs` arms `Empty.unity` as offline after the first successful connect (so Boot
+is never reloaded on a later disconnect) and provides a working Retry;
+`NetworkSessionSubSystem.CanStartNetworkSession` guards re-entrant starts. Same PR also fixed the
+concrete client/host divergence example this item cited (client light-fixture area/lighting parity —
+see [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) §3a for what shipped).
 
-- Related: [networking-session.md](systems/networking-session.md) § Pitfalls, [scene-management.md](systems/scene-management.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+**What's still missing is the formal contract, not the symptom.** There is still no named-state session
+FSM (`NetworkSessionSubSystem` remains imperative, just better-guarded) and no general world-readiness
+graph — round start is still time-driven (`RoundSubSystem.PrepareRound`'s fixed 500 ms + warmup,
+unaffected by PR #36), and `IsSetUp`/`InitializeWhenMapReady()`/raw event-subscription readiness idioms
+still coexist for Area/Electricity/Atmos/Disposal. This is the same class of "act before the
+prerequisite is real" as 1.7 (bootstrap) — one hole, two faces, one face now patched at the symptom
+level. [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) §2 (optional FSM
+formalization) and §3b (general readiness graph, still required) track what's left; doc `Status` is
+now `in-progress`.
+
+- Related: [networking-session.md](systems/networking-session.md) § Pitfalls, [scene-management.md](systems/scene-management.md), [area.md](systems/area.md) § Pitfalls, [electricity.md](systems/electricity.md) § Pitfalls, [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ---
 
