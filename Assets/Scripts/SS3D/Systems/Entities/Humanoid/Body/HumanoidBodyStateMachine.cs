@@ -415,8 +415,9 @@ namespace SS3D.Systems.Entities.Humanoid.Body
 
         private void ApplyOwnerSnapshot()
         {
-            // BodyStateBridge limp updates call PublishSnapshot every frame; skip posing while ragdolled.
-            if (TryGetComponent(out Ragdoll ragdoll) && ragdoll.IsKnockedDown)
+            // BodyStateBridge limp updates call PublishSnapshot every frame; skip posing while collapsed/dead.
+            if (TryGetComponent(out Ragdoll ragdoll)
+                && ragdoll.Presentation != BodyPresentationState.Locomotion)
             {
                 return;
             }
@@ -442,7 +443,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 _injuredArmRight,
                 _injuredLeg);
 
-            if (TryGetComponent(out Ragdoll ragdoll) && ragdoll.IsKnockedDown)
+            if (TryGetComponent(out Ragdoll ragdoll)
+                && ragdoll.Presentation != BodyPresentationState.Locomotion)
             {
                 OnCapabilitiesChanged?.Invoke(Capabilities);
                 return;

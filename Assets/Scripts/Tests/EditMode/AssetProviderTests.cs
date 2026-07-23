@@ -72,10 +72,48 @@ namespace EditorTests
         [Test]
         public async Task MissingKeyFailsLoudly()
         {
-            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            // Await UniTask directly. Assert.ThrowsAsync + UniTask can leave ExceptionHolder
+            // unobserved; AssetProvider must also not TrySetException without waiters (see AcquireAsync).
+            try
             {
                 await AssetProvider.AcquireAsync<Texture2D>("missing");
-            });
+                Assert.Fail("Expected InvalidOperationException for a missing Addressables key.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                StringAssert.Contains("missing", ex.Message);
+            }
+        }
+
+        [Test]
+        public async Task ConcurrentMissingKeyDoesNotLeakUnobservedException()
+        {
+            _backend.LoadDelayMs = 30;
+
+            UniTask<AssetHandle<Texture2D>> t1 = AssetProvider.AcquireAsync<Texture2D>("missing");
+            UniTask<AssetHandle<Texture2D>> t2 = AssetProvider.AcquireAsync<Texture2D>("missing");
+
+            int failures = 0;
+            try
+            {
+                await t1;
+            }
+            catch (InvalidOperationException)
+            {
+                failures++;
+            }
+
+            try
+            {
+                await t2;
+            }
+            catch (InvalidOperationException)
+            {
+                failures++;
+            }
+
+            Assert.AreEqual(2, failures);
+            Assert.AreEqual(1, _backend.LoadCount);
         }
 
         [Test]

@@ -82,10 +82,14 @@ namespace SS3D.Data.AssetDatabases
                 entry.Loading = null;
                 return new AssetHandle<TAsset>(key, asset);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Entries.Remove(key);
-                entry.Loading.TrySetException(ex);
+                // Wake concurrent waiters with a completed result (Asset stays null → they throw).
+                // Do not TrySetException: with no waiters that fault is unobserved, UniTask logs it,
+                // and Unity EditMode LogAssert fails later unrelated tests.
+                entry.Loading.TrySetResult(false);
+                entry.Loading = null;
                 throw;
             }
         }

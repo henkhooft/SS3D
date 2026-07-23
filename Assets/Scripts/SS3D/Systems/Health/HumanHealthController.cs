@@ -7,7 +7,6 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
-using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.ScreenEffects;
 using System;
 using System.Collections.Generic;
@@ -31,7 +30,7 @@ namespace SS3D.Systems.Health
         private HumanAnatomyController _anatomy;
         private Ragdoll _ragdoll;
         private bool _deathTriggered;
-        private bool _unconsciousRagdollActive;
+        private bool _healthCollapseActive;
         private bool _drivingLocalScreenEffects;
 
         [SyncVar(OnChange = nameof(SyncSnapshot))]
@@ -428,7 +427,7 @@ namespace SS3D.Systems.Health
 
             // Do not rely on SyncVar OnChange for this — FishNet may not invoke it on the
             // server when assigning the snapshot, which left unconscious players walking.
-            ApplyConsciousnessRagdoll(snapshot);
+            ApplyBodyPresentationIntent(snapshot);
             // Same host gap for local screen overlays and HUD alert consumers.
             ApplyScreenEffectsFromSnapshot(snapshot);
             SnapshotChanged?.Invoke(snapshot);
@@ -484,11 +483,11 @@ namespace SS3D.Systems.Health
         }
 
         /// <summary>
-        /// Unconscious / cardiac-arrest characters drop into a recoverable ragdoll; waking stands them up.
-        /// Death uses <see cref="Ragdoll.ServerDeathRagdoll"/> separately and is ignored here.
+        /// Writes presentation intent to <see cref="Ragdoll"/> only. Death is owned by
+        /// <see cref="Human.Kill"/> → <see cref="Ragdoll.ServerDeathRagdoll"/> and is ignored here.
         /// </summary>
         [Server]
-        private void ApplyConsciousnessRagdoll(HealthSnapshot snapshot)
+        private void ApplyBodyPresentationIntent(HealthSnapshot snapshot)
         {
             if (_deathTriggered || snapshot.State == HealthState.Dead)
             {
@@ -505,52 +504,34 @@ namespace SS3D.Systems.Health
                 return;
             }
 
-            // Cardiac arrest keeps IsConscious true until brain drains ≤10%; still collapse immediately.
-            bool shouldCollapse = !snapshot.IsConscious || snapshot.IsCardiacArrest;
-            if (shouldCollapse)
-            {
-                _ragdoll.ServerKnockdownTimeless();
-                RpcSetConsciousnessCollapsed(true);
-                _unconsciousRagdollActive = true;
-                return;
-            }
-
-            if (!_unconsciousRagdollActive)
+            BodyPresentationState intent = BodyPresentationIntent.FromSnapshot(snapshot);
+            if (intent == BodyPresentationState.Dead)
             {
                 return;
             }
 
-            _unconsciousRagdollActive = false;
-            if (_ragdoll.IsKnockedDown)
+            // Collapsed vs Locomotion only — never fight Kill()'s Dead write.
+            // Latch health-owned collapses so we do not clear combat timed knockdowns.
+            if (intent == BodyPresentationState.Collapsed)
             {
-                _ragdoll.ServerRecover();
+                if (_ragdoll.Presentation != BodyPresentationState.Collapsed)
+                {
+                    _ragdoll.ServerSetPresentation(BodyPresentationState.Collapsed);
+                }
+
+                _healthCollapseActive = true;
+                return;
             }
 
-            RpcSetConsciousnessCollapsed(false);
-        }
-
-        /// <summary>
-        /// Mirrors death's observer reinforce — host/client must apply collapse locally; SyncVar
-        /// knockdown alone left upright walk-cycle corpses.
-        /// </summary>
-        [ObserversRpc(RunLocally = true)]
-        private void RpcSetConsciousnessCollapsed(bool collapsed)
-        {
-            if (!TryGetComponent(out Ragdoll ragdoll))
+            if (!_healthCollapseActive)
             {
                 return;
             }
 
-            if (collapsed)
+            _healthCollapseActive = false;
+            if (_ragdoll.Presentation == BodyPresentationState.Collapsed)
             {
-                ragdoll.ApplyCollapseVisuals();
-                return;
-            }
-
-            // Recover SyncVar drives BonesReset/StandUp on server; observers just clear suppress.
-            if (TryGetComponent(out AnimationOrchestrator orchestrator))
-            {
-                orchestrator.SetPosingSuppressed(false);
+                _ragdoll.ServerSetPresentation(BodyPresentationState.Locomotion);
             }
         }
 
