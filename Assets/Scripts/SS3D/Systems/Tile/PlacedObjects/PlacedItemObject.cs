@@ -1,4 +1,5 @@
-﻿using FishNet;
+﻿using Coimbra;
+using FishNet;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Data;
@@ -113,6 +114,14 @@ namespace SS3D.Systems.Tile
         /// </summary>
         public void DestroySelf()
         {
+            // Pure clients hit this during teardown after StopConnection; ServerManager.Despawn
+            // then spam-logs "Cannot despawn object because server nor client are active."
+            if (InstanceFinder.ServerManager == null || !InstanceFinder.IsServer)
+            {
+                gameObject.Dispose(true);
+                return;
+            }
+
             InstanceFinder.ServerManager.Despawn(gameObject);
         }
 
