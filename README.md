@@ -8,10 +8,17 @@ This repository is **[henkhooft/SS3D](https://github.com/henkhooft/SS3D)** — a
 [RE-SS3D/SS3D](https://github.com/RE-SS3D/SS3D) project. It is an active experiment in redesigning core gameplay
 systems and development foundations at a faster pace than upstream's current review capacity supports.
 
-**Read [Documents/FORK_STATUS.md](Documents/FORK_STATUS.md)** for what has diverged and what may be proposed back
-upstream. Design specs live in [Documents/design/](Documents/design/); implementation plans go in
-[Documents/architecture/](Documents/architecture/). See [Documents/SKILL.md](Documents/SKILL.md) before editing
-either.
+Compared to upstream it targets **Unity 6** (`6000.3.16f1`) + **URP**, with rewritten gameplay systems
+(interactions, health, combat melee, inventory, atmos, areas/power, Map Editor, and more). Day-to-day play is
+still build-from-source in the Editor.
+
+| Want… | Go to… |
+|---|---|
+| What diverged from upstream | [Documents/FORK_STATUS.md](Documents/FORK_STATUS.md) |
+| What to build next (playable gates) | [Documents/milestones/](Documents/milestones/) |
+| Find code by system | [Documents/architecture/INDEX.md](Documents/architecture/INDEX.md) |
+| Gameplay what/why | [Documents/design/](Documents/design/) |
+| Doc authoring rules | [Documents/SKILL.md](Documents/SKILL.md) |
 
 This is not the official RE:SS3D release channel. For the upstream project, community, and official builds, see
 [RE-SS3D/SS3D](https://github.com/RE-SS3D/SS3D).
@@ -20,7 +27,7 @@ This is not the official RE:SS3D release channel. For the upstream project, comm
 
 <h1 align="center">INFO</h1>
 
-**[Fork status](Documents/FORK_STATUS.md) · [Design docs](Documents/design/) · [Doc conventions](Documents/SKILL.md)**
+**[Fork status](Documents/FORK_STATUS.md) · [Milestones](Documents/milestones/) · [Architecture index](Documents/architecture/INDEX.md) · [Design](Documents/design/) · [SKILL](Documents/SKILL.md)**
 [<img src="https://img.shields.io/github/discussions/henkhooft/SS3D?color=blueviolet&label=Discussions&style=plastic&logo=github" alt="GitHub Discussions" align="right">](https://github.com/henkhooft/SS3D/discussions)
 
 <br>
@@ -29,10 +36,10 @@ This is not the official RE:SS3D release channel. For the upstream project, comm
 
 [<img src="Documents/Images/currentproject.png" alt="Current Project" width="150" align="left">](https://github.com/henkhooft/SS3D/archive/develop.zip)
 
-This fork is not the official RE:SS3D release channel. Optionally, maintainers can cut a
-**manual prerelease** via GitHub Actions → **Develop Release** after EditMode + Linux multiplayer
-smoke: primary download is a **Windows** zip (`Game\SS3D.exe` + `Start_SS3D_*.bat` for self-host);
-Linux client/server zips are secondary. See
+This fork is not the official RE:SS3D release channel. Optionally, maintainers can cut a **manual
+prerelease** via GitHub Actions → **Develop Release**: default is a **Windows** zip
+(`Game\SS3D.exe` + `Start_SS3D_*.bat` for self-host). Linux client/server, EditMode, and multiplayer
+smoke are **opt-in** workflow inputs — see
 [Documents/architecture/2026-07_ci-develop-release-pipeline.md](Documents/architecture/2026-07_ci-develop-release-pipeline.md).
 Otherwise clone **`develop`** and build in Unity yourself.
 [<img src="https://img.shields.io/github/repo-size/henkhooft/SS3D?color=gold&label=Repository%20Size&style=plastic" alt="Repo Size" align="right">](https://github.com/henkhooft/SS3D)
@@ -43,7 +50,8 @@ cd SS3D
 git checkout develop
 ```
 
-Open the project in Unity (see [Documents/CONTRIBUTING.md](Documents/CONTRIBUTING.md) for setup notes).
+Open the project in **Unity Hub** with editor **`6000.3.16f1`** (see
+[Documents/CONTRIBUTING.md](Documents/CONTRIBUTING.md) for setup notes).
 
 ***Note:*** *This fork is in active development. Systems, interactions, and design docs are evolving — what you
 build today may not match upstream RE:SS3D.*
@@ -52,7 +60,7 @@ build today may not match upstream RE:SS3D.*
 
 <h1 align="center">CONTRIBUTING</h1>
 
-[<img src="https://img.shields.io/github/issues-raw/henkhooft/SS3D?color=green&label=Issues%20%28Open%29&logo=github&style=plastic" alt="Open Issues" align="right">](https://github.com/henkhooft/SS3D/issues)Read [Documents/SKILL.md](Documents/SKILL.md) before writing design or architecture docs. Gameplay specs belong in [Documents/design/](Documents/design/).[<img src="https://img.shields.io/github/issues-closed-raw/henkhooft/SS3D?color=red&label=Issues%20%28Closed%29&logo=github&style=plastic" alt="Closed Issues" align="right">](https://github.com/henkhooft/SS3D/issues?q=is%3Aissue+is%3Aclosed)
+[<img src="https://img.shields.io/github/issues-raw/henkhooft/SS3D?color=green&label=Issues%20%28Open%29&logo=github&style=plastic" alt="Open Issues" align="right">](https://github.com/henkhooft/SS3D/issues)Read [Documents/SKILL.md](Documents/SKILL.md) before writing docs. Start at [FORK_STATUS](Documents/FORK_STATUS.md) or [milestones](Documents/milestones/) for context; gameplay specs belong in [Documents/design/](Documents/design/).[<img src="https://img.shields.io/github/issues-closed-raw/henkhooft/SS3D?color=red&label=Issues%20%28Closed%29&logo=github&style=plastic" alt="Closed Issues" align="right">](https://github.com/henkhooft/SS3D/issues?q=is%3Aissue+is%3Aclosed)
 
 [<img src="https://img.shields.io/github/issues-pr-raw/henkhooft/SS3D?color=green&label=Pull%20Requests%20%28Open%29&logo=github&style=plastic" alt="Open Pull Requests" align="right">](https://github.com/henkhooft/SS3D/pulls)Code changes should align with the relevant design doc where one exists, or note the deviation in the PR.[<img src="https://img.shields.io/github/issues-pr-closed-raw/henkhooft/SS3D?color=red&label=Pull%20Requests%20%28Closed%29&logo=github&style=plastic" alt="Closed Pull Requests" align="right">](https://github.com/henkhooft/SS3D/pulls?q=is%3Apr+is%3Aclosed)
 
