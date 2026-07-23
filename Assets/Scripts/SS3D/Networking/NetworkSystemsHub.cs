@@ -1,3 +1,4 @@
+using Coimbra;
 using FishNet;
 using FishNet.Object;
 using SS3D.Core.Behaviours;
@@ -52,7 +53,7 @@ namespace SS3D.Networking
         /// </summary>
         public static void EnsureSpawned()
         {
-            if (!InstanceFinder.IsServerStarted)
+            if (!InstanceFinder.IsServer)
             {
                 return;
             }
@@ -84,7 +85,7 @@ namespace SS3D.Networking
             if (nob == null)
             {
                 Log.Error(typeof(NetworkSystemsHub), "NetworkSystemsHub prefab lacks NetworkObject", Logs.Important);
-                Object.Destroy(instance);
+                instance.Dispose(true);
                 return;
             }
 

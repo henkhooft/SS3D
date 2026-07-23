@@ -28,7 +28,7 @@ namespace SS3D.Editor.Bootstrap
             root.AddComponent<NetworkSystemsHub>();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, HubResourcesPath);
-            Object.DestroyImmediate(root);
+            UnityEngine.Object.DestroyImmediate(root);
 
             Selection.activeObject = prefab;
             EditorGUIUtility.PingObject(prefab);
@@ -101,7 +101,7 @@ namespace SS3D.Editor.Bootstrap
 
             if (go.name == "VisionSystem")
             {
-                Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(go);
                 return removed + 1;
             }
 

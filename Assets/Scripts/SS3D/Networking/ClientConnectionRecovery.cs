@@ -199,7 +199,7 @@ namespace SS3D.Networking
             SubSystems.SetSuppressMissingErrors(false);
             ArmEmptyOfflineScene();
             SetState(SessionState.Online);
-            if (InstanceFinder.IsServerStarted)
+            if (InstanceFinder.IsServer)
             {
                 NetworkSystemsHub.EnsureSpawned();
             }
