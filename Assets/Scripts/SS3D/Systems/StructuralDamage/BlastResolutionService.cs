@@ -6,8 +6,8 @@ using UnityEngine;
 namespace SS3D.Systems.StructuralDamage
 {
     /// <summary>
-    /// Breadth-first blast spread: open hops via BlockedEdges (same rules as atmos CanFlow),
-    /// structural force on blocking turf, cascade when Destroyed clears an edge.
+    /// Breadth-first blast spread: open hops via BlockedEdges (same rules as atmos CanFlow)
+    /// through plenum volume only, structural force on blocking turf, cascade when Destroyed clears an edge.
     /// </summary>
     public sealed class BlastResolutionService : IBlastResolutionService
     {
@@ -82,9 +82,15 @@ namespace SS3D.Systems.StructuralDamage
                         continue;
                     }
 
+                    // Open hops only through station volume (plenum). Empty chunk cells report
+                    // BlockedEdges=0 and would otherwise flank barriers through the void.
                     if (CanHop(fromOccupancy, toOccupancy, direction))
                     {
-                        queue.Enqueue((neighbor, nextForce));
+                        if (toOccupancy.HasPlenum)
+                        {
+                            queue.Enqueue((neighbor, nextForce));
+                        }
+
                         continue;
                     }
 
@@ -100,7 +106,7 @@ namespace SS3D.Systems.StructuralDamage
                         continue;
                     }
 
-                    if (CanHop(fromOccupancy, toOccupancy, direction))
+                    if (CanHop(fromOccupancy, toOccupancy, direction) && toOccupancy.HasPlenum)
                     {
                         queue.Enqueue((neighbor, nextForce));
                     }
