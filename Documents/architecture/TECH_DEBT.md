@@ -141,19 +141,24 @@ deleting it.
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
-**Blast radius: medium — trend: getting worse**
+**Blast radius: medium — trend: getting worse (fix now scheduled)**
 
 [core-subsystems.md](systems/core-subsystems.md) calls Boot/Game scene-placed subsystem registration
 "legacy," with code bootstrap as the stated target
-([2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**,
-unscheduled). In the meantime, individual systems have each invented their own escape hatch:
+([2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**). In the
+meantime, individual systems have each invented their own escape hatch:
 `ScreenEffectsSubSystem` self-bootstraps via `RuntimeInitializeOnLoadMethod`; `AutomationSubSystem`
 self-bootstraps with a no-op guard; Comms/local-speech is wired into `Game.unity` and `Human.prefab`
 manually and calls out that a fresh scene/prefab can silently lose that wiring. There are now (at
 least) three different "how does a new system get into the running game" answers with no single
 place documenting which one a new feature should pick.
 
-- Related: [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [chat-audio-screens.md](systems/chat-audio-screens.md)
+Follow-on **(a)** is now scheduled: [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+Phase 3 owns the code bootstrap + `NetworkSystemsHub` that collapses these three styles (its Phase 2
+world-readiness `DependsOn` graph is the dependency-ordering the hub needs). Still `planned`, so
+"getting worse" holds until it ships.
+
+- Related: [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
 
@@ -229,9 +234,11 @@ not: `TileMap.cs` scans every `Item` in the scene (`FindObjectsOfType<Item>()`),
 every `ContainerViewer`, and — more structurally — `Core/Subsystems.cs`, the service locator every
 domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache. As
 station population and prop density grow, these scans get proportionally more expensive on paths that
-were supposed to be O(1) lookups.
+were supposed to be O(1) lookups. The locator fallback specifically is scheduled to be relaxed toward
+`TryGet` + ready (missing-during-`WaitingForServer` silent) by
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3.
 
-- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md)
+- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ### 1.13 Hotkey-bound debug UIs sprawl with no shared shell
 
@@ -305,6 +312,26 @@ reached via a different (Addressables-group-as-metadata) route. Migration scoped
 started.
 
 - Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
+
+### 1.16 No session lifecycle — disconnect reloads Boot and storms init
+
+**Blast radius: high — trend: stable by bandage; fix scheduled**
+
+FishNet `DefaultScene` uses **offline = Boot** (`Boot.unity:281-288`), so any disconnect reloads Boot
+as a *Single* scene under the DontDestroyOnLoad `NetworkManager` → duplicate managers +
+`ApplicationInitializerSubSystem.OnStart()` re-fires the whole
+`ApplicationPreInitializing → Initializing → Initialized` chain (the "Boot storm"), which re-drives
+`IntroUIHelper`/`SkipIntro` into repeated `StartNetworkSession` ("already starting/started"). There is
+no session FSM — `NetworkSessionSubSystem` is imperative start/stop with no state, retry, or backoff,
+and the only `ServerConnectionView` Retry button is cosmetic. The lone mitigation is a **harness-only**
+Empty-offline redirect in `AutomationSubSystem`; normal play still storms. This is the same class of
+"act before the prerequisite is real" as 1.7 (bootstrap) and the world-readiness races (round start /
+client flood-fill divergence) — one hole, two faces.
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 1 is the scheduled fix
+(explicit session FSM; offline is never Boot after the first join); Phase 2 covers the world-readiness
+face. Still `planned`.
+
+- Related: [networking-session.md](systems/networking-session.md) § Pitfalls, [scene-management.md](systems/scene-management.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ---
 
