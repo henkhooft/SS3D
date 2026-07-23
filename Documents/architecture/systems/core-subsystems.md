@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Core/, Assets/Scripts/SS3D/Systems/Bootstrap/, Assets/Scripts/SS3D/Systems/WorldReadiness/, Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs
 > Entry points: SubSystem, NetworkSubSystem, SubSystems, SystemsBootstrap, WorldReadinessSubSystem, NetworkSystemsHub
 > Status: partial
-> Verified: 79239122d — 2026-07-23
+> Verified: 90e26cdc2 — 2026-07-23
 
 # Core / SubSystems
 
@@ -31,6 +31,7 @@ Scene-placed registration on Boot/Game actors is **legacy**. Process-wide servic
 
 - **Registration ≠ readiness.** Await `WorldReadyPhase` before round start / sim ticks that need flooded areas.
 - **Missing Get during WaitingForServer is silent** — use `TryGet`.
+- **Double epoch on station restore:** Persistence fires both `OnBeforeRestore` and `NotifyStationTemplateRestoreBeginning` — Epoch bumps twice (harmless). Prefer one call site.
 
 ## Related docs
 

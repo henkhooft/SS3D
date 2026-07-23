@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase
 > Status: shipped
-> Verified: 79239122d — 2026-07-23
+> Verified: 90e26cdc2 — 2026-07-23
 
 # Rounds / lobby
 

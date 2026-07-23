@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/Disposal/, Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs, DisposalOutlet.cs, Assets/Scripts/SS3D/Systems/Tile/Connections/Disposal*
 > Entry points: DisposalSubSystem, DisposalBin, DisposalOutlet, DisposalPipeConnectivity
 > Status: partial
-> Verified: f82ca45bf — 2026-07-19
+> Verified: 90e26cdc2 — 2026-07-23
 
 # Disposal
 
@@ -11,7 +11,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalSubSystem.cs` — registry owner; capsule tick; spill-on-cut
+- `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalSubSystem.cs` — registry owner; `IWorldReady`; awaits `TileMapLoaded` then rebuilds + notifies `DisposalReady`; capsule tick; spill-on-cut
 - `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalPipeConnectivity.cs` — BFS walk + `TryFindRoute`
 - `Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs` — chute; `AcceptsSize` / `MaxSizeClass`; drop-in + tagger interactions
 - `Assets/Scripts/SS3D/Systems/Furniture/DisposalOutlet.cs` — arrival hold / main-outlet grace (eject only if `_spaceEjectionPoint` or `IDisposalSweepable` is wired)
@@ -28,6 +28,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 
 ## Pitfalls
 
+- **Do not poll `CurrentMap != null` for network rebuild.** Await `TileMapLoaded`, rebuild, notify `DisposalReady` (epoch reset re-inits).
 - **Dispose fails silently if `DisposalSubSystem` missing:** `DisposalBin.TryEnterDisposalNetwork` returns false when `SubSystems.TryGet` misses — register `DisposalSystem` on `Game.unity` (already present on this branch).
 - **Dispose loses to Drop on primary-click:** Dispose defaulted to Priority 0 while Drop is 5. Dispose is now 40 (TagDisposal 20) so chute click prefers Dispose.
 - **Dispose becomes a floor drop:** enter used to `RemoveItem` before routing; on failure the item stayed out of hand. Now it restores to the hand. Root cause of empty networks: observer only rebuilt on **pipe** place — bin/outlet placed after pipes never joined `Terminals`. Fixed to rebuild on disposal furniture place/clear and after `OnMapLoaded`.
@@ -46,5 +47,6 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 ## Related docs
 
 - Effort: [2026-07_disposal-item-network.md](../2026-07_disposal-item-network.md)
+- Effort: [2026-07_session-world-lifecycle.md](../2026-07_session-world-lifecycle.md)
 - Design (read-only): [disposal.md](../../design/disposal.md)
 - [INDEX.md](../INDEX.md)
