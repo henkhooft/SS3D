@@ -35,7 +35,7 @@ namespace SS3D.Systems.Health.Interactions
 
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
-            InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
+            InteractionEvent combined = targetEvent.WithSource(originEvent.Source);
             return CanInteract(combined)
                 && MedicalInteractionUtility.TryResolveChestZone(combined, MedicalInteractionUtility.ResolveHealth(combined), out _);
         }

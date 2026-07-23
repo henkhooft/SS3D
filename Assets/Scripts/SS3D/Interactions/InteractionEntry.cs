@@ -12,6 +12,12 @@ namespace SS3D.Interactions
         public readonly IInteraction Interaction;
         public readonly InteractionIdentifier Id;
 
+        /// <summary>
+        /// True for source-only verbs (e.g. Drop) that are not bound to a hover target.
+        /// Equivalent to <see cref="Target"/> == null and wire index <see cref="InteractionIdentifier.SourceOnlyTargetIndex"/>.
+        /// </summary>
+        public bool IsSourceOnly => Target == null;
+
         public InteractionEntry(IInteractionTarget target, IInteraction interaction, int targetComponentIndex)
         {
             Target = target;
@@ -25,6 +31,14 @@ namespace SS3D.Interactions
         public InteractionEntry(IInteractionTarget target, IInteraction interaction)
             : this(target, interaction, InteractionIdentifier.SyntheticTargetIndex)
         {
+        }
+
+        /// <summary>
+        /// Creates a source-only entry (no hover target). Add once per Discover, not per target.
+        /// </summary>
+        public static InteractionEntry SourceOnly(IInteraction interaction)
+        {
+            return new InteractionEntry(null, interaction, InteractionIdentifier.SourceOnlyTargetIndex);
         }
 
         /// <summary>

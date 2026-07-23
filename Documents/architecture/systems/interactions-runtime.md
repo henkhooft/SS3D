@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 71d2a9224 — 2026-07-23
+> Verified: 011659a01 — 2026-07-23
 
 # Interactions (runtime)
 
@@ -45,16 +45,17 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 
 Entities (`Human`, ghosts) are excluded from hover outlines; medical targeting will use dedicated UI.
 
-Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.Target == null`). Those always appear while an item is held and must not outline every `Selectable` under the cursor.
+Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.IsSourceOnly` / `SourceOnly()`). Those always appear while an item is held and must not outline every `Selectable` under the cursor. Prefer `TryEvaluateOutlineInteractability` (skips source discovery); `FilterForOutline` for list-based filters.
 
-Structural Discover/source-list debt: [interactions-framework](interactions-framework.md) § Architecture smells.
+Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md).
 
 ## Pitfalls
 
 - **Spawn NRE in `OnAwake` / `SubscribeToInput`:** if `CameraSubSystem.PlayerCamera` is null (hub before Game camera — see [chat-audio-screens](chat-audio-screens.md)), wiring `_controls` after the camera line leaves SubscribeToInput cascading. Resolve inputs first; tolerate a late camera.
 - **`ArmedInteractionSubSystem` must not `Get<SelectionSubSystem>` in Awake.** Selection is a sibling on `NetworkSystemsHub`; Awake order can leave it unregistered, and FishNet also briefly enables scene copies before the hub exists. Lazy `TryGet` + null-safe enable/disable.
-- **Outline on every hover while holding an item:** `Item.CreateSourceInteractions` always discovers `Drop` with a null target. Outline evaluation must run `InteractionPipeline.FilterForOutline` (keep only `Target != null`) before treating Discover as "available." Prefer `TryEvaluateOutlineInteractability` on the LateUpdate path — it skips source-only discovery entirely.
+- **Outline on every hover while holding an item:** `Item` discovers Drop via `InteractionEntry.SourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (no source discovery) or `FilterForOutline` — never treat full Discover as hover-available.
 - **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
+- **Unresolved selection point:** when `TryResolveInteractionPoint` fails, build `InteractionEvent` without a point (`HasPoint = false`) — do not pass `Vector3.zero` into the four-arg ctor.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`C` is double-bound:** Input System **Cancel Interaction** is still `<Keyboard>/c`; combat hardcodes `cKey` for Help/Harm toggle. Both fire on `C`. Rebind cancel (or route cancel through a different key) when cleaning inputs — do not assume Cancel owns `C` alone.
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
@@ -79,6 +80,7 @@ Structural Discover/source-list debt: [interactions-framework](interactions-fram
 
 ## Related docs
 
+- Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
 - Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)
 - Plan: [interaction_system_improvements_9e14ae22.plan.md](../../plans/interaction_system_improvements_9e14ae22.plan.md)

@@ -26,7 +26,7 @@ namespace SS3D.Substances
 
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
-            InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
+            InteractionEvent combined = targetEvent.WithSource(originEvent.Source);
             return CanInteract(combined);
         }
 

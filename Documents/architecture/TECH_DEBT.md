@@ -68,19 +68,7 @@ forced — pick up each when its own redesign next touches entity wiring.
 
 ### 1.3 Interaction `Discover` has no contract
 
-**Blast radius: high — trend: stable (bandaged repeatedly, not fixed)**
-
-[interactions-framework.md](systems/interactions-framework.md) § Architecture smells names this
-directly: some interaction-source extensions always `Add` a candidate interaction (`Drop`), others
-gate on `CanInteract` at discover time; source-only and target-bound entries share one list with no
-type-level distinction; `InteractionEvent.Point` uses `Vector3.zero` as a sentinel for "unresolved,"
-indistinguishable from a real hit at world origin. This is the root cause of at least two shipped
-bugs fixed by narrow bandages instead of a contract change: empty-hand outline pollution from
-historical `Craft` (purged — see former §1.6) and wall-mount interactions that silently ignored range because a missing collider
-left `Point` at the sentinel value. Every new `IInteractionSourceExtension` is a coin flip on which
-convention it should follow because the framework doesn't enforce one.
-
-- Related: [interactions-framework.md](systems/interactions-framework.md) § Architecture smells (full list), [interactions-runtime.md](systems/interactions-runtime.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.4 UI asset-catalog pattern copy-pasted three times, no shared infrastructure
 
@@ -333,6 +321,17 @@ RPCs removed. Movement / bridge / orchestrator read `Presentation`.
 - **Closed by:** this session's body-presentation refactor (TECH_DEBT 1.2 plan); bump with PR when merged.
 - **Not in this close:** ghost/mind-swap redesign; collapse animation content; prefab strip.
 - Related: [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), [health.md](systems/health.md), [entities.md](systems/entities.md)
+
+### 1.3 Interaction Discover contract — 2026-07-23
+
+Discover semantics locked: candidates vs `FilterAndSort` viability; `InteractionEntry.IsSourceOnly` /
+`SourceOnly()` for Drop; `InteractionEvent.HasPoint` replaces zero-point sentinel; source discovery
+receives hit `context`. Pickable≠rangeable (missing wall-mount colliders) remains open under the
+framework map.
+
+- **Closed by:** this session's Discover contract work ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
+- **Not in this close:** forcing one extension gate style; `InteractionController` decomposition (1.9).
+- Related: [interactions-framework.md](systems/interactions-framework.md), [interactions-runtime.md](systems/interactions-runtime.md)
 
 ### 1.6 Crafting dead-code purge — 2026-07-23
 

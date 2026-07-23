@@ -18,7 +18,7 @@ namespace SS3D.Systems.Health.Interactions
             _interaction = new CprInteraction();
         }
 
-        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
             if (_interaction == null)
             {
@@ -33,7 +33,7 @@ namespace SS3D.Systems.Health.Interactions
 
             foreach (IInteractionTarget target in targets)
             {
-                if (_interaction.CanInteract(new InteractionEvent(hand, target)))
+                if (_interaction.CanInteract(context.WithTarget(target)))
                 {
                     interactions.Add(new InteractionEntry(target, _interaction));
                 }

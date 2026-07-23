@@ -320,7 +320,7 @@ namespace SS3D.Systems.Health
         private static bool TryBuildAimRay(InteractionEvent interactionEvent, out Ray ray)
         {
             ray = default;
-            if (interactionEvent.Point.sqrMagnitude < 0.001f)
+            if (!interactionEvent.HasPoint)
             {
                 return false;
             }
