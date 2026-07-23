@@ -56,7 +56,7 @@ Update as part of `update-system-docs`.
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
 | networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — shipped | [networking-session](systems/networking-session.md) — partial |
-| audio | [audio.md](../design/audio.md) — active | none yet | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
+| audio | [audio.md](../design/audio.md) — active | [audio-foundation](2026-07_audio-foundation.md) — planned (5-phase: mixer, SFX occlusion, per-area ambience, personal heartbeat/breathing, alerts + music/settings) | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
 | rd-material-economy | none yet | none yet | none yet |
@@ -167,6 +167,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4 + blast detonation VFX) |
 | [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) | in-progress (Phases 1–3 done: cleanup, AssetHandle/provider, InteractionIcons pilot; Phases 4–6 open) |
 | [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
+| [2026-07_audio-foundation](2026-07_audio-foundation.md) | planned (5-phase build over legacy `AudioSubSystem` pool: mixer groups, client-local SFX occlusion, per-area ambience, personal heartbeat/breathing, alerts + music/settings) |
 
 ## Implementation plans
 
