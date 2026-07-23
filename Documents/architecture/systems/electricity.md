@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: 8928399c4 — 2026-07-20
+> Verified: 20f4fbaa7 — 2026-07-22
 
 # Electricity
 
@@ -41,7 +41,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/ApcStatusDeriver.cs` — APC power/battery state derivation
 - `Assets/Scripts/SS3D/Systems/Electricity/ElectricCableConnectivity.cs` — HV cable links only grid backbone devices
 - `Assets/Scripts/SS3D/Systems/Electricity/Circuit.cs` — cable-grid power distribution; per-consumer channel resolver
-- `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state (emergency: dim short-range spot only; fill off)
+- `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state; client path uses floor-cache area id + lighting snapshot
 - `Assets/Scripts/SS3D/Systems/Electricity/ConsumerPowerVisual.cs` — emissive/panel dimming for generic consumers
 - `Assets/Scripts/SS3D/Systems/Electricity/BasicPowerConsumer.cs` — constant-load consumer
 - `Assets/Scripts/SS3D/Systems/Electricity/MachinePowerConsumer.cs` — idle/in-use load consumer
@@ -59,6 +59,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 ## Pitfalls
 
 - **Never assign `Inactive` then `Powered` in the same tick.** `PowerStatus` is a SyncVar; OnChange fires on every real transition. Furniture (notably [furniture](furniture.md) airlocks) treats `Inactive` as a power-loss edge. Clear-then-set every ~0.2s tick restarts close timers forever. `PowerAreaConsumers` must write the final status once (and skip no-ops). Cable path in `Circuit` already does single-assignment — keep area path aligned. Test: `PowerAreaConsumers_AssignsFinalStatusOnceWithoutFlicker`.
+- **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/`IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.
 
 ## Depends on / Used by
 

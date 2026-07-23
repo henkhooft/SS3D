@@ -141,13 +141,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, AirAlarmInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, AirAlarmInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private AirAlarmInterfaceViewModel BuildScratchModel()

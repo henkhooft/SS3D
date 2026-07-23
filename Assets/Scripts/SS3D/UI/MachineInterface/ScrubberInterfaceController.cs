@@ -119,13 +119,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, ScrubberInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, ScrubberInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private ScrubberInterfaceSnapshot BuildSnapshot()

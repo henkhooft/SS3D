@@ -98,13 +98,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, VentInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, VentInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private VentInterfaceSnapshot BuildSnapshot()

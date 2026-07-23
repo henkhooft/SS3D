@@ -103,8 +103,8 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap, adjacency, single-step construction placement; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys; staged build ladder (construction.md §1-2) unbuilt; Map Editor Spawn Placements authoring + `spawn-points` template chunk shipped (runtime role→point deferred) |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; GPU fog/fire on server/host only — client VFX sync planned; tick GC pitfalls documented (upload/pipes) |
-| Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, lighting state, wall light switches |
-| Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals |
+| Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, client lighting snapshot + floor-cache area ids, wall light switches |
+| Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals; client LightPower via area snapshot |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |

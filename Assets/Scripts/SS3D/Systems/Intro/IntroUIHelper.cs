@@ -36,26 +36,25 @@ namespace SS3D.Systems.Intro
             ApplicationSettings applicationSettings = ScriptableSettings.GetOrFind<ApplicationSettings>();
 
             // Multiplayer harness drives join/reconnect via AutomationSubSystem (-testscript=).
-            // Auto-starting here races that path: disconnect reloads Boot → Intro → SkipIntro
-            // StartNetworkSession while the script's reconnect is still pending.
+            // Auto-starting here races that path while the script's reconnect is still pending.
             if (!string.IsNullOrEmpty(applicationSettings.TestScriptPath))
             {
                 return;
             }
 
-             if (applicationSettings.SkipIntro)
-             {
-                 Destroy(_temporaryAudioSource);
-            
-                SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
-            
-                 _introUiCanvasGroup.alpha = 0;
-                 _connectionUiCanvasGroup.alpha = 1;
-             }
-             else
-             {
-                 TurnOnConnectionUIAfterFade();
-             }
+            if (applicationSettings.SkipIntro)
+            {
+                Destroy(_temporaryAudioSource);
+
+                TryStartNetworkSessionOnce();
+
+                _introUiCanvasGroup.alpha = 0;
+                _connectionUiCanvasGroup.alpha = 1;
+            }
+            else
+            {
+                TurnOnConnectionUIAfterFade();
+            }
         }
 
         // Please don't mess with this, its disgusting
@@ -67,11 +66,24 @@ namespace SS3D.Systems.Intro
             {
                 _introUiCanvasGroup.DOFade(0, _fadeOutDuration).SetDelay(_splashScreenFreezeDuration).OnComplete(() =>
                 {
-                    SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
+                    TryStartNetworkSessionOnce();
 
                     _connectionUiCanvasGroup.DOFade(1, _fadeInDuration).SetDelay(2);
                 });
             }).SetEase(Ease.InCubic);
+        }
+
+        private static void TryStartNetworkSessionOnce()
+        {
+            // StartNetworkSession no-ops itself when the client is already Starting/Started/Stopping;
+            // still null-check in case Intro is open without a session subsystem.
+            NetworkSessionSubSystem session = SubSystems.Get<NetworkSessionSubSystem>();
+            if (session == null)
+            {
+                return;
+            }
+
+            session.StartNetworkSession();
         }
     }
 }

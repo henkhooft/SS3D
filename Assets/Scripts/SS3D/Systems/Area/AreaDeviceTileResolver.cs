@@ -19,5 +19,45 @@ namespace SS3D.Systems.Area
             Vector2Int offset = TileHelper.CoordinateDifferenceInFrontFacingDirection(tileObject.Direction);
             return new TileCoord(origin.MapId, origin.Grid.x + offset.x, origin.Grid.y + offset.y);
         }
+
+        /// <summary>
+        /// Resolves area membership from a client floor-cache snapshot using the same tile
+        /// selection rules as <see cref="AreaSubSystem.TryGetAreaForDevice"/>.
+        /// </summary>
+        public static bool TryResolveAreaIdFromFloorCache(
+            AreaFloorVisualCache cache,
+            PlacedTileObject tileObject,
+            out AreaId areaId)
+        {
+            areaId = default;
+            if (cache == null || tileObject == null)
+            {
+                return false;
+            }
+
+            if (tileObject.Layer == TileLayer.WallMountHigh || tileObject.Layer == TileLayer.WallMountLow)
+            {
+                return TryGetAreaId(cache, GetTileInFront(tileObject).Grid, out areaId);
+            }
+
+            if (TryGetAreaId(cache, GetOriginTile(tileObject).Grid, out areaId))
+            {
+                return true;
+            }
+
+            return TryGetAreaId(cache, GetTileInFront(tileObject).Grid, out areaId);
+        }
+
+        private static bool TryGetAreaId(AreaFloorVisualCache cache, Vector2Int worldGrid, out AreaId areaId)
+        {
+            areaId = default;
+            if (!cache.TryGetAreaIdForWorldGrid(worldGrid, out ushort raw))
+            {
+                return false;
+            }
+
+            areaId = new AreaId(raw);
+            return true;
+        }
     }
 }

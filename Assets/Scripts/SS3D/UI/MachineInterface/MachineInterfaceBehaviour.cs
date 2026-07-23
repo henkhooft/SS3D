@@ -207,9 +207,14 @@ namespace SS3D.UI.MachineInterface
 
         protected abstract void SendRefreshToViewer(NetworkConnection conn);
 
-        protected void DispatchClientOpen<TSnapshot>(TSnapshot snapshot)
+        protected void DispatchClientOpen<TSnapshot>(NetworkConnection target, TSnapshot snapshot)
             where TSnapshot : struct
         {
+            if (!ShouldApplyTargetedUi(target))
+            {
+                return;
+            }
+
             if (!SubSystems.TryGet(out MachineInterfaceSubSystem subsystem))
             {
                 return;
@@ -218,15 +223,30 @@ namespace SS3D.UI.MachineInterface
             MachineInterfaceNetworkRegistry.DispatchOpen(subsystem, snapshot, this);
         }
 
-        protected void DispatchClientRefresh<TSnapshot>(TSnapshot snapshot)
+        protected void DispatchClientRefresh<TSnapshot>(NetworkConnection target, TSnapshot snapshot)
             where TSnapshot : struct
         {
+            if (!ShouldApplyTargetedUi(target))
+            {
+                return;
+            }
+
             if (!SubSystems.TryGet(out MachineInterfaceSubSystem subsystem))
             {
                 return;
             }
 
             MachineInterfaceNetworkRegistry.DispatchRefresh(subsystem, snapshot);
+        }
+
+        /// <summary>
+        /// <c>TargetRpc(RunLocally = true)</c> also executes on the listen-server when sending to a
+        /// remote client. UI must only apply when the RPC targets this process's local client
+        /// (host opening for themselves, or a pure client receiving their TargetRpc).
+        /// </summary>
+        protected static bool ShouldApplyTargetedUi(NetworkConnection target)
+        {
+            return target != null && target.IsValid && target.IsLocalClient;
         }
 
         private static bool TryResolveViewerConnection(IInteractionSource source, out NetworkConnection conn)
@@ -289,6 +309,11 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetCloseInterface(NetworkConnection conn)
         {
+            if (!ShouldApplyTargetedUi(conn))
+            {
+                return;
+            }
+
             if (!SubSystems.TryGet(out MachineInterfaceSubSystem subsystem))
             {
                 return;

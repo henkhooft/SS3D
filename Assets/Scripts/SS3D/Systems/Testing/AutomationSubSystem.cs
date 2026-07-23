@@ -405,11 +405,11 @@ namespace SS3D.Systems.Testing
             }
             else
             {
-                // DefaultScene offline = Boot.unity. StopConnection → LoadScene(Boot) as Single
-                // while NetworkManager is DontDestroyOnLoad → duplicate managers + Init/Intro
-                // storms. Staying in Game (pointing offline at Game) also fails: networked
-                // scene objects never resync and wait_lobby never sees a ckey. Use Empty.unity
-                // so Game unloads cleanly without re-entering Boot's ApplicationInitializer.
+                // DefaultScene offline is Boot until a successful connect (then
+                // ClientConnectionRecovery arms Empty). Explicitly set Empty before
+                // StopConnection so Boot cannot reload as Single while NetworkManager is
+                // DDOL → duplicate managers + Init/Intro storms. Staying in Game also fails:
+                // networked scene objects never resync and wait_lobby never sees a ckey.
                 RedirectOfflineSceneToEmpty();
                 networkManager.ClientManager.StopConnection();
             }
