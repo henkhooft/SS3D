@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Core/, Assets/Scripts/SS3D/Systems/Bootstrap/, Assets/Scripts/SS3D/Systems/WorldReadiness/, Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs
 > Entry points: SubSystem, NetworkSubSystem, SubSystems, SystemsBootstrap, WorldReadinessSubSystem, NetworkSystemsHub
 > Status: partial
-> Verified: 84401b2fe — 2026-07-23
+> Verified: 3bb5f5fd2 — 2026-07-23 (Disconnecting suppress for hub teardown Gets)
 
 # Core / SubSystems
 
@@ -32,7 +32,8 @@ Process-wide services: `SystemsBootstrap` (DDOL). World/session networked system
 ## Pitfalls
 
 - **Registration ≠ readiness.** Await `WorldReadyPhase` before round start / sim ticks that need flooded areas.
-- **Missing Get during WaitingForServer is silent** — use `TryGet`.
+- **Missing Get during Disconnecting / WaitingForServer is silent** — use `TryGet`.
+- **Game content prefabs may still host SubSystems** (PlayerCamera, Radial/Armed overlays, MapEditor) that register before hub Online — Phase 3 only stripped Boot/Game systems roots. Consumers must `TryGet` / lazy-resolve; relocating those components onto bootstrap/hub is residual cleanup ([session-world-lifecycle](../2026-07_session-world-lifecycle.md) post-ship note).
 - **Do not AddComponent NetworkSubSystems at runtime** — edit-time on hub prefab only (FishNet behaviour list).
 - Hub despawn on disconnect unregisters via `OnDestroyed` — no extra teardown required.
 

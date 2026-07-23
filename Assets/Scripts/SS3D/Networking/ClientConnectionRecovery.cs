@@ -228,6 +228,13 @@ namespace SS3D.Networking
 
             Log.Debug(this, "SessionState {from} → {to}", Logs.Important, State, next);
             State = next;
+
+            // Hub NetworkObjects despawn while Stopping/Disconnecting, before WaitingForServer.
+            // Missing Get lookups from device OnDestroy are expected then — same class as teardown.
+            if (next == SessionState.Disconnecting)
+            {
+                SubSystems.SetSuppressMissingErrors(true);
+            }
         }
 
         private void ArmEmptyOfflineScene()

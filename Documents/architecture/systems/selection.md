@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Selection/, Assets/Scripts/SS3D/Rendering/URP/
 > Entry points: SelectionSubSystem, SelectionController, SelectionPickRendererFeature
 > Status: shipped
-> Verified: a20853b1c — 2026-07-18
+> Verified: 3bb5f5fd2 — 2026-07-23 (SelectionCamera TryGet before hub Online)
 
 # Selection
 
@@ -33,6 +33,7 @@ Outline shells and other auxiliary meshes use `SelectionRenderingLayers.ExcludeF
 
 ## Pitfalls
 
+- **`SelectionCamera` must not `Get` Selection in Start.** It lives on `PlayerCamera` in Game, which loads before `NetworkSystemsHub` Online. Use `TryGet` and resolve lazily in the pick readback.
 - **`ClosestPoint` spam on hover:** ray-miss fallback must not call `Collider.ClosestPoint` on non-convex `MeshCollider` (or TerrainCollider). Unity warns every `LateUpdate`. Use `ClosestPointOnBounds` for unsupported shapes (`SelectionTargetUtility.GetClosestPoint`; same rule in [examine](examine.md) `ExamineRangeUtility`).
 - **Pickable without collider breaks range:** shader ID pick does not need colliders; interaction-point resolution does. Wall mounts missing colliders left `Point` at default zero and (historically) made `RangeCheck` a no-op — see [interactions-framework](interactions-framework.md) smells #3–4. Light switch / air alarm now carry `BoxCollider`s; keep that requirement for new wall mounts.
 

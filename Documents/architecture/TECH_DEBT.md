@@ -365,9 +365,12 @@ Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `Ne
 ([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h).
 
 - **Closed by:** `b74f47123` (Phase 3h hub + scene strip); post-ship hardening `ab79afee2` (ServerMeta
-  boot ownership), `b57f3974e` (PlayerCamera lazy resolve).
+  boot ownership), `b57f3974e` (PlayerCamera lazy resolve); smoke hardening (Selection/Armed
+  `TryGet`, Disconnecting suppress).
 - **Not in this close:** UiShell / MainHud / StoragePanel `RuntimeInitializeOnLoad` — agent-first
-  follow-on **(b)**.
+  follow-on **(b)**. Also residual: content-prefab `SubSystem`s (PlayerCamera / Radial / Armed /
+  MapEditor) that still register when Game loads before hub Online — consumers use `TryGet` until
+  those move to bootstrap/hub ([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)).
 - Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 
 ### 1.16 Session/world lifecycle — 2026-07-23

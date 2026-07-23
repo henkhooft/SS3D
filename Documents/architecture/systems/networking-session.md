@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 84401b2fe — 2026-07-23
+> Verified: 3bb5f5fd2 — 2026-07-23 (ArmedInteraction Selection TryGet + Disconnecting suppress)
 
 # Networking (session)
 
@@ -32,7 +32,7 @@ FishNet session management — host/join, network type and port settings. Distin
 
 - **Disconnect must not reload Boot after first Online.** CCR arms Empty; Automation must not restore Boot offline after reconnect.
 - **Intro auto-join is Cold-only** (`IntroUIHelper` checks `SessionState.Cold`).
-- **`SubSystems.Get` during WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`.
+- **`SubSystems.Get` during Disconnecting / WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`. Suppress starts on Disconnecting so hub/device `OnDestroy` during `StopConnection` does not Error before WaitingForServer.
 - **OnGUI recovery when Empty offline:** NetworkSession is DDOL — CCR shows OnGUI when Intro/Boot/Launcher are not loaded (not when NetworkSession is missing).
 - See also prior harness / headless pitfalls below (unchanged).
 - **After `ScriptComplete`, hard-exit — do not `Application.Quit`.** Quit still unloads scenes and re-enters `ApplicationInitializing`, so NetworkSession re-joins and (without a guard) automation re-runs → harness Error/Fatal + RoleSubSystem duplicate-key. `AutomationSubSystem` runs the script once and `Environment.Exit(0)` after emitting the final signal.

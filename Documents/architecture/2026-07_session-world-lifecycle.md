@@ -24,6 +24,14 @@ hub-before-Game ordering — Persistence now owns `LoadServerMeta` (contributors
 Phase 3h “Rebuild Hub + Strip” menu (Game no longer has SerializeField sources). TECH_DEBT §1.7 /
 §1.16 are in [TECH_DEBT.md](TECH_DEBT.md) §6 Resolved.
 
+**Residual (not Phase 3 scope):** Boot/Game *systems roots* are empty, but some **content prefabs**
+still carry `SubSystem` components that register when Game loads — before `NetworkSystemsHub` is
+Online (e.g. `PlayerCamera` + `SelectionCamera`, Radial/Armed overlay prefabs, MapEditor canvas).
+Smoke hardening on this branch uses consumer `TryGet` / lazy resolve (same pattern as PlayerCamera)
+and starts `SetSuppressMissingErrors` on **Disconnecting** so hub/device teardown Gets stay silent.
+Relocating those leftover prefab SubSystems onto `SystemsBootstrap` / the hub is follow-on cleanup,
+not a contradiction of Phase 3.
+
 ## 1. Problem & non-goals
 
 One architectural hole with two faces.
