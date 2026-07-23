@@ -1,15 +1,15 @@
 > Implements: Documents/design/audio.md §2 (ambience), §3 (diegetic SFX + occlusion), §4 (personal audio), §5 (music), §6 (alerts), §7 (volume categories)
-> Touches systems: audio (chat-audio-screens), area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
-> Status: planned
+> Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
+> Status: in-progress (Phase 1 shipped; Phase 0, 2–5 pending)
 
 # Audio foundation (Jul 2026)
 
 Builds the audio domain [audio.md](../design/audio.md) formalizes — the system four other
 design docs were already assuming (`area.md` §5 ambience, `main-hud.md` §5 heartbeat,
 `stamina.md` §4 breathing, `virology.md` §5 symptom cue) without anyone specifying it.
-Navigation map for the domain today: [systems/chat-audio-screens.md](systems/chat-audio-screens.md)
-(shared with chat/comms/screens). No dedicated `systems/audio.md` map yet — it splits out of
-`chat-audio-screens.md` once Phase 1 ships (cold-start step 3, [SKILL.md](../SKILL.md)).
+Navigation map: [systems/audio.md](systems/audio.md) — split out of
+[systems/chat-audio-screens.md](systems/chat-audio-screens.md) now that Phase 1 has shipped
+(cold-start step 3, [SKILL.md](../SKILL.md)).
 
 ## What already exists (upstream legacy)
 
@@ -57,25 +57,26 @@ is content, §10 / this doc's Deferred).
 - Confirm the sound content path and `AssetDatabases.Sounds` clip lookup is the single addition point
   (aligns with the Addressables migration — do not add a second clip loader).
 
-### Phase 1 — Diegetic SFX occlusion (§3) — highest leverage, do first
+### Phase 1 — Diegetic SFX occlusion (§3) — highest leverage, do first — **shipped**
 
 Delivers the design's core claim (real geometry occludes sound) and upgrades every existing pooled
 SFX at once.
 
-- Add a client-local occlusion driver to the pooled `AudioSource` (a component on the pool prefab, or
-  a per-source sampler owned by `AudioSubSystem`). While a positional source is playing, throttle-sample
-  `LineOfSight.HasLineOfSight(ListenerPosition, source.transform.position, occluderMask)` and, when
-  blocked, engage an `AudioLowPassFilter` + volume trim on that source (muffled/attenuated). Restore on
-  clear LOS. Occluder mask = walls + **closed** doors (open doors do not occlude — mirror the area
-  flood-fill's door handling and comms LOS).
-- **Bound the raycast cost:** sample per-source at a fixed cadence (not every frame × every source),
-  skip inaudible sources beyond `maxDistance`, and lerp the lowpass so toggling reads as a muffle, not
-  a pop.
-- Consolidate the closest ad-hoc emitters (`NoisyCollision` already uses the pool; bring `AirlockStateMachine`
-  door cycle and `BlastExplosionEffect` onto `PlayAudioSource`) so worked example B (explosion through a
-  wall) is demonstrable.
-- **Split `systems/audio.md` out of `chat-audio-screens.md`** at this point (per cold-start), stamping
-  the occlusion pitfalls.
+- ✅ `AudioSourceOcclusion` — a client-local component added at runtime to every pooled Sfx/Music
+  `AudioSource` (`AudioSubSystem.CreateNewAudioSource`). While a positional source is playing, it
+  throttle-samples (every 0.15s) `LineOfSight.HasLineOfSight(listener, source.transform.position,
+  LayerMask.GetMask("Default"))` — the same occluder mask/layer convention Drop, combat LOS, and comms
+  occlusion already use — and lerps an `AudioLowPassFilter` cutoff (22kHz ↔ 800Hz) plus a volume
+  scale (1.0 ↔ 0.5) toward the occluded/clear target, so toggling reads as a muffle, not a pop.
+  `AudioOcclusionState` holds the pure lerp math (unit-tested in `AudioOcclusionStateTests`,
+  independent of any live scene). `PrepareForPlayback` resets the muffle state before every `Play()`
+  so a reused pooled source doesn't inherit its previous clip's occlusion.
+- ✅ Bounded raycast cost: sampling is throttled per-source, and sources beyond their own `maxDistance`
+  skip the raycast/filter update entirely (Unity's own rolloff already silences them).
+- ✅ `systems/audio.md` split out of `chat-audio-screens.md`, stamping the occlusion pitfalls.
+- **Not yet done:** consolidating ad-hoc emitters (`AirlockStateMachine` door cycle,
+  `BlastExplosionEffect`) onto `PlayAudioSource` so they gain occlusion — `NoisyCollision` already
+  routes through the pool and got occlusion for free. Content-roster follow-up, not blocking.
 
 ### Phase 2 — Per-area ambience (§2)
 

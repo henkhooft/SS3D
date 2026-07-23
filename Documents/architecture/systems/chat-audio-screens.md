@@ -1,13 +1,19 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
-> Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
+> Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/
+> Entry points: ChatSubSystem, CommsSubSystem, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: ab79afee2 — 2026-07-23
+> Verified: 220ac4d48 — 2026-07-23
 
 # Chat / audio / screens
 
 ## Overview
 
-In-game chat backend, local-speech UI, audio playback, and camera/screen controllers. Camera pose is still multi-writer (`CameraFollow`, map-editor session, FOV tweens, ad-hoc `Camera.main`) — do not add new modal camera drivers that poke `CameraFollow` or `Camera.main` directly; planned fix is [camera ownership](../2026-07_camera-ownership.md) (dedicated manager / contexts, same ownership rule as input arbitration).
+In-game chat backend, local-speech UI, and camera/screen controllers. Audio playback now has its own
+map — [audio](audio.md) — split out once [audio-foundation](../2026-07_audio-foundation.md) Phase 1
+(client-local SFX occlusion) shipped; see that map for `AudioSubSystem` and friends. Camera pose is
+still multi-writer (`CameraFollow`, map-editor session, FOV tweens, ad-hoc `Camera.main`) — do not add
+new modal camera drivers that poke `CameraFollow` or `Camera.main` directly; planned fix is
+[camera ownership](../2026-07_camera-ownership.md) (dedicated manager / contexts, same ownership rule
+as input arbitration).
 
 **Always-on chat UI Phase 0 purged** per [comms.md](../../design/comms.md) + [agent-first composition](../2026-07_agent-first-composition.md): in-game/lobby chat windows, `ToggleChats`, tabs, and `InGameChatController` are gone. Do **not** resurrect UGUI chat chrome. `ChatSubSystem` remains headless (station alerts + future PDA/log / non-diegetic feed).
 
@@ -17,7 +23,6 @@ Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (
 
 - `Assets/Scripts/SS3D/Systems/Chat/ChatSubSystem.cs` — headless message hub (FishNet broadcast, server log file, `SendPlayerMessage` / `SendServerMessage*`). Channel SOs under `Assets/Content/Data/UI/Chat/Channels/`. Round/Entity still post station alerts here; with no UI subscribers those messages are fire-and-forget until the non-diegetic feed / PDA log lands.
 - `Assets/Scripts/SS3D/Systems/Comms/CommsSubSystem.cs` — local-speech system hub. Slice under `Assets/Scripts/SS3D/Systems/Comms/`: `LocalSpeechEmitter`, `LocalSpeechListener`, `LocalSpeechBubbleController` (overlay + compose), `LocalSpeechBubbleView`, `CrowdCapRanker`, `LocalSpeechConfig`. Radio/channels, non-diegetic feed, announcements, PDA log not built yet. F3 (`LocalSpeechDebugTrigger`) still cycles local test lines.
-- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — audio subsystem
 - `Assets/Scripts/SS3D/Systems/Screens/PlayerCameraSubSystem.cs` — binds follow target on local player spawn
 - `Assets/Scripts/SS3D/Systems/Screens/CameraSubSystem.cs` — holds `PlayerCamera` Actor reference
 - `Assets/Scripts/SS3D/Systems/Screens/CameraFollow.cs` — gameplay orbit-follow + `AddImpulse` shake; Coimbra `UpdateEvent` must guard `isActiveAndEnabled`

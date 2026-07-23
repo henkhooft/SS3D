@@ -121,6 +121,11 @@ namespace SS3D.Systems.Audio
             //-- we don't want the mouse to leave the squeak behind as it travels, but a flying soda can making a sound at the site of impact is probably fine.
             audioSource.transform.parent = parent == null ? null : parent.transform;
             audioSource.loop = isLooping;
+
+            // Reset any muffle state left over from this pooled source's previous clip before it
+            // starts sampling occlusion fresh (audio.md §3 — client-local, seventh LineOfSight consumer).
+            audioSource.GetComponent<AudioSourceOcclusion>()?.PrepareForPlayback(volume);
+
             audioSource.Play();
         }
 
@@ -226,6 +231,14 @@ namespace SS3D.Systems.Audio
             public void CreateNewAudioSource()
             {
                 AudioSource newAudioSource = Instantiate(Prefab, AudioSystem.transform.position, Quaternion.identity).GetComponent<AudioSource>();
+
+                // Sfx/Music are the pool's positional sources (audio.md §3/§5); Ambience/Personal
+                // are separate non-positional controllers (Phase 2/3) and never occlude.
+                if (AudioType is AudioType.Sfx or AudioType.Music)
+                {
+                    newAudioSource.gameObject.AddComponent<AudioSourceOcclusion>();
+                }
+
                 List.Add(newAudioSource);
                 newAudioSource.transform.parent = AudioSystem.transform;
             }
