@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects + alert stack wired; vitals HUD Phase 6 remainder)
-> Verified: c2b692f55 — 2026-07-23
+> Verified: 7f90106b6 — 2026-07-23
 
 # Health
 
@@ -57,6 +57,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + connect (exclude-self overload; AnatomyNode limb meshes; closest-point reach)
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
+- Personal heartbeat cue: [audio](audio.md) via `HealthPersonalAudioMapper` (`PersonalAudioSubSystem`) — driven from the same `ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` local-owner hooks as screen effects, not a separate subscription. Deliberately treats `IsCardiacArrest` as silence (opposite of the screen vignette) since the cue represents an actual beating heart.
 - Alert stack: emit via `SnapshotChanged`; map with `HealthAlertStackMapper` only — [inventory](inventory.md) Main HUD owns `AlertStackState` / icon rendering.
 - Body presentation: map vitals with `BodyPresentationIntent.FromSnapshot` and call `Ragdoll.ServerSetPresentation` — never apply ragdoll/animator visuals from Health.
 
@@ -75,7 +76,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 
 ## Depends on / Used by
 
-- **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md)
+- **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md), [audio](audio.md) (`PersonalAudioSubSystem`)
 - **Used by:** [combat](combat.md) (melee zone hits), [inventory](inventory.md) (Main HUD alert stack), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement multiplier / limp + `InjuredLeg` / injured-arm presentation), `Hand` (arm debuff stub)
 - **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; combat drains deferred
 

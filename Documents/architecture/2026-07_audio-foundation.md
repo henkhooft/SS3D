@@ -1,6 +1,6 @@
 > Implements: Documents/design/audio.md §2 (ambience), §3 (diegetic SFX + occlusion), §4 (personal audio), §5 (music), §6 (alerts), §7 (volume categories)
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
-> Status: in-progress (Phase 1–2 shipped; Phase 0, 3–5 pending)
+> Status: in-progress (Phase 1–3 shipped; Phase 0, 4–5 pending)
 
 # Audio foundation (Jul 2026)
 
@@ -109,16 +109,31 @@ SFX at once.
   prefabs do. Needs Phase 0's runtime-loadable mixer reference (or a small dedicated prefab) to route
   correctly.
 
-### Phase 3 — Personal audio (§4)
+### Phase 3 — Personal audio (§4) — **shipped**
 
-- Client-local mapper on the local owner (pattern: `HealthScreenEffectMapper`):
-  - **Heartbeat** — begins when brain function drops toward critical/dying; resumes on a successful defib;
-    silenced entirely when brain function reaches zero (worked example C). Source `HealthSnapshot` on the
-    owned body (`HumanHealthController` / `HealthSnapshot`), the same signal screen effects consume.
-  - **Breathing** — heavier as stamina depletes (`stamina.md` §4), off `StaminaController`.
-- Non-positional, no occlusion, **heard only by the affected player** (owner-only). Routes to the Personal
-  mixer group. This is the reusable category virology's symptom cue (§4) later plugs into — build the seam,
-  not the virology content.
+- ✅ `PersonalAudioSubSystem` — a third self-bootstrapped controller (same pattern as
+  `AmbienceSubSystem`/`ScreenEffectsSubSystem`), owning two non-positional, occlusion-free
+  `AudioSource`s (heartbeat, breathing) driven purely by intensity (`SetHeartbeatIntensity`/
+  `SetBreathingIntensity`, 0..1) — it never polls or subscribes to anything itself.
+  `AudioTrackIds` names the two fixed clip ids.
+- ✅ `HealthPersonalAudioMapper` — heartbeat intensity from `HealthSnapshot`, wired into
+  `HumanHealthController`'s existing local-owner hooks (`ApplyScreenEffectsFromSnapshot`/
+  `ClearScreenEffectsIfDriving`, alongside `HealthScreenEffectMapper` — same event, second consumer,
+  not a new subscription). **Deliberately diverges from the screen-effect mapper**: `IsCardiacArrest`
+  silences the heartbeat (heart stopped, nothing to beat) rather than forcing it to full intensity —
+  worked example C's "resuming on a successful defib" only makes sense if cardiac arrest silenced it
+  first. Unit-tested (`HealthPersonalAudioMapperTests`), including this exact divergence case.
+- ✅ `StaminaPersonalAudioMapper` — breathing intensity from stamina ratio (already 0..1 per
+  `IStamina.Current`), wired into `StaminaController.SyncCurrentStamina`'s existing `IsOwner` gate
+  (a no-op placeholder before this). Unit-tested (`StaminaPersonalAudioMapperTests`).
+- ✅ Lifecycle: `PersonalAudioSubSystem` never watches for disconnect itself — the driving consumer
+  zeroes intensity on ownership loss (`ClearScreenEffectsIfDriving` already ran on `OnDestroyed`), so
+  no separate reset logic was needed the way `AmbienceSubSystem` needed one.
+- This is the reusable category virology's symptom cue (§4) later plugs into — the seam is
+  `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`, callable directly by any
+  future domain mapper; virology content itself is out of scope here.
+- **Known gap (shared with Phase 2):** outputs to Master, not a `Personal` mixer group — same Phase 0
+  dependency as ambience.
 
 ### Phase 4 — Alert cues (§6)
 

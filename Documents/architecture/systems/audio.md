@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
-> Entry points: AudioSubSystem, AmbienceSubSystem
+> Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: defdd0f6a — 2026-07-23
+> Verified: 7f90106b6 — 2026-07-23
 
 # Audio
 
@@ -28,29 +28,35 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/AudioOcclusionState.cs` — pure cutoff/volume lerp math, kept
   separate from the `MonoBehaviour` so it's unit-testable without a scene
   (`Assets/Scripts/Tests/EditMode/AudioOcclusionStateTests.cs`)
-- `Assets/Scripts/SS3D/Systems/Audio/Boombox.cs` — diegetic jukebox: `MachinePowerConsumer`-gated,
-  plays/stops Music through the pool (audio.md §5's in-round music source)
-- `Assets/Scripts/SS3D/Systems/Audio/NoisyCollision.cs` — server-triggered positional collision SFX
-  through the pool (audio.md §3 example); gains occlusion for free
-- `Assets/Scripts/SS3D/Systems/Audio/ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs`
-  — Boombox music-swap interaction, local-player `AudioListener` follow, `Sfx`/`Music`/`Ambient` enum
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceHandler.cs` — **legacy, unwired, superseded.** Manual
-  per-scene `_air`/`_windiness`/`_power` knobs and a global mixer lowpass "muffle" predating
-  Area/electricity. Not per-Area, not driven by `AreaRecord.AmbienceTrackId`. Do not extend.
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — **Phase 2 replacement** for
-  `AmbienceHandler`: client-local per-Area ambience crossfade (audio.md §2). Self-bootstrapped by
-  `SystemsBootstrap.EnsureProcessWideServices` (same pattern as `ScreenEffectsSubSystem`), not a
-  scene/prefab placement. Polls the local player's world position every 0.5s via
-  `AreaSubSystem.TryResolveAreaIdForWorldPosition`, and on an area change crossfades two
-  non-positional (`spatialBlend = 0`) `AudioSource`s between the old and new
-  `AreaSubSystem.TryGetAmbienceTrackId` clip (`AssetDatabases.Sounds` lookup, matching the pool's clip
-  path). No occlusion (ambience isn't positional, per audio.md §2 vs §3).
-- `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience` / `SFX` / `Music` groups exist; a
-  `Personal` group and per-group exposed Volume parameters are Phase 0/5 work (not yet done).
-  `AmbienceSubSystem`'s sources currently output to Master (no runtime-loadable `AudioMixerGroup`
-  reference exists yet for a self-bootstrapped, prefab-less subsystem) — route them once Phase 0 lands.
+- `Assets/Scripts/SS3D/Systems/Audio/Boombox.cs`, `NoisyCollision.cs`, `ChangeMusicInteraction.cs`,
+  `ListenerPosition.cs`, `AudioType.cs` — diegetic jukebox (§5), server-triggered collision SFX (§3
+  example, gains occlusion for free), music-swap interaction, local-player `AudioListener` follow,
+  `Sfx`/`Music`/`Ambient` enum
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceHandler.cs` — **legacy, superseded, do not extend.**
+  Manual per-scene `_air`/`_windiness`/`_power` knobs + global mixer lowpass predating Area/electricity.
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — **Phase 2**, `AmbienceHandler`'s
+  replacement: client-local per-Area ambience crossfade (§2). Self-bootstrapped (same pattern as
+  `ScreenEffectsSubSystem`), not scene/prefab-placed. Polls the local player's position every 0.5s via
+  `AreaSubSystem.TryResolveAreaIdForWorldPosition`; crossfades two non-positional `AudioSource`s
+  between the old/new `AreaSubSystem.TryGetAmbienceTrackId` clip. No occlusion (non-positional, §2 vs §3).
+- `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — **Phase 3**: personal, internal
+  audio (§4) — heartbeat + heavy breathing, non-positional, no occlusion, owner-only.
+  Self-bootstrapped like `AmbienceSubSystem`; owns playback only (`SetHeartbeatIntensity`/
+  `SetBreathingIntensity`, 0..1) — domain mappers push intensities in, it doesn't poll anything itself.
+- `Assets/Scripts/SS3D/Systems/Health/HealthPersonalAudioMapper.cs`,
+  `Assets/Scripts/SS3D/Systems/Stamina/StaminaPersonalAudioMapper.cs` — `HealthSnapshot`/stamina
+  ratio → heartbeat/breathing intensity, unit-tested. Called from each domain's existing local-owner
+  hook (`HumanHealthController.ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` alongside
+  `HealthScreenEffectMapper`; `StaminaController.SyncCurrentStamina`'s `IsOwner` gate) — not a new
+  subscription.
+- `Assets/Scripts/SS3D/Systems/Audio/AudioTrackIds.cs` — fixed personal-audio clip ids
+  (`Heartbeat`/`HeavyBreathing`) — architecturally fixed, unlike content-authored ambience tracks.
+- `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
+  group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
+  output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
+  subsystem) — route them once Phase 0 lands.
 - `Assets/Content/Systems/Audio/SFXAudioSource.prefab`, `MusicAudioSource.prefab` — pool prefabs,
-  routed to the `SFX` / `Music` mixer groups respectively
+  routed to the `SFX`/`Music` mixer groups respectively
 
 ## Extension points
 
@@ -66,10 +72,12 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
   thin — no Map Editor UI yet, dev-console/content driven). Syncs to observers via
   `RpcSyncAreaAmbience` (BufferLast), same pattern as the departmental-tint snapshot.
+- Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`
+  directly for any future systemic cue (virology's symptomatic-stage cue is this same category,
+  per audio.md §4) rather than building a parallel non-positional playback path.
 - **Not yet built:** power-gating power-dependent ambience tracks off `AreaLightingState` (needs a
-  per-track "requires power" data field — deferred, see Pitfalls), personal heartbeat/breathing
-  (Phase 3), alert cues (Phase 4), lobby music + volume-slider settings (Phase 5). See
-  [audio-foundation](../2026-07_audio-foundation.md) for the phase plan.
+  per-track "requires power" data field — deferred, see Pitfalls), alert cues (Phase 4), lobby music
+  + volume-slider settings (Phase 5). See [audio-foundation](../2026-07_audio-foundation.md).
 
 ## Pitfalls
 
@@ -96,24 +104,19 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   built here on purpose: inventing the flag without an authoring surface or content decision on which
   tracks use it would be dead schema. `AreaSubSystem.OnAreaLightingStateChanged` /
   `TryGetLightingStateForTile` are the signal to consume once the flag exists.
-- **Ambience sources are pure-runtime `AudioSource`s with no mixer group assigned.** `AmbienceSubSystem`
-  self-bootstraps with no prefab/scene placement, so there's no Editor-assigned
-  `OutputAudioMixerGroup` reference to give them (unlike the pool's `SFXAudioSource.prefab` /
-  `MusicAudioSource.prefab`, which are pre-wired in the Editor). They output to Master until Phase 0
-  wires a runtime-loadable mixer group reference.
 - **A process-wide DDOL subsystem outlives any one player body.** `AmbienceSubSystem` never gets
   destroyed/recreated across disconnect/respawn/map-reload the way a `NetworkSubSystem` on the hub
-  does, so it must clear its own `_lastResolvedAreaId`/`_currentTrackId` when
-  `LocalPlayerObjectChanged` reports no body — otherwise (a) ambience keeps looping the last live
-  area's track forever with nothing to poll, and (b) a fresh map's `AreaId`s can numerically collide
-  with the old ones, silently skipping the correct crossfade on respawn. Mirrors
-  `HumanHealthController.ClearScreenEffectsIfDriving`: the driving consumer clears shared
-  presentation state on ownership loss, not the shared subsystem watching for disconnect.
+  does, so it clears its own `_lastResolvedAreaId`/`_currentTrackId` when `LocalPlayerObjectChanged`
+  reports no body — otherwise ambience loops the last live area's track forever with nothing left to
+  poll, and a fresh map's `AreaId`s can numerically collide with the old ones. `PersonalAudioSubSystem`
+  sidesteps this the way `ScreenEffectsSubSystem` does: it never watches for disconnect itself — the
+  driving consumer (`HumanHealthController.ClearScreenEffectsIfDriving`, same call site as the
+  screen-effect clear) zeroes the intensity on ownership loss instead.
 
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [player-control](player-control.md) (local player for `ListenerPosition` / `AmbienceSubSystem`'s `LocalPlayerObjectChanged`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs
 

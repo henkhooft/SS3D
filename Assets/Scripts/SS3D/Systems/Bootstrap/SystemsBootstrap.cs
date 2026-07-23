@@ -45,6 +45,7 @@ namespace SS3D.Systems.Bootstrap
             EnsureSubSystem<WorldReadinessSubSystem>();
             EnsureSubSystem<ScreenEffectsSubSystem>();
             EnsureSubSystem<AmbienceSubSystem>();
+            EnsureSubSystem<PersonalAudioSubSystem>();
             EnsureSubSystem<AutomationSubSystem>();
             EnsureSubSystem<VisionSubSystem>();
             EnsureSubSystem<ApplicationInitializerSubSystem>();

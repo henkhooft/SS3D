@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: StaminaController, StaminaFactory
 > Status: partial
-> Verified: 9145f200f — 2026-07-18
+> Verified: 7f90106b6 — 2026-07-23
 
 # Stamina
 
@@ -22,6 +22,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 - Combat drains: melee swings call `ServerDepleteStamina` via `MeleeWeaponProfile.StaminaCost` ([combat](combat.md)); block/fire drains still deferred.
 - Compact HUD indicator near vitals: Main HUD / Phase 6 — do not revive `StaminaBarView`.
+- Personal breathing cue: [audio](audio.md) via `StaminaPersonalAudioMapper` (`PersonalAudioSubSystem`), driven from `StaminaController.SyncCurrentStamina`'s `IsOwner` gate — audio.md §4 / stamina.md §4's "heavier breathing" mention.
 
 ## Pitfalls
 
@@ -30,7 +31,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md), [inventory](inventory.md), [entities](entities.md)
+- **Depends on:** [health](health.md), [inventory](inventory.md), [entities](entities.md), [audio](audio.md) (`PersonalAudioSubSystem`)
 - **Used by:** [interactions-runtime](interactions-runtime.md) (`Hand` gates — currently always allow), movement controllers
 
 ## Related docs
