@@ -15,11 +15,12 @@ namespace SS3D.Systems.ScreenEffects
     /// <summary>
     /// Drives the diegetic screen-space feedback described in the main HUD design doc (§5) and the
     /// "Screen-Space Effect" mockups: ambient temperature, fire/freezing, low oxygen, dying, blood loss,
-    /// concussion and unconsciousness, plus a momentary melee hit flash.
+    /// concussion and unconsciousness, plus momentary melee hit flash and blast flash.
     ///
     /// Health drives dying/blood-loss/oxy/concussion/unconscious and hit flash via
-    /// <c>HealthScreenEffectMapper</c> / <see cref="TriggerHitFlash"/>. Temperature and fire/frost
-    /// remain debug/console-only until atmospherics wires them.
+    /// <c>HealthScreenEffectMapper</c> / <see cref="TriggerHitFlash"/>. Blast flash via
+    /// <see cref="TriggerBlastFlash"/>. Temperature and fire/frost remain debug/console-only until
+    /// atmospherics wires them.
     /// </summary>
     public sealed class ScreenEffectsSubSystem : SubSystem
     {
@@ -27,6 +28,8 @@ namespace SS3D.Systems.ScreenEffects
 
         private const float HitFlashAttack = 0.03f;
         private const float HitFlashDecay = 0.35f;
+        private const float BlastFlashAttack = 0.04f;
+        private const float BlastFlashDecay = 0.45f;
 
         private readonly Dictionary<ScreenEffectType, float> _targetIntensity = new();
         private readonly Dictionary<ScreenEffectType, float> _currentIntensity = new();
@@ -41,6 +44,8 @@ namespace SS3D.Systems.ScreenEffects
         private readonly List<ScreenParticle> _frostParticles = new();
 
         private float _hitFlashTimer = -1f;
+        private float _blastFlashTimer = -1f;
+        private float _blastFlashStrength = 1f;
         private float _uiBackdropBlurTarget;
         private float _uiBackdropBlurCurrent;
 
@@ -105,6 +110,15 @@ namespace SS3D.Systems.ScreenEffects
         public void TriggerHitFlash()
         {
             _hitFlashTimer = 0f;
+        }
+
+        /// <summary>
+        /// White-hot blast flash. <paramref name="strength"/> scales vignette intensity (0..1+).
+        /// </summary>
+        public void TriggerBlastFlash(float strength = 1f)
+        {
+            _blastFlashTimer = 0f;
+            _blastFlashStrength = Mathf.Clamp(strength, 0.05f, 1.5f);
         }
 
         private void BuildVolume()
@@ -360,6 +374,12 @@ namespace SS3D.Systems.ScreenEffects
                 AddVignette(hitFlash, new Color(0.85f, 0.1f, 0.1f));
             }
 
+            float blastFlash = ComputeBlastFlash(deltaTime);
+            if (blastFlash > 0f)
+            {
+                AddVignette(blastFlash, new Color(1f, 0.72f, 0.35f));
+            }
+
             UpdateParticles(_emberParticles, fire, true);
             UpdateParticles(_frostParticles, freezing, false);
 
@@ -407,6 +427,35 @@ namespace SS3D.Systems.ScreenEffects
             }
 
             return 1f - (_hitFlashTimer - HitFlashAttack) / HitFlashDecay;
+        }
+
+        private float ComputeBlastFlash(float deltaTime)
+        {
+            if (_blastFlashTimer < 0f)
+            {
+                return 0f;
+            }
+
+            _blastFlashTimer += deltaTime;
+            const float total = BlastFlashAttack + BlastFlashDecay;
+
+            if (_blastFlashTimer >= total)
+            {
+                _blastFlashTimer = -1f;
+                return 0f;
+            }
+
+            float envelope;
+            if (_blastFlashTimer < BlastFlashAttack)
+            {
+                envelope = _blastFlashTimer / BlastFlashAttack;
+            }
+            else
+            {
+                envelope = 1f - (_blastFlashTimer - BlastFlashAttack) / BlastFlashDecay;
+            }
+
+            return envelope * _blastFlashStrength;
         }
 
         private void ApplyDepthOfField(float healthBlur)

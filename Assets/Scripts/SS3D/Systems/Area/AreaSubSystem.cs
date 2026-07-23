@@ -1,3 +1,5 @@
+using Coimbra.Services.Events;
+using Coimbra.Services.PlayerLoopEvents;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -49,6 +51,12 @@ namespace SS3D.Systems.Area
         /// </summary>
         private bool _deferAreaFlood;
 
+        /// <summary>
+        /// TileMap notifies <see cref="OnTileCleared"/> before the occupant is removed; defer
+        /// reflood to the next update so occupancy matches the post-clear world (same pitfall as atmos).
+        /// </summary>
+        private bool _pendingLiveBoundaryRecompute;
+
         public override void OnStartServer()
         {
             base.OnStartServer();
@@ -58,6 +66,8 @@ namespace SS3D.Systems.Area
 
             if (tileSubSystem.CurrentMap != null)
                 CompleteSetup(tileSubSystem);
+
+            AddHandle(UpdateEvent.AddListener(HandleUpdate));
         }
 
         public override void OnStartClient()
@@ -609,19 +619,60 @@ namespace SS3D.Systems.Area
 
         public void OnTilePlaced(ITileOccupant occupant, TileCoord coord)
         {
-            // Live boundary recompute deferred.
+            if (ShouldRecomputeForOccupant(occupant))
+                QueueLiveBoundaryRecompute();
         }
 
         public void OnTileCleared(ITileOccupant occupant, TileCoord coord, TileLayer layer)
         {
-            // Live boundary recompute deferred.
+            if (layer == TileLayer.Turf && ShouldRecomputeForOccupant(occupant))
+                QueueLiveBoundaryRecompute();
         }
 
         public void OnChunkCreated(TileChunkRef chunk) { }
 
         public void OnTileStateChanged(TileCoord coord)
         {
-            // Live boundary recompute deferred.
+            // Integrity Cracked changes airtightness for atmos, not Area boundaries (wall still present).
+        }
+
+        private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
+        {
+            if (!_pendingLiveBoundaryRecompute)
+                return;
+
+            _pendingLiveBoundaryRecompute = false;
+            RequestLiveBoundaryRecompute();
+        }
+
+        private void QueueLiveBoundaryRecompute()
+        {
+            _pendingLiveBoundaryRecompute = true;
+        }
+
+        /// <summary>
+        /// Phase 1: full reflood preserving AreaRecord metadata. True local-region flood is a follow-up.
+        /// </summary>
+        [Server]
+        public void RequestLiveBoundaryRecompute()
+        {
+            if (_deferAreaFlood || _floodFill == null || _map == null)
+                return;
+
+            if (_registeredApcs.Count == 0)
+                return;
+
+            RefloodAllAreaTilesPreservingMetadata();
+            NotifyAreaVisualsChanged();
+        }
+
+        private static bool ShouldRecomputeForOccupant(ITileOccupant occupant)
+        {
+            if (occupant is not PlacedTileObject placed)
+                return false;
+
+            return placed.GenericType == TileObjectGenericType.Wall
+                || placed.GenericType == TileObjectGenericType.Door;
         }
 
         [Server]

@@ -47,7 +47,7 @@ Update as part of `update-system-docs`.
 | virology | [virology.md](../design/virology.md) — active | none yet | none yet |
 | atmospherics | [atmospherics.md](../design/atmospherics.md) — active | [atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) — shipped (partial); [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — planned | [atmospherics](systems/atmospherics.md) — partial |
 | chemistry | [chemistry.md](../design/chemistry.md) — active | none yet | [substances](systems/substances.md) — partial |
-| explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | none yet | none yet |
+| explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | [structural-destruction](2026-07_structural-destruction.md) — in-progress (Phase 1–4 + blast detonation VFX) | [structural-destruction](systems/structural-destruction.md) — partial |
 | construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
 | creative-mode | [creative-mode.md](../design/creative-mode.md) — active | [spawn-point-authoring](2026-07_spawn-point-authoring.md) — shipped (authoring + save; runtime resolution deferred); map editor foundation in [map-editor-replacement](2026-07_map-editor-replacement.md) | [tile](systems/tile.md) — partial (Spawn Placements); [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) |
 | rendering-lighting | [rendering-lighting.md](../design/rendering-lighting.md) — active | look pass planned: [urp_lighting_look_plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md); polish handoff [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) (planned); palette emission sample fix shipped on Simple Toon | [rendering](systems/rendering.md) — partial |
@@ -116,6 +116,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, camera-ray connect (exclude self); `C`/chip toggles intent→stance; reticle lock-on + cross flash; disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete runtime purged (TECH_DEBT 1.6); awaiting redesign per design doc |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
+| Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine; epicenter blast VFX (fireball/light/scorch/shake/flash); `hurtstructure` / `blast` |
 | Disposal | [disposal](systems/disposal.md) | partial | Item disposal network; awaits TileMapLoaded → DisposalReady; pipe craft / Cargo / player transit deferred |
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; PrepareRound awaits WorldReady; lobby UI condemned |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
@@ -163,6 +164,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
 | [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
+| [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4 + blast detonation VFX) |
 | [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) | in-progress (Phases 1–3 done: cleanup, AssetHandle/provider, InteractionIcons pilot; Phases 4–6 open) |
 | [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
 
@@ -185,6 +187,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [health_implementation_plan.md](../plans/health_implementation_plan.md) | Clean-slate health rewrite (Phases 0–5b shipped; 6–9 pending) |
 | [combat_implementation_plan.md](../plans/combat_implementation_plan.md) | Clean-slate combat: Phase 0–1 unified melee shipped (camera-ray connect, intent↔stance, reticle 2A); disarm/ranged/stamina/armor later |
 | [urp_lighting_look_plan_d42c32f5.plan.md](../plans/urp_lighting_look_plan_d42c32f5.plan.md) | URP half-toon look pass (pending) |
+| [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md) | Structural integrity / blast / items (Phase 1–4 shipped; 5–6 pending) |
 | [shuttle_system_design_a3dd2e04.plan.md](../plans/shuttle_system_design_a3dd2e04.plan.md) | Shuttle tile blueprints / multi-map (pending) |
 
 ## Design specs (read-only)

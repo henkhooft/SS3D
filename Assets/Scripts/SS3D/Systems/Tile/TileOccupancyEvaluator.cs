@@ -15,6 +15,10 @@ namespace SS3D.Systems.Tile
                 return;
 
             PlacedTileObject placed = turfLocation.PlacedObject;
+            StructuralIntegrityStage integrity = placed.IntegrityStage;
+            bool leaks = integrity == StructuralIntegrityStage.Cracked
+                || integrity == StructuralIntegrityStage.Destroyed;
+
             switch (placed.GenericType)
             {
                 case TileObjectGenericType.Wall:
@@ -24,14 +28,14 @@ namespace SS3D.Systems.Tile
                         occupancy.HasWall = true;
                         occupancy.BlocksVision = false;
                         occupancy.BlockedEdges = ComputeWallBlockedEdges(placed, map);
-                        occupancy.IsAirtight = true;
+                        occupancy.IsAirtight = !leaks;
                     }
                     else
                     {
                         occupancy.HasWall = true;
                         occupancy.BlocksVision = true;
                         occupancy.BlockedEdges = ComputeWallBlockedEdges(placed, map);
-                        occupancy.IsAirtight = true;
+                        occupancy.IsAirtight = !leaks;
                     }
 
                     break;
@@ -42,14 +46,19 @@ namespace SS3D.Systems.Tile
                     occupancy.DoorBlocksVision = !open;
                     occupancy.BlocksVision = !open;
                     occupancy.BlockedEdges = open ? (byte)0 : AllCardinalEdges;
-                    occupancy.IsAirtight = !open;
+                    occupancy.IsAirtight = !open && !leaks;
                     break;
             }
         }
 
         public static bool IsWindow(PlacedTileObject placed)
         {
-            return placed.NameString.Contains("Window");
+            return placed != null && IsWindowName(placed.NameString);
+        }
+
+        public static bool IsWindowName(string nameString)
+        {
+            return !string.IsNullOrEmpty(nameString) && nameString.Contains("Window");
         }
 
         public static byte ComputeWallBlockedEdges(PlacedTileObject wall, TileMap map)

@@ -9,15 +9,22 @@
 
 Phase 0–1 clean-slate melee per [combat_implementation_plan.md](../../plans/combat_implementation_plan.md).
 **Harm primary always swings** (windup → connect → recovery + stamina) via `CmdRunMeleeSwing` —
-no collider required at click. Zone damage is resolved only at the **connect** frame from the
-client-synced **camera** aim ray (`CmdSyncMeleeAim` → `TryGetMeleeAimRay`), excluding self and
+no collider / wall interaction target required at click. There is **no** wall-targeted melee
+interaction in discovery; structural damage is resolved only at the **connect** frame from the
+client-synced **camera** aim ray (plus entity-facing adjacent fallback), excluding self and
 falling back to body `AimYaw`/`AimPitch` when no aim was synced. Misses still consume the full
 swing. Empty-hand fists, improvised held items, and dedicated tool profiles (crowbar / hatchet /
 kitchen knife). Zone reticle on Main HUD — single-composer presentation (`ZoneReticleDriver` →
 `ZoneReticleFrame` → `ZoneTargetReticle.Apply`); see [inventory](inventory.md).
 
+The delayed Harm-primary connect is **controller-scheduled** on `InteractionController` (server
+`UpdateEvent` after windup), not `InteractionSource.Interact` / `DelayedInteraction`. Profile still
+comes from the held tool. Discovered radial Hits still use the DelayedInteraction path.
+
 **Melee HUD feedback (design 2A):** recovery drives red lock-on recharge; successful connect plays
 white cross flash (whiffs silent). Owner clients mirror recovery via `ServerNotifyMeleeRecovery`.
+Harm connect prefers living zones; if none, applies `MeleeWeaponProfile.StructuralForce` to Turf
+walls/doors/windows via [structural-destruction](structural-destruction.md).
 
 **Intent ↔ stance:** `C` (and HUD intent chip) toggles Help/Harm. Harm always enters combat stance
 (Melee/Ranged from inventory); Help returns Peaceful — see [entities](entities.md).
@@ -35,7 +42,8 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — `C` → `RequestToggleIntent`; `RequestAttack` telegraph
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/HandMeleeExtension.cs` — fists on hand prefabs (radial discovery)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` — dedicated tool profiles
-- `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` — timing, damage, `StaminaCost`
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` — timing, damage, `StaminaCost`, `StructuralForce`
+- `Assets/Scripts/SS3D/Systems/Combat/MeleeStructuralHitResolver.cs` — aim-ray → structural Turf within hand range
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryTracker.cs` — post-connect recovery lockout + `ReadyProgress01` for HUD brackets
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeConnectFeedback.cs` — client signal → reticle cross flash on land
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeRecoveryFeedback.cs` — client signal when recovery starts (hit or miss)
@@ -57,7 +65,8 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 2. `C` / HUD chip toggles Help/Harm and combat stance together; Harm shows Melee/Ranged locomotion; HUD intent highlight must update for both paths.
 3. Harm LMB with nothing under the reticle — full swing + recovery; no self-damage; brackets recharge red.
 4. Harm LMB aimed at limbs through windup — damage applies at connect from camera aim; white cross flash on land (whiff = no flash).
-5. Help must not swing. Harm must not Drop / open MI (including while recovering). Optional health debug `H`.
+5. Harm LMB aimed at a wall/door (no body under reticle) — structural force applies; crowbar opens faster than fists.
+6. Help must not swing. Harm must not Drop / open MI (including while recovering). Optional health debug `H`.
 
 ## Pitfalls
 
@@ -65,12 +74,18 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Do not require a hover collider to start a swing** — Harm primary uses `CmdRunMeleeSwing`; connect resolves hit from synced camera ray.
 - **`C` toggles intent, not stance alone** — stance follows Harm via `InteractionController.ApplyCombatModeForIntent`. Hardcoded `cKey` in `HumanoidCombatController`; Input System still binds **Cancel Interaction** to `C` too — see [interactions-runtime](interactions-runtime.md).
 - **Connect aim is not stance SyncVars** — owner syncs the **camera mouse ray** via `CmdSyncMeleeAim`; connect must use that ray, not hand→aim.
+- **Structural wall hits need long camera rays** — `MeleeStructuralHitResolver` casts ~8m then checks reach (same pattern as living zones). Cap ray length at hand range from the camera and walls under the reticle miss (no damage, no cross flash).
+- **Structural reach is entity-root, not hand bone** — windup IK often puts `Hand.InteractionOrigin` past `RangeLimit` even when adjacent to a wall. Resolve from entity position; cardinal-ahead fallback matches `hurtstructure` when the ray grazes.
 - **Exclude self on connect/reticle** — pass attacker `HumanHealthController` into `TryResolveHoverZone` or swings hit your own arms.
 - **Cancel-on-move is off for melee** — `DelayedInteraction` cancels windup when the root moves; that skipped `StartDelayed` / recovery so walking felt like no cooldown. `MeleeHitInteraction.CancelOnMove` is false (CPR/craft still cancel). Entity-root override remains if cancel is re-enabled.
 - **Melee reach uses closest point on zone collider** — ray hit on forearm/hand can be past `RangeLimit`; use `IsMeleeZoneReachInRange`.
 - **Limb meshes use AnatomyNode colliders** — include them when armature triggers miss while animating.
 - **Client recovery must be TargetRpc'd** — server `MeleeRecoveryTracker` alone leaves pure clients without `IsBusy` / bracket recharge; use `ServerNotifyMeleeRecovery` with the full windup+recovery cycle from swing **Start** (not connect).
 - **Swing lock starts at Start** — do not wait until connect to lock; rapid clicks used to cancel in-flight windup via `SupportsMultipleInteractions` and never pay recovery.
+- **`CanInteract` ≠ `CanStartSwing`** — `CanStartSwing` requires `!IsBusy` for new Harm clicks. `CanInteract` must stay true during windup (hand present only). `DelayedInteraction` re-checks `CanInteract` every 0.1s; wiring it to `!IsBusy` cancelled every swing before `StartDelayed` (no damage, no connect flash).
+- **No wall melee interaction target** — walls are not discovered as Hit targets. Harm LMB is targetless `CmdRunMeleeSwing`; structural apply happens only inside `MeleeHitInteraction.ServerApplyConnect`. Cooldown brackets alone do not prove connect ran (client-optimistic lock + recovery TargetRpc also drive them).
+- **Harm is a whitelist** — `InteractionPipeline.MatchesIntent`: unrestricted verbs are Help-default; Harm only runs `IIntentRestrictedInteraction` with `AllowedIntent == Harm` (e.g. `MeleeHitInteraction`). Server gates primary swings with `_currentIntent` SyncVar, not client `_ownerIntent`.
+- **Host optimistic melee lock races CanStartSwing** — on listen-server, `BeginLocalSwingCycle` before `CmdRunMeleeSwing` marks the shared `MeleeRecoveryTracker` busy; the server then rejects the Cmd (cooldown from client lock, no connect/hitmarker). Only optimistic-lock on pure clients (`!IsServer`); host relies on `ServerBeginSwing` + recovery TargetRpc.
 - **No LoadingBar on melee** — `MeleeHitInteraction.CreateClient` returns null and Harm primary skips `InteractionOptimisticFeedback`; windup is telegraph, cooldown is reticle lock-on recharge.
 - **Reticle presentation is single-composer** — do not reintroduce parallel SetAim/SetLock/Tick writers; color priority and flash live in `ZoneReticleDriver` ([inventory](inventory.md)).
 - **Harm is combat-exclusive** — do not reintroduce primary fall-through to Drop/Open when recovery blocks a swing; unrestricted verbs are Help-default in `MatchesIntent`.

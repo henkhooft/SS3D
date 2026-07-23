@@ -16,7 +16,26 @@ namespace SS3D.Systems.Combat
         public float StaminaCost;
         public bool CanSever;
 
+        /// <summary>
+        /// Force applied to structural turf on connect. Prefabs serialized before this field existed
+        /// may store 0 — use <see cref="ResolveStructuralForce"/>.
+        /// </summary>
+        public float StructuralForce;
+
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
+
+        /// <summary>
+        /// Explicit StructuralForce when set; otherwise a provisional fraction of brute so old prefabs still hit walls.
+        /// </summary>
+        public float ResolveStructuralForce()
+        {
+            if (StructuralForce > 0f)
+            {
+                return StructuralForce;
+            }
+
+            return BruteDamage * 0.75f;
+        }
 
         public static MeleeWeaponProfile Fists => new()
         {
@@ -26,6 +45,7 @@ namespace SS3D.Systems.Combat
             RecoverySeconds = 0.7f,
             StaminaCost = 8f,
             CanSever = false,
+            StructuralForce = 5f,
         };
 
         /// <summary>Low-base fallback for any held item without a dedicated profile.</summary>
@@ -37,6 +57,7 @@ namespace SS3D.Systems.Combat
             RecoverySeconds = 1.6f,
             StaminaCost = 10f,
             CanSever = false,
+            StructuralForce = 8f,
         };
 
         public static MeleeWeaponProfile Crowbar => new()
@@ -47,6 +68,7 @@ namespace SS3D.Systems.Combat
             RecoverySeconds = 1.0f,
             StaminaCost = 12f,
             CanSever = false,
+            StructuralForce = 35f,
         };
 
         public static MeleeWeaponProfile Hatchet => new()
@@ -57,6 +79,7 @@ namespace SS3D.Systems.Combat
             RecoverySeconds = 0.9f,
             StaminaCost = 11f,
             CanSever = true,
+            StructuralForce = 28f,
         };
 
         public static MeleeWeaponProfile KitchenKnife => new()
@@ -67,6 +90,7 @@ namespace SS3D.Systems.Combat
             RecoverySeconds = 0.7f,
             StaminaCost = 9f,
             CanSever = true,
+            StructuralForce = 4f,
         };
     }
 }

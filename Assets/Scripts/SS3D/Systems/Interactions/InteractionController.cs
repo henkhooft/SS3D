@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using Coimbra.Services.Events;
+using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
@@ -59,6 +61,12 @@ namespace SS3D.Systems.Interactions
         private Vector3 _meleeAimPoint;
         private bool _hasMeleeAimRay;
 
+        /// <summary>Server-scheduled Harm primary connect (bypasses DelayedInteraction.Update).</summary>
+        private float _pendingMeleeConnectAt = -1f;
+        private Hand _pendingMeleeHand;
+        private MeleeWeaponProfile _pendingMeleeProfile;
+        private int _meleeSwingSerial;
+
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
         private readonly List<IInteractionTarget> _outlineTargets = new(8);
@@ -66,6 +74,13 @@ namespace SS3D.Systems.Interactions
         private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            // Owner-only Update() never runs on a dedicated server — schedule melee connect here.
+            AddHandle(UpdateEvent.AddListener(HandleServerMeleeConnectUpdate));
+        }
 
         public override void OnOwnershipClient(NetworkConnection prevOwner)
         {
@@ -252,20 +267,24 @@ namespace SS3D.Systems.Interactions
         [Client]
         private bool TryRunMeleeSwingPrimary()
         {
-            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand))
             {
                 return false;
             }
 
-            if (!hit.CanStartSwing(source))
+            if (!hit.CanStartSwing(hand))
             {
                 return false;
             }
 
-            // Optimistic lock so rapid clicks cannot queue another Cmd before the TargetRpc arrives.
-            BeginLocalSwingCycle(source, hit.Profile);
+            // Optimistic busy lock is for pure clients (Cmd latency). On host/listen-server the same
+            // Hand tracker is shared: locking before Cmd makes server CanStartSwing fail immediately
+            // (cooldown UI, no connect / hitmarker). ServerBeginSwing + recovery TargetRpc lock instead.
+            if (!IsServer)
+            {
+                BeginLocalSwingCycle(hand, hit.Profile);
+            }
 
-            InteractionEvent swingEvent = new(source, null);
             TryPlayMeleeSwingTelegraph(hit);
             // No world-space LoadingBar — windup is swing telegraph; recovery is reticle lock-on recharge.
             TrySyncMeleeAimToServer();
@@ -274,18 +293,8 @@ namespace SS3D.Systems.Interactions
         }
 
         [Client]
-        private static void BeginLocalSwingCycle(IInteractionSource source, MeleeWeaponProfile profile)
+        private static void BeginLocalSwingCycle(Hand hand, MeleeWeaponProfile profile)
         {
-            Hand hand = null;
-            if (source?.GetRootSource() is Hand rootHand)
-            {
-                hand = rootHand;
-            }
-            else if (source != null)
-            {
-                hand = source.GetComponentInTree<Hand>();
-            }
-
             if (hand == null)
             {
                 return;
@@ -302,63 +311,148 @@ namespace SS3D.Systems.Interactions
         [ServerRpc]
         private void CmdRunMeleeSwing()
         {
-            if (CurrentIntent != IntentType.Harm)
+            // Harm whitelist uses the server SyncVar — unrestricted verbs are Help-default;
+            // MeleeHitInteraction opts in via IIntentRestrictedInteraction.
+            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand))
             {
                 TargetRejectInteraction(Owner);
                 return;
             }
 
-            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            if (!InteractionPipeline.MatchesIntent(hit, _currentIntent))
+            {
+                Log.Warning(this, "Rejected melee swing — intent {intent} is not Harm-whitelisted",
+                    Logs.Generic, _currentIntent);
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!hit.CanStartSwing(hand))
             {
                 TargetRejectInteraction(Owner);
                 return;
             }
 
-            if (!hit.CanStartSwing(source))
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
+            // Do not use InteractionSource.Interact / DelayedInteraction for Harm primary.
+            // Connect is scheduled on this controller so it cannot be skipped when Hand/Item
+            // Update fails to tick through StartDelayed.
+            hit.ServerBeginSwing(hand);
+            ServerScheduleMeleeConnect(hand, hit.Profile);
 
-            InteractionEvent swingEvent = new(source, null);
-            InteractionReference reference = source.Interact(swingEvent, hit);
-            TrackActiveInteraction(source, reference, hit);
-            RpcExecuteMeleeSwing(reference.Id);
+            _meleeSwingSerial++;
+            RpcExecuteMeleeSwing(_meleeSwingSerial);
         }
 
         [ObserversRpc(RunLocally = true)]
-        private void RpcExecuteMeleeSwing(int referenceId)
+        private void RpcExecuteMeleeSwing(int swingId)
         {
             if (!IsOwner)
             {
                 return;
             }
 
-            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source))
+            // No client DelayedInteraction (CreateClient is null) — keep an id so cancel/aim
+            // paths have a handle; aim sync itself keys off MeleeRecoveryTracker.IsBusy.
+            if (!TryCreateMeleeHitInteraction(out _, out Hand hand))
             {
                 return;
             }
 
-            InteractionEvent swingEvent = new(source, null);
-            source.ClientInteract(swingEvent, hit, new InteractionReference(referenceId));
-            _clientActiveSource = source;
-            _clientActiveReferenceId = referenceId;
+            _clientActiveSource = hand;
+            _clientActiveReferenceId = swingId;
             TrySyncMeleeAimToServer();
         }
 
+        [Server]
+        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile)
+        {
+            _pendingMeleeHand = hand;
+            _pendingMeleeProfile = profile;
+            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, profile.WindupSeconds);
+        }
+
+        [Server]
+        private void ClearPendingMeleeConnect()
+        {
+            _pendingMeleeConnectAt = -1f;
+            _pendingMeleeHand = null;
+            _pendingMeleeProfile = default;
+        }
+
+        private void HandleServerMeleeConnectUpdate(ref EventContext context, in UpdateEvent updateEvent)
+        {
+            if (!IsServer || _pendingMeleeConnectAt < 0f || Time.time < _pendingMeleeConnectAt)
+            {
+                return;
+            }
+
+            Hand hand = _pendingMeleeHand;
+            MeleeWeaponProfile profile = _pendingMeleeProfile;
+            ClearPendingMeleeConnect();
+
+            // Re-check Harm whitelist at connect — Help mid-windup should not apply damage.
+            if (_currentIntent != IntentType.Harm)
+            {
+                ClearMeleeAimPoint();
+                return;
+            }
+
+            if (hand == null)
+            {
+                return;
+            }
+
+            var hit = new MeleeHitInteraction(profile);
+            hit.ServerApplyConnect(hand, this);
+        }
+
+        /// <summary>
+        /// Builds a melee hit from the active tool profile, but always returns the Hand that must
+        /// host the delayed interaction (never the held Item).
+        /// </summary>
         [ServerOrClient]
-        private bool TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out IInteractionSource source)
+        private bool TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand)
         {
             hit = null;
-            source = GetActiveInteractionSource();
+            hand = null;
+
+            IInteractionSource source = GetActiveInteractionSource();
             if (source == null)
             {
                 return false;
             }
 
+            hand = ResolveSwingHand(source);
+            if (hand == null)
+            {
+                return false;
+            }
+
+            // Keep tool→hand Source wired for any ResolveHand walks that still expect it.
+            if (source is Item item)
+            {
+                item.Source = hand;
+            }
+
             MeleeWeaponProfile profile = ResolveMeleeProfile(source);
             hit = new MeleeHitInteraction(profile);
             return true;
+        }
+
+        [ServerOrClient]
+        private static Hand ResolveSwingHand(IInteractionSource source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            if (source.GetRootSource() is Hand rootHand)
+            {
+                return rootHand;
+            }
+
+            return source.GetComponentInTree<Hand>();
         }
 
         [ServerOrClient]
@@ -1280,6 +1374,9 @@ namespace SS3D.Systems.Interactions
         [ServerRpc]
         private void CmdCancelInteraction(int referenceId)
         {
+            // Harm primary connect is controller-scheduled (not InteractionSource.Interact).
+            ClearPendingMeleeConnect();
+
             if (_serverActiveReference == null || _serverActiveReference.Id != referenceId || _serverActiveSource == null)
             {
                 return;
@@ -1312,6 +1409,7 @@ namespace SS3D.Systems.Interactions
         {
             _serverActiveReference = null;
             _serverActiveSource = null;
+            ClearPendingMeleeConnect();
             ClearMeleeAimPoint();
         }
 
@@ -1372,7 +1470,18 @@ namespace SS3D.Systems.Interactions
 
         private void TrySyncMeleeAimDuringSwing()
         {
-            if (_clientActiveReferenceId < 0 || CurrentIntent != IntentType.Harm)
+            if (CurrentIntent != IntentType.Harm)
+            {
+                return;
+            }
+
+            // Melee CreateClient returns null — there is no client delayed interaction to keep
+            // _clientActiveReferenceId alive. Sync while the hand recovery tracker is busy instead.
+            Hands hands = GetComponent<Hands>();
+            Hand hand = hands != null ? hands.SelectedHand : null;
+            if (hand == null
+                || !hand.TryGetComponent(out MeleeRecoveryTracker tracker)
+                || !tracker.IsBusy)
             {
                 return;
             }

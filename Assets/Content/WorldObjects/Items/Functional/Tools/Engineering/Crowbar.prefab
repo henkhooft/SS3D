@@ -323,4 +323,6 @@ MonoBehaviour:
     BurnDamage: 0
     WindupSeconds: 0.35
     RecoverySeconds: 1
+    StaminaCost: 12
     CanSever: 0
+    StructuralForce: 35

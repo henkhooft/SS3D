@@ -1188,7 +1188,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022240033
-    m_Localized: A gas pump. Moves gases between a turf cell and the connected pipe network.
+    m_Localized: A gas pump. Moves gases between a turf cell and the connected pipe
+      network.
     m_Metadata:
       m_Items: []
   - m_Id: 252937831022456832
@@ -1197,6 +1198,14 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 252937831043428352
     m_Localized: 'Assignment: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257390954000543744
+    m_Localized: It looks dented and scorched.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257390954025709568
+    m_Localized: "It is cracked and hissing \u2014 atmosphere is leaking through."
     m_Metadata:
       m_Items: []
   references:

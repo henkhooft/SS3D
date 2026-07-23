@@ -20,7 +20,7 @@ Local speech (comms slice 1) follows the Claude Design **weighted chips** mock (
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — audio subsystem
 - `Assets/Scripts/SS3D/Systems/Screens/PlayerCameraSubSystem.cs` — binds follow target on local player spawn
 - `Assets/Scripts/SS3D/Systems/Screens/CameraSubSystem.cs` — holds `PlayerCamera` Actor reference
-- `Assets/Scripts/SS3D/Systems/Screens/CameraFollow.cs` — gameplay orbit-follow; Coimbra `UpdateEvent` must guard `isActiveAndEnabled`
+- `Assets/Scripts/SS3D/Systems/Screens/CameraFollow.cs` — gameplay orbit-follow + `AddImpulse` shake; Coimbra `UpdateEvent` must guard `isActiveAndEnabled`
 
 ## Manual Editor setup required for the local speech slice
 

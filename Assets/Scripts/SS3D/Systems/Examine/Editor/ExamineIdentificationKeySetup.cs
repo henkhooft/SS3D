@@ -26,13 +26,42 @@ namespace SS3D.Systems.Examine.Editor
 
             UpsertEntry(englishTable, ExamineIdentificationKeys.OwnerLine, ExamineIdentificationKeys.OwnerFallback);
             UpsertEntry(englishTable, ExamineIdentificationKeys.RoleLine, ExamineIdentificationKeys.RoleFallback);
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Damaged, ExamineStructuralIntegrityKeys.DamagedFallback);
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Cracked, ExamineStructuralIntegrityKeys.CrackedFallback);
 
             EditorUtility.SetDirty(englishTable);
             EditorUtility.SetDirty(englishTable.SharedData);
             EditorUtility.SetDirty(collection);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("Added identification card template keys to the Examine English table.");
+            Debug.Log("Added identification card + structural integrity template keys to the Examine English table.");
+        }
+
+        [MenuItem("SS3D/Localization/Examine/Add Structural Integrity Template Keys")]
+        public static void AddStructuralIntegrityTemplateKeys()
+        {
+            StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(ExamineCanonicalKeyGenerator.ExamineTableName);
+            if (collection == null)
+            {
+                Debug.LogError($"Could not find string table collection '{ExamineCanonicalKeyGenerator.ExamineTableName}'.");
+                return;
+            }
+
+            if (collection.GetTable(new LocaleIdentifier("en")) is not StringTable englishTable)
+            {
+                Debug.LogError("Could not find English table for the Examine collection.");
+                return;
+            }
+
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Damaged, ExamineStructuralIntegrityKeys.DamagedFallback);
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Cracked, ExamineStructuralIntegrityKeys.CrackedFallback);
+
+            EditorUtility.SetDirty(englishTable);
+            EditorUtility.SetDirty(englishTable.SharedData);
+            EditorUtility.SetDirty(collection);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("Added structural integrity template keys to the Examine English table.");
         }
 
         private static void UpsertEntry(StringTable table, string key, string value)

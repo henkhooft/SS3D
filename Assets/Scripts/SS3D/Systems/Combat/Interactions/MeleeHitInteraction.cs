@@ -1,4 +1,5 @@
 using FishNet.Object;
+using SS3D.Core;
 using SS3D.Data;
 using SS3D.Data.Generated;
 using SS3D.Interactions;
@@ -10,6 +11,8 @@ using SS3D.Systems.Health;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Stamina;
+using SS3D.Systems.StructuralDamage;
+using SS3D.Systems.Tile;
 using UnityEngine;
 
 namespace SS3D.Systems.Combat.Interactions
@@ -66,13 +69,17 @@ namespace SS3D.Systems.Combat.Interactions
         }
 
         /// <summary>
-        /// Start/continue gates only — no target or range. Connect resolves what (if anything) is hit.
+        /// Continue gate for an in-flight swing — hand still valid. Must not require !IsBusy:
+        /// <see cref="Start"/> locks the tracker for windup+recovery, and
+        /// <see cref="DelayedInteraction.Update"/> re-checks CanInteract every CheckInterval
+        /// (and again at delay expiry). Requiring !IsBusy cancelled every swing before connect.
         /// </summary>
         public override bool CanInteract(InteractionEvent interactionEvent)
         {
-            return CanStartSwing(interactionEvent?.Source);
+            return ResolveHand(interactionEvent?.Source) != null;
         }
 
+        /// <summary>Gate for starting a new Harm swing (not for continuing windup).</summary>
         public bool CanStartSwing(IInteractionSource source)
         {
             Hand hand = ResolveHand(source);
@@ -89,41 +96,77 @@ namespace SS3D.Systems.Combat.Interactions
         {
             CaptureStartPosition(interactionEvent);
             StartCounter();
-            TryConsumeSwingStamina(interactionEvent.Source);
 
-            // Lock for windup+recovery now — waiting until connect let rapid clicks cancel/restart windup.
             Hand hand = ResolveHand(interactionEvent.Source);
             if (hand != null)
             {
-                float cycleSeconds = _profile.WindupSeconds + _profile.RecoverySeconds;
-                GetOrCreateRecoveryTracker(hand).BeginSwingCycle(_profile.WindupSeconds, _profile.RecoverySeconds);
-                InteractionController controller = hand.GetComponentInParent<InteractionController>();
-                controller?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
+                ServerBeginSwing(hand);
             }
 
             return true;
         }
 
-        protected override void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference)
+        /// <summary>
+        /// Stamina + recovery lock for a Harm swing (primary or discovered Hit).
+        /// </summary>
+        [Server]
+        public void ServerBeginSwing(Hand hand)
         {
-            Hand hand = ResolveHand(interactionEvent.Source);
+            if (hand == null)
+            {
+                return;
+            }
+
+            TryConsumeSwingStamina(hand);
+            float cycleSeconds = _profile.WindupSeconds + _profile.RecoverySeconds;
+            GetOrCreateRecoveryTracker(hand).BeginSwingCycle(_profile.WindupSeconds, _profile.RecoverySeconds);
+            InteractionController controller = hand.GetComponentInParent<InteractionController>();
+            controller?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
+        }
+
+        /// <summary>
+        /// Connect-frame resolve: living zone first, else structural turf. Used by Harm primary
+        /// (controller-scheduled) and by DelayedInteraction StartDelayed for discovered Hits.
+        /// </summary>
+        [Server]
+        public void ServerApplyConnect(Hand hand, InteractionController controller)
+        {
+            if (hand == null)
+            {
+                return;
+            }
+
             bool landed = false;
-            if (hand != null
-                && TryResolveConnectHit(hand, out HumanHealthController health, out BodyZone zone))
+            if (TryResolveConnectHit(hand, out HumanHealthController health, out BodyZone zone))
             {
                 health.ApplyDamage(zone, _profile.ToDamagePacket());
                 landed = true;
             }
-
-            if (hand != null)
+            else if (TryResolveStructuralConnect(hand, out TileCoord structuralCoord))
             {
-                InteractionController controller = hand.GetComponentInParent<InteractionController>();
-                controller?.ClearMeleeAimPoint();
-                if (landed)
+                float force = _profile.ResolveStructuralForce();
+                if (force > 0f
+                    && SubSystems.TryGet(out StructuralDamageSubSystem structural)
+                    && structural.TryApplyStructuralDamage(structuralCoord, force, StructuralDamageSource.Melee))
                 {
-                    controller?.ServerNotifyMeleeConnectHit();
+                    landed = true;
                 }
             }
+
+            controller?.ClearMeleeAimPoint();
+            if (landed)
+            {
+                controller?.ServerNotifyMeleeConnectHit();
+            }
+        }
+
+        protected override void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference)
+        {
+            Hand hand = ResolveHand(interactionEvent.Source);
+            InteractionController controller = hand != null
+                ? hand.GetComponentInParent<InteractionController>()
+                : null;
+            ServerApplyConnect(hand, controller);
         }
 
         public override void Cancel(InteractionEvent interactionEvent, InteractionReference reference)
@@ -183,6 +226,38 @@ namespace SS3D.Systems.Combat.Interactions
                 zoneCollider);
         }
 
+        private static bool TryResolveStructuralConnect(Hand hand, out TileCoord coord)
+        {
+            coord = default;
+
+            // Reach from entity root — swinging hand bone often sits past RangeLimit at connect.
+            Entity entity = hand.GetComponentInParent<Entity>();
+            Vector3 attackerPosition = entity != null
+                ? entity.transform.position
+                : hand.InteractionOrigin;
+
+            if (TryBuildConnectAimRay(hand, out Ray aimRay)
+                && MeleeStructuralHitResolver.TryResolve(
+                    aimRay,
+                    attackerPosition,
+                    hand.GetInteractionRange(),
+                    out coord))
+            {
+                return true;
+            }
+
+            // Facing-based adjacent wall (same as hurtstructure) when aim ray misses or never synced.
+            if (entity != null)
+            {
+                return MeleeStructuralHitResolver.TryResolveAdjacent(
+                    attackerPosition,
+                    entity.transform.forward,
+                    out coord);
+            }
+
+            return false;
+        }
+
         private static bool TryBuildConnectAimRay(Hand hand, out Ray aimRay)
         {
             aimRay = default;
@@ -223,17 +298,14 @@ namespace SS3D.Systems.Combat.Interactions
                 Mathf.Cos(yaw) * cosPitch);
         }
 
-        private void TryConsumeSwingStamina(IInteractionSource source)
+        private void TryConsumeSwingStamina(Hand hand)
         {
-            if (_profile.StaminaCost <= 0f)
+            if (_profile.StaminaCost <= 0f || hand == null)
             {
                 return;
             }
 
-            Hand hand = ResolveHand(source);
-            StaminaController stamina = hand != null
-                ? hand.GetComponentInParent<StaminaController>()
-                : null;
+            StaminaController stamina = hand.GetComponentInParent<StaminaController>();
             stamina?.ServerDepleteStamina(_profile.StaminaCost);
         }
 

@@ -16,9 +16,10 @@ GameObject:
   - component: {fileID: 1177000688717996335}
   - component: {fileID: -3504974528244723279}
   - component: {fileID: -3146616955965142812}
-  - component: {fileID: 5974748117383969709}
   - component: {fileID: 5385272248723591395}
   - component: {fileID: -6328828652464812230}
+  - component: {fileID: 5933309638403087119}
+  - component: {fileID: 1970998814711030603}
   m_Layer: 0
   m_Name: SteelWindow
   m_TagString: Untagged
@@ -171,6 +172,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: -2900075557854325373}
   _networkObjectCache: {fileID: -2900075557854325373}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   _advancedAdjacency:
     o: {fileID: 3274458310347382516, guid: 9c0b392ffb24ca248a002fe36b08bae8, type: 3}
     u: {fileID: -2386277492448864069, guid: 9c0b392ffb24ca248a002fe36b08bae8, type: 3}
@@ -215,19 +217,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e00534faac6488c47893490f2bf4c5a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &5974748117383969709
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3591147544166670882}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38640bf88ae0c29409092a258bd36878, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  key: {fileID: 11400000, guid: 84e559fc6ad816f4bb3c334a3c3e946e, type: 2}
 --- !u!114 &5385272248723591395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -245,7 +234,7 @@ MonoBehaviour:
   _networkObjectCache: {fileID: -2900075557854325373}
   _asset: {fileID: 11400000, guid: 72ff3e5319a440c448928af8af541920, type: 2}
   _tileObjectSo: {fileID: 11400000, guid: b46f02d975d975b4abe91f4bb650e04f, type: 2}
-  _syncAssetName: 
+  _syncAssetId: 65535
   _syncOriginX: 0
   _syncOriginY: 0
   _syncWorldOriginX: 0
@@ -253,6 +242,8 @@ MonoBehaviour:
   _syncDirection: 0
   _syncLayer: 0
   _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!114 &-6328828652464812230
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,3 +260,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &5933309638403087119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3591147544166670882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8497fbc0a2e5407588e8b4f873285d28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.StructuralDamage.StructuralIntegrityPresenter
+  _crackedHiss: {fileID: 8300000, guid: b743493757a54a2498fc3da972fa1333, type: 3}
+  _hissVolume: 0.35
+--- !u!114 &1970998814711030603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3591147544166670882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23a78eb0cc1c4b01ad68f5123895213c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.StructuralIntegrityExaminable
+  key: {fileID: 11400000, guid: 84e559fc6ad816f4bb3c334a3c3e946e, type: 2}

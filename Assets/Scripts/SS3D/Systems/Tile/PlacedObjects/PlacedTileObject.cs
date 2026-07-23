@@ -9,6 +9,7 @@ using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Rendering.URP;
+using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.Connections;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
@@ -98,6 +99,13 @@ namespace SS3D.Systems.Tile
         [SyncVar(OnChange = nameof(SyncMapIdValue))]
         private int _syncMapId;
 
+        /// <summary>Remaining structural HP. Negative means uninitialized (treated as max on first damage).</summary>
+        [SyncVar]
+        private float _syncIntegrityRemaining = -1f;
+
+        [SyncVar(OnChange = nameof(SyncIntegrityStage))]
+        private StructuralIntegrityStage _syncIntegrityStage = StructuralIntegrityStage.Intact;
+
         private IAdjacencyConnector _connector;
         private Vector2Int _worldOrigin;
         private bool _clientRegistered;
@@ -120,6 +128,20 @@ namespace SS3D.Systems.Tile
         public Direction Direction => _dir;
 
         public int MapId => _mapId;
+
+        /// <summary>
+        /// Local integrity when SyncVars cannot be written (no NetworkObject / not spawned).
+        /// EditMode tests and map tiles missing a NetworkObject use this path.
+        /// </summary>
+        private float _localIntegrityRemaining = -1f;
+        private StructuralIntegrityStage _localIntegrityStage = StructuralIntegrityStage.Intact;
+        private bool _integrityUsesLocal;
+
+        /// <summary>Remaining structural HP. Negative when not yet initialized.</summary>
+        public float IntegrityRemaining => _integrityUsesLocal ? _localIntegrityRemaining : _syncIntegrityRemaining;
+
+        public StructuralIntegrityStage IntegrityStage =>
+            _integrityUsesLocal ? _localIntegrityStage : _syncIntegrityStage;
 
         public string NameString => _tileObjectSo.NameString;
 
@@ -146,6 +168,7 @@ namespace SS3D.Systems.Tile
             base.OnStartClient();
             StampWorldDecalReceivers(gameObject);
             ApplySyncedIdentity();
+            NotifyIntegrityPresentation(IntegrityStage);
         }
 
         /// <summary>
@@ -181,6 +204,7 @@ namespace SS3D.Systems.Tile
             PublishIdentityToNetwork();
             NetworkObject.OnObserversActive += HandleObserversActive;
             RefreshHostVisibility();
+            NotifyIntegrityPresentation(IntegrityStage);
         }
 
         public override void OnStopServer()
@@ -302,6 +326,55 @@ namespace SS3D.Systems.Tile
 
             _clientRegistered = false;
             SubSystems.Get<TileSubSystem>()?.NotifyClientPlacedObjectStopped(this);
+        }
+
+        /// <summary>
+        /// Server (or EditMode) integrity write for structural turf.
+        /// </summary>
+        public void ServerSetIntegrity(float remaining, StructuralIntegrityStage stage)
+        {
+            // FishNet SyncVar setters call SyncBase.IsNetworkInitialized, which touches
+            // NetworkBehaviour.IsServer → _networkObjectCache with no null check. Guard like SetDirection.
+            if (!CanWriteIntegritySyncVars())
+            {
+                _integrityUsesLocal = true;
+                _localIntegrityRemaining = remaining;
+                _localIntegrityStage = stage;
+                NotifyIntegrityPresentation(stage);
+                return;
+            }
+
+            _integrityUsesLocal = false;
+            _syncIntegrityRemaining = remaining;
+            _syncIntegrityStage = stage;
+            // Host/server: SyncVar OnChange may not fire on assign — apply presentation explicitly.
+            NotifyIntegrityPresentation(stage);
+        }
+
+        private void SyncIntegrityStage(StructuralIntegrityStage _, StructuralIntegrityStage next, bool asServer)
+        {
+            if (asServer)
+                return;
+
+            NotifyIntegrityPresentation(next);
+        }
+
+        private void NotifyIntegrityPresentation(StructuralIntegrityStage stage)
+        {
+            if (TryGetComponent(out StructuralIntegrityPresenter presenter))
+                presenter.Apply(stage);
+        }
+
+        private bool CanWriteIntegritySyncVars()
+        {
+            // Woven setter writes the field and skips SyncVar.SetValue when not playing (EditMode tests).
+            if (!UnityEngine.Application.isPlaying)
+                return true;
+
+            // NetworkObject here is NetworkBehaviour's cached ref — null when PlacedTileObject was
+            // AddComponent'd at runtime (doors/floors) and never SerializeComponents'd. Writing SyncVars
+            // then NREs inside FishNet SyncBase.IsNetworkInitialized.
+            return NetworkObject != null && NetworkObject.IsSpawned && IsServer;
         }
 
         /// <summary>
