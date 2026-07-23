@@ -17,6 +17,8 @@ using SS3D.Systems.Combat;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Utils;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -267,7 +269,8 @@ namespace SS3D.Systems.Entities
             MindSubSystem mindSystem = SubSystems.Get<MindSubSystem>();
             mindSystem.TryCreateMind(player, out Mind createdMind);
 
-            Entity entity = Instantiate(_humanPrefab[Random.Range(0, _humanPrefab.Count)], _spawnPoint.position, Quaternion.identity);
+            Vector3 spawnPosition = ResolveSpawnPosition();
+            Entity entity = Instantiate(_humanPrefab[Random.Range(0, _humanPrefab.Count)], spawnPosition, Quaternion.identity);
             ServerManager.Spawn(entity.NetworkObject, player.Owner);
 
             createdMind.SetPlayer(player);
@@ -282,6 +285,27 @@ namespace SS3D.Systems.Entities
             RpcInvokeClientSpawned(entity.Owner);
 
             Log.Information(this, "Spawning mind {createdMind} on {entity}", Logs.ServerOnly, createdMind.name, entity.name);
+        }
+
+        /// <summary>
+        /// Prefers the legacy inspector spawn transform; otherwise uses the first authored map spawn
+        /// marker; otherwise the hub transform (scene spawn points are gone after Phase 3h).
+        /// </summary>
+        private Vector3 ResolveSpawnPosition()
+        {
+            if (_spawnPoint != null)
+            {
+                return _spawnPoint.position;
+            }
+
+            if (SubSystems.TryGet(out TileSubSystem tile)
+                && tile.SpawnPoints != null
+                && tile.SpawnPoints.Count > 0)
+            {
+                return tile.SpawnPoints.Records[0].Position;
+            }
+
+            return transform.position;
         }
 
         /// <summary>

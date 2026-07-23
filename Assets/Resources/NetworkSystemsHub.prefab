@@ -169,7 +169,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70e2ccd13983fdd4f94bbf6669cf82b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.TileResourceLoader
-  _missingIcon: {fileID: 0}
+  _missingIcon: {fileID: 21300000, guid: 9e89894392ee65f45bd559d4619cbade, type: 3}
 --- !u!114 &8717716949594846521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -267,7 +267,7 @@ MonoBehaviour:
   _componentIndexCache: 4
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _gasRegistry: {fileID: 0}
+  _gasRegistry: {fileID: 11400000, guid: 0aee396c6f7001293acdb041245c13ef, type: 2}
 --- !u!114 &5554236862455870120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,8 +332,8 @@ MonoBehaviour:
   _componentIndexCache: 8
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _unauthorizedUserPrefab: {fileID: 0}
-  _playerPrefab: {fileID: 0}
+  _unauthorizedUserPrefab: {fileID: 8203177977882359099, guid: 6ab4ce7059d374a4498481e1385c222e, type: 3}
+  _playerPrefab: {fileID: -3683743083778642796, guid: 59f05e8a3a1d4b94eb5222aed605e260, type: 3}
 --- !u!114 &6804748321536534414
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -349,7 +349,8 @@ MonoBehaviour:
   _componentIndexCache: 9
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _humanPrefab: []
+  _humanPrefab:
+  - {fileID: 5283895024578974260, guid: 1c3eed1ea37ecc1448e41270cdc63486, type: 3}
   _spawnPoint: {fileID: 0}
   _hasSpawnedInitialPlayers: 0
 --- !u!114 &5703366698014230458
@@ -367,8 +368,8 @@ MonoBehaviour:
   _componentIndexCache: 10
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _mindPrefab: {fileID: 0}
-  _emptyMind: {fileID: 0}
+  _mindPrefab: {fileID: 8103066686919155798, guid: 06a27ffa07c1c754c9590607a5a80030, type: 3}
+  _emptyMind: {fileID: 1256239026443271520, guid: 06a27ffa07c1c754c9590607a5a80030, type: 3}
 --- !u!114 &7940338062880343993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -384,7 +385,7 @@ MonoBehaviour:
   _componentIndexCache: 11
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _rolesAvailable: {fileID: 0}
+  _rolesAvailable: {fileID: 11400000, guid: 1ac202e4643a5ee41b99ccfe7dcc0092, type: 2}
 --- !u!114 &9100501647995449836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -400,7 +401,7 @@ MonoBehaviour:
   _componentIndexCache: 12
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  _gamemode: {fileID: 0}
+  _gamemode: {fileID: 11400000, guid: 9f6165af0f4ffa94fbb99e2acb16b056, type: 2}
 --- !u!114 &2704830289899808022
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -459,8 +460,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Comms.LocalSpeechBubbleController
   _document: {fileID: 0}
-  _bubbleStyleSheet: {fileID: 0}
-  _config: {fileID: 0}
+  _bubbleStyleSheet: {fileID: 7433441132597879392, guid: 748a61f2204743ec8607f66ccb8b20d2, type: 3}
+  _config: {fileID: 11400000, guid: 9c42426bc8ce465799af4da38d195944, type: 2}
 --- !u!114 &7050784612597778600
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -504,8 +505,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.ExamineUI
   HoverName: {fileID: 0}
-  DetailedViewPrefab: {fileID: 0}
-  ImageDetailedViewPrefab: {fileID: 0}
+  DetailedViewPrefab: {fileID: 8100000000000000003, guid: 8e5b3d0f9c2a4176b0f1d3e9c8a7b6d5, type: 3}
+  ImageDetailedViewPrefab: {fileID: 8100000000000000003, guid: 8d1314d83876a798eb8cce6643397bcf, type: 3}
   DetailedTextOffset: {x: 16, y: -16}
 --- !u!114 &3607219604979337015
 MonoBehaviour:
@@ -547,8 +548,8 @@ MonoBehaviour:
   _componentIndexCache: 18
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  SfxAudioSourcePrefab: {fileID: 0}
-  MusicAudioSourcePrefab: {fileID: 0}
+  SfxAudioSourcePrefab: {fileID: 2009473039716497087, guid: c06c615017500c94686e0eb5eb4402cf, type: 3}
+  MusicAudioSourcePrefab: {fileID: 506012496172542686, guid: 8d3ef04cfa66af24a8803a70f9d93a53, type: 3}
   MinSfxAudioSources: 10
   MaxSfxAudioSources: 30
   MinMusicAudioSources: 3

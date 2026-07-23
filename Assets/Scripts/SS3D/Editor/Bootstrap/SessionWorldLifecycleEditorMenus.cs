@@ -253,15 +253,26 @@ namespace SS3D.Editor.Bootstrap
 
         private static void CopyOrAdd(GameObject root, Type type)
         {
+            // Resolve the scene source BEFORE adding to root — FindObjectsByType would otherwise
+            // often return the just-added hub component and CopySerialized would no-op.
+            Component source = null;
+            foreach (UnityEngine.Object obj in UnityEngine.Object.FindObjectsByType(
+                         type, FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (obj is Component candidate && candidate.gameObject != root)
+                {
+                    source = candidate;
+                    break;
+                }
+            }
+
             Component dest = root.GetComponent(type);
             if (dest == null)
             {
                 dest = root.AddComponent(type);
             }
 
-            Component source = UnityEngine.Object.FindObjectOfType(type, true) as Component;
-            // FindObjectOfType may return the component we just added on root — only copy from a different GO.
-            if (source != null && source.gameObject != root)
+            if (source != null)
             {
                 EditorUtility.CopySerialized(source, dest);
             }
