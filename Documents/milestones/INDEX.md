@@ -9,10 +9,11 @@ vs built) stays in [architecture/INDEX.md](../architecture/INDEX.md); structural
 
 Deepest unfinished critical leaves on the active gate ([mvp1-nuke-ops.md](mvp1-nuke-ops.md)):
 
-- **M1** — Combat ranged + dedicated weapons (+ thin armor)
-- **M2** — Station structural damage model
+- **M1** — Combat ranged + dedicated weapons (+ thin armor) — resolve hitscan-vs-projectile first
+- **M2** — Station structural damage model — scoped to route-opening (no live area/atmos recompute)
+- **M5** — Round-resolution spine: death→spectator + round-end summary/reveal (death detach already wired via the ghost body; the summary/reveal is net-new and was previously hidden inside the gamemode slice)
 
-Not focus: lobby UITK redesign, shuttle-as-ops-gate, full PDA/uplink/Traitor.
+Not focus: lobby UITK redesign, shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, breach-driven atmos/area consequences.
 
 ## Gates
 

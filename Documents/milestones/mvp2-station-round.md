@@ -20,17 +20,24 @@ Expand this doc’s tree when MVP1 is in progress; slices below are a sketch onl
 
 ## Dependency tree
 
-High-level only — edges mean “needs.” MVP1 combat/structural/blast capability is assumed available.
+High-level only — edges mean “needs.” MVP1 combat/structural/blast **and its round-resolution
+spine** (death→spectator, round-end summary/reveal) are assumed available and reused, not rebuilt.
 
 ```mermaid
 flowchart TB
   mvp2[Play_station_round]
   jobs[Job_slots_loadouts_access]
+  lobbyui[Lobby_job_UI]
   station[Doors_power_atmos_felt]
+  atmossync[Atmos_client_viz_sync]
+  arearecompute[Area_live_recompute]
   med[Medical_shift_thin]
+  cloning[Cloning_pod_fabricator]
   comms[Radio_channels]
   traitor[Traitor_or_Extended]
+  uplink[PDA_uplink_telecrystals]
   evac[Evac_round_end]
+  shuttles[Shuttle_framework]
   mvp1[MVP1_combat_struct_nuke_spine]
   mvp2 --> jobs
   mvp2 --> station
@@ -39,30 +46,60 @@ flowchart TB
   mvp2 --> traitor
   mvp2 --> evac
   mvp2 --> mvp1
+  jobs --> lobbyui
+  station --> atmossync
+  station --> arearecompute
+  med -.-> cloning
   traitor --> objectives[Objectives_PDA_tab]
+  traitor --> uplink
   evac --> shuttleThin[Evac_shuttle_sequence]
+  shuttleThin --> shuttles
 ```
+
+Hidden blockers this sketch makes explicit (each its own future pass):
+
+- **Jobs need a job-select UI, and the lobby is condemned.** S1 can't ship on the condemned uGUI
+  lobby; it needs either the deferred lobby UITK redesign ([lobby.md](../design/lobby.md)) or a
+  minimal replacement path. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
+  [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); access presets come
+  from [id-access.md](../design/id-access.md) §5.
+- **"Atmos as a real threat when breached" pulls in two deferred pieces:** Area live-mutation
+  recompute ([2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md), deferred) and
+  atmos client visualization sync ([2026-07_atmos-client-visualization-sync.md](../architecture/2026-07_atmos-client-visualization-sync.md),
+  planned). Without them a hull breach doesn't visibly or mechanically bite on clients.
+- **Cloning is a fabricator, and crafting is a stub.** The medical save path leans on defib (shipped)
+  for the *thin* version; cloning/respawn ([death-cloning-respawn.md](../design/death-cloning-respawn.md)
+  §5) rides `crafting.md` §3's fabricator pattern, and [crafting](../architecture/systems/crafting.md)
+  is purged/awaiting redesign — so keep cloning as thin/deferred as the gate allows (dotted edge).
+- **Traitor needs the PDA/uplink stack MVP1 deferred.** Objectives have legacy scaffolding
+  ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)), but the uplink tab +
+  telecrystals ([antagonist-content.md](../design/antagonist-content.md) §3–§4) are net-new; Extended
+  (no antag) is the cheaper path to a first playable S5.
+- **Evac needs the shuttle framework, which is entirely unbuilt.** [shuttles.md](../design/shuttles.md)
+  has no architecture/system map yet — the single biggest unbuilt dependency under MVP2; the evac
+  sequence itself is [round-end.md](../design/round-end.md) §3.
 
 ## Slices
 
 | Id | Name | Status | Links |
 |----|------|--------|-------|
-| S1 | Job system (bare roster) | pending | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles |
-| S2 | Station loop felt | pending | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); id-access doors |
-| S3 | Medical shift thin | pending | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) |
-| S4 | Comms radio | pending | [comms.md](../design/comms.md) |
-| S5 | Traitor / Extended + objectives | pending | [antagonist-content.md](../design/antagonist-content.md) §3; [objectives.md](../design/objectives.md); [round-config.md](../design/round-config.md) |
-| S6 | Evac end path | pending | [round-end.md](../design/round-end.md) §3; [shuttles.md](../design/shuttles.md) (evac only) |
+| S1 | Job system (bare roster) | pending — blocked on a job-select UI (condemned lobby) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) |
+| S2 | Station loop felt | pending — atmos-threat needs deferred area recompute + atmos client sync | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [2026-07_atmos-client-visualization-sync.md](../architecture/2026-07_atmos-client-visualization-sync.md); id-access doors |
+| S3 | Medical shift thin | pending — defib (shipped) is the thin save path; cloning rides crafting rewrite | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) §3, §5; [crafting](../architecture/systems/crafting.md) (fabricator); reuses MVP1 death spine |
+| S4 | Comms radio | pending — comms partial (local speech only) | [comms.md](../design/comms.md) §6 |
+| S5 | Traitor / Extended + objectives | pending — Extended is the cheap first path; Traitor needs deferred uplink | [antagonist-content.md](../design/antagonist-content.md) §2–§4; [objectives.md](../design/objectives.md); [round-config.md](../design/round-config.md) |
+| S6 | Evac end path | pending — **blocked on unbuilt shuttle framework** | [round-end.md](../design/round-end.md) §3; [shuttles.md](../design/shuttles.md) (evac only) |
 | S7 | Eng / cargo minimum | pending | electricity repair already partial; [cargo.md](../design/cargo.md) thin or mapped supply |
 | S8 | MVP2 playable close | pending | depends S1–S7 + MVP1 |
 
 ## Explicitly deferred
 
-- AI / cyborgs, virology, chemistry depth, full crafting rewrite
-- Shuttles beyond ops polish + evac
+- AI / cyborgs, virology, chemistry depth, full crafting rewrite (S3 cloning stays thin/deferred until crafting is redesigned)
+- Shuttles beyond ops polish + evac (evac itself is blocked on the unbuilt shuttle framework — S6)
+- Full observer/ghost experience beyond the thin MVP1 death→spectator spine ([observer.md](../design/observer.md))
 - Persistence of station damage across rounds
 - Admin tooling beyond end-round; player accounts
-- Lobby visual redesign remains a parallel track (not a silent MVP2 gate unless embark is unusable)
+- Lobby visual redesign remains a parallel track — but note S1's job roster **does** need *some* job-select UI, so "not a silent gate" holds only if a minimal path exists
 
 ## Maintenance
 
