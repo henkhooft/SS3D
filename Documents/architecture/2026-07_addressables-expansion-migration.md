@@ -93,7 +93,9 @@ like upstream — not the diff.
        failures) — see Open questions.
 2. **Async handle infrastructure** — **done (2026-07-23).** `AssetHandle<T>`, `AssetProvider`,
    `IAssetLoadBackend` / `AddressablesLoadBackend`, `Assets.GetAsync`, EditMode
-   `AssetProviderTests` (ref-count share, double-release, missing key, preload cache, concurrent dedupe).
+   `AssetProviderTests` (ref-count share, double-release, missing key, concurrent missing, preload
+   cache, concurrent dedupe). Load-failure path wakes waiters with `TrySetResult(false)` — do not
+   `TrySetException` on an unawaited Loading TCS (unobserved UniTask → EditMode LogAssert poison).
    Sync `Assets.Get` remains for non-migrated DBs.
 3. **First migration slice: `InteractionIcons`** — **done (2026-07-23).**
    `LoadMode = AddressablesAsync`; GUID keys in `AssetKeys`; serialized `Assets` dict emptied;
@@ -140,7 +142,8 @@ like upstream — not the diff.
   Headless dedicated server) skip renderers/audio but still need correct gameplay assets — async
   loading changes startup-order assumptions there too (InteractionIcons preload is client-UI-only,
   low risk; Items migration will not be).
-- **Test coverage:** EditMode `AssetProviderTests` cover handle/ref-count with a fake backend.
+- **Test coverage:** EditMode `AssetProviderTests` cover handle/ref-count with a fake backend
+  (including missing-key / concurrent-missing without unobserved UniTask LogAssert poison).
   End-to-end Addressables load in Play Mode / player build still manual.
 
 ## Explicit non-goals (this doc)

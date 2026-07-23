@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects + alert stack wired; vitals HUD Phase 6 remainder)
-> Verified: dd676f05a — 2026-07-23
+> Verified: c2b692f55 — 2026-07-23
 
 # Health
 
