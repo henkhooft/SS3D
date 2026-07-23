@@ -260,7 +260,7 @@ shipped icon moves — do not grow them for new violations.
   § Architecture smells (same one-off-Editor-menu root cause),
   [2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md)
 
-### 1.15 Addressables configured but unused — every asset eager-loaded into RAM
+### 1.15 Addressables async loading partial — most DBs still eager-loaded
 
 **Blast radius: high (whole-game memory footprint) — trend: Phases 1–3 done; rest scheduled**
 

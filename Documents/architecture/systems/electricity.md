@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: a874b1dac — 2026-07-23
+> Verified: 71d2a9224 — 2026-07-23
 
 # Electricity
 
@@ -45,6 +45,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/ConsumerPowerVisual.cs` — emissive/panel dimming for generic consumers
 - `Assets/Scripts/SS3D/Systems/Electricity/BasicPowerConsumer.cs` — constant-load consumer
 - `Assets/Scripts/SS3D/Systems/Electricity/MachinePowerConsumer.cs` — idle/in-use load consumer
+- `Assets/Scripts/SS3D/Systems/Electricity/FuelPowerGenerator.cs` — Pacman generator (`IPowerProducer` + toggle FX)
+- `Assets/Scripts/SS3D/Systems/Electricity/MachineVibrate.cs` — client vibrate FX; capture rest rotation on enable (not `OnStart`)
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/BasicElectricDevice.cs` — tile-placed electric device base
 - `Assets/Scripts/SS3D/UI/MachineInterface/ApcController.cs` — APC façade; `IAreaApcOrigin` + storage SyncVars + MI
 

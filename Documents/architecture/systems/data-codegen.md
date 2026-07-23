@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/
 > Entry points: AssetDatabase, AssetDatabasesCodeGenerator, AssetProvider
 > Status: partial
-> Verified: 4b302f923 — 2026-07-23
+> Verified: 71d2a9224 — 2026-07-23
 
 # Data / codegen
 
@@ -14,13 +14,16 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 ## Start here
 
 - `Assets/Scripts/SS3D/Data/AssetDatabases/AssetDatabase.cs` — asset database base (`LoadMode`, `AssetKeys`)
+- `Assets/Scripts/SS3D/Data/AssetDatabases/AssetDatabaseLoadMode.cs` — `EagerSerialized` vs `AddressablesAsync`
 - `Assets/Scripts/SS3D/Data/AssetDatabases/AssetProvider.cs` — ref-counted Addressables load/release
 - `Assets/Scripts/SS3D/Data/AssetDatabases/AssetHandle.cs` — disposable handle
+- `Assets/Scripts/SS3D/Data/AssetDatabases/AddressablesLoadBackend.cs` — production Addressables backend
 - `Assets/Scripts/SS3D/Data/Assets.cs` — `Get` / `GetAsync` / `PreloadAddressableDatabases`
+- `Assets/Scripts/SS3D/Data/AssetsInitializationTrigger.cs` — loads DBs + async preload on `ApplicationInitializing`
 - `Assets/Scripts/SS3D/Data/AssetDatabases/AssetDatabasesCodeGenerator.cs` — codegen entry
 - `Assets/Scripts/SS3D/Data/Generated/AssetDatabases.cs` — generated database refs
 - `Assets/Scripts/SS3D/Data/Management/LocalStorage.cs` — `JsonUtility` file I/O, append JSONL, legacy path helpers
-
+- Tests: `Assets/Scripts/Tests/EditMode/AssetProviderTests.cs` (ref-count / missing key / preload cache)
 ## Extension points
 
 - New asset categories: extend asset database settings and rerun codegen.
