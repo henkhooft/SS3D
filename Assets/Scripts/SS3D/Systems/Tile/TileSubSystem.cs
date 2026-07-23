@@ -353,7 +353,11 @@ namespace SS3D.Systems.Tile
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
-                persistenceSubSystem.LoadMostRecentStationTemplate();
+                if (!persistenceSubSystem.LoadMostRecentStationTemplate())
+                {
+                    NotifyEmptyMapReady();
+                }
+
                 SyncFloorDecalsToClients();
                 return;
             }
@@ -370,7 +374,11 @@ namespace SS3D.Systems.Tile
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
-                persistenceSubSystem.LoadStationTemplate(mapName);
+                if (!persistenceSubSystem.LoadStationTemplate(mapName))
+                {
+                    NotifyEmptyMapReady();
+                }
+
                 SyncFloorDecalsToClients();
                 return;
             }
@@ -401,6 +409,25 @@ namespace SS3D.Systems.Tile
                 {
                     areaAfterLoad.EndDeferredAreaFlood();
                 }
+
+                if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+                {
+                    readiness.NotifyLegacyMapLoadComplete();
+                }
+            }
+        }
+
+        private static void NotifyEmptyMapReady()
+        {
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                // No BeginDeferred was paired; still signal flood-complete / empty ready.
+                areaSubSystem.EndDeferredAreaFlood();
+            }
+
+            if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+            {
+                readiness.NotifyLegacyMapLoadComplete();
             }
         }
 

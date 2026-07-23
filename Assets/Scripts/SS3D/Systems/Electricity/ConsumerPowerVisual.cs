@@ -176,14 +176,14 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (electricitySubSystem.IsSetUp)
+            if (electricitySubSystem.IsReady)
             {
                 electricitySubSystem.OnTick += HandleElectricityTick;
                 _electricityTickSubscribed = true;
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp += HandleElectricitySystemSetup;
+            electricitySubSystem.WhenReady += HandleElectricitySystemSetup;
         }
 
         private void HandleElectricitySystemSetup()
@@ -193,7 +193,7 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
+            electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
             if (!_electricityTickSubscribed)
             {
                 electricitySubSystem.OnTick += HandleElectricityTick;
@@ -210,7 +210,7 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
+            electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
             if (_electricityTickSubscribed)
             {
                 electricitySubSystem.OnTick -= HandleElectricityTick;

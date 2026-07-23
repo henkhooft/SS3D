@@ -84,11 +84,13 @@ namespace SS3D.Networking
             ServerAddress = networkSettings.ServerAddress;
             Port = Convert.ToUInt16(networkSettings.ServerPort);
 
-            // Re-entry while a prior join is still Starting/Started/Stopping is what storms
-            // "Failed to start the client connection" when Boot/Intro reload on disconnect.
-            if (!CanStartNetworkSession(networkManager, NetworkType, out string skipReason))
+            ClientConnectionRecovery recovery = networkManager.GetComponent<ClientConnectionRecovery>();
+
+            // Re-entry while Connecting/Online/Disconnecting (or transport Starting/Started/Stopping)
+            // is what storms "Failed to start the client connection" on Boot/Intro reload.
+            if (recovery != null && !recovery.CanStart)
             {
-                Log.Warning(this, "Skipping StartNetworkSession: {reason}", Logs.Important, skipReason);
+                Log.Warning(this, "Skipping StartNetworkSession: session {state}", Logs.Important, recovery.State);
                 return;
             }
 
@@ -97,10 +99,7 @@ namespace SS3D.Networking
             LocalPlayer.UpdateCkey(networkSettings.Ckey);
             string ckey = networkSettings.Ckey;
 
-            if (networkManager.TryGetComponent(out ClientConnectionRecovery recovery))
-            {
-                recovery.NotifySessionStartAttempted();
-            }
+            recovery?.NotifySessionStartAttempted();
 
             // Dedicated Server build target defines UNITY_SERVER, which makes FishNet auto-start
             // the transport on Boot (default port). Stop that so Host/Client use NetworkSettings.
@@ -110,16 +109,41 @@ namespace SS3D.Networking
             {
                 case NetworkType.DedicatedServer:
                     Log.Information(this, "Hosting a new headless server on port {port}", Logs.Important, Port);
-                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
+                    if (!networkManager.ServerManager.StartConnection(Port))
+                    {
+                        LogIfConnectionFailedToStart("server", false);
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 case NetworkType.Client:
                     Log.Information(this, "Joining server {serverAddress}:{port} as {ckey}", Logs.Important, ServerAddress, Port, ckey);
-                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
+                    if (!networkManager.ClientManager.StartConnection(ServerAddress, Port))
+                    {
+                        LogIfConnectionFailedToStart("client", false);
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 case NetworkType.Host:
                     Log.Information(this, "Hosting a new server on port {port}", Logs.Important, Port);
-                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
-                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
+                    bool serverOk = networkManager.ServerManager.StartConnection(Port);
+                    bool clientOk = networkManager.ClientManager.StartConnection(ServerAddress, Port);
+                    if (!serverOk)
+                    {
+                        LogIfConnectionFailedToStart("server", false);
+                    }
+
+                    if (!clientOk)
+                    {
+                        LogIfConnectionFailedToStart("client", false);
+                    }
+
+                    if (!serverOk || !clientOk)
+                    {
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -127,31 +151,6 @@ namespace SS3D.Networking
 
             NetworkSessionStartedEvent networkSessionStartedEvent = new(ckey, NetworkType);
             networkSessionStartedEvent.Invoke(this);
-        }
-
-        private static bool CanStartNetworkSession(NetworkManager networkManager, NetworkType networkType, out string skipReason)
-        {
-            skipReason = null;
-
-            // Host/dedicated may already have a Started server from UNITY_SERVER auto-start;
-            // StopAutoStartedConnections clears that before StartConnection. Only gate the
-            // client half — stacking StartConnection while Starting/Started/Stopping is what
-            // storms "Failed to start the client connection" on Boot/Intro reload.
-            if (networkType is not (NetworkType.Client or NetworkType.Host))
-            {
-                return true;
-            }
-
-            LocalConnectionState clientState = networkManager.TransportManager.Transport.GetConnectionState(false);
-            if (clientState is LocalConnectionState.Starting
-                or LocalConnectionState.Started
-                or LocalConnectionState.Stopping)
-            {
-                skipReason = $"client already {clientState}";
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>

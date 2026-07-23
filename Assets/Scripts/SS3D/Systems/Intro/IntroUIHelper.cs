@@ -75,7 +75,14 @@ namespace SS3D.Systems.Intro
 
         private static void TryStartNetworkSessionOnce()
         {
-            // StartNetworkSession no-ops itself when the client is already Starting/Started/Stopping;
+            // Cold-start only: never auto-join on reconnect / WaitingForServer.
+            ClientConnectionRecovery recovery = ClientConnectionRecovery.Instance;
+            if (recovery != null && recovery.State != SessionState.Cold)
+            {
+                return;
+            }
+
+            // StartNetworkSession no-ops itself when the session cannot start;
             // still null-check in case Intro is open without a session subsystem.
             NetworkSessionSubSystem session = SubSystems.Get<NetworkSessionSubSystem>();
             if (session == null)

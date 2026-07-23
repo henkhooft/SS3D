@@ -8,6 +8,7 @@ using SS3D.Application.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
+using SS3D.Data.Generated;
 using SS3D.Networking;
 using SS3D.Networking.Settings;
 using SS3D.Systems.Entities;
@@ -32,8 +33,7 @@ namespace SS3D.Systems.Testing
     /// <see cref="ReadyPlayersSubSystem"/>/<see cref="RoundSubSystem"/>, since those don't compile
     /// into a real built player/server.
     /// <para>
-    /// Self-bootstraps like <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/> instead
-    /// of living in Boot.unity - see AGENTS.md "Composition, prefabs, and UI". A no-op unless
+    /// Bootstrapped by <see cref="SS3D.Systems.Bootstrap.SystemsBootstrap"/> — a no-op unless
     /// <see cref="ApplicationSettings.TestScriptPath"/> is set (the "-testscript=" CLI arg), so this
     /// has zero effect on normal play.
     /// </para>
@@ -42,35 +42,10 @@ namespace SS3D.Systems.Testing
     {
         private const float DefaultWaitTimeoutSeconds = 30f;
 
-        /// <summary>
-        /// Used as FishNet DefaultScene offline during an in-process client reconnect so Game
-        /// unloads without reloading Boot (which would duplicate the DDOL NetworkManager).
-        /// </summary>
-        private const string EmptyOfflineScenePath = "Assets/Content/Scenes/Empty.unity";
-
         private RoundState _currentRoundState = RoundState.Stopped;
         private bool _clientConnected;
         private bool _serverStarted;
         private bool _scriptStarted;
-
-        /// <summary>
-        /// FishNet <see cref="DefaultScene"/> offline path saved while redirected to Empty for
-        /// in-process reconnect. Empty when not redirected.
-        /// </summary>
-        private string _suppressedOfflineScene;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (SubSystems.TryGet(out AutomationSubSystem _))
-            {
-                return;
-            }
-
-            GameObject host = new(nameof(AutomationSubSystem));
-            DontDestroyOnLoad(host);
-            host.AddComponent<AutomationSubSystem>();
-        }
 
         protected override void OnAwake()
         {
@@ -375,12 +350,10 @@ namespace SS3D.Systems.Testing
 
             // NetworkSessionSubSystem lives on Boot and is gone after the first online load
             // (and after Empty offline). Re-join with the same CLI-resolved NetworkSettings.
+            // Keep Empty offline — never restore Boot (that re-arms the Intro storm).
             StartClientConnectionFromSettings();
 
-            // Offline was redirected to Empty for the reconnect gap; restore Boot so a later
-            // disconnect still goes through DefaultScene's normal offline path.
             yield return WaitUntil(() => _clientConnected, DefaultWaitTimeoutSeconds, "reconnect_started");
-            RestoreOfflineScene();
         }
 
         private void RunConsoleCommand(string commandLine)
@@ -453,31 +426,12 @@ namespace SS3D.Systems.Testing
                 return;
             }
 
-            if (string.IsNullOrEmpty(_suppressedOfflineScene))
+            // Belt-and-suspenders on top of ClientConnectionRecovery: never leave Boot as
+            // offline across StopConnection. Do not restore Boot afterward.
+            if (defaultScene.GetOfflineScene() != Scenes.EmptyPath)
             {
-                _suppressedOfflineScene = defaultScene.GetOfflineScene();
+                defaultScene.SetOfflineScene(Scenes.EmptyPath);
             }
-
-            defaultScene.SetOfflineScene(EmptyOfflineScenePath);
-        }
-
-        private void RestoreOfflineScene()
-        {
-            if (string.IsNullOrEmpty(_suppressedOfflineScene))
-            {
-                return;
-            }
-
-            DefaultScene defaultScene = InstanceFinder.NetworkManager != null
-                ? InstanceFinder.NetworkManager.GetComponent<DefaultScene>()
-                : null;
-
-            if (defaultScene != null)
-            {
-                defaultScene.SetOfflineScene(_suppressedOfflineScene);
-            }
-
-            _suppressedOfflineScene = null;
         }
 
         private IEnumerator WaitUntil(Func<bool> condition, float timeoutSeconds, string label)

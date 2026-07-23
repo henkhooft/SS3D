@@ -1,6 +1,6 @@
 > Implements: infrastructure — session/scene lifecycle & world readiness; realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on (a) (code bootstrap + `NetworkSystemsHub`); session/reconnect behavior per [design/networking.md](../design/networking.md) §2–§5
 > Touches systems: networking-session, scene-management, application, core-subsystems, tile, area, electricity, atmospherics, rounds-lobby, player-control, persistence, disposal
-> Status: in-progress (Phase 1 symptom shipped, Phase 2 client-parity case shipped — both via PR #36, landed independently of this doc's phasing; general world-readiness graph and Phase 3 still open)
+> Status: in-progress (Phase 1 FSM + Empty codegen, Phase 2b world-readiness graph, Phase 3 scaffolding shipped; Boot/Game still hold most scene SubSystems — hub dual-runs until Editor migration empties them)
 
 # Session & world lifecycle
 
@@ -13,6 +13,13 @@ foundation that [2026-07_agent-first-composition.md](2026-07_agent-first-composi
 Sequenced in three phases; **Phase 1 is a standalone shippable slice** (the emergency brake on the
 disconnect error storm). Phase 2 removes the init races and host/client divergence. Phase 3 makes 1+2
 the only way systems appear.
+
+**Update 2026-07-23 (implementation pass):** Named `SessionState` on `ClientConnectionRecovery`;
+`Scenes.Empty` / `Scenes.EmptyPath`; Automation no longer restores Boot offline; `IWorldReady` +
+`WorldReadinessSubSystem`; Area/Electricity/Atmos/Disposal migrated; `PrepareRound` awaits
+`WorldReady`; `SystemsBootstrap` + `NetworkSystemsHub` Resources prefab + spawn on Online;
+`SubSystems.Get` silent during `WaitingForServer`; VisionSystem removed from Game (DDOL only).
+Full Boot/Game empty (Phase 3h) still open — use `SS3D/Bootstrap/*` Editor menus.
 
 ## 1. Problem & non-goals
 

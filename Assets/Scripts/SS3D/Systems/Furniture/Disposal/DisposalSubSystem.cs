@@ -2,12 +2,16 @@ using Cysharp.Threading.Tasks;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Core.WorldReadiness;
 using SS3D.Logging;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Tile;
+using SS3D.Systems.WorldReadiness;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace SS3D.Systems.Furniture.Disposal
@@ -17,7 +21,7 @@ namespace SS3D.Systems.Furniture.Disposal
     /// into a chute, and ticks in-transit capsules along their route (design doc §3-§7).
     /// Mirrors <c>ElectricitySubSystem</c>/<c>AtmosSubSystem</c>'s role for their own networks.
     /// </summary>
-    public sealed class DisposalSubSystem : NetworkSubSystem
+    public sealed class DisposalSubSystem : NetworkSubSystem, IWorldReady
     {
         [SerializeField]
         [Tooltip("When on, items stay visible while riding pipes (useful for debugging routes). Off hides them until spit/spill — opaque pipes make mid-transit meshes look wrong.")]
@@ -26,56 +30,85 @@ namespace SS3D.Systems.Furniture.Disposal
         private DisposalNetworkRegistry _registry;
         private DisposalPipeObserver _observer;
         private TileMap _map;
+        private CancellationTokenSource _readinessCts;
 
         private readonly List<DisposalCapsule> _activeCapsules = new();
+
+        public event Action WhenReady;
+
+        public bool IsReady { get; private set; }
 
         public DisposalNetworkRegistry Registry => _registry;
 
         public override void OnStartServer()
         {
             base.OnStartServer();
+
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.PhaseChanged += HandleReadinessPhaseChanged;
+            }
+
+            InitializeWhenMapReady().Forget();
+        }
+
+        private void HandleReadinessPhaseChanged(WorldReadyPhase phase)
+        {
+            if (phase != WorldReadyPhase.None || !IsServer)
+            {
+                return;
+            }
+
+            IsReady = false;
             InitializeWhenMapReady().Forget();
         }
 
         private async UniTaskVoid InitializeWhenMapReady()
         {
-            TileSubSystem tileSubSystem = null;
-            await UniTask.WaitUntil(() =>
-            {
-                tileSubSystem = SubSystems.Get<TileSubSystem>();
-                return tileSubSystem != null && tileSubSystem.CurrentMap != null;
-            });
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = new CancellationTokenSource();
+            CancellationToken ct = _readinessCts.Token;
 
-            if (!IsServer)
+            WorldReadinessSubSystem readiness = null;
+            await UniTask.WaitUntil(() => SubSystems.TryGet(out readiness), cancellationToken: ct);
+            await readiness.WaitUntilAsync(WorldReadyPhase.TileMapLoaded, ct);
+
+            if (!IsServer || ct.IsCancellationRequested)
+                return;
+
+            TileSubSystem tileSubSystem = SubSystems.Get<TileSubSystem>();
+            if (tileSubSystem?.CurrentMap == null)
                 return;
 
             _map = tileSubSystem.CurrentMap;
-            _registry = new DisposalNetworkRegistry();
+
+            if (_registry == null)
+            {
+                _registry = new DisposalNetworkRegistry();
+                _observer = new DisposalPipeObserver(_map, _registry, OnSegmentCut);
+                tileSubSystem.RegisterTileMutationObserver(_observer);
+            }
+
             _registry.RebuildAll(_map);
 
-            _observer = new DisposalPipeObserver(_map, _registry, OnSegmentCut);
-            tileSubSystem.RegisterTileMutationObserver(_observer);
-
-            // RebuildAll often runs on an empty map (CurrentMap exists before station template Load).
-            // Re-scan once the template finishes placing tiles.
-            _map.OnMapLoaded += HandleMapLoaded;
+            IsReady = true;
+            WhenReady?.Invoke();
+            readiness.NotifyDisposalReady();
 
             Log.Information(this, $"Disposal network started with {_registry.NetworkCount} network(s).");
         }
 
-        private void HandleMapLoaded(object sender, System.EventArgs args)
-        {
-            if (!IsServer || _registry == null || _map == null)
-                return;
-
-            _registry.RebuildAll(_map);
-            Log.Information(this, $"Disposal network rebuilt after map load with {_registry.NetworkCount} network(s).");
-        }
-
         protected override void OnDestroyed()
         {
-            if (_map != null)
-                _map.OnMapLoaded -= HandleMapLoaded;
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = null;
+
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.PhaseChanged -= HandleReadinessPhaseChanged;
+            }
 
             TileSubSystem tileSubSystem = SubSystems.Get<TileSubSystem>();
             if (_observer != null)

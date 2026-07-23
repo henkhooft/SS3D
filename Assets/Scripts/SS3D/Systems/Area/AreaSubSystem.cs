@@ -1,6 +1,7 @@
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Core.WorldReadiness;
 using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
@@ -13,9 +14,9 @@ namespace SS3D.Systems.Area
     /// <summary>
     /// APC-seeded area flood-fill and per-tile area-id registry.
     /// </summary>
-    public sealed class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource
+    public sealed class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource, IWorldReady
     {
-        public event Action OnSystemSetUp;
+        public event Action WhenReady;
 
         public event Action<AreaId, AreaLightingState> OnAreaLightingStateChanged;
 
@@ -23,7 +24,11 @@ namespace SS3D.Systems.Area
 
         public event Action OnAreaVisualsDirty;
 
-        public bool IsSetUp { get; private set; }
+        /// <summary>True after flood completes (or empty-map no-op). Prefer <see cref="IsReady"/>.</summary>
+        [Obsolete("Use IsReady / WhenReady (IWorldReady).")]
+        public bool IsSetUp => IsReady;
+
+        public bool IsReady { get; private set; }
 
         public AreaFloorVisualCache FloorVisualCache { get; } = new();
 
@@ -39,6 +44,7 @@ namespace SS3D.Systems.Area
         private AreaFloodFillService _floodFill;
         private bool _electricityTickSubscribed;
         private bool _templateRestoreActive;
+        private bool _mapWired;
 
         /// <summary>
         /// When true, <see cref="RegisterApc"/> queues APCs without flooding. Used while
@@ -81,7 +87,7 @@ namespace SS3D.Systems.Area
 
         private void HandleTileMapCreated()
         {
-            if (IsSetUp)
+            if (_mapWired)
                 return;
 
             if (SubSystems.TryGet(out TileSubSystem tileSubSystem))
@@ -90,7 +96,7 @@ namespace SS3D.Systems.Area
 
         private void CompleteSetup(TileSubSystem tileSubSystem)
         {
-            if (IsSetUp || tileSubSystem.CurrentMap == null)
+            if (_mapWired || tileSubSystem.CurrentMap == null)
                 return;
 
             _map = tileSubSystem.CurrentMap;
@@ -99,9 +105,8 @@ namespace SS3D.Systems.Area
 
             tileSubSystem.RegisterTileMutationObserver(this);
 
-            IsSetUp = true;
+            _mapWired = true;
             GameplayLightGuard.DisableOrphanSceneLights();
-            OnSystemSetUp?.Invoke();
             SubscribeElectricityTicks();
         }
 
@@ -275,46 +280,64 @@ namespace SS3D.Systems.Area
         /// <summary>
         /// Recompute per-tile area ids from every registered APC now that the map is complete.
         /// Preserves existing <see cref="AreaRecord"/> metadata (names, tags, tints, access, switches).
+        /// Always notifies world readiness (including no-op / early-out paths).
         /// </summary>
         [Server]
         public void EndDeferredAreaFlood()
         {
-            if (!_deferAreaFlood)
+            if (_deferAreaFlood)
             {
-                return;
-            }
+                _deferAreaFlood = false;
 
-            _deferAreaFlood = false;
-
-            if (_floodFill == null || _map == null)
-            {
-                return;
-            }
-
-            if (_registeredApcs.Count == 0)
-            {
-                return;
-            }
-
-            // Template restore may have linked APCs to saved records without flooding.
-            // Mid-load RegisterApc may have queued APCs with no records yet.
-            bool anyLinked = false;
-            foreach (IAreaApcOrigin apc in _registeredApcs)
-            {
-                if (_registry.TryGetApcArea(apc, out _))
+                if (_floodFill != null && _map != null && _registeredApcs.Count > 0)
                 {
-                    anyLinked = true;
-                    break;
+                    // Template restore may have linked APCs to saved records without flooding.
+                    // Mid-load RegisterApc may have queued APCs with no records yet.
+                    bool anyLinked = false;
+                    foreach (IAreaApcOrigin apc in _registeredApcs)
+                    {
+                        if (_registry.TryGetApcArea(apc, out _))
+                        {
+                            anyLinked = true;
+                            break;
+                        }
+                    }
+
+                    if (anyLinked)
+                    {
+                        RefloodAllAreaTilesPreservingMetadata();
+                    }
+                    else
+                    {
+                        RebuildAllAreasFromApcs();
+                    }
                 }
             }
 
-            if (anyLinked)
+            MarkAreasReady();
+        }
+
+        private void MarkAreasReady()
+        {
+            if (!_mapWired)
             {
-                RefloodAllAreaTilesPreservingMetadata();
+                if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readinessEarly))
+                {
+                    readinessEarly.NotifyAreasFlooded();
+                }
+
+                return;
             }
-            else
+
+            if (!IsReady)
             {
-                RebuildAllAreasFromApcs();
+                IsReady = true;
+                WhenReady?.Invoke();
+            }
+
+            if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+            {
+                readiness.NotifyAreasFlooded();
             }
         }
 

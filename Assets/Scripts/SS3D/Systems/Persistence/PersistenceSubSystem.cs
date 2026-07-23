@@ -234,6 +234,11 @@ namespace SS3D.Systems.Persistence
         {
             OnBeforeRestore?.Invoke(PersistenceLayer.StationTemplate);
 
+            if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readinessBefore))
+            {
+                readinessBefore.NotifyStationTemplateRestoreBeginning();
+            }
+
             var context = new PersistenceContext
             {
                 IsTemplateRestore = true,
@@ -272,6 +277,11 @@ namespace SS3D.Systems.Persistence
             }
 
             OnAfterRestore?.Invoke(PersistenceLayer.StationTemplate);
+
+            if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readinessAfter))
+            {
+                readinessAfter.NotifyTileMapLoaded();
+            }
         }
 
         private bool TryLoadEnvelope(string path, string templateName, out PersistenceEnvelope envelope)

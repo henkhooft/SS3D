@@ -2,12 +2,16 @@ using Cysharp.Threading.Tasks;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Core.WorldReadiness;
 using SS3D.Logging;
 using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Tile;
+using SS3D.Systems.WorldReadiness;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -16,7 +20,7 @@ namespace SS3D.Systems.Atmospherics
     /// <summary>
     /// Server-authoritative atmospherics coordinator. Owns the ECS simulation world and tick loop.
     /// </summary>
-    public sealed class AtmosSubSystem : NetworkSubSystem
+    public sealed class AtmosSubSystem : NetworkSubSystem, IWorldReady
     {
         private static readonly ProfilerMarker SimPerformanceMarker = new("SS3D.Atmos.Sim");
         private static readonly ProfilerMarker UploadPerformanceMarker = new("SS3D.Atmos.Upload");
@@ -37,6 +41,11 @@ namespace SS3D.Systems.Atmospherics
         private AtmosChunkPatchBuilder _patchBuilder;
         private readonly List<Vector2Int> _dirtyChunkBuffer = new();
         private float _tickTimer;
+        private CancellationTokenSource _readinessCts;
+
+        public event Action WhenReady;
+
+        public bool IsReady { get; private set; }
 
         public GasRegistry GasRegistry => _gasRegistry;
         public float TickInterval => AtmosConstants.TickInterval;
@@ -62,6 +71,11 @@ namespace SS3D.Systems.Atmospherics
             _dirtyChunkTracker = new AtmosDirtyChunkTracker();
             _patchBuilder = new AtmosChunkPatchBuilder();
 
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.PhaseChanged += HandleReadinessPhaseChanged;
+            }
+
             InitializeWhenMapReady().Forget();
         }
 
@@ -80,19 +94,48 @@ namespace SS3D.Systems.Atmospherics
                 _clientVisualizationBridge = GetComponent<AtmosClientVisualizationBridge>();
         }
 
+        private void HandleReadinessPhaseChanged(WorldReadyPhase phase)
+        {
+            if (phase != WorldReadyPhase.None || !IsServer)
+            {
+                return;
+            }
+
+            IsReady = false;
+            InitializeWhenMapReady().Forget();
+        }
+
         private async UniTaskVoid InitializeWhenMapReady()
         {
-            TileSubSystem tileSubSystem = null;
-            await UniTask.WaitUntil(() =>
-            {
-                tileSubSystem = SubSystems.Get<TileSubSystem>();
-                return tileSubSystem != null
-                    && tileSubSystem.CurrentMap != null
-                    && tileSubSystem.QueryService != null;
-            });
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = new CancellationTokenSource();
+            CancellationToken ct = _readinessCts.Token;
 
-            if (!IsServer)
+            WorldReadinessSubSystem readiness = null;
+            await UniTask.WaitUntil(() => SubSystems.TryGet(out readiness), cancellationToken: ct);
+
+            await readiness.WaitUntilAsync(WorldReadyPhase.TileMapLoaded, ct);
+
+            if (!IsServer || ct.IsCancellationRequested)
                 return;
+
+            TileSubSystem tileSubSystem = SubSystems.Get<TileSubSystem>();
+            if (tileSubSystem?.CurrentMap == null || tileSubSystem.QueryService == null)
+                return;
+
+            if (_simulation != null)
+            {
+                // Already initialized this epoch — still ensure gate is set after restore.
+                readiness.NotifyAtmosReady();
+                if (!IsReady)
+                {
+                    IsReady = true;
+                    WhenReady?.Invoke();
+                }
+
+                return;
+            }
 
             _atmosWorld = AtmosWorld.Create("AtmosSimulation");
 
@@ -138,6 +181,10 @@ namespace SS3D.Systems.Atmospherics
 
             _visualizationBridge?.PublishSnapshot();
 
+            IsReady = true;
+            WhenReady?.Invoke();
+            readiness.NotifyAtmosReady();
+
             Log.Information(this, $"Atmos simulation started with {gasTypeCount} gas slots and {_simulation.CellCount} cells.");
         }
 
@@ -167,6 +214,15 @@ namespace SS3D.Systems.Atmospherics
 
         protected override void OnDestroyed()
         {
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = null;
+
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.PhaseChanged -= HandleReadinessPhaseChanged;
+            }
+
             TileSubSystem tileSubSystem = SubSystems.Get<TileSubSystem>();
             if (_tileObserver != null)
                 tileSubSystem?.UnregisterTileMutationObserver(_tileObserver);
