@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 818aaab59 — 2026-07-23
+> Verified: 50a36b51 — 2026-07-23
 
 # Combat
 
