@@ -87,16 +87,33 @@ namespace SS3D.Systems.Interactions
         {
             base.OnAwake();
 
-            _radialView = SubSystems.Get<RadialInteractionSubSystem>();
-            _armedSystem = SubSystems.Get<ArmedInteractionSubSystem>();
-            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
-            _camera = SubSystems.Get<CameraSubSystem>().PlayerCamera.GetComponent<Camera>();
-
+            // Wire inputs before camera — a missing PlayerCamera must not leave _controls null
+            // (OnOwnershipClient → SubscribeToInput would cascade-NRE).
             _inputSystem = SubSystems.Get<InputSubSystem>();
             Controls controls = _inputSystem.Inputs;
             _controls = controls.Interactions;
             _hotkeysControls = controls.Hotkeys;
             _cancelInteractionAction = controls.Interactions.Get().FindAction("Cancel Interaction", throwIfNotFound: true);
+
+            _radialView = SubSystems.Get<RadialInteractionSubSystem>();
+            _armedSystem = SubSystems.Get<ArmedInteractionSubSystem>();
+            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
+
+            Actor playerCamera = SubSystems.Get<CameraSubSystem>()?.PlayerCamera;
+            if (playerCamera != null)
+            {
+                _camera = playerCamera.GetComponent<Camera>();
+            }
+
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+            }
+
+            if (_camera == null)
+            {
+                Log.Error(this, "No gameplay camera resolved for InteractionController", Logs.Important);
+            }
         }
 
         private void Update()
