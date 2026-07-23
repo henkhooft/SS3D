@@ -27,7 +27,8 @@ using `Vector3.zero` as an “unset point” sentinel (TECH_DEBT 1.3).
 - `InteractionEntry.IsSourceOnly` + `SourceOnly` factory; Drop uses the factory; `FilterForOutline` filters on `IsSourceOnly`.
 - `CreateSourceInteractions` / `GetSourceInteractions` take discover `context`; health extensions use `context.WithTarget`.
 - `InteractionController` builds no-point events when selection point resolve fails.
-- EditMode: Discover merge, source-only, HasPoint at world origin (`InteractionPipelineTests`, `InteractionRangeCheckTests`).
+- EditMode: Discover merge, source-only, HasPoint at world origin (`InteractionPipelineTests`, `InteractionRangeCheckTests`) — 17 passed.
+- Ship commit: `0499ab7cd`.
 
 ## Out of scope (still open)
 

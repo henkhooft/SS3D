@@ -329,7 +329,7 @@ Discover semantics locked: candidates vs `FilterAndSort` viability; `Interaction
 receives hit `context`. Pickable≠rangeable (missing wall-mount colliders) remains open under the
 framework map.
 
-- **Closed by:** this session's Discover contract work ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
+- **Closed by:** `0499ab7cd` on `cursor/interaction-discover-contract` ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
 - **Not in this close:** forcing one extension gate style; `InteractionController` decomposition (1.9).
 - Related: [interactions-framework.md](systems/interactions-framework.md), [interactions-runtime.md](systems/interactions-runtime.md)
 

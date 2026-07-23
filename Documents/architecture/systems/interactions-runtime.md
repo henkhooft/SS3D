@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 011659a01 — 2026-07-23
+> Verified: 0499ab7cd — 2026-07-23
 
 # Interactions (runtime)
 

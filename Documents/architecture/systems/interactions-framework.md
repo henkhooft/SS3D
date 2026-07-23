@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Interactions/
 > Entry points: IInteraction, IInteractionSource, IInteractionTarget, InteractionPipeline, InteractionIdentifier
 > Status: shipped
-> Verified: 011659a01 — 2026-07-23
+> Verified: 0499ab7cd — 2026-07-23
 
 # Interactions (framework)
 
