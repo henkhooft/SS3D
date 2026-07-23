@@ -59,7 +59,8 @@ flowchart TB
 Hidden blockers this sketch makes explicit (each its own future pass):
 
 - **Jobs need a job-select UI, and the lobby is condemned.** S1 can't ship on the condemned uGUI
-  lobby; it needs either the deferred lobby UITK redesign ([lobby.md](../design/lobby.md)) or a
+  lobby; it needs the lobby UITK redesign ([lobby.md](../design/lobby.md)) — now
+  implementation-ready per the owner (UI direction settled), a parallel track to commission — or a
   minimal replacement path. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
   [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); access presets come
   from [id-access.md](../design/id-access.md) §5.
