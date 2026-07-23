@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: 20f4fbaa7 — 2026-07-22
+> Verified: 90e26cdc2 — 2026-07-23
 
 # Area
 
@@ -15,7 +15,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Area/AreaSubSystem.cs` — registry, APC lifecycle, rebuild; `TryResolveAreaIdForDevice` / lighting snapshot sync
+- `Assets/Scripts/SS3D/Systems/Area/AreaSubSystem.cs` — registry, APC lifecycle, rebuild; `IWorldReady`; notifies `AreasFlooded` after deferred flood; `TryResolveAreaIdForDevice` / lighting snapshot sync
 - `Assets/Scripts/SS3D/Systems/Area/AreaFloodFillService.cs` — BFS from APC seeds, door-tile post-pass
 - `Assets/Scripts/SS3D/Systems/Area/AreaBoundaryEvaluator.cs` — walkability and expansion blocking rules
 - `Assets/Scripts/SS3D/Systems/Area/AreaRegistry.cs` — `AreaRecord` storage and APC reverse lookup
@@ -45,7 +45,8 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Resolve effective APC for a device: `AreaSubSystem.TryGetEffectiveApcForDevice`.
 - Area rebuild / APC lifecycle invalidates electricity's per-APC consumer index via `ElectricitySubSystem.InvalidateAreaConsumerIndex`.
 - Query lighting by tile: `IAreaLightingStateSource.TryGetLightingStateForTile`.
-- Subscribe to area lighting transitions: `OnAreaLightingStateChanged` (do **not** gate on `IsSetUp` — pure clients never set it).
+- Subscribe to area lighting transitions: `OnAreaLightingStateChanged` (do **not** gate on obsolete `IsSetUp` — use `IWorldReady` / lighting snapshot; pure clients never flood).
+- World readiness: after `EndDeferredAreaFlood`, notify `WorldReadinessSubSystem.NotifyAreasFlooded` — consumers await `AreasFlooded` / `WorldReady`, not `OnMapCreated`.
 - Toggle area fixture lighting: `ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting breaker in MI).
 - Subscribe to wall-switch changes: `OnAreaLightingSwitchChanged`.
 - Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); clients read via `TryGetDepartmentalLightTint`.
@@ -58,7 +59,8 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 - **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood`. Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
 - **Light switch usable from across the room:** prefab had no collider, selection never resolved a point, and `RangeCheck` treated zero point as unlimited — see [interactions-framework](interactions-framework.md) Pitfalls. LightSwitch now has a BoxCollider; RangeCheck falls back to target transform.
-- **Client fixtures stay stuck on/off (host OK):** Host fixture logic can read the area APC; pure clients cannot. `LightPower` is a `NetworkActor` with SyncVar `_fixtureVisual` — server computes Off/Normal/Emergency, clients only apply. Do not gate client visuals on `AreaSubSystem.IsSetUp` or re-derive emit from floor-cache alone.
+- **Client fixtures stay stuck on/off (host OK):** Host fixture logic can read the area APC; pure clients cannot. `LightPower` is a `NetworkActor` with SyncVar `_fixtureVisual` — server computes Off/Normal/Emergency, clients only apply. Do not gate client visuals on obsolete `IsSetUp` or re-derive emit from floor-cache alone.
+- **Act before flood:** registration ≠ readiness — await `WorldReadyPhase.AreasFlooded` (see [core-subsystems](core-subsystems.md)).
 
 ## Depends on / Used by
 
@@ -72,4 +74,5 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Architecture effort: [2026-07_area-foundation](../2026-07_area-foundation.md)
 - Architecture effort: [2026-07_mi-area-electricity-debt](../2026-07_mi-area-electricity-debt.md)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
+- Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Design (read-only): [Documents/design/area.md](../../design/area.md)

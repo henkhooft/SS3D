@@ -53,7 +53,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
-| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — in-progress (session-FSM symptom + client-lighting-parity case shipped via PR #36; general world-readiness graph and code bootstrap/`NetworkSystemsHub` still open) | [networking-session](systems/networking-session.md) — partial |
+| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — shipped | [networking-session](systems/networking-session.md) — partial |
 | audio | [audio.md](../design/audio.md) — active | none yet | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
@@ -80,14 +80,14 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Core / SubSystems | [core-subsystems](systems/core-subsystems.md) | shipped | `SubSystem` / `NetworkSubSystem` base types and `SubSystems` service locator; scene registration legacy — target code bootstrap |
-| Application | [application](systems/application.md) | stub | App bootstrap and startup; Boot/Game as thin launch pads |
-| Networking (session) | [networking-session](systems/networking-session.md) | partial | FishNet host/join session management; headless dedicated-server build; real multi-process test harness |
-| Scene management | [scene-management](systems/scene-management.md) | stub | Scene loading and switching; not a system composition root |
+| Core / SubSystems | [core-subsystems](systems/core-subsystems.md) | partial | `SystemsBootstrap` DDOL + `NetworkSystemsHub` Online; `IWorldReady` / readiness graph; locator silent while WaitingForServer |
+| Application | [application](systems/application.md) | stub | `ApplicationInitializerSubSystem` via SystemsBootstrap (DDOL); Boot is launch pad only |
+| Networking (session) | [networking-session](systems/networking-session.md) | partial | SessionState FSM + Empty offline; NetworkSystemsHub holds Game SubSystems; harness + headless |
+| Scene management | [scene-management](systems/scene-management.md) | stub | SceneSubSystem DDOL; `Scenes.Empty` offline after first Online |
 | UI shell | [ui-shell](systems/ui-shell.md) | partial | UITK composition root; `UiShellSubSystem` + shared catalog/animator/binder scaffolding shipped, radial + armed migrated; MI/Main HUD path catalogs still separate (duplicated), migration deferred |
 | Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; see map § Architecture smells |
 | Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references; one-off Editor rebuild menus are tracked debt; Addressables configured but unused (all assets eager-loaded) — migration planned: [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) |
-| Persistence | [persistence](systems/persistence.md) | partial | Contributor-based station templates (tilemap, areas, spawn-points) and server meta (permissions, round history) |
+| Persistence | [persistence](systems/persistence.md) | partial | Station templates + server meta; restore resets world-readiness epoch and notifies TileMapLoaded |
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | Permissions | [permissions](systems/permissions.md) | partial | Admin permission checks; persisted via [persistence](systems/persistence.md) envelope with legacy txt fallback |
@@ -101,10 +101,10 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial menu, armed interactions, outlines; Harm melee swing + intent↔stance; `C` double-bound with Cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
-| Tile / construction | [tile](systems/tile.md) | partial | Tilemap, adjacency, single-step construction placement; TileMap Creator uGUI condemned; `TileCoord` must be `IEquatable` for dict keys; staged build ladder (construction.md §1-2) unbuilt; Map Editor Spawn Placements authoring + `spawn-points` template chunk shipped (runtime role→point deferred) |
-| Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; GPU fog/fire on server/host only — client VFX sync planned; tick GC pitfalls documented (upload/pipes) |
-| Area | [area](systems/area.md) | partial | APC-seeded flood-fill, area power, client lighting snapshot + floor-cache area ids, wall light switches |
-| Electricity | [electricity](systems/electricity.md) | partial | kWh storage, HV cable grid, APC/SMES/generators, consumer visuals; client LightPower via area snapshot |
+| Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
+| Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; GPU VFX server/host only (client sync planned) |
+| Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |
+| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; awaits AreasFlooded → ElectricityReady; client LightPower SyncVar |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat drains deferred |
@@ -113,8 +113,8 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, camera-ray connect (exclude self); `C`/chip toggles intent→stance; reticle lock-on + cross flash; disarm/ranged/armor deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
-| Disposal | [disposal](systems/disposal.md) | partial | Item network: BFS pipes, chute SizeClass gate, capsules, outlet grace/despawn; pipe craft, Cargo, player transit deferred |
-| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; lobby UI condemned pending lobby.md redesign |
+| Disposal | [disposal](systems/disposal.md) | partial | Item disposal network; awaits TileMapLoaded → DisposalReady; pipe craft / Cargo / player transit deferred |
+| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; PrepareRound awaits WorldReady; lobby UI condemned |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | partial | Player subsystem, connect/authorize/disconnect lifecycle (incl. reconnect-to-body), and input routing |
 | Chat / audio / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech chips + T-compose; always-on chat UI Phase 0 purged (headless ChatSubSystem); audio/camera; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |
@@ -153,7 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) | in-progress (clean-slate + stamina 7a code shipped; Play Mode verification pending) |
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
 | [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch; default Windows+bats prerelease; Linux/EditMode/smoke opt-in) |
-| [2026-07_session-world-lifecycle](2026-07_session-world-lifecycle.md) | in-progress (Phase 1 session-storm symptom shipped via PR #36; Phase 2 client-lighting-parity case shipped via same PR, general readiness graph still open; Phase 3 code bootstrap + `NetworkSystemsHub` — realizes agent-first-composition (a) — still open) |
+| [2026-07_session-world-lifecycle](2026-07_session-world-lifecycle.md) | shipped |
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |

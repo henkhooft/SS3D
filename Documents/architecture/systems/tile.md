@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: cb23f6549 — 2026-07-21
+> Verified: 5db5299b1 — 2026-07-23
 
 # Tile / construction
 
@@ -50,10 +50,11 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - Dynamic passability: implement `IDynamicTileOccupant` and call `TileSubSystem.NotifyTileStateChanged` when state changes (see [furniture](furniture.md) airlocks).
 - HV cables (`CablesAdjacencyConnector`): underfloor Wire-layer runs link grid backbone devices only; see [electricity](electricity.md) `ElectricCableConnectivity`.
 - Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move, Delete, Dropper; toolbar hotkeys **1–4** = Construct / Select / Dropper / Delete (gated while `InputInterface.IsCapturingText`). **Ctrl/Cmd+Shift+O** opens Map Selection (plain Ctrl+O is Unity File/Open Scene); **Ctrl/Cmd+Shift+S** quicksaves (else opens Save Map). Camera pan ignores Ctrl/Cmd/Alt so modifier+S does not also move. Place/delete/decals/spawns go through `SubmitCommands` → `MapEditorCommandFactory` → `ExecuteCompound` (one undo step per drag). Ctrl+Z/Y gated while typing. **Phase 2 (deferred):** per-builder stacks + concurrent-edit validity ([creative-mode.md](../../design/creative-mode.md) §6). Placement hard-blocked by `BuildChecker` (`BuildFailReason` toasts). Delete/eraser scopes to library subcategory (`MapEditorDeleteTargeting`; wall-mount face = hologram direction). Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places/clears sparse `floorDecalIds` via undoable `SetFloorDecal` commands. **Spawn Placements** (Scripting) places job/antag markers via `PlaceSpawnPoint` / `ClearSpawnPoint` (plenum required); RandomSpawners/Triggers/Atmospherics Scripting remain stubs. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
-- Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`); server boot also calls `LoadServerMeta`. Unknown/removed tile SO names are skipped on load.
+- Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`). Unknown/removed tile SO names are skipped on load. End-of-restore notifies world readiness `TileMapLoaded` (via Persistence) — **not** `OnMapCreated`. Server-meta boot is owned by Persistence, not Tile.
 
 ## Pitfalls
 
+- **`OnMapCreated` ≠ map ready.** Domains must await `WorldReadyPhase.TileMapLoaded` ([core-subsystems](core-subsystems.md)); `OnMapCreated` fires when the map object exists but tiles may still be placing.
 - **Spawn markers vanish after loading an old template:** `TileMap.Clear` (called on every template restore) clears `SpawnPoints`. Templates without a `spawn-points` chunk intentionally stay empty — do not skip that clear or stale markers from the previous map survive.
 - **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.
 - **Dropper / Select always copied Plenum:** tile-location arrays are enum-ordered with Plenum at index 0, so a naive foreach sampled the base tile under every click. Use `MapEditorCursorPick` (physics hit when available, else furniture→turf→plenum priority; prefer visible layer groups).
@@ -103,4 +104,5 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - Plan: [map_editor_undo_redo.plan.md](../../plans/map_editor_undo_redo.plan.md)
 - Plan: [map_editor_build_delete.plan.md](../../plans/map_editor_build_delete.plan.md)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
+- Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Plan: [tile_overlay_replacement.plan.md](../../plans/tile_overlay_replacement.plan.md)

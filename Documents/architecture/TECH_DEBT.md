@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-23
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -141,24 +141,9 @@ deleting it.
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
-**Blast radius: medium — trend: getting worse (fix now scheduled)**
-
-[core-subsystems.md](systems/core-subsystems.md) calls Boot/Game scene-placed subsystem registration
-"legacy," with code bootstrap as the stated target
-([2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**). In the
-meantime, individual systems have each invented their own escape hatch:
-`ScreenEffectsSubSystem` self-bootstraps via `RuntimeInitializeOnLoadMethod`; `AutomationSubSystem`
-self-bootstraps with a no-op guard; Comms/local-speech is wired into `Game.unity` and `Human.prefab`
-manually and calls out that a fresh scene/prefab can silently lose that wiring. There are now (at
-least) three different "how does a new system get into the running game" answers with no single
-place documenting which one a new feature should pick.
-
-Follow-on **(a)** is now scheduled: [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
-Phase 3 owns the code bootstrap + `NetworkSystemsHub` that collapses these three styles (its Phase 2
-world-readiness `DependsOn` graph is the dependency-ordering the hub needs). Still `planned`, so
-"getting worse" holds until it ships.
-
-- Related: [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+**Resolved 2026-07-23** for gameplay SubSystems — see [§6 Resolved](#6-resolved). Residual UI-host
+`RuntimeInitializeOnLoad` self-bootstraps (UiShell / MainHud / StoragePanel) stay under agent-first
+follow-on **(b)**, not this item.
 
 ### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
 
@@ -226,17 +211,16 @@ early and expensive to reinstate once thousands of lines have drifted.
 
 ### 1.12 Scene-wide `FindObjectsByType` calls in gameplay code, not just Editor tooling
 
-**Blast radius: low-medium — trend: stable**
+**Blast radius: low-medium — trend: improving for locator; Item/Locker scans unchanged**
 
 Ten call sites use `FindObjectOfType`/`FindObjectsByType` for O(n) scene scans. Most are legitimately
 Editor-only (catalog builders, debug gizmo drawers) or dev-bypass toggles, which is fine. Three are
 not: `TileMap.cs` scans every `Item` in the scene (`FindObjectsOfType<Item>()`), `Locker.cs` scans
 every `ContainerViewer`, and — more structurally — `Core/Subsystems.cs`, the service locator every
-domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache. As
-station population and prop density grow, these scans get proportionally more expensive on paths that
-were supposed to be O(1) lookups. The locator fallback specifically is scheduled to be relaxed toward
-`TryGet` + ready (missing-during-`WaitingForServer` silent) by
-[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3.
+domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache.
+The locator fallback is now skipped while quitting **and** while `WaitingForServer`
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3 scaffolding);
+prefer `TryGet` + ready. Hot-path Item/Locker scans remain.
 
 - Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
@@ -313,33 +297,10 @@ started.
 
 - Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 
-### 1.16 No formal session/world lifecycle contract — one symptom fixed, structural gap remains
+### 1.16 Session/world lifecycle — shipped; optional backoff remains
 
-**Blast radius: high — trend: symptom fixed 2026-07-23 (PR #36); structural contract still open**
-
-FishNet `DefaultScene` used **offline = Boot** (`Boot.unity:281-288`), so any disconnect reloaded Boot
-as a *Single* scene under the DontDestroyOnLoad `NetworkManager` → duplicate managers +
-`ApplicationInitializerSubSystem.OnStart()` re-firing the whole
-`ApplicationPreInitializing → Initializing → Initialized` chain (the "Boot storm"), re-driving
-`IntroUIHelper`/`SkipIntro` into repeated `StartNetworkSession` ("already starting/started"). **PR #36
-(`cursor/client-light-fixture-sync` → `develop`, 2026-07-23) fixed this concrete symptom**: new
-`ClientConnectionRecovery.cs` arms `Empty.unity` as offline after the first successful connect (so Boot
-is never reloaded on a later disconnect) and provides a working Retry;
-`NetworkSessionSubSystem.CanStartNetworkSession` guards re-entrant starts. Same PR also fixed the
-concrete client/host divergence example this item cited (client light-fixture area/lighting parity —
-see [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) §3a for what shipped).
-
-**What's still missing is the formal contract, not the symptom.** There is still no named-state session
-FSM (`NetworkSessionSubSystem` remains imperative, just better-guarded) and no general world-readiness
-graph — round start is still time-driven (`RoundSubSystem.PrepareRound`'s fixed 500 ms + warmup,
-unaffected by PR #36), and `IsSetUp`/`InitializeWhenMapReady()`/raw event-subscription readiness idioms
-still coexist for Area/Electricity/Atmos/Disposal. This is the same class of "act before the
-prerequisite is real" as 1.7 (bootstrap) — one hole, two faces, one face now patched at the symptom
-level. [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) §2 (optional FSM
-formalization) and §3b (general readiness graph, still required) track what's left; doc `Status` is
-now `in-progress`.
-
-- Related: [networking-session.md](systems/networking-session.md) § Pitfalls, [scene-management.md](systems/scene-management.md), [area.md](systems/area.md) § Pitfalls, [electricity.md](systems/electricity.md) § Pitfalls, [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved). Optional reconnect exponential backoff and
+UI-host consolidation remain deferred elsewhere (not reopen criteria for this item).
 
 ---
 
@@ -395,7 +356,31 @@ not quality problems.
 ## 6. Resolved
 
 *(Move items here with the PR/commit that closed them, so the register shows real progress rather
-than only growing.)*
+than only growing. Keep a one-line stub under the old §1.x number so external citations still resolve.)*
 
-- None yet — this doc was created 2026-07-21 as an initial audit; the first item paid down against
-  this list should start this section.
+### 1.7 Legacy scene-based subsystem registration (gameplay) — 2026-07-23
+
+Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
+(Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h).
+
+- **Closed by:** `b74f47123` (Phase 3h hub + scene strip); post-ship hardening `ab79afee2` (ServerMeta
+  boot ownership), `b57f3974e` (PlayerCamera lazy resolve); smoke hardening (Selection/Armed
+  `TryGet`, Disconnecting suppress).
+- **Not in this close:** UiShell / MainHud / StoragePanel `RuntimeInitializeOnLoad` — agent-first
+  follow-on **(b)**. Also residual: content-prefab `SubSystem`s (PlayerCamera / Radial / Armed /
+  MapEditor) that still register when Game loads before hub Online — consumers use `TryGet` until
+  those move to bootstrap/hub ([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)).
+- Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+
+### 1.16 Session/world lifecycle — 2026-07-23
+
+Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
+`NetworkSystemsHub` shipped under
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
+
+- **Closed by:** `77f4d9798` / `84401b2fe` / `b74f47123` (phases 1–3h); follow-up Play Mode fixes on
+  `cursor/session-world-lifecycle` as above.
+- **Deferred elsewhere (do not reopen this item):** reconnect exponential backoff; UI-host bootstrap
+  consolidation.
+- Related: [networking-session.md](systems/networking-session.md), [core-subsystems.md](systems/core-subsystems.md)

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Permissions/
 > Entry points: PermissionSubSystem
 > Status: partial
-> Verified: d592fb12a — 2026-07-18
+> Verified: 5db5299b1 — 2026-07-23
 
 # Permissions
 
@@ -21,6 +21,7 @@ Admin permission checks for server-gated actions (e.g. TileMap Creator RPCs). Pe
 
 ## Pitfalls
 
+- **`HasLoadedPermissions` gates lobby start:** `ChangeRoundStateView` requires the SyncVar **and** `IsAtLeast(…, Administrator)`. That flag is set only by ServerMeta import / legacy load (`ImportUserPermissions` / `LoadPermissionsFromLegacyTxt`) — not by host `ChangeUserPermission`. If lobby says permissions not loaded despite a ServerOwner grant log, ServerMeta never imported (see [persistence](persistence.md)).
 - On a fresh server with no saved envelope yet, `PermissionsPersistenceContributor.Restore` falls through to `LegacyPermissionsMigrator.TryLoadFromLegacyTxt` — **not** `PermissionSubSystem`'s own `LoadPermissionsFromLegacyTxt` fallback (that only fires if `HasLoadedPermissions` is still false by the time something calls `TryGetUserRole`, which the persistence contributor's restore beats it to on boot). Both read the same `Config/permissions.txt` path. An existing `Data/ServerMeta/permissions.json` wins and the legacy file is never consulted — smoke triage symptom: `User harness_… doesn't have Administrator` despite a seeded `permissions.txt`. `run_smoketest.sh` deletes the staged ServerMeta permissions file before seeding the txt so the migrator path runs.
 
 ## Depends on / Used by

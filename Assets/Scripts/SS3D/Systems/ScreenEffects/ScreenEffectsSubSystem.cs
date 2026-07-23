@@ -23,21 +23,7 @@ namespace SS3D.Systems.ScreenEffects
     /// </summary>
     public sealed class ScreenEffectsSubSystem : SubSystem
     {
-        // Bootstraps itself instead of living in Boot.unity like the other persistent subsystems, since hand-editing
-        // scene YAML outside the Unity Editor isn't safe. Move this into Boot.unity later if preferred - the
-        // behaviour is identical, this is just how it gets into the scene without an Editor session.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (SubSystems.TryGet(out ScreenEffectsSubSystem _))
-            {
-                return;
-            }
-
-            GameObject host = new(nameof(ScreenEffectsSubSystem));
-            DontDestroyOnLoad(host);
-            host.AddComponent<ScreenEffectsSubSystem>();
-        }
+        // Bootstrapped by SystemsBootstrap (process-wide DDOL).
 
         private const float HitFlashAttack = 0.03f;
         private const float HitFlashDecay = 0.35f;

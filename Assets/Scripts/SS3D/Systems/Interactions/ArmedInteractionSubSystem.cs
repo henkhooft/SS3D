@@ -31,23 +31,26 @@ namespace SS3D.Systems.Interactions
 
         public ArmedInteractionState CurrentState => _state;
 
-        protected override void OnAwake()
-        {
-            base.OnAwake();
-
-            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
-        }
-
         protected override void OnEnabled()
         {
             base.OnEnabled();
-            _selectionSystem.OnSelectableChanged += HandleSelectableChanged;
+
+            // Selection lives on NetworkSystemsHub; Armed may OnEnable before Selection registers
+            // (hub behaviour order) or during FishNet scene-object flash before the hub exists.
+            if (TryResolveSelection())
+            {
+                _selectionSystem.OnSelectableChanged += HandleSelectableChanged;
+            }
         }
 
         protected override void OnDisabled()
         {
             base.OnDisabled();
-            _selectionSystem.OnSelectableChanged -= HandleSelectableChanged;
+
+            if (_selectionSystem != null)
+            {
+                _selectionSystem.OnSelectableChanged -= HandleSelectableChanged;
+            }
         }
 
         protected override void OnDestroyed()
@@ -114,7 +117,7 @@ namespace SS3D.Systems.Interactions
 
         private void RefreshHoverState()
         {
-            if (!IsArmed || _overlayView == null)
+            if (!IsArmed || _overlayView == null || !TryResolveSelection())
             {
                 return;
             }
@@ -127,6 +130,16 @@ namespace SS3D.Systems.Interactions
 
             ArmedTargetEvaluation evaluation = EvaluateHover(selectable);
             _overlayView.SetTargetState(evaluation.HasTarget, evaluation.IsValid);
+        }
+
+        private bool TryResolveSelection()
+        {
+            if (_selectionSystem != null)
+            {
+                return true;
+            }
+
+            return SubSystems.TryGet(out _selectionSystem);
         }
 
         private ArmedTargetEvaluation EvaluateHover(Selectable selectable)

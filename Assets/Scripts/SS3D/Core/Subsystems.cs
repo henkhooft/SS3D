@@ -24,10 +24,21 @@ namespace SS3D.Core
         /// </summary>
         private static bool _isQuitting;
 
+        /// <summary>
+        /// When true, missing <see cref="Get{T}"/> lookups stay silent (WaitingForServer / offline Empty
+        /// after Boot unload — same class as teardown).
+        /// </summary>
+        private static bool _suppressMissingErrors;
+
         static SubSystems()
         {
             UnityEngine.Application.quitting += () => _isQuitting = true;
         }
+
+        /// <summary>
+        /// Suppresses missing-subsystem Errors while disconnected / waiting to reconnect.
+        /// </summary>
+        public static void SetSuppressMissingErrors(bool suppress) => _suppressMissingErrors = suppress;
 
         /// <summary>
         /// Tries to get a subsystem at runtime, make sure there's no duplicates of said subsystem before using.
@@ -44,6 +55,8 @@ namespace SS3D.Core
 
         /// <summary>
         /// Gets any system at runtime, make sure there's no duplicates of said system before using.
+        /// Prefer <see cref="TryGet{T}"/>. FindObject fallback is legacy (TECH_DEBT §1.12) and skipped
+        /// while quitting or waiting-for-server.
         /// </summary>
         /// <typeparam name="T">The Type of object you want to get.</typeparam>
         /// <returns>The found subsystem</returns>
@@ -54,6 +67,11 @@ namespace SS3D.Core
                 return match as T;
             }
 
+            if (_isQuitting || _suppressMissingErrors)
+            {
+                return null;
+            }
+
             UnityEngine.Object subsystem = UnityEngine.Object.FindObjectOfType(typeof(T), true);
 
             if (subsystem != null)
@@ -62,13 +80,10 @@ namespace SS3D.Core
                 return subsystem as T;
             }
 
-            if (!_isQuitting)
-            {
-                string message = $"Couldn't find subsystem of {typeof(T).Name} in the scene";
+            string message = $"Couldn't find subsystem of {typeof(T).Name} in the scene";
 
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-                Log.Error(typeof(SubSystems), message, Logs.Important);
-            }
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
+            Log.Error(typeof(SubSystems), message, Logs.Important);
 
             return null;
         }

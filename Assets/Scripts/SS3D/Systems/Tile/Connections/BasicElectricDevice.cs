@@ -18,10 +18,10 @@ namespace SS3D.Systems.Tile.Connections
             base.OnStartServer();
 
             ElectricitySubSystem electricitySystem = SubSystems.Get<ElectricitySubSystem>();
-            if (electricitySystem.IsSetUp)
+            if (electricitySystem.IsReady)
                 electricitySystem.AddElectricalElement(this);
             else
-                electricitySystem.OnSystemSetUp += OnElectricitySystemSetup;
+                electricitySystem.WhenReady += OnElectricitySystemSetup;
         }
 
         protected override void OnDestroyed()
@@ -34,13 +34,14 @@ namespace SS3D.Systems.Tile.Connections
                 return;
             }
 
-            electricitySystem.OnSystemSetUp -= OnElectricitySystemSetup;
+            electricitySystem.WhenReady -= OnElectricitySystemSetup;
             electricitySystem.RemoveElectricalElement(this);
         }
 
         private void OnElectricitySystemSetup()
         {
             ElectricitySubSystem electricitySystem = SubSystems.Get<ElectricitySubSystem>();
+            electricitySystem.WhenReady -= OnElectricitySystemSetup;
             electricitySystem.AddElectricalElement(this);
         }
     }

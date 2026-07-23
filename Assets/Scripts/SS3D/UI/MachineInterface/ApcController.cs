@@ -93,24 +93,24 @@ namespace SS3D.UI.MachineInterface
             _storedEnergyKwh = _maxCapacityKwh;
 
             ElectricitySubSystem electricitySystem = SubSystems.Get<ElectricitySubSystem>();
-            if (electricitySystem.IsSetUp)
+            if (electricitySystem.IsReady)
             {
                 RegisterWithElectricity(electricitySystem);
             }
             else
             {
-                electricitySystem.OnSystemSetUp += OnElectricitySystemSetup;
+                electricitySystem.WhenReady += OnElectricitySystemSetup;
             }
 
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
-                if (areaSubSystem.IsSetUp)
+                if (areaSubSystem.IsReady)
                 {
                     areaSubSystem.RegisterApc(this);
                 }
                 else
                 {
-                    areaSubSystem.OnSystemSetUp += OnAreaSystemSetup;
+                    areaSubSystem.WhenReady += OnAreaSystemSetup;
                 }
             }
         }
@@ -169,7 +169,7 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
-                areaSubSystem.OnSystemSetUp -= OnAreaSystemSetup;
+                areaSubSystem.WhenReady -= OnAreaSystemSetup;
                 if (IsServer)
                 {
                     areaSubSystem.UnregisterApc(this);
@@ -178,7 +178,7 @@ namespace SS3D.UI.MachineInterface
 
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
-                electricitySystem.OnSystemSetUp -= OnElectricitySystemSetup;
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
                 if (IsServer)
                 {
                     electricitySystem.RemoveElectricalElement(this);
@@ -365,8 +365,8 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
+                areaSubSystem.WhenReady -= OnAreaSystemSetup;
                 areaSubSystem.RegisterApc(this);
-                areaSubSystem.OnSystemSetUp -= OnAreaSystemSetup;
             }
         }
 
@@ -374,6 +374,7 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
                 RegisterWithElectricity(electricitySystem);
             }
         }

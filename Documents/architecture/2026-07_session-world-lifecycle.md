@@ -1,6 +1,6 @@
 > Implements: infrastructure — session/scene lifecycle & world readiness; realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on (a) (code bootstrap + `NetworkSystemsHub`); session/reconnect behavior per [design/networking.md](../design/networking.md) §2–§5
 > Touches systems: networking-session, scene-management, application, core-subsystems, tile, area, electricity, atmospherics, rounds-lobby, player-control, persistence, disposal
-> Status: in-progress (Phase 1 symptom shipped, Phase 2 client-parity case shipped — both via PR #36, landed independently of this doc's phasing; general world-readiness graph and Phase 3 still open)
+> Status: shipped
 
 # Session & world lifecycle
 
@@ -8,11 +8,29 @@ Server/client init, disconnect handling, and round start are fragile because **p
 never modeled**. This effort replaces the ad-hoc init/reconnect bandages with two explicit contracts —
 a **session lifecycle FSM** and a **world readiness graph** — and lands them on the code-bootstrap
 foundation that [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on
-**(a)** and [TECH_DEBT.md](TECH_DEBT.md) §1.7 already name but leave unscheduled.
+**(a)** and [TECH_DEBT.md](TECH_DEBT.md) §1.7 name.
 
-Sequenced in three phases; **Phase 1 is a standalone shippable slice** (the emergency brake on the
-disconnect error storm). Phase 2 removes the init races and host/client divergence. Phase 3 makes 1+2
-the only way systems appear.
+Sequenced in three phases; all shipped 2026-07-23.
+
+**Update 2026-07-23 (Phase 3h):** Boot Persistent Systems and Game Systems SubSystems emptied via
+`SS3D/Bootstrap/Phase 3h — Rebuild Hub + Strip Boot & Game`. Process-wide services live in
+`SystemsBootstrap` (DDOL); world/session `NetworkSubSystem`s live on `NetworkSystemsHub` Resources
+prefab (spawned Online). Empty parent roots (`Persistent Systems` / `Systems` + EventSystem) may
+remain in scenes as launch pads only.
+
+**Post-ship hardening (same branch):** hub spawn exposed Awake/`OnStartServer` vs Unity `Start` and
+hub-before-Game ordering — Persistence now owns `LoadServerMeta` (contributors in `OnAwake`);
+`CameraSubSystem.PlayerCamera` lazy-resolves after Game’s MainCamera exists; do **not** re-run the
+Phase 3h “Rebuild Hub + Strip” menu (Game no longer has SerializeField sources). TECH_DEBT §1.7 /
+§1.16 are in [TECH_DEBT.md](TECH_DEBT.md) §6 Resolved.
+
+**Residual (not Phase 3 scope):** Boot/Game *systems roots* are empty, but some **content prefabs**
+still carry `SubSystem` components that register when Game loads — before `NetworkSystemsHub` is
+Online (e.g. `PlayerCamera` + `SelectionCamera`, Radial/Armed overlay prefabs, MapEditor canvas).
+Smoke hardening on this branch uses consumer `TryGet` / lazy resolve (same pattern as PlayerCamera)
+and starts `SetSuppressMissingErrors` on **Disconnecting** so hub/device teardown Gets stay silent.
+Relocating those leftover prefab SubSystems onto `SystemsBootstrap` / the hub is follow-on cleanup,
+not a contradiction of Phase 3.
 
 ## 1. Problem & non-goals
 
@@ -39,31 +57,27 @@ harness-only redirect (`AutomationSubSystem.RedirectOfflineSceneToEmpty`) is now
 top of the universal fix rather than the only mitigation. See
 [networking-session.md](systems/networking-session.md) Pitfalls for the updated account.
 
-**What this fix is not:** an explicit named-state session FSM (`Cold → Connecting → Online → …`). It's
-a targeted pair of guards plus a small recovery component — the *behavioral contract* Phase 1 below
-asks for is met (offline is never Boot after first join; retry actually retries), but there is still
-no single state enum a future feature could branch on. Formalizing that remains optional polish, not
-required follow-up — see §2.
+**Update (same day, implementation branch):** Phase 1 also landed the named `SessionState` FSM on
+`ClientConnectionRecovery`, `Scenes.Empty` / `Scenes.EmptyPath` codegen, Cold-only Intro auto-join, and
+silent `SubSystems.Get` while `WaitingForServer`. See §2.
 
 **Face B — world readiness.** Subsystems register in Unity `Awake` (`SubSystem`/`NetworkSubSystem.OnAwake`
 → `SubSystems.Register`) but do real setup later in `OnStartServer`/`OnStartClient` and only become
-*functional* after `TileMap.OnMapLoaded`. **Registration ≠ readiness.** Three incompatible readiness
-idioms coexist: `IsSetUp` + `OnSystemSetUp` (Area, Electricity), `InitializeWhenMapReady()` UniTask poll
-(Atmos, Disposal), and raw `OnMapCreated`/`OnMapLoaded` subscription. Round start is **time-driven**
-(`RoundSubSystem.PrepareRound` waits a fixed 500 ms + warmup) and independent of world readiness, so
-`SpawnReadyPlayersEvent` can fire on `Ongoing` before flood-fill/atmos init complete — this half of
-Face B is **still unaddressed** (see §3b).
+*functional* after the map is actually loaded. **Registration ≠ readiness.** Historically three
+incompatible idioms coexisted (`IsSetUp`/`OnSystemSetUp`, UniTask polls on `CurrentMap != null`, raw
+`OnMapCreated`/`OnMapLoaded`). Round start was time-driven (`PrepareRound` fixed 500 ms), so
+`SpawnReadyPlayersEvent` could fire before flood-fill/atmos init. **§3b shipped** the general
+`IWorldReady` / `WorldReadinessSubSystem` graph and gates `PrepareRound` on `WorldReady` — see §3b.
+Obsolete `IsSetUp` shims remain on Area/Electricity for call sites not yet migrated.
 
 The specific client/host divergence this doc originally called out — flood-fill and `TileChunk._areaIds`
 being server-only and never replicated, plus non-`BufferLast` lighting RPCs, so a client's `LightPower`
 couldn't resolve area or lighting state — was the bug class `cursor/client-light-fixture-sync` was
 chasing. **It shipped 2026-07-23** (PR #36); see §3a for what landed and why it validates this doc's
-client-parity contract without needing the general readiness graph.
+client-parity contract (orthogonal to the readiness graph).
 
-The Empty-offline / auto-retry work started as a harness-only bandage and has since been promoted to
-the universal fix for Face A (see the 2026-07-23 update above). The remaining proper fix — an explicit
-lifecycle that Boot, FishNet, and SubSystems currently only approximate — is now scoped to Face B
-(world readiness, §3) plus the optional FSM formalization named in §2.
+**Still open (deferred elsewhere):** reconnect exponential backoff; UiShell/MainHud/StoragePanel
+self-bootstraps (follow-on **(b)**); `Human.prefab` decomposition (follow-on **(d)**).
 
 **Non-goals.**
 - No prediction/rollback/lag-compensation/interpolation ([design/networking.md](../design/networking.md) §9 keeps
@@ -77,66 +91,38 @@ lifecycle that Boot, FishNet, and SubSystems currently only approximate — is n
 
 ## 2. Phase 1 — Session lifecycle FSM (standalone shippable slice)
 
-**Status: shipped (pragmatic form), 2026-07-23, via PR #36.** The behavioral contract below is met —
-offline is never Boot after the first join, and reconnect/retry actually reconnects — via
-`ClientConnectionRecovery.cs` + `NetworkSessionSubSystem.CanStartNetworkSession` +
-`ServerConnectionView`'s now-functional Retry, described in the Face A update above. What follows is
-the **original target shape** (an explicit named-state FSM); it is **not required** to get the
-acceptance criteria in §5 — those are already met. Treat this section as optional future
-consolidation (e.g. if a later feature needs to branch on "are we mid-reconnect" as a first-class
-state rather than inferring it from `SubSystems.TryGet<NetworkSessionSubSystem>()` presence, the way
-`ClientConnectionRecovery.HandleClientConnectionState` currently does).
-
-Promote `NetworkSessionSubSystem` (or a small DontDestroyOnLoad owner it holds) into an explicit FSM:
+**Status: shipped, 2026-07-23.** Behavioral contract met via PR #36 (Empty offline + retry guards);
+named FSM + Empty codegen landed on the same-day implementation pass (`cursor/session-world-lifecycle`).
 
 ```
 Cold → Connecting → Online → Disconnecting → WaitingForServer → Connecting → …
 ```
 
-Rules that kill the Boot storm:
+Owned by `ClientConnectionRecovery` (`SessionState` enum). Rules:
 
-- **Cold start** may load Boot/Intro **once**. `SkipIntro`/`IntroUIHelper` auto-join fires **only** on
-  cold start, never on reconnect.
-- **After any join attempt, offline is never Boot.** **Done** — `ClientConnectionRecovery` arms
-  `Empty.unity` as FishNet's offline scene after the first Started connection (both client and server
-  paths), so `ApplicationInitializerSubSystem` never re-fires on disconnect. Remaining formalization
-  only: give `Empty` a real codegen entry in `Data/Generated/Scenes.cs` (today it's a hardcoded path
-  string in both `ClientConnectionRecovery` and `AutomationSubSystem`) and fold the const into one
-  place.
-- **Reconnect** only after Boot is gone, via a manual Retry button. **Done in pragmatic form** —
-  `ClientConnectionRecovery`'s OnGUI Retry re-starts the connection directly from `NetworkSettings`
-  when `NetworkSessionSubSystem` isn't around (Boot unloaded), or calls `session.StartNetworkSession()`
-  when it still is; `ServerConnectionView`'s Retry does the latter for the pre-first-connect case.
-  **Not done:** exponential backoff (today's retry is a single manual button press, no automatic
-  2/4/8/16 s escalation) — still worth adding if disconnects prove to cluster around transient network
-  blips. Never reconnects via Intro/`SkipIntro` — confirmed unchanged.
-- **Online** loads Game once; **Disconnecting** tears Game down cleanly before entering
-  `WaitingForServer`.
-- `ApplicationInitializing` listeners are one-shot / owned via `Actor.AddHandle` so Boot cannot
-  multiply them — audit subscribers (`SceneSubSystem`, `NetworkSessionSubSystem` server-only,
-  `CommandLineArgsSubSystem`, and the `Tween`/`Assets`/`LocalSave` initialization triggers). Once
-  offline ≠ Boot after the first join, the storm's root cause is removed; keep the `AddHandle`
-  discipline as belt-and-suspenders.
+- **Cold start** may load Boot/Intro **once**. `SkipIntro`/`IntroUIHelper` auto-join fires **only** when
+  `SessionState.Cold`, never on reconnect.
+- **After any join attempt, offline is never Boot.** CCR arms `Scenes.EmptyPath` after first Online;
+  `AutomationSubSystem` redirect never restores Boot offline.
+- **Reconnect** via manual Retry (CCR OnGUI when Boot is gone; `ServerConnectionView` while Intro
+  remains). **Not done:** exponential backoff. Never via Intro/`SkipIntro`.
+- **Online** loads Game; **Disconnecting** → `WaitingForServer` with `SubSystems.SetSuppressMissingErrors`
+  so locator misses stay silent.
+- Prefer branching on `SessionState` / `ClientConnectionRecovery.Instance` over inferring session from
+  subsystem presence.
 
-`ClientConnectionRecovery`, `NetworkSessionSubSystem.CanStartNetworkSession`, and
-`ServerConnectionView`'s retry are unnamed pieces of an FSM — they satisfy the behavioral contract
-without ever naming a state. Formalizing them into the explicit enum above remains optional; nothing
-in §5's acceptance criteria requires it. Reconnect-to-body already works and is unchanged:
-`PlayerSubSystem.ProcessAuthorizePlayer` → `EntitySubSystem.TryReclaimEntity` implements
-[design/networking.md](../design/networking.md) §3 ("reconnecting hands control straight back").
+Reconnect-to-body unchanged: `PlayerSubSystem.ProcessAuthorizePlayer` →
+`EntitySubSystem.TryReclaimEntity` ([design/networking.md](../design/networking.md) §3).
 
-**Key files (as shipped):** `Networking/ClientConnectionRecovery.cs`,
+**Key files:** `Networking/SessionState.cs`, `Networking/ClientConnectionRecovery.cs`,
 `Networking/NetworkSessionSubSystem.cs`, `Networking/ServerConnectionView.cs`,
-`Networking/NetworkSessionStartedEvent.cs`, `SceneManagement/SceneSubSystem.cs`,
-`Systems/Intro/IntroUIHelper.cs`, `Systems/Testing/AutomationSubSystem.cs` (belt-and-suspenders
-redirect only, no longer the sole mitigation), `Data/Generated/Scenes.cs` (still missing `Empty`),
-and the FishNet `DefaultScene` config in `Assets/Content/Scenes/Boot.unity`.
+`Systems/Intro/IntroUIHelper.cs`, `Systems/Testing/AutomationSubSystem.cs`,
+`Data/Generated/Scenes.cs` (`Empty` / `EmptyPath` / `BootPath`), FishNet `DefaultScene` in `Boot.unity`.
 
 ## 3. Phase 2 — World readiness graph
 
-Separate **registered** from **ready**. Two distinct pieces below: the **client-parity contract**,
-which has a **shipped, validated instance** (§3a), and the **general world-readiness graph**, which
-remains open work (§3b).
+Separate **registered** from **ready**. Two pieces: **client-parity** (§3a, PR #36) and the
+**general world-readiness graph** (§3b, shipped on the implementation branch).
 
 ### 3a. Client parity contract — shipped instance (PR #36)
 
@@ -165,104 +151,76 @@ toggles").
 **Key files (as shipped):** `Systems/Electricity/LightPower.cs`, `Systems/Area/AreaSubSystem.cs`,
 `Systems/Area/AreaDeviceTileResolver.cs`, `Systems/Area/AreaFloorVisualCache.cs`.
 
-### 3b. General world-readiness graph — still open
+### 3b. General world-readiness graph — shipped
 
-Everything below is **unaffected by PR #36** and remains the real Phase 2 work. Introduce one contract
-to replace the three readiness idioms:
+**Status: shipped, 2026-07-23** (`cursor/session-world-lifecycle`). One contract replaces the old idioms:
 
-- `IWorldReady` / `WhenReady` on world subsystems — exposed **both** as an event and as a UniTask
-  awaitable — plus a small `WorldReadiness` coordinator that models phases:
+- `IWorldReady` / `IsReady` / `WhenReady` on world subsystems + UniTask `WaitUntilAsync` on
+  `WorldReadinessSubSystem`, phases:
 
   ```
-  TileMap loaded  →  Areas flooded  →  Electricity ready
-                  ↘  Atmos ready
-  Persistence OnAfterRestore  →  (re)fire the same gates
+  TileMapLoaded → AreasFlooded → ElectricityReady / AtmosReady / DisposalReady → WorldReady
+  Persistence OnBeforeRestore → ResetEpoch; OnAfterRestore → TileMapLoaded (+ domain re-notify)
   ```
 
-- Base the "tile ready" gate on `TileMap.OnMapLoaded` / end-of-restore (`AreaSubSystem.EndDeferredAreaFlood`,
-  `PersistenceSubSystem.OnAfterRestore`), **not** `OnMapCreated`. `OnMapCreated` fires when the map
-  *object* exists but tiles are not placed — the two-phase gap Atmos/Disposal currently trip on by
-  waiting on `CurrentMap != null`.
-- Migrate `AreaSubSystem`/`ElectricitySubSystem` off `IsSetUp` + `OnSystemSetUp`, and
-  `AtmosSubSystem.InitializeWhenMapReady()` / `DisposalSubSystem` off UniTask polling, onto the
-  contract. Each declares its prerequisites (`DependsOn`: Electricity → Area, Atmos → Tile, Area →
-  Tile-loaded). Consumers use `TryGet` + ready or subscribe to `WhenReady` — never `Get<T>()` in
-  `Update`/`FixedUpdate` that Errors when the target is missing.
-- **Gate round start / embark on readiness.** `RoundSubSystem.PrepareRound` still awaits a fixed 500 ms
-  (unchanged by PR #36) — this should await world-ready instead; `ReadyPlayersSubSystem`/
-  `EntitySubSystem` should spawn only after the ready epoch. This closes "spawn before flood-fill/atmos".
+- Tile gate is end-of-restore / post-flood — **not** `OnMapCreated`. Atmos/Disposal await
+  `TileMapLoaded` then notify their gates (no `CurrentMap != null` poll).
+- Area notifies `AreasFlooded` after deferred flood; Electricity awaits AreasFlooded then notifies.
+  Area/Electricity keep obsolete `IsSetUp` → `IsReady` shims.
+- `RoundSubSystem.PrepareRound` awaits `WorldReadyPhase.WorldReady` (no fixed 500 ms delay).
+- Station restore: `PersistenceSubSystem` calls `NotifyStationTemplateRestoreBeginning` directly
+  (WorldReadiness is DDOL; Persistence is hub-spawned — event-only binding is unreliable).
 
-**Key files:** `Systems/Tile/{TileSubSystem,TileMap,TileChunk}.cs`;
-`Systems/Area/{AreaSubSystem,AreaFloodFillService,AreaLightingStateDeriver,AreaFloorVisualCache}.cs`;
-`Systems/Electricity/ElectricitySubSystem.cs`; `Systems/Atmospherics/AtmosSubSystem.cs`;
-`Systems/Furniture/Disposal/DisposalSubSystem.cs`; `Systems/Persistence/PersistenceSubSystem.cs`;
-`Systems/Rounds/{RoundSubSystem,ReadyPlayersSubSystem}.cs`; `Systems/Entities/EntitySubSystem.cs`; and
-a new `IWorldReady` + `WorldReadiness` under `Core/` (or `Systems/WorldReadiness/`).
+**Key files:** `Core/WorldReadiness/{IWorldReady,WorldReadyPhase}.cs`,
+`Systems/WorldReadiness/WorldReadinessSubSystem.cs`; Area / Electricity / Atmos / Disposal SubSystems;
+`Systems/Persistence/PersistenceSubSystem.cs`; `Systems/Rounds/RoundSubSystem.cs`.
 
 ## 4. Phase 3 — Thin scenes + code bootstrap + `NetworkSystemsHub`
 
 Realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**;
-resolves [TECH_DEBT.md](TECH_DEBT.md) §1.7 and pays down §1.12.
+pays down [TECH_DEBT.md](TECH_DEBT.md) §1.7 / §1.12.
 
-- One code **bootstrap** builds process-wide services (the Phase 1 session owner, logging, UI shell) at
-  cold start.
-- One networked **`NetworkSystemsHub`** — a single NetworkObject, not one-per-system in Boot — plus the
-  Game load builds **world** SubSystems in **dependency order** (Phase 2's `DependsOn`) when Online.
-  Unloading Online unregisters world systems in **reverse** dependency order so `WaitingForServer` is
-  never a half-registered Game.
-- Empties `Boot.unity` (5 persistent systems) and `Game.unity` (~29 systems) of per-system GameObjects;
-  folds the `RuntimeInitializeOnLoadMethod` self-bootstraps (`ScreenEffectsSubSystem`,
-  `AutomationSubSystem`) and the manual Comms/`Human.prefab` wiring into the bootstrap — collapsing the
-  three competing bootstrap styles into one.
-- Relax the `SubSystems.Get<T>()` `FindObjectOfType`-or-Error fallback ([TECH_DEBT.md](TECH_DEBT.md)
-  §1.12) toward `TryGet` + ready; make missing-during-`WaitingForServer` silent, the way teardown
-  already suppresses via `_isQuitting`.
+**Status: shipped.**
 
-**Key files:** `Core/Subsystems.cs`, `Core/Behaviours/{SubSystem,NetworkSubSystem}.cs`,
-`Application/ApplicationInitializerSubSystem.cs`, `Assets/Content/Scenes/{Boot,Game}.unity`, and new
-`SystemsBootstrap` + `NetworkSystemsHub` types.
+- `SystemsBootstrap` — DDOL: NetworkSession / CommandLineArgs (via type name), Scene, Input,
+  WorldReadiness, ScreenEffects, Automation, Vision, ApplicationInitializer (last so listeners Awake first).
+- `NetworkSystemsHub` Resources prefab holds world/session SubSystems (edit-time components;
+  `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab` copies SerializeFields from Game then strips).
+- Boot Persistent Systems + Game Systems SubSystem GOs removed; EventSystem left on Game.
+- Hub despawn on network stop → `OnDestroyed` → `Unregister` (no extra reverse-order teardown needed).
+- `SubSystems.Get` FindObject fallback skipped while quitting **or** `WaitingForServer`.
+- CCR OnGUI recovery keys off Intro/Boot/Launcher loaded (NetworkSession is DDOL and always present).
+
+**Key files:** `Systems/Bootstrap/SystemsBootstrap.cs`, `Networking/NetworkSystemsHub.cs`,
+`Assets/Resources/NetworkSystemsHub.prefab`, `Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs`,
+`Core/Subsystems.cs`, `Assets/Content/Scenes/{Boot,Game}.unity`.
 
 ## 5. Sequencing & acceptance criteria
 
-Build order — each phase is independently valuable and unblocks the next:
-
-1. **Phase 1** — session FSM + never re-enter Boot after the first join attempt. Stops the
-   ~1000-error storm class. **Shipped** 2026-07-23 (pragmatic form, PR #36).
-2. **Phase 2** — world-ready signals for tile → area → electricity/atmos. Stops "subsystem exists but
-   map null" and host/client divergence. **§3a (client-parity) shipped** 2026-07-23 (PR #36); **§3b
-   (general readiness graph) still open.**
-3. **Phase 3** — code bootstrap + `NetworkSystemsHub`. Makes Phases 1+2 the only way systems appear;
-   kills [TECH_DEBT.md](TECH_DEBT.md) §1.7. **Open.**
+1. **Phase 1** — session FSM + never re-enter Boot after first join. **Shipped.**
+2. **Phase 2** — world-ready + client parity. **Shipped** (§3a + §3b).
+3. **Phase 3** — code bootstrap + hub + empty Boot/Game. **Shipped.**
 
 Per-phase acceptance:
 
-- **Phase 1 — met.** A real (non-harness) client disconnect no longer reloads Boot
-  (`ClientConnectionRecovery` arms `Empty.unity` after first connect); a disconnected client can
-  retry (OnGUI Retry / `ServerConnectionView` Retry) and reconnect, restoring control to its body; no
-  "already starting/started" storm (`NetworkSessionSubSystem.CanStartNetworkSession` guards re-entry).
-  Not automatic/backoff-driven — retry is still a manual button press.
-- **Phase 2, §3a — met.** A late-joining pure client lights fixtures correctly: area resolved via
-  `AreaDeviceTileResolver`/`AreaFloorVisualCache`, lit state via a SyncVar + BufferLast snapshot, no
-  host flood-fill dependency.
-- **Phase 2, §3b — open.** No spawn or tick-driven consumer runs before its prerequisite's ready
-  epoch; persistence restore re-fires readiness cleanly. `RoundSubSystem.PrepareRound` still uses a
-  fixed 500 ms wait, not a readiness gate.
-- **Phase 3 — open.** No gameplay subsystem is scene-placed in Boot/Game, and no
-  `RuntimeInitializeOnLoadMethod` bootstrap remains; adding a new system requires no scene YAML edit.
+- **Phase 1 — met.** Disconnect does not reload Boot after first Online; manual Retry reconnects;
+  named `SessionState`; Intro auto-join Cold-only. No backoff yet (deferred).
+- **Phase 2, §3a — met.** Late-join pure client lights fixtures via SyncVar + floor-cache area resolve.
+- **Phase 2, §3b — met.** Domains notify gates; `PrepareRound` awaits `WorldReady`; restore resets epoch
+  via direct Persistence → WorldReadiness notify.
+- **Phase 3 — met.** No gameplay SubSystem GameObjects under Boot/Game systems roots; new domains use
+  bootstrap list or hub rebuild menu. UI host `RuntimeInitializeOnLoad` remains (follow-on **(b)**).
 
-Verification per phase (when built, not in this planning pass): Editor Play Mode host + client; the
-multiplayer smoke harness `Testing/multiplayer/run_smoketest.sh` with the `reconnect` /
-`reconnect-client` scenarios (`Testing/multiplayer/scenarios/reconnect{,-client}.txt`); the EditMode
-suite via `.github/workflows/editmodetestrunner.yml`. Run the `update-system-docs` skill after each
-phase ships to sync the affected system maps, INDEX, and this doc's `Status`.
+Verification: Editor Play Mode host cold-start; `Testing/multiplayer/run_smoketest.sh` reconnect
+scenarios; EditMode via `.github/workflows/editmodetestrunner.yml`.
 
 ## 6. Related docs
 
 - Composition target: [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) (follow-on (a))
-- Debt register: [TECH_DEBT.md](TECH_DEBT.md) §1.7 (bootstrap styles), §1.12 (`Get` FindObject fallback)
+- Debt register: [TECH_DEBT.md](TECH_DEBT.md) §1.7 (bootstrap), §1.12 (`Get` FindObject), §1.16 (lifecycle)
 - Design (read-only): [design/networking.md](../design/networking.md) §2–§5 (disconnect/reconnect/capacity)
 - System maps: [networking-session](systems/networking-session.md), [scene-management](systems/scene-management.md),
   [application](systems/application.md), [core-subsystems](systems/core-subsystems.md),
   [player-control](systems/player-control.md), [tile](systems/tile.md), [area](systems/area.md),
-  [electricity](systems/electricity.md), [atmospherics](systems/atmospherics.md),
+  [electricity](systems/electricity.md), [atmospherics](systems/atmospherics.md), [disposal](systems/disposal.md),
   [persistence](systems/persistence.md), [rounds-lobby](systems/rounds-lobby.md)

@@ -4,6 +4,7 @@ using FishNet.Managing;
 using FishNet.Transporting;
 using SS3D.Core;
 using SS3D.Core.Settings;
+using SS3D.Data.Generated;
 using SS3D.Logging;
 using SS3D.Networking.Settings;
 using UnityEngine;
@@ -11,19 +12,19 @@ using UnityEngine;
 namespace SS3D.Networking
 {
     /// <summary>
-    /// Survives on the DDOL NetworkManager. After the first successful connection, points
-    /// FishNet <see cref="DefaultScene"/> offline at Empty so a drop does not reload Boot
-    /// (which re-enters Intro and storms <see cref="NetworkSessionSubSystem.StartNetworkSession"/>).
-    /// Offers OnGUI Retry/Quit when Boot is gone; Intro failure UI stays on
-    /// <see cref="ServerConnectionView"/>.
+    /// Session lifecycle owner (DDOL on NetworkManager). Tracks <see cref="SessionState"/>,
+    /// arms Empty as FishNet offline after the first successful connect, and offers OnGUI
+    /// Retry/Quit when Boot is gone. Intro failure UI stays on <see cref="ServerConnectionView"/>.
     /// </summary>
     public sealed class ClientConnectionRecovery : MonoBehaviour
     {
-        private const string EmptyOfflineScenePath = "Assets/Content/Scenes/Empty.unity";
-
-        private bool _sessionEverStarted;
+        private bool _reachedOnline;
         private bool _recoveryVisible;
         private string _status = "Disconnected from server.";
+
+        public SessionState State { get; private set; } = SessionState.Cold;
+
+        public static ClientConnectionRecovery Instance { get; private set; }
 
         public static void EnsureOn(NetworkManager networkManager)
         {
@@ -32,12 +33,50 @@ namespace SS3D.Networking
                 return;
             }
 
-            if (networkManager.GetComponent<ClientConnectionRecovery>() != null)
+            ClientConnectionRecovery existing = networkManager.GetComponent<ClientConnectionRecovery>();
+            if (existing != null)
             {
+                Instance = existing;
                 return;
             }
 
-            networkManager.gameObject.AddComponent<ClientConnectionRecovery>();
+            Instance = networkManager.gameObject.AddComponent<ClientConnectionRecovery>();
+        }
+
+        /// <summary>
+        /// Whether a new join/host attempt may call StartConnection.
+        /// </summary>
+        public bool CanStart
+        {
+            get
+            {
+                if (State is SessionState.Connecting or SessionState.Online or SessionState.Disconnecting)
+                {
+                    return false;
+                }
+
+                NetworkManager networkManager = InstanceFinder.NetworkManager;
+                if (networkManager == null)
+                {
+                    return false;
+                }
+
+                NetworkSettings settings = ScriptableSettings.GetOrFind<NetworkSettings>();
+                if (settings.NetworkType is not (NetworkType.Client or NetworkType.Host))
+                {
+                    return true;
+                }
+
+                LocalConnectionState clientState = networkManager.TransportManager.Transport.GetConnectionState(false);
+                return clientState is not (LocalConnectionState.Starting
+                    or LocalConnectionState.Started
+                    or LocalConnectionState.Stopping);
+            }
+        }
+
+        private void Awake()
+        {
+            Instance = this;
         }
 
         private void OnEnable()
@@ -71,31 +110,70 @@ namespace SS3D.Networking
         /// </summary>
         public void NotifySessionStartAttempted()
         {
-            _sessionEverStarted = true;
+            SetState(SessionState.Connecting);
             _recoveryVisible = false;
+        }
+
+        /// <summary>
+        /// Called when <c>StartConnection</c> returns false before any transport Started event.
+        /// </summary>
+        public void NotifySessionStartFailed()
+        {
+            if (State == SessionState.Connecting)
+            {
+                SetState(SessionState.WaitingForServer);
+            }
         }
 
         private void HandleServerConnectionState(ServerConnectionStateArgs args)
         {
-            if (args.ConnectionState == LocalConnectionState.Started)
+            switch (args.ConnectionState)
             {
-                ArmEmptyOfflineScene();
+                case LocalConnectionState.Started:
+                    EnterOnline();
+                    break;
+                case LocalConnectionState.Stopping when State == SessionState.Online:
+                    SetState(SessionState.Disconnecting);
+                    break;
+                case LocalConnectionState.Stopped when State is SessionState.Online or SessionState.Disconnecting or SessionState.Connecting:
+                    // Host/dedicated: server stop alone does not drive client WaitingForServer UI.
+                    if (!_reachedOnline)
+                    {
+                        SetState(SessionState.WaitingForServer);
+                    }
+
+                    break;
             }
         }
 
         private void HandleClientConnectionState(ClientConnectionStateArgs args)
         {
-            if (args.ConnectionState == LocalConnectionState.Started)
+            switch (args.ConnectionState)
             {
-                ArmEmptyOfflineScene();
-                _recoveryVisible = false;
-                return;
-            }
+                case LocalConnectionState.Started:
+                    EnterOnline();
+                    _recoveryVisible = false;
+                    return;
 
-            if (args.ConnectionState != LocalConnectionState.Stopped || !_sessionEverStarted)
-            {
-                return;
+                case LocalConnectionState.Stopping when State == SessionState.Online:
+                    SetState(SessionState.Disconnecting);
+                    return;
+
+                case LocalConnectionState.Stopped:
+                    if (State is not (SessionState.Connecting or SessionState.Online or SessionState.Disconnecting))
+                    {
+                        return;
+                    }
+
+                    EnterWaitingForServer();
+                    return;
             }
+        }
+
+        private void EnterWaitingForServer()
+        {
+            SetState(SessionState.WaitingForServer);
+            SubSystems.SetSuppressMissingErrors(true);
 
             NetworkSettings settings = ScriptableSettings.GetOrFind<NetworkSettings>();
             if (settings.NetworkType == NetworkType.DedicatedServer)
@@ -103,9 +181,9 @@ namespace SS3D.Networking
                 return;
             }
 
-            // Intro still loaded: ServerConnectionView owns retry. After offline Empty
-            // unload Boot, NetworkSessionSubSystem is gone and this OnGUI is the fallback.
-            if (SubSystems.TryGet(out NetworkSessionSubSystem _))
+            // Intro/Boot still loaded: ServerConnectionView owns retry. After Empty offline,
+            // those scenes are gone — show OnGUI even though NetworkSession is DDOL now.
+            if (IsConnectionUiSceneLoaded())
             {
                 return;
             }
@@ -113,6 +191,50 @@ namespace SS3D.Networking
             _status = "Could not connect, or connection to the server was lost.";
             _recoveryVisible = true;
             Log.Information(this, "{status}", Logs.Important, _status);
+        }
+
+        private static bool IsConnectionUiSceneLoaded()
+        {
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                string name = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).name;
+                if (name == Scenes.Intro || name == Scenes.Boot || name == Scenes.Launcher)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void EnterOnline()
+        {
+            _reachedOnline = true;
+            SubSystems.SetSuppressMissingErrors(false);
+            ArmEmptyOfflineScene();
+            SetState(SessionState.Online);
+            if (InstanceFinder.IsServer)
+            {
+                NetworkSystemsHub.EnsureSpawned();
+            }
+        }
+
+        private void SetState(SessionState next)
+        {
+            if (State == next)
+            {
+                return;
+            }
+
+            Log.Debug(this, "SessionState {from} → {to}", Logs.Important, State, next);
+            State = next;
+
+            // Hub NetworkObjects despawn while Stopping/Disconnecting, before WaitingForServer.
+            // Missing Get lookups from device OnDestroy are expected then — same class as teardown.
+            if (next == SessionState.Disconnecting)
+            {
+                SubSystems.SetSuppressMissingErrors(true);
+            }
         }
 
         private void ArmEmptyOfflineScene()
@@ -123,12 +245,12 @@ namespace SS3D.Networking
                 return;
             }
 
-            if (defaultScene.GetOfflineScene() == EmptyOfflineScenePath)
+            if (defaultScene.GetOfflineScene() == Scenes.EmptyPath)
             {
                 return;
             }
 
-            defaultScene.SetOfflineScene(EmptyOfflineScenePath);
+            defaultScene.SetOfflineScene(Scenes.EmptyPath);
             Log.Debug(this, "Armed Empty offline scene for disconnect (avoid Boot/Intro reload storm)", Logs.Important);
         }
 
@@ -175,10 +297,7 @@ namespace SS3D.Networking
                 return;
             }
 
-            LocalConnectionState state = networkManager.TransportManager.Transport.GetConnectionState(false);
-            if (state == LocalConnectionState.Starting
-                || state == LocalConnectionState.Started
-                || state == LocalConnectionState.Stopping)
+            if (!CanStart)
             {
                 _status = "Connection still settling — wait a moment, then retry.";
                 return;
@@ -199,12 +318,12 @@ namespace SS3D.Networking
                 {
                     _status = "Failed to start client connection.";
                     _recoveryVisible = true;
+                    SetState(SessionState.WaitingForServer);
                 }
 
                 return;
             }
 
-            NotifySessionStartAttempted();
             session.StartNetworkSession();
         }
     }

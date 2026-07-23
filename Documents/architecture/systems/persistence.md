@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: cb23f6549 — 2026-07-21
+> Verified: 5db5299b1 — 2026-07-23
 
 # Persistence
 
@@ -14,7 +14,7 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/SS3D/Data/Persistence/PersistenceEnvelope.cs` — envelope wrapper and schema version
 - `Assets/Scripts/SS3D/Data/Persistence/EnvelopePersistenceStore.cs` — JSON file I/O via `LocalStorage`
 - `Assets/Scripts/SS3D/Data/Persistence/PersistencePaths.cs` — `StationTemplates/`, `ServerMeta/`, legacy `Tilemaps/`
-- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events
+- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood
 - `Assets/Scripts/SS3D/Systems/Persistence/TileMapPersistenceContributor.cs` — tilemap + items chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/AreaPersistenceContributor.cs` — area metadata chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/SpawnPointPersistenceContributor.cs` — spawn markers chunk (`spawn-points`, load order 110)
@@ -32,13 +32,15 @@ Layered contributor-based disk persistence for station templates and server meta
 
 - New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup; add a `DeserializePayload` arm for the DTO type.
 - Station template save/load: `SaveStationTemplate` / `LoadStationTemplate` / `LoadMostRecentStationTemplate`.
-- Server meta: `LoadServerMeta` (server boot via `TileSubSystem`), `SaveServerMeta` (on `UserPermissionsChangedEvent`).
+- Server meta: `LoadServerMeta` (owned by `PersistenceSubSystem.OnStart` when server), `SaveServerMeta` (on `UserPermissionsChangedEvent`).
 - Round history: `AppendRoundHistory` — hooked from `RoundSubSystem.ProcessEndRound`.
 - **Deferred:** `RoundConfigPersistenceContributor` (blocked on round-config), round snapshot contributors (Phase 2), round-start `LoadStationTemplate(mapId)` from config pool.
 
 ## Pitfalls
 
+- **Contributor registration vs LoadServerMeta:** register built-in contributors in `OnAwake`, not `OnStart`. Hub spawn can run other systems' `OnStartServer` before Unity `Start`; LoadServerMeta itself runs from Persistence `OnStart` after all Awakes, so `PermissionSubSystem` is already registered for restore. Do not call `LoadServerMeta` from Tile or other domains.
 - **Missing spawn chunk leaves stale markers:** tilemap restore calls `TileMap.Clear`, which clears `TileSubSystem.SpawnPoints`. Do not remove that clear — templates without `spawn-points` must start empty.
+- **Station restore epoch:** `RestoreStationTemplate` calls `WorldReadinessSubSystem.NotifyStationTemplateRestoreBeginning` directly (Persistence is hub-spawned; WorldReadiness is DDOL — do not rely on OnBeforeRestore subscription alone).
 
 ## Depends on / Used by
 
@@ -49,4 +51,5 @@ Layered contributor-based disk persistence for station templates and server meta
 
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
 - Effort: [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md)
+- Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor); [creative-mode.md](../../design/creative-mode.md) §8–§9

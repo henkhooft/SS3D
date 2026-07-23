@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: a15807a6d — 2026-07-21
+> Verified: 3bb5f5fd2 — 2026-07-23 (ArmedInteraction Selection lazy TryGet)
 
 # Interactions (runtime)
 
@@ -51,6 +51,8 @@ Structural Discover/source-list debt: [interactions-framework](interactions-fram
 
 ## Pitfalls
 
+- **Spawn NRE in `OnAwake` / `SubscribeToInput`:** if `CameraSubSystem.PlayerCamera` is null (hub before Game camera — see [chat-audio-screens](chat-audio-screens.md)), wiring `_controls` after the camera line leaves SubscribeToInput cascading. Resolve inputs first; tolerate a late camera.
+- **`ArmedInteractionSubSystem` must not `Get<SelectionSubSystem>` in Awake.** Selection is a sibling on `NetworkSystemsHub`; Awake order can leave it unregistered, and FishNet also briefly enables scene copies before the hub exists. Lazy `TryGet` + null-safe enable/disable.
 - **Outline on every hover while holding an item:** `Item.CreateSourceInteractions` always discovers `Drop` with a null target. Outline evaluation must run `InteractionPipeline.FilterForOutline` (keep only `Target != null`) before treating Discover as "available." Prefer `TryEvaluateOutlineInteractability` on the LateUpdate path — it skips source-only discovery entirely.
 - **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
 - **Outline on every hover with empty hands:** obsolete `Craft` on hands used to discover `OpenCraftingMenu` for every target. Holding an item switches the source to the item (no `Craft`), so the bug only showed empty-handed. Do not extend crafting — purge per [crafting](crafting.md); until then discover must stay gated.

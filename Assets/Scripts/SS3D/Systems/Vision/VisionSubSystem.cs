@@ -23,20 +23,8 @@ namespace SS3D.Systems.Vision
     /// </summary>
     public class VisionSubSystem : Core.Behaviours.SubSystem
     {
-        // Bootstraps itself instead of living in Boot.unity like the other persistent subsystems, since hand-editing
-        // scene YAML outside the Unity Editor isn't safe. Mirrors ScreenEffectsSubSystem's bootstrap.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (SubSystems.TryGet(out VisionSubSystem _))
-            {
-                return;
-            }
-
-            GameObject host = new(nameof(VisionSubSystem));
-            DontDestroyOnLoad(host);
-            host.AddComponent<VisionSubSystem>();
-        }
+        // Bootstrapped by SystemsBootstrap (process-wide DDOL). Scene VisionSystem GO must not
+        // also exist — dual registration fights SubSystems.Register.
 
         [SerializeField]
         public bool showDebug;

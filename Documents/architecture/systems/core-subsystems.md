@@ -1,6 +1,7 @@
-> Code paths: Assets/Scripts/SS3D/Core/
-> Entry points: SubSystem, NetworkSubSystem, SubSystems
-> Status: shipped
+> Code paths: Assets/Scripts/SS3D/Core/, Assets/Scripts/SS3D/Systems/Bootstrap/, Assets/Scripts/SS3D/Systems/WorldReadiness/, Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs
+> Entry points: SubSystem, NetworkSubSystem, SubSystems, SystemsBootstrap, WorldReadinessSubSystem, NetworkSystemsHub
+> Status: partial
+> Verified: 3bb5f5fd2 — 2026-07-23 (Disconnecting suppress for hub teardown Gets)
 
 # Core / SubSystems
 
@@ -8,24 +9,36 @@
 
 Base actor/subsystem pattern and runtime service locator. All gameplay domains expose a `*SubSystem` registered via `SubSystems.Get<T>()`. `NetworkSubSystem` extends FishNet `NetworkActor` for networked subsystems.
 
-Scene-placed registration on Boot/Game actors is **legacy**. Target is code bootstrap ([agent-first composition](../2026-07_agent-first-composition.md)); do not add new systems by editing scene YAML.
+Process-wide services: `SystemsBootstrap` (DDOL). World/session networked systems: `NetworkSystemsHub` Resources prefab (spawned Online). Boot/Game do not place per-system SubSystem GameObjects ([session-world-lifecycle](../2026-07_session-world-lifecycle.md)).
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Core/Behaviours/SubSystem.cs` — non-networked subsystem base
-- `Assets/Scripts/SS3D/Core/Behaviours/NetworkSubSystem.cs` — networked subsystem base
-- `Assets/Scripts/SS3D/Core/Subsystems.cs` — `SubSystems` static locator
-- `Assets/Scripts/SS3D/Core/ViewLocator.cs` — view discovery helper
+- `Assets/Scripts/SS3D/Core/Behaviours/SubSystem.cs` — non-networked subsystem base (bootstrap-owned)
+- `Assets/Scripts/SS3D/Core/Behaviours/NetworkSubSystem.cs` — networked subsystem base (hub prefab only)
+- `Assets/Scripts/SS3D/Core/Subsystems.cs` — locator; FindObject fallback skipped while quitting / WaitingForServer
+- `Assets/Scripts/SS3D/Core/WorldReadiness/IWorldReady.cs` + `WorldReadyPhase.cs` — readiness contract
+- `Assets/Scripts/SS3D/Systems/WorldReadiness/WorldReadinessSubSystem.cs` — phase coordinator
+- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide services
+- `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub
+- `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — rebuild hub / strip scenes
 
 ## Extension points
 
-- New domain subsystem: subclass `SubSystem` or `NetworkSubSystem`. Prefer code bootstrap / self-register (see ScreenEffects) over adding a GameObject to Boot/Game. Scene registration remains until the bootstrap follow-on ships.
+- New process-wide SubSystem: add to `SystemsBootstrap.EnsureProcessWideServices`.
+- New networked domain: add type to hub rebuild menu list, run `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab` — do not edit Game.unity.
+- World sim: implement `IWorldReady`; notify via `WorldReadinessSubSystem` after TileMapLoaded / AreasFlooded — never treat `OnMapCreated` as ready.
+- Consumers: `IsReady` / `WhenReady` / `WaitUntilAsync` — not `Get` in Update.
 
-## Depends on / Used by
+## Pitfalls
 
-- **Used by:** All subsystem-backed domains
+- **Registration ≠ readiness.** Await `WorldReadyPhase` before round start / sim ticks that need flooded areas.
+- **Missing Get during Disconnecting / WaitingForServer is silent** — use `TryGet`.
+- **Game content prefabs may still host SubSystems** (PlayerCamera, Radial/Armed overlays, MapEditor) that register before hub Online — Phase 3 only stripped Boot/Game systems roots. Consumers must `TryGet` / lazy-resolve; relocating those components onto bootstrap/hub is residual cleanup ([session-world-lifecycle](../2026-07_session-world-lifecycle.md) post-ship note).
+- **Do not AddComponent NetworkSubSystems at runtime** — edit-time on hub prefab only (FishNet behaviour list).
+- Hub despawn on disconnect unregisters via `OnDestroyed` — no extra teardown required.
 
 ## Related docs
 
+- [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [INDEX.md](../INDEX.md)

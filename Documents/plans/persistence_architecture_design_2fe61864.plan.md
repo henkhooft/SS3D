@@ -440,6 +440,6 @@ Deferred until accounts/auth exist, but design for it now:
 
 **Phase 1a shipped** on `feature/persistence-framework`: envelope-based station templates, tilemap/area contributors, legacy tilemap migration, template-restore APC linking.
 
-**Phase 1b shipped (partial):** `PermissionsPersistenceContributor` + `LegacyPermissionsMigrator` (envelope at `ServerMeta/permissions.json`, legacy `Config/permissions.txt` fallback); `RoundHistoryStore` append-only JSONL at `ServerMeta/round-history.jsonl`; `LoadServerMeta` on server boot via `TileSubSystem`; round-end history hook in `RoundSubSystem`. **Deferred:** `RoundConfigPersistenceContributor` and round-start `LoadStationTemplate(mapId)` until round-config feature exists.
+**Phase 1b shipped (partial):** `PermissionsPersistenceContributor` + `LegacyPermissionsMigrator` (envelope at `ServerMeta/permissions.json`, legacy `Config/permissions.txt` fallback); `RoundHistoryStore` append-only JSONL at `ServerMeta/round-history.jsonl`; `LoadServerMeta` on server boot via `PersistenceSubSystem.OnStart` (moved off `TileSubSystem` after Phase 3h hub spawn exposed Start-vs-OnStartServer ordering); round-end history hook in `RoundSubSystem`. **Deferred:** `RoundConfigPersistenceContributor` and round-start `LoadStationTemplate(mapId)` until round-config feature exists.
 
 **Next:** Phase 2 round snapshot contributors.
