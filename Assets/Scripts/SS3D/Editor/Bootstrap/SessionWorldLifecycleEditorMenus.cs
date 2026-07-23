@@ -7,7 +7,6 @@ using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Comms;
-using SS3D.Systems.Crafting;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Electricity;
@@ -66,7 +65,6 @@ namespace SS3D.Editor.Bootstrap
             "SubstanceSystem",
             "PlayerControlSystem",
             "EntitySystem",
-            "CraftingSystem",
             "MindSystem",
             "AtmosSystem",
             "ExamineSystem",
@@ -106,7 +104,6 @@ namespace SS3D.Editor.Bootstrap
             typeof(ChatSubSystem),
             typeof(CommsSubSystem),
             typeof(LocalSpeechBubbleController),
-            typeof(CraftingSubSystem),
             typeof(ExamineSubSystem),
             typeof(ExamineUI),
             typeof(SelectionSubSystem),

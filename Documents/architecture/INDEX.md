@@ -30,7 +30,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | armor | [armor.md](../design/armor.md) — active | none yet | none yet |
 | inventory-storage | [inventory-storage.md](../design/inventory-storage.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — in-progress (clean-slate: data model + panel + Main HUD equip/drag + stamina 7a + old UI purge shipped; Play Mode verification pending) | [inventory](systems/inventory.md) — partial |
 | examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — partial (character-examine target type §7 unimplemented) |
-| crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (code obsolete / due for removal; do not extend) |
+| crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (obsolete runtime purged; awaiting redesign) |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
 | lobby | [lobby.md](../design/lobby.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
@@ -111,7 +111,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances + injured limp/severity/mirror; Harm intent → combat stance; shelved Misc/Probably Not clips; `Human.prefab` composition debt; collapse/death presentation debt ([body-presentation-authority](2026-07_body-presentation-authority.md)) |
 | Health | [health](systems/health.md) | partial | Phases 1–5b shipped; screen-effects wired from snapshot; Phase 0d strips/rewires `Human.prefab`; vitals HUD / examine-self Phase 6 remainder; interim collapse RPCs — see [body-presentation-authority](2026-07_body-presentation-authority.md); limp/`InjuredLeg`/arm injury → body anim ([animation-polish](2026-07_animation-polish.md)); zone resolve exclude-self + AnatomyNode for melee |
 | Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee: Harm click always swings, camera-ray connect (exclude self); `C`/chip toggles intent→stance; reticle lock-on + cross flash; disarm/ranged/armor deferred |
-| Crafting | [crafting](systems/crafting.md) | stub | Obsolete / due for removal; menu uGUI condemned; `Craft` on hands is outline landmine until purge |
+| Crafting | [crafting](systems/crafting.md) | stub | Obsolete runtime purged (TECH_DEBT 1.6); awaiting redesign per design doc |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox; disposal chutes/outlets delegate to [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Disposal | [disposal](systems/disposal.md) | partial | Item disposal network; awaits TileMapLoaded → DisposalReady; pipe craft / Cargo / player transit deferred |
 | Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | shipped | Round state machine; PrepareRound awaits WorldReady; lobby UI condemned |

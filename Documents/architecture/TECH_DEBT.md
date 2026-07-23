@@ -89,7 +89,7 @@ gate on `CanInteract` at discover time; source-only and target-bound entries sha
 type-level distinction; `InteractionEvent.Point` uses `Vector3.zero` as a sentinel for "unresolved,"
 indistinguishable from a real hit at world origin. This is the root cause of at least two shipped
 bugs fixed by narrow bandages instead of a contract change: empty-hand outline pollution from
-`Craft` (see 1.6) and wall-mount interactions that silently ignored range because a missing collider
+historical `Craft` (purged — see former §1.6) and wall-mount interactions that silently ignored range because a missing collider
 left `Point` at the sentinel value. Every new `IInteractionSourceExtension` is a coin flip on which
 convention it should follow because the framework doesn't enforce one.
 
@@ -125,19 +125,7 @@ time, not at PR time.
 
 ### 1.6 Crafting is dead code that hasn't been deleted
 
-**Blast radius: low, but pure waste — trend: not scheduled**
-
-`CraftingSubSystem`, `Craft.cs` (on both hand prefabs), and the crafting menu uGUI have been called
-"obsolete, due for removal" across three separate docs
-([INDEX.md](INDEX.md), [crafting.md](systems/crafting.md),
-[interactions-framework.md](systems/interactions-framework.md) § Architecture smells #1) for multiple
-work sessions. `Craft` on hands is a standing landmine: left in place, it silently pollutes hover
-outlines for every empty-handed target unless discover-time gating (a bandage, not a fix) stays
-correct. Nobody has scheduled the actual deletion PR (remove `Craft` from hand prefabs, delete the
-subsystem, drop the codegen recipe refs) even though the cost of leaving it is now higher than
-deleting it.
-
-- Related: [crafting.md](systems/crafting.md), [interactions-framework.md](systems/interactions-framework.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
@@ -153,11 +141,13 @@ Confirmed still condemned-but-present on `develop`: console panel
 ([ingame-console.md](systems/ingame-console.md)), lobby job-select/ready UI
 ([rounds-lobby.md](systems/rounds-lobby.md)), the ScreenEffects F2 debug canvas
 ([screen-effects.md](systems/screen-effects.md)), TileMap Creator
-([tile.md](systems/tile.md)), the crafting menu (1.6), and examine's hover/detailed uGUI panels
+([tile.md](systems/tile.md)), and examine's hover/detailed uGUI panels
 ([examine.md](systems/examine.md)). Each is "do not extend, replace when the owning redesign lands,"
 which is the right call individually, but there is no single burndown tracking how many of these
-are left or in what order they should go — six live legacy UI stacks is real maintenance surface
+are left or in what order they should go — five live legacy UI stacks is real maintenance surface
 (input arbitration, click-through, and pointer-over-UI code all still have to account for them).
+
+- Crafting menu uGUI was purged with §1.6 (2026-07-23).
 
 - **Doc-hygiene note:** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
   Condemned UI table still lists "Inventory / hands / intent uGUI" as condemned-pending-replacement,
@@ -282,7 +272,7 @@ moves) are not started.
 **Blast radius: high (whole-game memory footprint) — trend: scheduled but not started**
 
 21 Addressables groups are configured under `Assets/Content/Addressables/` (Items, Materials,
-Sounds, InteractionIcons, CraftingRecipes, UIElements, etc.), but they are only ever used as an
+Sounds, InteractionIcons, UIElements, etc.), but they are only ever used as an
 editor-time curation source: `AssetDatabase.LoadAssetsFromAssetGroup()` copies each group entry's
 real `Object` reference into a serialized dictionary, and `Assets.Get<T>` is a synchronous read
 against those hard references. No `Addressables.LoadAssetAsync`/`Instantiate*` call exists anywhere
@@ -357,6 +347,17 @@ not quality problems.
 
 *(Move items here with the PR/commit that closed them, so the register shows real progress rather
 than only growing. Keep a one-line stub under the old §1.x number so external citations still resolve.)*
+
+### 1.6 Crafting dead-code purge — 2026-07-23
+
+Obsolete `CraftingSubSystem`, hand/tool `Craft`, `GirderCraftable`/`RecipeIngredient`, crafting menu
+uGUI, recipe assets, `CraftingRecipes` database/Addressables group, and generated recipe refs removed.
+Empty-hand outline pollution from `OpenCraftingMenu` discovery is gone with the extension.
+
+- **Closed by:** this session's crafting deletion (TECH_DEBT 1.6 plan); bump with PR when merged.
+- **Not in this close:** future freeform crafting per [design/crafting.md](../design/crafting.md);
+  optional leftover `InteractionIcons.Crafting` sprite/codegen entry (lookup never used that id).
+- Related: [crafting.md](systems/crafting.md), [interactions-framework.md](systems/interactions-framework.md)
 
 ### 1.7 Legacy scene-based subsystem registration (gameplay) — 2026-07-23
 

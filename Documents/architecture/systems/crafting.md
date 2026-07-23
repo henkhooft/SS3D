@@ -1,36 +1,37 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Crafting/
-> Entry points: CraftingSubSystem
+> Code paths: none (obsolete runtime purged)
+> Entry points: none — redesign not started
 > Status: stub
-> Verified: a20853b1c — 2026-07-18
+> Verified: 97254ee1d — 2026-07-23
 
 # Crafting
 
 ## Overview
 
-Recipe-based crafting subsystem. **Obsolete — due for removal**, not extension. Do not invest in discover APIs, new recipes UI, or hand wiring beyond keeping Play Mode unblocked until purge.
-
-**Condemned UI:** crafting menu uGUI — do not extend; replace per [crafting.md](../../design/crafting.md) ([agent-first composition](../2026-07_agent-first-composition.md)). Full system purge should remove `Craft` from hand prefabs and delete the menu path.
+Obsolete recipe-crafting runtime, hand `Craft` extension, uGUI menu, recipe assets, and
+`CraftingSubSystem` hub registration were **purged** (TECH_DEBT 1.6). Do not reintroduce those
+types. Future freeform crafting follows the design spec only — no implementation yet.
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Crafting/CraftingSubSystem.cs` — crafting subsystem
-- `Assets/Scripts/SS3D/Systems/Crafting/Craft.cs` — hand/tool source extension (landmine until removed)
-- `Assets/Scripts/SS3D/Data/Generated/CraftingRecipes.cs` — codegen recipe refs
+- Design (read-only): [Documents/design/crafting.md](../../design/crafting.md) — intended direction
+- Debt close: [TECH_DEBT.md](../TECH_DEBT.md) §6 Resolved / former §1.6
 
 ## Extension points
 
-None — system is obsolete. Prefer delete over new features.
+None until a redesign effort lands. Prefer a new architecture effort + Phase 0 from design over
+reviving deleted recipe graphs or uGUI menus.
 
 ## Pitfalls
 
-- **Delete-debt / empty-hand outline pollution:** `Craft` on both hands used to discover `OpenCraftingMenu` for every hover target, so empty-hand outlines lit every `Selectable` while held-item (item as source, no `Craft`) looked fine. Discover is gated on `CanInteract` as a holdover bandage; the real fix is removing crafting + `Craft` from hands. See [interactions-framework](interactions-framework.md) § Architecture smells #1.
+*(none for live code — system has no runtime surface)*
 
 ## Depends on / Used by
 
-- **Depends on:** [inventory](inventory.md), [data-codegen](data-codegen.md), [interactions-framework](interactions-framework.md)
+- **Depends on:** none (code removed)
+- **Used by:** design-only citations from other design docs; no runtime consumers
 
 ## Related docs
 
-- Design (read-only): [Documents/design/crafting.md](../../design/crafting.md) — intended direction; code is not the target to extend
-- [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
+- Design (read-only): [Documents/design/crafting.md](../../design/crafting.md)
+- [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (crafting menu row: purged)
 - [INDEX.md](../INDEX.md)

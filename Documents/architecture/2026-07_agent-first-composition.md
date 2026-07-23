@@ -55,7 +55,7 @@ Do not extend or restyle. Replace per design + Phase 0 purge.
 | Inventory / hands / intent uGUI | [main-hud.md](../design/main-hud.md), [inventory-storage.md](../design/inventory-storage.md) |
 | Chat window (always-on box) | **Phase 0 purged** — headless `ChatSubSystem` remains; feed/PDA per [comms.md](../design/comms.md) |
 | Lobby job-select UI | [lobby.md](../design/lobby.md) |
-| Crafting menu uGUI | [crafting.md](../design/crafting.md) |
+| Crafting menu uGUI | **Phase 0 purged** (TECH_DEBT 1.6) — redesign per [crafting.md](../design/crafting.md) |
 | TileMap creator uGUI | creative-mode / construction redesign (editor) |
 | ScreenEffects debug Canvas | delete with health rewrite |
 | Examine uGUI views | when HUD / examine redesign lands |

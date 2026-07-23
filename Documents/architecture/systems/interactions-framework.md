@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Interactions/
 > Entry points: IInteraction, IInteractionSource, IInteractionTarget, InteractionPipeline, InteractionIdentifier
 > Status: shipped
-> Verified: a15807a6d — 2026-07-21
+> Verified: 97254ee1d — 2026-07-23
 
 # Interactions (framework)
 
@@ -52,7 +52,7 @@ Structural debt (not one-off bugs). Bandages live in Pitfalls / [interactions-ru
 
 - **Source-only interactions pollute hover outlines:** Drop always discovers while holding an item (`Target == null`). Runtime must `FilterForOutline` before treating Discover as “available on this object” (smell #2).
 - **Missing interaction point used to skip range:** `RangeCheck` treated default zero point as unlimited range. Unresolved points now range against the target transform/collider; wall mounts should still ship a `BoxCollider` for selection rays (smells #3–4).
-- **Unconditional source `Add` pollutes Discover:** any extension that adds for every target (historical `Craft` on hands) lights yellow outlines / menus on every hover when that source is active. Gate at discover time or remove the obsolete extension ([crafting](crafting.md) is due for purge).
+- **Unconditional source `Add` pollutes Discover:** any extension that adds for every target lights yellow outlines / menus on every hover when that source is active. Gate at discover time (smell #1). Historical example: empty-hand `Craft` → `OpenCraftingMenu` (purged with [crafting](crafting.md) / TECH_DEBT 1.6).
 
 ## Depends on / Used by
 
