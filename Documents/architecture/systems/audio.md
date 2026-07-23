@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 7f90106b6 — 2026-07-23
+> Verified: 752dfefd2 — 2026-07-23
 
 # Audio
 
@@ -50,7 +50,13 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `HealthScreenEffectMapper`; `StaminaController.SyncCurrentStamina`'s `IsOwner` gate) — not a new
   subscription.
 - `Assets/Scripts/SS3D/Systems/Audio/AudioTrackIds.cs` — fixed personal-audio clip ids
-  (`Heartbeat`/`HeavyBreathing`) — architecturally fixed, unlike content-authored ambience tracks.
+  (`Heartbeat`/`HeavyBreathing`/`AlertCue`) — architecturally fixed, unlike content-authored ambience tracks.
+- `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — **Phase 4** (§6): pure
+  `HasNewAlert(previous, current)` diff over `AlertStackState` — true only when a hazard goes
+  None → any severity, not on an escalation already showing. Unit-tested
+  (`AlertStackAudioMapperTests`). `MainHudSubSystem.PushAlertState` is the single funnel every
+  `AlertStackState` push goes through (health-driven, debug override, or clear) and calls
+  `PersonalAudioSubSystem.PlayAlertCue()` (one-shot, cooldown-debounced) on a new alert.
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
@@ -76,8 +82,10 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   directly for any future systemic cue (virology's symptomatic-stage cue is this same category,
   per audio.md §4) rather than building a parallel non-positional playback path.
 - **Not yet built:** power-gating power-dependent ambience tracks off `AreaLightingState` (needs a
-  per-track "requires power" data field — deferred, see Pitfalls), alert cues (Phase 4), lobby music
-  + volume-slider settings (Phase 5). See [audio-foundation](../2026-07_audio-foundation.md).
+  per-track "requires power" data field — deferred, see Pitfalls), PDA notification cues (no PDA
+  notification chip system exists yet to hook — same gap [chat-audio-screens](chat-audio-screens.md)
+  already records for the non-diegetic feed), lobby music + volume-slider settings (Phase 5). See
+  [audio-foundation](../2026-07_audio-foundation.md).
 
 ## Pitfalls
 
@@ -104,6 +112,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   built here on purpose: inventing the flag without an authoring surface or content decision on which
   tracks use it would be dead schema. `AreaSubSystem.OnAreaLightingStateChanged` /
   `TryGetLightingStateForTile` are the signal to consume once the flag exists.
+- **"New alert" means None → any severity, not any change.** `AlertStackAudioMapper.HasNewAlert`
+  deliberately does not fire on Warning → Critical escalation — the visual chip is already showing,
+  so re-cueing it would contradict §6's "not a continuous loop, only draws attention when something's
+  actually wrong" restraint. Route any future alert-audio change through this diff, not a raw
+  field-by-field equality check.
 - **A process-wide DDOL subsystem outlives any one player body.** `AmbienceSubSystem` never gets
   destroyed/recreated across disconnect/respawn/map-reload the way a `NetworkSubSystem` on the hub
   does, so it clears its own `_lastResolvedAreaId`/`_currentTrackId` when `LocalPlayerObjectChanged`
@@ -116,7 +129,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [player-control](player-control.md) (local player for `ListenerPosition` / `AmbienceSubSystem`'s `LocalPlayerObjectChanged`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`), [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs
 

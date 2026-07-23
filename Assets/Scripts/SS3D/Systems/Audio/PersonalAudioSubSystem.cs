@@ -19,12 +19,19 @@ namespace SS3D.Systems.Audio
     public sealed class PersonalAudioSubSystem : SubSystem
     {
         private const float IntensityLerpPerSecond = 4f;
+        private const float AlertCueVolumeScale = 0.8f;
+
+        /// <summary>Minimum gap between alert cues — a burst of chips appearing together (or in
+        /// quick succession) still reads as one restrained "ding," not a machine-gun (audio.md §6).</summary>
+        private const float AlertCueCooldownSeconds = 1f;
 
         private AudioSource _heartbeatSource;
         private AudioSource _breathingSource;
+        private AudioSource _alertCueSource;
 
         private float _heartbeatTarget;
         private float _breathingTarget;
+        private float _nextAlertCueTime;
 
         protected override void OnAwake()
         {
@@ -32,20 +39,21 @@ namespace SS3D.Systems.Audio
 
             _heartbeatSource = BuildPersonalSource("HeartbeatSource");
             _breathingSource = BuildPersonalSource("BreathingSource");
+            _alertCueSource = BuildPersonalSource("AlertCueSource", loop: false);
 
             AddHandle(UpdateEvent.AddListener(HandleUpdate));
         }
 
-        private AudioSource BuildPersonalSource(string name)
+        private AudioSource BuildPersonalSource(string name, bool loop = true)
         {
             GameObject host = new(name);
             host.transform.SetParent(Transform, false);
 
             AudioSource source = host.AddComponent<AudioSource>();
             source.playOnAwake = false;
-            source.loop = true;
+            source.loop = loop;
             source.spatialBlend = 0f; // Non-positional, no occlusion — audio.md §4.
-            source.volume = 0f;
+            source.volume = loop ? 0f : 1f; // One-shot cue source keeps a fixed base volume.
 
             // TODO(audio-foundation Phase 0): route to the MainMixer "Personal" group once it
             // exists and a runtime-loadable mixer reference is available (same gap as Ambience).
@@ -69,6 +77,26 @@ namespace SS3D.Systems.Audio
         {
             _breathingTarget = Mathf.Clamp01(intensity);
             EnsurePlayingIfAudible(_breathingSource, AudioTrackIds.HeavyBreathing, _breathingTarget);
+        }
+
+        /// <summary>
+        /// One-shot cue for a newly-appearing alert-stack chip or PDA notification (audio.md §6) —
+        /// not a loop, cooldown-debounced so a burst of chips reads as one restrained "ding."
+        /// </summary>
+        public void PlayAlertCue()
+        {
+            if (Time.time < _nextAlertCueTime)
+            {
+                return;
+            }
+
+            if (!Assets.TryGet(AssetDatabases.Sounds, AudioTrackIds.AlertCue, out AudioClip clip))
+            {
+                return;
+            }
+
+            _nextAlertCueTime = Time.time + AlertCueCooldownSeconds;
+            _alertCueSource.PlayOneShot(clip, AlertCueVolumeScale);
         }
 
         private static void EnsurePlayingIfAudible(AudioSource source, string trackId, float targetIntensity)

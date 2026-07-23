@@ -1,6 +1,6 @@
 > Implements: Documents/design/audio.md §2 (ambience), §3 (diegetic SFX + occlusion), §4 (personal audio), §5 (music), §6 (alerts), §7 (volume categories)
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
-> Status: in-progress (Phase 1–3 shipped; Phase 0, 4–5 pending)
+> Status: in-progress (Phase 1–4 shipped; Phase 0, 5 pending)
 
 # Audio foundation (Jul 2026)
 
@@ -135,11 +135,23 @@ SFX at once.
 - **Known gap (shared with Phase 2):** outputs to Master, not a `Personal` mixer group — same Phase 0
   dependency as ambience.
 
-### Phase 4 — Alert cues (§6)
+### Phase 4 — Alert cues (§6) — **shipped (alert stack; PDA deferred)**
 
-- Short, restrained **one-shot** cue when a *new* chip is added to the alert stack (`AlertIconStack` /
-  `MainHudSubSystem`) or a PDA notification — not a loop, debounced so a burst of chips is not a machine-gun.
-  Personal tier (§4), owner-only, Personal mixer group. No new visual chrome (§7).
+- ✅ `PersonalAudioSubSystem.PlayAlertCue()` — a third playback method on the same subsystem
+  (alongside heartbeat/breathing), but **one-shot** (`AudioSource.PlayOneShot`, not a loop) on its own
+  dedicated non-looping source, cooldown-debounced (1s) so a burst of chips reads as one restrained
+  "ding," not a machine-gun.
+- ✅ `AlertStackAudioMapper.HasNewAlert(previous, current)` — pure diff over `AlertStackState`
+  (`Assets/Scripts/SS3D/UI/MainHud/Components/`), true only when a hazard goes None → any severity.
+  An escalation already showing (Warning → Critical) does **not** re-trigger the cue — that's not a
+  new alert, it's the same chip getting worse. Unit-tested.
+- ✅ `MainHudSubSystem.PushAlertState` — the single funnel every `AlertStackState` push already went
+  through (health-driven via `HandleHealthSnapshotChanged`/`RefreshAlerts`, debug override via
+  `SetDebugAlertOverride`) now diffs through the mapper before forwarding to the view, so all three
+  existing call sites got the cue for free rather than needing three separate hooks.
+- **Deferred:** PDA notification chips — no PDA notification chip system exists in code yet to hook
+  (same gap `chat-audio-screens.md` already records for the non-diegetic feed / PDA log). The alert
+  stack was the only side of §6 actually built to wire into this pass.
 
 ### Phase 5 — Music exception & volume settings (§5, §7)
 

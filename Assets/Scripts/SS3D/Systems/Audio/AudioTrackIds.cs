@@ -9,5 +9,6 @@ namespace SS3D.Systems.Audio
     {
         public const string Heartbeat = "personal_heartbeat";
         public const string HeavyBreathing = "personal_heavy_breathing";
+        public const string AlertCue = "personal_alert_cue";
     }
 }
