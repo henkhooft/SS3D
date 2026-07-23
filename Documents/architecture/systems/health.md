@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects + alert stack wired; vitals HUD Phase 6 remainder)
-> Verified: c2b692f55 — 2026-07-23
+> Verified: 818aaab59 — 2026-07-23
 
 # Health
 
@@ -54,7 +54,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ApplyTreatment(...)` — zone treatments including splint flag (Phase 5)
 - `ApplyBloodTransfusion` / `ApplyOxyRelief` / `ApplyAntitoxin` / `ApplyCpr` — systemic field treatments (Phase 5)
 - `ZoneTargetResolver.TryResolveCombatZone` — zone raycast + groin banding for Harm hits (`ZoneTargetCollider` is the contract; bones may be on Characters)
-- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + connect (exclude-self overload; AnatomyNode limb meshes; closest-point reach)
+- `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + combat (exclude-self overload; AnatomyNode limb meshes; closest-point melee reach). Hover/hitscan accept optional `maxRayDistance` (default 8 m; ranged passes weapon max range).
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
 - Alert stack: emit via `SnapshotChanged`; map with `HealthAlertStackMapper` only — [inventory](inventory.md) Main HUD owns `AlertStackState` / icon rendering.

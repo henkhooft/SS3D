@@ -1,6 +1,6 @@
 ---
 name: Combat Implementation Plan
-overview: Clean-slate combat build-out per combat.md. Phase 0 purges the obsolete Systems/Combat prototype (no dual-stack). Phase 1 ships unified melee MVP on health zone APIs + HumanoidCombatController. Later phases add disarm/grab, ranged, stamina drains, armor, optional blocking, and hardening.
+overview: Clean-slate combat build-out per combat.md. Phase 0–1 melee and Phase 3 ranged hitscan shipped. Later phases: disarm/grab, combat stamina drains, armor, optional blocking, hardening.
 todos:
   - id: phase0-purge
     content: "Phase 0: Purge Assets/Scripts/SS3D/Systems/Combat/, weapon MeleeWeaponItemExtension prefab wiring, InteractionController melee-stance LMB intercept, orphaned IntentController; leave HumanoidCombatController + stance packs; compile-clean"
@@ -175,7 +175,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
 
 ## Open questions (surfaced, not decided here)
 
-- Hitscan vs. projectile for Phase 3 — recommended hitscan-by-default; confirm FishNet.
+- Hitscan vs. projectile for Phase 3 — **resolved 2026-07-23:** hitscan for small arms; projectile later for thrown/heavy.
 - Armor must land before final damage tuning.
 - No skill/training accuracy modifier assumed.
 
