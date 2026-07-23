@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
-> Entry points: AudioSubSystem
+> Entry points: AudioSubSystem, AmbienceSubSystem
 > Status: partial
-> Verified: 220ac4d48 — 2026-07-23
+> Verified: defdd0f6a — 2026-07-23
 
 # Audio
 
@@ -34,12 +34,21 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   through the pool (audio.md §3 example); gains occlusion for free
 - `Assets/Scripts/SS3D/Systems/Audio/ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs`
   — Boombox music-swap interaction, local-player `AudioListener` follow, `Sfx`/`Music`/`Ambient` enum
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceHandler.cs` — **legacy, unwired.** Manual per-scene
-  `_air`/`_windiness`/`_power` knobs and a global mixer lowpass "muffle" predating Area/electricity.
-  Not per-Area, not driven by `AreaRecord.AmbienceTrackId`. Superseded by
-  [audio-foundation](../2026-07_audio-foundation.md) Phase 2 — do not extend, replace per that plan.
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceHandler.cs` — **legacy, unwired, superseded.** Manual
+  per-scene `_air`/`_windiness`/`_power` knobs and a global mixer lowpass "muffle" predating
+  Area/electricity. Not per-Area, not driven by `AreaRecord.AmbienceTrackId`. Do not extend.
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — **Phase 2 replacement** for
+  `AmbienceHandler`: client-local per-Area ambience crossfade (audio.md §2). Self-bootstrapped by
+  `SystemsBootstrap.EnsureProcessWideServices` (same pattern as `ScreenEffectsSubSystem`), not a
+  scene/prefab placement. Polls the local player's world position every 0.5s via
+  `AreaSubSystem.TryResolveAreaIdForWorldPosition`, and on an area change crossfades two
+  non-positional (`spatialBlend = 0`) `AudioSource`s between the old and new
+  `AreaSubSystem.TryGetAmbienceTrackId` clip (`AssetDatabases.Sounds` lookup, matching the pool's clip
+  path). No occlusion (ambience isn't positional, per audio.md §2 vs §3).
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience` / `SFX` / `Music` groups exist; a
-  `Personal` group and per-group exposed Volume parameters are Phase 0/5 work (not yet done)
+  `Personal` group and per-group exposed Volume parameters are Phase 0/5 work (not yet done).
+  `AmbienceSubSystem`'s sources currently output to Master (no runtime-loadable `AudioMixerGroup`
+  reference exists yet for a self-bootstrapped, prefab-less subsystem) — route them once Phase 0 lands.
 - `Assets/Content/Systems/Audio/SFXAudioSource.prefab`, `MusicAudioSource.prefab` — pool prefabs,
   routed to the `SFX` / `Music` mixer groups respectively
 
@@ -54,8 +63,12 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`) bypass
   occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
   ([audio-foundation](../2026-07_audio-foundation.md), deferred).
-- **Not yet built:** per-area ambience crossfade (Phase 2), personal heartbeat/breathing (Phase 3),
-  alert cues (Phase 4), lobby music + volume-slider settings (Phase 5). See
+- Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
+  thin — no Map Editor UI yet, dev-console/content driven). Syncs to observers via
+  `RpcSyncAreaAmbience` (BufferLast), same pattern as the departmental-tint snapshot.
+- **Not yet built:** power-gating power-dependent ambience tracks off `AreaLightingState` (needs a
+  per-track "requires power" data field — deferred, see Pitfalls), personal heartbeat/breathing
+  (Phase 3), alert cues (Phase 4), lobby music + volume-slider settings (Phase 5). See
   [audio-foundation](../2026-07_audio-foundation.md) for the phase plan.
 
 ## Pitfalls
@@ -72,11 +85,26 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   unless reset. `AudioSubSystem.RpcPlayAudioSource` must call `PrepareForPlayback(volume)` before every
   `Play()` — skipping this leaves a newly played sound inheriting the previous clip's muffle.
 - **`AmbienceHandler` is legacy — do not wire new features onto it.** No `AreaSubSystem` awareness, no
-  power gating; Phase 2 replaces it wholesale rather than extending its `_air`/`_windiness` fields.
+  power gating; `AmbienceSubSystem` (Phase 2) replaces it wholesale rather than extending its
+  `_air`/`_windiness` fields.
+- **`AreaRecord.AmbienceTrackId` is not persisted.** Absent from `SavedAreaRecord` /
+  `BuildSavedAreaRecords` / `RestoreFromSave` — authoring via `SetAreaAmbienceTrackId` resets on the
+  next map load/restore until a persistence contributor is added ([persistence](persistence.md)).
+- **No per-track power-gating data field yet.** `audio.md` §2 says "some tracks are honestly
+  power-dependent, not all of them" — that needs a per-track opt-in (mirroring
+  `AreaRecord.HasDepartmentalLightTint`) before `AmbienceSubSystem` can silence a hum on `Dark`. Not
+  built here on purpose: inventing the flag without an authoring surface or content decision on which
+  tracks use it would be dead schema. `AreaSubSystem.OnAreaLightingStateChanged` /
+  `TryGetLightingStateForTile` are the signal to consume once the flag exists.
+- **Ambience sources are pure-runtime `AudioSource`s with no mixer group assigned.** `AmbienceSubSystem`
+  self-bootstraps with no prefab/scene placement, so there's no Editor-assigned
+  `OutputAudioMixerGroup` reference to give them (unlike the pool's `SFXAudioSource.prefab` /
+  `MusicAudioSource.prefab`, which are pre-wired in the Editor). They output to Master until Phase 0
+  wires a runtime-loadable mixer group reference.
 
 ## Depends on / Used by
 
-- **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, lighting snapshot — Phase 2), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [player-control](player-control.md) (local player for `ListenerPosition`)
+- **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [player-control](player-control.md) (local player for `ListenerPosition` / `AmbienceSubSystem`'s `LocalPlayerObjectChanged`)
 - **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs

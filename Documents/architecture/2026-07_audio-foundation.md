@@ -1,6 +1,6 @@
 > Implements: Documents/design/audio.md §2 (ambience), §3 (diegetic SFX + occlusion), §4 (personal audio), §5 (music), §6 (alerts), §7 (volume categories)
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
-> Status: in-progress (Phase 1 shipped; Phase 0, 2–5 pending)
+> Status: in-progress (Phase 1–2 shipped; Phase 0, 3–5 pending)
 
 # Audio foundation (Jul 2026)
 
@@ -78,22 +78,36 @@ SFX at once.
   `BlastExplosionEffect`) onto `PlayAudioSource` so they gain occlusion — `NoisyCollision` already
   routes through the pool and got occlusion for free. Content-roster follow-up, not blocking.
 
-### Phase 2 — Per-area ambience (§2)
+### Phase 2 — Per-area ambience (§2) — **shipped (mechanism; power-gating deferred)**
 
-- New **client-local** ambience controller: on the local player crossing an Area boundary — detected via
-  the same one-tile lookup every Area consumer uses (`AreaSubSystem.TryGetAreaForTile` /
-  `ITileQueryService.TryGetAreaId`) — crossfade two non-positional (2D) sources from the old track to the
-  new. Track id reads `AreaRecord.AmbienceTrackId` (**field already exists** on `AreaRecord`).
-- **Per-track power gating** (§2, "honestly power-dependent, not all of them"): a per-track "requires
-  power" flag; when set, the hum stops if that area sheds. Clients already receive `AreaLightingState`
-  (Normal/Emergency/Dark) via the BufferLast `RpcSyncAreaLighting` snapshot ([area](systems/area.md)) —
-  gate power-dependent tracks off that signal (Dark ⇒ silence the hum), matching area.md §5's "lights out
-  and hum off are the same event." Room-tone tracks with no implied machine are ungated.
-- Retire `AmbienceHandler`; migrate the mixer-muffle behavior it owned (if kept at all) into the Phase 1
-  per-source occlusion path — do **not** keep a global lowpass that muffles *everything*.
-- Authoring of `AmbienceTrackId` per area (Map Editor / `AreaSubSystem.RenameArea`-style API) is thin;
-  wire a minimal setter or defer to a content pass (§10 — which tracks, and which are power-dependent, is
-  content).
+- ✅ `AmbienceSubSystem` — a new **client-local**, self-bootstrapped controller (same
+  `SystemsBootstrap.EnsureSubSystem<T>()` pattern as `ScreenEffectsSubSystem`, not a scene/prefab
+  placement). Polls the local player's world position every 0.5s and resolves the current Area via a
+  new `AreaSubSystem.TryResolveAreaIdForWorldPosition` (live registry on host, `FloorVisualCache`
+  fallback on pure clients — the same two-tier pattern `TryResolveAreaIdForDevice` already uses for
+  devices, generalized to a moving world position). On an Area change it crossfades two non-positional
+  (`spatialBlend = 0`) `AudioSource`s from the old `AmbienceTrackId` clip to the new one.
+- ✅ **Client sync for `AmbienceTrackId`** — this field existed on `AreaRecord` but had no
+  broadcast channel; pure clients have no flood-fill registry (per [area](systems/area.md)) so they
+  could never read it. Added a `RpcSyncAreaAmbience` (BufferLast) snapshot mirroring the existing
+  departmental-tint sync pattern, landing in a new `AreaFloorVisualCache` ambience-id cache
+  (`SetAmbienceTrackId`/`TryGetAmbienceTrackId`/`ReplaceAmbienceTrackIds`, unit-tested). A thin
+  `AreaSubSystem.SetAreaAmbienceTrackId` server setter authors it (no Map Editor UI yet).
+- ✅ `AmbienceHandler` marked superseded in `systems/audio.md` (not deleted — still referenced from
+  content until any remaining scene placements are removed, tracked as a follow-up, not blocking).
+- **Deferred, not built:** per-track power gating (§2 "honestly power-dependent, not all of them")
+  needs a new per-track opt-in data field (mirroring `AreaRecord.HasDepartmentalLightTint`) before
+  `AreaLightingState`/`OnAreaLightingStateChanged` can silence a hum on `Dark`. Not added this pass —
+  inventing the flag with no authoring surface or content decision on which tracks use it would be
+  dead schema; see `systems/audio.md` Pitfalls.
+- **Known gap:** `AmbienceTrackId` is **not persisted** (`SavedAreaRecord` doesn't carry it) — resets
+  on map reload/restore until a persistence contributor is added. Pre-existing gap in the field the
+  design doc calls "already exists," not introduced by this phase, but now more visible since it's
+  actually wired end-to-end.
+- **Known gap:** ambience `AudioSource`s output to Master, not the `Ambience` mixer group — a
+  self-bootstrapped subsystem has no Editor-assigned `OutputAudioMixerGroup` reference the way pool
+  prefabs do. Needs Phase 0's runtime-loadable mixer reference (or a small dedicated prefab) to route
+  correctly.
 
 ### Phase 3 — Personal audio (§4)
 

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: defdd0f6a — 2026-07-23
 
 # Area
 
@@ -50,6 +50,8 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Toggle area fixture lighting: `ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting breaker in MI).
 - Subscribe to wall-switch changes: `OnAreaLightingSwitchChanged`.
 - Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); clients read via `TryGetDepartmentalLightTint`.
+- Ambience track API ([audio-foundation](../2026-07_audio-foundation.md) Phase 2): `SetAreaAmbienceTrackId` (server, thin — no Map Editor UI yet) sets `AreaRecord.AmbienceTrackId`; `TryGetAmbienceTrackId` reads live registry (host) or the synced `RpcSyncAreaAmbience` snapshot (clients), same two-tier pattern as tint. **Not persisted** — `AmbienceTrackId` is absent from `SavedAreaRecord`/`BuildSavedAreaRecords`/`RestoreFromSave`, so it resets on map reload until a persistence contributor is added.
+- Client-safe world-position → area id: `TryResolveAreaIdForWorldPosition` (live registry, else `FloorVisualCache` via the same world-grid math `ITileQueryService.WorldToTile` uses) — for presentation that tracks a moving position (e.g. ambience) rather than a fixed device tile.
 - Fixture visuals: `LightPower` + `AreaLightFixturePolicy` + `LightFixtureCapability` on prefabs.
 - Dev bypass (`SS3D → Dev → Lighting → Always Power Light Fixtures`) treats fixtures as powered but still respects APC channels and area Normal/Emergency/Dark policy.
 - Template restore: `BeginTemplateRestore` → `RestoreFromSave` → APC registration → `EndTemplateRestore`.
@@ -66,7 +68,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 ## Depends on / Used by
 
 - **Depends on:** [tile](tile.md) (`TileMap` area-id storage, `ITileQueryService`), [persistence](persistence.md) (area contributor chunk, `OnAfterRestore` lifecycle)
-- **Used by:** [machine-interface](machine-interface.md) (APC overlap diagnostic); [electricity](electricity.md) (area→APC resolver, `LightPower` fixture visuals, `LightSwitchController` consumer); [persistence](persistence.md) (area metadata capture/restore)
+- **Used by:** [machine-interface](machine-interface.md) (APC overlap diagnostic); [electricity](electricity.md) (area→APC resolver, `LightPower` fixture visuals, `LightSwitchController` consumer); [persistence](persistence.md) (area metadata capture/restore); [audio](audio.md) (`AmbienceSubSystem` per-area crossfade via `TryResolveAreaIdForWorldPosition` / `TryGetAmbienceTrackId`)
 
 ## Related docs
 
@@ -74,6 +76,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
 - Architecture effort: [2026-07_area-foundation](../2026-07_area-foundation.md)
 - Architecture effort: [2026-07_mi-area-electricity-debt](../2026-07_mi-area-electricity-debt.md)
+- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md) (Phase 2 ambience track sync)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
 - Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Related docs: [structural-destruction](structural-destruction.md)
