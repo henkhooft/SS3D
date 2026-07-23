@@ -4,6 +4,7 @@ Navigation hub for agents. Read this before broad code search. Open the relevant
 
 Authoring conventions: [Documents/SKILL.md](../SKILL.md). Agent rules: [AGENTS.md](../../AGENTS.md).
 Cross-cutting structural risk register: [TECH_DEBT.md](TECH_DEBT.md).
+Playable focus and dependency trees: [Documents/milestones/INDEX.md](../milestones/INDEX.md).
 
 ## Coverage table
 
@@ -15,8 +16,9 @@ to [`systems/`](systems/), or "none yet."
 This is the answer to "what's left" at the domain level: a design with no architecture
 entry is designed but unbuilt; a domain with no design entry hasn't been designed at all.
 Feature-level gaps *within* an already-designed system stay in that design doc's own
-`§Out of scope for this pass` — this table doesn't duplicate those. Update as part of
-`update-system-docs`.
+`§Out of scope for this pass` — this table doesn't duplicate those. **Sequenced playable
+gates and what to focus on next** live in [Documents/milestones/](../milestones/), not here.
+Update as part of `update-system-docs`.
 
 | Domain | Design | Architecture | System map |
 |---|---|---|---|
@@ -193,6 +195,7 @@ per domain.
 
 | Resource | Path | Use when |
 |----------|------|----------|
+| Playable milestones | [milestones/INDEX.md](../milestones/INDEX.md) | What to focus on next; dependency trees toward MVP1/MVP2 playable gates |
 | Technical debt tracker | [TECH_DEBT.md](TECH_DEBT.md) | Prioritizing structural risk / code smells before picking up cleanup work |
 | Art asset index | [art-asset-index.md](../art-asset-index.md) | Locating or importing art from SS3D-Art |
 | Available for import | [art-available-for-import.json](../art-available-for-import.json) | Finding game-ready art not yet in `Assets/Art/` |

@@ -6,7 +6,7 @@ This file inlines the **tripwires** — the mistakes that are high-frequency, hi
 
 ## Navigate docs before searching code
 
-1. Read [Documents/architecture/INDEX.md](Documents/architecture/INDEX.md) to find the relevant domain.
+1. Read [Documents/architecture/INDEX.md](Documents/architecture/INDEX.md) to find the relevant domain. When the question is **what to build next** or **what's blocking a playable goal**, start at [Documents/milestones/INDEX.md](Documents/milestones/INDEX.md) instead (focus + dependency trees — see [Documents/SKILL.md](Documents/SKILL.md)).
 2. Open the linked **system map** under `Documents/architecture/systems/` for entry points and key files.
 3. Read the map's **Pitfalls** section before any UI Toolkit, FishNet, or prefab work — it records failures that compile and run but misbehave with no error or log. These cost hours precisely because nothing throws; the map is where that knowledge is banked.
 4. Only then read specific source files or run targeted search — not full-tree exploration.
@@ -48,7 +48,7 @@ Canonical layer table (what each folder answers, who updates it): [Documents/SKI
 
 - **Never edit `Documents/design/*` or `Documents/FORK_STATUS.md`** unless the owner explicitly asks. If code diverges from a design spec, record the divergence in the system map, plan, or architecture effort doc — **do not change the design file to match code.**
 - **Design docs are WHAT/WHY only** — no prototyping prompts, no build-status field. Need a Cursor or Claude Design prompt for a system? Generate it fresh from the design doc plus the current system map; don't expect one written into the design doc. Need to know what's built vs. only designed? Read the coverage table in [INDEX.md](Documents/architecture/INDEX.md), not the design doc.
-- **Plans and system maps are yours to update; design specs are not.** When your feature ships, sync the maps (below) — an unsynced map is the drift this whole system exists to prevent.
+- **Plans, system maps, and milestones are yours to update; design specs are not.** When your feature ships, sync the maps (below) — and bump any matching milestone slice / hub current focus — an unsynced map is the drift this whole system exists to prevent.
 
 ## When code search is still appropriate
 
@@ -64,6 +64,7 @@ Run the **`update-system-docs`** skill (`.cursor/skills/update-system-docs/SKILL
 - INDEX status and coverage table
 - Linked plans in `Documents/plans/`
 - Architecture effort doc status, if applicable
+- Milestone slice status and hub current focus under `Documents/milestones/`, if the work advanced a playable gate
 
 ## Composition, prefabs, and UI
 

@@ -12,6 +12,7 @@ Read this before writing or editing anything in `Documents/`.
 | `Documents/architecture/YYYY-MM_*.md` | HOW and IN WHAT ORDER for one effort | Agents — set header `Status` when shipping |
 | `Documents/architecture/INDEX.md` | Navigation hub for agents; project-wide coverage table (what's designed, what's architected, what's mapped) | Agents via `update-system-docs` |
 | `Documents/architecture/systems/` | WHERE in code (one map per domain) | Agents via `update-system-docs` |
+| `Documents/milestones/` | What to focus on next; dependency trees toward a playable goal | Agents + owner — update slice status when child work ships; refresh hub current focus |
 | `Documents/FORK_STATUS.md` | Upstream divergence log | Owner periodically — agents do not touch |
 
 This table is canonical. `AGENTS.md` inlines only the hard prohibitions drawn from it; it does not restate the table, so the two cannot drift.
@@ -41,6 +42,30 @@ Temporary implementation plans — typically Cursor plan files (`*.plan.md`) wit
 ### Architecture efforts (`Documents/architecture/YYYY-MM_*.md`)
 
 Implementation plans for a specific effort (can span multiple systems). Named `YYYY-MM_short-description.md`.
+
+### Milestones (`Documents/milestones/`)
+
+Playable product gates and focus sequencing — not a substitute for design, architecture efforts, or plans. A milestone answers **what to work on next** and shows the **dependency tree** of features that unlock a playable goal (e.g. Nuke Ops → ranged combat → armor/health; nuke device → blast → station structural damage). Domain-level “what's designed / built” stays in the INDEX coverage table; structural risk stays in [TECH_DEBT.md](architecture/TECH_DEBT.md).
+
+Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates). One file per playable gate (e.g. `mvp1-nuke-ops.md`).
+
+**Rules:**
+
+- A milestone doc **cites** design §§, architecture efforts, and plans — it does **not** restate gameplay rules or full implementation HOW.
+- Milestone docs may link **down** to design / architecture / plans (same direction as architecture → design). Design docs still never link up to milestones.
+- Status on a milestone is about the **playable gate**, not “is the design active” or “did one PR ship.”
+- Do not invent a parallel `Documents/plans/*.plan.md` as a second source of truth for the same gate — day-to-day HOW stays in plans/efforts; the milestone tracks focus and tree status.
+
+**Header template:**
+
+```
+> Goal: <one-line playable definition>
+> Status: planned | in-progress | shipped | abandoned
+> Depends on: <other milestone paths, if any>
+> Current focus: <slice id or “blocked on X” — also mirrored on milestones INDEX>
+```
+
+**Body sections (fixed order):** **Playable definition**, **Dependency tree** (mermaid and/or nested bullets; leaf nodes link to design§ / effort / plan — this is the primary artifact), **Slices** (status table for the same nodes), **Explicitly deferred**, **Maintenance**.
 
 ### System maps (`Documents/architecture/systems/`)
 
@@ -94,9 +119,13 @@ Every **system map** starts with:
 > Verified: <short-sha> — <YYYY-MM-DD>
 ```
 
+Every **milestone** doc starts with the header template under [Milestones](#milestones-documentsmilestones) above.
+
 System map body sections (fixed order): **Overview**, **Start here**, **Extension points**, **Pitfalls** (optional — include only when there are real silent-failure landmines), **Depends on / Used by**, **Related docs**.
 
 Design doc body sections (fixed order): unnumbered opening — what this doc formalizes and why it exists — then **Design philosophy**, doc-specific numbered sections, **Worked examples**, **Integration notes**, **Out of scope for this pass**. Nothing follows "Out of scope." No prototyping section, no status field beyond the one above.
+
+Milestone body sections: fixed order under [Milestones](#milestones-documentsmilestones) above.
 
 Keep each system map under ~80 lines; **Pitfalls** does not count against this — it's the one section worth letting a map run long for. Do not duplicate gameplay rules from design docs — link and cite by path + section.
 
@@ -136,4 +165,4 @@ A domain sitting at "none yet / none yet" in INDEX.md's coverage table goes from
 
 ## After implementing a feature (agents)
 
-Run the `update-system-docs` skill (`.cursor/skills/update-system-docs/SKILL.md`) to sync INDEX, affected system maps (status, `Verified` stamp, new **Pitfalls**), linked plans, and architecture effort status. Never edit `Documents/design/` or `Documents/FORK_STATUS.md` unless the owner explicitly asks.
+Run the `update-system-docs` skill (`.cursor/skills/update-system-docs/SKILL.md`) to sync INDEX, affected system maps (status, `Verified` stamp, new **Pitfalls**), linked plans, architecture effort status, and any [milestones](milestones/) slice status / hub current focus the work advanced. Never edit `Documents/design/` or `Documents/FORK_STATUS.md` unless the owner explicitly asks.

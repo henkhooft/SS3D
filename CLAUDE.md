@@ -21,7 +21,8 @@ Windows-only; Linux, EditMode, and smoke are opt-in) — see
 This repo's most important convention is **docs-first navigation**, defined in `AGENTS.md` (repo root). Follow it:
 
 1. Read `Documents/architecture/INDEX.md` first — it's the navigation hub and a per-domain coverage table
-   (design spec / architecture effort / system map, each linked or marked "none yet").
+   (design spec / architecture effort / system map, each linked or marked "none yet"). When asking
+   **what to build next** or what's blocking a playable goal, start at `Documents/milestones/INDEX.md`.
 2. Open the linked **system map** under `Documents/architecture/systems/` for entry points and key files for that
    domain.
 3. Only then read source files or grep — don't do full-tree exploration as a first move.
@@ -34,11 +35,12 @@ Doc layers and who owns them:
 | Architecture efforts | `Documents/architecture/YYYY-MM_*.md` | HOW/order for one implementation effort. Set header `Status` when it ships. |
 | System maps | `Documents/architecture/systems/*.md` | WHERE in code (entry points, key files) per domain. Update after feature work. Keep under ~80 lines; link to design docs rather than duplicating rules. |
 | Plans | `Documents/plans/*.plan.md` | Temporary in-flight implementation plans with YAML frontmatter/todos. Update todos on ship; never delete. |
+| Milestones | `Documents/milestones/` | What to focus on next; dependency trees toward playable gates (MVP1/MVP2). Update slice status + hub focus on ship. |
 | `Documents/FORK_STATUS.md` | — | **Read-only** unless the owner explicitly asks. Divergence log vs. upstream. |
 | `Documents/SKILL.md` | — | Authoring conventions (header blocks, linking rules, section order) for everything above. Read before writing any doc. |
 
 After implementing a feature, run the `update-system-docs` skill (`.cursor/skills/update-system-docs/SKILL.md`) to
-sync system maps, INDEX.md, plans, and architecture effort status.
+sync system maps, INDEX.md, plans, architecture effort status, and milestone focus.
 
 ### Finding art and UI icons
 

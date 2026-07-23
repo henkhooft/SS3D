@@ -1,12 +1,13 @@
 ---
 name: update-system-docs
-description: Updates architecture INDEX, system maps, and implementation plans after code changes. Use when finishing a feature, after merging implementation work, or when the user asks to sync navigation docs with the codebase.
+description: Updates architecture INDEX, system maps, implementation plans, and milestone focus after code changes. Use when finishing a feature, after merging implementation work, or when the user asks to sync navigation docs with the codebase.
 disable-model-invocation: true
 ---
 
 # Update System Docs
 
-Sync navigation documentation after implementation work. Updates INDEX, system maps, plans, and architecture effort status.
+Sync navigation documentation after implementation work. Updates INDEX, system maps, plans,
+architecture effort status, and playable milestone slice/focus status.
 
 **Never edit:** `Documents/design/*`, `Documents/FORK_STATUS.md` (unless the owner explicitly asks).
 
@@ -19,7 +20,8 @@ Sync navigation documentation after implementation work. Updates INDEX, system m
 - [ ] Step 4: Update INDEX.md
 - [ ] Step 5: Update linked plans
 - [ ] Step 6: Update architecture effort docs
-- [ ] Step 7: Sanity check links, paths, stamps
+- [ ] Step 7: Update milestones (slice status + hub current focus)
+- [ ] Step 8: Sanity check links, paths, stamps
 ```
 
 ## Step 1: Identify scope
@@ -36,7 +38,7 @@ Run `git diff` (or review changed paths from the session). Map paths to systems 
 | `Assets/Scripts/SS3D/UI/MachineInterface/` | machine-interface |
 | `Assets/Scripts/SS3D/Systems/Rounds/`, `Systems/Lobby/` | rounds-lobby |
 
-When unsure, read INDEX first.
+When unsure, read INDEX first. If the question or change advances a **playable gate**, also open [Documents/milestones/INDEX.md](../../Documents/milestones/INDEX.md).
 
 ## Step 2: Read affected maps
 
@@ -84,12 +86,26 @@ If work completed a dated effort in `Documents/architecture/YYYY-MM_*.md`:
 
 - Set header `> Status: shipped` (or `abandoned` with explanation)
 
-## Step 7: Sanity check
+## Step 7: Update milestones
+
+If the shipped work advances a slice under [Documents/milestones/](../../Documents/milestones/)
+(see [Documents/SKILL.md](../../Documents/SKILL.md) Milestones section):
+
+1. Bump that slice’s **Status** (and child effort/plan link) in the owning gate doc
+   (e.g. `mvp1-nuke-ops.md`)
+2. Update the gate header `> Current focus:` to the deepest unfinished critical leaves
+3. Mirror **Current focus** on [Documents/milestones/INDEX.md](../../Documents/milestones/INDEX.md)
+4. If a whole gate ships, set its header `Status: shipped` and retarget hub focus to the next gate
+
+Do not restate design rules or implementation HOW in milestone docs — cite only.
+
+## Step 8: Sanity check
 
 - Every file listed under **Start here** exists in the repo
 - INDEX links resolve to existing system map files
 - Every `Verified` stamp you bumped points at a commit you actually checked the map against
 - Any `Pitfalls` entry you added describes real, current behavior
+- Milestone links resolve; hub current focus matches the active gate header
 - No edits were made to `Documents/design/` or `Documents/FORK_STATUS.md`
 
 ## System map template
@@ -100,3 +116,4 @@ Use the canonical header block and fixed section order in [Documents/SKILL.md](.
 
 - Agent navigation rules: [AGENTS.md](../../AGENTS.md)
 - Full doc conventions: [Documents/SKILL.md](../../Documents/SKILL.md)
+- Playable milestones: [Documents/milestones/INDEX.md](../../Documents/milestones/INDEX.md)
