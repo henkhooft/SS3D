@@ -420,6 +420,12 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            StaminaController stamina = GetComponent<StaminaController>();
+            if (weapon.Profile.StaminaCost > 0f)
+            {
+                stamina?.ServerDepleteStamina(weapon.Profile.StaminaCost);
+            }
+
             if (!TryGetMeleeAimRay(out Ray aimRay))
             {
                 // Fall back to entity facing if aim never synced.
@@ -439,7 +445,8 @@ namespace SS3D.Systems.Interactions
             }
 
             float horizontalSpeed = GetHorizontalMoveSpeed();
-            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
+            float exertionPenalty = stamina?.ExertionPenalty ?? 0f;
+            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance, exertionPenalty);
             var rng = new System.Random(unchecked(Environment.TickCount ^ GetInstanceID() ^ weapon.RoundsRemaining));
 
             HumanHealthController selfHealth = GetComponentInChildren<HumanHealthController>();
@@ -618,8 +625,8 @@ namespace SS3D.Systems.Interactions
             // Do not use InteractionSource.Interact / DelayedInteraction for Harm primary.
             // Connect is scheduled on this controller so it cannot be skipped when Hand/Item
             // Update fails to tick through StartDelayed.
-            hit.ServerBeginSwing(hand);
-            ServerScheduleMeleeConnect(hand, hit.Profile);
+            float effectiveWindupSeconds = hit.ServerBeginSwing(hand);
+            ServerScheduleMeleeConnect(hand, hit.Profile, effectiveWindupSeconds);
 
             _meleeSwingSerial++;
             RpcExecuteMeleeSwing(_meleeSwingSerial);
@@ -646,11 +653,11 @@ namespace SS3D.Systems.Interactions
         }
 
         [Server]
-        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile)
+        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile, float windupSeconds)
         {
             _pendingMeleeHand = hand;
             _pendingMeleeProfile = profile;
-            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, profile.WindupSeconds);
+            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, windupSeconds);
         }
 
         [Server]

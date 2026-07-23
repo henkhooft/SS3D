@@ -292,7 +292,8 @@ MonoBehaviour:
     MagazineSize: 30
     ReloadSeconds: 2.2
     StructuralForce: 12
-    StaminaCost: 0
+    StaminaCost: 3
+    ExhaustionSpreadDegrees: 3
 --- !u!1 &6508855772059703352
 GameObject:
   m_ObjectHideFlags: 0

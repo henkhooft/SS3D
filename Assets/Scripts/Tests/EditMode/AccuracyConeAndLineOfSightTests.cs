@@ -50,6 +50,17 @@ namespace EditorTests
             float far = AccuracyCone.ComputeSpreadDegrees(profile, 0f, 0f, profile.FalloffEndMeters);
             Assert.Greater(far, near);
         }
+
+        [Test]
+        public void ComputeSpread_ExertionWidensCone()
+        {
+            RangedWeaponProfile profile = RangedWeaponProfile.M4;
+            float rested = AccuracyCone.ComputeSpreadDegrees(profile, 0f, 0f, 5f, 0f);
+            float winded = AccuracyCone.ComputeSpreadDegrees(profile, 0f, 0f, 5f, 0.5f);
+            float exhausted = AccuracyCone.ComputeSpreadDegrees(profile, 0f, 0f, 5f, 1f);
+            Assert.Greater(winded, rested);
+            Assert.Greater(exhausted, winded);
+        }
     }
 
     public class LineOfSightTests
@@ -74,6 +85,14 @@ namespace EditorTests
             Assert.Greater(m4.FireCooldownSeconds, 0f);
             Assert.Greater(m4.ReloadSeconds, 0f);
             Assert.Greater(m4.MaxRangeMeters, ZoneTargetResolverDefaultRay());
+        }
+
+        [Test]
+        public void M4_HasCombatStaminaCosts()
+        {
+            RangedWeaponProfile m4 = RangedWeaponProfile.M4;
+            Assert.Greater(m4.StaminaCost, 0f);
+            Assert.Greater(m4.ExhaustionSpreadDegrees, 0f);
         }
 
         private static float ZoneTargetResolverDefaultRay() => 8f;

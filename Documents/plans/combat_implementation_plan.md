@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: phase4-stamina
     content: "Phase 4: Combat stamina drains (swing/fire/block) via StaminaController; push-past-empty already → ApplyOxyDebt"
-    status: pending
+    status: completed
   - id: phase5-armor
     content: "Phase 5: Per-zone armor absorption before limb damage + seal breach per armor.md; retune combat damage numbers"
     status: pending
@@ -149,6 +149,8 @@ Single primary path per [combat.md](../design/combat.md) §2:
 - Per [stamina.md](../design/stamina.md): swing, block, and sustained fire drain via
   `StaminaController.ServerDepleteStamina`; push-past-empty already draws oxy debt. Gate or
   soft-penalize combat verbs as design requires (core Phase 7a does not hard-lock at zero).
+- **Shipped 2026-07-23 for swing + fire** (block deferred to Phase 6 — see Implementation
+  notes below).
 
 ### Phase 5 — Armor
 
@@ -210,3 +212,21 @@ Single primary path per [combat.md](../design/combat.md) §2:
   Harm primary branches to `CmdRunRangedFire` (accuracy cone, LOS, zone/structural); mag +
   cooldown + timed reload (E / empty fire). Reticle bloom via `ZoneReticleDriver`. Armor,
   disarm, projectile, loose ammo still deferred.
+- **2026-07-23 (Phase 4, swing + fire only):** Gave `RangedWeaponProfile.M4` a nonzero
+  `StaminaCost` (3, vs. melee's 8-12 — much higher fire rate) and drained it per shot in
+  `CmdRunRangedFire`, mirroring the melee `TryConsumeSwingStamina` pattern. Also wired the
+  winded-performance feedback from `stamina.md` §3 that neither swing nor fire had before:
+  `StaminaController.ExertionPenalty` widens the ranged accuracy cone
+  (`RangedWeaponProfile.ExhaustionSpreadDegrees`, new field, read in
+  `AccuracyCone.ComputeSpreadDegrees`) and scales melee windup/recovery up to 1.6x
+  (`MeleeHitInteraction.ComputeExertionTimeMultiplier`). `MeleeHitInteraction.ServerBeginSwing`
+  now returns the scaled windup so `InteractionController.CmdRunMeleeSwing` can schedule the
+  actual connect timer (`ServerScheduleMeleeConnect`) at the same lengthened duration as the
+  recovery lock — the client-side optimistic lock stays unscaled since the server's
+  `TargetNotifyMeleeRecovery` RPC corrects it moments later. Main HUD's ranged reticle bloom
+  (`MainHudSubSystem.GetSelectedRangedBloom01`) now reads the same `ExertionPenalty` so the
+  preview matches the server-fired spread. **Block drain deliberately not done** — no block
+  interaction exists in code yet (Phase 6 is still pending/optional-for-MVP and owns building
+  the block mechanic itself); wiring a drain-over-time onto a nonexistent interaction would be
+  scope creep ahead of its own phase. Numeric costs/multipliers are a balancing placeholder,
+  consistent with `stamina.md` §7 leaving exact rates unspecified.

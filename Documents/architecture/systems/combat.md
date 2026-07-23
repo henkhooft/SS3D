@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 818aaab59 — 2026-07-23
+> Verified: b1fcfbbce — 2026-07-23
 
 # Combat
 
@@ -15,7 +15,16 @@ Phase 0–1 melee + Phase 3 ranged vertical slice per [combat_implementation_pla
 
 **Intent ↔ stance:** Harm → Melee/Ranged from inventory (`RangedWeaponItemExtension` preferred over trait name); Help → Peaceful. Harm never falls through to Drop/Open/MI.
 
-Deferred: disarm/grab, armor, blocking, combat fire stamina drain, projectile/thrown.
+**Combat stamina drains (Phase 4, fire done, block deferred):** Ranged fire drains
+`RangedWeaponProfile.StaminaCost` per shot via `StaminaController.ServerDepleteStamina` (melee
+swing already drained this way). Exertion also feeds back into performance: `ExertionPenalty`
+widens the ranged accuracy cone (`RangedWeaponProfile.ExhaustionSpreadDegrees`, read in
+`AccuracyCone.ComputeSpreadDegrees`) and scales melee windup/recovery up to 1.6x
+(`MeleeHitInteraction.ComputeExertionTimeMultiplier`) — both the recovery lock and the actual
+connect-timing schedule lengthen together. Main HUD reticle bloom reads the same exertion value
+so the visual preview matches server-fired spread.
+
+Deferred: disarm/grab, armor, blocking (including block stamina drain), projectile/thrown.
 
 ## Start here
 
@@ -43,6 +52,7 @@ Deferred: disarm/grab, armor, blocking, combat fire stamina drain, projectile/th
 3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
 4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
 5. Help + M4 must not swing/fire; Harm must not Drop.
+6. Fire/swing repeatedly until stamina is low — ranged spread should visibly widen and melee windup/recovery should visibly slow versus a fresh attack at full stamina.
 
 ## Pitfalls
 
@@ -51,11 +61,12 @@ Deferred: disarm/grab, armor, blocking, combat fire stamina drain, projectile/th
 - **Zone ray default is 8 m** — ranged passes `profile.MaxRangeMeters` into `TryResolveHoverZone`; do not hardcode melee default for hitscan.
 - **Reload via E bypasses intent** — `ReloadRangedInteraction` is Help-default in discovery; Harm reload uses `CmdRunRangedReload` from Use / empty fire.
 - **Reticle bloom is single-composer** — set via `ZoneReticleDriver.SetBloomInput` only; no parallel writers.
+- **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - Melee pitfalls (connect aim, exclude self, structural reach, Harm whitelist, etc.) still apply — see git history / prior map notes.
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md), [stamina](stamina.md) (melee costs), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md), [structural-destruction](structural-destruction.md)
+- **Depends on:** [health](health.md), [stamina](stamina.md) (melee + ranged fire costs, exertion feedback into windup/cone), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md), [structural-destruction](structural-destruction.md)
 - **Used by:** Harm-intent Run Primary; Hotkeys Use (reload)
 
 ## Related docs
