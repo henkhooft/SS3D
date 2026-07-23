@@ -32,17 +32,22 @@ Editor Play Mode smoke check before merging — don't batch phases together to s
 
 ### 1. Icon scatter
 
-All 4,219 `.svg` files live under `Assets/Art/Icons/` as intended, but icon-like image assets also exist in:
+**Audit snapshot @ `b329ad1a` (pre–Phase 1).** Phase 1 icon consolidation (`3fe823a15`) moved the starred
+items into `Assets/Art/Icons/`; strike-through paths below are historical. Still open: InteractionIcons
+Art/Content name collision (Phase 2) and TMP sprite sheets.
 
-- `Assets/Art/Graphics/UI/Misc/Heroicons/` — 460 files, a second vendored icon set outside `Icons/`.
-- `Assets/Art/Graphics/UI/Interactions/InteractionIcons/` — 51 PNGs, plus `.../RadialMenu/CloseIcon.png`.
-- `Assets/Art/Graphics/UI/Containers/InventoryIcons/` — 19 files.
-- `Assets/Art/Graphics/Misc/RenderedIcons/` — 13 files.
-- `Assets/Content/Systems/UI/MainHud/Icons/AlertStack/` — 14 PNGs (bleeding, cardiac-arrest, hunger, etc.) — a
-  live gameplay icon set stored under `Content/Systems`, not `Art/`, at all.
+All 4,219 `.svg` files already lived under `Assets/Art/Icons/` (now `External/` after rename). Icon-like
+image assets also existed in:
+
+- ~~`Assets/Art/Graphics/UI/Misc/Heroicons/`~~ → `Assets/Art/Icons/Heroicons/` ★
+- `Assets/Art/Graphics/UI/Interactions/InteractionIcons/` — 51 PNGs, plus `.../RadialMenu/CloseIcon.png`
+  (Phase 2).
+- ~~`Assets/Art/Graphics/UI/Containers/InventoryIcons/`~~ → `Assets/Art/Icons/Inventory/` ★
+- ~~`Assets/Art/Graphics/Misc/RenderedIcons/`~~ → `Assets/Art/Icons/Rendered/` ★
+- ~~`Assets/Content/Systems/UI/MainHud/Icons/AlertStack/`~~ → `Assets/Art/Icons/Alerts/` ★
 - `Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/` — 51 `.asset` ScriptableObject wrappers
   that **share the exact folder name** with the Art-side PNG folder above, in a different tree, wrapping a
-  different asset kind. This is the sharpest collision in the audit.
+  different asset kind. This is the sharpest collision in the audit (Phase 2).
 - `Assets/Content/Systems/UI/MapEditor/MapEditorIcons.asset`, `.../Font/SpriteAssets/TMPSpriteAssetIcons.asset` —
   more icon-catalog ScriptableObjects mirroring raw PNGs elsewhere.
 - Vendored editor-toolbar icons in `Scripts/External/DOTween`, `Scripts/External/Hierarchy 2`,
@@ -76,8 +81,10 @@ documented rule for which bucket a new ScriptableObject should land in.
 
 ### 5. Five "Misc" dumping grounds
 
-`Art/Animations/Misc`, `Art/Animations/Probably Not/Misc`, `Art/Graphics/Misc`, `Art/Graphics/UI/Misc`,
+`Art/Animations/Misc`, `Art/Animations/Probably Not/Misc`, ~~`Art/Graphics/Misc`~~, ~~`Art/Graphics/UI/Misc`~~,
 `Content/Localization/Table Collections/Misc` — the classic signal of a taxonomy with no place for edge cases.
+Graphics Misc folders were emptied/removed with Phase 1 icon moves (`Windows/` → `Graphics/UI/Windows/`,
+overlays → `Graphics/UI/Chrome/`).
 
 ### 6. Structural mistake
 
@@ -86,8 +93,8 @@ documented rule for which bucket a new ScriptableObject should land in.
 
 ### 7. Naming inconsistency
 
-Spaces vs. PascalCase: `Assets/UI Toolkit`, `Art/Icons/external icons` (lowercase+spaced — this one is
-in-house-named, not vendor-named), `Content/Localization/Table Collections`. Most other spaced folders
+Spaces vs. PascalCase: `Assets/UI Toolkit`, ~~`Art/Icons/external icons`~~ (renamed `External/` in Phase 1),
+`Content/Localization/Table Collections`. Most other spaced folders
 (`Basic Shooter Pack`, `Pro Melee Axe Pack`, `TextMesh Pro`, `Hierarchy 2`) are asset-store/vendor pack names
 and should be left alone, same as we don't rename `Assets/FishNet/`.
 
