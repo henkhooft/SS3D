@@ -11,7 +11,9 @@ namespace SS3D.Systems.Health
     public static class ZoneTargetResolver
     {
         private const float MaxPointResolveDistanceSqr = 0.08f;
-        private const float MaxRayDistance = 8f;
+
+        /// <summary>Default hover/melee camera ray length. Ranged passes an explicit max.</summary>
+        public const float DefaultMaxRayDistance = 8f;
 
         /// <summary>
         /// Player-facing zone label for the Main HUD reticle chip (main-hud §6).
@@ -60,10 +62,32 @@ namespace SS3D.Systems.Health
             out Vector3 hitPoint,
             out Collider zoneCollider)
         {
+            return TryResolveHoverZone(
+                ray,
+                excludeHealth,
+                DefaultMaxRayDistance,
+                out zone,
+                out health,
+                out hitPoint,
+                out zoneCollider);
+        }
+
+        /// <param name="maxRayDistance">Camera/hitscan cast length (melee hover uses <see cref="DefaultMaxRayDistance"/>).</param>
+        public static bool TryResolveHoverZone(
+            Ray ray,
+            HumanHealthController excludeHealth,
+            float maxRayDistance,
+            out BodyZone zone,
+            out HumanHealthController health,
+            out Vector3 hitPoint,
+            out Collider zoneCollider)
+        {
             zone = BodyZone.Chest;
             health = null;
             hitPoint = default;
             zoneCollider = null;
+
+            float castDistance = Mathf.Max(0.01f, maxRayDistance);
 
             int mask = LayerMask.GetMask("Characters", HealthLayers.BodyPartsLayerName);
             if (mask == 0)
@@ -71,7 +95,7 @@ namespace SS3D.Systems.Health
                 mask = ~0;
             }
 
-            RaycastHit[] hits = Physics.RaycastAll(ray, MaxRayDistance, mask, QueryTriggerInteraction.Collide);
+            RaycastHit[] hits = Physics.RaycastAll(ray, castDistance, mask, QueryTriggerInteraction.Collide);
             if (hits.Length == 0)
             {
                 return false;
@@ -103,7 +127,7 @@ namespace SS3D.Systems.Health
                 return false;
             }
 
-            if (!TryResolveZoneFromRay(ray, closestHealth, out zone, out RaycastHit zoneHit))
+            if (!TryResolveZoneFromRay(ray, closestHealth, castDistance, out zone, out RaycastHit zoneHit))
             {
                 return false;
             }
@@ -161,6 +185,16 @@ namespace SS3D.Systems.Health
 
         public static bool TryResolveZoneFromRay(Ray ray, HumanHealthController health, out BodyZone zone, out RaycastHit hit)
         {
+            return TryResolveZoneFromRay(ray, health, DefaultMaxRayDistance, out zone, out hit);
+        }
+
+        public static bool TryResolveZoneFromRay(
+            Ray ray,
+            HumanHealthController health,
+            float maxRayDistance,
+            out BodyZone zone,
+            out RaycastHit hit)
+        {
             zone = BodyZone.Chest;
             hit = default;
 
@@ -169,6 +203,7 @@ namespace SS3D.Systems.Health
                 return false;
             }
 
+            float castDistance = Mathf.Max(0.01f, maxRayDistance);
             float closestDistance = float.PositiveInfinity;
             bool found = false;
 
@@ -187,7 +222,14 @@ namespace SS3D.Systems.Health
                     continue;
                 }
 
-                if (!TryPickClosestZoneHit(ray, physicsCollider, zoneCollider.Zone, ref closestDistance, ref hit, ref zone))
+                if (!TryPickClosestZoneHit(
+                        ray,
+                        physicsCollider,
+                        zoneCollider.Zone,
+                        castDistance,
+                        ref closestDistance,
+                        ref hit,
+                        ref zone))
                 {
                     continue;
                 }
@@ -220,7 +262,14 @@ namespace SS3D.Systems.Health
                         continue;
                     }
 
-                    if (!TryPickClosestZoneHit(ray, physicsCollider, anatomyNode.PrimaryZone, ref closestDistance, ref hit, ref zone))
+                    if (!TryPickClosestZoneHit(
+                            ray,
+                            physicsCollider,
+                            anatomyNode.PrimaryZone,
+                            castDistance,
+                            ref closestDistance,
+                            ref hit,
+                            ref zone))
                     {
                         continue;
                     }
@@ -236,11 +285,12 @@ namespace SS3D.Systems.Health
             Ray ray,
             Collider physicsCollider,
             BodyZone candidateZone,
+            float maxRayDistance,
             ref float closestDistance,
             ref RaycastHit hit,
             ref BodyZone zone)
         {
-            if (!physicsCollider.Raycast(ray, out RaycastHit candidate, MaxRayDistance))
+            if (!physicsCollider.Raycast(ray, out RaycastHit candidate, maxRayDistance))
             {
                 return false;
             }

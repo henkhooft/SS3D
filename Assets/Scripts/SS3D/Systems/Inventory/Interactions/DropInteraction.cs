@@ -6,6 +6,7 @@ using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Utils;
 using UnityEngine;
 
 namespace SS3D.Systems.Inventory.Interactions
@@ -60,11 +61,10 @@ namespace SS3D.Systems.Inventory.Interactions
                 return false;
             }
 
-            // Confirm the entities ViewPoint can see the drop point
-            Vector3 direction = (interactionEvent.Point - entity.ViewPoint.transform.position).normalized;
-            bool raycast = Physics.Raycast(entity.ViewPoint.transform.position, direction, out RaycastHit hit, Mathf.Infinity, _defaultMask);
-
-            if (!raycast)
+            // Confirm the entities ViewPoint can see the drop point (shared LOS helper).
+            Vector3 viewOrigin = entity.ViewPoint.transform.position;
+            Vector3 direction = (interactionEvent.Point - viewOrigin).normalized;
+            if (!LineOfSight.TryGetFirstHit(viewOrigin, direction, Mathf.Infinity, _defaultMask, out RaycastHit hit))
             {
                 return false;
             }

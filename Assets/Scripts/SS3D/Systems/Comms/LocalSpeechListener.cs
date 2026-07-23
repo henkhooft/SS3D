@@ -1,4 +1,5 @@
 using SS3D.Systems.Entities;
+using SS3D.Utils;
 using UnityEngine;
 
 namespace SS3D.Systems.Comms
@@ -44,19 +45,13 @@ namespace SS3D.Systems.Comms
         }
 
         /// <summary>
-        /// Raycasts from the viewer's ViewPoint toward the speaker's, following the same
-        /// line-of-sight pattern DropInteraction uses. v1 treats all solid geometry the same
-        /// (comms.md §13) - a single occlusion mask, not material-aware.
+        /// Raycasts from the viewer's ViewPoint toward the speaker's via shared
+        /// <see cref="LineOfSight"/>. v1 treats all solid geometry the same
+        /// (comms.md §13) — a single occlusion mask, not material-aware.
         /// </summary>
         private bool IsBlocked(Vector3 origin, Vector3 target, float distance)
         {
-            if (distance <= 0f)
-            {
-                return false;
-            }
-
-            Vector3 direction = (target - origin) / distance;
-            return Physics.Raycast(origin, direction, distance, _config.OcclusionMask);
+            return !LineOfSight.HasLineOfSight(origin, target, _config.OcclusionMask, out _);
         }
     }
 }

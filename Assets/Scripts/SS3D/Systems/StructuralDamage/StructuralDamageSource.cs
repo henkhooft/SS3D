@@ -10,5 +10,6 @@ namespace SS3D.Systems.StructuralDamage
         Blast = 2,
         Console = 3,
         Other = 4,
+        Ranged = 5,
     }
 }

@@ -1,4 +1,5 @@
 ﻿using FishNet.Connection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
@@ -17,10 +18,13 @@ using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
+using SS3D.Systems.Health;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.StructuralDamage;
+using SS3D.Systems.Tile;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -231,9 +235,15 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            // Harm is combat-exclusive: attempt a swing and never fall through to Drop/Open/MI.
+            // Harm is combat-exclusive: ranged fire when holding a firearm, else melee swing.
+            // Never fall through to Drop/Open/MI.
             if (CurrentIntent == IntentType.Harm)
             {
+                if (TryRunRangedFirePrimary())
+                {
+                    return;
+                }
+
                 TryRunMeleeSwingPrimary();
                 return;
             }
@@ -290,6 +300,278 @@ namespace SS3D.Systems.Interactions
             TrySyncMeleeAimToServer();
             CmdRunMeleeSwing();
             return true;
+        }
+
+        /// <summary>
+        /// Harm primary fire when the selected hand holds a <see cref="RangedWeaponItemExtension"/>.
+        /// Instant hitscan — no windup; reload/cooldown pace the gun.
+        /// </summary>
+        [Client]
+        private bool TryRunRangedFirePrimary()
+        {
+            if (!TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon))
+            {
+                return false;
+            }
+
+            weapon.ServerCompleteReloadIfDue();
+
+            // Empty mag → start reload instead of falling through to melee with the rifle.
+            if (weapon.RoundsRemaining <= 0)
+            {
+                if (weapon.CanStartReload())
+                {
+                    TryRunRangedReloadPrimary();
+                }
+
+                return true;
+            }
+
+            if (!weapon.CanStartFire())
+            {
+                return true;
+            }
+
+            if (!IsServer)
+            {
+                weapon.BeginLocalFireCooldown();
+            }
+
+            TrySyncMeleeAimToServer();
+            CmdRunRangedFire();
+            return true;
+        }
+
+        [Client]
+        private bool TryRunRangedReloadPrimary()
+        {
+            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                return false;
+            }
+
+            if (!weapon.CanStartReload())
+            {
+                return false;
+            }
+
+            if (!IsServer)
+            {
+                weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
+            }
+
+            CmdRunRangedReload();
+            return true;
+        }
+
+        [ServerOrClient]
+        private bool TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon)
+        {
+            hand = null;
+            weapon = null;
+
+            Hands hands = GetComponent<Hands>();
+            hand = hands != null ? hands.SelectedHand : null;
+            if (hand == null)
+            {
+                return false;
+            }
+
+            Item item = hand.ItemInHand;
+            if (item == null || !item.TryGetComponent(out weapon))
+            {
+                weapon = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        [ServerRpc]
+        private void CmdRunRangedFire()
+        {
+            if (_currentIntent != IntentType.Harm)
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            weapon.ServerCompleteReloadIfDue();
+
+            if (weapon.RoundsRemaining <= 0)
+            {
+                if (weapon.ServerTryBeginReload())
+                {
+                    ServerNotifyRangedReloadStarted(weapon);
+                }
+
+                return;
+            }
+
+            if (!weapon.CanStartFire() || !weapon.ServerTryConsumeRound())
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!TryGetMeleeAimRay(out Ray aimRay))
+            {
+                // Fall back to entity facing if aim never synced.
+                Entity entity = GetComponent<Entity>();
+                Vector3 origin = entity != null
+                    ? entity.transform.position + Vector3.up * 1.5f
+                    : transform.position + Vector3.up * 1.5f;
+                Vector3 direction = entity != null ? entity.transform.forward : transform.forward;
+                aimRay = new Ray(origin, direction);
+            }
+
+            float maxRange = Mathf.Max(1f, weapon.Profile.MaxRangeMeters);
+            float aimDistance = maxRange;
+            if (Physics.Raycast(aimRay, out RaycastHit aimHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
+            {
+                aimDistance = aimHit.distance;
+            }
+
+            float horizontalSpeed = GetHorizontalMoveSpeed();
+            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
+            var rng = new System.Random(unchecked(Environment.TickCount ^ GetInstanceID() ^ weapon.RoundsRemaining));
+
+            HumanHealthController selfHealth = GetComponentInChildren<HumanHealthController>();
+            bool resolved = RangedHitscanResolver.TryResolveShot(
+                aimRay,
+                weapon.Profile,
+                spread,
+                rng,
+                selfHealth,
+                out HumanHealthController health,
+                out BodyZone zone,
+                out TileCoord structuralCoord,
+                out bool hitLiving,
+                out bool hitStructural);
+
+            bool landed = false;
+            if (resolved && hitLiving && health != null)
+            {
+                health.ApplyDamage(zone, weapon.Profile.ToDamagePacket());
+                landed = true;
+            }
+            else if (resolved && hitStructural)
+            {
+                float force = weapon.Profile.ResolveStructuralForce();
+                if (force > 0f
+                    && SubSystems.TryGet(out StructuralDamageSubSystem structural)
+                    && structural.TryApplyStructuralDamage(structuralCoord, force, StructuralDamageSource.Ranged))
+                {
+                    landed = true;
+                }
+            }
+
+            ClearMeleeAimPoint();
+            ServerNotifyRangedFireState(weapon, landed);
+        }
+
+        [ServerRpc]
+        private void CmdRunRangedReload()
+        {
+            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            if (!weapon.ServerTryBeginReload())
+            {
+                TargetRejectInteraction(Owner);
+                return;
+            }
+
+            ServerNotifyRangedReloadStarted(weapon);
+        }
+
+        [Server]
+        public void ServerNotifyRangedReloadStarted(RangedWeaponItemExtension weapon)
+        {
+            if (Owner == null || weapon == null)
+            {
+                return;
+            }
+
+            TargetNotifyRangedReload(
+                Owner,
+                weapon.Profile.ReloadSeconds,
+                weapon.RoundsRemaining,
+                weapon.RecoilStacks);
+        }
+
+        [Server]
+        private void ServerNotifyRangedFireState(RangedWeaponItemExtension weapon, bool landed)
+        {
+            if (Owner == null || weapon == null)
+            {
+                return;
+            }
+
+            TargetNotifyRangedFireState(
+                Owner,
+                weapon.Profile.FireCooldownSeconds,
+                weapon.RoundsRemaining,
+                weapon.RecoilStacks,
+                landed);
+        }
+
+        [TargetRpc]
+        private void TargetNotifyRangedFireState(
+            NetworkConnection connection,
+            float cooldownSeconds,
+            int rounds,
+            float recoilStacks,
+            bool landed)
+        {
+            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                weapon.BeginLocalFireCooldown();
+                weapon.ClientSetRounds(rounds);
+                weapon.ClientSetRecoil(recoilStacks);
+            }
+
+            if (landed)
+            {
+                MeleeConnectFeedback.NotifyLocalConnectHitLanded();
+            }
+        }
+
+        [TargetRpc]
+        private void TargetNotifyRangedReload(
+            NetworkConnection connection,
+            float reloadSeconds,
+            int rounds,
+            float recoilStacks)
+        {
+            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                weapon.BeginLocalReload(reloadSeconds);
+                weapon.ClientSetRounds(rounds);
+                weapon.ClientSetRecoil(recoilStacks);
+            }
+        }
+
+        [ServerOrClient]
+        private float GetHorizontalMoveSpeed()
+        {
+            if (TryGetComponent(out CharacterController character) && character != null)
+            {
+                Vector3 v = character.velocity;
+                v.y = 0f;
+                return v.magnitude;
+            }
+
+            return 0f;
         }
 
         [Client]
@@ -575,7 +857,7 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void HandleUse(InputAction.CallbackContext callbackContext)
         {
-            // Activate item in selected hand
+            // Activate item in selected hand — reload takes priority for firearms.
             Hands hands = GetComponent<Hands>();
             if (hands == null)
             {
@@ -583,6 +865,14 @@ namespace SS3D.Systems.Interactions
             }
 
             Item item = hands.SelectedHand.ItemInHand;
+            if (item != null
+                && item.TryGetComponent(out RangedWeaponItemExtension ranged)
+                && ranged.CanStartReload())
+            {
+                TryRunRangedReloadPrimary();
+                return;
+            }
+
             if (item != null)
             {
                 InteractInHand(item.gameObject, gameObject);

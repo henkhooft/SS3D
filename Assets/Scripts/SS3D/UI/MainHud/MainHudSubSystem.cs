@@ -7,6 +7,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Combat;
+using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Health;
@@ -273,13 +274,15 @@ namespace SS3D.UI.MainHud
             }
 
             TryGetSelectedHandRecovery(out float lockReadyProgress01, out bool recharging);
+            float bloom01 = GetSelectedRangedBloom01();
             _view.ApplyZoneReticle(
                 visible,
                 screenPosition,
                 zoneLabel,
                 inRange,
                 lockReadyProgress01,
-                recharging);
+                recharging,
+                bloom01);
         }
 
         private void HandleMeleeConnectHitLanded()
@@ -293,7 +296,21 @@ namespace SS3D.UI.MainHud
             recharging = false;
 
             Hand hand = _hands?.SelectedHand;
-            if (hand == null || !hand.TryGetComponent(out MeleeRecoveryTracker tracker))
+            if (hand == null)
+            {
+                return false;
+            }
+
+            Item held = hand.ItemInHand;
+            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            {
+                ranged.ServerCompleteReloadIfDue();
+                recharging = ranged.IsBusy;
+                readyProgress01 = ranged.ReadyProgress01;
+                return true;
+            }
+
+            if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
             {
                 return false;
             }
@@ -303,12 +320,42 @@ namespace SS3D.UI.MainHud
             return true;
         }
 
+        private float GetSelectedRangedBloom01()
+        {
+            Hand hand = _hands?.SelectedHand;
+            Item held = hand?.ItemInHand;
+            if (held == null || !held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            {
+                return 0f;
+            }
+
+            float horizontalSpeed = 0f;
+            if (_localPlayer != null && _localPlayer.TryGetComponent(out CharacterController character))
+            {
+                Vector3 v = character.velocity;
+                v.y = 0f;
+                horizontalSpeed = v.magnitude;
+            }
+
+            float aimDistance = ranged.Profile.MaxRangeMeters * 0.5f;
+            float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
+            // Map typical M4 spread (~1–8°) into 0–1 bloom for reticle grow.
+            return Mathf.Clamp01(spread / 8f);
+        }
+
         private bool IsHoveredZoneInRange(Collider zoneCollider)
         {
             Hand hand = _hands?.SelectedHand;
             if (hand == null)
             {
                 return false;
+            }
+
+            Item held = hand.ItemInHand;
+            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension _))
+            {
+                // Ranged: any resolved zone under the reticle is "in range" for the chip.
+                return zoneCollider != null;
             }
 
             return ZoneTargetResolver.IsMeleeZoneReachInRange(

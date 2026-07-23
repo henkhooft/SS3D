@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 8526524843428953758}
   - component: {fileID: 3769753042901807984}
   - component: {fileID: 8290816172357947520}
+  - component: {fileID: 9182736450123456901}
   m_Layer: 10
   m_Name: M4
   m_TagString: Untagged
@@ -262,6 +263,36 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.12030666, y: 0.9544234, z: 0.3115627}
   m_Center: {x: -0.00000012293458, y: -0.08629977, z: -0.016062317}
+--- !u!114 &9182736450123456901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4945023127613724458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cedf862ef3a543ffb8fe4aab0e3ba596, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _profile:
+    BruteDamage: 18
+    BurnDamage: 0
+    CanSever: 0
+    BaseSpreadDegrees: 1.2
+    RecoilClimbDegrees: 0.55
+    RecoilPerShot: 1
+    RecoilDecayPerSecond: 2.5
+    MovementBloomPerSpeed: 1.8
+    FalloffStartMeters: 12
+    FalloffEndMeters: 40
+    FalloffExtraSpreadDegrees: 4
+    MaxRangeMeters: 50
+    FireCooldownSeconds: 0.12
+    MagazineSize: 30
+    ReloadSeconds: 2.2
+    StructuralForce: 12
+    StaminaCost: 0
 --- !u!1 &6508855772059703352
 GameObject:
   m_ObjectHideFlags: 0

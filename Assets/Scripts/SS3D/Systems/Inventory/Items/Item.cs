@@ -356,7 +356,8 @@ namespace SS3D.Systems.Inventory.Items
             interactions.Add(InteractionEntry.SourceOnly(new DropInteraction()));
 
             // Improvised melee for any held item without a dedicated weapon profile.
-            if (TryGetComponent(out MeleeWeaponItemExtension _))
+            if (TryGetComponent(out MeleeWeaponItemExtension _)
+                || TryGetComponent(out RangedWeaponItemExtension _))
             {
                 return;
             }

@@ -13,7 +13,7 @@ todos:
     status: pending
   - id: phase3-ranged
     content: "Phase 3: Ranged vertical slice — weapon accuracy cone, hitscan default, reload/cooldown, shared LOS occlusion helper (no parallel raycast)"
-    status: pending
+    status: completed
   - id: phase4-stamina
     content: "Phase 4: Combat stamina drains (swing/fire/block) via StaminaController; push-past-empty already → ApplyOxyDebt"
     status: pending
@@ -205,3 +205,8 @@ Single primary path per [combat.md](../design/combat.md) §2:
 - **2026-07-20 (Harm exclusivity):** Unrestricted interactions are Help-default in
   `MatchesIntent`; Harm primary always returns after the melee attempt (no Drop/Open
   fall-through); Drop hotkey requires Help.
+- **2026-07-23 (Phase 3 ranged):** Hitscan small-arms slice. Shared `SS3D.Utils.LineOfSight`
+  (Drop + LocalSpeech migrated). `RangedWeaponProfile` / `RangedWeaponItemExtension` on M4;
+  Harm primary branches to `CmdRunRangedFire` (accuracy cone, LOS, zone/structural); mag +
+  cooldown + timed reload (E / empty fire). Reticle bloom via `ZoneReticleDriver`. Armor,
+  disarm, projectile, loose ammo still deferred.

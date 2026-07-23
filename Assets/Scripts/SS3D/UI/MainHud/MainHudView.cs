@@ -131,7 +131,8 @@ namespace SS3D.UI.MainHud
             string zoneLabel,
             bool inRange,
             float lockReadyProgress01,
-            bool recharging)
+            bool recharging,
+            float bloom01 = 0f)
         {
             if (_zoneReticle == null || _zoneReticleDriver == null)
             {
@@ -141,6 +142,7 @@ namespace SS3D.UI.MainHud
             _zoneReticleDriver.SetVisible(visible);
             _zoneReticleDriver.SetAimInput(screenPosition, zoneLabel, inRange);
             _zoneReticleDriver.SetRecoveryInput(lockReadyProgress01, recharging);
+            _zoneReticleDriver.SetBloomInput(bloom01);
             _zoneReticleDriver.Tick(out ZoneReticleFrame frame);
             _zoneReticle.Apply(in frame);
         }

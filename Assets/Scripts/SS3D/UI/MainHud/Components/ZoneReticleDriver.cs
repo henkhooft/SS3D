@@ -20,6 +20,7 @@ namespace SS3D.UI.MainHud.Components
         private float _ready01 = 1f;
         private bool _recovering;
         private float _crossFlashStartedAt = -1f;
+        private float _bloom01;
 
         public void SetVisible(bool visible)
         {
@@ -47,6 +48,11 @@ namespace SS3D.UI.MainHud.Components
         {
             _ready01 = Mathf.Clamp01(ready01);
             _recovering = recovering;
+        }
+
+        public void SetBloomInput(float bloom01)
+        {
+            _bloom01 = Mathf.Clamp01(bloom01);
         }
 
         public void NotifyConnectHit()
@@ -95,7 +101,8 @@ namespace SS3D.UI.MainHud.Components
                 color,
                 bracketReady01,
                 crossFlashT,
-                shake);
+                shake,
+                _bloom01);
         }
 
         private static Vector2 ComputeShake(float shakeT)

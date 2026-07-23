@@ -1,3 +1,4 @@
+using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Containers;
@@ -114,7 +115,8 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Melee vs Ranged from the active hand item. Unarmed or non-ranged weapon → Melee.
+        /// Melee vs Ranged from the active hand item. Prefers <see cref="RangedWeaponItemExtension"/>;
+        /// falls back to ranged trait name match for unwired content.
         /// </summary>
         public HumanoidCombatMode ResolveCombatStance()
         {
@@ -127,6 +129,11 @@ namespace SS3D.Systems.Entities.Humanoid
             if (item == null)
             {
                 return HumanoidCombatMode.Melee;
+            }
+
+            if (item.TryGetComponent(out RangedWeaponItemExtension _))
+            {
+                return HumanoidCombatMode.Ranged;
             }
 
             foreach (Trait trait in item.Traits)

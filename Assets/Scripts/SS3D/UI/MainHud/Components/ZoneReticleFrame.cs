@@ -26,6 +26,8 @@ namespace SS3D.UI.MainHud.Components
         public readonly float BracketReady01;
         public readonly float CrossFlashT;
         public readonly Vector2 ShakeOffset;
+        /// <summary>0 = tight aim, 1 = max bloom (ranged accuracy cone feedback).</summary>
+        public readonly float Bloom01;
 
         public ZoneReticleFrame(
             bool visible,
@@ -34,7 +36,8 @@ namespace SS3D.UI.MainHud.Components
             ZoneReticleColorMode color,
             float bracketReady01,
             float crossFlashT,
-            Vector2 shakeOffset)
+            Vector2 shakeOffset,
+            float bloom01 = 0f)
         {
             Visible = visible;
             CursorScreen = cursorScreen;
@@ -43,6 +46,7 @@ namespace SS3D.UI.MainHud.Components
             BracketReady01 = bracketReady01;
             CrossFlashT = crossFlashT;
             ShakeOffset = shakeOffset;
+            Bloom01 = Mathf.Clamp01(bloom01);
         }
     }
 }

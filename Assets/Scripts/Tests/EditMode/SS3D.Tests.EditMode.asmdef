@@ -9,6 +9,7 @@
         "SS3D.Hacks",
         "SS3D.Atmospherics.ECS",
         "SS3D.Rendering.URP",
+        "SS3D.Utils",
         "Coimbra",
         "SS3D.Data",
         "SS3D.Logging",

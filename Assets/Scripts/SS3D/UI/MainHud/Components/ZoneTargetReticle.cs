@@ -12,6 +12,7 @@ namespace SS3D.UI.MainHud.Components
     public sealed class ZoneTargetReticle
     {
         private const float ReticleSize = 52f;
+        private const float ReticleBloomExtraPx = 28f;
         private const float ChipGapAboveReticle = 14f;
         private const float CornerMinPx = 4f;
         private const float CornerMaxPx = 16f;
@@ -52,7 +53,10 @@ namespace SS3D.UI.MainHud.Components
                 return;
             }
 
-            float half = ReticleSize * 0.5f;
+            float size = ReticleSize + (frame.Bloom01 * ReticleBloomExtraPx);
+            float half = size * 0.5f;
+            _reticle.style.width = size;
+            _reticle.style.height = size;
             _reticle.style.left = frame.CursorScreen.x - half;
             _reticle.style.bottom = frame.CursorScreen.y - half;
 

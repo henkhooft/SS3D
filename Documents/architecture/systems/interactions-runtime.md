@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 0499ab7cd — 2026-07-23
+> Verified: 6f6f1f087 — 2026-07-23
 
 # Interactions (runtime)
 
 ## Overview
 
-Client-side interaction routing: discovers available interactions from the current selection and player state, presents the three-tier radial menu, arms targeted interactions, and dispatches `InteractionIdentifier`-based requests to the server. Bridges [selection](selection.md) hover targets with the shared [interactions-framework](interactions-framework.md). Owns Help/Harm intent (`IIntentProvider`) and Harm-primary melee swing dispatch (`CmdRunMeleeSwing`) — see [combat](combat.md).
+Client-side interaction routing: discovers available interactions from the current selection and player state, presents the three-tier radial menu, arms targeted interactions, and dispatches `InteractionIdentifier`-based requests to the server. Bridges [selection](selection.md) hover targets with the shared [interactions-framework](interactions-framework.md). Owns Help/Harm intent (`IIntentProvider`) and Harm-primary combat dispatch (`CmdRunRangedFire` when holding a ranged weapon, else `CmdRunMeleeSwing`) — see [combat](combat.md).
 
 **Intent gate:** unrestricted verbs (Drop, Open, MI, …) are **Help-default** via `InteractionPipeline.MatchesIntent`. Harm is combat-exclusive (`IIntentRestrictedInteraction`); primary never falls through to world verbs when a swing cannot start. Drop hotkey also requires Help.
 
@@ -15,7 +15,7 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — primary click, radial dispatch, intent sync (+ combat stance), Harm melee swing, armed resolution, outline feedback
+- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — primary click, radial dispatch, intent sync (+ combat stance), Harm ranged/melee, armed resolution, outline feedback
 - `Assets/Scripts/SS3D/Systems/Interactions/RadialInteractionSubSystem.cs` — three-tier radial menu subsystem
 - `Assets/Scripts/SS3D/Systems/Interactions/UI/RadialInteractionMenuView.cs` — radial menu UI (UI Toolkit)
 - `Assets/Scripts/SS3D/Systems/Interactions/UI/RadialInteractionPetal.cs` — dynamic petal elements
@@ -29,7 +29,7 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 
 1. `SelectionSubSystem` resolves hovered `Selectable`.
 2. `InteractionController` builds viable list via `InteractionPipeline` + active hand/tool source.
-3. Primary click: Harm → `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing` then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
+3. Primary click: Harm → `TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
 4. Targeted radial choices arm the cursor via `TryRouteRadialInteraction`; second click resolves the matching `InteractionEntry` by `GetGenericName()` and dispatches RPC.
 5. Server re-validates gates (intent, stamina, ownership, permissions) then `InteractionSource.Interact`.
 6. Observers run client FX; rejections use `TargetRejectInteraction` to roll back optimistic UI.

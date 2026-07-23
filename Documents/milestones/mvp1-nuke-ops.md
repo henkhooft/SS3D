@@ -1,7 +1,7 @@
 > Goal: A playable Nuclear Operatives round — ops (or proxies) plant/defuse a device; guns and breakable walls matter; on-station syndie spawn is enough
 > Status: planned
 > Depends on: —
-> Current focus: M1 (ranged combat + weapons + thin armor), M2 (station structural damage), M5 (death→spectator + round-end summary — newly surfaced spine)
+> Current focus: M1 (thin armor after ranged hitscan slice), M2 (station structural damage), M5 (death→spectator + round-end summary — newly surfaced spine)
 
 # MVP1 — Nuclear Operatives round
 
@@ -76,7 +76,7 @@ flowchart TB
 | Id | Name | Status | Links |
 |----|------|--------|-------|
 | M0 | Map authoring + spawn tags + vault + ops loadout | partial — authoring shipped; runtime role→spawn pick open; ops-at-spawn loadout via legacy `RoleLoadout` not yet wired | [creative-mode.md](../design/creative-mode.md) §8; [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md); [id-access.md](../design/id-access.md) §6 (vault); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) (`RoleLoadout`) |
-| M1 | Combat ranged + dedicated weapons (+ thin armor) | pending — **focus**; resolve hitscan-vs-projectile first | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phases 3–5 |
+| M1 | Combat ranged + dedicated weapons (+ thin armor) | partial — ranged hitscan + M4 shipped; thin armor pending | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 shipped, Phase 5 open |
 | M2 | Station structural damage model | pending — **focus**; scoped to route-opening only (no live area/atmos recompute) | [explosives-destruction.md](../design/explosives-destruction.md) §3–§4; [construction.md](../design/construction.md) §2 (ladder meet); [area.md](../design/area.md) §3 / [2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md) (recompute deferred); architecture effort TBD when commissioned |
 | M3 | Blast + explosive items / nuke device (incl. disk-load arm gate + defuse) | pending | blocked on M2; [explosives-destruction.md](../design/explosives-destruction.md) §2, §6; [antagonist-content.md](../design/antagonist-content.md) §6 |
 | M4 | Thin Nuke Ops gamemode (on-station syndie spawn, assignment, win/lose) | pending | rewrite legacy `NukeGamemode` ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); [antagonist-content.md](../design/antagonist-content.md) §2, §6 |
