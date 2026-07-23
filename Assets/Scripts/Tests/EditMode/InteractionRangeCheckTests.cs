@@ -22,12 +22,13 @@ namespace EditorTests
             targetObject.transform.position = new Vector3(10f, 0f, 0f);
 
             StubInteractionSource source = new(sourceObject);
-            InteractionEvent farEvent = new(source, target, Vector3.zero);
+            InteractionEvent farEvent = new(source, target);
 
+            Assert.IsFalse(farEvent.HasPoint);
             Assert.IsFalse(InteractionExtensions.RangeCheck(farEvent));
 
             targetObject.transform.position = new Vector3(1f, 0f, 0f);
-            InteractionEvent nearEvent = new(source, target, Vector3.zero);
+            InteractionEvent nearEvent = new(source, target);
 
             Assert.IsTrue(InteractionExtensions.RangeCheck(nearEvent));
         }
@@ -45,8 +46,31 @@ namespace EditorTests
 
             StubInteractionSource source = new(sourceObject);
 
-            Assert.IsFalse(InteractionExtensions.RangeCheck(new InteractionEvent(source, target, new Vector3(10f, 0f, 0f))));
-            Assert.IsTrue(InteractionExtensions.RangeCheck(new InteractionEvent(source, target, new Vector3(1f, 0f, 0f))));
+            Assert.IsFalse(InteractionExtensions.RangeCheck(new InteractionEvent(source, target, new Vector3(10f, 0f, 0f), Vector3.up)));
+            Assert.IsTrue(InteractionExtensions.RangeCheck(new InteractionEvent(source, target, new Vector3(1f, 0f, 0f), Vector3.up)));
+        }
+
+        [Test]
+        public void RangeCheck_WorldOriginHit_IsResolvedPointNotUnset()
+        {
+            CreateGameObject(out GameObject sourceObject, out RangeLimitBehaviour rangeLimit);
+            CreateGameObject(out GameObject targetObject, out TargetComponent target);
+
+            sourceObject.transform.position = new Vector3(0.5f, 0f, 0f);
+            rangeLimit.Origin = sourceObject.transform.position;
+            rangeLimit.Range = new RangeLimit(1.5f, 2f);
+            // Target far away — only a resolved point at origin should pass.
+            targetObject.transform.position = new Vector3(50f, 0f, 0f);
+
+            StubInteractionSource source = new(sourceObject);
+            InteractionEvent originHit = new(source, target, Vector3.zero, Vector3.up);
+
+            Assert.IsTrue(originHit.HasPoint);
+            Assert.IsTrue(InteractionExtensions.RangeCheck(originHit));
+
+            InteractionEvent unset = new(source, target);
+            Assert.IsFalse(unset.HasPoint);
+            Assert.IsFalse(InteractionExtensions.RangeCheck(unset));
         }
 
         private sealed class RangeLimitBehaviour : MonoBehaviour, IInteractionRangeLimit, IInteractionOriginProvider
@@ -93,7 +117,7 @@ namespace EditorTests
             {
             }
 
-            public void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries)
+            public void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries, InteractionEvent context)
             {
             }
 

@@ -2,6 +2,7 @@ using Coimbra;
 using Coimbra.Services.Events;
 using FishNet;
 using FishNet.Managing;
+using FishNet.Transporting;
 using SS3D.Application.Events;
 using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
@@ -29,7 +30,7 @@ namespace SS3D.Networking
 #if UNITY_SERVER
             // Dedicated servers skip the Intro scene (the only place that otherwise calls
             // StartNetworkSession), so start listening for connections here instead.
-            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+            AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
 #endif
         }
 
@@ -67,20 +68,38 @@ namespace SS3D.Networking
         /// <summary>
         /// Uses the processed args to proceed with game network initialization
         /// </summary>
-        public void  StartNetworkSession()
+        public void StartNetworkSession()
         {
-            Log.Debug(this, "Initializing network session", Logs.Important);
-
             NetworkManager networkManager = InstanceFinder.NetworkManager;
+            if (networkManager == null)
+            {
+                Log.Error(this, "No NetworkManager found; cannot start network session", Logs.Important);
+                return;
+            }
+
+            ClientConnectionRecovery.EnsureOn(networkManager);
+
             NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
-
-            LocalPlayer.UpdateCkey(networkSettings.Ckey);
-
-            string ckey = networkSettings.Ckey;
-            ServerAddress  = networkSettings.ServerAddress;
+            NetworkType = networkSettings.NetworkType;
+            ServerAddress = networkSettings.ServerAddress;
             Port = Convert.ToUInt16(networkSettings.ServerPort);
 
-            NetworkType = networkSettings.NetworkType;
+            ClientConnectionRecovery recovery = networkManager.GetComponent<ClientConnectionRecovery>();
+
+            // Re-entry while Connecting/Online/Disconnecting (or transport Starting/Started/Stopping)
+            // is what storms "Failed to start the client connection" on Boot/Intro reload.
+            if (recovery != null && !recovery.CanStart)
+            {
+                Log.Warning(this, "Skipping StartNetworkSession: session {state}", Logs.Important, recovery.State);
+                return;
+            }
+
+            Log.Debug(this, "Initializing network session", Logs.Important);
+
+            LocalPlayer.UpdateCkey(networkSettings.Ckey);
+            string ckey = networkSettings.Ckey;
+
+            recovery?.NotifySessionStartAttempted();
 
             // Dedicated Server build target defines UNITY_SERVER, which makes FishNet auto-start
             // the transport on Boot (default port). Stop that so Host/Client use NetworkSettings.
@@ -90,16 +109,41 @@ namespace SS3D.Networking
             {
                 case NetworkType.DedicatedServer:
                     Log.Information(this, "Hosting a new headless server on port {port}", Logs.Important, Port);
-                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
+                    if (!networkManager.ServerManager.StartConnection(Port))
+                    {
+                        LogIfConnectionFailedToStart("server", false);
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 case NetworkType.Client:
                     Log.Information(this, "Joining server {serverAddress}:{port} as {ckey}", Logs.Important, ServerAddress, Port, ckey);
-                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
+                    if (!networkManager.ClientManager.StartConnection(ServerAddress, Port))
+                    {
+                        LogIfConnectionFailedToStart("client", false);
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 case NetworkType.Host:
                     Log.Information(this, "Hosting a new server on port {port}", Logs.Important, Port);
-                    LogIfConnectionFailedToStart("server", networkManager.ServerManager.StartConnection(Port));
-                    LogIfConnectionFailedToStart("client", networkManager.ClientManager.StartConnection(ServerAddress, Port));
+                    bool serverOk = networkManager.ServerManager.StartConnection(Port);
+                    bool clientOk = networkManager.ClientManager.StartConnection(ServerAddress, Port);
+                    if (!serverOk)
+                    {
+                        LogIfConnectionFailedToStart("server", false);
+                    }
+
+                    if (!clientOk)
+                    {
+                        LogIfConnectionFailedToStart("client", false);
+                    }
+
+                    if (!serverOk || !clientOk)
+                    {
+                        recovery?.NotifySessionStartFailed();
+                    }
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -132,12 +176,16 @@ namespace SS3D.Networking
         /// </summary>
         private static void StopAutoStartedConnections(NetworkManager networkManager)
         {
-            if (networkManager.ClientManager.Started)
+            // Started alone misses Starting — a second StartNetworkSession during Starting
+            // skips Stop and StartConnection returns false ("already starting/started").
+            LocalConnectionState clientState = networkManager.TransportManager.Transport.GetConnectionState(false);
+            if (clientState == LocalConnectionState.Starting || clientState == LocalConnectionState.Started)
             {
                 networkManager.ClientManager.StopConnection();
             }
 
-            if (networkManager.ServerManager.Started)
+            LocalConnectionState serverState = networkManager.TransportManager.Transport.GetConnectionState(true);
+            if (serverState == LocalConnectionState.Starting || serverState == LocalConnectionState.Started)
             {
                 Log.Warning(typeof(NetworkSessionSubSystem),
                     "Stopping a server that was already started (often UNITY_SERVER / Dedicated Server build target auto-start). Switch the Editor build target to Standalone for normal Host play.");

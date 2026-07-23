@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: 8928399c4 — 2026-07-20
+> Verified: 71d2a9224 — 2026-07-23
 
 # Electricity
 
@@ -36,15 +36,17 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerStorageMath.cs` — shared APC/SMES/battery charge/discharge helpers
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerGate.cs` — `IsPowered` / `IsChannelOpen` / `IsEffectivelyPowered`
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerConsumerAllocation.cs` — channel-priority consumer budgeting
-- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; per-APC consumer index
+- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; `IWorldReady`; awaits `AreasFlooded` then notifies `ElectricityReady`; per-APC consumer index
 - `Assets/Scripts/SS3D/Systems/Electricity/AreaApcPowerDistribution.cs` — area APC powers local consumers without per-device cables
 - `Assets/Scripts/SS3D/Systems/Electricity/ApcStatusDeriver.cs` — APC power/battery state derivation
 - `Assets/Scripts/SS3D/Systems/Electricity/ElectricCableConnectivity.cs` — HV cable links only grid backbone devices
 - `Assets/Scripts/SS3D/Systems/Electricity/Circuit.cs` — cable-grid power distribution; per-consumer channel resolver
-- `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state (emergency: dim short-range spot only; fill off)
+- `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state; client path uses floor-cache area id + lighting snapshot
 - `Assets/Scripts/SS3D/Systems/Electricity/ConsumerPowerVisual.cs` — emissive/panel dimming for generic consumers
 - `Assets/Scripts/SS3D/Systems/Electricity/BasicPowerConsumer.cs` — constant-load consumer
 - `Assets/Scripts/SS3D/Systems/Electricity/MachinePowerConsumer.cs` — idle/in-use load consumer
+- `Assets/Scripts/SS3D/Systems/Electricity/FuelPowerGenerator.cs` — Pacman generator (`IPowerProducer` + toggle FX)
+- `Assets/Scripts/SS3D/Systems/Electricity/MachineVibrate.cs` — client vibrate FX; capture rest rotation on enable (not `OnStart`)
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/BasicElectricDevice.cs` — tile-placed electric device base
 - `Assets/Scripts/SS3D/UI/MachineInterface/ApcController.cs` — APC façade; `IAreaApcOrigin` + storage SyncVars + MI
 
@@ -55,10 +57,13 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - HV cable graph: only `IPowerProducer` and `IPowerStorage` participate via `ElectricCableConnectivity.ParticipatesInCableGrid`; consumers draw from area APCs.
 - Machine panels: register via [machine-interface](machine-interface.md).
 - Area membership changes: Area APC register/unregister/rebuild calls `ElectricitySubSystem.InvalidateAreaConsumerIndex()`.
+- Powered-device init: await `ElectricityReady` / `WorldReady` (`IWorldReady` / `WorldReadinessSubSystem`) — obsolete `IsSetUp` is an `IsReady` shim only.
 
 ## Pitfalls
 
 - **Never assign `Inactive` then `Powered` in the same tick.** `PowerStatus` is a SyncVar; OnChange fires on every real transition. Furniture (notably [furniture](furniture.md) airlocks) treats `Inactive` as a power-loss edge. Clear-then-set every ~0.2s tick restarts close timers forever. `PowerAreaConsumers` must write the final status once (and skip no-ops). Cable path in `Circuit` already does single-assignment — keep area path aligned. Test: `PowerAreaConsumers_AssignsFinalStatusOnceWithoutFlicker`.
+- **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/obsolete `IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.
+- **Machine "Turn on" snaps facing to prefab/default:** `MachineVibrate` used to cache rest rotation in `OnStart`, then force it when Enable becomes true. Tile-placed machines (Pacman / `FuelPowerGenerator`) often get their final yaw later (spawn sync, `PlacedTileObject` direction). Capture rest pose when vibration starts, restore it when stopping — never from a stale Start snapshot.
 
 ## Depends on / Used by
 
@@ -67,6 +72,6 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Related docs
 
-- Architecture efforts: [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../2026-07_area-foundation.md)
+- Architecture efforts: [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../2026-07_area-foundation.md), [session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md), [electricity_kwh_foundation_917ccdbc.plan.md](../../plans/electricity_kwh_foundation_917ccdbc.plan.md)
 - Design (read-only): [Documents/design/area.md](../../design/area.md)

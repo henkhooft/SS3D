@@ -8,6 +8,20 @@ namespace SS3D.Interactions
     /// <summary>
     /// Shared discovery and filtering for client interaction menus and server RPC re-validation.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Discover</b> produces candidates: target-bound entries (<c>Target != null</c>) and optional
+    /// source-only entries (<c>Target == null</c>, e.g. Drop). Discover may pre-filter; it does not
+    /// mean “already viable for the menu.”
+    /// </para>
+    /// <para>
+    /// <b>FilterAndSort</b> is the sole full viability gate for menus/RPC
+    /// (<see cref="IInteraction.CanInteract"/>, intent, <see cref="IInteractionSource.CanExecuteInteraction"/>).
+    /// </para>
+    /// <para>
+    /// Hover outlines use <see cref="TryEvaluateOutlineInteractability"/> (target-bound only).
+    /// </para>
+    /// </remarks>
     public static class InteractionPipeline
     {
         private static readonly ProfilerMarker DiscoverPerformanceMarker = new("SS3D.Interactions.Discover");
@@ -20,7 +34,7 @@ namespace SS3D.Interactions
         {
             List<InteractionEntry> discovered = Discover(source, targets, interactionEvent);
 
-            return FilterAndSort(source, discovered, interactionEvent.Point, interactionEvent.Normal, intent);
+            return FilterAndSort(source, discovered, interactionEvent, intent);
         }
 
         public static List<InteractionEntry> Discover(
@@ -31,12 +45,11 @@ namespace SS3D.Interactions
             using (DiscoverPerformanceMarker.Auto())
             {
                 List<InteractionEntry> interactions = new();
-                Vector3 point = interactionEvent.Point;
                 GameObject targetGameObject = ResolveTargetGameObject(targets);
 
                 foreach (IInteractionTarget target in targets)
                 {
-                    InteractionEvent e = new(source, target, point, interactionEvent.Normal);
+                    InteractionEvent e = interactionEvent.WithTarget(target);
                     IInteraction[] targetInteractions = target.CreateTargetInteractions(e);
 
                     foreach (IInteraction interaction in targetInteractions)
@@ -45,7 +58,7 @@ namespace SS3D.Interactions
                     }
                 }
 
-                source.CreateSourceInteractions(targets.ToArray(), interactions);
+                source.CreateSourceInteractions(targets.ToArray(), interactions, interactionEvent);
                 RebuildEntryIndices(interactions, targetGameObject);
 
                 return interactions;
@@ -64,15 +77,14 @@ namespace SS3D.Interactions
         public static bool TryEvaluateOutlineInteractability(
             IInteractionSource source,
             List<IInteractionTarget> targets,
-            Vector3 point,
-            Vector3 normal,
+            InteractionEvent interactionEvent,
             IntentType intent,
             out bool hasViableInteractions)
         {
             hasViableInteractions = false;
             bool hasTargetBound = false;
 
-            if (source == null || targets == null || targets.Count == 0)
+            if (source == null || targets == null || targets.Count == 0 || interactionEvent == null)
             {
                 return false;
             }
@@ -84,7 +96,7 @@ namespace SS3D.Interactions
                     continue;
                 }
 
-                InteractionEvent discoverEvent = new(source, target, point, normal);
+                InteractionEvent discoverEvent = interactionEvent.WithTarget(target);
                 IInteraction[] targetInteractions = target.CreateTargetInteractions(discoverEvent);
 
                 foreach (IInteraction interaction in targetInteractions)
@@ -96,8 +108,7 @@ namespace SS3D.Interactions
                         continue;
                     }
 
-                    InteractionEvent checkEvent = new(source, target, point, normal);
-                    if (!interaction.CanInteract(checkEvent))
+                    if (!interaction.CanInteract(discoverEvent))
                     {
                         continue;
                     }
@@ -124,18 +135,39 @@ namespace SS3D.Interactions
             return hasTargetBound;
         }
 
+        /// <summary>
+        /// Legacy overload for callers that only have a point/normal. Prefer the
+        /// <see cref="InteractionEvent"/> overload so unresolved hits keep <see cref="InteractionEvent.HasPoint"/> false.
+        /// </summary>
+        public static bool TryEvaluateOutlineInteractability(
+            IInteractionSource source,
+            List<IInteractionTarget> targets,
+            Vector3 point,
+            Vector3 normal,
+            IntentType intent,
+            out bool hasViableInteractions)
+        {
+            if (source == null)
+            {
+                hasViableInteractions = false;
+                return false;
+            }
+
+            InteractionEvent interactionEvent = new(source, null, point, normal);
+            return TryEvaluateOutlineInteractability(source, targets, interactionEvent, intent, out hasViableInteractions);
+        }
+
         public static List<InteractionEntry> FilterAndSort(
             IInteractionSource source,
             List<InteractionEntry> entries,
-            Vector3 point,
-            Vector3 normal = default,
+            InteractionEvent interactionEvent,
             IntentType intent = IntentType.Help)
         {
             List<InteractionEntry> viable = new();
 
             foreach (InteractionEntry entry in entries)
             {
-                InteractionEvent e = new(source, entry.Target, point, normal);
+                InteractionEvent e = interactionEvent.WithTarget(entry.Target);
 
                 if (!entry.Interaction.CanInteract(e))
                 {
@@ -161,9 +193,23 @@ namespace SS3D.Interactions
         }
 
         /// <summary>
+        /// Legacy overload. Point/normal always set <see cref="InteractionEvent.HasPoint"/> true.
+        /// Prefer the <see cref="InteractionEvent"/> overload.
+        /// </summary>
+        public static List<InteractionEntry> FilterAndSort(
+            IInteractionSource source,
+            List<InteractionEntry> entries,
+            Vector3 point,
+            Vector3 normal = default,
+            IntentType intent = IntentType.Help)
+        {
+            InteractionEvent interactionEvent = new(source, null, point, normal);
+            return FilterAndSort(source, entries, interactionEvent, intent);
+        }
+
+        /// <summary>
         /// Hover outlines only reflect interactions that target the hovered object.
-        /// Source-only entries (e.g. Drop, which always appears while holding an item) must not
-        /// light up every Selectable under the cursor.
+        /// Source-only entries (e.g. Drop) must not light up every Selectable under the cursor.
         /// </summary>
         public static List<InteractionEntry> FilterForOutline(List<InteractionEntry> entries)
         {
@@ -171,7 +217,7 @@ namespace SS3D.Interactions
 
             foreach (InteractionEntry entry in entries)
             {
-                if (entry.Target == null)
+                if (entry.IsSourceOnly)
                 {
                     continue;
                 }

@@ -1,16 +1,20 @@
 using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
+using Cysharp.Threading.Tasks;
 using FishNet.Object;
 using QuikGraph;
 using QuikGraph.Algorithms;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Core.WorldReadiness;
 using SS3D.Systems.Area;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.Connections;
+using SS3D.Systems.WorldReadiness;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
@@ -22,9 +26,9 @@ namespace SS3D.Systems.Electricity
     /// Graph topology is marked dirty on changes and rebuilt on the next tick.
     /// Cable placement uses <see cref="ITileMutationObserver"/> to refresh device edges.
     /// </remarks>
-    public partial class ElectricitySubSystem : NetworkSubSystem, ITileMutationObserver
+    public partial class ElectricitySubSystem : NetworkSubSystem, ITileMutationObserver, IWorldReady
     {
-        public event Action OnSystemSetUp;
+        public event Action WhenReady;
 
         /// <summary>
         /// Called each time the electricity system updates. Subscribers should use this
@@ -32,7 +36,7 @@ namespace SS3D.Systems.Electricity
         /// </summary>
         public event Action OnTick;
 
-        public bool IsSetUp { get; private set; }
+        public bool IsReady { get; private set; }
 
         private record VerticeCoordinates(short X, short Y, byte Layer, byte Direction);
 
@@ -45,6 +49,7 @@ namespace SS3D.Systems.Electricity
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridInputKw = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridAvailableKw = new();
         private UndirectedGraph<VerticeCoordinates, Edge<VerticeCoordinates>> _electricityGraph;
+        private CancellationTokenSource _readinessCts;
 
         [SerializeField]
         private float _tickRate = 0.2f;
@@ -57,14 +62,79 @@ namespace SS3D.Systems.Electricity
             _circuits = new();
             AddHandle(FixedUpdateEvent.AddListener(HandleFixedUpdate));
             SubSystems.Get<TileSubSystem>().RegisterTileMutationObserver(this);
-            IsSetUp = true;
-            OnSystemSetUp?.Invoke();
+            AwaitAreasThenMarkReady().Forget();
         }
 
         protected override void OnDestroyed()
         {
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = null;
+
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.PhaseChanged -= HandleReadinessPhaseChanged;
+            }
+
             SubSystems.Get<TileSubSystem>()?.UnregisterTileMutationObserver(this);
             base.OnDestroyed();
+        }
+
+        private async UniTaskVoid AwaitAreasThenMarkReady()
+        {
+            _readinessCts?.Cancel();
+            _readinessCts?.Dispose();
+            _readinessCts = new CancellationTokenSource();
+            CancellationToken ct = _readinessCts.Token;
+
+            if (!SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                MarkReady();
+                return;
+            }
+
+            readiness.PhaseChanged -= HandleReadinessPhaseChanged;
+            readiness.PhaseChanged += HandleReadinessPhaseChanged;
+
+            try
+            {
+                await readiness.WaitUntilAsync(WorldReadyPhase.AreasFlooded, ct);
+                if (!ct.IsCancellationRequested)
+                {
+                    MarkReady();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private void HandleReadinessPhaseChanged(WorldReadyPhase phase)
+        {
+            if (phase != WorldReadyPhase.None || !IsServer)
+            {
+                return;
+            }
+
+            // Station restore reset — clear ready and wait for AreasFlooded again.
+            IsReady = false;
+            AwaitAreasThenMarkReady().Forget();
+        }
+
+        private void MarkReady()
+        {
+            if (IsReady)
+            {
+                return;
+            }
+
+            IsReady = true;
+            WhenReady?.Invoke();
+
+            if (SubSystems.TryGet(out WorldReadinessSubSystem readiness))
+            {
+                readiness.NotifyElectricityReady();
+            }
         }
 
         [Server]

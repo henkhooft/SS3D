@@ -8,6 +8,8 @@ using SS3D.Application.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
+using SS3D.Data.Generated;
+using SS3D.Networking;
 using SS3D.Networking.Settings;
 using SS3D.Systems.Entities;
 using SS3D.Systems.IngameConsoleSystem;
@@ -31,8 +33,7 @@ namespace SS3D.Systems.Testing
     /// <see cref="ReadyPlayersSubSystem"/>/<see cref="RoundSubSystem"/>, since those don't compile
     /// into a real built player/server.
     /// <para>
-    /// Self-bootstraps like <see cref="SS3D.Systems.ScreenEffects.ScreenEffectsSubSystem"/> instead
-    /// of living in Boot.unity - see AGENTS.md "Composition, prefabs, and UI". A no-op unless
+    /// Bootstrapped by <see cref="SS3D.Systems.Bootstrap.SystemsBootstrap"/> — a no-op unless
     /// <see cref="ApplicationSettings.TestScriptPath"/> is set (the "-testscript=" CLI arg), so this
     /// has zero effect on normal play.
     /// </para>
@@ -46,24 +47,11 @@ namespace SS3D.Systems.Testing
         private bool _serverStarted;
         private bool _scriptStarted;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (SubSystems.TryGet(out AutomationSubSystem _))
-            {
-                return;
-            }
-
-            GameObject host = new(nameof(AutomationSubSystem));
-            DontDestroyOnLoad(host);
-            host.AddComponent<AutomationSubSystem>();
-        }
-
         protected override void OnAwake()
         {
             base.OnAwake();
 
-            ApplicationInitializing.AddListener(HandleApplicationInitializing);
+            AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
         }
 
         private void HandleApplicationInitializing(ref EventContext context, in ApplicationInitializing e)
@@ -87,6 +75,13 @@ namespace SS3D.Systems.Testing
 
             SubscribeToConnectionEvents();
             AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
+
+            // IntroUIHelper skips auto-join when -testscript= is set so disconnect/reconnect
+            // is not raced by SkipIntro. Kick off the first client session here instead.
+            if (!IsServerRole())
+            {
+                SubSystems.Get<NetworkSessionSubSystem>().StartNetworkSession();
+            }
 
             StartCoroutine(RunScript(applicationSettings.TestScriptPath));
         }
@@ -263,6 +258,24 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "PlayerEmbarked");
                     break;
 
+                case "assert_embarked":
+                    // Confirms this connection currently owns a spawned Entity - unlike "embark",
+                    // which only fires the spawn request without waiting on it. Used after
+                    // "reconnect" to verify EntitySubSystem.TryReclaimEntity actually handed
+                    // control of the pre-existing body back to this connection, not just that the
+                    // connection itself re-authorized.
+                    yield return WaitUntil(IsEmbarked, DefaultWaitTimeoutSeconds, "assert_embarked");
+                    TestSignal.Emit(this, "EmbarkVerified");
+                    break;
+
+                case "reconnect":
+                    // Re-opens the client connection this process already had settings for
+                    // (same ip/port/ckey NetworkSessionSubSystem resolved at startup), simulating
+                    // a disconnected player rejoining rather than a brand-new client. Must follow
+                    // a "disconnect" for the same role; only valid for a client script.
+                    yield return Reconnect();
+                    break;
+
                 case "console":
                     RunConsoleCommand(instruction.ArgsJoined);
                     break;
@@ -317,6 +330,32 @@ namespace SS3D.Systems.Testing
             entitySystem.CmdSpawnLatePlayer(player);
         }
 
+        private bool IsEmbarked()
+        {
+            EntitySubSystem entitySystem = SubSystems.Get<EntitySubSystem>();
+
+            return entitySystem.TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out _);
+        }
+
+        private IEnumerator Reconnect()
+        {
+            if (IsServerRole())
+            {
+                throw new InvalidOperationException("'reconnect' is a client-only instruction.");
+            }
+
+            // Disconnect is async (Stopping → Stopped). Starting while still Stopping makes
+            // ClientManager.StartConnection return false and spam NetworkSession errors.
+            yield return WaitUntil(IsClientFullyStopped, DefaultWaitTimeoutSeconds, "reconnect_stopped");
+
+            // NetworkSessionSubSystem lives on Boot and is gone after the first online load
+            // (and after Empty offline). Re-join with the same CLI-resolved NetworkSettings.
+            // Keep Empty offline — never restore Boot (that re-arms the Intro storm).
+            StartClientConnectionFromSettings();
+
+            yield return WaitUntil(() => _clientConnected, DefaultWaitTimeoutSeconds, "reconnect_started");
+        }
+
         private void RunConsoleCommand(string commandLine)
         {
             CommandsController commandsController = FindFirstObjectByType<CommandsController>();
@@ -339,7 +378,59 @@ namespace SS3D.Systems.Testing
             }
             else
             {
+                // DefaultScene offline is Boot until a successful connect (then
+                // ClientConnectionRecovery arms Empty). Explicitly set Empty before
+                // StopConnection so Boot cannot reload as Single while NetworkManager is
+                // DDOL → duplicate managers + Init/Intro storms. Staying in Game also fails:
+                // networked scene objects never resync and wait_lobby never sees a ckey.
+                RedirectOfflineSceneToEmpty();
                 networkManager.ClientManager.StopConnection();
+            }
+        }
+
+        private static bool IsClientFullyStopped()
+        {
+            NetworkManager networkManager = InstanceFinder.NetworkManager;
+            if (networkManager == null)
+            {
+                return true;
+            }
+
+            LocalConnectionState state = networkManager.TransportManager.Transport.GetConnectionState(false);
+            return state == LocalConnectionState.Stopped;
+        }
+
+        private void StartClientConnectionFromSettings()
+        {
+            NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
+            NetworkManager networkManager = InstanceFinder.NetworkManager;
+
+            LocalPlayer.UpdateCkey(networkSettings.Ckey);
+
+            bool started = networkManager.ClientManager.StartConnection(
+                networkSettings.ServerAddress,
+                networkSettings.ServerPort);
+
+            if (!started)
+            {
+                throw new InvalidOperationException(
+                    $"Reconnect failed to StartConnection on {networkSettings.ServerAddress}:{networkSettings.ServerPort}.");
+            }
+        }
+
+        private void RedirectOfflineSceneToEmpty()
+        {
+            DefaultScene defaultScene = InstanceFinder.NetworkManager.GetComponent<DefaultScene>();
+            if (defaultScene == null)
+            {
+                return;
+            }
+
+            // Belt-and-suspenders on top of ClientConnectionRecovery: never leave Boot as
+            // offline across StopConnection. Do not restore Boot afterward.
+            if (defaultScene.GetOfflineScene() != Scenes.EmptyPath)
+            {
+                defaultScene.SetOfflineScene(Scenes.EmptyPath);
             }
         }
 

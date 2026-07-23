@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-23
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -43,44 +43,32 @@ hand-edit — a wrong YAML edit silently desyncs `fileID` references with no com
 [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) makes this a named
 prefab-composition-debt item and forbids "add one more behaviour" as a feature path, and the health
 rewrite's Phase 0d demonstrated the only accepted mitigation (strip-and-rewire via Editor tooling,
-not organic growth). But enforcement is **convention only** — nothing stops a future PR from adding
-a 127th component. Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) that
-would make even the rewire tool-mediated has never been scheduled.
+not organic growth). Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) is now
+partly paid down: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
+turned strip-and-rewire into a repeatable `PrefabUtility` recipe convention
+(`HumanPrefabHygiene`/`BodyPartContainerInteractiveStrip`/`HumanPrefabRecipes`), added a CI-checked
+missing-script/dev-hack/`ContainerInteractive` gate (`HumanPrefabIntegrityTests`, passing), and fixed
+the concrete hygiene bugs the audit found (stale missing-script GUID caches, the never-built
+`BodyPartContainerInteractiveStrip.cs` tool `inventory.md`/`combat.md` cited, a dev-only hack shipping
+on production `Human.prefab`). **Enforcement is now partially machine-checked** (the EditMode test
+catches regressions on those specific items) but still not comprehensive — nothing stops a future PR
+from adding a 127th *unrelated* component; only the denylisted/known-bad ones are caught. The organ
+prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
+and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
+on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
+`HandsPrefabSetup` (**SS3D → Inventory → Wire Human Hands**). Every other domain directly on
+`Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
+forced — pick up each when its own redesign next touches entity wiring.
 
-- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab)
+- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 
-**Blast radius: high — trend: scheduled but not started**
-
-Health, `Ragdoll`, `AnimationOrchestrator`, `HumanoidBodyStateBridge`, and movement controllers each
-independently write "is this body collapsed/dead" behavior. The interim implementation leans on
-transport quirks as control flow — `ServerRpc` from server is a no-op, SyncVar `OnChange` may not
-fire on the server, `OnDisable` during network teardown is not "recover" — each of which has already
-caused a shipped bug (death re-triggering every tick, ghost stack-overflow, corpses standing back up,
-unconscious players walking). [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md)
-documents the target architecture (single replicated `BodyPresentationState` + one applier) and
-explicitly says **do not add a third collapse path** while it's pending — but it is `Status: planned`
-with no owner or date, so every new health/combat feature that touches consciousness is one incident
-away from adding that third path anyway.
-
-- Related: [health.md](systems/health.md) § Pitfalls, [entities.md](systems/entities.md) § Body presentation debt
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.3 Interaction `Discover` has no contract
 
-**Blast radius: high — trend: stable (bandaged repeatedly, not fixed)**
-
-[interactions-framework.md](systems/interactions-framework.md) § Architecture smells names this
-directly: some interaction-source extensions always `Add` a candidate interaction (`Drop`), others
-gate on `CanInteract` at discover time; source-only and target-bound entries share one list with no
-type-level distinction; `InteractionEvent.Point` uses `Vector3.zero` as a sentinel for "unresolved,"
-indistinguishable from a real hit at world origin. This is the root cause of at least two shipped
-bugs fixed by narrow bandages instead of a contract change: empty-hand outline pollution from
-`Craft` (see 1.6) and wall-mount interactions that silently ignored range because a missing collider
-left `Point` at the sentinel value. Every new `IInteractionSourceExtension` is a coin flip on which
-convention it should follow because the framework doesn't enforce one.
-
-- Related: [interactions-framework.md](systems/interactions-framework.md) § Architecture smells (full list), [interactions-runtime.md](systems/interactions-runtime.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.4 UI asset-catalog pattern copy-pasted three times, no shared infrastructure
 
@@ -112,35 +100,13 @@ time, not at PR time.
 
 ### 1.6 Crafting is dead code that hasn't been deleted
 
-**Blast radius: low, but pure waste — trend: not scheduled**
-
-`CraftingSubSystem`, `Craft.cs` (on both hand prefabs), and the crafting menu uGUI have been called
-"obsolete, due for removal" across three separate docs
-([INDEX.md](INDEX.md), [crafting.md](systems/crafting.md),
-[interactions-framework.md](systems/interactions-framework.md) § Architecture smells #1) for multiple
-work sessions. `Craft` on hands is a standing landmine: left in place, it silently pollutes hover
-outlines for every empty-handed target unless discover-time gating (a bandage, not a fix) stays
-correct. Nobody has scheduled the actual deletion PR (remove `Craft` from hand prefabs, delete the
-subsystem, drop the codegen recipe refs) even though the cost of leaving it is now higher than
-deleting it.
-
-- Related: [crafting.md](systems/crafting.md), [interactions-framework.md](systems/interactions-framework.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved).
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
-**Blast radius: medium — trend: getting worse**
-
-[core-subsystems.md](systems/core-subsystems.md) calls Boot/Game scene-placed subsystem registration
-"legacy," with code bootstrap as the stated target
-([2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**,
-unscheduled). In the meantime, individual systems have each invented their own escape hatch:
-`ScreenEffectsSubSystem` self-bootstraps via `RuntimeInitializeOnLoadMethod`; `AutomationSubSystem`
-self-bootstraps with a no-op guard; Comms/local-speech is wired into `Game.unity` and `Human.prefab`
-manually and calls out that a fresh scene/prefab can silently lose that wiring. There are now (at
-least) three different "how does a new system get into the running game" answers with no single
-place documenting which one a new feature should pick.
-
-- Related: [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [chat-audio-screens.md](systems/chat-audio-screens.md)
+**Resolved 2026-07-23** for gameplay SubSystems — see [§6 Resolved](#6-resolved). Residual UI-host
+`RuntimeInitializeOnLoad` self-bootstraps (UiShell / MainHud / StoragePanel) stay under agent-first
+follow-on **(b)**, not this item.
 
 ### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
 
@@ -150,11 +116,13 @@ Confirmed still condemned-but-present on `develop`: console panel
 ([ingame-console.md](systems/ingame-console.md)), lobby job-select/ready UI
 ([rounds-lobby.md](systems/rounds-lobby.md)), the ScreenEffects F2 debug canvas
 ([screen-effects.md](systems/screen-effects.md)), TileMap Creator
-([tile.md](systems/tile.md)), the crafting menu (1.6), and examine's hover/detailed uGUI panels
+([tile.md](systems/tile.md)), and examine's hover/detailed uGUI panels
 ([examine.md](systems/examine.md)). Each is "do not extend, replace when the owning redesign lands,"
 which is the right call individually, but there is no single burndown tracking how many of these
-are left or in what order they should go — six live legacy UI stacks is real maintenance surface
+are left or in what order they should go — five live legacy UI stacks is real maintenance surface
 (input arbitration, click-through, and pointer-over-UI code all still have to account for them).
+
+- Crafting menu uGUI was purged with §1.6 (2026-07-23).
 
 - **Doc-hygiene note:** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
   Condemned UI table still lists "Inventory / hands / intent uGUI" as condemned-pending-replacement,
@@ -208,17 +176,18 @@ early and expensive to reinstate once thousands of lines have drifted.
 
 ### 1.12 Scene-wide `FindObjectsByType` calls in gameplay code, not just Editor tooling
 
-**Blast radius: low-medium — trend: stable**
+**Blast radius: low-medium — trend: improving for locator; Item/Locker scans unchanged**
 
 Ten call sites use `FindObjectOfType`/`FindObjectsByType` for O(n) scene scans. Most are legitimately
 Editor-only (catalog builders, debug gizmo drawers) or dev-bypass toggles, which is fine. Three are
 not: `TileMap.cs` scans every `Item` in the scene (`FindObjectsOfType<Item>()`), `Locker.cs` scans
 every `ContainerViewer`, and — more structurally — `Core/Subsystems.cs`, the service locator every
-domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache. As
-station population and prop density grow, these scans get proportionally more expensive on paths that
-were supposed to be O(1) lookups.
+domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache.
+The locator fallback is now skipped while quitting **and** while `WaitingForServer`
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3 scaffolding);
+prefer `TryGet` + ready. Hot-path Item/Locker scans remain.
 
-- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md)
+- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ### 1.13 Hotkey-bound debug UIs sprawl with no shared shell
 
@@ -247,6 +216,45 @@ and (b) preferring an in-game console command first. Target: one arbitrated debu
 UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when that lands.
 
 - Related: [inputs.md](systems/inputs.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
+
+### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
+
+**Blast radius: low individually, high in aggregate — trend: Phase 1 icons done; leftovers scheduled**
+
+The intended `Assets/Art/` (raw art, by type then domain) vs. `Assets/Content/` (game data/composition) split
+is sound. Phase 0 (docs/tooling + CI `AssetTaxonomyTests`) and **Phase 1 icon consolidation** have landed:
+icon images now live under `Assets/Art/Icons/` (`External/`, `Heroicons/`, `Inventory/`, `Alerts/`,
+`Rendered/`, `map-editor/`). `Graphics/Misc` and `Graphics/UI/Misc` were disposed with those moves.
+Still open from Phase 1: flatten `Content/Systems/UI/Systems/`, delete orphaned `Scripts/External/FishNet/`
+stubs, disposition animation/localization Misc folders, move `splatter.png`. Phase 2 still owns the
+InteractionIcons Art/Content folder-name collision, Substances → `Content/Data/`, and first-party
+`Assets/Editor/` → `Scripts/SS3D/Editor/`. Grandfather lists in `AssetAuditUtilities.cs` shrank for the
+shipped icon moves — do not grow them for new violations.
+
+- Related: [asset-organization.md](systems/asset-organization.md), [data-codegen.md](systems/data-codegen.md)
+  § Architecture smells (same one-off-Editor-menu root cause),
+  [2026-07_asset-file-structure-taxonomy.md](2026-07_asset-file-structure-taxonomy.md)
+
+### 1.15 Addressables async loading partial — most DBs still eager-loaded
+
+**Blast radius: high (whole-game memory footprint) — trend: Phases 1–3 done; rest scheduled**
+
+21+ Addressables groups under `Assets/Content/Addressables/` were historically editor-curation only.
+**Phases 1–3 shipped (2026-07-23)** per
+[2026-07_addressables-expansion-migration.md](2026-07_addressables-expansion-migration.md): orphan
+`AddressableAssetsData/` removed; `com.unity.addressables` 2.9.1 pinned; `AssetHandle`/`AssetProvider`
++ `Assets.GetAsync` dual-path live; **InteractionIcons** migrated to `AddressablesAsync` (GUID keys,
+warm preload, no eager SO hard refs). Items/Materials/Sounds/etc. still eager-load — Phase 4 needs
+FishNet preload ordering; Phase 5 deletes sync `Assets.Get`; Phase 6 retires UI `Resources.Load`
+catalogs. Same root cause as upstream [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494)
+until remaining DBs migrate.
+
+- Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
+
+### 1.16 Session/world lifecycle — shipped; optional backoff remains
+
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved). Optional reconnect exponential backoff and
+UI-host consolidation remain deferred elsewhere (not reopen criteria for this item).
 
 ---
 
@@ -302,7 +310,63 @@ not quality problems.
 ## 6. Resolved
 
 *(Move items here with the PR/commit that closed them, so the register shows real progress rather
-than only growing.)*
+than only growing. Keep a one-line stub under the old §1.x number so external citations still resolve.)*
 
-- None yet — this doc was created 2026-07-21 as an initial audit; the first item paid down against
-  this list should start this section.
+### 1.2 Body presentation authority — 2026-07-23
+
+`Ragdoll` owns replicated `BodyPresentationState` (`Locomotion` / `Collapsed` / `Dead`) and is the
+sole applier. Health writes intent via `BodyPresentationIntent`; dual death/unconscious reinforce
+RPCs removed. Movement / bridge / orchestrator read `Presentation`.
+
+- **Closed by:** this session's body-presentation refactor (TECH_DEBT 1.2 plan); bump with PR when merged.
+- **Not in this close:** ghost/mind-swap redesign; collapse animation content; prefab strip.
+- Related: [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), [health.md](systems/health.md), [entities.md](systems/entities.md)
+
+### 1.3 Interaction Discover contract — 2026-07-23
+
+Discover semantics locked: candidates vs `FilterAndSort` viability; `InteractionEntry.IsSourceOnly` /
+`SourceOnly()` for Drop; `InteractionEvent.HasPoint` replaces zero-point sentinel; source discovery
+receives hit `context`. Pickable≠rangeable (missing wall-mount colliders) remains open under the
+framework map.
+
+- **Closed by:** `0499ab7cd` on `cursor/interaction-discover-contract` ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
+- **Not in this close:** forcing one extension gate style; `InteractionController` decomposition (1.9).
+- Related: [interactions-framework.md](systems/interactions-framework.md), [interactions-runtime.md](systems/interactions-runtime.md)
+
+### 1.6 Crafting dead-code purge — 2026-07-23
+
+Obsolete `CraftingSubSystem`, hand/tool `Craft`, `GirderCraftable`/`RecipeIngredient`, crafting menu
+uGUI, recipe assets, `CraftingRecipes` database/Addressables group, and generated recipe refs removed.
+Empty-hand outline pollution from `OpenCraftingMenu` discovery is gone with the extension.
+
+- **Closed by:** this session's crafting deletion (TECH_DEBT 1.6 plan); bump with PR when merged.
+- **Not in this close:** future freeform crafting per [design/crafting.md](../design/crafting.md);
+  optional leftover `InteractionIcons.Crafting` sprite/codegen entry (lookup never used that id).
+- Related: [crafting.md](systems/crafting.md), [interactions-framework.md](systems/interactions-framework.md)
+
+### 1.7 Legacy scene-based subsystem registration (gameplay) — 2026-07-23
+
+Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
+(Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h).
+
+- **Closed by:** `b74f47123` (Phase 3h hub + scene strip); post-ship hardening `ab79afee2` (ServerMeta
+  boot ownership), `b57f3974e` (PlayerCamera lazy resolve); smoke hardening (Selection/Armed
+  `TryGet`, Disconnecting suppress).
+- **Not in this close:** UiShell / MainHud / StoragePanel `RuntimeInitializeOnLoad` — agent-first
+  follow-on **(b)**. Also residual: content-prefab `SubSystem`s (PlayerCamera / Radial / Armed /
+  MapEditor) that still register when Game loads before hub Online — consumers use `TryGet` until
+  those move to bootstrap/hub ([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)).
+- Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+
+### 1.16 Session/world lifecycle — 2026-07-23
+
+Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
+`NetworkSystemsHub` shipped under
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
+
+- **Closed by:** `77f4d9798` / `84401b2fe` / `b74f47123` (phases 1–3h); follow-up Play Mode fixes on
+  `cursor/session-world-lifecycle` as above.
+- **Deferred elsewhere (do not reopen this item):** reconnect exponential backoff; UI-host bootstrap
+  consolidation.
+- Related: [networking-session.md](systems/networking-session.md), [core-subsystems.md](systems/core-subsystems.md)

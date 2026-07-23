@@ -276,13 +276,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, VendingInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, VendingInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private bool TryReadId()

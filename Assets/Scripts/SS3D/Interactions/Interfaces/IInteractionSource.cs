@@ -11,11 +11,14 @@ namespace SS3D.Interactions.Interfaces
         IInteractionSource Source { get; set; }
 
         /// <summary>
-        /// Allows the source to manipulate existing interactions and add new ones
+        /// Allows the source to manipulate existing interactions and add new ones.
+        /// Discover may pre-filter candidates; <see cref="InteractionPipeline.FilterAndSort"/> is the
+        /// sole full viability gate. Source-only verbs use <see cref="InteractionEntry.SourceOnly"/>.
         /// </summary>
         /// <param name="targets">The interaction targets of this interaction</param>
         /// <param name="entries">The already present interactions</param>
-        void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries);
+        /// <param name="context">Discover event (source + optional resolved point/normal)</param>
+        void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries, InteractionEvent context);
         /// <summary>
         /// Checks if this source can interact with a certain target
         /// </summary>

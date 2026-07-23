@@ -102,16 +102,33 @@ namespace SS3D.Systems.Interactions
         {
             base.OnAwake();
 
-            _radialView = SubSystems.Get<RadialInteractionSubSystem>();
-            _armedSystem = SubSystems.Get<ArmedInteractionSubSystem>();
-            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
-            _camera = SubSystems.Get<CameraSubSystem>().PlayerCamera.GetComponent<Camera>();
-
+            // Wire inputs before camera — a missing PlayerCamera must not leave _controls null
+            // (OnOwnershipClient → SubscribeToInput would cascade-NRE).
             _inputSystem = SubSystems.Get<InputSubSystem>();
             Controls controls = _inputSystem.Inputs;
             _controls = controls.Interactions;
             _hotkeysControls = controls.Hotkeys;
             _cancelInteractionAction = controls.Interactions.Get().FindAction("Cancel Interaction", throwIfNotFound: true);
+
+            _radialView = SubSystems.Get<RadialInteractionSubSystem>();
+            _armedSystem = SubSystems.Get<ArmedInteractionSubSystem>();
+            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
+
+            Actor playerCamera = SubSystems.Get<CameraSubSystem>()?.PlayerCamera;
+            if (playerCamera != null)
+            {
+                _camera = playerCamera.GetComponent<Camera>();
+            }
+
+            if (_camera == null)
+            {
+                _camera = Camera.main;
+            }
+
+            if (_camera == null)
+            {
+                Log.Error(this, "No gameplay camera resolved for InteractionController", Logs.Important);
+            }
         }
 
         private void Update()
@@ -632,7 +649,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            InteractionEvent interactionEvent = new(source, null, source.GameObject.transform.position);
+            InteractionEvent interactionEvent = new(source, null, source.GameObject.transform.position, Vector3.up);
 
             List<IInteractionTarget> targets = GetTargetsFromGameObject(source, target);
             List<InteractionEntry> entries = InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
@@ -748,6 +765,7 @@ namespace SS3D.Systems.Interactions
 
             List<InteractionEntry> viableInteractions = GetViableInteractionsFromTarget(
                 selectable.gameObject,
+                targetEvent.HasPoint,
                 targetEvent.Point,
                 targetEvent.Normal,
                 out _);
@@ -909,15 +927,20 @@ namespace SS3D.Systems.Interactions
                 return new List<InteractionEntry>();
             }
 
-            SelectionTargetUtility.TryResolveInteractionPoint(_camera, current, out Vector3 point, out Vector3 normal);
-            return GetViableInteractionsFromTarget(current.gameObject, point, normal, out interactionEvent);
+            bool hasPoint = SelectionTargetUtility.TryResolveInteractionPoint(_camera, current, out Vector3 point, out Vector3 normal);
+            return GetViableInteractionsFromTarget(current.gameObject, hasPoint, point, normal, out interactionEvent);
         }
 
         /// <summary>
         /// Gets all possible interactions for a resolved target object and interaction point.
         /// </summary>
         [ServerOrClient]
-        private List<InteractionEntry> GetViableInteractionsFromTarget(GameObject targetGameObject, Vector3 point, Vector3 normal, out InteractionEvent interactionEvent)
+        private List<InteractionEntry> GetViableInteractionsFromTarget(
+            GameObject targetGameObject,
+            bool hasPoint,
+            Vector3 point,
+            Vector3 normal,
+            out InteractionEvent interactionEvent)
         {
             IInteractionSource source = GetActiveInteractionSource();
 
@@ -928,7 +951,9 @@ namespace SS3D.Systems.Interactions
             }
 
             List<IInteractionTarget> targets = GetTargetsFromGameObject(source, targetGameObject);
-            interactionEvent = new InteractionEvent(source, targets[0], point, normal);
+            interactionEvent = hasPoint
+                ? new InteractionEvent(source, targets[0], point, normal)
+                : new InteractionEvent(source, targets[0]);
 
             return InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
         }
@@ -961,10 +986,13 @@ namespace SS3D.Systems.Interactions
             return false;
         }
 
+        /// <summary>
+        /// RPC path: point was chosen on the client and sent over the wire (always treated as resolved).
+        /// </summary>
         [ServerOrClient]
         private List<InteractionEntry> GetViableInteractionsFromTarget(GameObject targetGameObject, Vector3 point, out InteractionEvent interactionEvent)
         {
-            return GetViableInteractionsFromTarget(targetGameObject, point, Vector3.zero, out interactionEvent);
+            return GetViableInteractionsFromTarget(targetGameObject, hasPoint: true, point, Vector3.zero, out interactionEvent);
         }
 
         [Client]
@@ -1175,15 +1203,18 @@ namespace SS3D.Systems.Interactions
                 return false;
             }
 
-            SelectionTargetUtility.TryResolveInteractionPoint(_camera, selectable, out Vector3 point, out Vector3 normal);
+            bool hasPoint = SelectionTargetUtility.TryResolveInteractionPoint(_camera, selectable, out Vector3 point, out Vector3 normal);
             CollectTargetsInto(source, selectable.gameObject, _outlineTargets);
+
+            InteractionEvent outlineEvent = hasPoint
+                ? new InteractionEvent(source, null, point, normal)
+                : new InteractionEvent(source, null);
 
             // Outline LateUpdate must not run full Discover (source-only Drop, ToArray, Filter lists).
             return InteractionPipeline.TryEvaluateOutlineInteractability(
                 source,
                 _outlineTargets,
-                point,
-                normal,
+                outlineEvent,
                 CurrentIntent,
                 out hasViableInteractions);
         }
@@ -1266,7 +1297,7 @@ namespace SS3D.Systems.Interactions
 
             IInteractionSource source = sourceObject.GetComponent<IInteractionSource>();
             List<IInteractionTarget> targets = GetTargetsFromGameObject(source, target);
-            InteractionEvent interactionEvent = new(source, null, source.GameObject.transform.position);
+            InteractionEvent interactionEvent = new(source, null, source.GameObject.transform.position, Vector3.up);
 
             List<InteractionEntry> entries = InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
 

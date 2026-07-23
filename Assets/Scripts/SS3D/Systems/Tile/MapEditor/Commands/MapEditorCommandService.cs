@@ -1,4 +1,5 @@
 using SS3D.Data.AssetDatabases;
+using SS3D.Systems.Tile.SpawnPoints;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -24,12 +25,16 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         }
 
         public void Bind(TileMap map, TileResourceLoader loader, ConstructionService construction,
-            System.Action floorDecalsChanged = null)
+            System.Action floorDecalsChanged = null,
+            SpawnPointRegistry spawnPoints = null,
+            System.Action spawnPointsChanged = null)
         {
             _context = new MapEditorCommandContext(map, loader, construction)
             {
                 PlacementMode = _placementMode,
                 FloorDecalsChanged = floorDecalsChanged,
+                SpawnPoints = spawnPoints,
+                SpawnPointsChanged = spawnPointsChanged,
             };
         }
 

@@ -3,6 +3,7 @@ using Coimbra.Services.PlayerLoopEvents;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Core.WorldReadiness;
 using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
@@ -15,9 +16,9 @@ namespace SS3D.Systems.Area
     /// <summary>
     /// APC-seeded area flood-fill and per-tile area-id registry.
     /// </summary>
-    public sealed class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource
+    public sealed class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource, IWorldReady
     {
-        public event Action OnSystemSetUp;
+        public event Action WhenReady;
 
         public event Action<AreaId, AreaLightingState> OnAreaLightingStateChanged;
 
@@ -25,7 +26,7 @@ namespace SS3D.Systems.Area
 
         public event Action OnAreaVisualsDirty;
 
-        public bool IsSetUp { get; private set; }
+        public bool IsReady { get; private set; }
 
         public AreaFloorVisualCache FloorVisualCache { get; } = new();
 
@@ -41,6 +42,7 @@ namespace SS3D.Systems.Area
         private AreaFloodFillService _floodFill;
         private bool _electricityTickSubscribed;
         private bool _templateRestoreActive;
+        private bool _mapWired;
 
         /// <summary>
         /// When true, <see cref="RegisterApc"/> queues APCs without flooding. Used while
@@ -91,7 +93,7 @@ namespace SS3D.Systems.Area
 
         private void HandleTileMapCreated()
         {
-            if (IsSetUp)
+            if (_mapWired)
                 return;
 
             if (SubSystems.TryGet(out TileSubSystem tileSubSystem))
@@ -100,7 +102,7 @@ namespace SS3D.Systems.Area
 
         private void CompleteSetup(TileSubSystem tileSubSystem)
         {
-            if (IsSetUp || tileSubSystem.CurrentMap == null)
+            if (_mapWired || tileSubSystem.CurrentMap == null)
                 return;
 
             _map = tileSubSystem.CurrentMap;
@@ -109,9 +111,8 @@ namespace SS3D.Systems.Area
 
             tileSubSystem.RegisterTileMutationObserver(this);
 
-            IsSetUp = true;
+            _mapWired = true;
             GameplayLightGuard.DisableOrphanSceneLights();
-            OnSystemSetUp?.Invoke();
             SubscribeElectricityTicks();
         }
 
@@ -184,7 +185,9 @@ namespace SS3D.Systems.Area
 
             record.LightingSwitchOn = !record.LightingSwitchOn;
             ApplyLightingSwitchChange(areaId, record.LightingSwitchOn);
-            UpdateAreaLightingStates();
+            UpdateAreaLightingStates(pushObservers: false);
+            // One snapshot after switch + re-derived state so clients never see switch/state skew.
+            PushLightingSnapshotToObservers();
             return true;
         }
 
@@ -224,6 +227,35 @@ namespace SS3D.Systems.Area
             return TryGetAreaForTile(inFront, out record);
         }
 
+        /// <summary>
+        /// Resolves area id for a device on host (live registry) or pure clients (floor-cache snapshot).
+        /// </summary>
+        public bool TryResolveAreaIdForDevice(PlacedTileObject tileObject, out AreaId areaId)
+        {
+            areaId = default;
+            if (TryGetAreaForDevice(tileObject, out AreaRecord record))
+            {
+                areaId = record.Id;
+                return true;
+            }
+
+            return AreaDeviceTileResolver.TryResolveAreaIdFromFloorCache(FloorVisualCache, tileObject, out areaId);
+        }
+
+        /// <summary>
+        /// Departmental tint from live registry (host) or floor-cache snapshot (clients).
+        /// </summary>
+        public bool TryGetDepartmentalLightTint(AreaId areaId, out Color tint)
+        {
+            if (_registry.TryGet(areaId, out AreaRecord record) && record.HasDepartmentalLightTint)
+            {
+                tint = record.DepartmentalLightTint;
+                return true;
+            }
+
+            return FloorVisualCache.TryGetTint(areaId.Value, out tint);
+        }
+
         public bool TryGetAreaApc(AreaId areaId, out IApcChannelSource apc)
         {
             apc = null;
@@ -254,46 +286,64 @@ namespace SS3D.Systems.Area
         /// <summary>
         /// Recompute per-tile area ids from every registered APC now that the map is complete.
         /// Preserves existing <see cref="AreaRecord"/> metadata (names, tags, tints, access, switches).
+        /// Always notifies world readiness (including no-op / early-out paths).
         /// </summary>
         [Server]
         public void EndDeferredAreaFlood()
         {
-            if (!_deferAreaFlood)
+            if (_deferAreaFlood)
             {
-                return;
-            }
+                _deferAreaFlood = false;
 
-            _deferAreaFlood = false;
-
-            if (_floodFill == null || _map == null)
-            {
-                return;
-            }
-
-            if (_registeredApcs.Count == 0)
-            {
-                return;
-            }
-
-            // Template restore may have linked APCs to saved records without flooding.
-            // Mid-load RegisterApc may have queued APCs with no records yet.
-            bool anyLinked = false;
-            foreach (IAreaApcOrigin apc in _registeredApcs)
-            {
-                if (_registry.TryGetApcArea(apc, out _))
+                if (_floodFill != null && _map != null && _registeredApcs.Count > 0)
                 {
-                    anyLinked = true;
-                    break;
+                    // Template restore may have linked APCs to saved records without flooding.
+                    // Mid-load RegisterApc may have queued APCs with no records yet.
+                    bool anyLinked = false;
+                    foreach (IAreaApcOrigin apc in _registeredApcs)
+                    {
+                        if (_registry.TryGetApcArea(apc, out _))
+                        {
+                            anyLinked = true;
+                            break;
+                        }
+                    }
+
+                    if (anyLinked)
+                    {
+                        RefloodAllAreaTilesPreservingMetadata();
+                    }
+                    else
+                    {
+                        RebuildAllAreasFromApcs();
+                    }
                 }
             }
 
-            if (anyLinked)
+            MarkAreasReady();
+        }
+
+        private void MarkAreasReady()
+        {
+            if (!_mapWired)
             {
-                RefloodAllAreaTilesPreservingMetadata();
+                if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readinessEarly))
+                {
+                    readinessEarly.NotifyAreasFlooded();
+                }
+
+                return;
             }
-            else
+
+            if (!IsReady)
             {
-                RebuildAllAreasFromApcs();
+                IsReady = true;
+                WhenReady?.Invoke();
+            }
+
+            if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+            {
+                readiness.NotifyAreasFlooded();
             }
         }
 
@@ -845,16 +895,17 @@ namespace SS3D.Systems.Area
             UpdateAreaLightingStates();
         }
 
-        private void UpdateAreaLightingStates()
+        private void UpdateAreaLightingStates(bool pushObservers = true)
         {
             if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
+            bool anyChanged = false;
             foreach (AreaRecord record in _registry.GetAllAreas())
             {
-                if (record.Apc is not IApcChannelSource areaApc || record.Apc is not IElectricDevice apcDevice)
+                if (record.Apc is not IApcChannelSource areaApc || record.Apc is not IElectricDevice)
                 {
                     continue;
                 }
@@ -866,7 +917,15 @@ namespace SS3D.Systems.Area
                 }
 
                 AreaLightingState newState = AreaLightingStateDeriver.Derive(stats, areaApc.Channels, record.LightingSwitchOn);
-                ApplyLightingStateChange(record.Id, newState);
+                if (ApplyLightingStateChange(record.Id, newState))
+                {
+                    anyChanged = true;
+                }
+            }
+
+            if (pushObservers && anyChanged && IsServer)
+            {
+                PushLightingSnapshotToObservers();
             }
         }
 
@@ -874,53 +933,110 @@ namespace SS3D.Systems.Area
         {
             _lightingSwitchOn[areaId] = on;
             OnAreaLightingSwitchChanged?.Invoke(areaId, on);
-
-            if (IsServer)
-            {
-                RpcAreaLightingSwitchChanged(areaId.Value, on);
-            }
         }
 
-        private void ApplyLightingStateChange(AreaId areaId, AreaLightingState newState)
+        /// <returns>True when the stored state changed.</returns>
+        private bool ApplyLightingStateChange(AreaId areaId, AreaLightingState newState)
         {
             if (_lightingStates.TryGetValue(areaId, out AreaLightingState previousState) && previousState == newState)
             {
-                return;
+                return false;
             }
 
             _lightingStates[areaId] = newState;
             OnAreaLightingStateChanged?.Invoke(areaId, newState);
-
-            if (IsServer)
-            {
-                RpcAreaLightingStateChanged(areaId.Value, newState);
-            }
+            return true;
         }
 
-        [ObserversRpc]
-        private void RpcAreaLightingStateChanged(ushort areaIdValue, AreaLightingState state)
+        [Server]
+        private void PushLightingSnapshotToObservers()
+        {
+            var areaIds = new HashSet<AreaId>(_lightingStates.Keys);
+            foreach (AreaId switchAreaId in _lightingSwitchOn.Keys)
+            {
+                areaIds.Add(switchAreaId);
+            }
+
+            var entries = new SyncedAreaLighting[areaIds.Count];
+            int index = 0;
+            foreach (AreaId areaId in areaIds)
+            {
+                if (!_lightingStates.TryGetValue(areaId, out AreaLightingState state))
+                {
+                    state = AreaLightingState.Dark;
+                }
+
+                if (!_lightingSwitchOn.TryGetValue(areaId, out bool switchOn))
+                {
+                    switchOn = true;
+                }
+
+                entries[index++] = new SyncedAreaLighting
+                {
+                    areaId = areaId.Value,
+                    state = state,
+                    lightingSwitchOn = switchOn,
+                };
+            }
+
+            RpcSyncAreaLighting(entries);
+        }
+
+        /// <summary>
+        /// Full lighting + wall-switch snapshot. BufferLast so late joiners get current fixture state
+        /// (per-area RPCs would only retain the last area).
+        /// </summary>
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncAreaLighting(SyncedAreaLighting[] entries)
         {
             if (IsServer)
             {
                 return;
             }
 
-            var areaId = new AreaId(areaIdValue);
-            _lightingStates[areaId] = state;
-            OnAreaLightingStateChanged?.Invoke(areaId, state);
-        }
-
-        [ObserversRpc]
-        private void RpcAreaLightingSwitchChanged(ushort areaIdValue, bool on)
-        {
-            if (IsServer)
+            var nextStates = new Dictionary<AreaId, AreaLightingState>();
+            var nextSwitches = new Dictionary<AreaId, bool>();
+            if (entries != null)
             {
-                return;
+                foreach (SyncedAreaLighting entry in entries)
+                {
+                    var areaId = new AreaId(entry.areaId);
+                    nextStates[areaId] = entry.state;
+                    nextSwitches[areaId] = entry.lightingSwitchOn;
+                }
             }
 
-            var areaId = new AreaId(areaIdValue);
-            _lightingSwitchOn[areaId] = on;
-            OnAreaLightingSwitchChanged?.Invoke(areaId, on);
+            foreach (KeyValuePair<AreaId, AreaLightingState> pair in nextStates)
+            {
+                if (_lightingStates.TryGetValue(pair.Key, out AreaLightingState previous) && previous == pair.Value)
+                {
+                    continue;
+                }
+
+                _lightingStates[pair.Key] = pair.Value;
+                OnAreaLightingStateChanged?.Invoke(pair.Key, pair.Value);
+            }
+
+            foreach (AreaId removed in _lightingStates.Keys.Where(id => !nextStates.ContainsKey(id)).ToList())
+            {
+                _lightingStates.Remove(removed);
+            }
+
+            foreach (KeyValuePair<AreaId, bool> pair in nextSwitches)
+            {
+                if (_lightingSwitchOn.TryGetValue(pair.Key, out bool previous) && previous == pair.Value)
+                {
+                    continue;
+                }
+
+                _lightingSwitchOn[pair.Key] = pair.Value;
+                OnAreaLightingSwitchChanged?.Invoke(pair.Key, pair.Value);
+            }
+
+            foreach (AreaId removed in _lightingSwitchOn.Keys.Where(id => !nextSwitches.ContainsKey(id)).ToList())
+            {
+                _lightingSwitchOn.Remove(removed);
+            }
         }
 
         private static void InvalidateElectricityConsumerIndex()
@@ -1024,6 +1140,14 @@ namespace SS3D.Systems.Area
             public int chunkKeyX;
             public int chunkKeyY;
             public ushort[] areaIds;
+        }
+
+        [Serializable]
+        private struct SyncedAreaLighting
+        {
+            public ushort areaId;
+            public AreaLightingState state;
+            public bool lightingSwitchOn;
         }
     }
 }

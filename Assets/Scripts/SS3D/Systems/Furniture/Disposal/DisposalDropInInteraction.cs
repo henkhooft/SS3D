@@ -43,7 +43,7 @@ namespace SS3D.Systems.Furniture.Disposal
 
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
-            InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
+            InteractionEvent combined = targetEvent.WithSource(originEvent.Source);
             return CanInteract(combined);
         }
 

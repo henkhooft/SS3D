@@ -27,14 +27,20 @@ namespace SS3D.Systems.Examine
         protected override void OnAwake()
         {
             base.OnAwake();
-            _selectionSystem = SubSystems.Get<SelectionSubSystem>();
+            // Sibling on NetworkSystemsHub — Awake order may run before Selection registers.
+            SubSystems.TryGet(out _selectionSystem);
         }
 
         protected override void OnEnabled()
         {
             base.OnEnabled();
-            
-            if (_selectionSystem)
+
+            if (_selectionSystem == null)
+            {
+                SubSystems.TryGet(out _selectionSystem);
+            }
+
+            if (_selectionSystem != null)
             {
                 _selectionSystem.OnSelectableChanged += UpdateExaminable;
             }
@@ -43,8 +49,8 @@ namespace SS3D.Systems.Examine
         protected override void OnDisabled()
         {
             base.OnDisabled();
-            
-            if (_selectionSystem)
+
+            if (_selectionSystem != null)
             {
                 _selectionSystem.OnSelectableChanged -= UpdateExaminable;
             }

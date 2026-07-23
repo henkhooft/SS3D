@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Chat/, Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Audio/, Assets/Scripts/SS3D/Systems/Screens/
 > Entry points: ChatSubSystem, CommsSubSystem, AudioSubSystem, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 82c1fed63 — 2026-07-21
+> Verified: ab79afee2 — 2026-07-23
 
 # Chat / audio / screens
 
@@ -28,6 +28,7 @@ Scene/prefab placements for the local speech slice are already in `Game.unity` (
 
 ## Pitfalls
 
+- **`CameraSubSystem.PlayerCamera` null after Phase 3h:** hub `CameraSubSystem` Awakes Online before Game loads the Player Camera prefab. Do not resolve only in `OnAwake` via `Camera.main` — lazy-resolve on `PlayerCamera` get (and/or `FindObjectOfType<CameraFollow>`). Otherwise `InteractionController.OnAwake` NREs at spawn and input subscribe cascades.
 - **Speech bubbles invisible with healthy speech logs:** if `ShowBubble` reports `panel=null` / `resolvedSize=(NaNxNaN)`, the controller attached to a `UIDocument.rootVisualElement` that is not (or no longer) on a live panel. `EnsureOverlay` must require `root.panel != null`, compare against the current root identity, and tear down on disable — UIDocument rebuilds its tree across disable/enable and a cached view will keep driving orphans forever.
 - **Do not resurrect UGUI always-on chat** — UI purged; headless `ChatSubSystem` only until the non-diegetic feed / PDA log per [comms.md](../../design/comms.md).
 - **Station alerts are silent for now:** `RoundSubSystem` / `EntitySubSystem` still call `ChatSubSystem.SendServerMessage`; nothing displays them until a feed UI subscribes to `OnMessageReceived`.

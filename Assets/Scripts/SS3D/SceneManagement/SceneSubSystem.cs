@@ -23,7 +23,7 @@ namespace SS3D.SceneManagement
 		{
 			base.OnAwake();
 
-			ApplicationInitializing.AddListener(HandleApplicationInitializing);
+			AddHandle(ApplicationInitializing.AddListener(HandleApplicationInitializing));
 			UnitySceneManager.sceneLoaded += HandleUnitySceneLoaded;
 		}
 

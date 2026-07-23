@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace SS3D.Systems.Tile.MapEditor
 {
     /// <summary>
-    /// One object (or floor-decal slot) the map editor Delete tool should clear.
+    /// One object (or floor-decal / spawn-point slot) the map editor Delete tool should clear.
     /// </summary>
     public readonly struct MapEditorDeleteTarget
     {
@@ -11,6 +11,7 @@ namespace SS3D.Systems.Tile.MapEditor
         public TileLayer Layer { get; init; }
         public Direction Direction { get; init; }
         public bool IsFloorDecal { get; init; }
+        public bool IsSpawnPoint { get; init; }
 
         public static MapEditorDeleteTarget Tile(string assetName, TileLayer layer, Direction direction) =>
             new()
@@ -19,10 +20,14 @@ namespace SS3D.Systems.Tile.MapEditor
                 Layer = layer,
                 Direction = direction,
                 IsFloorDecal = false,
+                IsSpawnPoint = false,
             };
 
         public static MapEditorDeleteTarget FloorDecal =>
             new() { IsFloorDecal = true };
+
+        public static MapEditorDeleteTarget SpawnPoint =>
+            new() { IsSpawnPoint = true };
     }
 
     /// <summary>

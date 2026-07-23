@@ -441,8 +441,6 @@ GameObject:
   - component: {fileID: -2900075557854325373}
   - component: {fileID: 8063692154441053622}
   - component: {fileID: 6753708217938451176}
-  - component: {fileID: 6528007219760414512}
-  - component: {fileID: 6634051451888538392}
   - component: {fileID: 978290459806476930}
   - component: {fileID: 780577917937939798}
   - component: {fileID: 6697673826405223293}
@@ -522,8 +520,6 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 6753708217938451176}
-  - {fileID: 6528007219760414512}
-  - {fileID: 6634051451888538392}
   - {fileID: 25706523928023003}
   - {fileID: 9077835508851316360}
   - {fileID: 3937552610322827250}
@@ -583,44 +579,6 @@ MonoBehaviour:
   _syncMapId: 0
   _syncIntegrityRemaining: -1
   _syncIntegrityStage: 0
---- !u!114 &6528007219760414512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3591147544166670882}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49d37ab5b82ded9419a6e3ab3d05af02, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _componentIndexCache: 1
-  _addedNetworkObject: {fileID: -2900075557854325373}
-  _networkObjectCache: {fileID: -2900075557854325373}
---- !u!114 &6634051451888538392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3591147544166670882}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3586a2042e5c55d4ead9bca2972c182c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _componentIndexCache: 2
-  _addedNetworkObject: {fileID: -2900075557854325373}
-  _networkObjectCache: {fileID: -2900075557854325373}
-  _currentStepName: 
-  _wallSheetMesh: {fileID: 7525611301124887248}
-  _windowSheetMesh: {fileID: 4653278720775000695}
-  _lowerReinforcedSheetMesh: {fileID: 6440590755580855208}
-  _higherReinforcedWallSheetMesh: {fileID: 6249453572088940716}
-  _higherReinforcedWindowSheetMesh: {fileID: 152874455885084365}
-  _supportMesh: {fileID: 3475283530131085730}
-  _struts: {fileID: 7379630380104514676}
 --- !u!114 &978290459806476930
 MonoBehaviour:
   m_ObjectHideFlags: 0

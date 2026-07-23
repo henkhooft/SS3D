@@ -40,8 +40,9 @@ namespace SS3D.Systems.Electricity
         protected override void OnDestroyed()
         {
             base.OnDestroyed();
-            ElectricitySubSystem electricitySystem = SubSystems.Get<ElectricitySubSystem>();
-            if (electricitySystem != null)
+
+            // Hub may already be unregistered during client disconnect teardown.
+            if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
                 electricitySystem.OnTick -= HandleTick;
             }

@@ -12,15 +12,15 @@ Agents excel at C#, UXML/USS, and docs. They fail at Unity-owned object graphs: 
 
 Pressure already in-tree:
 
-- `ScreenEffectsSubSystem` self-bootstraps via `RuntimeInitializeOnLoadMethod` to avoid `Boot.unity` YAML
+- UiShell / MainHud / StoragePanel still self-bootstrap via `RuntimeInitializeOnLoadMethod` until follow-on **(b)**
 - `MachineInterfaceHost.EnsureEditorAssets` papers over scene SerializeField debt (Editor-only; fails in builds) — **mitigated for MI** by [2026-07_mi-path-catalog.md](2026-07_mi-path-catalog.md)
 - [`Human.prefab`](../../Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab) (~15k lines, ~120 `m_Script` refs) — health, inventory, movement, interactions, and body parts piled onto one graph agents cannot safely edit
 
 ## Scene composition policy
 
 - New features **must not** require edits to `Boot.unity` / `Game.unity` to register systems or UI hosts (unless the task *is* the bootstrap effort).
-- Subsystems are code-owned (spawn/register from bootstrap), not scene-placed GameObjects.
-- Networked subsystems: one hub contract (`NetworkSystemsHub`) — not one NetworkObject per system in Boot. Implementation deferred.
+- Subsystems are code-owned: `SystemsBootstrap` (process-wide DDOL) + `NetworkSystemsHub` prefab (Online) — not scene-placed GameObjects.
+- Networked subsystems: one hub NetworkObject — rebuild via `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab`.
 
 ## Prefab composition policy
 
@@ -55,7 +55,7 @@ Do not extend or restyle. Replace per design + Phase 0 purge.
 | Inventory / hands / intent uGUI | [main-hud.md](../design/main-hud.md), [inventory-storage.md](../design/inventory-storage.md) |
 | Chat window (always-on box) | **Phase 0 purged** — headless `ChatSubSystem` remains; feed/PDA per [comms.md](../design/comms.md) |
 | Lobby job-select UI | [lobby.md](../design/lobby.md) |
-| Crafting menu uGUI | [crafting.md](../design/crafting.md) |
+| Crafting menu uGUI | **Phase 0 purged** (TECH_DEBT 1.6) — redesign per [crafting.md](../design/crafting.md) |
 | TileMap creator uGUI | creative-mode / construction redesign (editor) |
 | ScreenEffects debug Canvas | delete with health rewrite |
 | Examine uGUI views | when HUD / examine redesign lands |
@@ -76,10 +76,10 @@ Named only — separate architecture efforts when scheduled:
 
 | Effort | Intent |
 |---|---|
-| (a) Subsystem bootstrap + `NetworkSystemsHub` | Empty Boot/Game of per-system GameObjects |
-| (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](2026-07_mi-path-catalog.md)) and Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)). **Still deferred:** full UiShell layers/document ownership; **shared catalog infrastructure** so a third UITK surface does not copy-paste Paths/SO/rebuild-menu again ([ui-shell](systems/ui-shell.md) § Future work) |
+| (a) Subsystem bootstrap + `NetworkSystemsHub` | **Shipped:** [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) — Boot/Game emptied of SubSystem GOs; `SystemsBootstrap` + hub prefab |
+| (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](2026-07_mi-path-catalog.md)), Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)), and shared scaffolding + radial/armed migration ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md)). **Still deferred:** migrating MI/Main HUD/Storage Panel onto the shared `UiShellSubSystem` + `UiAssetCatalogBase` ([ui-shell](systems/ui-shell.md) § Future work) |
 | (c) Main-HUD UITK slice | **Partial:** player overlay (`MainHudSubSystem` — hands, gear, equipment, intent) + `MainHudAssetCatalog` Resources load; vitals/alerts/self-examine and Phase 0 uGUI purge still open — see [inventory](systems/inventory.md) |
-| (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits |
+| (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits — scheduled: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md) (planned) |
 
 ## Related docs
 

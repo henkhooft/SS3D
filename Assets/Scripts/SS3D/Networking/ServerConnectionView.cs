@@ -1,6 +1,7 @@
 using DG.Tweening;
 using FishNet;
 using FishNet.Transporting;
+using SS3D.Core;
 using SS3D.Data.Messages;
 using SS3D.Utils;
 using TMPro;
@@ -91,6 +92,11 @@ namespace SS3D.Networking
             UpdateMessageText(ApplicationMessages.Network.ConnectingToServer);
 
             ProcessConnectingToServer();
+
+            if (SubSystems.TryGet(out NetworkSessionSubSystem session))
+            {
+                session.StartNetworkSession();
+            }
         }
         
         private void HandleServerConnectionFailed(ClientConnectionStateArgs clientConnectionStateArgs)

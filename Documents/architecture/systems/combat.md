@@ -93,7 +93,7 @@ Deferred: disarm/grab, ranged, armor, blocking. Stamina swing costs are wired (`
 - **Prefab wiring:** prefer `MeleePrefabSetup` / PrefabUtility over raw YAML or growing `Human.prefab`.
 - **Combat dummy is not on Human.prefab** — `CombatDummyBootstrap` is AddComponent'd only on spawn instances.
 - **`spawndummy` needs Administrator** — same bar as `hurt`.
-- **Head/torso must not be world containers:** `ContainerInteractive` stripped from `HumanHead`/`HumanTorso` prefabs (clothing/pocket `AttachedContainer` HUD slots kept). Re-run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** if it returns. Surgery organ holes are deferred.
+- **Head/torso must not be world containers:** `ContainerInteractive` must not be present on `HumanHead`/`HumanTorso` prefabs (clothing/pocket `AttachedContainer` HUD slots stay). Run **SS3D → Inventory → Strip Head/Torso ContainerInteractive** in the Editor and verify in Play Mode — the tool exists as of [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 0 but has not been executed against the prefabs yet. Surgery organ holes are deferred.
 
 ## Depends on / Used by
 

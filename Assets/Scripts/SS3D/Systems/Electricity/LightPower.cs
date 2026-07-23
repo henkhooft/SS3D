@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using FishNet.Object.Synchronizing;
 using SS3D.Core;
+using SS3D.Core.Behaviours;
 using SS3D.Systems.Area;
 using SS3D.Systems.Tile.Connections;
 using UnityEngine;
@@ -7,10 +9,18 @@ using UnityEngine;
 namespace SS3D.Systems.Electricity
 {
     /// <summary>
-    /// Toggles a fixture's realtime light and emissive mesh visuals based on power and area lighting state.
+    /// Fixture realtime light + emissive visuals. Server computes lit mode; clients apply a SyncVar
+    /// so they do not need the area registry or APC channel lookups the host uses.
     /// </summary>
-    public class LightPower : MonoBehaviour
+    public class LightPower : NetworkActor
     {
+        public enum FixtureVisual : byte
+        {
+            Off = 0,
+            Normal = 1,
+            Emergency = 2,
+        }
+
         static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
         static readonly int LuminId = Shader.PropertyToID("_Lumin");
 
@@ -38,6 +48,9 @@ namespace SS3D.Systems.Electricity
         [SerializeField]
         private Color _emergencyTint = new Color(1f, 0.25f, 0.2f);
 
+        [SyncVar(OnChange = nameof(SyncFixtureVisual))]
+        private FixtureVisual _fixtureVisual;
+
         private float _poweredIntensity;
         private float _poweredFillIntensity;
         private float _poweredRange;
@@ -50,12 +63,53 @@ namespace SS3D.Systems.Electricity
         private bool _hasArea;
         private bool _areaLightingSubscribed;
         private bool _electricityTickSubscribed;
+        private bool _baselineCached;
 
-        private void Start()
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            EnsureBaselineCached();
+            SubscribeServerDrivers();
+            RefreshVisuals();
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            EnsureBaselineCached();
+            ApplyFixtureVisual(_fixtureVisual);
+        }
+
+        protected override void OnDestroyed()
         {
             if (_consumer != null)
             {
-                _consumer.OnPowerStatusUpdated += HandlePowerStatusUpdated;
+                _consumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
+            }
+
+            UnsubscribeServerDrivers();
+            base.OnDestroyed();
+        }
+
+        private void Update()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            // SubSystems may register after OnStartServer.
+            if (!_areaLightingSubscribed || !_electricityTickSubscribed)
+            {
+                SubscribeServerDrivers();
+            }
+        }
+
+        private void EnsureBaselineCached()
+        {
+            if (_baselineCached)
+            {
+                return;
             }
 
             if (_light != null)
@@ -72,21 +126,7 @@ namespace SS3D.Systems.Electricity
             }
 
             CacheEmissiveMaterials();
-            CacheAreaId();
-            TrySubscribeAreaLighting();
-            TrySubscribeElectricityTick();
-            RefreshVisuals();
-        }
-
-        private void OnDestroy()
-        {
-            if (_consumer != null)
-            {
-                _consumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
-            }
-
-            UnsubscribeAreaLighting();
-            UnsubscribeElectricityTick();
+            _baselineCached = true;
         }
 
         private void CacheEmissiveMaterials()
@@ -131,6 +171,29 @@ namespace SS3D.Systems.Electricity
             }
         }
 
+        private void SubscribeServerDrivers()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            if (_consumer != null)
+            {
+                _consumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
+                _consumer.OnPowerStatusUpdated += HandlePowerStatusUpdated;
+            }
+
+            TrySubscribeAreaLighting();
+            TrySubscribeElectricityTick();
+        }
+
+        private void UnsubscribeServerDrivers()
+        {
+            UnsubscribeAreaLighting();
+            UnsubscribeElectricityTick();
+        }
+
         private void CacheAreaId()
         {
             _hasArea = false;
@@ -139,13 +202,19 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (!areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record))
+            if (areaSubSystem.TryResolveAreaIdForDevice(_consumer.TileObject, out AreaId areaId))
             {
+                _hasArea = true;
+                _areaId = areaId;
                 return;
             }
 
-            _hasArea = true;
-            _areaId = record.Id;
+            // Host registry path (TryResolve already tries this; kept for clarity if cache lags).
+            if (areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record))
+            {
+                _hasArea = true;
+                _areaId = record.Id;
+            }
         }
 
         private void TrySubscribeAreaLighting()
@@ -155,58 +224,37 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (areaSubSystem.IsSetUp)
-            {
-                areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
-                _areaLightingSubscribed = true;
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp += HandleAreaSystemSetup;
-        }
-
-        private void HandleAreaSystemSetup()
-        {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
-            {
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
-            if (!_areaLightingSubscribed)
-            {
-                areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
-                _areaLightingSubscribed = true;
-            }
-
+            areaSubSystem.OnAreaLightingStateChanged += HandleAreaLightingStateChanged;
+            _areaLightingSubscribed = true;
             CacheAreaId();
-            RefreshVisuals();
         }
 
         private void UnsubscribeAreaLighting()
         {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            if (!_areaLightingSubscribed || !SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 return;
             }
 
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
-            if (_areaLightingSubscribed)
-            {
-                areaSubSystem.OnAreaLightingStateChanged -= HandleAreaLightingStateChanged;
-                _areaLightingSubscribed = false;
-            }
+            areaSubSystem.OnAreaLightingStateChanged -= HandleAreaLightingStateChanged;
+            _areaLightingSubscribed = false;
         }
 
         private void HandlePowerStatusUpdated(object sender, PowerStatus newStatus)
         {
-            RefreshVisuals();
+            if (IsServer)
+            {
+                RefreshVisuals();
+            }
         }
 
         private void HandleAreaLightingStateChanged(AreaId areaId, AreaLightingState state)
         {
-            // If we haven't resolved an area yet, retry now — the area system just published
-            // a state so flood-fill must have run and tiles are assigned.
+            if (!IsServer)
+            {
+                return;
+            }
+
             if (!_hasArea)
             {
                 CacheAreaId();
@@ -225,50 +273,28 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (electricitySubSystem.IsSetUp)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp += HandleElectricitySystemSetup;
-        }
-
-        private void HandleElectricitySystemSetup()
-        {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
-            {
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (!_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-            }
-
-            RefreshVisuals();
+            electricitySubSystem.OnTick += HandleElectricityTick;
+            _electricityTickSubscribed = true;
         }
 
         private void UnsubscribeElectricityTick()
         {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (!_electricityTickSubscribed || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick -= HandleElectricityTick;
-                _electricityTickSubscribed = false;
-            }
+            electricitySubSystem.OnTick -= HandleElectricityTick;
+            _electricityTickSubscribed = false;
         }
 
         private void HandleElectricityTick()
         {
+            if (!IsServer)
+            {
+                return;
+            }
+
             if (!_hasArea)
             {
                 CacheAreaId();
@@ -285,22 +311,60 @@ namespace SS3D.Systems.Electricity
             }
         }
 
+        /// <summary>
+        /// Server: recompute and sync. Client: re-apply the last synced visual.
+        /// </summary>
         public void RefreshVisuals()
         {
-            if (ShouldBeLit(out bool useEmergencyVisuals))
+            EnsureBaselineCached();
+
+            if (!IsServer)
             {
-                if (useEmergencyVisuals)
-                {
-                    TurnLightOnEmergency();
-                }
-                else
-                {
-                    TurnLightOnNormal();
-                }
+                ApplyFixtureVisual(_fixtureVisual);
+                return;
             }
-            else
+
+            FixtureVisual next = ComputeFixtureVisual();
+            if (_fixtureVisual != next)
             {
-                TurnLightOff();
+                _fixtureVisual = next;
+            }
+
+            ApplyFixtureVisual(next);
+        }
+
+        private void SyncFixtureVisual(FixtureVisual _, FixtureVisual next, bool asServer)
+        {
+            if (!asServer)
+            {
+                EnsureBaselineCached();
+                ApplyFixtureVisual(next);
+            }
+        }
+
+        private FixtureVisual ComputeFixtureVisual()
+        {
+            if (!ShouldBeLit(out bool useEmergencyVisuals))
+            {
+                return FixtureVisual.Off;
+            }
+
+            return useEmergencyVisuals ? FixtureVisual.Emergency : FixtureVisual.Normal;
+        }
+
+        private void ApplyFixtureVisual(FixtureVisual visual)
+        {
+            switch (visual)
+            {
+                case FixtureVisual.Normal:
+                    TurnLightOnNormal();
+                    break;
+                case FixtureVisual.Emergency:
+                    TurnLightOnEmergency();
+                    break;
+                default:
+                    TurnLightOff();
+                    break;
             }
         }
 
@@ -320,7 +384,7 @@ namespace SS3D.Systems.Electricity
                 return false;
             }
 
-            AreaLightingState areaState = AreaLightingState.Dark;
+            AreaLightingState areaState = AreaLightingState.Normal;
             bool hasAreaContext = _hasArea;
             if (_hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
@@ -330,10 +394,15 @@ namespace SS3D.Systems.Electricity
             }
             else if (_hasArea)
             {
-                areaState = AreaLightingState.Dark;
+                // Server registry path before first derive: treat as powered-area Normal.
+                areaState = AreaLightingState.Normal;
+            }
+            else
+            {
+                return false;
             }
 
-            if (hasAreaContext && areaState == AreaLightingState.Dark)
+            if (areaState == AreaLightingState.Dark)
             {
                 return false;
             }
@@ -352,17 +421,8 @@ namespace SS3D.Systems.Electricity
                 out useEmergencyVisuals);
         }
 
-        /// <summary>
-        /// Lighting fixtures must belong to an area APC. PowerGate passthrough (no APC) is treated as off
-        /// unless the dev bypass is active for tilemap authoring.
-        /// </summary>
         private bool IsFixtureLightingChannelOpen()
         {
-            if (!PowerGate.IsChannelOpen(_consumer))
-            {
-                return false;
-            }
-
             if (_consumer is not IElectricDevice device)
             {
                 return _respectDevBypass && LightingDevBypass.IsActive;
@@ -373,9 +433,9 @@ namespace SS3D.Systems.Electricity
                 return _respectDevBypass && LightingDevBypass.IsActive;
             }
 
-            if (areaSubSystem.TryGetEffectiveApcForDevice(device, out _))
+            if (areaSubSystem.TryGetEffectiveApcForDevice(device, out IApcChannelSource apc))
             {
-                return true;
+                return PowerGate.IsChannelEnabled(_consumer.Channel, apc.Channels);
             }
 
             return _respectDevBypass && LightingDevBypass.IsActive;
@@ -387,11 +447,9 @@ namespace SS3D.Systems.Electricity
             if (_applyDepartmentalLightTint
                 && _hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
-                && _consumer?.TileObject != null
-                && areaSubSystem.TryGetAreaForDevice(_consumer.TileObject, out AreaRecord record)
-                && record.HasDepartmentalLightTint)
+                && areaSubSystem.TryGetDepartmentalLightTint(_areaId, out Color tint))
             {
-                emission = MultiplyColor(_poweredEmission, record.DepartmentalLightTint);
+                emission = MultiplyColor(_poweredEmission, tint);
             }
 
             ApplyLightState(_light, _poweredIntensity, _poweredRange, _poweredLightColor);

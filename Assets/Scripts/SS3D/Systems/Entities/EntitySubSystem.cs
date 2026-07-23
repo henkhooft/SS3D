@@ -17,6 +17,8 @@ using SS3D.Systems.Combat;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Utils;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -181,6 +183,33 @@ namespace SS3D.Systems.Entities
         }
 
         /// <summary>
+        /// Reconnects a returning player to the body they were controlling before they disconnected.
+        /// The body itself is never despawned on disconnect (see <see cref="HandleRoundStateUpdated"/>/
+        /// <see cref="DestroySpawnedPlayers"/> - it only happens at round end), it's simply left ownerless
+        /// in the world. This re-links it to the new connection instead of leaving it stranded and the
+        /// reconnecting player stuck without a controllable entity.
+        /// </summary>
+        [Server]
+        public bool TryReclaimEntity(Player player, NetworkConnection conn)
+        {
+            Entity entity = _spawnedPlayers.Find(e => e.Mind?.player == player);
+            if (entity == null)
+            {
+                return false;
+            }
+
+            entity.GiveOwnership(conn);
+            entity.Mind?.GiveOwnership(conn);
+            conn.SetFirstObject(entity.NetworkObject);
+
+            RpcInvokeClientSpawned(entity.Owner);
+
+            Log.Information(this, "Reconnected {ckey} to their existing body {entity}", Logs.ServerOnly, player.Ckey, entity.name);
+
+            return true;
+        }
+
+        /// <summary>
         /// Spawns a mindless Human for combat/interaction testing. Server-owned; no mind or loadout.
         /// </summary>
         [Server]
@@ -240,7 +269,8 @@ namespace SS3D.Systems.Entities
             MindSubSystem mindSystem = SubSystems.Get<MindSubSystem>();
             mindSystem.TryCreateMind(player, out Mind createdMind);
 
-            Entity entity = Instantiate(_humanPrefab[Random.Range(0, _humanPrefab.Count)], _spawnPoint.position, Quaternion.identity);
+            Vector3 spawnPosition = ResolveSpawnPosition();
+            Entity entity = Instantiate(_humanPrefab[Random.Range(0, _humanPrefab.Count)], spawnPosition, Quaternion.identity);
             ServerManager.Spawn(entity.NetworkObject, player.Owner);
 
             createdMind.SetPlayer(player);
@@ -255,6 +285,27 @@ namespace SS3D.Systems.Entities
             RpcInvokeClientSpawned(entity.Owner);
 
             Log.Information(this, "Spawning mind {createdMind} on {entity}", Logs.ServerOnly, createdMind.name, entity.name);
+        }
+
+        /// <summary>
+        /// Prefers the legacy inspector spawn transform; otherwise uses the first authored map spawn
+        /// marker; otherwise the hub transform (scene spawn points are gone after Phase 3h).
+        /// </summary>
+        private Vector3 ResolveSpawnPosition()
+        {
+            if (_spawnPoint != null)
+            {
+                return _spawnPoint.position;
+            }
+
+            if (SubSystems.TryGet(out TileSubSystem tile)
+                && tile.SpawnPoints != null
+                && tile.SpawnPoints.Count > 0)
+            {
+                return tile.SpawnPoints.Records[0].Position;
+            }
+
+            return transform.position;
         }
 
         /// <summary>

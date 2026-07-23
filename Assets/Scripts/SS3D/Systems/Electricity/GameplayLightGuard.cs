@@ -11,7 +11,7 @@ namespace SS3D.Systems.Electricity
         public static void DisableOrphanSceneLights()
         {
 #if UNITY_SERVER
-            if (!Application.isEditor)
+            if (!UnityEngine.Application.isEditor)
             {
                 return;
             }

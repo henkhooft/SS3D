@@ -15,6 +15,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         WiresAndPipes,
         FloorDecals,
         Items,
+        Scripts,
     }
 
     /// <summary>
@@ -35,6 +36,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 TileLayerCategory.WiresAndPipes => "Wires and pipes",
                 TileLayerCategory.FloorDecals => "Floor decals",
                 TileLayerCategory.Items => "Items",
+                TileLayerCategory.Scripts => "Scripts",
                 _ => category.ToString(),
             };
 
@@ -54,6 +56,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
         public static bool IsFloorDecalsCategory(TileLayerCategory category) =>
             category == TileLayerCategory.FloorDecals;
 
+        public static bool IsScriptsCategory(TileLayerCategory category) =>
+            category == TileLayerCategory.Scripts;
+
         public static IReadOnlyList<TileLayer> GetLayers(TileLayerCategory category) =>
             category switch
             {
@@ -72,6 +77,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 },
                 TileLayerCategory.FloorDecals => Array.Empty<TileLayer>(),
                 TileLayerCategory.Items => Array.Empty<TileLayer>(),
+                TileLayerCategory.Scripts => Array.Empty<TileLayer>(),
                 _ => Array.Empty<TileLayer>(),
             };
 
@@ -79,7 +85,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         {
             foreach (TileLayerCategory candidate in AllCategories)
             {
-                if (IsItemsCategory(candidate) || IsFloorDecalsCategory(candidate))
+                if (IsItemsCategory(candidate) || IsFloorDecalsCategory(candidate) || IsScriptsCategory(candidate))
                     continue;
 
                 foreach (TileLayer mappedLayer in GetLayers(candidate))

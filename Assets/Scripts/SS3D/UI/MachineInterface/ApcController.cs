@@ -93,24 +93,24 @@ namespace SS3D.UI.MachineInterface
             _storedEnergyKwh = _maxCapacityKwh;
 
             ElectricitySubSystem electricitySystem = SubSystems.Get<ElectricitySubSystem>();
-            if (electricitySystem.IsSetUp)
+            if (electricitySystem.IsReady)
             {
                 RegisterWithElectricity(electricitySystem);
             }
             else
             {
-                electricitySystem.OnSystemSetUp += OnElectricitySystemSetup;
+                electricitySystem.WhenReady += OnElectricitySystemSetup;
             }
 
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
-                if (areaSubSystem.IsSetUp)
+                if (areaSubSystem.IsReady)
                 {
                     areaSubSystem.RegisterApc(this);
                 }
                 else
                 {
-                    areaSubSystem.OnSystemSetUp += OnAreaSystemSetup;
+                    areaSubSystem.WhenReady += OnAreaSystemSetup;
                 }
             }
         }
@@ -169,7 +169,7 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
-                areaSubSystem.OnSystemSetUp -= OnAreaSystemSetup;
+                areaSubSystem.WhenReady -= OnAreaSystemSetup;
                 if (IsServer)
                 {
                     areaSubSystem.UnregisterApc(this);
@@ -178,7 +178,7 @@ namespace SS3D.UI.MachineInterface
 
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
-                electricitySystem.OnSystemSetUp -= OnElectricitySystemSetup;
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
                 if (IsServer)
                 {
                     electricitySystem.RemoveElectricalElement(this);
@@ -317,13 +317,13 @@ namespace SS3D.UI.MachineInterface
         [TargetRpc(RunLocally = true)]
         private void TargetOpenInterface(NetworkConnection conn, ApcInterfaceSnapshot snapshot)
         {
-            DispatchClientOpen(snapshot);
+            DispatchClientOpen(conn, snapshot);
         }
 
         [TargetRpc(RunLocally = true)]
         private void TargetRefreshInterface(NetworkConnection conn, ApcInterfaceSnapshot snapshot)
         {
-            DispatchClientRefresh(snapshot);
+            DispatchClientRefresh(conn, snapshot);
         }
 
         private ApcInterfaceSnapshot BuildSnapshot()
@@ -365,8 +365,8 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
+                areaSubSystem.WhenReady -= OnAreaSystemSetup;
                 areaSubSystem.RegisterApc(this);
-                areaSubSystem.OnSystemSetUp -= OnAreaSystemSetup;
             }
         }
 
@@ -374,6 +374,7 @@ namespace SS3D.UI.MachineInterface
         {
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
                 RegisterWithElectricity(electricitySystem);
             }
         }
@@ -385,16 +386,18 @@ namespace SS3D.UI.MachineInterface
 
         private void OnChannelsChanged(ApcControlFlags oldValue, ApcControlFlags newValue, bool asServer)
         {
-            if (asServer)
+            if (!asServer)
             {
-                if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
-                {
-                    areaSubSystem.RefreshAreaLightingStates();
-                }
-
-                RefreshAllViewers();
+                return;
             }
 
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                areaSubSystem.RefreshAreaLightingStates();
+            }
+
+            RefreshAllViewers();
+            // Server recomputes fixture visuals and SyncVars them to clients.
             LightPower.RefreshAllFixtures();
         }
     }

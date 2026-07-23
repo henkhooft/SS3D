@@ -14,6 +14,8 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         Compound,
         SetFloorDecal,
         ClearFloorDecal,
+        PlaceSpawnPoint,
+        ClearSpawnPoint,
     }
 
     [Serializable]

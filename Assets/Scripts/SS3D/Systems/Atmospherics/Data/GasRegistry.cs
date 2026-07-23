@@ -31,21 +31,27 @@ namespace SS3D.Systems.Atmospherics
 
         public void Initialize()
         {
-            if (_sortedDefinitions != null)
+            // Require both caches. Play Mode without domain reload (and hub unload/reload) can
+            // leave the array while dropping the dictionary — early-return on array alone NREs
+            // at TryGetDefinition after AtmosSubSystem.GetSlotCount already succeeded.
+            if (_sortedDefinitions != null && _byId != null)
                 return;
 
             var valid = new List<GasDefinition>();
-            foreach (GasDefinition definition in _definitions)
+            if (_definitions != null)
             {
-                if (definition != null)
-                    valid.Add(definition);
+                foreach (GasDefinition definition in _definitions)
+                {
+                    if (definition != null)
+                        valid.Add(definition);
+                }
             }
 
             valid.Sort((a, b) => a.Id.CompareTo(b.Id));
-            _sortedDefinitions = valid.ToArray();
-            _byId = new Dictionary<ushort, GasDefinition>(_sortedDefinitions.Length);
+            GasDefinition[] sorted = valid.ToArray();
+            var byId = new Dictionary<ushort, GasDefinition>(sorted.Length);
 
-            foreach (GasDefinition definition in _sortedDefinitions)
+            foreach (GasDefinition definition in sorted)
             {
                 if (definition.Id >= AtmosConstants.MaxGasTypes)
                 {
@@ -53,19 +59,30 @@ namespace SS3D.Systems.Atmospherics
                     continue;
                 }
 
-                if (_byId.ContainsKey(definition.Id))
+                if (byId.ContainsKey(definition.Id))
                 {
                     Debug.LogError($"Duplicate gas id {definition.Id} for {definition.DisplayName}.");
                     continue;
                 }
 
-                _byId[definition.Id] = definition;
+                byId[definition.Id] = definition;
             }
+
+            // Assign only after both are fully built so a re-entrant/failed init cannot early-return
+            // with a half-ready registry.
+            _byId = byId;
+            _sortedDefinitions = sorted;
         }
 
         public bool TryGetDefinition(GasId gasId, out GasDefinition definition)
         {
             Initialize();
+            if (_byId == null)
+            {
+                definition = null;
+                return false;
+            }
+
             return _byId.TryGetValue(gasId.Value, out definition);
         }
 

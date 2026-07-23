@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: a15807a6d — 2026-07-21
+> Verified: 0499ab7cd — 2026-07-23
 
 # Interactions (runtime)
 
@@ -10,6 +10,8 @@
 Client-side interaction routing: discovers available interactions from the current selection and player state, presents the three-tier radial menu, arms targeted interactions, and dispatches `InteractionIdentifier`-based requests to the server. Bridges [selection](selection.md) hover targets with the shared [interactions-framework](interactions-framework.md). Owns Help/Harm intent (`IIntentProvider`) and Harm-primary melee swing dispatch (`CmdRunMeleeSwing`) — see [combat](combat.md).
 
 **Intent gate:** unrestricted verbs (Drop, Open, MI, …) are **Help-default** via `InteractionPipeline.MatchesIntent`. Harm is combat-exclusive (`IIntentRestrictedInteraction`); primary never falls through to world verbs when a swing cannot start. Drop hotkey also requires Help.
+
+Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay layer (see [ui-shell](ui-shell.md)) instead of owning a private `UIDocument` — `RadialInteractionSubSystem`/`ArmedInteractionSubSystem` no longer require `[RequireComponent(typeof(UIDocument))]`; `RadialInteractionMenuView`'s open/close tween runs through the shared `PanelAnimator`.
 
 ## Start here
 
@@ -43,18 +45,21 @@ Client-side interaction routing: discovers available interactions from the curre
 
 Entities (`Human`, ghosts) are excluded from hover outlines; medical targeting will use dedicated UI.
 
-Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.Target == null`). Those always appear while an item is held and must not outline every `Selectable` under the cursor.
+Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.IsSourceOnly` / `SourceOnly()`). Those always appear while an item is held and must not outline every `Selectable` under the cursor. Prefer `TryEvaluateOutlineInteractability` (skips source discovery); `FilterForOutline` for list-based filters.
 
-Structural Discover/source-list debt: [interactions-framework](interactions-framework.md) § Architecture smells.
+Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md).
 
 ## Pitfalls
 
-- **Outline on every hover while holding an item:** `Item.CreateSourceInteractions` always discovers `Drop` with a null target. Outline evaluation must run `InteractionPipeline.FilterForOutline` (keep only `Target != null`) before treating Discover as "available." Prefer `TryEvaluateOutlineInteractability` on the LateUpdate path — it skips source-only discovery entirely.
+- **Spawn NRE in `OnAwake` / `SubscribeToInput`:** if `CameraSubSystem.PlayerCamera` is null (hub before Game camera — see [chat-audio-screens](chat-audio-screens.md)), wiring `_controls` after the camera line leaves SubscribeToInput cascading. Resolve inputs first; tolerate a late camera.
+- **`ArmedInteractionSubSystem` must not `Get<SelectionSubSystem>` in Awake.** Selection is a sibling on `NetworkSystemsHub`; Awake order can leave it unregistered, and FishNet also briefly enables scene copies before the hub exists. Lazy `TryGet` + null-safe enable/disable.
+- **Outline on every hover while holding an item:** `Item` discovers Drop via `InteractionEntry.SourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (no source discovery) or `FilterForOutline` — never treat full Discover as hover-available.
 - **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
-- **Outline on every hover with empty hands:** obsolete `Craft` on hands used to discover `OpenCraftingMenu` for every target. Holding an item switches the source to the item (no `Craft`), so the bug only showed empty-handed. Do not extend crafting — purge per [crafting](crafting.md); until then discover must stay gated.
+- **Unresolved selection point:** when `TryResolveInteractionPoint` fails, build `InteractionEvent` without a point (`HasPoint = false`) — do not pass `Vector3.zero` into the four-arg ctor.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`C` is double-bound:** Input System **Cancel Interaction** is still `<Keyboard>/c`; combat hardcodes `cKey` for Help/Harm toggle. Both fire on `C`. Rebind cancel (or route cancel through a different key) when cleaning inputs — do not assume Cancel owns `C` alone.
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
+- **Radial shows icons but petal clicks no-op after first close:** `Disappear` unsubscribes `InteractionSelected`/`CloseRequested` (avoids double-fire during hide). The UiShell-backed menu view is reused, so `ShowInteractionsMenu` must call `BindMenuViewHandlers` every open — otherwise the second hold-RMB session looks fine (icons populate) but petals never route. Not Addressables-related.
 
 ## Cancellation
 
@@ -75,6 +80,7 @@ Structural Discover/source-list debt: [interactions-framework](interactions-fram
 
 ## Related docs
 
+- Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
 - Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)
 - Plan: [interaction_system_improvements_9e14ae22.plan.md](../../plans/interaction_system_improvements_9e14ae22.plan.md)

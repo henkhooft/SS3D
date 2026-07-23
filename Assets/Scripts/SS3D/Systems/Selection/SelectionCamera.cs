@@ -29,8 +29,9 @@ namespace SS3D.Systems.Selection
 
         protected override void OnStart()
         {
-            _system = SubSystems.Get<SelectionSubSystem>();
-            _inputSystem = SubSystems.Get<InputSubSystem>();
+            // PlayerCamera lives in Game before NetworkSystemsHub exists; Selection registers Online.
+            SubSystems.TryGet(out _system);
+            SubSystems.TryGet(out _inputSystem);
             _camera = GetComponent<Camera>();
             _playerCamera = transform.parent.GetComponent<Camera>();
 
@@ -40,7 +41,11 @@ namespace SS3D.Systems.Selection
 
             EnsureRenderTextureSize();
             GenerateReadbackTexture();
-            _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
+            if (_inputSystem != null)
+            {
+                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
+            }
+
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
             RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
         }
@@ -48,12 +53,12 @@ namespace SS3D.Systems.Selection
         protected override void OnEnabled()
         {
             base.OnEnabled();
-            _inputSystem = SubSystems.Get<InputSubSystem>();
-
-            if (_inputSystem)
+            if (!SubSystems.TryGet(out _inputSystem))
             {
-                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
+                return;
             }
+
+            _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
         }
 
         protected override void OnDisabled()
@@ -137,7 +142,12 @@ namespace SS3D.Systems.Selection
 
         private void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
         {
-            if (camera != _playerCamera || _system == null || _renderTexture == null || _readbackTexture == null)
+            if (camera != _playerCamera || _renderTexture == null || _readbackTexture == null)
+            {
+                return;
+            }
+
+            if (_system == null && !SubSystems.TryGet(out _system))
             {
                 return;
             }

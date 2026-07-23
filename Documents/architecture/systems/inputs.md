@@ -42,7 +42,9 @@ the context table, and the migration from the old refcount API.
   and dispose the handle when done. Prefer disposing in `OnDisabled`/`OnDestroyed` so a missed
   pointer-exit or early disable can never strand the suppression.
 - **New runtime UI Toolkit panel that should block world clicks?** Call
-  `InputInterface.RegisterDocument` in setup and `UnregisterDocument` in teardown.
+  `InputInterface.RegisterDocument` in setup and `UnregisterDocument` in teardown — unless the document is a
+  shared one owned by `UiShellSubSystem` ([ui-shell](ui-shell.md)), in which case register (idempotent) but don't
+  unregister on your own surface's teardown, since other surfaces sharing that document still need it registered.
 - **Need a one-off debug/UI chord without regenerating `Controls.cs`?** Add a code-defined action on
   `InputSubSystem`'s `System` map (see `UiCancel`, `OpenLocalSpeechCompose`, `ToggleAlertStackDebug`),
   include it in the contexts that should enable it, and subscribe to `performed`. F3 is owned by

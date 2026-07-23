@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SS3D.UI.MainHud
 {
     /// <summary>
-    /// The shipped inventory silhouette sprites (<c>Assets/Art/Graphics/UI/Containers/InventoryIcons</c>) the
+    /// The shipped inventory silhouette sprites (<c>Assets/Art/Icons/Inventory</c>) the
     /// HUD's equipment grid and hands/gear strip need as empty-slot placeholders. Assigned on
     /// <see cref="MainHudSubSystem"/> and threaded down to the components that build the slots.
     /// </summary>

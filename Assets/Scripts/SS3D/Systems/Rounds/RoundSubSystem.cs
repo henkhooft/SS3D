@@ -1,15 +1,15 @@
 ﻿using Coimbra;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using FishNet;
 using FishNet.Object;
 using SS3D.Core;
+using SS3D.Core.WorldReadiness;
 using SS3D.Engine.Chat;
 using SS3D.Logging;
 using SS3D.Systems.Gamemodes;
 using SS3D.Systems.Persistence;
-using SS3D.Systems.Tile;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.WorldReadiness;
 using System;
 
 namespace SS3D.Systems.Rounds
@@ -70,7 +70,7 @@ namespace SS3D.Systems.Rounds
         }
 
         /// <summary>
-        /// Prepares the round before starting
+        /// Prepares the round before starting — waits for world readiness, not a fixed delay.
         /// </summary>
         [Server]
         protected override async UniTask PrepareRound(CancellationToken cancellationToken)
@@ -79,7 +79,12 @@ namespace SS3D.Systems.Rounds
 
             RoundState = RoundState.Preparing;
 
-            await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
+            WorldReadinessSubSystem readiness = null;
+            await UniTask.WaitUntil(
+                () => SubSystems.TryGet(out readiness),
+                cancellationToken: cancellationToken);
+
+            await readiness.WaitUntilAsync(WorldReadyPhase.WorldReady, cancellationToken);
         }
 
         /// <summary>
@@ -138,7 +143,7 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
-            string mapId = SubSystems.TryGet(out TileSubSystem tileSubSystem) && tileSubSystem.CurrentMap != null
+            string mapId = SubSystems.TryGet(out Tile.TileSubSystem tileSubSystem) && tileSubSystem.CurrentMap != null
                 ? tileSubSystem.CurrentMap.gameObject.name
                 : string.Empty;
 

@@ -596,6 +596,8 @@ health.md §8 + death-cloning §9 example A, end-to-end:
 - Vitals cluster UITK and examine-self organ readout still open.
 - Blood decals / bleed VFX tuning already landed earlier in Phase 6 wound-visuals work.
 
-### Body presentation debt (banked 2026-07)
+### Body presentation (shipped 2026-07)
 
-Death and unconsciousness collapse were fixed with interim reinforce RPCs + `Ragdoll.ApplyCollapseVisuals` + `SetPosingSuppressed`. That is stopgap — Health must not grow a third collapse path. Future single-authority refactor: [2026-07_body-presentation-authority.md](../architecture/2026-07_body-presentation-authority.md).
+Death and unconsciousness collapse use single-authority `Ragdoll` + replicated `BodyPresentationState`.
+Health maps vitals via `BodyPresentationIntent` and must not grow a parallel collapse path.
+See [2026-07_body-presentation-authority.md](../architecture/2026-07_body-presentation-authority.md).

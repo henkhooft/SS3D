@@ -113,7 +113,11 @@ namespace SS3D.Systems.Examine
 
             if (examinable?.GetData() == null)
             {
-                HoverName.text = string.Empty;
+                if (HoverName != null)
+                {
+                    HoverName.text = string.Empty;
+                }
+
                 SetDetailedViewVisible(false);
                 InvalidateContentCache();
                 _pinnedDetailedExamine = false;
@@ -129,21 +133,31 @@ namespace SS3D.Systems.Examine
                     && IsWithinDetailedImageRange(examinable, data)
                     && TryGetImageDetailedContent(examinable, content, out Sprite image, out string caption, out Vector2 imageSize))
                 {
-                    HoverName.text = string.Empty;
+                    if (HoverName != null)
+                    {
+                        HoverName.text = string.Empty;
+                    }
+
                     ShowImageDetailedView(image, caption, imageSize);
                     return;
                 }
 
                 if (content.HasDescription || content.Sections.Count > 0)
                 {
-                    HoverName.text = string.Empty;
+                    if (HoverName != null)
+                    {
+                        HoverName.text = string.Empty;
+                    }
                     ShowTextDetailedView(content.Name, BuildDetailedText(content));
                     return;
                 }
             }
 
             SetDetailedViewVisible(false);
-            HoverName.text = content.Name;
+            if (HoverName != null)
+            {
+                HoverName.text = content.Name;
+            }
         }
 
         private ExamineContent GetCachedContent(IExaminable examinable)

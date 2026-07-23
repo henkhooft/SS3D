@@ -17,7 +17,7 @@ namespace SS3D.Systems.Combat.Interactions
 
         public MeleeWeaponProfile Profile => _profile;
 
-        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
             if (!TryGetComponent(out Item item))
             {

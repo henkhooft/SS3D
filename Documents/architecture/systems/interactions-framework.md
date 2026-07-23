@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Interactions/
 > Entry points: IInteraction, IInteractionSource, IInteractionTarget, InteractionPipeline, InteractionIdentifier
 > Status: shipped
-> Verified: a15807a6d — 2026-07-21
+> Verified: 0499ab7cd — 2026-07-23
 
 # Interactions (framework)
 
@@ -11,23 +11,26 @@ Shared interaction contracts used across all gameplay systems. Defines how inter
 
 RPCs identify interactions with `InteractionIdentifier` (`genericName` + `targetComponentIndex`), never display `GetName()`.
 
+**Discover contract** (TECH_DEBT 1.3 / [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)): Discover produces **candidates**; `FilterAndSort` is the sole full viability gate for menus/RPC. Target-bound entries have `Target != null`; source-only (e.g. Drop) use `InteractionEntry.SourceOnly` (`IsSourceOnly`, wire index `-1`). `InteractionEvent.HasPoint` is explicit — never treat `Point == zero` as unset.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IInteraction.cs` — core contract (`GetGenericName`, `Priority`, server-only `Start`)
-- `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionSource.cs` — objects that offer interactions (hands, items)
+- `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionSource.cs` — objects that offer interactions (hands, items); `CreateSourceInteractions(..., context)`
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionTarget.cs` — objects that receive interactions
-- `Assets/Scripts/SS3D/Interactions/InteractionEntry.cs` — target + interaction + wire identifier
+- `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionSourceExtension.cs` — source extensions; Discover contract in XML remarks
+- `Assets/Scripts/SS3D/Interactions/InteractionEntry.cs` — target + interaction + wire identifier; `IsSourceOnly` / `SourceOnly()`
 - `Assets/Scripts/SS3D/Interactions/InteractionIdentifier.cs` — stable RPC wire ID
-- `Assets/Scripts/SS3D/Interactions/InteractionPipeline.cs` — shared discover → filter → sort; `TryEvaluateOutlineInteractability` for hover LateUpdate; `FilterForOutline` for list-based outline filters; `SS3D.Interactions.Discover` marker on full Discover
-- `Assets/Scripts/SS3D/Interactions/InteractionEvent.cs` — source/target/point/normal; default `Point` is `Vector3.zero` when unset (see smells)
+- `Assets/Scripts/SS3D/Interactions/InteractionPipeline.cs` — discover → filter → sort; `TryEvaluateOutlineInteractability`; `FilterForOutline`
+- `Assets/Scripts/SS3D/Interactions/InteractionEvent.cs` — source/target/`HasPoint`/point/normal; `WithTarget` / `WithSource`
 - `Assets/Scripts/SS3D/Interactions/InteractionTier.cs` — instant / targeted / folder tiers for radial menu
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IInteractionTierProvider.cs` — per-interaction tier override
-- `Assets/Scripts/SS3D/Interactions/Extensions/InteractionExtensions.cs` — `RangeCheck`, `GetInteractionTier()`
+- `Assets/Scripts/SS3D/Interactions/Extensions/InteractionExtensions.cs` — `RangeCheck` (uses `HasPoint`), `GetInteractionTier()`
 - `Assets/Scripts/SS3D/Interactions/InteractionOptimisticFeedback.cs` — delayed loading bars during server confirm
 - `Assets/Scripts/SS3D/Interactions/Interfaces/IIntentRestrictedInteraction.cs` — Help/Harm gate (unrestricted = Help-default; Harm must opt in)
 - `Assets/Scripts/SS3D/Interactions/Interfaces/ITargetedInteraction.cs` — armed-mode second-click targeting
 - `Assets/Scripts/SS3D/Interactions/DelayedInteraction.cs` — timed interaction base class
-- `Assets/Scripts/SS3D/Interactions/InteractionIconLookup.cs` — resolves radial/menu sprites from `InteractionIcons`
+- `Assets/Scripts/SS3D/Interactions/InteractionIconLookup.cs` — resolves radial/menu sprites from `InteractionIcons` (`AddressablesAsync` DB; sync Get needs warmup — [data-codegen](data-codegen.md) pitfalls)
 
 ## Extension points
 
@@ -35,24 +38,21 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - Add `InteractionTargetBehaviour` (or `InteractionTargetNetworkBehaviour`) to world objects that should receive interactions.
 - Implement `IInteractionTierProvider` to control radial menu tier (instant vs armed targeted).
 - Use `Requirement` and `IInteractionRangeLimit` / `RangeLimit` for gating.
-- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
+- Register interaction icons via generated `InteractionIcons` asset refs ([data-codegen](data-codegen.md)); that DB is `AddressablesAsync` (warm-preloaded). Expose named helpers on `InteractionIconLookup` when shared. Do not add another one-shot icon rebuild `MenuItem` — see [data-codegen](data-codegen.md) § Architecture smells.
 - Replicated state changes in `Start()` must go through networked components (`NetworkedOpenable.SetOpenState`, `SyncVar` toggles), not local-only animator writes.
-- Prefer gating `IInteractionSourceExtension.GetSourceInteractions` on a real availability check (like `HandMeleeExtension`), not unconditional `Add` — see smells below.
+- Source extensions: gate target-bound Adds (structural and/or `CanInteract`); never unconditional Add for every hover. Source-only verbs: `InteractionEntry.SourceOnly` once per Discover. Prefer `context.WithTarget(target)` so `HasPoint` is preserved.
 
 ## Architecture smells
 
-Structural debt (not one-off bugs). Bandages live in Pitfalls / [interactions-runtime](interactions-runtime.md); prefer fixing the contract when touching this area.
+1. **Pickable ≠ rangeable** (owned with [selection](selection.md)): shader pick works without colliders; range/drop need a resolved point from colliders. Missing colliders on `Selectable` wall mounts still force `HasPoint == false` and transform fallback — ship a `BoxCollider` for selection rays.
 
-1. **`Discover` has no contract.** Some source extensions always `Add` (e.g. `Drop`); others gate on `CanInteract` at discover time (`HandMeleeExtension`, CPR). Consumers cannot tell whether an entry means “candidate for this target,” “source-only world action,” or “already range-checked.” Empty-hand vs held-item also swaps which extensions run (`Hands.GetActiveInteractionSource` → Hand or Item), so the same hover can look fine with an item and broken with empty hands.
-2. **Source-only and target-bound entries share one list.** `Drop` uses `Target == null` in the same bag as object interactions. Anything that assumes Discover ≈ “doable *to this hover*” needs a consumer filter (`FilterForOutline`). Longer-term: mark source-only interactions or split discover lists.
-3. **`InteractionEvent.Point` uses `Vector3.zero` as unset.** Magnitude checks cannot distinguish “no point resolved” from a real hit at world origin. Prefer an explicit `HasPoint` (or nullable) when reshaping the event type.
-4. **Pickable ≠ rangeable** (owned with [selection](selection.md)): shader pick works without colliders; range/drop need a resolved point from colliders. Missing colliders on `Selectable` wall mounts silently break range until `RangeCheck` falls back to the transform.
+Resolved by [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md): Discover semantics / source-only typing / `HasPoint` (former smells #1–3).
 
 ## Pitfalls
 
-- **Source-only interactions pollute hover outlines:** Drop always discovers while holding an item (`Target == null`). Runtime must `FilterForOutline` before treating Discover as “available on this object” (smell #2).
-- **Missing interaction point used to skip range:** `RangeCheck` treated default zero point as unlimited range. Unresolved points now range against the target transform/collider; wall mounts should still ship a `BoxCollider` for selection rays (smells #3–4).
-- **Unconditional source `Add` pollutes Discover:** any extension that adds for every target (historical `Craft` on hands) lights yellow outlines / menus on every hover when that source is active. Gate at discover time or remove the obsolete extension ([crafting](crafting.md) is due for purge).
+- **Source-only vs outline:** Drop is `IsSourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (skips source discovery) or `FilterForOutline` — never treat full Discover as “available on this hover.”
+- **Unresolved point:** build events with the two-arg ctor (`HasPoint = false`), not `Point = Vector3.zero`. World-origin hits use the four-arg ctor with `Point = zero` and `HasPoint = true`.
+- **Unconditional source `Add` pollutes Discover:** any extension that adds for every target lights yellow outlines / menus on every hover when that source is active. Gate at discover time. Historical example: empty-hand `Craft` → `OpenCraftingMenu` (purged with [crafting](crafting.md) / TECH_DEBT 1.6).
 
 ## Depends on / Used by
 
@@ -61,6 +61,7 @@ Structural debt (not one-off bugs). Bandages live in Pitfalls / [interactions-ru
 
 ## Related docs
 
+- Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
 - Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
 - Plan: [interaction_system_improvements_9e14ae22.plan.md](../../plans/interaction_system_improvements_9e14ae22.plan.md)
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)

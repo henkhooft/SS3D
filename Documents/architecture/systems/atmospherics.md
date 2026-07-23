@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: a15807a6d — 2026-07-21
+> Verified: 5db5299b1 — 2026-07-23
 
 # Atmospherics
 
@@ -11,7 +11,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop, waits for tilemap, wires observer + visualization (`SS3D.Atmos.Sim` / `Upload` markers)
+- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop; `IWorldReady`; awaits `TileMapLoaded` then notifies `AtmosReady` (`SS3D.Atmos.Sim` / `Upload` markers)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSimulation.cs` — native cell buffers, active-cell scheduling, job dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Bridge/AtmosTileObserver.cs` — `ITileMutationObserver`; refreshes cells on placement, clear, and door state
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ShareGasJob.cs` — pressure-driven mole sharing
@@ -44,6 +44,8 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 ## Pitfalls
 
+- **`GasRegistry` runtime caches:** `Initialize` must treat `_sortedDefinitions` + `_byId` as one unit. An array-only early-return (Play Mode without domain reload, or leftover SO state across hub unload) makes `GetSlotCount` succeed then `TryGetDefinition` NRE during `AtmosVisualizationBridge.PublishSnapshot`.
+- **Do not poll `CurrentMap != null` for init.** Await `WorldReadyPhase.TileMapLoaded` via `WorldReadinessSubSystem`, then notify `AtmosReady`. Epoch reset (`Phase == None`) re-runs init.
 - **~1 MB GC attributed to `AtmosSubSystem.Update` on GPU upload:** `EncodeComposition` used `new float[4]` per cell and lambdas captured locals — use stack locals / cached method-group delegates; sample flow gradients from atlas scratch, not `TryGetCellIndex`.
 - **`TileCoord` dictionary lookups box (~24 B) on Mono:** keys must implement `IEquatable<TileCoord>` / `GetHashCode` (see [tile](tile.md)); otherwise `ValueType.DefaultEquals` dominates flow upload and other hot maps.
 - **Port ticks allocating via `GetAllPlacedObject`:** that API always builds a new `List`. Pipe layers are single-occupancy — use `TryGetPlacedObject`. Do not re-resolve pipe networks every tick; cache against `GasPipeNetworkRegistry.TopologyVersion`.
@@ -58,6 +60,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - Design (read-only): [Documents/design/atmospherics.md](../../design/atmospherics.md)
 - Effort: [2026-07_atmos-ecs-foundation.md](../2026-07_atmos-ecs-foundation.md)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — **client VFX sync missing**
+- Effort: [2026-07_session-world-lifecycle.md](../2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring
 - [furniture](furniture.md) — airlock `IDynamicTileOccupant` for door passability

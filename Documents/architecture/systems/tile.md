@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 82c1fed63 — 2026-07-21
+> Verified: 5db5299b1 — 2026-07-23
 
 # Tile / construction
 
 ## Overview
 
-Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters.
+Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. Job/antag **spawn markers** live in `TileSubSystem.SpawnPoints` (not NetworkObjects) and ride station templates via the `spawn-points` contributor. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters.
 
 **Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed) live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
 
@@ -17,8 +17,9 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
-- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
+- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
 - `Assets/Scripts/SS3D/Systems/Tile/TileMap.cs` — tilemap data and mutation
+- `Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/` — `SpawnPointRegistry`, records, editor pin view
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/AdjacencyEngine.cs` — queued adjacency recompute
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/TileAdjacencyView.cs` — local mesh/direction visuals
 - `Assets/Scripts/SS3D/Systems/Tile/ConstructionService.cs` — server-authoritative placement
@@ -35,12 +36,13 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorDeleteTargeting.cs` — subcategory → clear targets (wall-mount face via `Direction`)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSubSystem.cs` — full-screen map editor (admin-gated)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/UI/MapEditorView.cs` — UI Toolkit editor chrome
-- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorCatalog.cs` — object library taxonomy
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorCatalog.cs` — object library taxonomy (+ spawn keys)
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSpawnCatalog.cs` — `spawn:job:` / `spawn:antag:` keys
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandService.cs` — server undo/redo command layer
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandFactory.cs` — DTO → invertible command (snapshots previous state)
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/ConstructionHologramManager.cs` — placement preview and drag batches
-- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity)
-- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` is catalog-backed, not a `TileLayer`)
+- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity); **Scripts** toggles spawn-marker pins
+- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
 
 ## Extension points
 
@@ -48,11 +50,13 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - React to placement: implement `ITileMutationObserver` (see [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md)).
 - Dynamic passability: implement `IDynamicTileOccupant` and call `TileSubSystem.NotifyTileStateChanged` when state changes (see [furniture](furniture.md) airlocks).
 - HV cables (`CablesAdjacencyConnector`): underfloor Wire-layer runs link grid backbone devices only; see [electricity](electricity.md) `ElectricCableConnectivity`.
-- Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move, Delete, Dropper; toolbar hotkeys **1–4** = Construct / Select / Dropper / Delete (gated while `InputInterface.IsCapturingText`). **Ctrl/Cmd+Shift+O** opens Map Selection (plain Ctrl+O is Unity File/Open Scene); **Ctrl/Cmd+Shift+S** quicksaves (else opens Save Map). Camera pan ignores Ctrl/Cmd/Alt so modifier+S does not also move. Place/delete/decals go through `SubmitCommands` → `MapEditorCommandFactory` → `ExecuteCompound` (one undo step per drag). Ctrl+Z/Y gated while typing. **Phase 2 (deferred):** per-builder stacks + concurrent-edit validity ([creative-mode.md](../../design/creative-mode.md) §6). Placement hard-blocked by `BuildChecker` (`BuildFailReason` toasts). Delete/eraser scopes to library subcategory (`MapEditorDeleteTargeting`; wall-mount face = hologram direction). Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places/clears sparse `floorDecalIds` via undoable `SetFloorDecal` commands. Scripting mode rail is UI-only stub in v1. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
-- Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`); server boot also calls `LoadServerMeta`. Unknown/removed tile SO names are skipped on load.
+- Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move, Delete, Dropper; toolbar hotkeys **1–4** = Construct / Select / Dropper / Delete (gated while `InputInterface.IsCapturingText`). **Ctrl/Cmd+Shift+O** opens Map Selection (plain Ctrl+O is Unity File/Open Scene); **Ctrl/Cmd+Shift+S** quicksaves (else opens Save Map). Camera pan ignores Ctrl/Cmd/Alt so modifier+S does not also move. Place/delete/decals/spawns go through `SubmitCommands` → `MapEditorCommandFactory` → `ExecuteCompound` (one undo step per drag). Ctrl+Z/Y gated while typing. **Phase 2 (deferred):** per-builder stacks + concurrent-edit validity ([creative-mode.md](../../design/creative-mode.md) §6). Placement hard-blocked by `BuildChecker` (`BuildFailReason` toasts). Delete/eraser scopes to library subcategory (`MapEditorDeleteTargeting`; wall-mount face = hologram direction). Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places/clears sparse `floorDecalIds` via undoable `SetFloorDecal` commands. **Spawn Placements** (Scripting) places job/antag markers via `PlaceSpawnPoint` / `ClearSpawnPoint` (plenum required); RandomSpawners/Triggers/Atmospherics Scripting remain stubs. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
+- Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`). Unknown/removed tile SO names are skipped on load. End-of-restore notifies world readiness `TileMapLoaded` (via Persistence) — **not** `OnMapCreated`. Server-meta boot is owned by Persistence, not Tile.
 
 ## Pitfalls
 
+- **`OnMapCreated` ≠ map ready.** Domains must await `WorldReadyPhase.TileMapLoaded` ([core-subsystems](core-subsystems.md)); `OnMapCreated` fires when the map object exists but tiles may still be placing.
+- **Spawn markers vanish after loading an old template:** `TileMap.Clear` (called on every template restore) clears `SpawnPoints`. Templates without a `spawn-points` chunk intentionally stay empty — do not skip that clear or stale markers from the previous map survive.
 - **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.
 - **Dropper / Select always copied Plenum:** tile-location arrays are enum-ordered with Plenum at index 0, so a naive foreach sampled the base tile under every click. Use `MapEditorCursorPick` (physics hit when available, else furniture→turf→plenum priority; prefer visible layer groups).
 - **Construct hologram lingered after switching to Select:** `OnToolSelected` only cleared when leaving Delete, and hologram `HandleUpdate` early-out for Select/Dropper/Move skipped `DestroyHolograms`, so the last ghost froze in-world. Clear selection on non-Edit tools; destroy leftovers in the inactive-tool early-out; restore the ghost when returning to Construct from the current library selection.
@@ -60,8 +64,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **Map Selection empty after Save Map:** `MapEditorLocalPersistence` used to pass `SavePath + "/" + name` into `TileSubSystem.Save`/`Load`, but those APIs already prepend `StationTemplates/` via `PersistenceSubSystem` — files landed in `StationTemplates/StationTemplates/` while the UI listed only `StationTemplates/`. Pass bare template names; `ListMaps` uses `ListStationTemplates()` (includes legacy `Tilemaps/`) and migrates any doubled-path leftovers.
 - **Ctrl+S panned the camera / Ctrl+O opened Unity's Open Scene:** map session WASD pan ignores Ctrl/Cmd/Alt. Open-map is **Ctrl/Cmd+Shift+O** (Unity's default shortcut profile is read-only, so temporarily clearing File/Open Scene is not viable). Save/quicksave is **Ctrl/Cmd+Shift+S**.
 - **Map editor place used to ignore red holograms:** `skipBuildCheck: true` on `RpcPlaceObject` / place commands let invalid tiles commit anyway. Placement now runs `BuildChecker` (Alt replace still checks; only relaxes layer-occupied). Client skips invalid cells and toasts `BuildFailMessages` / `"Skipped N tiles: …"`. Hover shows the primary reason on the Selected Object hint (toast debounced ~0.5s).
-- **Map editor undo stayed empty after place/delete:** hologram path used `RpcPlaceObject` / `RpcClear*` and never pushed `MapEditorCommandService`. Place/delete/decals now `SubmitCommands` → factory snapshots → one `Compound` per gesture. Alt-replace undo restores the previous occupant. Design §6 per-builder validity is Phase 2.
-- **Map editor Delete cleared every layer:** `EraseAtPointer` wiped all `PlacedTileObject`s on the tile. Delete/eraser now scopes to the object-library **subcategory** via `MapEditorDeleteTargeting` (pipes ≠ disposals). Wall Attachments delete only the hologram face (R cycles). Overlays clear floor decals; Items mode still raycasts. Uncategorized → toast `"Select a subcategory to delete"`.
+- **Map editor undo stayed empty after place/delete:** hologram path used `RpcPlaceObject` / `RpcClear*` and never pushed `MapEditorCommandService`. Place/delete/decals/spawns now `SubmitCommands` → factory snapshots → one `Compound` per gesture. Alt-replace undo restores the previous occupant. Design §6 per-builder validity is Phase 2.
+- **Map editor Delete cleared every layer:** `EraseAtPointer` wiped all `PlacedTileObject`s on the tile. Delete/eraser now scopes to the object-library **subcategory** via `MapEditorDeleteTargeting` (pipes ≠ disposals). Wall Attachments delete only the hologram face (R cycles). Overlays clear floor decals; Spawn Placements clear spawn markers; Items mode still raycasts. Uncategorized → toast `"Select a subcategory to delete"`.
 - **`Dictionary<TileCoord, T>` / `HashSet<TileCoord>` GC on Mono:** without `IEquatable<TileCoord>` + `GetHashCode`, every lookup boxes via `ValueType.DefaultEquals` (~24 B). Prefer `TryGetPlacedObject` over `GetAllPlacedObject` on hot single-occupancy layers — the latter always allocates a new `List`.
 - **Icon generation under `-batchmode -nographics`:** `TileResourceLoader.LoadAssetsWithIcon` and `Item.GenerateIcon` use `RuntimePreviewGenerator` (camera → URP). On NullGfxDevice that throws GraphicsBuffer/Blitter exceptions and poisons multiplayer smoke-test logs. Both paths skip when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).
 - **B does nothing / Map Editor missing:** `TileCreator.ToggleMenu` (`<Keyboard>/b`) is handled by `MapEditorSubSystem` on `MapEditorCanvas`, nested under `PlayerCanvas`. Never GUID-swap a nested PrefabInstance to a different prefab (ConstructionMenu → MapEditorCanvas once did this) — orphan `fileID`s leave Missing Prefab / SceneId-0 NetworkObjects, so the toggle listener never runs. Re-nest in the Editor or rewrite the PrefabInstance against the source's current local IDs. Map Editor is full-screen UITK, not a DynamicPanels "Construction" tab.
@@ -94,11 +98,12 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 ## Related docs
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
-- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
-- System map: [area](area.md), [structural-destruction](structural-destruction.md)
-- Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
+- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
+- System map: [area](area.md), [structural-destruction](structural-destruction.md); hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md)
+- Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - Plan: [map_editor_undo_redo.plan.md](../../plans/map_editor_undo_redo.plan.md)
 - Plan: [map_editor_build_delete.plan.md](../../plans/map_editor_build_delete.plan.md)
 - Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
+- Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Plan: [tile_overlay_replacement.plan.md](../../plans/tile_overlay_replacement.plan.md)

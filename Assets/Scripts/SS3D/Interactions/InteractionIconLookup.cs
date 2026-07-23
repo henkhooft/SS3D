@@ -9,7 +9,6 @@ namespace SS3D.Interactions
     /// </summary>
     public static class InteractionIconLookup
     {
-        public static Sprite Crafting => Get(InteractionIcons.Open);
         public static Sprite Discard => Get(InteractionIcons.Discard);
         public static Sprite Dispose => Get(InteractionIcons.Dispose);
         public static Sprite Examine => Get(InteractionIcons.Examine);

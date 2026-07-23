@@ -19,6 +19,8 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/IdAccessCommands/` — `accesscheck`, `accessgrant`, `accessrevoke`, `accesspreset` dev helpers
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectCommand.cs` — client `screeneffect` intensity setter
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectHitFlashCommand.cs` — client hit-flash trigger
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosDebugCommand.cs` — server `atmosdebug (heat|gas|wake)`, headless equivalent of `AtmosDebugController`'s GUI buttons, targets the caller's own tile
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosClientStatusCommand.cs` — offline `atmosclientstatus [assert]`, reports/asserts this process's `AtmosRenderContext` snapshot validity (multiplayer test harness use)
 - `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — client `alertstack` hazard override (MainHud asm)
 
 ## Extension points
