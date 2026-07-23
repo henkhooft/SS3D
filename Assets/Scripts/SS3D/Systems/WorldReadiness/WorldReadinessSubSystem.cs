@@ -35,7 +35,6 @@ namespace SS3D.Systems.WorldReadiness
         {
             if (_persistenceBound && SubSystems.TryGet(out PersistenceSubSystem persistence))
             {
-                persistence.OnBeforeRestore -= HandleBeforeRestore;
                 persistence.OnAfterRestore -= HandleAfterRestore;
             }
 
@@ -54,7 +53,8 @@ namespace SS3D.Systems.WorldReadiness
                 return;
             }
 
-            persistence.OnBeforeRestore += HandleBeforeRestore;
+            // OnBeforeRestore epoch reset is done via NotifyStationTemplateRestoreBeginning from
+            // Persistence (hub may spawn after this DDOL SubSystem's OnStart).
             persistence.OnAfterRestore += HandleAfterRestore;
             _persistenceBound = true;
         }
@@ -111,16 +111,6 @@ namespace SS3D.Systems.WorldReadiness
             NotifyAreasFlooded();
         }
 
-        private void HandleBeforeRestore(PersistenceLayer layer)
-        {
-            if (layer != PersistenceLayer.StationTemplate)
-            {
-                return;
-            }
-
-            ResetEpoch();
-        }
-
         private void HandleAfterRestore(PersistenceLayer layer)
         {
             if (layer != PersistenceLayer.StationTemplate)
@@ -128,6 +118,7 @@ namespace SS3D.Systems.WorldReadiness
                 return;
             }
 
+            // Prefer Persistence's direct NotifyTileMapLoaded; keep as belt-and-suspenders when bound.
             NotifyTileMapLoaded();
         }
 

@@ -234,6 +234,8 @@ namespace SS3D.Systems.Persistence
         {
             OnBeforeRestore?.Invoke(PersistenceLayer.StationTemplate);
 
+            // Direct notify — WorldReadiness is DDOL and may not have bound to OnBeforeRestore yet
+            // when Persistence lives on the Online hub.
             if (SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readinessBefore))
             {
                 readinessBefore.NotifyStationTemplateRestoreBeginning();

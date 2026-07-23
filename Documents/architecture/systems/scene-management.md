@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/SceneManagement/
 > Entry points: SceneSubSystem
 > Status: stub
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Scene management
 
@@ -9,11 +9,11 @@
 
 Scene loading and switching. Integrates with editor toolbar Scene Switcher.
 
-Scenes are launch pads, not system composition roots ([agent-first composition](../2026-07_agent-first-composition.md)). FishNet offline after first Online is `Scenes.Empty` (not Boot) — see [networking-session](networking-session.md) and [session-world-lifecycle](../2026-07_session-world-lifecycle.md).
+`SceneSubSystem` is DDOL via `SystemsBootstrap`. Scenes are launch pads, not system composition roots ([agent-first composition](../2026-07_agent-first-composition.md)). FishNet offline after first Online is `Scenes.Empty` — see [networking-session](networking-session.md).
 
 ## Start here
 
-- `Assets/Scripts/SS3D/SceneManagement/SceneSubSystem.cs` — scene loading subsystem
+- `Assets/Scripts/SS3D/SceneManagement/SceneSubSystem.cs` — scene loading subsystem (bootstrapped)
 - `Assets/Scripts/SS3D/Data/Generated/Scenes.cs` — codegen scene refs (`Boot`, `Empty`, `EmptyPath`, `BootPath`, Game, …)
 
 ## Extension points

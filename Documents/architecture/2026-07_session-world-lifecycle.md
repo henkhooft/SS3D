@@ -1,6 +1,6 @@
 > Implements: infrastructure — session/scene lifecycle & world readiness; realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on (a) (code bootstrap + `NetworkSystemsHub`); session/reconnect behavior per [design/networking.md](../design/networking.md) §2–§5
 > Touches systems: networking-session, scene-management, application, core-subsystems, tile, area, electricity, atmospherics, rounds-lobby, player-control, persistence, disposal
-> Status: in-progress (Phase 1 FSM + Empty codegen, Phase 2b world-readiness graph, Phase 3 scaffolding shipped; Boot/Game still hold most scene SubSystems — hub dual-runs until Editor migration empties them)
+> Status: shipped
 
 # Session & world lifecycle
 
@@ -8,19 +8,15 @@ Server/client init, disconnect handling, and round start are fragile because **p
 never modeled**. This effort replaces the ad-hoc init/reconnect bandages with two explicit contracts —
 a **session lifecycle FSM** and a **world readiness graph** — and lands them on the code-bootstrap
 foundation that [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on
-**(a)** and [TECH_DEBT.md](TECH_DEBT.md) §1.7 name. Phase 3 scaffolding for that foundation is
-shipped; emptying Boot/Game (Phase 3h) is still open.
+**(a)** and [TECH_DEBT.md](TECH_DEBT.md) §1.7 name.
 
-Sequenced in three phases; **Phase 1 is a standalone shippable slice** (the emergency brake on the
-disconnect error storm). Phase 2 removes the init races and host/client divergence. Phase 3 makes 1+2
-the only way systems appear.
+Sequenced in three phases; all shipped 2026-07-23.
 
-**Update 2026-07-23 (implementation pass):** Named `SessionState` on `ClientConnectionRecovery`;
-`Scenes.Empty` / `Scenes.EmptyPath`; Automation no longer restores Boot offline; `IWorldReady` +
-`WorldReadinessSubSystem`; Area/Electricity/Atmos/Disposal migrated; `PrepareRound` awaits
-`WorldReady`; `SystemsBootstrap` + `NetworkSystemsHub` Resources prefab + spawn on Online;
-`SubSystems.Get` silent during `WaitingForServer`; VisionSystem removed from Game (DDOL only).
-Full Boot/Game empty (Phase 3h) still open — use `SS3D/Bootstrap/*` Editor menus.
+**Update 2026-07-23 (Phase 3h):** Boot Persistent Systems and Game Systems SubSystems emptied via
+`SS3D/Bootstrap/Phase 3h — Rebuild Hub + Strip Boot & Game`. Process-wide services live in
+`SystemsBootstrap` (DDOL); world/session `NetworkSubSystem`s live on `NetworkSystemsHub` Resources
+prefab (spawned Online). Empty parent roots (`Persistent Systems` / `Systems` + EventSystem) may
+remain in scenes as launch pads only.
 
 ## 1. Problem & non-goals
 
@@ -66,8 +62,8 @@ couldn't resolve area or lighting state — was the bug class `cursor/client-lig
 chasing. **It shipped 2026-07-23** (PR #36); see §3a for what landed and why it validates this doc's
 client-parity contract (orthogonal to the readiness graph).
 
-**Still open:** Phase 3h — empty Boot/Game of per-system GameObjects (hub dual-runs with scene systems
-today). See §4–§5.
+**Still open (deferred elsewhere):** reconnect exponential backoff; UiShell/MainHud/StoragePanel
+self-bootstraps (follow-on **(b)**); `Human.prefab` decomposition (follow-on **(d)**).
 
 **Non-goals.**
 - No prediction/rollback/lag-compensation/interpolation ([design/networking.md](../design/networking.md) §9 keeps
@@ -158,9 +154,8 @@ toggles").
 - Area notifies `AreasFlooded` after deferred flood; Electricity awaits AreasFlooded then notifies.
   Area/Electricity keep obsolete `IsSetUp` → `IsReady` shims.
 - `RoundSubSystem.PrepareRound` awaits `WorldReadyPhase.WorldReady` (no fixed 500 ms delay).
-- **Smell (harmless):** station restore can double-`ResetEpoch` — `OnBeforeRestore` handler **and**
-  direct `NotifyStationTemplateRestoreBeginning()` from `PersistenceSubSystem` (logs epoch 1 then 2).
-  Prefer one path when cleaning up.
+- Station restore: `PersistenceSubSystem` calls `NotifyStationTemplateRestoreBeginning` directly
+  (WorldReadiness is DDOL; Persistence is hub-spawned — event-only binding is unreliable).
 
 **Key files:** `Core/WorldReadiness/{IWorldReady,WorldReadyPhase}.cs`,
 `Systems/WorldReadiness/WorldReadinessSubSystem.cs`; Area / Electricity / Atmos / Disposal SubSystems;
@@ -171,46 +166,39 @@ toggles").
 Realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**;
 pays down [TECH_DEBT.md](TECH_DEBT.md) §1.7 / §1.12.
 
-**Status: scaffolding shipped; Boot/Game empty still open.**
+**Status: shipped.**
 
-Shipped:
-
-- `SystemsBootstrap` — DDOL WorldReadiness, ScreenEffects, Automation, Vision (no longer
-  `RuntimeInitializeOnLoadMethod` / Game-placed Vision).
-- `NetworkSystemsHub` Resources prefab; server spawns on Online (dual-runs with scene SubSystems).
+- `SystemsBootstrap` — DDOL: NetworkSession / CommandLineArgs (via type name), Scene, Input,
+  WorldReadiness, ScreenEffects, Automation, Vision, ApplicationInitializer (last so listeners Awake first).
+- `NetworkSystemsHub` Resources prefab holds world/session SubSystems (edit-time components;
+  `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab` copies SerializeFields from Game then strips).
+- Boot Persistent Systems + Game Systems SubSystem GOs removed; EventSystem left on Game.
+- Hub despawn on network stop → `OnDestroyed` → `Unregister` (no extra reverse-order teardown needed).
 - `SubSystems.Get` FindObject fallback skipped while quitting **or** `WaitingForServer`.
-- Editor menus under `SS3D/Bootstrap/*` for migration.
-
-Still open (Phase 3h):
-
-- Empty `Boot.unity` / `Game.unity` of per-system GameObjects; migrate remaining scene systems onto
-  bootstrap/hub so adding a system needs no scene YAML.
-- Full reverse-order unregister on Online unload; Comms/`Human.prefab` wiring still manual.
+- CCR OnGUI recovery keys off Intro/Boot/Launcher loaded (NetworkSession is DDOL and always present).
 
 **Key files:** `Systems/Bootstrap/SystemsBootstrap.cs`, `Networking/NetworkSystemsHub.cs`,
-`Assets/Resources/NetworkSystemsHub.prefab`, `Core/Subsystems.cs`,
-`Assets/Content/Scenes/{Boot,Game}.unity`.
+`Assets/Resources/NetworkSystemsHub.prefab`, `Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs`,
+`Core/Subsystems.cs`, `Assets/Content/Scenes/{Boot,Game}.unity`.
 
 ## 5. Sequencing & acceptance criteria
 
-1. **Phase 1** — session FSM + never re-enter Boot after first join. **Shipped** (PR #36 + FSM/Empty codegen).
-2. **Phase 2** — world-ready + client parity. **§3a shipped** (PR #36); **§3b shipped** (readiness graph + PrepareRound gate).
-3. **Phase 3** — code bootstrap + hub. **Scaffolding shipped**; **Boot/Game scene empty still open** (effort remains `in-progress`).
+1. **Phase 1** — session FSM + never re-enter Boot after first join. **Shipped.**
+2. **Phase 2** — world-ready + client parity. **Shipped** (§3a + §3b).
+3. **Phase 3** — code bootstrap + hub + empty Boot/Game. **Shipped.**
 
 Per-phase acceptance:
 
 - **Phase 1 — met.** Disconnect does not reload Boot after first Online; manual Retry reconnects;
-  named `SessionState`; Intro auto-join Cold-only; no "already starting/started" storm. No backoff yet.
+  named `SessionState`; Intro auto-join Cold-only. No backoff yet (deferred).
 - **Phase 2, §3a — met.** Late-join pure client lights fixtures via SyncVar + floor-cache area resolve.
 - **Phase 2, §3b — met.** Domains notify gates; `PrepareRound` awaits `WorldReady`; restore resets epoch
-  and re-fires TileMapLoaded. Double-epoch reset smell documented, not blocking.
-- **Phase 3 — partial.** Bootstrap + hub spawn + WaitingForServer-silent Get exist; most SubSystems still
-  scene-placed (hub dual-runs). Full acceptance = no scene-placed gameplay SubSystems and no competing
-  self-bootstrap styles.
+  via direct Persistence → WorldReadiness notify.
+- **Phase 3 — met.** No gameplay SubSystem GameObjects under Boot/Game systems roots; new domains use
+  bootstrap list or hub rebuild menu. UI host `RuntimeInitializeOnLoad` remains (follow-on **(b)**).
 
-Verification: Editor Play Mode host cold-start (Cold→Online→World ready→PrepareRound→Ongoing);
-`Testing/multiplayer/run_smoketest.sh` reconnect scenarios; EditMode via
-`.github/workflows/editmodetestrunner.yml`. Run `update-system-docs` after further Phase 3 migration.
+Verification: Editor Play Mode host cold-start; `Testing/multiplayer/run_smoketest.sh` reconnect
+scenarios; EditMode via `.github/workflows/editmodetestrunner.yml`.
 
 ## 6. Related docs
 

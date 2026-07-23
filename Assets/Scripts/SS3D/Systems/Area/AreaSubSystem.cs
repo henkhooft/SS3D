@@ -24,10 +24,6 @@ namespace SS3D.Systems.Area
 
         public event Action OnAreaVisualsDirty;
 
-        /// <summary>True after flood completes (or empty-map no-op). Prefer <see cref="IsReady"/>.</summary>
-        [Obsolete("Use IsReady / WhenReady (IWorldReady).")]
-        public bool IsSetUp => IsReady;
-
         public bool IsReady { get; private set; }
 
         public AreaFloorVisualCache FloorVisualCache { get; } = new();

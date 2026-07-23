@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/Disposal/, Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs, DisposalOutlet.cs, Assets/Scripts/SS3D/Systems/Tile/Connections/Disposal*
 > Entry points: DisposalSubSystem, DisposalBin, DisposalOutlet, DisposalPipeConnectivity
 > Status: partial
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Disposal
 
@@ -18,7 +18,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 - `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalDropInInteraction.cs` — Combine-tier dispose
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/DisposalPipeAdjacencyConnector.cs` — pipe mesh adjacency
 - Prefabs: `Assets/Content/WorldObjects/Furniture/Machines/Supply/DisposalBin.prefab`, `DisposalOutlet.prefab`; pipes under `.../Structures/Pipes/Disposals/`; open clips/controllers beside the prefabs
-- Scene: `DisposalSystem` under networked systems root in `Game.unity`
+- Scene: disposal furniture on station maps; `DisposalSubSystem` on `NetworkSystemsHub` (not Game.unity)
 
 ## Extension points
 
@@ -29,7 +29,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 ## Pitfalls
 
 - **Do not poll `CurrentMap != null` for network rebuild.** Await `TileMapLoaded`, rebuild, notify `DisposalReady` (epoch reset re-inits).
-- **Dispose fails silently if `DisposalSubSystem` missing:** `DisposalBin.TryEnterDisposalNetwork` returns false when `SubSystems.TryGet` misses — register `DisposalSystem` on `Game.unity` (already present on this branch).
+- **Dispose fails silently if `DisposalSubSystem` missing:** `DisposalBin.TryEnterDisposalNetwork` returns false when `SubSystems.TryGet` misses — Disposal lives on `NetworkSystemsHub` (spawned Online), not Game.unity.
 - **Dispose loses to Drop on primary-click:** Dispose defaulted to Priority 0 while Drop is 5. Dispose is now 40 (TagDisposal 20) so chute click prefers Dispose.
 - **Dispose becomes a floor drop:** enter used to `RemoveItem` before routing; on failure the item stayed out of hand. Now it restores to the hand. Root cause of empty networks: observer only rebuilt on **pipe** place — bin/outlet placed after pipes never joined `Terminals`. Fixed to rebuild on disposal furniture place/clear and after `OnMapLoaded`.
 - **Outlet arrivals spawn inside the mesh:** arrivals are spat along `transform.forward` by `_spitDistance` (default 0.85m), not at the outlet origin.

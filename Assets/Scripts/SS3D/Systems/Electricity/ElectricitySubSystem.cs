@@ -36,10 +36,6 @@ namespace SS3D.Systems.Electricity
         /// </summary>
         public event Action OnTick;
 
-        /// <summary>Prefer <see cref="IsReady"/>.</summary>
-        [Obsolete("Use IsReady / WhenReady (IWorldReady).")]
-        public bool IsSetUp => IsReady;
-
         public bool IsReady { get; private set; }
 
         private record VerticeCoordinates(short X, short Y, byte Layer, byte Direction);

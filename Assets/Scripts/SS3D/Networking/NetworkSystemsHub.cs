@@ -9,8 +9,8 @@ namespace SS3D.Networking
 {
     /// <summary>
     /// Single networked hub NetworkObject for world/session <see cref="NetworkSubSystem"/>s.
-    /// Dual-runs with scene-placed systems until migration empties Game.unity; spawn on server
-    /// when Online so the hub exists for late joiners.
+    /// Prefab is edit-time owned (SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab); server spawns
+    /// on Online. Scene Boot/Game no longer place per-system GameObjects.
     /// </summary>
     public sealed class NetworkSystemsHub : NetworkActor
     {

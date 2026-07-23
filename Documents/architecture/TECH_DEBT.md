@@ -141,19 +141,15 @@ deleting it.
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
-**Blast radius: medium — trend: improving (scaffolding shipped; scene empty still open)**
+**Blast radius: low — trend: closed for gameplay SubSystems (2026-07-23); UI hosts remain**
 
-[core-subsystems.md](systems/core-subsystems.md) calls Boot/Game scene-placed subsystem registration
-"legacy," with code bootstrap as the stated target
-([2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**).
-`SystemsBootstrap` + `NetworkSystemsHub` now exist (WorldReadiness / ScreenEffects / Automation /
-Vision DDOL; hub spawns on Online) but most SubSystems remain scene-placed — hub dual-runs until
-Editor migration empties Boot/Game. Competing styles are collapsing; not gone yet.
+Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
+(Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h). Remaining
+`RuntimeInitializeOnLoad` self-bootstraps are UI hosts (UiShell / MainHud / StoragePanel) and debug
+views — tracked under agent-first follow-on **(b)**, not §1.7 scene registration.
 
-Follow-on **(a)** progress: [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
-Phase 3 scaffolding shipped; Phase 3h (empty scenes) still open.
-
-- Related: [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+- Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 
 ### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
 
@@ -307,22 +303,16 @@ started.
 
 - Related: [data-codegen.md](systems/data-codegen.md) § Architecture smells #2
 
-### 1.16 Session/world lifecycle — Face A + readiness shipped; scene bootstrap still dual-run
+### 1.16 Session/world lifecycle — shipped; optional backoff remains
 
-**Blast radius: medium — trend: improving (symptom + contracts shipped 2026-07-23; Phase 3h open)**
+**Blast radius: low — trend: closed 2026-07-23 (optional reconnect backoff deferred)**
 
-FishNet `DefaultScene` used **offline = Boot**, so disconnect reloaded Boot under DDOL NetworkManager
-→ Boot storm. **PR #36** fixed the symptom (`ClientConnectionRecovery` arms Empty offline + Retry /
-`CanStartNetworkSession`). Same-day implementation also shipped: named `SessionState` FSM,
-`Scenes.Empty` codegen, `IWorldReady` / `WorldReadinessSubSystem`, domain gate migration,
-`PrepareRound` awaits `WorldReady`, `SystemsBootstrap` + `NetworkSystemsHub` scaffolding, silent
-`Get` while `WaitingForServer`.
+Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
+`NetworkSystemsHub` (Boot/Game emptied of SubSystem GOs) all shipped under
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
+Remaining optional: reconnect exponential backoff; UI host self-bootstrap consolidation (follow-on **(b)**).
 
-**Still open:** Boot/Game still hold most scene SubSystems (hub dual-runs); Comms/`Human.prefab`
-manual wiring; optional reconnect backoff. Tracked by
-[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (Status: `in-progress`).
-
-- Related: [networking-session.md](systems/networking-session.md) § Pitfalls, [core-subsystems.md](systems/core-subsystems.md), [scene-management.md](systems/scene-management.md), [rounds-lobby.md](systems/rounds-lobby.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+- Related: [networking-session.md](systems/networking-session.md), [core-subsystems.md](systems/core-subsystems.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
 
 ---
 

@@ -181,9 +181,9 @@ namespace SS3D.Networking
                 return;
             }
 
-            // Intro still loaded: ServerConnectionView owns retry. After offline Empty
-            // unload Boot, NetworkSessionSubSystem is gone and this OnGUI is the fallback.
-            if (SubSystems.TryGet(out NetworkSessionSubSystem _))
+            // Intro/Boot still loaded: ServerConnectionView owns retry. After Empty offline,
+            // those scenes are gone — show OnGUI even though NetworkSession is DDOL now.
+            if (IsConnectionUiSceneLoaded())
             {
                 return;
             }
@@ -191,6 +191,20 @@ namespace SS3D.Networking
             _status = "Could not connect, or connection to the server was lost.";
             _recoveryVisible = true;
             Log.Information(this, "{status}", Logs.Important, _status);
+        }
+
+        private static bool IsConnectionUiSceneLoaded()
+        {
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                string name = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).name;
+                if (name == Scenes.Intro || name == Scenes.Boot || name == Scenes.Launcher)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void EnterOnline()

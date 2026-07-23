@@ -53,7 +53,7 @@ Feature-level gaps *within* an already-designed system stay in that design doc's
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
-| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — in-progress (Phase 1 FSM + Phase 2b readiness + Phase 3 scaffolding shipped; Boot/Game scene empty still open) | [networking-session](systems/networking-session.md) — partial |
+| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — shipped | [networking-session](systems/networking-session.md) — partial |
 | audio | [audio.md](../design/audio.md) — active | none yet | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
@@ -80,10 +80,10 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Core / SubSystems | [core-subsystems](systems/core-subsystems.md) | partial | `SubSystem` / `NetworkSubSystem` + `SubSystems` locator; `IWorldReady` / `WorldReadinessSubSystem`; `SystemsBootstrap` + `NetworkSystemsHub` scaffolding — Boot/Game scene systems still legacy |
-| Application | [application](systems/application.md) | stub | App bootstrap + `SystemsBootstrap` DDOL scaffolding; Boot/Game still hold most scene SubSystems |
-| Networking (session) | [networking-session](systems/networking-session.md) | partial | SessionState FSM + Empty offline; hub spawn; headless dedicated-server; multiplayer harness |
-| Scene management | [scene-management](systems/scene-management.md) | stub | Scene loading; `Scenes.Empty` offline after first Online; not a system composition root |
+| Core / SubSystems | [core-subsystems](systems/core-subsystems.md) | partial | `SystemsBootstrap` DDOL + `NetworkSystemsHub` Online; `IWorldReady` / readiness graph; locator silent while WaitingForServer |
+| Application | [application](systems/application.md) | stub | `ApplicationInitializerSubSystem` via SystemsBootstrap (DDOL); Boot is launch pad only |
+| Networking (session) | [networking-session](systems/networking-session.md) | partial | SessionState FSM + Empty offline; NetworkSystemsHub holds Game SubSystems; harness + headless |
+| Scene management | [scene-management](systems/scene-management.md) | stub | SceneSubSystem DDOL; `Scenes.Empty` offline after first Online |
 | UI shell | [ui-shell](systems/ui-shell.md) | partial | UITK composition root; `UiShellSubSystem` + shared catalog/animator/binder scaffolding shipped, radial + armed migrated; MI/Main HUD path catalogs still separate (duplicated), migration deferred |
 | Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; see map § Architecture smells |
 | Data / codegen | [data-codegen](systems/data-codegen.md) | stub | Asset databases and generated references; one-off Editor rebuild menus are tracked debt; Addressables configured but unused (all assets eager-loaded) — migration planned: [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) |
@@ -153,7 +153,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) | in-progress (clean-slate + stamina 7a code shipped; Play Mode verification pending) |
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
 | [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch; default Windows+bats prerelease; Linux/EditMode/smoke opt-in) |
-| [2026-07_session-world-lifecycle](2026-07_session-world-lifecycle.md) | in-progress (Phase 1 FSM + Phase 2b readiness + Phase 3 scaffolding shipped; Boot/Game scene empty still open) |
+| [2026-07_session-world-lifecycle](2026-07_session-world-lifecycle.md) | shipped |
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |

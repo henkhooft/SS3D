@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Persistence
 
@@ -39,7 +39,7 @@ Layered contributor-based disk persistence for station templates and server meta
 ## Pitfalls
 
 - **Missing spawn chunk leaves stale markers:** tilemap restore calls `TileMap.Clear`, which clears `TileSubSystem.SpawnPoints`. Do not remove that clear — templates without `spawn-points` must start empty.
-- **Double epoch reset on station restore:** `OnBeforeRestore` → `WorldReadinessSubSystem.ResetEpoch` **and** direct `NotifyStationTemplateRestoreBeginning()` from `RestoreStationTemplate` both bump Epoch (logs 1 then 2). Harmless today; prefer one path when cleaning up. See [session-world-lifecycle](../2026-07_session-world-lifecycle.md) §3b.
+- **Station restore epoch:** `RestoreStationTemplate` calls `WorldReadinessSubSystem.NotifyStationTemplateRestoreBeginning` directly (Persistence is hub-spawned; WorldReadiness is DDOL — do not rely on OnBeforeRestore subscription alone).
 
 ## Depends on / Used by
 

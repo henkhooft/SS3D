@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Networking (session)
 
@@ -14,10 +14,11 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Networking/SessionState.cs` — `Cold → Connecting → Online → Disconnecting → WaitingForServer`
 - `Assets/Scripts/SS3D/Networking/ClientConnectionRecovery.cs` — DDOL session FSM owner; arms `Scenes.EmptyPath` offline after first Online; OnGUI Retry/Quit; suppresses `SubSystems.Get` Errors while WaitingForServer; spawns `NetworkSystemsHub` on server Online
 - `Assets/Scripts/SS3D/Networking/NetworkSessionSubSystem.cs` — session host/join; gates on `ClientConnectionRecovery.CanStart`; UNITY_SERVER auto-starts on `ApplicationInitializing`
-- `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — dual-run hub NetworkObject (Phase 3 scaffolding)
+- `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub NetworkObject (all Game NetworkSubSystems)
 - `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again
-- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — process-wide DDOL for WorldReadiness / ScreenEffects / Automation / Vision
+- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide (incl. NetworkSession via type name)
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — harness script runner (bootstrapped via SystemsBootstrap); Empty offline redirect never restores Boot
+- `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — Phase 3h hub rebuild / scene strip
 - `Testing/multiplayer/run_smoketest.sh` — multiplayer harness
 
 ## Extension points
@@ -25,13 +26,14 @@ FishNet session management — host/join, network type and port settings. Distin
 - Boot.unity's `ServerManager._startOnHeadless` must stay `0`.
 - Boot.unity `DefaultScene._offlineScene` stays Boot for cold start; CCR arms Empty after first Online.
 - Prefer `SessionState` / `ClientConnectionRecovery.Instance` over inferring session status from subsystem presence.
-- Hub migration: attach NetworkSubSystems to the hub prefab and remove scene GOs in the same change (`SS3D/Bootstrap/*` menus).
+- New networked SubSystem: add to hub rebuild menu — never hand-edit Game.unity.
 
 ## Pitfalls
 
 - **Disconnect must not reload Boot after first Online.** CCR arms Empty; Automation must not restore Boot offline after reconnect.
 - **Intro auto-join is Cold-only** (`IntroUIHelper` checks `SessionState.Cold`).
 - **`SubSystems.Get` during WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`.
+- **OnGUI recovery when Empty offline:** NetworkSession is DDOL — CCR shows OnGUI when Intro/Boot/Launcher are not loaded (not when NetworkSession is missing).
 - See also prior harness / headless pitfalls below (unchanged).
 - **After `ScriptComplete`, hard-exit — do not `Application.Quit`.** Quit still unloads scenes and re-enters `ApplicationInitializing`, so NetworkSession re-joins and (without a guard) automation re-runs → harness Error/Fatal + RoleSubSystem duplicate-key. `AutomationSubSystem` runs the script once and `Environment.Exit(0)` after emitting the final signal.
 - **`TileResourceLoader` / `Item.GenerateIcon` preview cameras break `-nographics` clients.** `RuntimePreviewGenerator` recreates URP on NullGfxDevice → GraphicsBuffer/Blitter spam that fails the harness exception check. Skip icon generation when `Application.isBatchMode` or `GraphicsDeviceType.Null` (dedicated server already skipped via `UNITY_SERVER`).

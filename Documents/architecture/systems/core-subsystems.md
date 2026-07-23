@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Core/, Assets/Scripts/SS3D/Systems/Bootstrap/, Assets/Scripts/SS3D/Systems/WorldReadiness/, Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs
 > Entry points: SubSystem, NetworkSubSystem, SubSystems, SystemsBootstrap, WorldReadinessSubSystem, NetworkSystemsHub
 > Status: partial
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Core / SubSystems
 
@@ -9,21 +9,23 @@
 
 Base actor/subsystem pattern and runtime service locator. All gameplay domains expose a `*SubSystem` registered via `SubSystems.Get<T>()`. `NetworkSubSystem` extends FishNet `NetworkActor` for networked subsystems.
 
-Scene-placed registration on Boot/Game actors is **legacy**. Process-wide services use `SystemsBootstrap`; networked hub scaffolding is `NetworkSystemsHub` (dual-runs with scene systems until migration empties Game).
+Process-wide services: `SystemsBootstrap` (DDOL). World/session networked systems: `NetworkSystemsHub` Resources prefab (spawned Online). Boot/Game do not place per-system SubSystem GameObjects ([session-world-lifecycle](../2026-07_session-world-lifecycle.md)).
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Core/Behaviours/SubSystem.cs` — non-networked subsystem base
-- `Assets/Scripts/SS3D/Core/Behaviours/NetworkSubSystem.cs` — networked subsystem base
+- `Assets/Scripts/SS3D/Core/Behaviours/SubSystem.cs` — non-networked subsystem base (bootstrap-owned)
+- `Assets/Scripts/SS3D/Core/Behaviours/NetworkSubSystem.cs` — networked subsystem base (hub prefab only)
 - `Assets/Scripts/SS3D/Core/Subsystems.cs` — locator; FindObject fallback skipped while quitting / WaitingForServer
 - `Assets/Scripts/SS3D/Core/WorldReadiness/IWorldReady.cs` + `WorldReadyPhase.cs` — readiness contract
 - `Assets/Scripts/SS3D/Systems/WorldReadiness/WorldReadinessSubSystem.cs` — phase coordinator
-- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL WorldReadiness / ScreenEffects / Automation / Vision
-- `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` — spawnable hub NetworkObject
+- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide services
+- `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub
+- `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — rebuild hub / strip scenes
 
 ## Extension points
 
-- New domain subsystem: subclass `SubSystem`/`NetworkSubSystem`. Prefer bootstrap/hub over Boot/Game YAML.
+- New process-wide SubSystem: add to `SystemsBootstrap.EnsureProcessWideServices`.
+- New networked domain: add type to hub rebuild menu list, run `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab` — do not edit Game.unity.
 - World sim: implement `IWorldReady`; notify via `WorldReadinessSubSystem` after TileMapLoaded / AreasFlooded — never treat `OnMapCreated` as ready.
 - Consumers: `IsReady` / `WhenReady` / `WaitUntilAsync` — not `Get` in Update.
 
@@ -31,7 +33,8 @@ Scene-placed registration on Boot/Game actors is **legacy**. Process-wide servic
 
 - **Registration ≠ readiness.** Await `WorldReadyPhase` before round start / sim ticks that need flooded areas.
 - **Missing Get during WaitingForServer is silent** — use `TryGet`.
-- **Double epoch on station restore:** Persistence fires both `OnBeforeRestore` and `NotifyStationTemplateRestoreBeginning` — Epoch bumps twice (harmless). Prefer one call site.
+- **Do not AddComponent NetworkSubSystems at runtime** — edit-time on hub prefab only (FishNet behaviour list).
+- Hub despawn on disconnect unregisters via `OnDestroyed` — no extra teardown required.
 
 ## Related docs
 

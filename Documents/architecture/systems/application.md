@@ -1,26 +1,27 @@
 > Code paths: Assets/Scripts/SS3D/Application/, Assets/Scripts/SS3D/Systems/Bootstrap/
 > Entry points: ApplicationInitializerSubSystem, SystemsBootstrap
 > Status: stub
-> Verified: 90e26cdc2 — 2026-07-23
+> Verified: 84401b2fe — 2026-07-23
 
 # Application
 
 ## Overview
 
-App bootstrap and startup initialization. Boot/Game remain scene launch pads; process-wide services move to `SystemsBootstrap` ([agent-first composition](../2026-07_agent-first-composition.md) follow-on (a) — scaffolding shipped, scene empty still open).
+App bootstrap and startup initialization. `ApplicationInitializerSubSystem` is DDOL via `SystemsBootstrap` (created last so ApplicationPreInitializing / ApplicationInitializing listeners Awake first). Boot/Game are thin launch pads ([agent-first composition](../2026-07_agent-first-composition.md) follow-on (a) shipped).
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Application/ApplicationInitializerSubSystem.cs` — application startup subsystem (Boot scene)
-- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL WorldReadiness / ScreenEffects / Automation / Vision
+- `Assets/Scripts/SS3D/Application/ApplicationInitializerSubSystem.cs` — application startup subsystem
+- `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — owns ApplicationInitializer + other process-wide services
 
 ## Extension points
 
-- New process-wide services: register in `SystemsBootstrap`, not Boot YAML (until Phase 3h empties scenes).
+- New process-wide services: register in `SystemsBootstrap`, not Boot YAML.
 
 ## Pitfalls
 
 - **Boot storm if offline reloads Boot after Online.** Session owner arms Empty — see [networking-session](networking-session.md).
+- **Listener order:** anything that subscribes to ApplicationInitializing must exist before ApplicationInitializer.OnStart — bootstrap creates ApplicationInitializer last in the AfterSceneLoad batch.
 
 ## Depends on / Used by
 
