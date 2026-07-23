@@ -24,7 +24,7 @@ This fork has the identical root cause today, independently of upstream's PR. In
 - **Addressables package is present and configured.** `com.unity.addressables` 2.9.1 (Unity 6),
   active settings at `Assets/Content/Addressables/AddressableAssetSettings.asset`, with **21
   configured groups** (Items, Materials, Sounds, ParticlesEffects, InteractionIcons,
-  CraftingRecipes, UIElements, Settings, Scenes, Built In Data, Default Local Group, plus the
+  CraftingRecipes (purged with TECH_DEBT 1.6), UIElements, Settings, Scenes, Built In Data, Default Local Group, plus the
   Localization package's auto-managed locale/table groups).
 - **But nothing loads through Addressables at runtime.** Grepped `Assets/Scripts` for
   `Addressables.Load*` / `Addressables.Instantiate*` / any async Addressables API — zero call
@@ -106,7 +106,7 @@ like upstream — not the diff.
 3. **First migration slice: `InteractionIcons`** — no network-spawn coupling, exercises the async
    path end-to-end (load → display → release) in a low-risk surface. Validates the model before
    touching gameplay-critical databases.
-4. **Network-spawn-coupled databases (`Items`, `CraftingRecipes`, `Materials`)** — requires the
+4. **Network-spawn-coupled databases (`Items`, `Materials`)** — requires the
    FishNet preload-ordering design from Target model §3 to land first.
 5. **Remove sync `Assets.Get<T>` path** once all call sites are migrated; delete the now-redundant
    `SerializableDictionary<string, Object> Assets` field and `LoadAssetsFromAssetGroup` eager-copy
