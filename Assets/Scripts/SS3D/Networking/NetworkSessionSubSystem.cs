@@ -68,20 +68,39 @@ namespace SS3D.Networking
         /// <summary>
         /// Uses the processed args to proceed with game network initialization
         /// </summary>
-        public void  StartNetworkSession()
+        public void StartNetworkSession()
         {
-            Log.Debug(this, "Initializing network session", Logs.Important);
-
             NetworkManager networkManager = InstanceFinder.NetworkManager;
+            if (networkManager == null)
+            {
+                Log.Error(this, "No NetworkManager found; cannot start network session", Logs.Important);
+                return;
+            }
+
+            ClientConnectionRecovery.EnsureOn(networkManager);
+
             NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
-
-            LocalPlayer.UpdateCkey(networkSettings.Ckey);
-
-            string ckey = networkSettings.Ckey;
-            ServerAddress  = networkSettings.ServerAddress;
+            NetworkType = networkSettings.NetworkType;
+            ServerAddress = networkSettings.ServerAddress;
             Port = Convert.ToUInt16(networkSettings.ServerPort);
 
-            NetworkType = networkSettings.NetworkType;
+            // Re-entry while a prior join is still Starting/Started/Stopping is what storms
+            // "Failed to start the client connection" when Boot/Intro reload on disconnect.
+            if (!CanStartNetworkSession(networkManager, NetworkType, out string skipReason))
+            {
+                Log.Warning(this, "Skipping StartNetworkSession: {reason}", Logs.Important, skipReason);
+                return;
+            }
+
+            Log.Debug(this, "Initializing network session", Logs.Important);
+
+            LocalPlayer.UpdateCkey(networkSettings.Ckey);
+            string ckey = networkSettings.Ckey;
+
+            if (networkManager.TryGetComponent(out ClientConnectionRecovery recovery))
+            {
+                recovery.NotifySessionStartAttempted();
+            }
 
             // Dedicated Server build target defines UNITY_SERVER, which makes FishNet auto-start
             // the transport on Boot (default port). Stop that so Host/Client use NetworkSettings.
@@ -108,6 +127,31 @@ namespace SS3D.Networking
 
             NetworkSessionStartedEvent networkSessionStartedEvent = new(ckey, NetworkType);
             networkSessionStartedEvent.Invoke(this);
+        }
+
+        private static bool CanStartNetworkSession(NetworkManager networkManager, NetworkType networkType, out string skipReason)
+        {
+            skipReason = null;
+
+            // Host/dedicated may already have a Started server from UNITY_SERVER auto-start;
+            // StopAutoStartedConnections clears that before StartConnection. Only gate the
+            // client half — stacking StartConnection while Starting/Started/Stopping is what
+            // storms "Failed to start the client connection" on Boot/Intro reload.
+            if (networkType is not (NetworkType.Client or NetworkType.Host))
+            {
+                return true;
+            }
+
+            LocalConnectionState clientState = networkManager.TransportManager.Transport.GetConnectionState(false);
+            if (clientState is LocalConnectionState.Starting
+                or LocalConnectionState.Started
+                or LocalConnectionState.Stopping)
+            {
+                skipReason = $"client already {clientState}";
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

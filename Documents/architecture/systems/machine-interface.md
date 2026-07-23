@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/MachineInterface/, Assets/Content/Systems/UI/MachineInterface/
 > Entry points: MachineInterfaceSubSystem, MachineInterfaceHost, MachineInterfaceRegistry, MachineUiAssetCatalog
 > Status: shipped
-> Verified: add2ad2c9 — 2026-07-18
+> Verified: 4516b813f — 2026-07-22
 
 # Machine interface UI
 
@@ -50,6 +50,7 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 - **Close must await dismiss tween:** disabling `UIDocument` mid-DOTween kills the tree. `MachineInterfaceHost.Close(onComplete)` teardowns only after the sequence; SubSystem keeps input blocked / `IsOpen` until then. Starting the close tween must not clear `_pendingCloseComplete` — that skipped `FinishClose` and left `InputContext.MachineUI` stuck (no movement).
 - **Do not hide Main HUD / storage from MI:** chrome visibility is owned by [inventory](inventory.md) `MainHudSubSystem` and `StoragePanelHost` observing `InterfaceOpened` / `InterfaceClosed` (asmdef is MainHud/StoragePanel → MI; reverse would cycle). That owner currently fully hides the HUD rather than layering MI on top of it, a known fork deviation from `main-hud.md` — see [inventory](inventory.md) § Fork deviation. Don't reimplement visibility logic here either way.
 - **Open interface from across the room on air alarm:** prefab lacked a collider; unresolved interaction point made `RangeCheck` pass everywhere — see [interactions-framework](interactions-framework.md). AirAlarm now has a BoxCollider.
+- **Client open also opens MI on listen-server host:** `TargetRpc(RunLocally = true)` re-enters on the server for every send. `DispatchClientOpen`/`Refresh`/`Close` must call `ShouldApplyTargetedUi(conn)` so only the local client connection applies UI (host opening for self still works).
 
 ## Depends on / Used by
 

@@ -190,6 +190,7 @@ MonoBehaviour:
   _networkBehaviours:
   - {fileID: 8301714305325130111}
   - {fileID: -7419120924986984554}
+  - {fileID: 5299084947188572917}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -212,6 +213,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b693691ec1592874896bee261d991d69, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _componentIndexCache: 2
+  _addedNetworkObject: {fileID: -7828078595381397262}
+  _networkObjectCache: {fileID: -7828078595381397262}
   _consumer: {fileID: 8301714305325130111}
   _light: {fileID: 2502875599337934467}
   _fillLight: {fileID: 8720000000000000003}
@@ -223,6 +227,7 @@ MonoBehaviour:
   _emergencyIntensityMultiplier: 0.1
   _emergencyRangeMultiplier: 0.352
   _emergencyTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  _fixtureVisual: 0
 --- !u!114 &8301714305325130111
 MonoBehaviour:
   m_ObjectHideFlags: 0

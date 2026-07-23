@@ -100,6 +100,19 @@ namespace SS3D.Systems.Area
             RefreshVisuals();
         }
 
+        private void Update()
+        {
+            if (!_areaEventsSubscribed)
+            {
+                TrySubscribeAreaEvents();
+            }
+
+            if (!_electricityTickSubscribed)
+            {
+                TrySubscribeElectricityTick();
+            }
+        }
+
         private void CacheEmissiveMaterials()
         {
             _emissiveMaterials.Clear();
@@ -154,13 +167,13 @@ namespace SS3D.Systems.Area
                 return;
             }
 
-            if (!areaSubSystem.TryGetAreaForDevice(tileObject, out AreaRecord record))
+            if (!areaSubSystem.TryResolveAreaIdForDevice(tileObject, out AreaId areaId))
             {
                 return;
             }
 
             _hasArea = true;
-            _areaId = record.Id;
+            _areaId = areaId;
         }
 
         private void SyncSwitchState()
@@ -183,30 +196,15 @@ namespace SS3D.Systems.Area
                 return;
             }
 
-            if (areaSubSystem.IsSetUp)
-            {
-                areaSubSystem.OnAreaLightingSwitchChanged += HandleAreaLightingSwitchChanged;
-                _areaEventsSubscribed = true;
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp += HandleAreaSystemSetup;
+            areaSubSystem.OnAreaLightingSwitchChanged += HandleAreaLightingSwitchChanged;
+            areaSubSystem.FloorVisualCache.OnDirty += HandleFloorVisualCacheDirty;
+            _areaEventsSubscribed = true;
+            CacheArea();
+            SyncSwitchState();
         }
 
-        private void HandleAreaSystemSetup()
+        private void HandleFloorVisualCacheDirty()
         {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
-            {
-                return;
-            }
-
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
-            if (!_areaEventsSubscribed)
-            {
-                areaSubSystem.OnAreaLightingSwitchChanged += HandleAreaLightingSwitchChanged;
-                _areaEventsSubscribed = true;
-            }
-
             CacheArea();
             SyncSwitchState();
             RefreshVisuals();
@@ -219,10 +217,10 @@ namespace SS3D.Systems.Area
                 return;
             }
 
-            areaSubSystem.OnSystemSetUp -= HandleAreaSystemSetup;
             if (_areaEventsSubscribed)
             {
                 areaSubSystem.OnAreaLightingSwitchChanged -= HandleAreaLightingSwitchChanged;
+                areaSubSystem.FloorVisualCache.OnDirty -= HandleFloorVisualCacheDirty;
                 _areaEventsSubscribed = false;
             }
         }
@@ -256,50 +254,28 @@ namespace SS3D.Systems.Area
                 return;
             }
 
-            if (electricitySubSystem.IsSetUp)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp += HandleElectricitySystemSetup;
-        }
-
-        private void HandleElectricitySystemSetup()
-        {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
-            {
-                return;
-            }
-
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (!_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-            }
-
-            RefreshVisuals();
+            electricitySubSystem.OnTick += HandleElectricityTick;
+            _electricityTickSubscribed = true;
         }
 
         private void UnsubscribeElectricityTick()
         {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (!_electricityTickSubscribed || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
-            electricitySubSystem.OnSystemSetUp -= HandleElectricitySystemSetup;
-            if (_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick -= HandleElectricityTick;
-                _electricityTickSubscribed = false;
-            }
+            electricitySubSystem.OnTick -= HandleElectricityTick;
+            _electricityTickSubscribed = false;
         }
 
         private void HandleAreaLightingSwitchChanged(AreaId areaId, bool on)
         {
+            if (!_hasArea)
+            {
+                CacheArea();
+            }
+
             if (_hasArea && _areaId == areaId)
             {
                 _lightsOn = on;
