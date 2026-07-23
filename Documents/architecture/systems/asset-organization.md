@@ -1,7 +1,7 @@
 > Code paths: Assets/Art/, Assets/Content/, Assets/Scripts/, Assets/Editor/, Assets/Settings/, Assets/Resources/
 > Entry points: Tools/generate_art_index.py, Tools/generate_icon_index.py, Assets/Scripts/Tests/AssetAudit/AssetTaxonomyTests.cs
-> Status: stub
-> Verified: b329ad1a — 2026-07-22
+> Status: partial
+> Verified: 9b9df0e49 — 2026-07-23
 
 # Asset organization
 
@@ -11,7 +11,10 @@ Two top-level trees split raw art from game data/composition: `Assets/Art/` (mod
 animations, fonts, icons — organized by asset type then game domain) and `Assets/Content/` (Addressables,
 ScriptableObject data, localization, scenes, and per-domain system prefabs/UI under `Content/Systems/`). The
 split is sound; adherence has drifted at ~12k files in — see the full audit in
-[2026-07_asset-file-structure-taxonomy.md](../2026-07_asset-file-structure-taxonomy.md).
+[2026-07_asset-file-structure-taxonomy.md](../2026-07_asset-file-structure-taxonomy.md). Phase 1 icon
+consolidation moved Heroicons, Inventory, Rendered, Alerts, and `external icons` → `External/` under
+`Assets/Art/Icons/`; InteractionIcons rename and remaining Phase 1 leftovers (Systems flatten, animation/
+localization Misc, splatter) are still open.
 
 ## Start here
 

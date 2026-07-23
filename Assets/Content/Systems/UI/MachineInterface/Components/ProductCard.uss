@@ -50,7 +50,7 @@
     padding: 3px;
     background-color: var(--ss3d-diegetic-panel-raised);
     border-radius: 50%;
-    background-image: url("project://database/Assets/Art/Graphics/UI/Misc/Heroicons/Outline/LockClosed.png");
+    background-image: url("project://database/Assets/Art/Icons/Heroicons/Outline/LockClosed.png");
     -unity-background-scale-mode: scale-to-fit;
     -unity-background-image-tint-color: var(--ss3d-text-tertiary);
 }

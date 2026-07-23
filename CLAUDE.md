@@ -46,7 +46,8 @@ sync system maps, INDEX.md, plans, and architecture effort status.
   assets from `RE-SS3D/SS3D-Art`) → `Documents/art-asset-index.json` (what's already imported). Regenerate with
   `python3 Tools/generate_art_index.py` after importing new art.
 - UI icons: `Documents/icon-index.md` → `Documents/icon-index.json`. Icons live under
-  `Assets/Art/Icons/external icons/` (game-icons.net SVGs). Regenerate with `python3 Tools/generate_icon_index.py`.
+  `Assets/Art/Icons/` (`External/` for game-icons.net SVGs, plus `Heroicons/`, `Inventory/`, `Alerts/`,
+  `Rendered/`, `map-editor/`). Regenerate with `python3 Tools/generate_icon_index.py`.
 
 ## Build, run, and test
 

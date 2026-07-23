@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SS3D.UI.MainHud
 {
     /// <summary>
-    /// The imported alert-stack icon sprites (<c>Assets/Content/Systems/UI/MainHud/Icons/AlertStack</c>),
+    /// The imported alert-stack icon sprites (<c>Assets/Art/Icons/Alerts</c>),
     /// one per <see cref="Components.AlertHazard"/>. Assigned on <see cref="MainHudSubSystem"/> and threaded
     /// down to <see cref="Components.AlertIconStack"/>.
     /// </summary>
