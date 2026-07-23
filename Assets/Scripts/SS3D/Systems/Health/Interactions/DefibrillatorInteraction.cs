@@ -32,7 +32,7 @@ namespace SS3D.Systems.Health.Interactions
 
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
-            InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
+            InteractionEvent combined = targetEvent.WithSource(originEvent.Source);
             if (!CanInteract(combined))
             {
                 return false;
@@ -111,13 +111,11 @@ namespace SS3D.Systems.Health.Interactions
     {
         private static readonly DefibrillatorInteraction Interaction = new();
 
-        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
-            Item item = GetComponent<Item>();
-
             foreach (IInteractionTarget target in targets)
             {
-                if (Interaction.CanInteract(new InteractionEvent(item, target)))
+                if (Interaction.CanInteract(context.WithTarget(target)))
                 {
                     interactions.Add(new InteractionEntry(target, Interaction));
                 }

@@ -64,7 +64,8 @@ Update as part of `update-system-docs`.
 | admin-tools | [admin-tools.md](../design/admin-tools.md) — active | none yet | [ingame-console](systems/ingame-console.md) — partial (dev/admin console, not a design spec) |
 | player-accounts | [player-accounts.md](../design/player-accounts.md) — active | none yet | none yet |
 
-[2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) (shipped) and the infrastructure systems below (core
+[2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) /
+[2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) (shipped) and the infrastructure systems below (core
 subsystems, rendering pipeline internals, data/codegen, etc.) aren't gameplay domains with
 their own design docs — they support the domains above rather than being one themselves,
 so they stay out of this table and live only in the Infrastructure section below.
@@ -87,7 +88,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Networking (session) | [networking-session](systems/networking-session.md) | partial | SessionState FSM + Empty offline; NetworkSystemsHub holds Game SubSystems; harness + headless |
 | Scene management | [scene-management](systems/scene-management.md) | stub | SceneSubSystem DDOL; `Scenes.Empty` offline after first Online |
 | UI shell | [ui-shell](systems/ui-shell.md) | partial | UITK composition root; `UiShellSubSystem` + shared catalog/animator/binder scaffolding shipped, radial + armed migrated; MI/Main HUD path catalogs still separate (duplicated), migration deferred |
-| Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, pipeline, wire identifiers; InteractionIcons via AddressablesAsync preload |
+| Interactions (framework) | [interactions-framework](systems/interactions-framework.md) | shipped | Shared `IInteraction` contracts, Discover/`HasPoint` contract, pipeline, wire identifiers; InteractionIcons via AddressablesAsync preload |
 | Data / codegen | [data-codegen](systems/data-codegen.md) | partial | Asset databases + generated refs; InteractionIcons on Addressables async path; other DBs still eager; catalog rebuild menus still debt — [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) Phases 1–3 done |
 | Persistence | [persistence](systems/persistence.md) | partial | Station templates + server meta; restore resets world-readiness epoch and notifies TileMapLoaded |
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
@@ -137,6 +138,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_machine-interface-phase3-smes-generalization](2026-07_machine-interface-phase3-smes-generalization.md) | shipped |
 | [2026-07_diegetic-screen-ui-framework](2026-07_diegetic-screen-ui-framework.md) | shipped |
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
+| [2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |

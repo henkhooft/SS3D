@@ -138,9 +138,12 @@ namespace EditorTests
             StubInteractionTarget target = new();
             List<InteractionEntry> entries = new()
             {
-                new InteractionEntry(null, new NamedInteraction("Drop", 5), InteractionIdentifier.SourceOnlyTargetIndex),
+                InteractionEntry.SourceOnly(new NamedInteraction("Drop", 5)),
                 new InteractionEntry(target, new NamedInteraction("Pickup", 10), InteractionIdentifier.SyntheticTargetIndex),
             };
+
+            Assert.IsTrue(entries[0].IsSourceOnly);
+            Assert.IsFalse(entries[1].IsSourceOnly);
 
             List<InteractionEntry> outlineEntries = InteractionPipeline.FilterForOutline(entries);
 
@@ -154,12 +157,12 @@ namespace EditorTests
             StubInteractionSource source = new();
             OfferingTarget target = new(new NamedInteraction("Pickup", 10));
             List<IInteractionTarget> targets = new() { target };
+            InteractionEvent interactionEvent = new(source, target, Vector3.zero, Vector3.up);
 
             bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
                 source,
                 targets,
-                Vector3.zero,
-                Vector3.up,
+                interactionEvent,
                 IntentType.Help,
                 out bool hasViable);
 
@@ -173,12 +176,12 @@ namespace EditorTests
             StubInteractionSource source = new();
             OfferingTarget target = new(new NamedInteraction("Pickup", 10));
             List<IInteractionTarget> targets = new() { target };
+            InteractionEvent interactionEvent = new(source, target, Vector3.zero, Vector3.up);
 
             bool found = InteractionPipeline.TryEvaluateOutlineInteractability(
                 source,
                 targets,
-                Vector3.zero,
-                Vector3.up,
+                interactionEvent,
                 IntentType.Harm,
                 out bool hasViable);
 
@@ -197,6 +200,61 @@ namespace EditorTests
             InteractionIdentifier missing = new("Drop", InteractionIdentifier.SyntheticTargetIndex);
 
             Assert.IsFalse(InteractionEntry.TryResolve(entries, missing, out _));
+        }
+
+        [Test]
+        public void Discover_MergesTargetBoundAndSourceOnly()
+        {
+            SourceOnlyAwareSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+            InteractionEvent interactionEvent = new(source, target, new Vector3(1f, 0f, 0f), Vector3.up);
+
+            List<InteractionEntry> discovered = InteractionPipeline.Discover(source, targets, interactionEvent);
+
+            Assert.AreEqual(2, discovered.Count);
+            Assert.IsFalse(discovered[0].IsSourceOnly);
+            Assert.AreEqual("Pickup", discovered[0].Interaction.GetGenericName());
+            Assert.IsTrue(discovered[1].IsSourceOnly);
+            Assert.AreEqual("Drop", discovered[1].Interaction.GetGenericName());
+            Assert.AreEqual(InteractionIdentifier.SourceOnlyTargetIndex, discovered[1].Id.TargetComponentIndex);
+            Assert.IsTrue(source.LastContext.HasPoint);
+            Assert.AreEqual(new Vector3(1f, 0f, 0f), source.LastContext.Point);
+        }
+
+        [Test]
+        public void Discover_PassesUnsetPointContextToSource()
+        {
+            SourceOnlyAwareSource source = new();
+            OfferingTarget target = new(new NamedInteraction("Pickup", 10));
+            List<IInteractionTarget> targets = new() { target };
+            InteractionEvent interactionEvent = new(source, target);
+
+            InteractionPipeline.Discover(source, targets, interactionEvent);
+
+            Assert.IsNotNull(source.LastContext);
+            Assert.IsFalse(source.LastContext.HasPoint);
+        }
+
+        [Test]
+        public void InteractionEvent_WithTarget_PreservesHasPoint()
+        {
+            StubInteractionSource source = new();
+            StubInteractionTarget first = new();
+            StubInteractionTarget second = new();
+
+            InteractionEvent withPoint = new(source, first, Vector3.zero, Vector3.up);
+            InteractionEvent copied = withPoint.WithTarget(second);
+
+            Assert.IsTrue(copied.HasPoint);
+            Assert.AreEqual(Vector3.zero, copied.Point);
+            Assert.AreSame(second, copied.Target);
+
+            InteractionEvent withoutPoint = new(source, first);
+            InteractionEvent copiedUnset = withoutPoint.WithTarget(second);
+
+            Assert.IsFalse(copiedUnset.HasPoint);
+            Assert.AreSame(second, copiedUnset.Target);
         }
 
         private static InteractionEntry CreateEntry(string genericName, int priority)
@@ -271,7 +329,7 @@ namespace EditorTests
             }
         }
 
-        private sealed class StubInteractionSource : IInteractionSource
+        private class StubInteractionSource : IInteractionSource
         {
             public GameObject GameObject { get; } = new("StubSource");
 
@@ -293,7 +351,7 @@ namespace EditorTests
             {
             }
 
-            public void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries)
+            public virtual void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries, InteractionEvent context)
             {
             }
 
@@ -302,6 +360,17 @@ namespace EditorTests
             public bool HasInteraction(InteractionReference reference) => false;
 
             public InteractionReference Interact(InteractionEvent interactionEvent, IInteraction interaction) => new(1);
+        }
+
+        private sealed class SourceOnlyAwareSource : StubInteractionSource
+        {
+            public InteractionEvent LastContext { get; private set; }
+
+            public override void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> entries, InteractionEvent context)
+            {
+                LastContext = context;
+                entries.Add(InteractionEntry.SourceOnly(new NamedInteraction("Drop", 5)));
+            }
         }
     }
 }

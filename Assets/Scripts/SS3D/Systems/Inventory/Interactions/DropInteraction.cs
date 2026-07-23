@@ -55,6 +55,11 @@ namespace SS3D.Systems.Inventory.Interactions
                 return false;
             }
 
+            if (!interactionEvent.HasPoint)
+            {
+                return false;
+            }
+
             // Confirm the entities ViewPoint can see the drop point
             Vector3 direction = (interactionEvent.Point - entity.ViewPoint.transform.position).normalized;
             bool raycast = Physics.Raycast(entity.ViewPoint.transform.position, direction, out RaycastHit hit, Mathf.Infinity, _defaultMask);

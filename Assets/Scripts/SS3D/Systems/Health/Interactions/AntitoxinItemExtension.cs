@@ -1,6 +1,5 @@
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
-using SS3D.Systems.Inventory.Items;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,13 +9,11 @@ namespace SS3D.Systems.Health.Interactions
     {
         private static readonly AntitoxinInteraction Interaction = new();
 
-        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
-            Item item = GetComponent<Item>();
-
             foreach (IInteractionTarget target in targets)
             {
-                if (Interaction.CanInteract(new InteractionEvent(item, target)))
+                if (Interaction.CanInteract(context.WithTarget(target)))
                 {
                     interactions.Add(new InteractionEntry(target, Interaction));
                 }

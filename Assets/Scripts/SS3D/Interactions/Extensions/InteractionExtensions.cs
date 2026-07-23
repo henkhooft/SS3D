@@ -36,10 +36,8 @@ namespace SS3D.Interactions.Extensions
                 return true;
             }
 
-            Vector3 point = interactionEvent.Point;
-
             // Block interaction when point is on top of wall or above.
-            if (HasResolvedPoint(point) && IsWallTop(point, 0.1f))
+            if (interactionEvent.HasPoint && IsWallTop(interactionEvent.Point, 0.1f))
             {
                 return false;
             }
@@ -57,23 +55,15 @@ namespace SS3D.Interactions.Extensions
             }
 
             RangeLimit range = interactionEvent.Source.GetRange();
-            if (HasResolvedPoint(point) && range.IsInRange(sourcePosition, point))
+            if (interactionEvent.HasPoint && range.IsInRange(sourcePosition, interactionEvent.Point))
             {
                 return true;
             }
 
             // Missing or out-of-range points still range against the target itself.
-            // Never treat an unresolved (default zero) point as unlimited range — wall mounts
-            // without colliders otherwise pass RangeCheck from anywhere.
+            // Never treat an unresolved point as unlimited range — wall mounts without
+            // colliders otherwise pass RangeCheck from anywhere.
             return IsTargetWithinRange(sourcePosition, range, interactionEvent.Target);
-        }
-
-        /// <summary>
-        /// Default <see cref="InteractionEvent"/> point is Vector3.zero when unset.
-        /// </summary>
-        private static bool HasResolvedPoint(Vector3 point)
-        {
-            return point.sqrMagnitude >= 0.001f;
         }
 
         private static bool IsTargetWithinRange(Vector3 sourcePosition, RangeLimit range, IInteractionTarget target)

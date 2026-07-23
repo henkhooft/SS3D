@@ -13,7 +13,7 @@ namespace SS3D.Systems.Combat.Interactions
     /// </summary>
     public class HandMeleeExtension : MonoBehaviour, IInteractionSourceExtension
     {
-        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
             if (!TryGetComponent(out Hand hand))
             {

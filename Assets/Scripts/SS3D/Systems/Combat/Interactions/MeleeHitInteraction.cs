@@ -59,7 +59,7 @@ namespace SS3D.Systems.Combat.Interactions
                 return false;
             }
 
-            InteractionEvent combined = new(originEvent.Source, targetEvent.Target, targetEvent.Point, targetEvent.Normal);
+            InteractionEvent combined = targetEvent.WithSource(originEvent.Source);
             HumanHealthController health = ResolveHealth(combined.Target);
             return health != null
                 && ZoneTargetResolver.TryResolveCombatZone(combined, health, out _);

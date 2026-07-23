@@ -350,12 +350,10 @@ namespace SS3D.Systems.Inventory.Items
         }
 
         // this creates the base interactions for an item, in this case, the drop interaction
-        public override void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions)
+        public override void CreateSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
         {
-            base.CreateSourceInteractions(targets, interactions);
-            DropInteraction dropInteraction = new();
-
-            interactions.Add(new InteractionEntry(null, dropInteraction));
+            base.CreateSourceInteractions(targets, interactions, context);
+            interactions.Add(InteractionEntry.SourceOnly(new DropInteraction()));
 
             // Improvised melee for any held item without a dedicated weapon profile.
             if (TryGetComponent(out MeleeWeaponItemExtension _))
