@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: c2b692f55 — 2026-07-23
+> Verified: 76295c94b — 2026-07-23
 
 # Entities
 
@@ -56,7 +56,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Depends on / Used by
 
-- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md)
+- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md), [audio](audio.md) (`LocalPlayerObjectChanged` — `ListenerPosition`, `AmbienceSubSystem`)
 
 ## Related docs
 

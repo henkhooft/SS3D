@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 752dfefd2 — 2026-07-23
+> Verified: 76295c94b — 2026-07-23
 
 # Audio
 
@@ -128,7 +128,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Depends on / Used by
 
-- **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [player-control](player-control.md) (local player for `ListenerPosition` / `AmbienceSubSystem`'s `LocalPlayerObjectChanged`)
+- **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
 - **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`), [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs
