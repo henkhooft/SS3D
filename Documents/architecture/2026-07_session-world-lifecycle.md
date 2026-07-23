@@ -18,6 +18,12 @@ Sequenced in three phases; all shipped 2026-07-23.
 prefab (spawned Online). Empty parent roots (`Persistent Systems` / `Systems` + EventSystem) may
 remain in scenes as launch pads only.
 
+**Post-ship hardening (same branch):** hub spawn exposed Awake/`OnStartServer` vs Unity `Start` and
+hub-before-Game ordering — Persistence now owns `LoadServerMeta` (contributors in `OnAwake`);
+`CameraSubSystem.PlayerCamera` lazy-resolves after Game’s MainCamera exists; do **not** re-run the
+Phase 3h “Rebuild Hub + Strip” menu (Game no longer has SerializeField sources). TECH_DEBT §1.7 /
+§1.16 are in [TECH_DEBT.md](TECH_DEBT.md) §6 Resolved.
+
 ## 1. Problem & non-goals
 
 One architectural hole with two faces.

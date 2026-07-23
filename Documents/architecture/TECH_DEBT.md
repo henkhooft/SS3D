@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-23
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -141,15 +141,9 @@ deleting it.
 
 ### 1.7 Legacy scene-based subsystem registration coexists with three ad-hoc bootstrap styles
 
-**Blast radius: low — trend: closed for gameplay SubSystems (2026-07-23); UI hosts remain**
-
-Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
-(Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
-([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h). Remaining
-`RuntimeInitializeOnLoad` self-bootstraps are UI hosts (UiShell / MainHud / StoragePanel) and debug
-views — tracked under agent-first follow-on **(b)**, not §1.7 scene registration.
-
-- Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+**Resolved 2026-07-23** for gameplay SubSystems — see [§6 Resolved](#6-resolved). Residual UI-host
+`RuntimeInitializeOnLoad` self-bootstraps (UiShell / MainHud / StoragePanel) stay under agent-first
+follow-on **(b)**, not this item.
 
 ### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
 
@@ -305,14 +299,8 @@ started.
 
 ### 1.16 Session/world lifecycle — shipped; optional backoff remains
 
-**Blast radius: low — trend: closed 2026-07-23 (optional reconnect backoff deferred)**
-
-Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
-`NetworkSystemsHub` (Boot/Game emptied of SubSystem GOs) all shipped under
-[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
-Remaining optional: reconnect exponential backoff; UI host self-bootstrap consolidation (follow-on **(b)**).
-
-- Related: [networking-session.md](systems/networking-session.md), [core-subsystems.md](systems/core-subsystems.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+**Resolved 2026-07-23** — see [§6 Resolved](#6-resolved). Optional reconnect exponential backoff and
+UI-host consolidation remain deferred elsewhere (not reopen criteria for this item).
 
 ---
 
@@ -368,7 +356,28 @@ not quality problems.
 ## 6. Resolved
 
 *(Move items here with the PR/commit that closed them, so the register shows real progress rather
-than only growing.)*
+than only growing. Keep a one-line stub under the old §1.x number so external citations still resolve.)*
 
-- None yet — this doc was created 2026-07-21 as an initial audit; the first item paid down against
-  this list should start this section.
+### 1.7 Legacy scene-based subsystem registration (gameplay) — 2026-07-23
+
+Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
+(Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
+([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h).
+
+- **Closed by:** `b74f47123` (Phase 3h hub + scene strip); post-ship hardening `ab79afee2` (ServerMeta
+  boot ownership), `b57f3974e` (PlayerCamera lazy resolve).
+- **Not in this close:** UiShell / MainHud / StoragePanel `RuntimeInitializeOnLoad` — agent-first
+  follow-on **(b)**.
+- Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+
+### 1.16 Session/world lifecycle — 2026-07-23
+
+Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
+`NetworkSystemsHub` shipped under
+[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
+
+- **Closed by:** `77f4d9798` / `84401b2fe` / `b74f47123` (phases 1–3h); follow-up Play Mode fixes on
+  `cursor/session-world-lifecycle` as above.
+- **Deferred elsewhere (do not reopen this item):** reconnect exponential backoff; UI-host bootstrap
+  consolidation.
+- Related: [networking-session.md](systems/networking-session.md), [core-subsystems.md](systems/core-subsystems.md)
