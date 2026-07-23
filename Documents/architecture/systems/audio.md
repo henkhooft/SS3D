@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 76295c94b — 2026-07-23
+> Verified: 62eec2934 — 2026-07-23
 
 # Audio
 
@@ -71,6 +71,14 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   that should occlude — route it through the pool so `AudioSourceOcclusion` applies.
 - Sound clips resolve via `Assets.Get<AudioClip>(AssetDatabases.Sounds, id)` — the single clip-lookup
   path; don't add a second loader.
+- **Finding/adding clips:** check `Documents/art-asset-index.md` → `art-available-for-import.json`
+  first (SS3D-Art has hundreds of unimported sounds, and some imported ones aren't yet registered in
+  `Assets/Content/Data/Databases/Sounds.asset`). Registering a new clip: create an
+  `ObjectAssetReference` asset under `Assets/Content/Data/ObjectAssetReferences/` with
+  `Id = <clip's own asset GUID>`, `Database = AssetDatabases.Sounds`'s `DatabaseID`, then add a
+  matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000,
+  guid: <clip guid>, type: 3}`). `CombatAudioTrackIds` (per-domain, mirrors `AudioTrackIds`) is the
+  pattern for naming registered ids in code rather than inlining raw GUID strings.
 - Ad-hoc `AudioSource` users outside the pool (`AirlockStateMachine`, `StructuralIntegrityPresenter`,
   `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`) bypass
   occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
@@ -129,7 +137,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`), [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); furniture/combat/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`), [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`), [combat](combat.md) (gunfire/reload SFX via the pool, `CombatAudioTrackIds`); furniture/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs
 

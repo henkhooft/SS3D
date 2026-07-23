@@ -16,6 +16,7 @@ using SS3D.Systems.Inputs;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Health;
@@ -431,6 +432,8 @@ namespace SS3D.Systems.Interactions
                 aimRay = new Ray(origin, direction);
             }
 
+            PlayGunfireSound(aimRay.origin);
+
             float maxRange = Mathf.Max(1f, weapon.Profile.MaxRangeMeters);
             float aimDistance = maxRange;
             if (Physics.Raycast(aimRay, out RaycastHit aimHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
@@ -494,6 +497,19 @@ namespace SS3D.Systems.Interactions
             ServerNotifyRangedReloadStarted(weapon);
         }
 
+        /// <summary>
+        /// Positional gunshot report (audio.md §3) — a side effect of the existing fire event, not a
+        /// new trigger. Occlusion/falloff come free from the pool's <c>AudioSourceOcclusion</c>.
+        /// </summary>
+        [Server]
+        private void PlayGunfireSound(Vector3 position)
+        {
+            string[] clips = CombatAudioTrackIds.GunFire;
+            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
+            float pitch = UnityEngine.Random.Range(0.95f, 1.05f);
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(AudioType.Sfx, clipId, position, null, false, 0.9f, pitch);
+        }
+
         [Server]
         public void ServerNotifyRangedReloadStarted(RangedWeaponItemExtension weapon)
         {
@@ -501,6 +517,9 @@ namespace SS3D.Systems.Interactions
             {
                 return;
             }
+
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineOut, transform.position, null);
 
             TargetNotifyRangedReload(
                 Owner,
