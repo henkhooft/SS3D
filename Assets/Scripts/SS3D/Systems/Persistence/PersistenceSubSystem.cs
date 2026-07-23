@@ -32,11 +32,24 @@ namespace SS3D.Systems.Persistence
 
         public event Action<PersistenceLayer> OnBeforeCapture;
 
+        protected override void OnAwake()
+        {
+            base.OnAwake();
+            // Contributors must exist before LoadServerMeta. Hub NetworkBehaviour.OnStartServer
+            // can run after Awakes but before Unity Start — keep registration here, not in OnStart.
+            RegisterBuiltInContributors();
+        }
+
         protected override void OnStart()
         {
             base.OnStart();
-            RegisterBuiltInContributors();
             AddHandle(UserPermissionsChangedEvent.AddListener(HandleUserPermissionsChanged));
+
+            // Own server-meta boot here — do not call from Tile or other domains.
+            if (InstanceFinder.IsServer)
+            {
+                LoadServerMeta();
+            }
         }
 
         public bool LoadServerMeta()
@@ -44,6 +57,12 @@ namespace SS3D.Systems.Persistence
             if (_serverMetaLoaded)
             {
                 return true;
+            }
+
+            // Defensive: contributors must exist before restore (Awake normally registers them).
+            if (_contributors.Count == 0)
+            {
+                RegisterBuiltInContributors();
             }
 
             _store.TryLoad(PersistencePaths.ServerMetaPermissions, out PersistenceEnvelope envelope);

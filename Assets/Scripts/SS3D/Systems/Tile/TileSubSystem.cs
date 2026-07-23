@@ -80,11 +80,6 @@ namespace SS3D.Systems.Tile
 		        return;
 	        }
 
-            if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
-            {
-                persistenceSubSystem.LoadServerMeta();
-            }
-
 	        await WaitForResourcesLoad();
 
             Log.Debug(this, "All tiles loaded successfully");
