@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 62eec2934 — 2026-07-23
+> Verified: a2de58b87 — 2026-07-23
 
 # Audio
 
@@ -63,6 +63,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   subsystem) — route them once Phase 0 lands.
 - `Assets/Content/Systems/Audio/SFXAudioSource.prefab`, `MusicAudioSource.prefab` — pool prefabs,
   routed to the `SFX`/`Music` mixer groups respectively
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AreaAmbienceCommand.cs` — `areaambience`
+  dev console command, the thin authoring surface for `AreaSubSystem.SetAreaAmbienceTrackId`
 
 ## Extension points
 
@@ -84,8 +86,16 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
   ([audio-foundation](../2026-07_audio-foundation.md), deferred).
 - Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
-  thin — no Map Editor UI yet, dev-console/content driven). Syncs to observers via
+  thin — no Map Editor UI yet). Reachable in-game via the `areaambience (trackId|clear)` dev console
+  command (`AreaAmbienceCommand`), which always targets the calling player's own current area (same
+  "no mouse to click a tile with" reasoning as `AtmosDebugCommand`). Syncs to observers via
   `RpcSyncAreaAmbience` (BufferLast), same pattern as the departmental-tint snapshot.
+- **31 ambience/collision clips registered, content-availability only (no default assignment):**
+  `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant`, `WindHeavy/Light/Violent`, `PowerHum` (all
+  candidate `areaambience` track ids — content decides which area gets which, per audio.md §2/§10);
+  `MetalHit1-2`/`GrilleHit`/`Rod1`/`Tap`/`TrayHit1-2`/`WoodHit1` (more `NoisyCollision` variety — **no
+  prefab uses `NoisyCollision` yet**, so these are registered for whenever one does, not wired to
+  anything today).
 - Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`
   directly for any future systemic cue (virology's symptomatic-stage cue is this same category,
   per audio.md §4) rather than building a parallel non-positional playback path.

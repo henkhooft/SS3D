@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: defdd0f6a — 2026-07-23
+> Verified: a2de58b87 — 2026-07-23
 
 # Area
 
@@ -50,7 +50,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Toggle area fixture lighting: `ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting breaker in MI).
 - Subscribe to wall-switch changes: `OnAreaLightingSwitchChanged`.
 - Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); clients read via `TryGetDepartmentalLightTint`.
-- Ambience track API ([audio-foundation](../2026-07_audio-foundation.md) Phase 2): `SetAreaAmbienceTrackId` (server, thin — no Map Editor UI yet) sets `AreaRecord.AmbienceTrackId`; `TryGetAmbienceTrackId` reads live registry (host) or the synced `RpcSyncAreaAmbience` snapshot (clients), same two-tier pattern as tint. **Not persisted** — `AmbienceTrackId` is absent from `SavedAreaRecord`/`BuildSavedAreaRecords`/`RestoreFromSave`, so it resets on map reload until a persistence contributor is added.
+- Ambience track API ([audio-foundation](../2026-07_audio-foundation.md) Phase 2): `SetAreaAmbienceTrackId` (server, no Map Editor UI yet — reachable via the `areaambience` dev console command, [audio](audio.md)) sets `AreaRecord.AmbienceTrackId`; `TryGetAmbienceTrackId` reads live registry (host) or the synced `RpcSyncAreaAmbience` snapshot (clients), same two-tier pattern as tint. **Not persisted** — `AmbienceTrackId` is absent from `SavedAreaRecord`/`BuildSavedAreaRecords`/`RestoreFromSave`, so it resets on map reload until a persistence contributor is added.
 - Client-safe world-position → area id: `TryResolveAreaIdForWorldPosition` (live registry, else `FloorVisualCache` via the same world-grid math `ITileQueryService.WorldToTile` uses) — for presentation that tracks a moving position (e.g. ambience) rather than a fixed device tile.
 - Fixture visuals: `LightPower` + `AreaLightFixturePolicy` + `LightFixtureCapability` on prefabs.
 - Dev bypass (`SS3D → Dev → Lighting → Always Power Light Fixtures`) treats fixtures as powered but still respects APC channels and area Normal/Emergency/Dark policy.

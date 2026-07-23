@@ -104,6 +104,13 @@ SFX at once.
   on map reload/restore until a persistence contributor is added. Pre-existing gap in the field the
   design doc calls "already exists," not introduced by this phase, but now more visible since it's
   actually wired end-to-end.
+- **Follow-up (content pass):** registered 31 imported-but-previously-unregistered SS3D-Art clips
+  into `Sounds.asset` — `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant`,
+  `WindHeavy/Light/Violent`, `PowerHum` (candidate `areaambience` track ids), plus 8 more
+  `NoisyCollision`-shaped collision variants (registered for availability; no prefab uses
+  `NoisyCollision` yet so they're unwired). Added `AreaAmbienceCommand` (`areaambience <trackId>`)
+  as the actual dev-console authoring surface `SetAreaAmbienceTrackId` needed — always targets the
+  calling player's own current area, same reasoning as `AtmosDebugCommand`.
 - **Known gap:** ambience `AudioSource`s output to Master, not the `Ambience` mixer group — a
   self-bootstrapped subsystem has no Editor-assigned `OutputAudioMixerGroup` reference the way pool
   prefabs do. Needs Phase 0's runtime-loadable mixer reference (or a small dedicated prefab) to route
