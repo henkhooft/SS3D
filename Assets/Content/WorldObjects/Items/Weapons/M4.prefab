@@ -279,14 +279,14 @@ MonoBehaviour:
     BruteDamage: 18
     BurnDamage: 0
     CanSever: 0
-    BaseSpreadDegrees: 1.2
-    RecoilClimbDegrees: 0.55
+    BaseSpreadDegrees: 0.55
+    RecoilClimbDegrees: 0.35
     RecoilPerShot: 1
-    RecoilDecayPerSecond: 2.5
-    MovementBloomPerSpeed: 1.8
-    FalloffStartMeters: 12
-    FalloffEndMeters: 40
-    FalloffExtraSpreadDegrees: 4
+    RecoilDecayPerSecond: 3
+    MovementBloomPerSpeed: 0.35
+    FalloffStartMeters: 18
+    FalloffEndMeters: 45
+    FalloffExtraSpreadDegrees: 2.5
     MaxRangeMeters: 50
     FireCooldownSeconds: 0.12
     MagazineSize: 30

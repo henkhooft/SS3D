@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 818aaab59 — 2026-07-23
+> Verified: 76a6ecdc2 — 2026-07-24
 
 # Inventory
 
@@ -12,6 +12,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 **Container primitive:** `AttachedContainer` — position-grid slots (`Size.x × Size.y`), `SizeClass` fit ceiling, recursive computed `Weight`, `MaxWeight` panel readout, stacking (`Item.MaxStackSize`/`StackCount`, merge-on-add; split not built). Optional `AttachedContainerLock` ID-gates world containers. See [inventory-storage.md](../../design/inventory-storage.md).
 
 **Carried weight:** `HumanInventory.CarriedWeight` sums every inventory container's recursive `AttachedContainer.Weight` (hands included). Fires `OnCarriedWeightChanged`. Feeds [stamina](stamina.md) encumbrance (Phase 7a).
+
+**Clothing world vs worn:** one Item NetworkObject. `ClothingItemPresentation` keeps the folded child active for world/hand; worn-shaped child stays off. Worn look is `ClothesDisplayer` + `Cloth` body mesh while `HideItems` hides the Item in a cloth slot. Root `BoxCollider` for world physics (jumpsuit base: `JumpsuitGrey`; variants inherit). Equipment-doll HUD uses `Item.GetHudSprite(preferWornShape: true)` (worn-shaped preview); hands keep folded `ItemSprite`. Re-run **SS3D → Inventory → Setup Clothing World Presentation** if child refs drift. Do not dual-spawn folded/worn prefabs (breaks SyncVars / armor on the same Item).
 
 **Storage panel UI:** `StoragePanelHost` manages N simultaneous `StoragePanelView` panels. Opened when an *item that is itself storage* is clicked (backpack on back, bag in hand, world `ViewContainerInteraction`), via pocket hotkey / gear-strip **Pocket** well (`ToggleInternalClothing` → pockets), or nested click. Hand / gear / clothing slots do **not** open the 1-slot equip container — click equip/unequips (or selects hand) unless the held/worn item has its own `AttachedContainer`. Drag to another slot transfers; drag into the world (not over UI) places via `HumanInventory.ClientPlaceItemInWorld` (DropInteraction rules). Panel width follows container columns; header drag uses UITK pointer capture with the host on `InputInterface`. HUD slots register as `HudDropTarget` peers for panel↔HUD transfers.
 
@@ -31,6 +33,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainer.cs` — container primitive
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Cloth.cs` / `ClothesDisplayer.cs` / `ClothingItemPresentation.cs` — worn body mesh + folded world/hand form
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/ClothingPrefabSetup.cs` — **SS3D → Inventory → Setup Clothing World Presentation (Jumpsuits)**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandsPrefabSetup.cs` — **SS3D → Inventory → Wire Human Hands**, (re)wires `Hands.PlayerHands`
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
@@ -52,6 +56,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Storage Panel → Rebuild Asset Catalog**.
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip with **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.
 - **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Assets/Art/Icons/Alerts/`, wire catalog/builder/editor fallback, rebuild catalog; add F4 debug row + `AlertStackCommand` case.
+- **New clothing with dual mesh:** add folded + worn-shaped children on one Item, `Cloth` mesh map, `ClothingItemPresentation` + root collider via `ClothingPrefabSetup` (or same PrefabUtility pattern) — never a second NetworkObject for the folded form.
 
 ## Pitfalls
 
@@ -71,6 +76,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Locker door gates storage:** `Locker` implements `IStorageAccessGate` — View/Store `CanInteract` is false while closed. Door priority is 30 when closed (open wins click) and 15 when open (view at 25 wins click; close via radial). Closing the door calls `CloseStorageUIs` so panels cannot outlive the door.
 - **Gear-strip panels open above the anchor:** `StoragePanelHost.PositionPanel` flips above when the anchor is near the bottom (belt/ID/pocket/back). Do not set `style.top = gearBound.y` without that clamp — the strip sits on the screen edge.
 - **Sticky `_dragMoved` blocks hand clicks:** HUD WireDrag must clear `_dragMoved` on every PointerDown *before* the empty-slot early-out. After dragging an item out of a hand, the well is empty so the next press never re-entered the old reset path and ClickEvent kept ignoring hand switches.
+- **Dropped clothing falls through floor / looks body-shaped:** missing root collider or active worn-shaped child — use `ClothingItemPresentation` + root `BoxCollider` on the Item (jumpsuit base); `Item.SetVisibility(true)` re-applies world form. Do not spawn a separate folded NetworkObject.
+- **Worn equipment HUD shows folded pile:** equipment doll must call `Item.GetHudSprite(preferWornShape: true)`; hands/storage keep default `ItemSprite` (folded). Do not point both at the same cached sprite.
 - **Play Mode / Editor verification still required** for this clean-slate pass (catalog present; compile/Play Mode not run in implementing session).
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
 - **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
@@ -86,4 +93,5 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
 - [2026-07_inventory-storage-redesign](../2026-07_inventory-storage-redesign.md)
+- [clothing_world_presentation.plan.md](../../plans/clothing_world_presentation.plan.md)
 - [INDEX.md](../INDEX.md)

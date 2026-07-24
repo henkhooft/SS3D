@@ -29,5 +29,17 @@ namespace SS3D.Systems.Inventory.Containers
         Belt = 1 << 15,
         Pda = 1 << 16,
     }
+
+    public static class ContainerTypeExtensions
+    {
+        /// <summary>
+        /// True for clothes-type containers (worn on the body), false for hands/pockets/bags/ID/PDA.
+        /// Relies on the enum ordering guaranteed by the doc comment on <see cref="ContainerType"/>.
+        /// </summary>
+        public static bool IsWornSlot(this ContainerType type)
+        {
+            return type >= ContainerType.ShoeLeft;
+        }
+    }
 }
 

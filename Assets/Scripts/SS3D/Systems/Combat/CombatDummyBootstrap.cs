@@ -1,6 +1,10 @@
+using SS3D.Core;
+using SS3D.Data.Generated;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Interactions;
+using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Screens;
 using UnityEngine;
 
@@ -34,6 +38,35 @@ namespace SS3D.Systems.Combat
             }
 
             gameObject.name = "CombatDummy";
+        }
+
+        /// <summary>
+        /// Equips the Phase 5 armor test piece so absorption can be verified without manual give/equip.
+        /// </summary>
+        public void EquipArmorTestLoadout()
+        {
+            if (!TryGetComponent(out HumanInventory inventory))
+            {
+                inventory = GetComponentInChildren<HumanInventory>();
+            }
+
+            if (inventory == null)
+            {
+                return;
+            }
+
+            if (!inventory.TryGetTypeContainer(ContainerType.Jumpsuit, 0, out AttachedContainer jumpsuitSlot))
+            {
+                return;
+            }
+
+            if (jumpsuitSlot.ItemCount > 0)
+            {
+                return;
+            }
+
+            ItemSubSystem items = SubSystems.Get<ItemSubSystem>();
+            items.SpawnItemInContainer(Items.JumpsuitSecurity, jumpsuitSlot);
         }
 
         private void DisableBehavioursInChildren<T>() where T : Behaviour
