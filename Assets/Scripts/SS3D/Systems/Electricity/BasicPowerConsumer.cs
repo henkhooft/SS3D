@@ -23,7 +23,21 @@ namespace SS3D.Systems.Electricity
         public float PowerNeeded => _powerConsumption;
         public PowerChannel Channel => _channel;
         public event EventHandler<PowerStatus> OnPowerStatusUpdated;
-        public PowerStatus PowerStatus { get => _powerStatus; set => _powerStatus = value; }
+        public PowerStatus PowerStatus
+        {
+            get => _powerStatus;
+            set
+            {
+                // SyncVar is server-authoritative — client assigns spam FishNet
+                // "Cannot complete operation as server when server is not active".
+                if (!IsServer)
+                {
+                    return;
+                }
+
+                _powerStatus = value;
+            }
+        }
 
         public override void OnStartClient()
         {

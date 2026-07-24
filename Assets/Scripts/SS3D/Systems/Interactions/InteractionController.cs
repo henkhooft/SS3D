@@ -460,7 +460,10 @@ namespace SS3D.Systems.Interactions
                 out BodyZone zone,
                 out TileCoord structuralCoord,
                 out bool hitLiving,
-                out bool hitStructural);
+                out bool hitStructural,
+                out Vector3 impactPoint,
+                out bool hasImpact,
+                out Vector3 shotDirection);
 
             bool landed = false;
             if (resolved && hitLiving && health != null)
@@ -480,7 +483,7 @@ namespace SS3D.Systems.Interactions
             }
 
             ClearMeleeAimPoint();
-            ServerNotifyRangedFireState(weapon, landed);
+            ServerNotifyRangedFireState(weapon, landed, hasImpact, impactPoint, shotDirection);
         }
 
         [ServerRpc]
@@ -517,7 +520,12 @@ namespace SS3D.Systems.Interactions
         }
 
         [Server]
-        private void ServerNotifyRangedFireState(RangedWeaponItemExtension weapon, bool landed)
+        private void ServerNotifyRangedFireState(
+            RangedWeaponItemExtension weapon,
+            bool landed,
+            bool hasImpact,
+            Vector3 impactPoint,
+            Vector3 shotDirection)
         {
             if (Owner == null || weapon == null)
             {
@@ -529,7 +537,10 @@ namespace SS3D.Systems.Interactions
                 weapon.Profile.FireCooldownSeconds,
                 weapon.RoundsRemaining,
                 weapon.RecoilStacks,
-                landed);
+                landed,
+                hasImpact,
+                impactPoint,
+                shotDirection);
         }
 
         [TargetRpc]
@@ -538,7 +549,10 @@ namespace SS3D.Systems.Interactions
             float cooldownSeconds,
             int rounds,
             float recoilStacks,
-            bool landed)
+            bool landed,
+            bool hasImpact,
+            Vector3 impactPoint,
+            Vector3 shotDirection)
         {
             if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
             {
@@ -547,7 +561,11 @@ namespace SS3D.Systems.Interactions
                 weapon.ClientSetRecoil(recoilStacks);
             }
 
-            if (landed)
+            if (hasImpact)
+            {
+                RangedShotFeedback.NotifyLocalShotImpact(impactPoint, landed, shotDirection);
+            }
+            else if (landed)
             {
                 MeleeConnectFeedback.NotifyLocalConnectHitLanded();
             }

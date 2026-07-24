@@ -2,7 +2,8 @@
     "name": "CombatEditorAssembly",
     "rootNamespace": "",
     "references": [
-        "GUID:ca7dfa56d1d490249a5fe56aee92a13c"
+        "GUID:ca7dfa56d1d490249a5fe56aee92a13c",
+        "GUID:7c88a4a7926ee5145ad2dfa06f454c67"
     ],
     "includePlatforms": [
         "Editor"

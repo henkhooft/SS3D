@@ -14,9 +14,8 @@ Two tracks run in parallel — an **operational** one that makes the game testab
 - **T1** — Loadable Windows build: it runs but is missing critical files/permissions (likely unpacked Addressables content) — diagnose against a real build
 - **T2** — Zero-setup remote join: launch bats hardcode `127.0.0.1`; a public build must default to the hosted server
 
-**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md):
+**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 now shipped: ranged hitscan + per-zone armor absorption/integrity; environmental seal deferred):
 
-- **M1** — Combat ranged + dedicated weapons (+ thin armor) — ranged hitscan slice shipped; thin armor still open
 - **M2** — Station structural damage model — scoped to route-opening (no live area/atmos recompute)
 - **M5** — Round-resolution spine: death→spectator + round-end summary/reveal (death detach already wired via the ghost body; the summary/reveal is net-new). **Shared with the test server's T4 round-end loop** — the same spine unlocks both.
 

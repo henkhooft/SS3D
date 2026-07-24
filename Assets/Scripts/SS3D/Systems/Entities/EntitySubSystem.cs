@@ -231,6 +231,7 @@ namespace SS3D.Systems.Entities
             }
 
             bootstrap.ConfigureAsDummy();
+            bootstrap.EquipArmorTestLoadout();
 
             Log.Information(this, "Spawned combat dummy at {position}", Logs.ServerOnly, position);
             return entity;

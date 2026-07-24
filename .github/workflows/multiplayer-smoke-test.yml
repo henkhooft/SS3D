@@ -1,26 +1,36 @@
 #https://game.ci/docs/github/builder
 # Builds a real headless dedicated-server binary and a real client binary, then runs them
 # against each other via Testing/multiplayer/run_smoketest.sh - the actual multiplayer test
-# harness. Opt-in for PRs (label test:multiplayer) and manual dispatch. The full gated path
-# (EditMode → build → smoke → prerelease) is develop-release.yml — this workflow does not
-# auto-run on every develop push (license cost at high merge volume).
+# harness. Opt-in for PRs (label test:multiplayer), manual dispatch, and nightly on develop.
+# Runs on the self-hosted TomNAS runner (labels: self-hosted,linux,x64,unity) with a warm
+# host Library stash — see Documents/architecture/2026-07_multiplayer-testing-self-hosted-ci.md.
 #
-# See Documents/architecture/2026-07_multiplayer-test-harness.md and
+# Server+client are built in ONE Editor session (ClientAndServerBuildScript.BuildBothForCi).
+# Two sequential unity-builder steps share Library across Docker restarts and race PackageCache
+# (CS2001 / missing Unity.Cecil.Awesome.dll on the client step).
+#
+# See also Documents/architecture/2026-07_multiplayer-test-harness.md and
 # Documents/architecture/2026-07_ci-develop-release-pipeline.md.
 name: Multiplayer Smoke Test
 on:
   pull_request:
     types: [labeled, synchronize, opened, reopened]
   workflow_dispatch: {}
+  schedule:
+    # Nightly UTC — self-hosted minutes are free; keep the warm Library stash exercised.
+    - cron: "0 4 * * *"
 jobs:
   multiplayer-smoke-test:
     name: Build and run multiplayer smoke test
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'test:multiplayer')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unity]
     environment:
       name: unity_tests
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # Host-side warm Library cache (same filesystem as the runner workdir — mv is rename).
+      # Created on TomNAS at /home/cu6e/.cache/ss3d/Library; never wipe between successful runs.
+      SS3D_UNITY_LIBRARY_STASH: /home/cu6e/.cache/ss3d/Library
       SERVER_BUILD_DIR: ${{ github.workspace }}/build/GameServer/StandaloneLinux64
       CLIENT_BUILD_DIR: ${{ github.workspace }}/build/Game/StandaloneLinux64
       # Unity 6 Linux players no longer append .x86_64; game-ci -customBuildPath uses buildName as-is.
@@ -31,6 +41,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Restore Unity Library stash
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          # Self-hosted workdirs persist; never keep a leftover workspace Library.
+          if [[ -d "$workspace_lib" ]]; then
+            echo "Removing leftover workspace Library/ before restore"
+            rm -rf "$workspace_lib"
+          fi
+          if [[ -d "$stash" ]]; then
+            echo "Restoring warm Library stash from $stash"
+            du -sh "$stash" || true
+            # Same-filesystem rename (O(1)). Symlinks break Docker mounts (game-ci#603).
+            mv "$stash" "$workspace_lib"
+          else
+            echo "No Library stash at $stash — cold import this run"
+          fi
       - name: Validate Unity CI secrets
         run: |
           missing=0
@@ -43,7 +72,7 @@ jobs:
             missing=1
           fi
           exit $missing
-      - name: Build dedicated server
+      - name: Build dedicated server and client
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -51,27 +80,44 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
-          buildName: SS3D-Server
-          buildsPath: build/GameServer
-          targetPlatform: StandaloneLinux64
-          buildMethod: SS3D.Editor.ServerBuildScript.BuildServer
-          versioning: None
-          unityVersion: 6000.3.16f1
-      - name: Build client
-        uses: game-ci/unity-builder@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
+          # Primary output for game-ci's existence check = client; BuildBothForCi also writes the server.
           buildName: SS3D-Client
           buildsPath: build/Game
           targetPlatform: StandaloneLinux64
-          buildMethod: SS3D.Editor.ClientBuildScript.BuildClient
+          buildMethod: SS3D.Editor.ClientAndServerBuildScript.BuildBothForCi
           versioning: None
           unityVersion: 6000.3.16f1
+          runAsHostUser: true
+      - name: Verify server binary exists
+        run: |
+          set -euo pipefail
+          test -x "$SERVER_BUILD_DIR/$SERVER_BIN_NAME"
+          test -x "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"
+          ls -la "$SERVER_BUILD_DIR/$SERVER_BIN_NAME" "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"
+      - name: Save Unity Library stash
+        if: success()
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            rm -rf "$stash"
+            mv "$workspace_lib" "$stash"
+            echo "Saved Library stash to $stash"
+            du -sh "$stash" || true
+          else
+            echo "No workspace Library/ to stash"
+          fi
+      - name: Discard Library after failed build
+        if: failure()
+        run: |
+          # Do not stash a failed Library (incomplete PackageCache poisons the next warm run).
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE}/Library"
+          echo "Discarded workspace Library/ after failure"
       - name: Run multiplayer smoke tests
+        if: success()
         env:
           SS3D_SERVER_BUILD_DIR: ${{ env.SERVER_BUILD_DIR }}
           SS3D_CLIENT_BUILD_DIR: ${{ env.CLIENT_BUILD_DIR }}
