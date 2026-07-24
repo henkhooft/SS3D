@@ -98,13 +98,24 @@ namespace SS3D.Substances
         [SyncVar]
         private bool _initialised = false;
 
-        protected override void OnStart()
+        /// <summary>
+        /// Seed prefab <see cref="InitialSubstances"/> on the server only.
+        /// Writing SyncVars from Unity <c>Start</c> on pure clients hits the smoke denylist
+        /// (<c>Cannot complete operation as server when server is not active</c>) — e.g. OxygenTank.
+        /// </summary>
+        public override void OnStartServer()
         {
-            foreach(var substance in InitialSubstances)
+            base.OnStartServer();
+
+            if (InitialSubstances != null)
             {
-                AddSubstance(substance.Substance, substance.MilliMoles);
+                foreach (SubstanceEntry substance in InitialSubstances)
+                {
+                    AddSubstance(substance.Substance, substance.MilliMoles);
+                }
             }
-            if (IsServer) _initialised = true;
+
+            _initialised = true;
         }
 
         public void Init(float volume, bool locked)
