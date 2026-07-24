@@ -23,6 +23,7 @@ using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.Stamina;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile;
 using System.Collections;
