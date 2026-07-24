@@ -69,6 +69,16 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# Previous runs may leave players alive (Unity often ignores SIGTERM after ScriptComplete).
+# Kill only the exact binaries this run is about to launch — not arbitrary SS3D processes.
+for orphan_bin in "$SERVER_BUILD_DIR/$SERVER_BIN_NAME" "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"; do
+    while read -r orphan_pid; do
+        [[ -n "$orphan_pid" ]] || continue
+        echo "warning: killing leftover PID $orphan_pid using $orphan_bin" >&2
+        kill -KILL "$orphan_pid" 2>/dev/null || true
+    done < <(pgrep -f "^${orphan_bin}( |$)" 2>/dev/null || true)
+done
+
 # Resolve each client's scenario script and ckey up front so a missing script fails fast,
 # before any process is started.
 CLIENT_SCRIPTS=()
@@ -171,6 +181,9 @@ wait_for_pid_exit "$SERVER_PID" 30 || true
 for pid in "${CLIENT_PIDS[@]}"; do
     wait_for_pid_exit "$pid" 30 || true
 done
+
+# Guarantee no leftover players (Environment.Exit / SIGTERM are not reliable for Unity 6).
+kill_tracked_pids
 
 CHECK_LABELS=("server")
 CHECK_UNITY_LOGS=("$SERVER_UNITY_LOG")

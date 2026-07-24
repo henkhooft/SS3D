@@ -95,9 +95,16 @@ last_tracked_pid() {
 }
 
 kill_tracked_pids() {
+    # Unity batchmode players often ignore plain SIGTERM after ScriptComplete; escalate to KILL.
     for pid in "${SS3D_TRACKED_PIDS[@]:-}"; do
         if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            kill "$pid" 2>/dev/null
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+    sleep 1
+    for pid in "${SS3D_TRACKED_PIDS[@]:-}"; do
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
         fi
     done
 }

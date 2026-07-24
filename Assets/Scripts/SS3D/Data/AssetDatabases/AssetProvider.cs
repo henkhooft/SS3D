@@ -42,6 +42,8 @@ namespace SS3D.Data.AssetDatabases
             _backend = new AddressablesLoadBackend();
         }
 
+        private static readonly object Gate = new();
+
         public static async UniTask<AssetHandle<TAsset>> AcquireAsync<TAsset>([NotNull] string key)
             where TAsset : Object
         {
@@ -50,46 +52,81 @@ namespace SS3D.Data.AssetDatabases
                 throw new ArgumentException("Asset key must be non-empty.", nameof(key));
             }
 
-            if (Entries.TryGetValue(key, out SharedEntry existing))
+            SharedEntry entry = null;
+            UniTaskCompletionSource<bool> loadingToAwait = null;
+
+            lock (Gate)
             {
-                if (existing.Loading != null)
+                if (Entries.TryGetValue(key, out SharedEntry existing))
                 {
-                    await existing.Loading.Task;
+                    if (existing.Loading != null)
+                    {
+                        loadingToAwait = existing.Loading;
+                    }
+                    else if (existing.Asset == null)
+                    {
+                        throw new InvalidOperationException($"Asset key '{key}' failed to load.");
+                    }
+                    else
+                    {
+                        existing.RefCount++;
+                        return new AssetHandle<TAsset>(key, (TAsset)existing.Asset);
+                    }
                 }
-
-                if (existing.Asset == null)
+                else
                 {
-                    throw new InvalidOperationException($"Asset key '{key}' failed to load.");
+                    entry = new SharedEntry
+                    {
+                        RefCount = 1,
+                        Loading = new UniTaskCompletionSource<bool>(),
+                    };
+                    Entries[key] = entry;
                 }
-
-                existing.RefCount++;
-                return new AssetHandle<TAsset>(key, (TAsset)existing.Asset);
             }
 
-            SharedEntry entry = new()
+            if (loadingToAwait != null)
             {
-                RefCount = 1,
-                Loading = new UniTaskCompletionSource<bool>(),
-            };
-            Entries[key] = entry;
+                await loadingToAwait.Task;
+
+                lock (Gate)
+                {
+                    if (!Entries.TryGetValue(key, out SharedEntry after) || after.Asset == null)
+                    {
+                        throw new InvalidOperationException($"Asset key '{key}' failed to load.");
+                    }
+
+                    after.RefCount++;
+                    return new AssetHandle<TAsset>(key, (TAsset)after.Asset);
+                }
+            }
 
             try
             {
                 (TAsset asset, object token) = await _backend.LoadAsync<TAsset>(key);
-                entry.Asset = asset;
-                entry.ReleaseToken = token;
-                entry.Loading.TrySetResult(true);
-                entry.Loading = null;
+                lock (Gate)
+                {
+                    entry.Asset = asset;
+                    entry.ReleaseToken = token;
+                    entry.Loading.TrySetResult(true);
+                    entry.Loading = null;
+                }
+
                 return new AssetHandle<TAsset>(key, asset);
             }
             catch (Exception)
             {
-                Entries.Remove(key);
-                // Wake concurrent waiters with a completed result (Asset stays null → they throw).
-                // Do not TrySetException: with no waiters that fault is unobserved, UniTask logs it,
-                // and Unity EditMode LogAssert fails later unrelated tests.
-                entry.Loading.TrySetResult(false);
-                entry.Loading = null;
+                UniTaskCompletionSource<bool> loading;
+                lock (Gate)
+                {
+                    Entries.Remove(key);
+                    // Wake concurrent waiters with a completed result (Asset stays null → they throw).
+                    // Do not TrySetException: with no waiters that fault is unobserved, UniTask logs it,
+                    // and Unity EditMode LogAssert fails later unrelated tests.
+                    loading = entry.Loading;
+                    entry.Loading = null;
+                }
+
+                loading?.TrySetResult(false);
                 throw;
             }
         }
@@ -105,30 +142,66 @@ namespace SS3D.Data.AssetDatabases
                 throw new ArgumentException("Asset key must be non-empty.", nameof(key));
             }
 
-            if (Entries.TryGetValue(key, out SharedEntry existing))
-            {
-                if (existing.Loading != null)
-                {
-                    existing.Loading.Task.GetAwaiter().GetResult();
-                }
+            SharedEntry entry = null;
+            UniTaskCompletionSource<bool> loadingToAwait = null;
 
-                existing.RefCount++;
-                return new AssetHandle<TAsset>(key, (TAsset)existing.Asset);
+            lock (Gate)
+            {
+                if (Entries.TryGetValue(key, out SharedEntry existing))
+                {
+                    if (existing.Loading != null)
+                    {
+                        loadingToAwait = existing.Loading;
+                    }
+                    else
+                    {
+                        existing.RefCount++;
+                        return new AssetHandle<TAsset>(key, (TAsset)existing.Asset);
+                    }
+                }
+                else
+                {
+                    // Sync path does not publish a Loading TCS — concurrent AcquireAsync for the
+                    // same key is unsupported while a sync load is in flight.
+                    entry = new SharedEntry { RefCount = 1 };
+                    Entries[key] = entry;
+                }
             }
 
-            SharedEntry entry = new() { RefCount = 1 };
-            Entries[key] = entry;
+            if (loadingToAwait != null)
+            {
+                loadingToAwait.Task.GetAwaiter().GetResult();
+
+                lock (Gate)
+                {
+                    if (!Entries.TryGetValue(key, out SharedEntry after) || after.Asset == null)
+                    {
+                        throw new InvalidOperationException($"Asset key '{key}' failed to load.");
+                    }
+
+                    after.RefCount++;
+                    return new AssetHandle<TAsset>(key, (TAsset)after.Asset);
+                }
+            }
 
             try
             {
                 (TAsset asset, object token) = _backend.LoadSync<TAsset>(key);
-                entry.Asset = asset;
-                entry.ReleaseToken = token;
+                lock (Gate)
+                {
+                    entry.Asset = asset;
+                    entry.ReleaseToken = token;
+                }
+
                 return new AssetHandle<TAsset>(key, asset);
             }
             catch
             {
-                Entries.Remove(key);
+                lock (Gate)
+                {
+                    Entries.Remove(key);
+                }
+
                 throw;
             }
         }
@@ -136,10 +209,13 @@ namespace SS3D.Data.AssetDatabases
         public static bool TryGetCached<TAsset>([NotNull] string key, out TAsset asset)
             where TAsset : Object
         {
-            if (Entries.TryGetValue(key, out SharedEntry entry) && entry.Asset is TAsset typed)
+            lock (Gate)
             {
-                asset = typed;
-                return true;
+                if (Entries.TryGetValue(key, out SharedEntry entry) && entry.Asset is TAsset typed)
+                {
+                    asset = typed;
+                    return true;
+                }
             }
 
             asset = null;
@@ -178,36 +254,47 @@ namespace SS3D.Data.AssetDatabases
 
         internal static void ReleaseShared([NotNull] string key)
         {
-            if (!Entries.TryGetValue(key, out SharedEntry entry))
+            object tokenToRelease = null;
+
+            lock (Gate)
             {
-                return;
+                if (!Entries.TryGetValue(key, out SharedEntry entry))
+                {
+                    return;
+                }
+
+                entry.RefCount--;
+                if (entry.RefCount > 0)
+                {
+                    return;
+                }
+
+                tokenToRelease = entry.ReleaseToken;
+                Entries.Remove(key);
             }
 
-            entry.RefCount--;
-            if (entry.RefCount > 0)
+            if (tokenToRelease != null)
             {
-                return;
+                _backend.Release(tokenToRelease);
             }
-
-            if (entry.ReleaseToken != null)
-            {
-                _backend.Release(entry.ReleaseToken);
-            }
-
-            Entries.Remove(key);
         }
 
         public static void ReleaseAll()
         {
-            foreach (KeyValuePair<string, SharedEntry> pair in Entries.ToList())
+            List<object> tokens;
+            lock (Gate)
             {
-                if (pair.Value.ReleaseToken != null)
-                {
-                    _backend.Release(pair.Value.ReleaseToken);
-                }
+                tokens = Entries.Values
+                    .Where(e => e.ReleaseToken != null)
+                    .Select(e => e.ReleaseToken)
+                    .ToList();
+                Entries.Clear();
             }
 
-            Entries.Clear();
+            foreach (object token in tokens)
+            {
+                _backend.Release(token);
+            }
         }
     }
 }
