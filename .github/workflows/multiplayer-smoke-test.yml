@@ -1,26 +1,32 @@
 #https://game.ci/docs/github/builder
 # Builds a real headless dedicated-server binary and a real client binary, then runs them
 # against each other via Testing/multiplayer/run_smoketest.sh - the actual multiplayer test
-# harness. Opt-in for PRs (label test:multiplayer) and manual dispatch. The full gated path
-# (EditMode → build → smoke → prerelease) is develop-release.yml — this workflow does not
-# auto-run on every develop push (license cost at high merge volume).
+# harness. Opt-in for PRs (label test:multiplayer), manual dispatch, and nightly on develop.
+# Runs on the self-hosted TomNAS runner (labels: self-hosted,linux,x64,unity) with a warm
+# host Library stash — see Documents/architecture/2026-07_multiplayer-testing-self-hosted-ci.md.
 #
-# See Documents/architecture/2026-07_multiplayer-test-harness.md and
+# See also Documents/architecture/2026-07_multiplayer-test-harness.md and
 # Documents/architecture/2026-07_ci-develop-release-pipeline.md.
 name: Multiplayer Smoke Test
 on:
   pull_request:
     types: [labeled, synchronize, opened, reopened]
   workflow_dispatch: {}
+  schedule:
+    # Nightly UTC — self-hosted minutes are free; keep the warm Library stash exercised.
+    - cron: "0 4 * * *"
 jobs:
   multiplayer-smoke-test:
     name: Build and run multiplayer smoke test
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'test:multiplayer')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unity]
     environment:
       name: unity_tests
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # Host-side warm Library cache (same filesystem as the runner workdir — mv is rename).
+      # Created on TomNAS at /home/cu6e/.cache/ss3d/Library; never wipe between successful runs.
+      SS3D_UNITY_LIBRARY_STASH: /home/cu6e/.cache/ss3d/Library
       SERVER_BUILD_DIR: ${{ github.workspace }}/build/GameServer/StandaloneLinux64
       CLIENT_BUILD_DIR: ${{ github.workspace }}/build/Game/StandaloneLinux64
       # Unity 6 Linux players no longer append .x86_64; game-ci -customBuildPath uses buildName as-is.
@@ -31,6 +37,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Restore Unity Library stash
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            echo "Workspace already has Library/ — leaving in place"
+          elif [[ -d "$stash" ]]; then
+            echo "Restoring warm Library stash from $stash"
+            du -sh "$stash" || true
+            # Same-filesystem rename (O(1)). Symlinks break Docker mounts (game-ci#603).
+            mv "$stash" "$workspace_lib"
+          else
+            echo "No Library stash at $stash — cold import this run"
+          fi
       - name: Validate Unity CI secrets
         run: |
           missing=0
@@ -57,6 +79,7 @@ jobs:
           buildMethod: SS3D.Editor.ServerBuildScript.BuildServer
           versioning: None
           unityVersion: 6000.3.16f1
+          runAsHostUser: true
       - name: Build client
         uses: game-ci/unity-builder@v4
         env:
@@ -71,6 +94,23 @@ jobs:
           buildMethod: SS3D.Editor.ClientBuildScript.BuildClient
           versioning: None
           unityVersion: 6000.3.16f1
+          runAsHostUser: true
+      - name: Save Unity Library stash
+        if: always()
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            # Drop any previous partial stash so mv succeeds.
+            rm -rf "$stash"
+            mv "$workspace_lib" "$stash"
+            echo "Saved Library stash to $stash"
+            du -sh "$stash" || true
+          else
+            echo "No workspace Library/ to stash"
+          fi
       - name: Run multiplayer smoke tests
         env:
           SS3D_SERVER_BUILD_DIR: ${{ env.SERVER_BUILD_DIR }}

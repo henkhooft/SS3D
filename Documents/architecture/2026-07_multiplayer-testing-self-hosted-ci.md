@@ -1,6 +1,6 @@
 > Implements: none (infrastructure — CI/test tooling, not a gameplay domain)
 > Touches systems: networking-session, electricity, area, ingame-console, logging
-> Status: planned
+> Status: in-progress (Phase 0 TomNAS-unity online; warm smoke proof pending; Phases 1–2 open)
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 
@@ -38,22 +38,37 @@ different bucket:
 
 The single biggest lever on build time is a **persistent `Library/` cache**, not the CI
 tool. CI pays ~45 min because every run re-imports assets and does a full IL2CPP compile from
-an empty `Library`; on a persistent box with a cached Library volume, server+client rebuilds
-drop to minutes.
+an empty `Library`; on a persistent box with a cached Library, server+client rebuilds drop to
+minutes.
 
-- Register the x64 box as a GitHub Actions self-hosted runner with labels
-  `[self-hosted, linux, x64, unity]`.
-- Point the build jobs in `multiplayer-smoke-test.yml` (and, later, `develop-release.yml` /
-  `editmodetestrunner.yml`) at those labels via `runs-on`. The `game-ci/unity-builder@v4`
-  steps, build methods, `versioning: None`, and binary names stay as-is.
-- Run the builds inside the `unityci/editor:6000.3.16f1-*-il2cpp` image with a **named Docker
-  volume mounted at the project `Library/`** so it survives between runs. Warm cache is the
-  whole point — do not wipe it per run.
-- Unity license: activate the personal/plus license in the container the same way game-ci
-  does; the `unity_tests` Environment secrets still apply.
-- Cadence: keep the current triggers (PR label `test:multiplayer`, `workflow_dispatch`), and
-  add a **nightly scheduled** smoke run on `develop` now that runner minutes are free and the
-  dev box is uninvolved.
+### Ops (TomNAS — provisioned Jul 2026)
+
+| Item | Value |
+|------|--------|
+| SSH | `ssh tomnas` (user `cu6e`) |
+| Runner name | `TomNAS-unity` |
+| Labels | `self-hosted`, `linux`/`Linux`, `x64`/`X64`, `unity` |
+| Install dir | `/home/cu6e/actions-runner` |
+| Service | user systemd `github-actions-runner.service` (`systemctl --user …`) |
+| Library stash | `/home/cu6e/.cache/ss3d/Library` (same FS as `/home/cu6e` — `mv` is rename) |
+| Manual clone slot | `/home/cu6e/Dev/` (optional; CI checks out into runner `_work`) |
+
+Still required once was: docker group + linger + image pull (done Jul 2026). Pre-pull:
+
+```bash
+ssh tomnas 'docker pull unityci/editor:ubuntu-6000.3.16f1-linux-il2cpp-3'
+```
+
+Without the docker group, `game-ci/unity-builder` fails on the daemon socket. Without linger,
+the user systemd unit dies when all `cu6e` sessions end.
+
+### Workflow
+
+- [`.github/workflows/multiplayer-smoke-test.yml`](../../.github/workflows/multiplayer-smoke-test.yml):
+  `runs-on: [self-hosted, linux, x64, unity]`; restore/save Library stash via `mv` around
+  the two `unity-builder` steps; `runAsHostUser: true`; nightly `cron: "0 4 * * *"`.
+- Build methods, `versioning: None`, and binary names unchanged.
+- Later: same labels for `editmodetestrunner.yml` / Linux path of `develop-release.yml`.
 
 Net effect: the exact 45-min / metered-minutes pain the CI-pipeline doc
 ([2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md)) records
