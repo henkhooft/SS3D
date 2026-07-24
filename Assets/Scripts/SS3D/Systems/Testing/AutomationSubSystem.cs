@@ -73,6 +73,10 @@ namespace SS3D.Systems.Testing
 
             _scriptStarted = true;
 
+            // Capture stacks for FishNet SyncVar-on-client warnings (smoke denylist).
+            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.Full);
+            Application.logMessageReceived += HandleUnityLogMessage;
+
             SubscribeToConnectionEvents();
             AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
 
@@ -457,6 +461,19 @@ namespace SS3D.Systems.Testing
             // process dies — that noise fails the harness after a successful scenario.
             yield return null;
             System.Environment.Exit(0);
+        }
+
+        private static void HandleUnityLogMessage(string condition, string stackTrace, LogType type)
+        {
+            if (type != LogType.Warning
+                || string.IsNullOrEmpty(condition)
+                || !condition.Contains("Cannot complete operation as server when server is not active"))
+            {
+                return;
+            }
+
+            // Appears in unity.log next to the FishNet warning so triage can name the writer.
+            Debug.Log($"[SS3D SyncVarGuard] FishNet server-write warning stack:\n{stackTrace}");
         }
     }
 }

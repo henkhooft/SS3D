@@ -27,7 +27,19 @@ namespace SS3D.Systems.Electricity
         }
         
         public event EventHandler<PowerStatus> OnPowerStatusUpdated;
-        public PowerStatus PowerStatus { get => _powerStatus; set => _powerStatus = value; }
+        public PowerStatus PowerStatus
+        {
+            get => _powerStatus;
+            set
+            {
+                if (!IsServer)
+                {
+                    return;
+                }
+
+                _powerStatus = value;
+            }
+        }
 
         public PowerChannel Channel => PowerChannel.Equipment;
 
