@@ -151,7 +151,8 @@ namespace SS3D.Systems.Tile.Connections
                 neighbourObject?.UpdateSingleAdjacency(TileHelper.GetOpposite(dir), _placedObject, false);
                 // SyncVar is server-authoritative — writing on a pure client logs FishNet
                 // "Cannot complete operation as server when server is not active".
-                if (IsServer)
+                // NetworkObject first — IsServer NREs when _networkObjectCache is null (EditMode).
+                if (NetworkObject == null || !NetworkObject.IsSpawned || IsServer)
                 {
                     _syncedConnections = _adjacencyMap.SerializeToByte();
                 }

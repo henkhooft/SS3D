@@ -206,7 +206,8 @@ namespace SS3D.Systems.Tile.Connections
             _pendingAdjacencyPayload = payload.PackDisposal();
             _hasPendingAdjacency = true;
 
-            if (IsServer && NetworkObject != null && NetworkObject.IsSpawned)
+            // NetworkObject first — IsServer NREs when _networkObjectCache is null (EditMode).
+            if (NetworkObject != null && NetworkObject.IsSpawned && IsServer)
             {
                 _syncedAdjacencyPayload = _pendingAdjacencyPayload;
                 _hasPendingAdjacency = false;

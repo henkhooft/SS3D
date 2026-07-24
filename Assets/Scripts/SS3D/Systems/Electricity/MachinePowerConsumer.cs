@@ -32,7 +32,9 @@ namespace SS3D.Systems.Electricity
             get => _powerStatus;
             set
             {
-                if (!IsServer)
+                // Allow EditMode/offline; block pure clients only.
+                // NetworkObject first — IsServer NREs when _networkObjectCache is null.
+                if (NetworkObject != null && NetworkObject.IsSpawned && !IsServer)
                 {
                     return;
                 }

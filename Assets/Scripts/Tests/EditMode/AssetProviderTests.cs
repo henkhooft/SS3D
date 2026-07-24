@@ -159,8 +159,9 @@ namespace EditorTests
             {
                 if (LoadDelayMs > 0)
                 {
-                    // EditMode has no PlayerLoop — default UniTask.Delay never completes (180s Timeout).
-                    await UniTask.Delay(LoadDelayMs, DelayType.Realtime);
+                    // EditMode has no PlayerLoop — UniTask.Delay (even Realtime) can stall or take
+                    // minutes under -batchmode; System.Threading.Tasks timers keep working.
+                    await Task.Delay(LoadDelayMs);
                 }
 
                 return LoadSync<TAsset>(key);

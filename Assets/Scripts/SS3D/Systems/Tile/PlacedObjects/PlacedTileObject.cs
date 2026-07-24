@@ -310,7 +310,12 @@ namespace SS3D.Systems.Tile
         /// </summary>
         private void RegisterWithClientMap()
         {
-            if (IsServer || _clientRegistered)
+            // NetworkObject first — IsServer NREs when _networkObjectCache is null (EditMode).
+            // Offline/unspawned: skip; server/host already tracks the tile.
+            if (_clientRegistered
+                || NetworkObject == null
+                || !NetworkObject.IsSpawned
+                || IsServer)
                 return;
 
             _clientRegistered = true;
@@ -321,7 +326,10 @@ namespace SS3D.Systems.Tile
         {
             base.OnStopClient();
 
-            if (IsServer || !_clientRegistered)
+            if (!_clientRegistered
+                || NetworkObject == null
+                || !NetworkObject.IsSpawned
+                || IsServer)
                 return;
 
             _clientRegistered = false;
