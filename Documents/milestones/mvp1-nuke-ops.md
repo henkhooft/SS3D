@@ -1,7 +1,7 @@
 > Goal: A playable Nuclear Operatives round — ops (or proxies) plant/defuse a device; guns and breakable walls matter; on-station syndie spawn is enough
 > Status: planned
 > Depends on: —
-> Current focus: M1 (thin armor after ranged hitscan slice), M2 (station structural damage), M5 (death→spectator + round-end summary — newly surfaced spine)
+> Current focus: M2 (station structural damage), M5 (death→spectator + round-end summary — newly surfaced spine) — M1 shipped (ranged hitscan + thin armor)
 
 # MVP1 — Nuclear Operatives round
 
@@ -62,7 +62,7 @@ flowchart TB
 ```
 
 - **Health zone damage** — largely shipped ([health.md](../design/health.md); [health_implementation_plan.md](../plans/health_implementation_plan.md) Phases 0–5b). Prerequisite for combat leaves, not a current focus leaf.
-- **Ranged combat** — the accuracy-cone model ([combat.md](../design/combat.md) §3) carries an **unresolved implementation decision**: hitscan vs. projectile, flagged in that doc §3/§6 as having real FishNet prediction implications. Confirm this before building M1's ranged slice, and reuse the existing occlusion raycast for cover/LOS ([combat.md](../design/combat.md) §3) rather than a parallel one.
+- **Ranged combat + thin armor** — shipped ([combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + Phase 5; [systems/combat.md](../architecture/systems/combat.md)): accuracy cone, shared `LineOfSight`, M4 mag/reload, per-zone armor absorption/integrity before limb damage. Projectile travel still deferred for thrown/heavy; environmental seal/breach ([armor.md](../design/armor.md) §3) deferred, blocked on an environment→health exposure pipeline that doesn't exist yet.
 - **Death → spectator** — the detach itself is **already wired**: `Human.Kill()` transfers the mind into a free-flying ghost body ([entities](../architecture/systems/entities.md); `HumanoidGhostController`). MVP1 needs only that this reads as a clean spectator and that round end has a surface to paint on — **not** the full observer experience (dead chat, possession, ghost-role bodies, follow-lock) which stays deferred ([observer.md](../design/observer.md) §2, §7; [death-cloning-respawn.md](../design/death-cloning-respawn.md) §2).
 - **Round-end summary/reveal** — the round-ending *trigger* is already wired in legacy code (`Nuke.Detonate()` → `GamemodeSubSystem.EndRound()`, see [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)). What is net-new is the **legible outcome**: reveal + summary painted over the spectator state ([round-end.md](../design/round-end.md) §4, §5), and the return-to-lobby transition (§6). Evac call/countdown (§3) is **not** MVP1 — detonation/defuse/timer are the end paths here.
 - **Ops spawn loadout** — antagonist-content routes operative gear through the Traitor uplink ([antagonist-content.md](../design/antagonist-content.md) §6), but uplink/PDA is deferred this pass. MVP1 needs an alternate path: gear the ops at spawn. Legacy `RoleLoadout`/`RoleSubSystem` already models role loadouts ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); wire ops spawn to it rather than inventing a new mechanism.
@@ -76,7 +76,7 @@ flowchart TB
 | Id | Name | Status | Links |
 |----|------|--------|-------|
 | M0 | Map authoring + spawn tags + vault + ops loadout | partial — authoring shipped; runtime role→spawn pick open; ops-at-spawn loadout via legacy `RoleLoadout` not yet wired | [creative-mode.md](../design/creative-mode.md) §8; [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md); [id-access.md](../design/id-access.md) §6 (vault); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) (`RoleLoadout`) |
-| M1 | Combat ranged + dedicated weapons (+ thin armor) | partial — ranged hitscan + M4 shipped; thin armor pending | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 shipped, Phase 5 open |
+| M1 | Combat ranged + dedicated weapons (+ thin armor) | shipped — ranged hitscan + M4 + per-zone armor absorption/integrity; environmental seal deferred | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + Phase 5 shipped |
 | M2 | Station structural damage model | pending — **focus**; scoped to route-opening only (no live area/atmos recompute) | [explosives-destruction.md](../design/explosives-destruction.md) §3–§4; [construction.md](../design/construction.md) §2 (ladder meet); [area.md](../design/area.md) §3 / [2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md) (recompute deferred); architecture effort TBD when commissioned |
 | M3 | Blast + explosive items / nuke device (incl. disk-load arm gate + defuse) | pending | blocked on M2; [explosives-destruction.md](../design/explosives-destruction.md) §2, §6; [antagonist-content.md](../design/antagonist-content.md) §6 |
 | M4 | Thin Nuke Ops gamemode (on-station syndie spawn, assignment, win/lose) | pending | rewrite legacy `NukeGamemode` ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); [antagonist-content.md](../design/antagonist-content.md) §2, §6 |

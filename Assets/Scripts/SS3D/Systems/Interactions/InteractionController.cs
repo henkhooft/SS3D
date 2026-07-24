@@ -24,6 +24,7 @@ using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.Stamina;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile;
 using System.Collections;
@@ -421,6 +422,12 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            StaminaController stamina = GetComponent<StaminaController>();
+            if (weapon.Profile.StaminaCost > 0f)
+            {
+                stamina?.ServerDepleteStamina(weapon.Profile.StaminaCost);
+            }
+
             if (!TryGetMeleeAimRay(out Ray aimRay))
             {
                 // Fall back to entity facing if aim never synced.
@@ -442,7 +449,8 @@ namespace SS3D.Systems.Interactions
             }
 
             float horizontalSpeed = GetHorizontalMoveSpeed();
-            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
+            float exertionPenalty = stamina?.ExertionPenalty ?? 0f;
+            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance, exertionPenalty);
             var rng = new System.Random(unchecked(Environment.TickCount ^ GetInstanceID() ^ weapon.RoundsRemaining));
 
             HumanHealthController selfHealth = GetComponentInChildren<HumanHealthController>();
@@ -456,7 +464,10 @@ namespace SS3D.Systems.Interactions
                 out BodyZone zone,
                 out TileCoord structuralCoord,
                 out bool hitLiving,
-                out bool hitStructural);
+                out bool hitStructural,
+                out Vector3 impactPoint,
+                out bool hasImpact,
+                out Vector3 shotDirection);
 
             bool landed = false;
             if (resolved && hitLiving && health != null)
@@ -476,7 +487,7 @@ namespace SS3D.Systems.Interactions
             }
 
             ClearMeleeAimPoint();
-            ServerNotifyRangedFireState(weapon, landed);
+            ServerNotifyRangedFireState(weapon, landed, hasImpact, impactPoint, shotDirection);
         }
 
         [ServerRpc]
@@ -529,7 +540,12 @@ namespace SS3D.Systems.Interactions
         }
 
         [Server]
-        private void ServerNotifyRangedFireState(RangedWeaponItemExtension weapon, bool landed)
+        private void ServerNotifyRangedFireState(
+            RangedWeaponItemExtension weapon,
+            bool landed,
+            bool hasImpact,
+            Vector3 impactPoint,
+            Vector3 shotDirection)
         {
             if (Owner == null || weapon == null)
             {
@@ -541,7 +557,10 @@ namespace SS3D.Systems.Interactions
                 weapon.Profile.FireCooldownSeconds,
                 weapon.RoundsRemaining,
                 weapon.RecoilStacks,
-                landed);
+                landed,
+                hasImpact,
+                impactPoint,
+                shotDirection);
         }
 
         [TargetRpc]
@@ -550,7 +569,10 @@ namespace SS3D.Systems.Interactions
             float cooldownSeconds,
             int rounds,
             float recoilStacks,
-            bool landed)
+            bool landed,
+            bool hasImpact,
+            Vector3 impactPoint,
+            Vector3 shotDirection)
         {
             if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
             {
@@ -559,7 +581,11 @@ namespace SS3D.Systems.Interactions
                 weapon.ClientSetRecoil(recoilStacks);
             }
 
-            if (landed)
+            if (hasImpact)
+            {
+                RangedShotFeedback.NotifyLocalShotImpact(impactPoint, landed, shotDirection);
+            }
+            else if (landed)
             {
                 MeleeConnectFeedback.NotifyLocalConnectHitLanded();
             }
@@ -637,8 +663,8 @@ namespace SS3D.Systems.Interactions
             // Do not use InteractionSource.Interact / DelayedInteraction for Harm primary.
             // Connect is scheduled on this controller so it cannot be skipped when Hand/Item
             // Update fails to tick through StartDelayed.
-            hit.ServerBeginSwing(hand);
-            ServerScheduleMeleeConnect(hand, hit.Profile);
+            float effectiveWindupSeconds = hit.ServerBeginSwing(hand);
+            ServerScheduleMeleeConnect(hand, hit.Profile, effectiveWindupSeconds);
 
             _meleeSwingSerial++;
             RpcExecuteMeleeSwing(_meleeSwingSerial);
@@ -665,11 +691,11 @@ namespace SS3D.Systems.Interactions
         }
 
         [Server]
-        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile)
+        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile, float windupSeconds)
         {
             _pendingMeleeHand = hand;
             _pendingMeleeProfile = profile;
-            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, profile.WindupSeconds);
+            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, windupSeconds);
         }
 
         [Server]

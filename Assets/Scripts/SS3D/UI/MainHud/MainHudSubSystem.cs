@@ -18,6 +18,7 @@ using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Stamina;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Screens;
 using SS3D.UI.MachineInterface;
@@ -87,6 +88,7 @@ namespace SS3D.UI.MainHud
         private AlertStackState _lastAlertState;
         private GameObject _localPlayer;
         private HumanHealthController _healthController;
+        private StaminaController _stamina;
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
@@ -339,10 +341,36 @@ namespace SS3D.UI.MainHud
                 horizontalSpeed = v.magnitude;
             }
 
-            float aimDistance = ranged.Profile.MaxRangeMeters * 0.5f;
-            float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
-            // Map typical M4 spread (~1–8°) into 0–1 bloom for reticle grow.
-            return Mathf.Clamp01(spread / 8f);
+            float maxRange = Mathf.Max(1f, ranged.Profile.MaxRangeMeters);
+            float aimDistance = EstimateRangedAimDistance(maxRange);
+            float exertionPenalty = _stamina != null ? _stamina.ExertionPenalty : 0f;
+            float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance, exertionPenalty);
+            // Map current cone into 0–1 using a readable reference (~still + light move at mid range).
+            float bloomRef = Mathf.Max(
+                2.5f,
+                ranged.Profile.BaseSpreadDegrees
+                + (ranged.Profile.MovementBloomPerSpeed * 2f)
+                + (ranged.Profile.FalloffExtraSpreadDegrees * 0.5f));
+            return Mathf.Clamp01(spread / bloomRef);
+        }
+
+        private float EstimateRangedAimDistance(float maxRange)
+        {
+            if (!SubSystems.TryGet(out CameraSubSystem cameras)
+                || cameras.PlayerCamera == null
+                || !cameras.PlayerCamera.TryGetComponent(out Camera camera))
+            {
+                return maxRange * 0.35f;
+            }
+
+            Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
+            Ray ray = camera.ScreenPointToRay(screenPosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Collide))
+            {
+                return hit.distance;
+            }
+
+            return maxRange * 0.35f;
         }
 
         private bool IsHoveredZoneInRange(Collider zoneCollider)
@@ -585,6 +613,8 @@ namespace SS3D.UI.MainHud
             _localPlayer = playerObject;
             _healthController = _localPlayer.GetComponent<HumanHealthController>()
                 ?? _localPlayer.GetComponentInChildren<HumanHealthController>();
+            _stamina = _localPlayer.GetComponent<StaminaController>()
+                ?? _localPlayer.GetComponentInChildren<StaminaController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
             _hands = _localPlayer.GetComponentInChildren<Hands>();
             _intentProvider = _localPlayer.GetComponent<IIntentProvider>()
@@ -635,6 +665,7 @@ namespace SS3D.UI.MainHud
 
             _localPlayer = null;
             _healthController = null;
+            _stamina = null;
             _inventory = null;
             _hands = null;
             _intentProvider = null;
@@ -1151,18 +1182,20 @@ namespace SS3D.UI.MainHud
             void SetEquipment(EquipmentGrid.Slot slot, ContainerType type)
             {
                 Item item = ItemIn(type);
-                _view.SetEquipmentContents(slot, item?.ItemSprite, item?.Name);
+                _view.SetEquipmentContents(slot, item?.GetHudSprite(preferWornShape: true), item?.Name);
             }
 
             void SetEquipmentAlternate(EquipmentGrid.Slot slot, ContainerType primary, ContainerType secondary)
             {
                 Item item = ItemIn(primary) ?? ItemIn(secondary);
-                _view.SetEquipmentContents(slot, item?.ItemSprite, item?.Name);
+                _view.SetEquipmentContents(slot, item?.GetHudSprite(preferWornShape: true), item?.Name);
             }
 
             void SetGear(HandsGearStrip.GearSlot slot, ContainerType type)
             {
                 Item item = ItemIn(type);
+                // Gear strip holds bags/ID/belt — folded/world form is correct; clothing presentation
+                // is only for body-worn equipment-doll slots above.
                 _view.SetGearContents(slot, item?.ItemSprite, item?.Name);
             }
         }

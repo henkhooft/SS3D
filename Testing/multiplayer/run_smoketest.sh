@@ -69,6 +69,16 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# Previous runs may leave players alive (Unity often ignores SIGTERM after ScriptComplete).
+# Kill only the exact binaries this run is about to launch — not arbitrary SS3D processes.
+for orphan_bin in "$SERVER_BUILD_DIR/$SERVER_BIN_NAME" "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"; do
+    while read -r orphan_pid; do
+        [[ -n "$orphan_pid" ]] || continue
+        echo "warning: killing leftover PID $orphan_pid using $orphan_bin" >&2
+        kill -KILL "$orphan_pid" 2>/dev/null || true
+    done < <(pgrep -f "^${orphan_bin}( |$)" 2>/dev/null || true)
+done
+
 # Resolve each client's scenario script and ckey up front so a missing script fails fast,
 # before any process is started.
 CLIENT_SCRIPTS=()
@@ -94,6 +104,17 @@ mkdir -p "$RUN_DIR"
 echo "Staging isolated build trees (hardlink when possible)..."
 stage_build "$SERVER_BUILD_DIR" "$RUN_DIR/server" || exit 1
 chmod +x "$RUN_DIR/server/$SERVER_BIN_NAME"
+
+# Fresh player builds (CI) have no CWD Data/Tilemaps. TileSubSystem.Load() then logs
+# "No station templates found" and atmos starts with 0 cells — atmos-client-sync cannot pass.
+# Seed the tracked Editor fixtures (Builds/Game/Data/Tilemaps is in git; GameServer Data is not).
+TILEMAP_FIXTURES="${SS3D_TILEMAP_FIXTURES:-$REPO_ROOT/Builds/Game/Data/Tilemaps}"
+if [[ -d "$TILEMAP_FIXTURES" ]]; then
+    mkdir -p "$RUN_DIR/server/Data/Tilemaps"
+    cp -a "$TILEMAP_FIXTURES"/. "$RUN_DIR/server/Data/Tilemaps/"
+else
+    echo "warning: no tilemap fixtures at $TILEMAP_FIXTURES — scenarios that need a station map may fail" >&2
+fi
 
 # Every client's ckey needs Administrator to be allowed to start the round (see
 # ChangeRoundStateView.HandleEmbarkButtonPress / PermissionSubSystem) - seeded here since a
@@ -171,6 +192,9 @@ wait_for_pid_exit "$SERVER_PID" 30 || true
 for pid in "${CLIENT_PIDS[@]}"; do
     wait_for_pid_exit "$pid" 30 || true
 done
+
+# Guarantee no leftover players (Environment.Exit / SIGTERM are not reliable for Unity 6).
+kill_tracked_pids
 
 CHECK_LABELS=("server")
 CHECK_UNITY_LOGS=("$SERVER_UNITY_LOG")

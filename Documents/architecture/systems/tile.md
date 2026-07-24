@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 5db5299b1 — 2026-07-23
+> Verified: 01c3b241d — 2026-07-24
 
 # Tile / construction
 
@@ -55,6 +55,11 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **Adjacency SyncVar writes on pure clients hard-fail smoke:** connectors that assign `_synced*` /
+  `_syncedEngineConnections` / `_syncedAdjacencyPayload` without `IsServer` log FishNet
+  `Cannot complete operation as server when server is not active` (harness denylist). Publish only
+  on server; clients apply via SyncVar OnChange / `ApplyEngineConnections`. Shows up once a real
+  station template is loaded (empty UnnamedMap may not hit the path).
 - **`OnMapCreated` ≠ map ready.** Domains must await `WorldReadyPhase.TileMapLoaded` ([core-subsystems](core-subsystems.md)); `OnMapCreated` fires when the map object exists but tiles may still be placing.
 - **Spawn markers vanish after loading an old template:** `TileMap.Clear` (called on every template restore) clears `SpawnPoints`. Templates without a `spawn-points` chunk intentionally stay empty — do not skip that clear or stale markers from the previous map survive.
 - **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.

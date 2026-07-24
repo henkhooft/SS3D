@@ -1,6 +1,6 @@
 ---
 name: Combat Implementation Plan
-overview: Clean-slate combat build-out per combat.md. Phase 0 purges the obsolete Systems/Combat prototype (no dual-stack). Phase 1 ships unified melee MVP on health zone APIs + HumanoidCombatController. Later phases add disarm/grab, ranged, stamina drains, armor, optional blocking, and hardening.
+overview: Clean-slate combat build-out per combat.md. Phase 0–1 melee, Phase 3 ranged hitscan, Phase 4 combat stamina drains (swing/fire; block deferred), and Phase 5 combat armor absorption shipped. Later phases: disarm/grab, optional blocking, hardening.
 todos:
   - id: phase0-purge
     content: "Phase 0: Purge Assets/Scripts/SS3D/Systems/Combat/, weapon MeleeWeaponItemExtension prefab wiring, InteractionController melee-stance LMB intercept, orphaned IntentController; leave HumanoidCombatController + stance packs; compile-clean"
@@ -16,10 +16,10 @@ todos:
     status: completed
   - id: phase4-stamina
     content: "Phase 4: Combat stamina drains (swing/fire/block) via StaminaController; push-past-empty already → ApplyOxyDebt"
-    status: pending
+    status: completed
   - id: phase5-armor
     content: "Phase 5: Per-zone armor absorption before limb damage + seal breach per armor.md; retune combat damage numbers"
-    status: pending
+    status: completed
   - id: phase6-blocking
     content: "Phase 6 (optional for MVP): Equipment-tied timed blocking (riot shield)"
     status: pending
@@ -42,7 +42,7 @@ redesigned:
 | [main-hud.md](../design/main-hud.md) §7 | Intent / combat-verb chording — help/harm, Ctrl disarm, Alt grab |
 | [health.md](../design/health.md) | Per-limb brute/burn/oxy model damage feeds into |
 | [stamina.md](../design/stamina.md) | Stamina drain on combat actions; push-past-empty → oxy debt |
-| [armor.md](../design/armor.md) | Per-zone absorption before limb damage (deferred) |
+| [armor.md](../design/armor.md) | Per-zone absorption before limb damage (Phase 5 shipped; environmental seal deferred) |
 | [death-cloning-respawn.md](../design/death-cloning-respawn.md) | What a lethal hit resolves into (round-end/observer) |
 
 ## Strategic shift: clean-slate (condemned prototype)
@@ -149,11 +149,20 @@ Single primary path per [combat.md](../design/combat.md) §2:
 - Per [stamina.md](../design/stamina.md): swing, block, and sustained fire drain via
   `StaminaController.ServerDepleteStamina`; push-past-empty already draws oxy debt. Gate or
   soft-penalize combat verbs as design requires (core Phase 7a does not hard-lock at zero).
+- **Shipped 2026-07-23 for swing + fire** (block deferred to Phase 6 — see Implementation
+  notes below).
 
 ### Phase 5 — Armor
 
-- Per-zone flat absorption before limb damage + binary seal breach ([armor.md](../design/armor.md)).
-- Retune combat damage numbers once mitigation exists ([combat.md](../design/combat.md) §6).
+- Per-zone flat absorption before limb damage, shipped ([armor.md](../design/armor.md) §2).
+- Binary seal breach and environmental protective gear ([armor.md](../design/armor.md) §3) —
+  **deferred**: no environment→health exposure pipeline exists yet to punch a hole in
+  (atmospherics client sync and the remaining health systemic-pool wiring are both still open
+  per `INDEX.md`); building the seal now means inventing that pipeline too, outside combat's
+  scope. Revisit once atmos exposure lands.
+- Retune combat damage numbers once mitigation exists ([combat.md](../design/combat.md) §6) —
+  only new armor absorption defaults were picked (interim, same spirit as existing weapon
+  numbers); no rebalance of shipped weapon damage this pass.
 
 ### Phase 6 — Blocking (optional for MVP)
 
@@ -175,7 +184,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
 
 ## Open questions (surfaced, not decided here)
 
-- Hitscan vs. projectile for Phase 3 — recommended hitscan-by-default; confirm FishNet.
+- Hitscan vs. projectile for Phase 3 — **resolved 2026-07-23:** hitscan for small arms; projectile later for thrown/heavy.
 - Armor must land before final damage tuning.
 - No skill/training accuracy modifier assumed.
 
@@ -210,3 +219,34 @@ Single primary path per [combat.md](../design/combat.md) §2:
   Harm primary branches to `CmdRunRangedFire` (accuracy cone, LOS, zone/structural); mag +
   cooldown + timed reload (E / empty fire). Reticle bloom via `ZoneReticleDriver`. Armor,
   disarm, projectile, loose ammo still deferred.
+- **2026-07-23 (Phase 4, swing + fire only):** Gave `RangedWeaponProfile.M4` a nonzero
+  `StaminaCost` (3, vs. melee's 8-12 — much higher fire rate) and drained it per shot in
+  `CmdRunRangedFire`, mirroring the melee `TryConsumeSwingStamina` pattern. Also wired the
+  winded-performance feedback from `stamina.md` §3 that neither swing nor fire had before:
+  `StaminaController.ExertionPenalty` widens the ranged accuracy cone
+  (`RangedWeaponProfile.ExhaustionSpreadDegrees`, new field, read in
+  `AccuracyCone.ComputeSpreadDegrees`) and scales melee windup/recovery up to 1.6x
+  (`MeleeHitInteraction.ComputeExertionTimeMultiplier`). `MeleeHitInteraction.ServerBeginSwing`
+  now returns the scaled windup so `InteractionController.CmdRunMeleeSwing` can schedule the
+  actual connect timer (`ServerScheduleMeleeConnect`) at the same lengthened duration as the
+  recovery lock — the client-side optimistic lock stays unscaled since the server's
+  `TargetNotifyMeleeRecovery` RPC corrects it moments later. Main HUD's ranged reticle bloom
+  (`MainHudSubSystem.GetSelectedRangedBloom01`) now reads the same `ExertionPenalty` so the
+  preview matches the server-fired spread. **Block drain deliberately not done** — no block
+  interaction exists in code yet (Phase 6 is still pending/optional-for-MVP and owns building
+  the block mechanic itself); wiring a drain-over-time onto a nonexistent interaction would be
+  scope creep ahead of its own phase. Numeric costs/multipliers are a balancing placeholder,
+  consistent with `stamina.md` §7 leaving exact rates unspecified.
+- **2026-07-23 (Phase 5 armor):** Combat-armor absorption slice. `ArmorProfile` (per-zone flat
+  brute/burn absorption + integrity, `BodyZoneMask` coverage) + `ArmorItemExtension`
+  (`NetworkBehaviour`, `SyncVar` integrity, `ServerAbsorb`) follow the weapon-profile pattern.
+  `HumanHealthController.ApplyDamage(BodyZone, float, float)` — the single chokepoint both melee
+  and ranged already funneled through — now runs incoming damage through every worn armor piece
+  covering the hit zone first (`ApplyArmorAbsorption`, layered across overlapping pieces), found
+  via existing clothing containers (`ContainerType.IsWornSlot()`, `ContainerType >= ShoeLeft`) —
+  no new equip/slot plumbing needed. Armor weight already flowed into `CarriedWeight` → stamina
+  for free (`Item.Weight` + worn container, pre-existing). Interim test piece:
+  `JumpsuitSecurity.prefab` via `SS3D/Combat/Setup Armor Prefabs`
+  (`Editor/ArmorPrefabSetup.cs`). Pure-math `ArmorSimulation.ResolveAbsorption` unit-tested in
+  `ArmorSimulationTests`. Environmental seal/breach, armor wear visuals, and examine-self
+  integration deferred — see Phase 5 notes above.

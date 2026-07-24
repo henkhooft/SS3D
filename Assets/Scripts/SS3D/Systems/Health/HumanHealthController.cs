@@ -6,8 +6,11 @@ using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Audio;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.ScreenEffects;
 using System;
 using System.Collections.Generic;
@@ -30,6 +33,7 @@ namespace SS3D.Systems.Health
         private WoundVfx _woundVfx;
         private HumanAnatomyController _anatomy;
         private Ragdoll _ragdoll;
+        private HumanInventory _inventory;
         private bool _deathTriggered;
         private bool _healthCollapseActive;
         private bool _drivingLocalPresentation;
@@ -85,6 +89,7 @@ namespace SS3D.Systems.Health
             base.OnStart();
             InitializeDefaults();
             _entity = GetComponent<Entity>();
+            _inventory = GetComponent<HumanInventory>();
             _woundVfx = GetComponent<WoundVfx>();
             if (_woundVfx == null)
             {
@@ -194,6 +199,8 @@ namespace SS3D.Systems.Health
                 return;
             }
 
+            (brute, burn) = ApplyArmorAbsorption(zone, brute, burn);
+
             ZoneDamageState state = _zones[index];
             state.Brute += brute;
             state.Burn += burn;
@@ -212,6 +219,40 @@ namespace SS3D.Systems.Health
             {
                 RpcHitFlash(Owner);
             }
+        }
+
+        /// <summary>
+        /// Runs incoming damage through every worn armor piece covering this zone before it reaches
+        /// the limb model (Documents/design/armor.md §2). Pieces are layered — each one's absorption
+        /// reduces the running remainder before the next piece sees it.
+        /// </summary>
+        [Server]
+        private (float Brute, float Burn) ApplyArmorAbsorption(BodyZone zone, float brute, float burn)
+        {
+            if (_inventory == null)
+            {
+                return (brute, burn);
+            }
+
+            foreach (AttachedContainer container in _inventory.Containers)
+            {
+                if (!container.Type.IsWornSlot())
+                {
+                    continue;
+                }
+
+                foreach (Item item in container.Items)
+                {
+                    if (!item.TryGetComponent(out ArmorItemExtension armor) || !armor.Profile.CoveredZones.Contains(zone))
+                    {
+                        continue;
+                    }
+
+                    (brute, burn) = armor.ServerAbsorb(brute, burn);
+                }
+            }
+
+            return (brute, burn);
         }
 
         [Server]

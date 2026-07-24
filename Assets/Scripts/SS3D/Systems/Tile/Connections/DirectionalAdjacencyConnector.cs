@@ -210,7 +210,7 @@ namespace SS3D.Systems.Tile.Connections
             _pendingShape = shape;
             _hasPendingVisual = true;
 
-            if (NetworkObject != null && NetworkObject.IsSpawned)
+            if (IsServer && NetworkObject != null && NetworkObject.IsSpawned)
             {
                 _syncedRotation = rotation;
                 _syncedShape = shape;

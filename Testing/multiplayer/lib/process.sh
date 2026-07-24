@@ -4,6 +4,11 @@
 
 SS3D_TRACKED_PIDS=()
 
+# Linux client players need a video backend even with -nographics: without DISPLAY and
+# without SDL_VIDEODRIVER, Unity 6 selects window backend (null) and SIGSEGVs in PlayerMain
+# (TomNAS self-hosted CI). Dummy is enough for headless smoke; override if needed.
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-dummy}"
+
 # Prints a free UDP port on 127.0.0.1. Avoids the hardcoded port the old PlayMode harness used,
 # which broke under concurrent/parallel runs.
 alloc_port() {
@@ -90,9 +95,16 @@ last_tracked_pid() {
 }
 
 kill_tracked_pids() {
+    # Unity batchmode players often ignore plain SIGTERM after ScriptComplete; escalate to KILL.
     for pid in "${SS3D_TRACKED_PIDS[@]:-}"; do
         if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            kill "$pid" 2>/dev/null
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+    sleep 1
+    for pid in "${SS3D_TRACKED_PIDS[@]:-}"; do
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
         fi
     done
 }

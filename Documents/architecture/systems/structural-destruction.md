@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/ (integrity stage + occupancy + blast VFX Rpc)
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: 82c1fed63 — 2026-07-21
+> Verified: b1fcfbbce — 2026-07-23
 
 # Structural destruction
 
@@ -31,7 +31,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 
 ## Extension points
 
-- Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, blast hops, chemistry, etc. — one apply path.
+- Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, ranged hitscan, blast hops, chemistry, etc. — one apply path. Sources include `StructuralDamageSource.Melee` / `Ranged` / `Blast` / `Console`.
 - Call `StructuralDamageSubSystem.ResolveBlast(epicenter, yield, falloff)` from grenades/charges (Phase 5) — also broadcasts blast VFX.
 - Override max HP per SO via `TileObjectSo.structuralMaxIntegrity` (> 0).
 - Wall/window prefabs: **SS3D → Structural Damage → Setup Wall Integrity Presentation**.
@@ -46,6 +46,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - **Structural melee ray length ≠ hand range:** camera aim rays must cast ~8m (like living zones), then check `RangeLimit` from the **entity root** (not the swinging hand bone) to the hit/closest point. Hand-bone reach during windup often fails adjacent walls; cardinal-ahead is the last fallback.
 - **Blast BFS keeps max force per tile:** weaker revisit paths are skipped; a stronger cascade path must still enqueue.
 - **Blast hop checks mirror atmos `CanFlow` locally:** do not call `AtmosNeighbourBuilder` (`internal`); keep the BlockedEdges bit test in `BlastResolutionService`.
+- **Open blast hops require `HasPlenum`:** empty chunk cells still return occupancy with `BlockedEdges=0`; without a plenum gate the BFS floods the void and flanks doors/walls from the side (EditMode: door took 30+10, thin wall 65+35→Destroyed).
 - **Never assign integrity SyncVars without a spawned NetworkObject:** FishNet `SyncBase.IsNetworkInitialized` NREs when `_networkObjectCache` is null (common for door/floor prefabs that get `PlacedTileObject` via `AddComponent` at place time). `ServerSetIntegrity` falls back to local fields when the NB cache is missing or not spawned (same guard pattern as `SetDirection`). Server damage/clear still works; clients will not see stage SyncVars on those tiles until prefabs bake `PlacedTileObject`.
 - **Host SyncVar OnChange may skip:** `ServerSetIntegrity` always calls `StructuralIntegrityPresenter.Apply` so host tint/hiss updates without relying on FishNet OnChange.
 - **Blast VFX Rpc must RunLocally and must not BufferLast:** one-shot boom; host needs `RunLocally = true`. Scorch decal materials stay **Opaque** (same URP Decal pitfall as blood).

@@ -49,8 +49,11 @@ namespace SS3D.Systems.Combat
 
         public float StructuralForce;
 
-        /// <summary>Unused until combat stamina Phase 4.</summary>
+        /// <summary>Stamina cost per shot fired.</summary>
         public float StaminaCost;
+
+        /// <summary>Extra spread degrees at full exhaustion (ExertionPenalty == 1).</summary>
+        public float ExhaustionSpreadDegrees;
 
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
 
@@ -64,26 +67,27 @@ namespace SS3D.Systems.Combat
             return BruteDamage * 0.5f;
         }
 
-        /// <summary>Assault rifle — interim lethality until armor retune.</summary>
+        /// <summary>Assault rifle — readable cone at station ranges; movement bloom is mild so standing still is accurate.</summary>
         public static RangedWeaponProfile M4 => new()
         {
             BruteDamage = 18f,
             BurnDamage = 0f,
             CanSever = false,
-            BaseSpreadDegrees = 1.2f,
-            RecoilClimbDegrees = 0.55f,
+            BaseSpreadDegrees = 0.55f,
+            RecoilClimbDegrees = 0.35f,
             RecoilPerShot = 1f,
-            RecoilDecayPerSecond = 2.5f,
-            MovementBloomPerSpeed = 1.8f,
-            FalloffStartMeters = 12f,
-            FalloffEndMeters = 40f,
-            FalloffExtraSpreadDegrees = 4f,
+            RecoilDecayPerSecond = 3f,
+            MovementBloomPerSpeed = 0.35f,
+            FalloffStartMeters = 18f,
+            FalloffEndMeters = 45f,
+            FalloffExtraSpreadDegrees = 2.5f,
             MaxRangeMeters = 50f,
             FireCooldownSeconds = 0.12f,
             MagazineSize = 30,
             ReloadSeconds = 2.2f,
             StructuralForce = 12f,
-            StaminaCost = 0f,
+            StaminaCost = 3f,
+            ExhaustionSpreadDegrees = 3f,
         };
     }
 }

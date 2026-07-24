@@ -149,7 +149,13 @@ namespace SS3D.Systems.Tile.Connections
             if (isUpdated)
             {
                 neighbourObject?.UpdateSingleAdjacency(TileHelper.GetOpposite(dir), _placedObject, false);
-                _syncedConnections = _adjacencyMap.SerializeToByte();
+                // SyncVar is server-authoritative — writing on a pure client logs FishNet
+                // "Cannot complete operation as server when server is not active".
+                if (IsServer)
+                {
+                    _syncedConnections = _adjacencyMap.SerializeToByte();
+                }
+
                 UpdateMeshAndDirection();
             }
 

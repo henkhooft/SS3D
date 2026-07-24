@@ -46,8 +46,17 @@ namespace SS3D.Systems.Inventory.Containers
         protected virtual void OpenStateChanged(object sender, bool e)
         {
             OpenAllOpenables(sender, e);
-            _openState = e;
-            UpdateAnimator();
+
+            // SyncVar is server-authoritative; clients apply via SyncOpenState OnChange.
+            if (IsServer)
+            {
+                _openState = e;
+            }
+
+            if (Animator != null)
+            {
+                Animator.SetBool(OpenAnimation, e);
+            }
         }
 
         /// <summary>

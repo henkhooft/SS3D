@@ -12,7 +12,7 @@ namespace SS3D.UI.MainHud.Components
     public sealed class ZoneTargetReticle
     {
         private const float ReticleSize = 52f;
-        private const float ReticleBloomExtraPx = 28f;
+        private const float ReticleBloomExtraPx = 56f;
         private const float ChipGapAboveReticle = 14f;
         private const float CornerMinPx = 4f;
         private const float CornerMaxPx = 16f;
