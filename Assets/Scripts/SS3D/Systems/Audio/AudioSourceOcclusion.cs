@@ -21,6 +21,15 @@ namespace SS3D.Systems.Audio
         private const float SampleInterval = 0.15f;
         private const float LerpSpeed = 6f;
 
+        /// <summary>
+        /// Occlusion rays are sampled at this height above the listener/source, not at the feet.
+        /// <c>ListenerPosition</c> parks the <see cref="AudioListener"/> on the body root (y≈0), and
+        /// plenums/airlock tiles put Default-layer box colliders whose tops sit on that same plane —
+        /// a feet-height ray therefore false-positives on the floor for almost every non-zero-length
+        /// cast and leaves every pooled SFX permanently muffled (0.5× + 800Hz).
+        /// </summary>
+        private const float OcclusionSampleHeight = 1.2f;
+
         private static Transform s_listener;
 
         private AudioSource _source;
@@ -71,6 +80,7 @@ namespace SS3D.Systems.Audio
             _nextSampleTime = 0f;
             _lowPass.cutoffFrequency = AudioOcclusionState.ClearCutoffHz;
             _source.volume = volume;
+            _lowPass.enabled = false;
         }
 
         private void Update()
@@ -101,14 +111,38 @@ namespace SS3D.Systems.Audio
             if (Time.time >= _nextSampleTime)
             {
                 _nextSampleTime = Time.time + SampleInterval;
-                _isOccluded = !LineOfSight.HasLineOfSight(s_listener.position, transform.position, OcclusionMask, out _);
+
+                float distance = Vector3.Distance(s_listener.position, transform.position);
+                // Own footsteps / point-blank sources: never occlude (ray length ~0 also false-hits
+                // nearby Default colliders on the body/tile).
+                if (distance < 1.5f)
+                {
+                    _isOccluded = false;
+                }
+                else
+                {
+                    // Planar sample at chest height — walls still intersect; floors/plenums do not.
+                    Vector3 origin = s_listener.position;
+                    origin.y += OcclusionSampleHeight;
+                    Vector3 end = transform.position;
+                    end.y = origin.y;
+
+                    _isOccluded = !LineOfSight.HasLineOfSight(origin, end, OcclusionMask, out _);
+                }
             }
 
             float lerpFactor = Time.deltaTime * LerpSpeed;
             _cutoffCurrent = AudioOcclusionState.LerpCutoffHz(_cutoffCurrent, _isOccluded, lerpFactor);
             _volumeScaleCurrent = AudioOcclusionState.LerpVolumeScale(_volumeScaleCurrent, _isOccluded, lerpFactor);
 
-            _lowPass.cutoffFrequency = _cutoffCurrent;
+            // Disable the filter when fully clear — a 22kHz lowpass still colors some clips.
+            bool filterNeeded = _isOccluded || _cutoffCurrent < AudioOcclusionState.ClearCutoffHz - 500f;
+            _lowPass.enabled = filterNeeded;
+            if (filterNeeded)
+            {
+                _lowPass.cutoffFrequency = _cutoffCurrent;
+            }
+
             _source.volume = _baseVolume * _volumeScaleCurrent;
         }
     }

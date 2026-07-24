@@ -4,6 +4,7 @@ using FishNet.Object.Prediction;
 using FishNet.Transporting;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
@@ -111,6 +112,18 @@ namespace SS3D.Systems.Entities.Humanoid
             base.OnStartNetwork();
             _networkStarted = true;
             TrySubscribeTick();
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            // Footsteps are ordinary §3 SFX — attach on server start (IsServer is unreliable in
+            // OnStartNetwork for the add gate). Do not hand-edit onto Human.prefab.
+            if (GetComponent<FootstepAudio>() == null)
+            {
+                gameObject.AddComponent<FootstepAudio>();
+            }
         }
 
         protected override void OnEnabled()
@@ -323,6 +336,18 @@ namespace SS3D.Systems.Entities.Humanoid
             float animSpeed = GetAnimSpeedForScale(_smoothedSpeedScale, combatMode);
 
             _characterController.Move(moveDirection * (tickDelta * speed));
+
+            // Real planar input only — not the empty Move(default) server tick that follows on host.
+            if (Mathf.Abs(md.Horizontal) > 0.01f || Mathf.Abs(md.Vertical) > 0.01f)
+            {
+                FootstepAudio footsteps = GetComponent<FootstepAudio>();
+                if (footsteps == null && IsServer)
+                {
+                    footsteps = gameObject.AddComponent<FootstepAudio>();
+                }
+
+                footsteps?.ServerNotifyMoving(md.IsRunning);
+            }
 
             if (caps.CanRotate)
             {

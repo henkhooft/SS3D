@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 39db67f99 — 2026-07-24
+> Verified: 6ac41562b — 2026-07-24
 
 # Audio
 
@@ -57,6 +57,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   (`AlertStackAudioMapperTests`). `MainHudSubSystem.PushAlertState` is the single funnel every
   `AlertStackState` push goes through (health-driven, debug override, or clear) and calls
   `PersonalAudioSubSystem.PlayAlertCue()` (one-shot, cooldown-debounced) on a new alert.
+- `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs`, `FootstepAudioTrackIds.cs` — footwear
+  footsteps (§3): Socks / Shoes / Boots clips under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`.
+  Server loops the matching clip while `CharacterController` planar speed is above a threshold;
+  runtime-added from `HumanoidPredictedMovement` (no Human.prefab edit). Empty feet → Socks;
+  item name containing "boot" → Boots; else Shoes.
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
@@ -96,6 +101,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `MetalHit1-2`/`GrilleHit`/`Rod1`/`Tap`/`TrayHit1-2`/`WoodHit1` (more `NoisyCollision` variety — **no
   prefab uses `NoisyCollision` yet**, so these are registered for whenever one does, not wired to
   anything today).
+- **Footwear footsteps (Socks/Shoes/Boots)** are registered *and* wired via `FootstepAudio` — not the
+  availability-only pattern above.
 - Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`
   directly for any future systemic cue (virology's symptomatic-stage cue is this same category,
   per audio.md §4) rather than building a parallel non-positional playback path.
@@ -114,6 +121,13 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - **Reuse `SS3D.Utils.LineOfSight`, do not fork a raycast.** Same shared occluder mask
   (`LayerMask.GetMask("Default")`) as Drop, combat LOS, and comms occlusion — solid geometry that
   should occlude sits on the `Default` layer in this project, not a dedicated `Walls` layer.
+- **Occlusion rays must not cast at feet height.** `ListenerPosition` follows the body root, and
+  plenum/airlock-tile colliders on `Default` top out near y=0 — a root-height ray false-positives on
+  the floor and muffles every pooled SFX. Sample planar LOS at chest height
+  (`AudioSourceOcclusion.OcclusionSampleHeight`) so walls still block and floors don't.
+- **`MainMixer` Master defaults to 0 dB.** The inherited snapshot had Master at ≈−20 dB (~10% linear);
+  pooled SFX/Music route through it, so that alone made every diegetic sound inaudibly quiet even with
+  clear LOS. Per-category slider balancing stays Phase 5 — don't re-bury Master as a stand-in for it.
 - **Do not call `LayerMask.GetMask` / `NameToLayer` from a MonoBehaviour field initializer or static
   ctor.** Unity throws `UnityException` during `AddComponent` type init (pool create path hit this on
   `AudioSourceOcclusion`). Resolve lazily or in `Awake` — same rule `VisionSubSystem` already documents.
@@ -138,6 +152,10 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   so re-cueing it would contradict §6's "not a continuous loop, only draws attention when something's
   actually wrong" restraint. Route any future alert-audio change through this diff, not a raw
   field-by-field equality check.
+- **`StopAudioSource(parent)` stops the first child `AudioSource` under that NetworkObject.** Footsteps
+  parent their pooled loop to the player body — don't parent unrelated one-shots to the same
+  NetworkObject or a stop (idle / footwear swap) can kill the wrong clip. Prefer `parent: null` for
+  transient SFX (gunfire already does).
 - **A process-wide DDOL subsystem outlives any one player body.** `AmbienceSubSystem` never gets
   destroyed/recreated across disconnect/respawn/map-reload the way a `NetworkSubSystem` on the hub
   does, so it clears its own `_lastResolvedAreaId`/`_currentTrackId` when `LocalPlayerObjectChanged`

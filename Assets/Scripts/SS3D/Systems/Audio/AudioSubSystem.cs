@@ -111,10 +111,19 @@ namespace SS3D.Systems.Audio
 
             audioSource.gameObject.transform.position = position;
             audioSource.clip = Assets.Get<AudioClip>(AssetDatabases.Sounds, audioClipID);
+            if (audioSource.clip == null)
+            {
+                // Missing Sounds.asset ref (common after hand-adding files) — don't Play() a null clip.
+                return;
+            }
+
             audioSource.volume = volume;
             audioSource.pitch = pitch;
             audioSource.minDistance = minRange;
             audioSource.maxDistance = maxRange;
+            // Station props animate (airlocks, etc.); Doppler on a parented pooled source warbles
+            // the attack of the clip into a compression-like pitch scoop.
+            audioSource.dopplerLevel = 0f;
 
             //If we want to attach the audio source to something specific, do that. Otherwise, detach it from any parents.
             //This is useful for things that are obviously creating the sound, like a mouse's squeak
@@ -232,9 +241,9 @@ namespace SS3D.Systems.Audio
             {
                 AudioSource newAudioSource = Instantiate(Prefab, AudioSystem.transform.position, Quaternion.identity).GetComponent<AudioSource>();
 
-                // Sfx/Music are the pool's positional sources (audio.md §3/§5); Ambience/Personal
-                // are separate non-positional controllers (Phase 2/3) and never occlude.
-                if (AudioType is AudioType.Sfx or AudioType.Music)
+                // Sfx only — Music (jukebox) must not get the 800Hz occlusion lowpass or it reads
+                // as permanently muddled even in the same room (furniture/wall false hits on Default).
+                if (AudioType is AudioType.Sfx)
                 {
                     newAudioSource.gameObject.AddComponent<AudioSourceOcclusion>();
                 }
