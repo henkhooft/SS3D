@@ -17,6 +17,7 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Audio;
+using AudioType = SS3D.Systems.Audio.AudioType;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Health;
