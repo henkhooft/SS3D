@@ -141,6 +141,9 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
   client) restart Docker/Unity against a shared Library and race `PackageCache` on this host
   (missing localization sources → CS2001; missing `Unity.Cecil.Awesome.dll` → CS0006). Smoke
   uses `ClientAndServerBuildScript.BuildBothForCi` in a single step.
+- **Headless Linux client needs `SDL_VIDEODRIVER=dummy`.** Without DISPLAY, Unity 6 client
+  players select window backend `(null)` and SIGSEGV in `PlayerMain` before any game code.
+  Dedicated server builds are fine. Harness defaults the env var in `lib/process.sh`.
 - **Server-kill vs. harness cleanup.** The harness already `trap`s EXIT/INT/TERM to
   `kill_tracked_pids`; a deliberate mid-run server kill must not confuse that PID bookkeeping
   or trip the "server script did not complete" path as a false failure. The server dying is

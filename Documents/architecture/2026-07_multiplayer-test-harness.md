@@ -68,8 +68,8 @@ Manual / partial:
 
 ### Orchestration (`Testing/multiplayer/`)
 - `run_smoketest.sh <scenario> [client-count]` — launches one real dedicated-server process and
-  N real client processes, all `-batchmode -nographics` (no display dependency, runs unmodified
-  on headless Linux CI or a dev machine).
+  N real client processes, all `-batchmode -nographics` (dedicated server is display-free;
+  Linux *clients* still need `SDL_VIDEODRIVER=dummy` — see Pitfalls / process.sh),
 - `lib/process.sh` — dynamic free-port allocation (no more hardcoded port); stages an isolated
   per-run tree of each build via hardlinks when possible (`cp -a --link` / `cp -al`, full copy
   fallback) so Logs/`Application.dataPath` stay isolated without duplicating player binaries;
@@ -185,6 +185,9 @@ Manual / partial:
   Separately, `known_unity_bad.patterns` is a **hard-fail denylist** for non-exception LogWarning
   prose that must never appear (FishNet "Cannot complete operation as server when server is not
   active" — pure-client SyncVar writes). Do not move denylist entries into the noise allowlist.
+- **Linux client SIGSEGV without `SDL_VIDEODRIVER`.** On headless hosts with no DISPLAY, Unity 6
+  client players pick window backend `(null)` and crash in `PlayerMain`. `lib/process.sh`
+  defaults `SDL_VIDEODRIVER=dummy`. Dedicated server builds do not need it.
 - **Not yet verified against a real Unity build in this environment** — see Verification below.
 
 ## Verification
