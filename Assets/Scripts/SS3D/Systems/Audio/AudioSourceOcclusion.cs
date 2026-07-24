@@ -13,7 +13,10 @@ namespace SS3D.Systems.Audio
     [RequireComponent(typeof(AudioSource))]
     public class AudioSourceOcclusion : MonoBehaviour
     {
-        private static readonly LayerMask OcclusionMask = LayerMask.GetMask("Default");
+        // Must not call LayerMask.GetMask from a field initializer / static ctor — Unity forbids
+        // NameToLayer during MonoBehaviour construction (same pitfall as VisionSubSystem).
+        private static LayerMask s_occlusionMask;
+        private static bool s_occlusionMaskReady;
 
         private const float SampleInterval = 0.15f;
         private const float LerpSpeed = 6f;
@@ -28,6 +31,20 @@ namespace SS3D.Systems.Audio
         private float _nextSampleTime;
         private bool _isOccluded;
 
+        private static LayerMask OcclusionMask
+        {
+            get
+            {
+                if (!s_occlusionMaskReady)
+                {
+                    s_occlusionMask = LayerMask.GetMask("Default");
+                    s_occlusionMaskReady = true;
+                }
+
+                return s_occlusionMask;
+            }
+        }
+
         private void Awake()
         {
             _source = GetComponent<AudioSource>();
@@ -38,6 +55,7 @@ namespace SS3D.Systems.Audio
             }
 
             _lowPass.cutoffFrequency = AudioOcclusionState.ClearCutoffHz;
+            _ = OcclusionMask; // Resolve once Awake is legal, not during AddComponent type init.
         }
 
         /// <summary>

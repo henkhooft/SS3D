@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: a2de58b87 — 2026-07-23
+> Verified: 39db67f99 — 2026-07-24
 
 # Audio
 
@@ -114,6 +114,9 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - **Reuse `SS3D.Utils.LineOfSight`, do not fork a raycast.** Same shared occluder mask
   (`LayerMask.GetMask("Default")`) as Drop, combat LOS, and comms occlusion — solid geometry that
   should occlude sits on the `Default` layer in this project, not a dedicated `Walls` layer.
+- **Do not call `LayerMask.GetMask` / `NameToLayer` from a MonoBehaviour field initializer or static
+  ctor.** Unity throws `UnityException` during `AddComponent` type init (pool create path hit this on
+  `AudioSourceOcclusion`). Resolve lazily or in `Awake` — same rule `VisionSubSystem` already documents.
 - **Pooled sources are never destroyed between plays** — the same `GameObject` is reused, so
   `AudioSourceOcclusion` state (cutoff, volume scale, occlusion flag) persists across unrelated clips
   unless reset. `AudioSubSystem.RpcPlayAudioSource` must call `PrepareForPlayback(volume)` before every
