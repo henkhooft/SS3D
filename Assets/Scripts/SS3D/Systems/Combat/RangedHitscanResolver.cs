@@ -6,11 +6,16 @@ using UnityEngine;
 namespace SS3D.Systems.Combat
 {
     /// <summary>
-    /// Server hitscan resolve: accuracy-cone sample → LOS → living zone or structural turf.
+    /// Server hitscan resolve: accuracy-cone sample → living zone (with LOS) or structural turf.
     /// </summary>
     public static class RangedHitscanResolver
     {
-        private static readonly LayerMask DefaultOcclusionMask = LayerMask.GetMask("Default");
+        /// <summary>
+        /// Cover layers between muzzle and a limb. Must include Walls — many tile walls are not Default.
+        /// Do not early-out on a full-range Default cast: Characters are excluded from that mask, so the
+        /// ray passes through the target and can "block" on floor/props behind them, skipping the hit.
+        /// </summary>
+        private static readonly LayerMask CoverOcclusionMask = LayerMask.GetMask("Default", "Walls");
 
         public static bool TryResolveShot(
             Ray aimRay,
@@ -43,22 +48,7 @@ namespace SS3D.Systems.Combat
             shotDirection = shotDir;
             Ray shotRay = new(aimRay.origin, shotDir);
 
-            // Occlusion: wall before anything else stops the round (whiff).
-            if (RangedStructuralHitResolver.IsOccluded(shotRay, maxRange, DefaultOcclusionMask, out float blockDistance))
-            {
-                impactPoint = shotRay.GetPoint(blockDistance);
-                hasImpact = true;
-
-                // Prefer structural damage on the blocking wall when it is structural turf.
-                if (RangedStructuralHitResolver.TryResolve(shotRay, blockDistance + 0.05f, out structuralCoord, out _))
-                {
-                    hitStructural = true;
-                    return true;
-                }
-
-                return false;
-            }
-
+            // Living first — cover is checked only along the segment to the limb (not past it).
             if (ZoneTargetResolver.TryResolveHoverZone(
                     shotRay,
                     excludeHealth,
@@ -68,11 +58,13 @@ namespace SS3D.Systems.Combat
                     out Vector3 hitPoint,
                     out _))
             {
-                // Default-layer occluder between muzzle and limb absorbs the round.
-                float limbDistance = Vector3.Distance(shotRay.origin, hitPoint);
-                if (!LineOfSight.HasLineOfSight(shotRay.origin, hitPoint, DefaultOcclusionMask, out _))
+                if (!LineOfSight.HasLineOfSight(shotRay.origin, hitPoint, CoverOcclusionMask, out RaycastHit coverHit))
                 {
-                    if (RangedStructuralHitResolver.TryResolve(shotRay, limbDistance, out structuralCoord, out float structuralDistance))
+                    float coverDistance = coverHit.distance > 0f
+                        ? coverHit.distance
+                        : Vector3.Distance(shotRay.origin, hitPoint);
+
+                    if (RangedStructuralHitResolver.TryResolve(shotRay, coverDistance + 0.05f, out structuralCoord, out float structuralDistance))
                     {
                         health = null;
                         hitStructural = true;
@@ -82,7 +74,7 @@ namespace SS3D.Systems.Combat
                     }
 
                     health = null;
-                    impactPoint = hitPoint;
+                    impactPoint = coverHit.collider != null ? coverHit.point : hitPoint;
                     hasImpact = true;
                     return false;
                 }
@@ -102,6 +94,14 @@ namespace SS3D.Systems.Combat
             }
 
             // Soft surface / floor / prop without structural turf — still show where the round went.
+            // Prefer cover layers, then any non-trigger collider (CharacterController, props, etc.).
+            if (LineOfSight.TryGetFirstHit(shotRay.origin, shotDir, maxRange, CoverOcclusionMask, out RaycastHit coverSurface))
+            {
+                impactPoint = coverSurface.point;
+                hasImpact = true;
+                return false;
+            }
+
             if (Physics.Raycast(shotRay, out RaycastHit anyHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
             {
                 impactPoint = anyHit.point;
