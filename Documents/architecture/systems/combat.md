@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 2a5e4dd92 — 2026-07-24
+> Verified: 76a6ecdc2 — 2026-07-24
 
 # Combat
 
@@ -30,7 +30,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` / `MeleeStructuralHitResolver.cs` / `MeleeRecoveryTracker.cs`
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/RangedPrefabSetup.cs` — **SS3D → Combat → Setup Ranged Prefabs (M4)**
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — melee hands/tools
-- `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` + `spawndummy`
+- `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` + `spawndummy` — freezes controls; equips `JumpsuitSecurity` for armor tests
 - `Assets/Scripts/SS3D/Systems/Combat/ArmorProfile.cs` / `ArmorSimulation.cs` / `ArmorItemExtension.cs` — per-zone absorption data, math, per-item integrity
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/ArmorPrefabSetup.cs` — **SS3D → Combat → Setup Armor Prefabs** (interim: `JumpsuitSecurity.prefab`; world form via inventory clothing presentation on Grey base)
 - `Assets/Scripts/SS3D/Systems/Health/HumanHealthController.cs` — `ApplyArmorAbsorption` (armor hook inside `ApplyDamage`)
@@ -49,11 +49,10 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
 4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
 5. Help + M4 must not swing/fire; Harm must not Drop.
-6. Run **SS3D → Combat → Setup Armor Prefabs** (and clothing presentation on Grey if world mesh/collider drifts);
-   spawn/give `JumpsuitSecurity` — folded pile rests on the floor; equip on the dummy;
-   Harm-melee/ranged it — covered zones (chest/limbs) take reduced brute, head (uncovered) takes
-   full damage; enough hits deplete integrity and damage reverts to unmitigated. Unequip/drop keeps
-   the same Item (armor SyncVar) and restores folded world form.
+6. `spawndummy` equips `JumpsuitSecurity` automatically; Harm-melee/ranged covered zones
+   (chest/limbs) take reduced brute, head (uncovered) takes full damage; enough hits deplete
+   integrity and damage reverts to unmitigated. Unequip/drop keeps the same Item (armor SyncVar)
+   and restores folded world form. Equipment-doll HUD icons use the worn-shaped mesh; hands show folded.
 
 ## Pitfalls
 

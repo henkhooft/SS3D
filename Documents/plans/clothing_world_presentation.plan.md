@@ -17,4 +17,6 @@ todos:
 
 Shipped: single-NO world form via `ClothingItemPresentation` on jumpsuit base (`JumpsuitGrey`); variants inherit. Orphan `JumpsuitSecurityFolded` removed from content, Addressables, and `DefaultPrefabObjects`.
 
+Follow-ups shipped: `spawndummy` equips `JumpsuitSecurity`; equipment-doll HUD uses worn-shaped icon via `Item.GetHudSprite(preferWornShape: true)`.
+
 Armor Phase 5 still uses `JumpsuitSecurity` + `ArmorItemExtension` on that same Item.

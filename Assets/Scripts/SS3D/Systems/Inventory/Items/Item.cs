@@ -460,9 +460,28 @@ namespace SS3D.Systems.Inventory.Items
 
        
 
+        /// <summary>
+        /// Sprite for Main HUD / storage slots. Hands and world use the default (folded for clothing).
+        /// Equipment-doll worn slots pass <paramref name="preferWornShape"/>.
+        /// </summary>
+        [ServerOrClient]
+        public Sprite GetHudSprite(bool preferWornShape = false)
+        {
+            if (preferWornShape && TryGetComponent(out ClothingItemPresentation clothingPresentation))
+            {
+                Sprite worn = clothingPresentation.GetWornHudSprite(this);
+                if (worn != null)
+                {
+                    return worn;
+                }
+            }
+
+            return ItemSprite;
+        }
+
         // Generate preview of the same object, but without stored items.
         [ServerOrClient]
-        public Sprite GenerateIcon()
+        public Sprite GenerateIcon(bool useWornShapedForm = false)
         {
 #if UNITY_SERVER
             // Icon generation renders a camera to produce a preview texture, which is unavailable and
@@ -502,7 +521,18 @@ namespace SS3D.Systems.Inventory.Items
             Transform previewObject = Instantiate(transform, null, false);
             previewObject.gameObject.hideFlags = HideFlags.HideAndDontSave;
             RemoveInteractionOutlines(previewObject);
-            previewObject.GetComponent<Item>().SetVisibility(true);
+            Item previewItem = previewObject.GetComponent<Item>();
+            if (useWornShapedForm && previewItem.TryGetComponent(out ClothingItemPresentation presentation))
+            {
+                // Bypass SetVisibility — that re-applies world (folded) form.
+                presentation.ApplyWornShapedForm();
+                SetChildRenderersEnabled(previewObject, true);
+            }
+            else
+            {
+                previewItem.SetVisibility(true);
+            }
+
             Sprite icon;
             try
             {
@@ -524,6 +554,20 @@ namespace SS3D.Systems.Inventory.Items
             }
             return icon;
 #endif
+        }
+
+        private static void SetChildRenderersEnabled(Transform root, bool visible)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+            foreach (Renderer childRenderer in renderers)
+            {
+                if (childRenderer.transform.name == "InteractionOutline")
+                {
+                    continue;
+                }
+
+                childRenderer.enabled = visible;
+            }
         }
 
         /// <summary>

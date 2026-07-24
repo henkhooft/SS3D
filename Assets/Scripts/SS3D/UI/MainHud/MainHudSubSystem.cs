@@ -1133,18 +1133,20 @@ namespace SS3D.UI.MainHud
             void SetEquipment(EquipmentGrid.Slot slot, ContainerType type)
             {
                 Item item = ItemIn(type);
-                _view.SetEquipmentContents(slot, item?.ItemSprite, item?.Name);
+                _view.SetEquipmentContents(slot, item?.GetHudSprite(preferWornShape: true), item?.Name);
             }
 
             void SetEquipmentAlternate(EquipmentGrid.Slot slot, ContainerType primary, ContainerType secondary)
             {
                 Item item = ItemIn(primary) ?? ItemIn(secondary);
-                _view.SetEquipmentContents(slot, item?.ItemSprite, item?.Name);
+                _view.SetEquipmentContents(slot, item?.GetHudSprite(preferWornShape: true), item?.Name);
             }
 
             void SetGear(HandsGearStrip.GearSlot slot, ContainerType type)
             {
                 Item item = ItemIn(type);
+                // Gear strip holds bags/ID/belt — folded/world form is correct; clothing presentation
+                // is only for body-worn equipment-doll slots above.
                 _view.SetGearContents(slot, item?.ItemSprite, item?.Name);
             }
         }

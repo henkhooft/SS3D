@@ -13,7 +13,7 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
 
         public override string ShortDescription => "Spawn a standing combat dummy in front of you";
         public override string LongDescription =>
-            "Spawns a mindless Human with player controls frozen for melee/interaction tests. Usage: spawndummy";
+            "Spawns a mindless Human with player controls frozen for melee/interaction tests. Equips JumpsuitSecurity for armor absorption tests. Usage: spawndummy";
         public override string Usage => "";
         public override ServerRoleTypes AccessLevel => ServerRoleTypes.Administrator;
         public override CommandType Type => CommandType.Server;
@@ -43,7 +43,7 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
                 return "Failed to spawn combat dummy (no human prefab configured).";
             }
 
-            return $"Combat dummy spawned at {spawnPosition}";
+            return $"Combat dummy spawned at {spawnPosition} (wearing JumpsuitSecurity)";
         }
 
         protected override CheckArgsResponse CheckArgs(string[] args)
