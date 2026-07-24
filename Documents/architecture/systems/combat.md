@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: c91a0c134 — 2026-07-24
+> Verified: 3b1f4a42d — 2026-07-24
 
 # Combat
 
@@ -17,7 +17,17 @@ Phase 0–1 melee + Phase 3 ranged + Phase 5 armor slice per [combat_implementat
 
 **Intent ↔ stance:** Harm → Melee/Ranged from inventory (`RangedWeaponItemExtension` preferred over trait name); Help → Peaceful. Harm never falls through to Drop/Open/MI.
 
-Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, combat fire stamina drain, projectile/thrown.
+**Combat stamina drains (Phase 4, fire done, block deferred):** Ranged fire drains
+`RangedWeaponProfile.StaminaCost` per shot via `StaminaController.ServerDepleteStamina` (melee
+swing already drained this way). Exertion also feeds back into performance: `ExertionPenalty`
+widens the ranged accuracy cone (`RangedWeaponProfile.ExhaustionSpreadDegrees`, read in
+`AccuracyCone.ComputeSpreadDegrees`) and scales melee windup/recovery up to 1.6x
+(`MeleeHitInteraction.ComputeExertionTimeMultiplier`) — both the recovery lock and the actual
+connect-timing schedule lengthen together. Main HUD reticle bloom reads the same exertion value
+so the visual preview matches server-fired spread.
+
+Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking (including block
+stamina drain), projectile/thrown.
 
 ## Start here
 
@@ -53,6 +63,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
    (chest/limbs) take reduced brute, head (uncovered) takes full damage; enough hits deplete
    integrity and damage reverts to unmitigated. Unequip/drop keeps the same Item (armor SyncVar)
    and restores folded world form. Equipment-doll HUD icons use the worn-shaped mesh; hands show folded.
+7. Fire/swing repeatedly until stamina is low — ranged spread should visibly widen and melee windup/recovery should visibly slow versus a fresh attack at full stamina.
 
 ## Pitfalls
 
@@ -61,6 +72,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 - **Zone ray default is 8 m** — ranged passes `profile.MaxRangeMeters` into `TryResolveHoverZone`; do not hardcode melee default for hitscan.
 - **Reload via E bypasses intent** — `ReloadRangedInteraction` is Help-default in discovery; Harm reload uses `CmdRunRangedReload` from Use / empty fire.
 - **Reticle bloom is single-composer** — set via `ZoneReticleDriver.SetBloomInput` only; no parallel writers. Bloom uses live aim-ray distance (not a fake mid-range), so close targets stay tight.
+- **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - **Ranged impact marker is client-local** — `RangedShotFeedback` after `TargetNotifyRangedFireState`; gold = damaging connect (also cross-flash), grey = surface whiff. Living hits pull the marker toward the shooter so it isn't buried inside BodyParts colliders. Do not invent a second hit-VFX path.
 - **Hitscan must resolve living before full-range Default occlusion** — Characters are not on the Default mask, so a max-range Default cast goes *through* the dummy and can “block” on floor/props behind them (no limb damage; marker far behind or easy to miss). Order: zone hit → LOS (Default+Walls) only to that limb → structural/soft. Do not early-out on `IsOccluded` for the full weapon range.
 - **Armor absorption is a single chokepoint** — lives inside `HumanHealthController.ApplyDamage(BodyZone, float, float)`, not duplicated in melee/ranged call sites; also applies to `StructuralDamageSubSystem`'s debris-collapse call (intentional, not excluded).
@@ -70,7 +82,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md), [stamina](stamina.md) (melee costs; armor weight via `CarriedWeight`), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md) (worn armor lookup via `HumanInventory`/`ContainerType`), [structural-destruction](structural-destruction.md)
+- **Depends on:** [health](health.md), [stamina](stamina.md) (melee + ranged fire costs, exertion feedback into windup/cone; armor weight also feeds `CarriedWeight`), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md) (worn armor lookup via `HumanInventory`/`ContainerType`), [structural-destruction](structural-destruction.md)
 - **Used by:** Harm-intent Run Primary; Hotkeys Use (reload)
 
 ## Related docs

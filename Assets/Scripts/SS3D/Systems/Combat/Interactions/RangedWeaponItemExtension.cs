@@ -153,11 +153,11 @@ namespace SS3D.Systems.Combat.Interactions
             _reloadUntil = 0f;
         }
 
-        public float CurrentSpreadDegrees(float horizontalSpeed, float aimDistanceMeters)
+        public float CurrentSpreadDegrees(float horizontalSpeed, float aimDistanceMeters, float exertionPenalty = 0f)
         {
             EnsureInitialized();
             DecayRecoil();
-            return AccuracyCone.ComputeSpreadDegrees(_profile, _recoilStacks, horizontalSpeed, aimDistanceMeters);
+            return AccuracyCone.ComputeSpreadDegrees(_profile, _recoilStacks, horizontalSpeed, aimDistanceMeters, exertionPenalty);
         }
 
         private void EnsureInitialized()

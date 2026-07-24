@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: StaminaController, StaminaFactory
 > Status: partial
-> Verified: 9145f200f — 2026-07-18
+> Verified: b1fcfbbce — 2026-07-23
 
 # Stamina
 
@@ -9,7 +9,7 @@
 
 Phase **7a-core** rewrite per [stamina.md](../../design/stamina.md) and health plan Phase 7a. Fast exertion pool with health-modulated regen (heart/lungs/blood), carried-weight encumbrance from [inventory](inventory.md) `HumanInventory.CarriedWeight`, sprint drain via `HumanoidController.OnSpeedChangeEvent`, and push-past-empty → `HumanHealthController.ApplyOxyDebt`. **No permanent stamina bar** — obsolete `StaminaBarView` / PlayerCanvas bar purged.
 
-Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinueInteraction` always true). Exhaustion applies `ExertionPenalty` (0..1) to movement in `HumanoidLivingController` / `HumanoidPredictedMovement`. Combat swing/block/fire costs and dedicated winded screen FX are deferred.
+Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinueInteraction` always true). Exhaustion applies `ExertionPenalty` (0..1) to movement in `HumanoidLivingController` / `HumanoidPredictedMovement`, and — per combat plan Phase 4 — to combat performance: `RangedWeaponProfile.ExhaustionSpreadDegrees` widens the ranged accuracy cone and `MeleeHitInteraction.ComputeExertionTimeMultiplier` (up to 1.6x) lengthens melee windup/recovery. Ranged fire and melee swings both drain via `StaminaController.ServerDepleteStamina` (`RangedWeaponProfile.StaminaCost` / `MeleeWeaponProfile.StaminaCost`). Block stamina drain and dedicated winded screen FX are still deferred (block itself has no interaction yet — combat plan Phase 6, optional for MVP).
 
 ## Start here
 
@@ -20,7 +20,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 ## Extension points
 
-- Combat drains: melee swings call `ServerDepleteStamina` via `MeleeWeaponProfile.StaminaCost` ([combat](combat.md)); block/fire drains still deferred.
+- Combat drains: melee swings and ranged fire both call `ServerDepleteStamina` via their profile's `StaminaCost` ([combat](combat.md)); block drain still deferred (no block interaction exists yet).
 - Compact HUD indicator near vitals: Main HUD / Phase 6 — do not revive `StaminaBarView`.
 
 ## Pitfalls
@@ -31,7 +31,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 ## Depends on / Used by
 
 - **Depends on:** [health](health.md), [inventory](inventory.md), [entities](entities.md)
-- **Used by:** [interactions-runtime](interactions-runtime.md) (`Hand` gates — currently always allow), movement controllers
+- **Used by:** [interactions-runtime](interactions-runtime.md) (`Hand` gates — currently always allow), [combat](combat.md) (swing/fire drains + exertion feedback into windup/cone), movement controllers, Main HUD ranged reticle bloom (`MainHudSubSystem.GetSelectedRangedBloom01`)
 
 ## Related docs
 

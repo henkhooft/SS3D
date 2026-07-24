@@ -78,6 +78,7 @@ namespace SS3D.Systems.Combat.Editor
                 so.FindProperty("_profile.ReloadSeconds").floatValue = profile.ReloadSeconds;
                 so.FindProperty("_profile.StructuralForce").floatValue = profile.StructuralForce;
                 so.FindProperty("_profile.StaminaCost").floatValue = profile.StaminaCost;
+                so.FindProperty("_profile.ExhaustionSpreadDegrees").floatValue = profile.ExhaustionSpreadDegrees;
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, path);

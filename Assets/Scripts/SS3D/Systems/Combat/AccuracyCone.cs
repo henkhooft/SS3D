@@ -45,7 +45,8 @@ namespace SS3D.Systems.Combat
             in RangedWeaponProfile profile,
             float recoilStacks,
             float horizontalSpeed,
-            float aimDistanceMeters)
+            float aimDistanceMeters,
+            float exertionPenalty = 0f)
         {
             float spread = Mathf.Max(0f, profile.BaseSpreadDegrees);
             spread += Mathf.Max(0f, recoilStacks) * Mathf.Max(0f, profile.RecoilClimbDegrees);
@@ -58,6 +59,8 @@ namespace SS3D.Systems.Combat
                 float t = Mathf.InverseLerp(start, end, aimDistanceMeters);
                 spread += t * Mathf.Max(0f, profile.FalloffExtraSpreadDegrees);
             }
+
+            spread += Mathf.Clamp01(exertionPenalty) * Mathf.Max(0f, profile.ExhaustionSpreadDegrees);
 
             return spread;
         }

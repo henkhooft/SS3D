@@ -107,21 +107,35 @@ namespace SS3D.Systems.Combat.Interactions
         }
 
         /// <summary>
-        /// Stamina + recovery lock for a Harm swing (primary or discovered Hit).
+        /// Stamina + recovery lock for a Harm swing (primary or discovered Hit). Windup/recovery
+        /// lengthen with exertion (stamina.md §3, "performance degrades hard"). Returns the
+        /// effective (exertion-scaled) windup seconds so callers can align connect timing.
         /// </summary>
         [Server]
-        public void ServerBeginSwing(Hand hand)
+        public float ServerBeginSwing(Hand hand)
         {
             if (hand == null)
             {
-                return;
+                return _profile.WindupSeconds;
             }
 
-            TryConsumeSwingStamina(hand);
-            float cycleSeconds = _profile.WindupSeconds + _profile.RecoverySeconds;
-            GetOrCreateRecoveryTracker(hand).BeginSwingCycle(_profile.WindupSeconds, _profile.RecoverySeconds);
+            StaminaController stamina = hand.GetComponentInParent<StaminaController>();
+            TryConsumeSwingStamina(stamina);
+
+            float multiplier = ComputeExertionTimeMultiplier(stamina?.ExertionPenalty ?? 0f);
+            float windupSeconds = _profile.WindupSeconds * multiplier;
+            float recoverySeconds = _profile.RecoverySeconds * multiplier;
+            float cycleSeconds = windupSeconds + recoverySeconds;
+            GetOrCreateRecoveryTracker(hand).BeginSwingCycle(windupSeconds, recoverySeconds);
             InteractionController controller = hand.GetComponentInParent<InteractionController>();
             controller?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
+            return windupSeconds;
+        }
+
+        /// <summary>Windup/recovery time scale from exertion: 1x rested .. 1.6x fully exhausted.</summary>
+        public static float ComputeExertionTimeMultiplier(float exertionPenalty)
+        {
+            return Mathf.Lerp(1f, 1.6f, Mathf.Clamp01(exertionPenalty));
         }
 
         /// <summary>
@@ -298,14 +312,13 @@ namespace SS3D.Systems.Combat.Interactions
                 Mathf.Cos(yaw) * cosPitch);
         }
 
-        private void TryConsumeSwingStamina(Hand hand)
+        private void TryConsumeSwingStamina(StaminaController stamina)
         {
-            if (_profile.StaminaCost <= 0f || hand == null)
+            if (_profile.StaminaCost <= 0f)
             {
                 return;
             }
 
-            StaminaController stamina = hand.GetComponentInParent<StaminaController>();
             stamina?.ServerDepleteStamina(_profile.StaminaCost);
         }
 

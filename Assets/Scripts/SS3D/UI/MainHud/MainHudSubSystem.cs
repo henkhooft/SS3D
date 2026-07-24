@@ -17,6 +17,7 @@ using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
+using SS3D.Systems.Stamina;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Screens;
 using SS3D.UI.MachineInterface;
@@ -85,6 +86,7 @@ namespace SS3D.UI.MainHud
         private AlertStackState? _debugAlertOverride;
         private GameObject _localPlayer;
         private HumanHealthController _healthController;
+        private StaminaController _stamina;
         private HumanInventory _inventory;
         private Hands _hands;
         private IIntentProvider _intentProvider;
@@ -339,7 +341,8 @@ namespace SS3D.UI.MainHud
 
             float maxRange = Mathf.Max(1f, ranged.Profile.MaxRangeMeters);
             float aimDistance = EstimateRangedAimDistance(maxRange);
-            float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
+            float exertionPenalty = _stamina != null ? _stamina.ExertionPenalty : 0f;
+            float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance, exertionPenalty);
             // Map current cone into 0–1 using a readable reference (~still + light move at mid range).
             float bloomRef = Mathf.Max(
                 2.5f,
@@ -592,6 +595,8 @@ namespace SS3D.UI.MainHud
             _localPlayer = playerObject;
             _healthController = _localPlayer.GetComponent<HumanHealthController>()
                 ?? _localPlayer.GetComponentInChildren<HumanHealthController>();
+            _stamina = _localPlayer.GetComponent<StaminaController>()
+                ?? _localPlayer.GetComponentInChildren<StaminaController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
             _hands = _localPlayer.GetComponentInChildren<Hands>();
             _intentProvider = _localPlayer.GetComponent<IIntentProvider>()
@@ -642,6 +647,7 @@ namespace SS3D.UI.MainHud
 
             _localPlayer = null;
             _healthController = null;
+            _stamina = null;
             _inventory = null;
             _hands = null;
             _intentProvider = null;

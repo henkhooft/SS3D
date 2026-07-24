@@ -49,8 +49,11 @@ namespace SS3D.Systems.Combat
 
         public float StructuralForce;
 
-        /// <summary>Unused until combat stamina Phase 4.</summary>
+        /// <summary>Stamina cost per shot fired.</summary>
         public float StaminaCost;
+
+        /// <summary>Extra spread degrees at full exhaustion (ExertionPenalty == 1).</summary>
+        public float ExhaustionSpreadDegrees;
 
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
 
@@ -83,7 +86,8 @@ namespace SS3D.Systems.Combat
             MagazineSize = 30,
             ReloadSeconds = 2.2f,
             StructuralForce = 12f,
-            StaminaCost = 0f,
+            StaminaCost = 3f,
+            ExhaustionSpreadDegrees = 3f,
         };
     }
 }
