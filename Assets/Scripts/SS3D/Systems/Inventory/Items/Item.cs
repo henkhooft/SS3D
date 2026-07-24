@@ -219,12 +219,15 @@ namespace SS3D.Systems.Inventory.Items
         private Collider[] GetNativeColliders()
         {
             List<Collider> collidersToExcept = new();
-            AttachedContainer[] containers = GetComponentsInChildren<AttachedContainer>();
+            AttachedContainer[] containers = GetComponentsInChildren<AttachedContainer>(true);
             foreach (Item item in containers.SelectMany(container => container.Items))
             {
-                collidersToExcept.AddRange(item.GetComponentsInChildren<Collider>());
+                collidersToExcept.AddRange(item.GetComponentsInChildren<Collider>(true));
             }
-            return GetComponentsInChildren<Collider>().Except(collidersToExcept).ToArray();
+
+            // includeInactive: clothing may keep a folded child inactive until presentation applies;
+            // root colliders must still participate in Freeze/Unfreeze.
+            return GetComponentsInChildren<Collider>(true).Except(collidersToExcept).ToArray();
         }
 
         public override void OnStartServer()
@@ -322,6 +325,13 @@ namespace SS3D.Systems.Inventory.Items
         [ServerOrClient]
         public void SetVisibility(bool visible)
         {
+            // Re-assert folded world form before enabling renderers so unequip/drop shows the pile,
+            // not the body-shaped child (ClothingItemPresentation / ClothesDisplayer).
+            if (visible && TryGetComponent(out ClothingItemPresentation clothingPresentation))
+            {
+                clothingPresentation.ApplyWorldForm();
+            }
+
             // TODO: Make this handle multiple renderers, with different states
             Renderer[] renderers = GetComponentsInChildren<Renderer>();
             foreach (Renderer childRenderer in renderers)

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 50a36b51 — 2026-07-23
+> Verified: 2a5e4dd92 — 2026-07-24
 
 # Combat
 
@@ -32,7 +32,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — melee hands/tools
 - `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` + `spawndummy`
 - `Assets/Scripts/SS3D/Systems/Combat/ArmorProfile.cs` / `ArmorSimulation.cs` / `ArmorItemExtension.cs` — per-zone absorption data, math, per-item integrity
-- `Assets/Scripts/SS3D/Systems/Combat/Editor/ArmorPrefabSetup.cs` — **SS3D → Combat → Setup Armor Prefabs** (interim: `JumpsuitSecurity.prefab`)
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/ArmorPrefabSetup.cs` — **SS3D → Combat → Setup Armor Prefabs** (interim: `JumpsuitSecurity.prefab`; world form via inventory clothing presentation on Grey base)
 - `Assets/Scripts/SS3D/Systems/Health/HumanHealthController.cs` — `ApplyArmorAbsorption` (armor hook inside `ApplyDamage`)
 
 ## Extension points
@@ -49,9 +49,11 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
 4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
 5. Help + M4 must not swing/fire; Harm must not Drop.
-6. Run **SS3D → Combat → Setup Armor Prefabs**; equip `JumpsuitSecurity` on the dummy (admin give);
+6. Run **SS3D → Combat → Setup Armor Prefabs** (and clothing presentation on Grey if world mesh/collider drifts);
+   spawn/give `JumpsuitSecurity` — folded pile rests on the floor; equip on the dummy;
    Harm-melee/ranged it — covered zones (chest/limbs) take reduced brute, head (uncovered) takes
-   full damage; enough hits deplete integrity and damage reverts to unmitigated.
+   full damage; enough hits deplete integrity and damage reverts to unmitigated. Unequip/drop keeps
+   the same Item (armor SyncVar) and restores folded world form.
 
 ## Pitfalls
 
@@ -62,6 +64,7 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 - **Reticle bloom is single-composer** — set via `ZoneReticleDriver.SetBloomInput` only; no parallel writers.
 - **Armor absorption is a single chokepoint** — lives inside `HumanHealthController.ApplyDamage(BodyZone, float, float)`, not duplicated in melee/ranged call sites; also applies to `StructuralDamageSubSystem`'s debris-collapse call (intentional, not excluded).
 - **Armor coverage ≠ clothing slot** — `ArmorProfile.CoveredZones` (`BodyZoneMask`) is independent of which `ContainerType` slot the item occupies; only "is it worn" (`IsWornSlot()`) gates lookup, not slot identity.
+- **Armor Item is not a dual prefab** — `ArmorItemExtension` stays on the clothing Item (`JumpsuitSecurity`); world folded look is `ClothingItemPresentation` on the same NO ([inventory](inventory.md)). Do not spawn a separate folded NetworkObject for drops.
 - Melee pitfalls (connect aim, exclude self, structural reach, Harm whitelist, etc.) still apply — see git history / prior map notes.
 
 ## Depends on / Used by
@@ -73,4 +76,5 @@ Deferred: disarm/grab, environmental seal/breach, armor wear visuals, blocking, 
 
 - Design: [Documents/design/combat.md](../../design/combat.md), [Documents/design/armor.md](../../design/armor.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md) (Phase 3, Phase 5 shipped)
+- Clothing world form: [clothing_world_presentation.plan.md](../../plans/clothing_world_presentation.plan.md), [inventory](inventory.md)
 - [entities](entities.md), [health](health.md), [inventory](inventory.md), [INDEX.md](../INDEX.md)

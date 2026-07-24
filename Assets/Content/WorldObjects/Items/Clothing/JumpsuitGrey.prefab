@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7211482324398141271
 Transform:
   m_ObjectHideFlags: 0
@@ -106,6 +106,8 @@ GameObject:
   - component: {fileID: 7201402233169256053}
   - component: {fileID: 173897779263585381}
   - component: {fileID: -9111137678263042396}
+  - component: {fileID: 4829173640582917364}
+  - component: {fileID: -5829173640582917365}
   m_Layer: 10
   m_Name: JumpsuitGrey
   m_TagString: Untagged
@@ -255,6 +257,9 @@ MonoBehaviour:
   _asset: {fileID: 11400000, guid: 620dc53a5608be44a975c990e69ddba5, type: 2}
   _name: Jumpsuit Grey
   _weight: 1
+  _sizeClass: 2
+  _maxStackSize: 1
+  _stackCount: 1
   _startingTraits:
   - {fileID: 11400000, guid: 9fce2bd65c51b5b40ad2346bedb63121, type: 2}
   _rigidbody: {fileID: 6375350292960470613}
@@ -303,6 +308,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   key: {fileID: 11400000, guid: e0f2e3fe7e3c8354f8dc7a49f831b017, type: 2}
+--- !u!114 &4829173640582917364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 624365323667193292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7c4e2a91f3846d0a5e8c3b2d1f0a9e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Inventory.Containers.ClothingItemPresentation
+  _worldRoot: {fileID: 2306192207345831892}
+  _wornShapedRoot: {fileID: 414388142646750405}
+--- !u!65 &-5829173640582917365
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 624365323667193292}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.43, y: 0.173, z: 0.351}
+  m_Center: {x: 0, y: 0.015, z: -0.015}
 --- !u!1 &2306192207345831892
 GameObject:
   m_ObjectHideFlags: 0
@@ -320,7 +360,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &6684324995704323731
 Transform:
   m_ObjectHideFlags: 0
