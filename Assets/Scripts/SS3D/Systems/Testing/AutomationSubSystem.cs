@@ -473,8 +473,10 @@ namespace SS3D.Systems.Testing
                 return;
             }
 
-            // Appears in unity.log next to the FishNet warning so triage can name the writer.
-            Debug.Log($"[SS3D SyncVarGuard] FishNet server-write warning stack:\n{stackTrace}");
+            // FishNet SyncBase now embeds Behaviour=/Object=/ObjectId= in the warning text.
+            // Re-log condition + Unity stack so triage can name the writer even when frames are stripped.
+            string stack = string.IsNullOrEmpty(stackTrace) ? "(empty)" : stackTrace;
+            Debug.Log($"[SS3D SyncVarGuard] FishNet server-write warning:\n{condition}\n--- unity stack ---\n{stack}");
         }
     }
 }
