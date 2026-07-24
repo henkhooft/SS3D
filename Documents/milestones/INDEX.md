@@ -14,14 +14,16 @@ Two tracks run in parallel — an **operational** one that makes the game testab
 - **T1** — Loadable Windows build: it runs but is missing critical files/permissions (likely unpacked Addressables content) — diagnose against a real build
 - **T2** — Zero-setup remote join: launch bats hardcode `127.0.0.1`; a public build must default to the hosted server
 
-**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 now shipped: ranged hitscan + per-zone armor absorption/integrity; environmental seal deferred):
+**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API shipped):
 
-- **M2** — Station structural damage model — scoped to route-opening (no live area/atmos recompute)
-- **M5** — Round-resolution spine: death→spectator + round-end summary/reveal (death detach already wired via the ghost body; the summary/reveal is net-new). **Shared with the test server's T4 round-end loop** — the same spine unlocks both.
+- **M0** — Vault + disk on map, runtime antag/job spawn pick, ops gear at spawn (`RoleLoadout`)
+- **M3** — Nuke device loop (disk load → arm / countdown / defuse / detonate); optional breaching charges on the existing blast API
+- **M4** — Thin Nuke Ops gamemode (assignment, on-station syndie spawn, win/lose)
+- **M5** — Round-end summary/reveal over the existing death→ghost spectator. **Shared with test-server T4**
 
-The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) is now implementation-ready per the owner (UI direction settled) — a parallel track to commission when capacity allows; a minimal join/spawn path is the only hard dependency the test server has on it.
+Not focus: re-opening structural damage as a foundation, Area-id merge on breach, shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, server browser / accounts.
 
-Not focus: shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, breach-driven atmos/area consequences, server browser / accounts.
+The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) is implementation-ready per the owner — a parallel track when capacity allows; a minimal join/spawn path is the only hard dependency the test server has on it.
 
 ## Gates
 

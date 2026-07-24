@@ -1,7 +1,7 @@
-> Goal: A playable Nuclear Operatives round — ops (or proxies) plant/defuse a device; guns and breakable walls matter; on-station syndie spawn is enough
+> Goal: A playable Nuclear Operatives round — ops spawn geared, steal/load the disk, arm or defuse the nuke; fight and breaching already work; round ends with a legible outcome
 > Status: planned
 > Depends on: —
-> Current focus: M2 (station structural damage), M5 (death→spectator + round-end summary — newly surfaced spine) — M1 shipped (ranged hitscan + thin armor)
+> Current focus: M0 (ops loadout + vault/disk + runtime spawn pick), M3 (nuke device loop), M4 (thin Nuke Ops gamemode), M5 (round-end summary/reveal)
 
 # MVP1 — Nuclear Operatives round
 
@@ -9,93 +9,88 @@
 
 Done when a small group can run a Nuke Ops–shaped round end-to-end:
 
-- Crew and ops spawn on a authored map (ops may start on-station; shuttle not required), and ops actually spawn **holding their gear** (no uplink this pass — loadout comes with the spawn)
-- Ranged and melee fights resolve through real weapons and enough armor that hits are survivable
-- Walls/doors take staged structural damage; a blast can open a route or kill
-- Authentication disk (a carryable steal-target sited in an access-gated vault) + timed nuke device: the disk must be loaded before arming succeeds, then arm / countdown / defuse
-- A killed player **detaches to a spectator state** rather than being stuck at their body — so a lethal round stays playable through to the end
-- Detonation, successful defuse, or timer ends the round with a **legible outcome**: a summary/reveal painted over that spectator state
+- Crew and ops spawn on an authored map (ops may start on-station; shuttle not required), and ops spawn **holding their gear** (no uplink this pass — loadout comes with the spawn)
+- Fights resolve through real weapons and enough armor that hits are survivable (foundation shipped)
+- Walls can be staged-damaged and blasted open via the existing structural/blast path (foundation shipped) — player **breaching charges / grenades** are content on that path, not a new damage model
+- Authentication disk (carryable steal-target in an access-gated vault) + timed nuke: disk must be loaded before arming, then arm / countdown / defuse / detonate
+- A killed player **detaches to a spectator** (already wired) rather than stuck at their body
+- Detonation, successful defuse, or timer ends the round with a **legible outcome**: summary/reveal over that spectator state
 
-Does **not** require full job economy, Traitor uplink, lobby redesign, shuttle flight, cloning/respawn, or breach-driven atmos/area consequences.
+Does **not** require full job economy, Traitor uplink, lobby redesign, shuttle flight, cloning/respawn, or breach-driven atmos/area identity merge.
 
 ## Dependency tree
 
-Edges mean “needs.” A dotted edge is a consequence MVP1 deliberately scopes out (see notes).
-Leaves cite design / effort / plan — not full HOW.
+Edges mean “needs.” Leaves cite design / effort / plan — not full HOW.
 
 ```mermaid
 flowchart TB
   mvp1[Play_Nuke_Ops]
-  combat[Ranged_combat_weapons]
-  armor[Thin_armor]
-  health[Health_zone_damage]
+  combat[Ranged_combat_armor]
+  struct[Structural_damage_blast_API]
   death[Death_to_spectator]
-  struct[Station_structural_damage]
-  arearecompute[Area_live_recompute]
-  blast[Blast_resolution]
   nuke[Nuke_device_disk_defuse]
-  diskload[Disk_load_arm_gate]
-  map[Map_spawns_vault]
-  spawns[Spawn_point_authoring]
-  vault[Vault_access_gate]
+  items[Breaching_charges_grenades]
+  map[Map_vault_disk_spawns]
   loadout[Ops_spawn_loadout]
   mode[Thin_gamemode_winlose]
   roundend[Round_end_summary_reveal]
 
-  mvp1 --> combat
   mvp1 --> nuke
   mvp1 --> map
+  mvp1 --> loadout
   mvp1 --> mode
   mvp1 --> roundend
-  combat --> armor
-  combat --> health
-  combat --> death
-  death --> roundend
+  mvp1 --> combat
+  nuke --> struct
+  nuke --> death
+  items --> struct
+  loadout --> items
   mode --> roundend
-  nuke --> blast
-  nuke --> diskload
-  blast --> struct
-  struct -.-> arearecompute
-  map --> spawns
-  map --> vault
+  death --> roundend
   map --> loadout
 ```
 
-- **Health zone damage** — largely shipped ([health.md](../design/health.md); [health_implementation_plan.md](../plans/health_implementation_plan.md) Phases 0–5b). Prerequisite for combat leaves, not a current focus leaf.
-- **Ranged combat + thin armor** — shipped ([combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + Phase 5; [systems/combat.md](../architecture/systems/combat.md)): accuracy cone, shared `LineOfSight`, M4 mag/reload, per-zone armor absorption/integrity before limb damage. Projectile travel still deferred for thrown/heavy; environmental seal/breach ([armor.md](../design/armor.md) §3) deferred, blocked on an environment→health exposure pipeline that doesn't exist yet.
-- **Death → spectator** — the detach itself is **already wired**: `Human.Kill()` transfers the mind into a free-flying ghost body ([entities](../architecture/systems/entities.md); `HumanoidGhostController`). MVP1 needs only that this reads as a clean spectator and that round end has a surface to paint on — **not** the full observer experience (dead chat, possession, ghost-role bodies, follow-lock) which stays deferred ([observer.md](../design/observer.md) §2, §7; [death-cloning-respawn.md](../design/death-cloning-respawn.md) §2).
-- **Round-end summary/reveal** — the round-ending *trigger* is already wired in legacy code (`Nuke.Detonate()` → `GamemodeSubSystem.EndRound()`, see [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)). What is net-new is the **legible outcome**: reveal + summary painted over the spectator state ([round-end.md](../design/round-end.md) §4, §5), and the return-to-lobby transition (§6). Evac call/countdown (§3) is **not** MVP1 — detonation/defuse/timer are the end paths here.
-- **Ops spawn loadout** — antagonist-content routes operative gear through the Traitor uplink ([antagonist-content.md](../design/antagonist-content.md) §6), but uplink/PDA is deferred this pass. MVP1 needs an alternate path: gear the ops at spawn. Legacy `RoleLoadout`/`RoleSubSystem` already models role loadouts ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); wire ops spawn to it rather than inventing a new mechanism.
-- **Vault + disk** — the disk is a carryable steal-target in an access-gated vault ([antagonist-content.md](../design/antagonist-content.md) §6; [id-access.md](../design/id-access.md) §6). Map authoring must place the vault + gated door; inventory (shipped) already carries the disk as an item.
-- **Disk-load arm gate** — arming only succeeds once the disk is physically loaded into the device — a distinct interruptible combine step, not part of the timer itself ([antagonist-content.md](../design/antagonist-content.md) §6; [explosives-destruction.md](../design/explosives-destruction.md) §6). Legacy `Nuke.cs` / `DetonateNukeObjective` / `GetItemObjective` are the rewrite target.
-- **Spawn point authoring** — Map Editor markers shipped ([2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md)); runtime job/antag-aware pick still open ([creative-mode.md](../design/creative-mode.md) §8).
-- **Area live-recompute (dotted)** — a Destroyed wall *should* re-flood Area boundaries and connect atmosphere ([explosives-destruction.md](../design/explosives-destruction.md) §4; [area.md](../design/area.md) §3, §5), but Area's live-mutation recompute is **deferred** ([2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md)). MVP1 scopes structural damage to "the tile becomes passable / a route opens" **only** — power/camera/access re-derive and atmos decompression on breach are explicitly out of this gate. Making that boundary explicit keeps it from being a silent blocker on M2/M3.
+**Shipped foundations** (not focus — do not re-open as MVP1 blockers):
+
+- **Health + ranged combat + thin armor** — [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + 5; [systems/combat.md](../architecture/systems/combat.md). Environmental seal deferred.
+- **Structural damage + blast resolve API** — Phase 1–4 shipped ([structural-destruction](../architecture/systems/structural-destruction.md); [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md)): integrity stages, melee/ranged force, BFS blast, Destroyed→clear, presentation. Admin `hurtstructure` / `blast` exercise the path. Clearing a wall already opens the route (collider gone); Area-id merge on breach is **not** a goal here (see deferred).
+- **Death → spectator** — `Human.Kill()` → ghost body already wired ([entities](../architecture/systems/entities.md)). Full observer (dead chat, possession, follow-lock) stays deferred.
+
+**What still unlocks the round:**
+
+- **Nuke device loop (M3)** — the actual Nuke Ops fantasy: disk as steal-target, physical load-into-device gate, arm / visible countdown / defuse, detonate → `EndRound` + `ResolveBlast` ([antagonist-content.md](../design/antagonist-content.md) §6; [explosives-destruction.md](../design/explosives-destruction.md) §6). Legacy `Nuke.cs` / objectives are the rewrite target. Blast *resolution* exists; the device and disk interactions do not.
+- **Breaching charges / grenades** — Phase 5 of the structural plan: items that call `ResolveBlast`. Useful ops gear (and can ride M0 loadout), but **secondary** to the nuke loop — not a separate foundation milestone.
+- **Ops spawn loadout (M0)** — gear at spawn via legacy `RoleLoadout` / `RoleSubSystem` ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); uplink/PDA deferred.
+- **Vault + disk + runtime spawns (M0)** — map places vault/gated door + disk; Map Editor spawn markers shipped, runtime job/antag-aware pick still open ([2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md)).
+- **Thin Nuke Ops gamemode (M4)** — assignment, on-station syndie spawn, win/lose; rewrite legacy `NukeGamemode`.
+- **Round-end summary/reveal (M5)** — `EndRound` trigger exists; legible reveal + return-to-lobby is net-new ([round-end.md](../design/round-end.md) §4–§6). **Shared with [test-server.md](test-server.md) T4.** Evac (§3) is not MVP1.
 
 ## Slices
 
 | Id | Name | Status | Links |
 |----|------|--------|-------|
-| M0 | Map authoring + spawn tags + vault + ops loadout | partial — authoring shipped; runtime role→spawn pick open; ops-at-spawn loadout via legacy `RoleLoadout` not yet wired | [creative-mode.md](../design/creative-mode.md) §8; [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md); [id-access.md](../design/id-access.md) §6 (vault); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) (`RoleLoadout`) |
-| M1 | Combat ranged + dedicated weapons (+ thin armor) | shipped — ranged hitscan + M4 + per-zone armor absorption/integrity; environmental seal deferred | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + Phase 5 shipped |
-| M2 | Station structural damage model | pending — **focus**; scoped to route-opening only (no live area/atmos recompute) | [explosives-destruction.md](../design/explosives-destruction.md) §3–§4; [construction.md](../design/construction.md) §2 (ladder meet); [area.md](../design/area.md) §3 / [2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md) (recompute deferred); architecture effort TBD when commissioned |
-| M3 | Blast + explosive items / nuke device (incl. disk-load arm gate + defuse) | pending | blocked on M2; [explosives-destruction.md](../design/explosives-destruction.md) §2, §6; [antagonist-content.md](../design/antagonist-content.md) §6 |
-| M4 | Thin Nuke Ops gamemode (on-station syndie spawn, assignment, win/lose) | pending | rewrite legacy `NukeGamemode` ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); [antagonist-content.md](../design/antagonist-content.md) §2, §6 |
-| M5 | Round resolution spine: death→spectator + round-end summary/reveal | pending — **focus** (newly surfaced); death detach already wired, summary/reveal net-new; **shared with [test-server.md](test-server.md) T4** | [observer.md](../design/observer.md) §2, §7; [round-end.md](../design/round-end.md) §4–§6; [entities](../architecture/systems/entities.md) (ghost); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) (`EndRound`) |
+| M0 | Map: vault + disk + runtime spawn pick + ops loadout | partial — **focus**; authoring shipped; runtime role→spawn pick open; ops-at-spawn `RoleLoadout` not wired; vault/disk placement on playable map | [creative-mode.md](../design/creative-mode.md) §8; [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md); [id-access.md](../design/id-access.md) §6; [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) (`RoleLoadout`) |
+| M1 | Combat ranged + thin armor | shipped | [combat.md](../design/combat.md) §3, §6; [armor.md](../design/armor.md); [combat_implementation_plan.md](../plans/combat_implementation_plan.md) Phase 3 + 5 |
+| M2 | Structural damage + blast resolve API | shipped — integrity stages, melee/ranged/blast BFS, Destroyed→clear, VFX; Area/atmos breach consequences explicitly out | [structural-destruction](../architecture/systems/structural-destruction.md); [2026-07_structural-destruction.md](../architecture/2026-07_structural-destruction.md); [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md) Phase 1–4 |
+| M3 | Nuke device loop (disk load, arm, countdown, defuse, detonate) + optional breaching items | pending — **focus**; blast API ready; device/disk/items are the work | [antagonist-content.md](../design/antagonist-content.md) §6; [explosives-destruction.md](../design/explosives-destruction.md) §2, §6; plan Phase 5 |
+| M4 | Thin Nuke Ops gamemode (assignment, on-station syndie spawn, win/lose) | pending — **focus** | rewrite legacy `NukeGamemode` ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); [antagonist-content.md](../design/antagonist-content.md) §2, §6 |
+| M5 | Round-end summary/reveal (over existing death→spectator) | pending — **focus**; detach wired, summary/reveal net-new; **shared with [test-server.md](test-server.md) T4** | [round-end.md](../design/round-end.md) §4–§6; [observer.md](../design/observer.md) §2, §7; [entities](../architecture/systems/entities.md) |
 | M6 | MVP1 playable close | pending | depends M0–M5 |
 
 ## Explicitly deferred
 
 Off the critical path — do not treat as MVP1 blockers:
 
-- **Full observer/ghost experience** ([observer.md](../design/observer.md)) — dead chat, possession, ghost-role bodies, follow-lock. MVP1 uses only the existing death→ghost detach as a thin spectator.
-- **Cloning / defib-revive / respawn** ([death-cloning-respawn.md](../design/death-cloning-respawn.md)) — dead players stay spectators until round end; no revival path this pass.
-- **Breach-driven area & atmos consequences** ([explosives-destruction.md](../design/explosives-destruction.md) §4) — structural damage opens routes only; Area live-recompute stays deferred ([2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md)).
+- **Area-id merge / live Area recompute on breach** — opening a hole already makes the tile passable. Auto-merging authored areas (hallway → Medical) corrupts APC/camera/access/alarm identity; that is not a Nuke Ops beat. Design flagged live recompute as an open question ([area.md](../design/area.md) §3); do not pull it in under M2/M3. Atmos zone connect on breach is a separate system with a real play goal — still **not** MVP1 (see MVP2 station-felt loop).
+- **Full observer/ghost experience** ([observer.md](../design/observer.md)) — dead chat, possession, ghost-role bodies, follow-lock.
+- **Cloning / defib-revive / respawn** ([death-cloning-respawn.md](../design/death-cloning-respawn.md)).
 - **Evac shuttle end path** ([round-end.md](../design/round-end.md) §3) — detonation/defuse/timer are MVP1's end triggers.
-- Shuttle as ops spawn/transit gate ([shuttles.md](../design/shuttles.md)) — on-station syndie spawn instead.
-- Lobby UITK redesign ([lobby.md](../design/lobby.md)) — condemned lobby remains until look is approved; parallel UX track.
-- Full PDA / uplink / Traitor before MVP1 ([pda.md](../design/pda.md), [antagonist-content.md](../design/antagonist-content.md) §3–4) — ops gear comes from spawn loadout instead.
+- Shuttle as ops spawn/transit gate ([shuttles.md](../design/shuttles.md)).
+- Lobby UITK redesign ([lobby.md](../design/lobby.md)) — parallel UX track.
+- Full PDA / uplink / Traitor ([pda.md](../design/pda.md), [antagonist-content.md](../design/antagonist-content.md) §3–4).
+- Structural repair (plan Phase 6) — gated on construction/crafting freeform.
 - Malf-AI, Revolution, chemistry depth, ship-to-ship combat.
 
 ## Maintenance
 
-When child work ships, run `update-system-docs`: bump the matching slice status (and this header’s `Current focus`), then refresh [INDEX.md](INDEX.md) **Current focus** to the deepest unfinished critical leaves. If a scoped-out consequence (area/atmos recompute on breach, cloning, evac) is later pulled in, move it from **Explicitly deferred** into the tree with its own slice rather than letting it creep in silently.
+When child work ships, run `update-system-docs`: bump the matching slice status (and this header’s `Current focus`), then refresh [INDEX.md](INDEX.md). Keep M5 in sync with test-server T4. Do not resurrect M2 as focus — remaining explosives work is M3 content on the shipped blast API. If atmos-on-breach or a *narrow* Area rule is ever wanted, give it its own slice (likely under MVP2), never smuggle it back into M2.
