@@ -65,10 +65,13 @@ the user systemd unit dies when all `cu6e` sessions end.
 ### Workflow
 
 - [`.github/workflows/multiplayer-smoke-test.yml`](../../.github/workflows/multiplayer-smoke-test.yml):
-  `runs-on: [self-hosted, linux, x64, unity]`; restore/save Library stash via `mv` around
-  the two `unity-builder` steps; `runAsHostUser: true`; nightly `cron: "0 4 * * *"`.
-- Build methods, `versioning: None`, and binary names unchanged.
-- Later: same labels for `editmodetestrunner.yml` / Linux path of `develop-release.yml`.
+  `runs-on: [self-hosted, linux, x64, unity]`; restore/save Library stash via `mv`;
+  **one** `unity-builder` step with `ClientAndServerBuildScript.BuildBothForCi`;
+  `runAsHostUser: true`; nightly `cron: "0 4 * * *"`.
+- Build methods for isolated server/client still exist for local/menu use; smoke CI must not
+  split them across two Editor sessions.
+- Later: same labels for `editmodetestrunner.yml` / Linux path of `develop-release.yml`
+  (develop-release still uses two builder steps — same PackageCache pitfall if moved here).
 
 Net effect: the exact 45-min / metered-minutes pain the CI-pipeline doc
 ([2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md)) records
@@ -132,10 +135,12 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 - **Warm `Library/` cache is the whole win — protect it.** A step that clears it, or a
   container that doesn't mount the volume, silently drops you back to 45-min cold builds with
   no error. Verify cache reuse in run logs. **Never stash a failed build's Library** — a
-  half-written `PackageCache` (missing localization sources → cascading `Unity.Cecil` /
-  Entities CodeGen errors on the client step) poisons the next warm run. Wipe leftover
-  workspace `Library/` before restore; clear `ScriptAssemblies`/`Bee` between server and
-  client builds in the same job.
+  half-written `PackageCache` poisons the next warm run. Wipe leftover workspace `Library/`
+  before restore.
+- **One Editor session for server+client.** Two sequential `unity-builder` steps (server then
+  client) restart Docker/Unity against a shared Library and race `PackageCache` on this host
+  (missing localization sources → CS2001; missing `Unity.Cecil.Awesome.dll` → CS0006). Smoke
+  uses `ClientAndServerBuildScript.BuildBothForCi` in a single step.
 - **Server-kill vs. harness cleanup.** The harness already `trap`s EXIT/INT/TERM to
   `kill_tracked_pids`; a deliberate mid-run server kill must not confuse that PID bookkeeping
   or trip the "server script did not complete" path as a false failure. The server dying is
