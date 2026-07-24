@@ -74,8 +74,9 @@ namespace SS3D.Systems.Testing
             _scriptStarted = true;
 
             // Capture stacks for FishNet SyncVar-on-client warnings (smoke denylist).
-            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.Full);
-            Application.logMessageReceived += HandleUnityLogMessage;
+            // Qualify UnityEngine.Application — this file imports SS3D.Application.
+            UnityEngine.Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.Full);
+            UnityEngine.Application.logMessageReceived += HandleUnityLogMessage;
 
             SubscribeToConnectionEvents();
             AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
