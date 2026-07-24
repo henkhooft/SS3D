@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Substances/
 > Entry points: SubstancesSubSystem, SubstanceContainer, TransferSubstanceInteraction
 > Status: partial
-> Verified: 8d5428105 — 2026-07-17
+> Verified: 3db3babca — 2026-07-24
 
 # Substances
 
@@ -23,6 +23,7 @@ Chemical substances, containers, and transfer interactions. `TransferSubstanceIn
 ## Pitfalls
 
 - **GC on `SubstanceContainer.Substances`:** `List.AsReadOnly()` allocates a new wrapper every call. Cache the view; internal mutators (`IndexOfSubstance`, `RemoveSubstance`, volume recalcs) must use `_substances` directly. Heart bleed previously spiked GC through this property.
+- **Never seed `InitialSubstances` from Unity `Start` on clients:** `AddSubstance` → `_currentVolume` SyncVar. Pure clients writing it fail the smoke denylist. Use FishNet `OnStartServer` (clients receive contents via SyncVars). Hit: `OxygenTank(Clone)` / `SubstanceContainer` after empty map create.
 
 ## Depends on / Used by
 

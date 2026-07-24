@@ -56,7 +56,8 @@ namespace SS3D.Systems.Tile.Connections
             _hasPendingEngineConnections = true;
             ApplyEngineConnections(horizontalConnections);
 
-            if (IsServer && NetworkObject != null && NetworkObject.IsSpawned)
+            // NetworkObject first — IsServer NREs when _networkObjectCache is null (EditMode).
+            if (NetworkObject != null && NetworkObject.IsSpawned && IsServer)
                 PublishEngineConnections(horizontalConnections);
         }
 

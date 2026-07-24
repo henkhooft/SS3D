@@ -30,7 +30,9 @@ namespace SS3D.Systems.Electricity
             {
                 // SyncVar is server-authoritative — client assigns spam FishNet
                 // "Cannot complete operation as server when server is not active".
-                if (!IsServer)
+                // Allow EditMode/offline (null or unspawned NetworkObject); block pure clients only.
+                // NetworkObject first — IsServer NREs when _networkObjectCache is null.
+                if (NetworkObject != null && NetworkObject.IsSpawned && !IsServer)
                 {
                     return;
                 }
