@@ -1,7 +1,4 @@
 using System.Linq;
-using FishNet;
-using FishNet.Object;
-using SS3D.Core;
 using SS3D.Data;
 using SS3D.Data.Generated;
 using SS3D.Logging;
@@ -13,85 +10,161 @@ using UnityEngine;
 namespace SS3D.Systems.Audio
 {
     /// <summary>
-    /// Server-side footwear footsteps (audio.md §3). The provided Socks/Shoes/Boots clips are
-    /// ~2s walking loops, so this starts a pooled looping source while move input is held and
-    /// stops shortly after input ends. Added from <c>OnStartServer</c> — do not edit Human.prefab.
+    /// Client-local footwear footsteps (audio.md §3 presentation). The Socks/Shoes/Boots clips are
+    /// ~2s walking loops — this plays them on a local <see cref="AudioSource"/> while the body is
+    /// moving. Does <b>not</b> go through <see cref="AudioSubSystem"/>: host prediction clears
+    /// server locomotion every tick with <c>Move(default)</c>, so a server-pooled loop never stayed
+    /// audible. Owner uses predicted locomotion velocity; remotes use transform delta.
+    /// Added from <c>OnStartNetwork</c> — do not edit Human.prefab.
     /// </summary>
     public sealed class FootstepAudio : MonoBehaviour
     {
-        private const float MovingHoldSeconds = 0.25f;
-        private const float Volume = 0.85f;
-        private const float MinRange = 1f;
-        private const float MaxRange = 12f;
+        private const float OwnerSpeedThreshold = 0.05f;
+        private const float RemoteSpeedThreshold = 0.35f;
+        private const float Volume = 0.45f;
+        private const float SpatialBlend = 1f;
+        private const float MinDistance = 1f;
+        private const float MaxDistance = 12f;
 
-        private NetworkObject _networkObject;
+        private HumanoidController _controller;
         private HumanInventory _inventory;
         private Ragdoll _ragdoll;
+        private AudioSource _source;
 
-        private string _playingTrackId = string.Empty;
-        private bool _isPlaying;
-        private float _lastMovingTime = float.NegativeInfinity;
+        private float _ownerSpeed;
+        private Vector3 _lastPosition;
+        private bool _hasLastPosition;
+        private string _loadedTrackId = string.Empty;
+        private bool _loggedMissingClip;
 
         private void Awake()
         {
-            _networkObject = GetComponent<NetworkObject>();
+            _controller = GetComponent<HumanoidController>();
             _inventory = GetComponent<HumanInventory>();
             _ragdoll = GetComponent<Ragdoll>();
+
+            _source = gameObject.AddComponent<AudioSource>();
+            _source.playOnAwake = false;
+            _source.loop = true;
+            _source.spatialBlend = SpatialBlend;
+            _source.minDistance = MinDistance;
+            _source.maxDistance = MaxDistance;
+            _source.rolloffMode = AudioRolloffMode.Logarithmic;
+            _source.dopplerLevel = 0f;
+            _source.volume = Volume;
+        }
+
+        private void OnEnable()
+        {
+            if (_controller != null)
+            {
+                _controller.OnLocomotionVelocityChanged += HandleLocomotionVelocityChanged;
+            }
         }
 
         private void OnDisable()
         {
-            if (_isPlaying && InstanceFinder.IsServer)
+            if (_controller != null)
             {
-                StopFootsteps();
+                _controller.OnLocomotionVelocityChanged -= HandleLocomotionVelocityChanged;
             }
+
+            StopFootsteps();
         }
 
-        /// <summary>
-        /// Called from <c>HumanoidPredictedMovement.Move</c> on ticks with planar input.
-        /// </summary>
-        public void ServerNotifyMoving(bool isRunning = false)
+        private void HandleLocomotionVelocityChanged(float velX, float velZ, float turn)
         {
-            if (!InstanceFinder.IsServer)
-            {
-                return;
-            }
-
-            _lastMovingTime = Time.time;
+            _ownerSpeed = Mathf.Sqrt((velX * velX) + (velZ * velZ));
         }
 
         private void Update()
         {
-            if (!InstanceFinder.IsServer || _networkObject == null)
+            if (_ragdoll != null && _ragdoll.IsKnockedDown)
             {
+                StopFootsteps();
                 return;
             }
 
-            bool shouldPlay = Time.time - _lastMovingTime <= MovingHoldSeconds
-                && (_ragdoll == null || !_ragdoll.IsKnockedDown);
-
-            if (!shouldPlay)
+            bool moving = IsMoving();
+            if (!moving)
             {
-                if (_isPlaying)
-                {
-                    StopFootsteps();
-                }
-
+                StopFootsteps();
                 return;
             }
 
             string trackId = ResolveTrackId();
-            if (_isPlaying && trackId == _playingTrackId)
+            if (!EnsureClip(trackId))
             {
                 return;
             }
 
-            if (_isPlaying)
+            if (!_source.isPlaying)
             {
-                StopFootsteps();
+                _source.time = 0f;
+                _source.Play();
+            }
+        }
+
+        private bool IsMoving()
+        {
+            // Owner: predicted locomotion axes are published every move tick.
+            if (_controller != null && _controller.IsOwner)
+            {
+                return _ownerSpeed >= OwnerSpeedThreshold;
             }
 
-            StartFootsteps(trackId);
+            // Remotes: no predicted velocity — approximate from world motion.
+            Vector3 position = transform.position;
+            if (!_hasLastPosition)
+            {
+                _lastPosition = position;
+                _hasLastPosition = true;
+                return false;
+            }
+
+            float dt = Time.deltaTime;
+            float speed = dt > 0f ? (position - _lastPosition).magnitude / dt : 0f;
+            _lastPosition = position;
+            return speed >= RemoteSpeedThreshold;
+        }
+
+        private bool EnsureClip(string trackId)
+        {
+            if (_loadedTrackId == trackId && _source.clip != null)
+            {
+                return true;
+            }
+
+            if (!Assets.TryGet(AssetDatabases.Sounds, trackId, out AudioClip clip) || clip == null)
+            {
+                if (!_loggedMissingClip)
+                {
+                    _loggedMissingClip = true;
+                    Log.Warning(this,
+                        "Footstep clip '{id}' missing from Sounds database — open the Footsteps mp3s in Unity so they import, then confirm Sounds.asset refs are not Missing.",
+                        Logs.Generic, trackId);
+                }
+
+                return false;
+            }
+
+            _source.clip = clip;
+            _loadedTrackId = trackId;
+            if (_source.isPlaying)
+            {
+                _source.Stop();
+                _source.Play();
+            }
+
+            return true;
+        }
+
+        private void StopFootsteps()
+        {
+            if (_source != null && _source.isPlaying)
+            {
+                _source.Stop();
+            }
         }
 
         private string ResolveTrackId()
@@ -141,45 +214,6 @@ namespace SS3D.Systems.Audio
 
             item = container.Items.FirstOrDefault();
             return item != null;
-        }
-
-        private void StartFootsteps(string trackId)
-        {
-            if (!Assets.TryGet(AssetDatabases.Sounds, trackId, out AudioClip _))
-            {
-                Log.Warning(this,
-                    "Footstep clip '{id}' missing from Sounds database — select the mp3s in Unity so they import, then confirm Sounds.asset refs are not missing.",
-                    Logs.Generic, trackId);
-                _lastMovingTime = float.NegativeInfinity;
-                return;
-            }
-
-            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
-            if (audio == null)
-            {
-                return;
-            }
-
-            audio.PlayAudioSource(
-                AudioType.Sfx,
-                trackId,
-                transform.position,
-                _networkObject,
-                isLooping: true,
-                volume: Volume,
-                pitch: 1f,
-                minRange: MinRange,
-                maxRange: MaxRange);
-
-            _playingTrackId = trackId;
-            _isPlaying = true;
-        }
-
-        private void StopFootsteps()
-        {
-            SubSystems.Get<AudioSubSystem>()?.StopAudioSource(_networkObject);
-            _playingTrackId = string.Empty;
-            _isPlaying = false;
         }
     }
 }

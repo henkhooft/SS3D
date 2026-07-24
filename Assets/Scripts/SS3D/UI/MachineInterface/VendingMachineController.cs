@@ -500,7 +500,7 @@ namespace SS3D.UI.MachineInterface
         {
             SubSystems.Get<AudioSubSystem>().PlayAudioSource(
                 AudioType.Sfx,
-                Sounds.Can1,
+                VendorAudioTrackIds.VendingMachine,
                 Position,
                 NetworkObject,
                 false,

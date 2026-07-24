@@ -58,10 +58,13 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `AlertStackState` push goes through (health-driven, debug override, or clear) and calls
   `PersonalAudioSubSystem.PlayAlertCue()` (one-shot, cooldown-debounced) on a new alert.
 - `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs`, `FootstepAudioTrackIds.cs` — footwear
-  footsteps (§3): Socks / Shoes / Boots clips under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`.
-  Server loops the matching clip while `CharacterController` planar speed is above a threshold;
-  runtime-added from `HumanoidPredictedMovement` (no Human.prefab edit). Empty feet → Socks;
-  item name containing "boot" → Boots; else Shoes.
+  footsteps (§3): Socks / Shoes / Boots under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`.
+  **Client-local** `AudioSource` loop (not the networked pool) — host `Move(default)` clears server
+  locomotion every tick, so a server-pooled loop never stayed audible. Owner uses predicted
+  locomotion velocity; remotes use transform delta. Runtime-added from `HumanoidPredictedMovement`.
+- `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
+  (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
+  the old Can1 placeholder).
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less

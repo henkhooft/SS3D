@@ -15,6 +15,11 @@ MonoBehaviour:
   m_GroupName: Sounds
   m_GUID: 5a93ce093ec9bfc4aab900a7ff98e41a
   m_SerializeEntries:
+  - m_GUID: 9731827fc0204964ade3d0d8083813b0
+    m_Address: Assets/Art/Sound/Furniture/Machines/Vendors/VendingMachine.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1342f00d3f3444ba9d135ac709a632b4
     m_Address: Assets/Art/Sound/Entities/Humanoid/Footsteps/Socks.mp3
     m_ReadOnly: 0
