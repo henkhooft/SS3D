@@ -126,6 +126,11 @@ Manual / partial:
   a real dedicated server has no Editor session to grant this by hand, and `start_round` is
   server-side gated on it. Without clearing the envelope, Persistence wins and the txt is
   ignored (see [permissions.md](systems/permissions.md) Pitfalls).
+- Station map fixtures: CI player builds have no CWD `Data/Tilemaps`. Without seeding,
+  `TileSubSystem.Load()` logs "No station templates found", atmos starts with **0 cells**, and
+  `atmos-client-sync` fails on `AtmosClientSnapshotInvalid`. `run_smoketest.sh` copies
+  tracked `Builds/Game/Data/Tilemaps/` into the staged server `Data/Tilemaps/` (override with
+  `SS3D_TILEMAP_FIXTURES`).
 
 ### CI
 - `.github/workflows/develop-release.yml` — **manual** gated path: EditMode → Linux

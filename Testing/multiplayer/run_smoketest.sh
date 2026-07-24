@@ -105,6 +105,17 @@ echo "Staging isolated build trees (hardlink when possible)..."
 stage_build "$SERVER_BUILD_DIR" "$RUN_DIR/server" || exit 1
 chmod +x "$RUN_DIR/server/$SERVER_BIN_NAME"
 
+# Fresh player builds (CI) have no CWD Data/Tilemaps. TileSubSystem.Load() then logs
+# "No station templates found" and atmos starts with 0 cells — atmos-client-sync cannot pass.
+# Seed the tracked Editor fixtures (Builds/Game/Data/Tilemaps is in git; GameServer Data is not).
+TILEMAP_FIXTURES="${SS3D_TILEMAP_FIXTURES:-$REPO_ROOT/Builds/Game/Data/Tilemaps}"
+if [[ -d "$TILEMAP_FIXTURES" ]]; then
+    mkdir -p "$RUN_DIR/server/Data/Tilemaps"
+    cp -a "$TILEMAP_FIXTURES"/. "$RUN_DIR/server/Data/Tilemaps/"
+else
+    echo "warning: no tilemap fixtures at $TILEMAP_FIXTURES — scenarios that need a station map may fail" >&2
+fi
+
 # Every client's ckey needs Administrator to be allowed to start the round (see
 # ChangeRoundStateView.HandleEmbarkButtonPress / PermissionSubSystem) - seeded here since a
 # real headless dedicated server has no Editor session to grant it by hand. Harmless for
