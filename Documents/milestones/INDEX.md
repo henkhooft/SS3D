@@ -7,23 +7,27 @@ vs built) stays in [architecture/INDEX.md](../architecture/INDEX.md); structural
 
 ## Current focus
 
-Two tracks run in parallel — an **operational** one that makes the game testable by others, and the **gameplay** gate:
+Two tracks run in parallel — an **operational** one that makes multiplayer playtests trustworthy, and the **gameplay** gate:
 
-**Near-term operational push** — the hop-on/off test server ([test-server.md](test-server.md)), so a link + download is all a playtester needs:
+**Near-term operational push** — [test-server.md](test-server.md):
 
-- **T1** — Loadable Windows build: it runs but is missing critical files/permissions (likely unpacked Addressables content) — diagnose against a real build
-- **T2** — Zero-setup remote join: launch bats hardcode `127.0.0.1`; a public build must default to the hosted server
+- **T1** — Loadable Windows build (Addressables/content/permissions — diagnose a real build)
+- **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
+- **T3** — Session stability: flawless round start/stop, connect/disconnect, graceful server + client handling, no gross host/client sync gaps (includes known remote drop/selection break)
 
-**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API shipped):
+**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat foundation + M2 structural/blast API shipped):
 
-- **M0** — Vault + disk on map, runtime antag/job spawn pick, ops gear at spawn (`RoleLoadout`)
-- **M3** — Nuke device loop (disk load → arm / countdown / defuse / detonate); optional breaching charges on the existing blast API
-- **M4** — Thin Nuke Ops gamemode (assignment, on-station syndie spawn, win/lose)
-- **M5** — Round-end summary/reveal over the existing death→ghost spectator. **Shared with test-server T4**
+- **M0** — Basic editor-built test station; vault/disk; per-role loadouts + assignment
+- **M1p** — Combat feel: weapon VFX/decals/blood/sounds, aim IK, two-hand rules, no hit-debug UI in normal play
+- **M3** — Nuke loop + disk pinpoint + breaching charges / realistic-ish explosions
+- **M4** — Objectives + win/lose checking
+- **M5** — End-game screen + round restart (**shared with T4**)
+- **M7** — Health feel: ragdoll on crit; screen effects that composite cleanly
+- **M8** — Atmos→health (spacing/fire/temp) + armor environmental seal + air alarms
 
-Not focus: re-opening structural damage as a foundation, Area-id merge on breach, shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, server browser / accounts.
+Not focus: Area-id merge on breach, shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, server browser / accounts.
 
-The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) is implementation-ready per the owner — a parallel track when capacity allows; a minimal join/spawn path is the only hard dependency the test server has on it.
+The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) remains a parallel capacity track; test server only needs a minimal join/spawn path.
 
 ## Gates
 
