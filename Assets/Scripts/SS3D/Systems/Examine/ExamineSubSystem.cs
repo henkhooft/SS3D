@@ -20,6 +20,13 @@ namespace SS3D.Systems.Examine
         public event ExaminableChangedHandler OnExaminableChanged;
         public event ExaminableChangedHandler OnDetailedExamineRequested;
 
+        /// <summary>
+        /// Fired by <see cref="SS3D.Systems.Interactions.InteractionController"/> on Shift+Click over a
+        /// character — kept here (rather than a direct reference) so the interactions layer never needs
+        /// to depend on the UI-layer character-examine window that consumes this.
+        /// </summary>
+        public event ExaminableChangedHandler OnCharacterWindowRequested;
+
         public delegate void ExaminableChangedHandler(IExaminable examinable);
         
         private SelectionSubSystem _selectionSystem;
@@ -69,6 +76,15 @@ namespace SS3D.Systems.Examine
         public void ShowDetailedExamine(IExaminable examinable)
         {
             OnDetailedExamineRequested?.Invoke(examinable);
+        }
+
+        /// <summary>
+        /// Requests the persistent character-examine window for <paramref name="examinable"/>.
+        /// No-op unless something is listening (the character-examine window is character-only).
+        /// </summary>
+        public void RequestCharacterWindow(IExaminable examinable)
+        {
+            OnCharacterWindowRequested?.Invoke(examinable);
         }
     }
 }

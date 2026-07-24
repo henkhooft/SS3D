@@ -15,6 +15,7 @@ using SS3D.Logging;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Examine;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
@@ -230,6 +231,14 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            // Shift+Click opens the persistent character-examine window (Documents/architecture/systems
+            // /examine.md § character examine) — a distinct modifier combo from plain click, so it always
+            // takes priority over armed/harm/interaction resolution rather than competing with them.
+            if (_inputSystem.DetailedExamine.IsPressed() && TryRequestCharacterExamineWindow())
+            {
+                return;
+            }
+
             if (_armedSystem.IsArmed)
             {
                 TryResolveArmedInteraction();
@@ -269,6 +278,24 @@ namespace SS3D.Systems.Interactions
             InteractionOptimisticFeedback.TryBeginDelayed(interaction.Interaction, interactionEvent);
             InteractionOutlineView.TryBeginPending(interaction.Interaction, interactionEvent);
             CmdRunInteraction(networkTarget, interactionEvent.Point, interaction.Id.GenericName, interaction.Id.TargetComponentIndex);
+        }
+
+        /// <summary>
+        /// Requests the character-examine window if the hovered selectable resolves to a
+        /// <see cref="CharacterExaminable"/>. Routed through <see cref="ExamineSubSystem"/> rather than a
+        /// direct reference so the interactions layer never needs to depend on the UI-layer window.
+        /// </summary>
+        [Client]
+        private bool TryRequestCharacterExamineWindow()
+        {
+            CharacterExaminable character = _selectionSystem.GetCurrentSelectable<CharacterExaminable>();
+            if (character == null)
+            {
+                return false;
+            }
+
+            SubSystems.Get<ExamineSubSystem>().RequestCharacterWindow(character);
+            return true;
         }
 
         /// <summary>

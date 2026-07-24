@@ -31,7 +31,7 @@ Update as part of `update-system-docs`.
 | health | [health.md](../design/health.md) — active | rewrite in flight: [health_implementation_plan](../plans/health_implementation_plan.md); [body-presentation-authority](2026-07_body-presentation-authority.md) — shipped; screen overlays in [screen-space-effects](2026-07_screen-space-effects.md) (health wired); Main HUD alert stack health-wired (vitals UITK still open) | [health](systems/health.md) — partial |
 | armor | [armor.md](../design/armor.md) — active | [combat_implementation_plan](../plans/combat_implementation_plan.md) Phase 5 — combat-armor absorption shipped (per-zone flat brute/burn absorption + integrity); environmental seal/breach (§3) deferred, blocked on an environment→health exposure pipeline that doesn't exist yet | [combat](systems/combat.md) — partial (armor absorption); no dedicated armor map, folded into combat |
 | inventory-storage | [inventory-storage.md](../design/inventory-storage.md) — active | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — in-progress (clean-slate: data model + panel + Main HUD equip/drag + stamina 7a + old UI purge shipped; clothing folded world presentation shipped; Play Mode verification pending) | [inventory](systems/inventory.md) — partial |
-| examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — partial (character-examine target type §7 unimplemented) |
+| examine | [examine.md](../design/examine.md) — active | none yet | [examine](systems/examine.md) — partial (character-examine §7 shipped on UITK; hold-to-take is a UI-only stub, no networked transfer) |
 | crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (obsolete runtime purged; awaiting redesign) |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
@@ -103,7 +103,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 |--------|-----|--------|---------|
 | Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines; Harm melee + intent↔stance; `C` double-bound with Cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
-| Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
+| Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type shipped on UITK (hold-to-take is a UI-only stub) |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; GPU VFX server/host only (client sync planned) |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |

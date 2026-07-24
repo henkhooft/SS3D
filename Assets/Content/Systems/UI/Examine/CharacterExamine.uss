@@ -1,0 +1,70 @@
+/* Character-examine paperdoll grid — shared by the hover quick-look preview and the full window. */
+
+.character-paperdoll-grid {
+    flex-direction: column;
+    overflow: visible;
+}
+
+.character-paperdoll-grid__row {
+    flex-direction: row;
+    overflow: visible;
+}
+
+.character-paperdoll-grid__row > .inventory-slot {
+    margin-right: var(--ss3d-space-1);
+    margin-bottom: var(--ss3d-space-1);
+}
+
+.character-paperdoll-grid__hand-row {
+    margin-top: var(--ss3d-space-1);
+}
+
+/* Hover quick-look preview */
+
+.character-quicklook {
+    position: absolute;
+    width: 220px;
+    border-radius: var(--ss3d-radius-md);
+    box-shadow: var(--ss3d-shadow-panel);
+}
+
+.character-quicklook__clip {
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    background-color: var(--ss3d-surface-panel);
+    border-radius: var(--ss3d-radius-md);
+    padding: var(--ss3d-space-3);
+}
+
+.character-quicklook__name {
+    font-size: 13px;
+    letter-spacing: var(--ss3d-space-1);
+    -unity-text-align: middle-center;
+    margin-bottom: var(--ss3d-space-2);
+}
+
+.character-quicklook__grid {
+    align-items: center;
+}
+
+/* Full examine window */
+
+.character-examine-window {
+    width: 300px;
+}
+
+.character-examine-window__hint {
+    margin-top: var(--ss3d-space-2);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--ss3d-accent-rust);
+    -unity-text-align: middle-center;
+}
+
+/* Hold-to-take affordance — a modifier on the shared InventorySlot component's well. */
+
+.inventory-slot--drop-target .inventory-slot__well {
+    border-color: var(--ss3d-feedback-info);
+    background-color: var(--ss3d-feedback-info-bg);
+}
