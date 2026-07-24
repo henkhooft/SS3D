@@ -337,10 +337,35 @@ namespace SS3D.UI.MainHud
                 horizontalSpeed = v.magnitude;
             }
 
-            float aimDistance = ranged.Profile.MaxRangeMeters * 0.5f;
+            float maxRange = Mathf.Max(1f, ranged.Profile.MaxRangeMeters);
+            float aimDistance = EstimateRangedAimDistance(maxRange);
             float spread = ranged.CurrentSpreadDegrees(horizontalSpeed, aimDistance);
-            // Map typical M4 spread (~1–8°) into 0–1 bloom for reticle grow.
-            return Mathf.Clamp01(spread / 8f);
+            // Map current cone into 0–1 using a readable reference (~still + light move at mid range).
+            float bloomRef = Mathf.Max(
+                2.5f,
+                ranged.Profile.BaseSpreadDegrees
+                + (ranged.Profile.MovementBloomPerSpeed * 2f)
+                + (ranged.Profile.FalloffExtraSpreadDegrees * 0.5f));
+            return Mathf.Clamp01(spread / bloomRef);
+        }
+
+        private float EstimateRangedAimDistance(float maxRange)
+        {
+            if (!SubSystems.TryGet(out CameraSubSystem cameras)
+                || cameras.PlayerCamera == null
+                || !cameras.PlayerCamera.TryGetComponent(out Camera camera))
+            {
+                return maxRange * 0.35f;
+            }
+
+            Vector2 screenPosition = InputInterface.GetPointerScreenPosition();
+            Ray ray = camera.ScreenPointToRay(screenPosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Collide))
+            {
+                return hit.distance;
+            }
+
+            return maxRange * 0.35f;
         }
 
         private bool IsHoveredZoneInRange(Collider zoneCollider)
