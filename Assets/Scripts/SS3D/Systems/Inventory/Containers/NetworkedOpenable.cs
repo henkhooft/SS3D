@@ -48,7 +48,8 @@ namespace SS3D.Systems.Inventory.Containers
             OpenAllOpenables(sender, e);
 
             // SyncVar is server-authoritative; clients apply via SyncOpenState OnChange.
-            if (IsServer)
+            // NetworkObject first — IsServer NREs when _networkObjectCache is null (EditMode).
+            if (NetworkObject == null || !NetworkObject.IsSpawned || IsServer)
             {
                 _openState = e;
             }

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/
 > Entry points: AssetDatabase, AssetDatabasesCodeGenerator, AssetProvider
 > Status: partial
-> Verified: c2b692f55 — 2026-07-23
+> Verified: 3b1f4a422 — 2026-07-24
 
 # Data / codegen
 
@@ -39,6 +39,7 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 - **`Sprite.Create` NativeFormat icons go null in AssetDatabase:** InteractionIcons audit failed when Recycle was authored via `Sprite.Create` + `CreateAsset` (empty `RenderDataKey` / unloadable sprite). Clone the texture’s imported sprite (`Object.Instantiate` of the PNG sub-asset) or use Editor-authored NativeFormat sprites — never commit a one-shot `Sprite.Create` rebuild as the source of truth.
 - **AddressablesAsync sync Get needs preload:** `Assets.Get` for an async DB reads `AssetProvider` cache only. Call `Assets.PreloadAddressableDatabases()` after `LoadAssetDatabases()` (done in `AssetsInitializationTrigger`) or icons resolve null with a log and no throw.
 - **Missing-key load must not `TrySetException` on an unawaited Loading TCS:** `AssetProvider.AcquireAsync` failure with no concurrent waiters used to `TrySetException` then rethrow — UniTask’s unobserved fault logged `[Exception]` and Unity EditMode `LogAssert` failed a later unrelated test. On failure: `TrySetResult(false)`, clear `Loading`, rethrow; waiters already check `Asset == null`. Await UniTask faults in tests (do not rely on `Assert.ThrowsAsync` alone).
+- **EditMode fake-backend delay must not use `UniTask.Delay`:** under `-batchmode` EditMode there is no reliable PlayerLoop; even `DelayType.Realtime` can stall (~100s+) or hit the 180s NUnit timeout (`ConcurrentMissingKeyDoesNotLeakUnobservedException`). Use `Task.Delay` in `AssetProviderTests` fakes.
 
 ## Depends on / Used by
 
