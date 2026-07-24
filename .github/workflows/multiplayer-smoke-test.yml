@@ -43,9 +43,13 @@ jobs:
           stash="${SS3D_UNITY_LIBRARY_STASH}"
           workspace_lib="${GITHUB_WORKSPACE}/Library"
           mkdir -p "$(dirname "$stash")"
+          # Self-hosted workdirs persist; never keep a leftover workspace Library (poison /
+          # partial PackageCache caused client CS2001/Cecil failures after a green server build).
           if [[ -d "$workspace_lib" ]]; then
-            echo "Workspace already has Library/ — leaving in place"
-          elif [[ -d "$stash" ]]; then
+            echo "Removing leftover workspace Library/ before restore"
+            rm -rf "$workspace_lib"
+          fi
+          if [[ -d "$stash" ]]; then
             echo "Restoring warm Library stash from $stash"
             du -sh "$stash" || true
             # Same-filesystem rename (O(1)). Symlinks break Docker mounts (game-ci#603).
@@ -80,6 +84,15 @@ jobs:
           versioning: None
           unityVersion: 6000.3.16f1
           runAsHostUser: true
+      - name: Reset script assemblies for client build
+        run: |
+          # Server (UNITY_SERVER) and client share one Library; wipe compile products so the
+          # client editor session does not reuse a half-invalid Bee/PackageCache graph.
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE}/Library/ScriptAssemblies" \
+                 "${GITHUB_WORKSPACE}/Library/Bee" \
+                 "${GITHUB_WORKSPACE}/Library/PlayerDataCache"
+          echo "Cleared ScriptAssemblies/Bee/PlayerDataCache before client build"
       - name: Build client
         uses: game-ci/unity-builder@v4
         env:
@@ -96,7 +109,7 @@ jobs:
           unityVersion: 6000.3.16f1
           runAsHostUser: true
       - name: Save Unity Library stash
-        if: always()
+        if: success()
         run: |
           set -euo pipefail
           stash="${SS3D_UNITY_LIBRARY_STASH}"
@@ -111,7 +124,15 @@ jobs:
           else
             echo "No workspace Library/ to stash"
           fi
+      - name: Discard Library after failed build
+        if: failure()
+        run: |
+          # Do not stash a failed Library (incomplete PackageCache poisons the next warm run).
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE}/Library"
+          echo "Discarded workspace Library/ after failure"
       - name: Run multiplayer smoke tests
+        if: success()
         env:
           SS3D_SERVER_BUILD_DIR: ${{ env.SERVER_BUILD_DIR }}
           SS3D_CLIENT_BUILD_DIR: ${{ env.CLIENT_BUILD_DIR }}

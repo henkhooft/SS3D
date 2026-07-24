@@ -131,7 +131,11 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 
 - **Warm `Library/` cache is the whole win — protect it.** A step that clears it, or a
   container that doesn't mount the volume, silently drops you back to 45-min cold builds with
-  no error. Verify cache reuse in run logs.
+  no error. Verify cache reuse in run logs. **Never stash a failed build's Library** — a
+  half-written `PackageCache` (missing localization sources → cascading `Unity.Cecil` /
+  Entities CodeGen errors on the client step) poisons the next warm run. Wipe leftover
+  workspace `Library/` before restore; clear `ScriptAssemblies`/`Bee` between server and
+  client builds in the same job.
 - **Server-kill vs. harness cleanup.** The harness already `trap`s EXIT/INT/TERM to
   `kill_tracked_pids`; a deliberate mid-run server kill must not confuse that PID bookkeeping
   or trip the "server script did not complete" path as a false failure. The server dying is
