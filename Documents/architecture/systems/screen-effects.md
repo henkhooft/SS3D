@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/ScreenEffects/
 > Entry points: ScreenEffectsSubSystem
-> Status: partial (health wired; atmos deferred)
-> Verified: e1bf86d8a — 2026-07-25
+> Status: partial (health + turf temp/fire wired)
+> Verified: 9965980a7 — 2026-07-25
 
 # Screen-space effects
 
@@ -9,7 +9,7 @@
 
 Client-only URP Volume overlays for diegetic feedback from [main-hud](../../design/main-hud.md) §5: temperature, fire/freezing, low oxygen, dying/critical, blood-loss tunnel vision, concussion, unconsciousness, plus momentary melee hit flash and blast flash. Driven by intensity (0..1) via `SetEffect` / `TriggerHitFlash` / `TriggerBlastFlash`. Also hosts `SetUiBackdropBlur`, which drives Dual Kawase fullscreen blur (`UiBackdropBlurContext` → [rendering](rendering.md) `UiBackdropBlurRendererFeature`) for soft world focus behind sharp UI Toolkit overlays — separate from `ScreenEffectType` so health clears do not wipe it. Diegetic panels also paint a dark UITK scrim on the overlay root.
 
-**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. While dying/critical is active, LowOxygen screen intensity is attenuated so the red heartbeat blink reads; unconscious uses the previous flat blackout (no pulsed red veil). Dying pulses Dual Kawase via the same `UiBackdropBlurContext` as machine UI (max of UI vs health channels). Temperature/fire/frost remain debug/console-only until atmospherics wires them. Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
+**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. While dying/critical is active, LowOxygen screen intensity is attenuated so the red heartbeat blink reads; unconscious uses the previous flat blackout (no pulsed red veil). Dying pulses Dual Kawase via the same `UiBackdropBlurContext` as machine UI (max of UI vs health channels). Temperature/fire/frost are driven from synced `HealthSnapshot.Environment` via `AtmosScreenEffectMapper` (still F2/`screeneffect` for debug). Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
 
 Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it can land without scene YAML edits.
 

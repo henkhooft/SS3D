@@ -704,5 +704,89 @@ namespace EditorTests
             Assert.IsTrue(snapshot.IsZoneSevered(BodyZone.LeftArm));
             Assert.IsFalse(snapshot.IsZoneSevered(BodyZone.RightArm));
         }
+
+        [Test]
+        public void VacuumAtmosphereRaisesOxyDebtWithHealthyOrgans()
+        {
+            ZoneDamageState[] zones = CreateDefaultZones();
+            OrganState[] organs = CreateHealthyOrgans();
+            SystemicPools pools = SystemicPools.Default;
+
+            pools = HealthSimulation.TickPools(pools, zones, organs, atmosphereO2: 0f);
+
+            Assert.Greater(pools.OxyDebt, 0f);
+            Assert.AreEqual(HealthConstants.BaseOxygenDemand, pools.OxyDebt, 0.001f);
+        }
+
+        [Test]
+        public void FullAtmosphereDoesNotRaiseOxyDebtWithHealthyOrgans()
+        {
+            ZoneDamageState[] zones = CreateDefaultZones();
+            OrganState[] organs = CreateHealthyOrgans();
+            SystemicPools pools = SystemicPools.Default;
+
+            pools = HealthSimulation.TickPools(pools, zones, organs, atmosphereO2: 1f);
+
+            Assert.AreEqual(0f, pools.OxyDebt, 0.001f);
+        }
+
+        [Test]
+        public void FullAtmosphereRecoversExistingOxyDebt()
+        {
+            ZoneDamageState[] zones = CreateDefaultZones();
+            OrganState[] organs = CreateHealthyOrgans();
+            SystemicPools pools = new SystemicPools
+            {
+                BloodVolumeRatio = 1f,
+                OxyDebt = 0.5f,
+                ToxinConcentration = 0f,
+            };
+
+            pools = HealthSimulation.TickPools(pools, zones, organs, atmosphereO2: 1f);
+
+            Assert.AreEqual(0.5f - HealthConstants.BaseOxygenDemand, pools.OxyDebt, 0.001f);
+        }
+
+        [Test]
+        public void DeadLungsRaiseOxyDebtInFullAtmosphere()
+        {
+            ZoneDamageState[] zones = CreateDefaultZones();
+            OrganState[] organs =
+            {
+                OrganState.Default(OrganType.Heart),
+                new OrganState { Type = OrganType.LeftLung, FunctionPercent = 0f },
+                new OrganState { Type = OrganType.RightLung, FunctionPercent = 0f },
+                OrganState.Default(OrganType.Liver),
+                OrganState.Default(OrganType.Brain),
+            };
+
+            SystemicPools pools = SystemicPools.Default;
+            pools = HealthSimulation.TickPools(pools, zones, organs, atmosphereO2: 1f);
+
+            Assert.Greater(pools.OxyDebt, 0f);
+        }
+
+        private static ZoneDamageState[] CreateDefaultZones()
+        {
+            var zones = new ZoneDamageState[HealthConstants.ZoneCount];
+            for (int i = 0; i < zones.Length; i++)
+            {
+                zones[i] = ZoneDamageState.Default;
+            }
+
+            return zones;
+        }
+
+        private static OrganState[] CreateHealthyOrgans()
+        {
+            return new[]
+            {
+                OrganState.Default(OrganType.Heart),
+                OrganState.Default(OrganType.LeftLung),
+                OrganState.Default(OrganType.RightLung),
+                OrganState.Default(OrganType.Liver),
+                OrganState.Default(OrganType.Brain),
+            };
+        }
     }
 }

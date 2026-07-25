@@ -29,6 +29,17 @@
         public const float LiverClearanceRate = 0.02f;
         public const float RenalClearanceFactor = 0.5f;
 
+        // Environment → health (turf exposure). Breathability 1 = station O₂ fraction.
+        public const float BreathOxygenMolesPerTick = 0.05f;
+        public const float PlasmaToxinIntakeScale = 0.08f;
+        public const float ColdWarningTemperatureKelvin = 273.15f;
+        public const float ColdDamageTemperatureKelvin = 260f;
+        public const float FreezingTemperatureKelvin = 240f;
+        public const float HotDamageBurnPerKelvin = 0.04f;
+        public const float ColdDamageBurnPerKelvin = 0.03f;
+        public const float FireBurnPerIntensity = 2.5f;
+        public const float MaxEnvironmentalBurnPerTick = 8f;
+
         public const float GroinTorsoBandFraction = 0.35f;
 
         // Wound severity thresholds (brute damage per zone).

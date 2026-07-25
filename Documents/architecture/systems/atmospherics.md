@@ -55,7 +55,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 ## Depends on / Used by
 
 - **Depends on:** [tile](tile.md) (`ITileQueryService`, `ITileMutationObserver`, `IDynamicTileOccupant`, `TileCoord`), [rendering](rendering.md) (`AtmosRendererFeature`), [area](area.md) (air-alarm area membership and tile-in-front resolution)
-- **Used by:** [machine-interface](machine-interface.md) (air alarm / scrubber / vent / pump panels), (future) [substances](substances.md), [health](health.md)
+- **Used by:** [machine-interface](machine-interface.md) (air alarm / scrubber / vent / pump panels), [health](health.md) (turf sample → breathability / O₂↔CO₂ / env burn; armor seal still deferred), (future) [substances](substances.md)
 
 ## Related docs
 

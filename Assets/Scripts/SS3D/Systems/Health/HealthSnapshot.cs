@@ -25,6 +25,7 @@ namespace SS3D.Systems.Health
         public bool CanUseArms;
         public HealthCriticalFlags CriticalFlags;
         public bool CanDefibrillate;
+        public HealthEnvironmentState Environment;
 
         public bool IsZoneBleeding(BodyZone zone)
         {
@@ -67,6 +68,7 @@ namespace SS3D.Systems.Health
             CanUseArms = true,
             CriticalFlags = HealthCriticalFlags.None,
             CanDefibrillate = false,
+            Environment = HealthEnvironmentState.SafeDefault,
         };
     }
 }

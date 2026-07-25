@@ -5,6 +5,8 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
@@ -12,6 +14,7 @@ using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.ScreenEffects;
+using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -37,6 +40,7 @@ namespace SS3D.Systems.Health
         private bool _deathTriggered;
         private bool _healthCollapseActive;
         private bool _drivingLocalPresentation;
+        private HealthEnvironmentState _environment = HealthEnvironmentState.SafeDefault;
 
         [SyncVar(OnChange = nameof(SyncSnapshot))]
         private HealthSnapshot _snapshot = HealthSnapshot.Default;
@@ -408,10 +412,10 @@ namespace SS3D.Systems.Health
         }
 
         [Server]
-        public void TickHealth(float atmosphereO2 = 1f)
+        public void TickHealth(float atmosphereO2 = 1f, float toxinIntake = HealthConstants.BaseToxinIntake)
         {
             OrganSimulation.TickOrganFunction(_pools, _organs);
-            _pools = HealthSimulation.TickPools(_pools, _zones, _organs, atmosphereO2);
+            _pools = HealthSimulation.TickPools(_pools, _zones, _organs, atmosphereO2, toxinIntake);
 
             for (int i = 0; i < _modifiers.Count; i++)
             {
@@ -441,7 +445,142 @@ namespace SS3D.Systems.Health
             }
 
             _tickTimer = 0f;
-            TickHealth();
+            TickHealthFromEnvironment();
+        }
+
+        [Server]
+        private void TickHealthFromEnvironment()
+        {
+            if (HealthEnvironmentSettings.AtmosphericDamageDisabled)
+            {
+                _environment = HealthEnvironmentState.SafeDefault;
+                TickHealth(atmosphereO2: 1f, toxinIntake: HealthConstants.BaseToxinIntake);
+                return;
+            }
+
+            _environment = SampleEnvironmentAtBody();
+            ApplyEnvironmentalBurn(_environment);
+            ApplyBreathExchange(_environment);
+
+            float toxinIntake = HealthEnvironmentExposure.ToxinIntakeFromPlasma(
+                _environment.PlasmaMoleFraction);
+            TickHealth(_environment.AtmosphereBreathability, toxinIntake);
+        }
+
+        [Server]
+        private HealthEnvironmentState SampleEnvironmentAtBody()
+        {
+            if (!SubSystems.TryGet(out TileSubSystem tiles)
+                || tiles.CurrentMap == null
+                || !SubSystems.TryGet(out AtmosSubSystem atmos)
+                || atmos.Simulation == null)
+            {
+                return HealthEnvironmentState.SafeDefault;
+            }
+
+            TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
+            AtmosSimulation simulation = atmos.Simulation;
+
+            if (!simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo info))
+            {
+                return HealthEnvironmentState.SafeDefault;
+            }
+
+            if (info.State == AtmosCellState.Vacuum)
+            {
+                return HealthEnvironmentExposure.FromVacuumCell(info.Temperature, info.BurnIntensity);
+            }
+
+            if (AtmosAreaSampler.TrySampleTile(coord, simulation, out AtmosAreaSample sample))
+            {
+                return HealthEnvironmentExposure.FromTileSample(sample, isVacuum: false, info.BurnIntensity);
+            }
+
+            // Empty / zero-mole cell that isn't flagged vacuum yet — treat as unbreathable.
+            return HealthEnvironmentExposure.FromVacuumCell(info.Temperature, info.BurnIntensity);
+        }
+
+        [Server]
+        private void ApplyEnvironmentalBurn(HealthEnvironmentState env)
+        {
+            float burn = HealthEnvironmentExposure.EnvironmentalBurnDamage(
+                env.TemperatureKelvin,
+                env.BurnIntensity);
+            if (burn <= 0f)
+            {
+                return;
+            }
+
+            ApplyEnvironmentalZoneBurn(BodyZone.Chest, burn);
+        }
+
+        [Server]
+        private void ApplyEnvironmentalZoneBurn(BodyZone zone, float burn)
+        {
+            int index = (int)zone;
+            if (index < 0 || index >= _zones.Length || burn <= 0f)
+            {
+                return;
+            }
+
+            ZoneDamageState state = _zones[index];
+            state.Burn += burn;
+            HealthSimulation.RefreshZoneDerivedState(ref state);
+            if (!state.IsSevered)
+            {
+                state.BleedingRate = HealthSimulation.BleedingRateForSeverity(state.Severity);
+            }
+
+            _zones[index] = state;
+            OrganSimulation.ApplyZoneDamageToOrgans(zone, brute: 0f, burn, _organs);
+        }
+
+        [Server]
+        private void ApplyBreathExchange(HealthEnvironmentState env)
+        {
+            if (!env.HasSample || env.IsVacuum || env.AtmosphereBreathability <= 0f)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out TileSubSystem tiles)
+                || tiles.CurrentMap == null
+                || !SubSystems.TryGet(out AtmosSubSystem atmos)
+                || atmos.Simulation == null)
+            {
+                return;
+            }
+
+            float lungFunction =
+                (HealthSimulation.GetOrganFunction(_organs, OrganType.LeftLung, _pools.BloodVolumeRatio)
+                 + HealthSimulation.GetOrganFunction(_organs, OrganType.RightLung, _pools.BloodVolumeRatio))
+                * 0.005f;
+            float request = HealthEnvironmentExposure.BreathOxygenMoles(
+                env.AtmosphereBreathability,
+                lungFunction);
+            if (request <= 0f)
+            {
+                return;
+            }
+
+            TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
+            AtmosSimulation simulation = atmos.Simulation;
+            if (!simulation.TryRemoveMoles(
+                    coord,
+                    AtmosConstants.Oxygen,
+                    request,
+                    out float removed,
+                    out float sourceTemperature)
+                || removed <= 0f)
+            {
+                return;
+            }
+
+            simulation.TryAddMolesAtTemperature(
+                coord,
+                AtmosConstants.CarbonDioxide,
+                removed,
+                sourceTemperature);
         }
 
         [Server]
@@ -464,6 +603,7 @@ namespace SS3D.Systems.Health
         private void PublishSnapshot()
         {
             HealthSnapshot snapshot = HealthSimulation.BuildSnapshot(_pools, _zones, _organs);
+            snapshot.Environment = _environment;
             _snapshot = snapshot;
             _debugDetail = HealthDebugDetail.FromStates(_zones, _organs);
 
@@ -502,11 +642,13 @@ namespace SS3D.Systems.Health
             if (snapshot.State == HealthState.Dead)
             {
                 HealthScreenEffectMapper.Clear(effects);
+                AtmosScreenEffectMapper.Clear(effects);
                 HealthPersonalAudioMapper.Clear(personalAudio);
                 return;
             }
 
             HealthScreenEffectMapper.Apply(snapshot, effects);
+            AtmosScreenEffectMapper.Apply(snapshot.Environment, effects);
             HealthPersonalAudioMapper.Apply(snapshot, personalAudio);
         }
 
@@ -518,7 +660,9 @@ namespace SS3D.Systems.Health
             }
 
             _drivingLocalPresentation = false;
-            HealthScreenEffectMapper.Clear(SubSystems.Get<ScreenEffectsSubSystem>());
+            ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            HealthScreenEffectMapper.Clear(effects);
+            AtmosScreenEffectMapper.Clear(effects);
             HealthPersonalAudioMapper.Clear(SubSystems.Get<PersonalAudioSubSystem>());
         }
 
