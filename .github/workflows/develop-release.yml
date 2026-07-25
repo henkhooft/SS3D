@@ -1,9 +1,13 @@
-# Manual Windows prerelease (+ optional Linux / EditMode / smoke).
+# Manual Windows prerelease (+ optional Linux / EditMode / smoke), plus nightly full cut.
 # Default dispatch: Windows client → GitHub prerelease. Linux, EditMode, and smoke are opt-in.
-# Not triggered on every develop merge (license cost + release spam at high PR volume).
+# Nightly (05:00 UTC): Windows + Linux client + Linux dedicated server → floating develop-nightly.
+# Prefers TomNAS when online; falls back to ubuntu-latest. Not triggered on every develop merge.
 # See Documents/architecture/2026-07_ci-develop-release-pipeline.md.
 name: Develop Release
 on:
+  schedule:
+    # After multiplayer-smoke-test (04:00 UTC) so TomNAS Library stash is warm.
+    - cron: "0 5 * * *"
   workflow_dispatch:
     inputs:
       build_linux:
@@ -26,11 +30,122 @@ on:
         description: Override tag suffix (default short SHA). Full tag is develop-<suffix>
         type: string
         default: ''
+      runner:
+        description: Runner preference (auto = TomNAS if online, else GitHub-hosted)
+        type: choice
+        options:
+          - auto
+          - tomnas
+          - github
+        default: auto
+
+concurrency:
+  group: develop-release
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Prepare flags + runner
+    runs-on: ubuntu-latest
+    permissions:
+      # No `administration` — not a valid GITHUB_TOKEN permission key (workflow fails validation).
+      # Listing runners may 403; pick step already falls back to ubuntu-latest on API failure.
+      actions: read
+      contents: read
+    outputs:
+      runs_on: ${{ steps.pick.outputs.runs_on }}
+      self_hosted: ${{ steps.pick.outputs.self_hosted }}
+      build_linux: ${{ steps.flags.outputs.build_linux }}
+      skip_release: ${{ steps.flags.outputs.skip_release }}
+      run_editmode: ${{ steps.flags.outputs.run_editmode }}
+      run_smoke: ${{ steps.flags.outputs.run_smoke }}
+      tag_suffix: ${{ steps.flags.outputs.tag_suffix }}
+    steps:
+      - name: Resolve schedule vs dispatch flags
+        id: flags
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "build_linux=true" >> "$GITHUB_OUTPUT"
+            echo "skip_release=false" >> "$GITHUB_OUTPUT"
+            echo "run_editmode=false" >> "$GITHUB_OUTPUT"
+            echo "run_smoke=false" >> "$GITHUB_OUTPUT"
+            echo "tag_suffix=nightly" >> "$GITHUB_OUTPUT"
+            echo "Nightly schedule: full Windows + Linux client/server, tag develop-nightly"
+            exit 0
+          fi
+
+          bool() {
+            # workflow_dispatch booleans arrive as true/false strings.
+            case "$1" in
+              true|True) echo true ;;
+              *) echo false ;;
+            esac
+          }
+
+          echo "build_linux=$(bool '${{ inputs.build_linux }}')" >> "$GITHUB_OUTPUT"
+          echo "skip_release=$(bool '${{ inputs.skip_release }}')" >> "$GITHUB_OUTPUT"
+          echo "run_editmode=$(bool '${{ inputs.run_editmode }}')" >> "$GITHUB_OUTPUT"
+          echo "run_smoke=$(bool '${{ inputs.run_smoke }}')" >> "$GITHUB_OUTPUT"
+          echo "tag_suffix=${{ inputs.tag_suffix }}" >> "$GITHUB_OUTPUT"
+      - name: Prefer TomNAS when online
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNNER_PREF: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'auto' }}
+          RUNNER_NAME: TomNAS-unity
+        run: |
+          set -euo pipefail
+          tomnas_json='["self-hosted","linux","x64","unity"]'
+          github_json='["ubuntu-latest"]'
+
+          pick_tomnas() {
+            echo "runs_on=${tomnas_json}" >> "$GITHUB_OUTPUT"
+            echo "self_hosted=true" >> "$GITHUB_OUTPUT"
+            echo "Selected TomNAS-unity (self-hosted)"
+          }
+          pick_github() {
+            echo "runs_on=${github_json}" >> "$GITHUB_OUTPUT"
+            echo "self_hosted=false" >> "$GITHUB_OUTPUT"
+            echo "Selected ubuntu-latest (GitHub-hosted fallback)"
+          }
+
+          case "$RUNNER_PREF" in
+            tomnas)
+              pick_tomnas
+              exit 0
+              ;;
+            github)
+              pick_github
+              exit 0
+              ;;
+          esac
+
+          if ! status=$(gh api "repos/${{ github.repository }}/actions/runners" \
+              --jq ".runners[] | select(.name==\"${RUNNER_NAME}\") | .status" 2>/tmp/pick-runner.err); then
+            echo "::warning::Could not list runners (falling back to GitHub-hosted): $(cat /tmp/pick-runner.err)"
+            pick_github
+            exit 0
+          fi
+
+          if [ -z "$status" ]; then
+            echo "::warning::Runner ${RUNNER_NAME} not registered; falling back to GitHub-hosted"
+            pick_github
+            exit 0
+          fi
+
+          echo "TomNAS-unity status=${status}"
+          if [ "$status" = "online" ]; then
+            pick_tomnas
+          else
+            echo "::notice::TomNAS-unity is ${status}; falling back to GitHub-hosted"
+            pick_github
+          fi
+
   editmode:
     name: EditMode tests
-    if: ${{ inputs.run_editmode == true || inputs.run_editmode == 'true' }}
+    needs: prepare
+    if: ${{ needs.prepare.outputs.run_editmode == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: unity_tests
@@ -81,14 +196,16 @@ jobs:
 
   build-linux:
     name: Build Linux client + server
-    needs: editmode
-    # EditMode skipped/green + build_linux opted in. always() breaks skip-cascade from EditMode.
-    if: ${{ always() && (needs.editmode.result == 'success' || needs.editmode.result == 'skipped') && (inputs.build_linux == true || inputs.build_linux == 'true') }}
-    runs-on: ubuntu-latest
+    needs: [prepare, editmode]
+    # EditMode skipped/green + build_linux. always() breaks skip-cascade from EditMode.
+    if: ${{ always() && (needs.editmode.result == 'success' || needs.editmode.result == 'skipped') && needs.prepare.outputs.build_linux == 'true' }}
+    runs-on: ${{ fromJSON(needs.prepare.outputs.runs_on) }}
     environment:
       name: unity_tests
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # Share smoke's warm build Library on TomNAS (same FS as runner workdir — mv is rename).
+      SS3D_UNITY_LIBRARY_STASH: /home/cu6e/.cache/ss3d/Library
       SERVER_BUILD_DIR: ${{ github.workspace }}/build/GameServer/StandaloneLinux64
       CLIENT_BUILD_DIR: ${{ github.workspace }}/build/Game/StandaloneLinux64
       # Unity 6 Linux players no longer append .x86_64; game-ci -customBuildPath uses buildName as-is.
@@ -99,6 +216,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Restore Unity Library stash
+        if: needs.prepare.outputs.self_hosted == 'true'
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            echo "Removing leftover workspace Library/ before restore"
+            rm -rf "$workspace_lib"
+          fi
+          if [[ -d "$stash" ]]; then
+            echo "Restoring warm Library stash from $stash"
+            du -sh "$stash" || true
+            mv "$stash" "$workspace_lib"
+          else
+            echo "No Library stash at $stash — cold import this run"
+          fi
       - name: Validate Unity CI secrets
         run: |
           missing=0
@@ -111,21 +246,8 @@ jobs:
             missing=1
           fi
           exit $missing
-      - name: Build dedicated server
-        uses: game-ci/unity-builder@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          buildName: SS3D-Server
-          buildsPath: build/GameServer
-          targetPlatform: StandaloneLinux64
-          buildMethod: SS3D.Editor.ServerBuildScript.BuildServer
-          versioning: None
-          unityVersion: 6000.3.16f1
-      - name: Build client
+      # One Editor session — two sequential unity-builder steps race PackageCache on TomNAS.
+      - name: Build dedicated server and client
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -136,11 +258,39 @@ jobs:
           buildName: SS3D-Client
           buildsPath: build/Game
           targetPlatform: StandaloneLinux64
-          buildMethod: SS3D.Editor.ClientBuildScript.BuildClient
+          buildMethod: SS3D.Editor.ClientAndServerBuildScript.BuildBothForCi
           versioning: None
           unityVersion: 6000.3.16f1
+          runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
+      - name: Verify server and client binaries
+        run: |
+          set -euo pipefail
+          test -x "$SERVER_BUILD_DIR/$SERVER_BIN_NAME"
+          test -x "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"
+          ls -la "$SERVER_BUILD_DIR/$SERVER_BIN_NAME" "$CLIENT_BUILD_DIR/$CLIENT_BIN_NAME"
+      - name: Save Unity Library stash
+        if: needs.prepare.outputs.self_hosted == 'true' && success()
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            rm -rf "$stash"
+            mv "$workspace_lib" "$stash"
+            echo "Saved Library stash to $stash"
+            du -sh "$stash" || true
+          else
+            echo "No workspace Library/ to stash"
+          fi
+      - name: Discard Library after failed build
+        if: needs.prepare.outputs.self_hosted == 'true' && failure()
+        run: |
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE}/Library"
+          echo "Discarded workspace Library/ after failure"
       - name: Run multiplayer smoke tests
-        if: ${{ inputs.run_smoke == true || inputs.run_smoke == 'true' }}
+        if: ${{ needs.prepare.outputs.run_smoke == 'true' }}
         env:
           SS3D_SERVER_BUILD_DIR: ${{ env.SERVER_BUILD_DIR }}
           SS3D_CLIENT_BUILD_DIR: ${{ env.CLIENT_BUILD_DIR }}
@@ -155,7 +305,7 @@ jobs:
           ./Testing/multiplayer/run_smoketest.sh atmos-client-sync
       - name: Upload harness logs
         uses: actions/upload-artifact@v4
-        if: ${{ always() && (inputs.run_smoke == true || inputs.run_smoke == 'true') }}
+        if: ${{ always() && needs.prepare.outputs.run_smoke == 'true' }}
         with:
           name: develop-release-smoke-logs
           path: Testing/multiplayer/.runs
@@ -171,19 +321,38 @@ jobs:
 
   build-windows:
     name: Build Windows client
-    needs: [editmode, build-linux]
-    # always() required so skipped EditMode / skipped Linux (default) do not cascade-skip Windows.
-    if: ${{ always() && (needs.editmode.result == 'success' || needs.editmode.result == 'skipped') && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && inputs.skip_release != true && inputs.skip_release != 'true' }}
-    runs-on: ubuntu-latest
+    needs: [prepare, editmode, build-linux]
+    # always() required so skipped EditMode / skipped Linux (default manual) do not cascade-skip Windows.
+    if: ${{ always() && (needs.editmode.result == 'success' || needs.editmode.result == 'skipped') && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && needs.prepare.outputs.skip_release != 'true' }}
+    runs-on: ${{ fromJSON(needs.prepare.outputs.runs_on) }}
     environment:
       name: unity_tests
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SS3D_UNITY_LIBRARY_STASH: /home/cu6e/.cache/ss3d/Library
     steps:
       - name: Checkout project code
         uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Restore Unity Library stash
+        if: needs.prepare.outputs.self_hosted == 'true'
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            echo "Removing leftover workspace Library/ before restore"
+            rm -rf "$workspace_lib"
+          fi
+          if [[ -d "$stash" ]]; then
+            echo "Restoring warm Library stash from $stash"
+            du -sh "$stash" || true
+            mv "$stash" "$workspace_lib"
+          else
+            echo "No Library stash at $stash — cold import this run"
+          fi
       - name: Validate Unity CI secrets
         run: |
           missing=0
@@ -210,6 +379,28 @@ jobs:
           targetPlatform: StandaloneWindows64
           versioning: None
           unityVersion: 6000.3.16f1
+          runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
+      - name: Save Unity Library stash
+        if: needs.prepare.outputs.self_hosted == 'true' && success()
+        run: |
+          set -euo pipefail
+          stash="${SS3D_UNITY_LIBRARY_STASH}"
+          workspace_lib="${GITHUB_WORKSPACE}/Library"
+          mkdir -p "$(dirname "$stash")"
+          if [[ -d "$workspace_lib" ]]; then
+            rm -rf "$stash"
+            mv "$workspace_lib" "$stash"
+            echo "Saved Library stash to $stash"
+            du -sh "$stash" || true
+          else
+            echo "No workspace Library/ to stash"
+          fi
+      - name: Discard Library after failed build
+        if: needs.prepare.outputs.self_hosted == 'true' && failure()
+        run: |
+          set -euo pipefail
+          rm -rf "${GITHUB_WORKSPACE}/Library"
+          echo "Discarded workspace Library/ after failure"
       - name: Upload Windows player build
         if: success()
         uses: actions/upload-artifact@v4
@@ -220,9 +411,9 @@ jobs:
 
   release:
     name: GitHub prerelease
-    needs: [build-linux, build-windows]
+    needs: [prepare, build-linux, build-windows]
     # Same skip-cascade override; Linux may be skipped when build_linux is off.
-    if: ${{ always() && needs.build-windows.result == 'success' && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && inputs.skip_release != true && inputs.skip_release != 'true' }}
+    if: ${{ always() && needs.build-windows.result == 'success' && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && needs.prepare.outputs.skip_release != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -238,14 +429,21 @@ jobs:
       - name: Resolve release tag
         id: tag
         run: |
-          suffix="${{ inputs.tag_suffix }}"
+          suffix="${{ needs.prepare.outputs.tag_suffix }}"
           if [ -z "$suffix" ]; then
             suffix="${GITHUB_SHA:0:7}"
           fi
           echo "tag_name=develop-${suffix}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "is_nightly=true" >> "$GITHUB_OUTPUT"
+            echo "kind_line=**Nightly build** (floating develop-nightly tag — overwritten each night)." >> "$GITHUB_OUTPUT"
+          else
+            echo "is_nightly=false" >> "$GITHUB_OUTPUT"
+            echo "kind_line=Manual dispatch." >> "$GITHUB_OUTPUT"
+          fi
       - name: Download Linux player builds
-        if: ${{ inputs.build_linux == true || inputs.build_linux == 'true' }}
+        if: ${{ needs.prepare.outputs.build_linux == 'true' }}
         uses: actions/download-artifact@v4
         with:
           name: develop-release-linux-builds
@@ -275,7 +473,7 @@ jobs:
           FILES="dist/SS3D-Windows-${TAG}.zip"
           NOTES_LINUX="_(not built for this dispatch — enable build_linux to attach Linux zips)_"
 
-          if [ "${{ inputs.build_linux }}" = "true" ]; then
+          if [ "${{ needs.prepare.outputs.build_linux }}" = "true" ]; then
             test -d build-linux/GameServer/StandaloneLinux64
             test -d build-linux/Game/StandaloneLinux64
             zip -qq -r "dist/SS3D-Linux-Server-${TAG}.zip" build-linux/GameServer
@@ -302,10 +500,12 @@ jobs:
           generate_release_notes: true
           body: |
             Fork-internal prerelease from `${{ github.sha }}` (short `${{ steps.tag.outputs.short_sha }}`).
+            ${{ steps.tag.outputs.kind_line }}
 
             Not an official RE:SS3D build. Windows player built from this commit.
-            Linux builds, EditMode, and multiplayer smoke run only when opted in on the
-            workflow dispatch (see the Actions run for this tag). Windows is not smoke-tested.
+            Linux client + dedicated server are included when this was a nightly run or when
+            `build_linux` was enabled. EditMode / multiplayer smoke only when opted in on
+            dispatch (see the Actions run). Windows is not smoke-tested.
 
             **Player download (Windows):** `SS3D-Windows-${{ steps.tag.outputs.tag_name }}.zip`
             — unzip, run `Start_SS3D_Host.bat`, then a `Start_SS3D_Client_*.bat`.

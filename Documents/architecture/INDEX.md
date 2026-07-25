@@ -45,7 +45,7 @@ Update as part of `update-system-docs`.
 | disposal | [disposal.md](../design/disposal.md) — active | [disposal-item-network](2026-07_disposal-item-network.md) — shipped (item network; pipe craft, Cargo, player transit deferred) | [disposal](systems/disposal.md) — partial |
 | id-access | [id-access.md](../design/id-access.md) — active | none yet | [id-access](systems/id-access.md) — partial |
 | virology | [virology.md](../design/virology.md) — active | none yet | none yet |
-| atmospherics | [atmospherics.md](../design/atmospherics.md) — active | [atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) — shipped (partial); [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — planned | [atmospherics](systems/atmospherics.md) — partial |
+| atmospherics | [atmospherics.md](../design/atmospherics.md) — active | [atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) — shipped (partial); [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — shipped (Phase 1 dirty-chunk; Phase 2 late-join/AOI open) | [atmospherics](systems/atmospherics.md) — partial |
 | chemistry | [chemistry.md](../design/chemistry.md) — active | none yet | [substances](systems/substances.md) — partial |
 | explosives-destruction | [explosives-destruction.md](../design/explosives-destruction.md) — active | [structural-destruction](2026-07_structural-destruction.md) — in-progress (Phase 1–4 + blast detonation VFX) | [structural-destruction](systems/structural-destruction.md) — partial |
 | construction | [construction.md](../design/construction.md) — active | none yet | [tile](systems/tile.md) — partial (staged build ladder §1-2 unimplemented; single-step placement only) |
@@ -55,7 +55,7 @@ Update as part of `update-system-docs`.
 | ai-cyborgs | [ai-cyborgs.md](../design/ai-cyborgs.md) — active | none yet | none yet |
 | objectives | [objectives.md](../design/objectives.md) — active | none yet | none yet |
 | persistence-save | [persistence-save.md](../design/persistence-save.md) — active | [persistence_architecture_design_2fe61864.plan.md](../plans/persistence_architecture_design_2fe61864.plan.md) — Phase 1a/1b shipped, Phase 2 round snapshots pending | [persistence](systems/persistence.md) — partial (station templates, server meta only) |
-| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats prerelease by default; Linux/EditMode/smoke opt-in), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — shipped, [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress (TomNAS-unity online; warm-run proof open; Phases 1–2 pending) | [networking-session](systems/networking-session.md) — partial |
+| networking | [networking.md](../design/networking.md) — active | [headless-dedicated-server](2026-07_headless-dedicated-server.md) — shipped (partial: selection outline and drop interaction against a real client still broken, not root-caused), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md) — shipped (partial: mouse/screen-space interaction and pocket/container regressions not covered), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) — shipped (manual Windows+bats by default; nightly Windows+Linux client/server → `develop-nightly`; Linux/EditMode/smoke opt-in on dispatch), [session-world-lifecycle](2026-07_session-world-lifecycle.md) — shipped, [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress (TomNAS-unity online; EditMode + develop-release TomNAS+GitHub fallback; warm-run proof open; Phases 1–2 pending) | [networking-session](systems/networking-session.md) — partial |
 | audio | [audio.md](../design/audio.md) — active | [audio-foundation](2026-07_audio-foundation.md) — in-progress (Phase 1 SFX occlusion + Phase 2 ambience + Phase 3 personal heartbeat/breathing + Phase 4 alert cues shipped; Phase 0/5 pending) | [audio](systems/audio.md) — partial (split from chat-audio-screens) |
 | onboarding-tutorial | none yet | none yet | none yet |
 | antagonist-content | [antagonist-content.md](../design/antagonist-content.md) — active | none yet | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — stub |
@@ -105,7 +105,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type unbuilt |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
-| Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; GPU VFX server/host only (client sync planned) |
+| Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; client VFX Phase 1 dirty-chunk sync shipped (late-join/AOI Phase 2 open) |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |
 | Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; Pacman vibrate captures rest yaw on enable |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
@@ -142,11 +142,11 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
 | [2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
-| [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase, pipes, pumps, client VFX sync) |
+| [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase; client VFX is a separate effort — Phase 1 shipped) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |
 | [2026-07_spawn-point-authoring](2026-07_spawn-point-authoring.md) | shipped (authoring + save; runtime resolution deferred) |
 | [2026-07_tile-overlay-replacement](2026-07_tile-overlay-replacement.md) | shipped |
-| [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | planned |
+| [2026-07_atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) | shipped (Phase 1; Phase 2 late-join/AOI open) |
 | [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) | shipped |
 | [2026-07_player-body-animation](2026-07_player-body-animation.md) | shipped (foundation; polish in [animation-polish](2026-07_animation-polish.md)) |
 | [2026-07_animation-polish](2026-07_animation-polish.md) | shipped (melee torso, limp severity/oneshots, left-hand mirror, swing variants) |
@@ -158,7 +158,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_body-presentation-authority](2026-07_body-presentation-authority.md) | shipped |
 | [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) | in-progress (clean-slate + stamina 7a code shipped; Play Mode verification pending) |
 | [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (partial: mouse/screen-space interaction and pocket/container round-trip regressions not covered; not yet verified against a real Unity build) |
-| [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch; default Windows+bats prerelease; Linux/EditMode/smoke opt-in) |
+| [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (manual workflow_dispatch Windows-default; nightly full cut → develop-nightly; Linux/EditMode/smoke opt-in; TomNAS prefer) |
 | [2026-07_session-world-lifecycle](2026-07_session-world-lifecycle.md) | shipped |
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
@@ -169,7 +169,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_addressables-expansion-migration](2026-07_addressables-expansion-migration.md) | in-progress (Phases 1–3 done: cleanup, AssetHandle/provider, InteractionIcons pilot; Phases 4–6 open) |
 | [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
 | [2026-07_audio-foundation](2026-07_audio-foundation.md) | in-progress (Phase 1 client-local SFX occlusion + Phase 2 per-area ambience + Phase 3 personal heartbeat/breathing + Phase 4 alert-stack cues shipped; Phase 0 mixer groups, Phase 5 music/settings pending) |
-| [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) | in-progress (TomNAS-unity online; warm smoke proof open; Phases 1–2 pending; rendered-client + soak deferred) |
+| [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) | in-progress (TomNAS-unity online; EditMode + develop-release TomNAS+GitHub fallback; warm smoke proof open; Phases 1–2 pending; rendered-client + soak deferred) |
 
 ## Implementation plans
 
