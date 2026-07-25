@@ -99,7 +99,7 @@ namespace SS3D.Systems.Comms.UI
             card.Sender.style.display = string.IsNullOrEmpty(card.Sender.text)
                 ? DisplayStyle.None
                 : DisplayStyle.Flex;
-            card.Body.text = string.IsNullOrEmpty(body) ? string.Empty : body.ToUpperInvariant();
+            card.Body.text = body ?? string.Empty;
             card.Root.style.borderLeftColor = accent;
             card.Header.style.color = accent;
             card.Expiry = Time.time + RadioFadeSeconds;

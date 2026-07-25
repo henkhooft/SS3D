@@ -80,8 +80,9 @@
 .comms-feed__radio-body {
     margin-top: 2px;
     padding: 0;
-    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 19px;
+    /* Readable dialogue sans — terminal Spessman stays on header/sender only. */
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    font-size: 16px;
     color: rgb(255, 255, 255);
     -unity-text-align: middle-left;
     white-space: normal;
