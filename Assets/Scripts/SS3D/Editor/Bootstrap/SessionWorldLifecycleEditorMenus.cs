@@ -1,5 +1,4 @@
 using FishNet.Object;
-using SS3D.Engine.Chat;
 using SS3D.Networking;
 using SS3D.Permissions;
 using SS3D.Substances;
@@ -99,9 +98,9 @@ namespace SS3D.Editor.Bootstrap
             typeof(RoleSubSystem),
             typeof(GamemodeSubSystem),
             typeof(ItemSubSystem),
-            typeof(ChatSubSystem),
             typeof(CommsSubSystem),
             typeof(LocalSpeechBubbleController),
+            typeof(CommsFeedController),
             typeof(ExamineSubSystem),
             typeof(ExamineUI),
             typeof(SelectionSubSystem),

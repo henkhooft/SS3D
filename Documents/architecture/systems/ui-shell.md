@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud)
 > Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog
 > Status: partial (Phase 0-1 shipped: scaffolding + radial/armed migration)
-> Verified: f1c9476af — 2026-07-25
+> Verified: 4bc2ae93d — 2026-07-25
 
 # UI shell
 
@@ -62,8 +62,7 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay
-- **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), lobby UI, comms UI, examine overlays, console (as redesigns land)
+- **Owns:** radial interaction menu, armed overlay; local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud)
 
 ## Related docs
 

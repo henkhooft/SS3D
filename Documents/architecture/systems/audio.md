@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 6ac41562b — 2026-07-24
+> Verified: 6ce5ab235 — 2026-07-25
 
 # Audio
 
@@ -65,6 +65,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
   (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
   the old Can1 placeholder).
+- `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — announcement chimes
+  (`Announce.ogg` always first; optional `Welcome.ogg` follow-up with the banner); `CommsFeedController`
+  plays `StationAnnounce`, then reveals the ALL-STATION banner and any `CommsMessage.SoundId`
+  follow-up in parallel. Third-party credits:
+  [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
@@ -88,11 +93,13 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `Id = <clip's own asset GUID>`, `Database = AssetDatabases.Sounds`'s `DatabaseID`, then add a
   matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000,
   guid: <clip guid>, type: 3}`). `CombatAudioTrackIds` (per-domain, mirrors `AudioTrackIds`) is the
-  pattern for naming registered ids in code rather than inlining raw GUID strings.
+  pattern for naming registered ids in code rather than inlining raw GUID strings. Third-party
+  imports: add a row to [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - Ad-hoc `AudioSource` users outside the pool (`AirlockStateMachine`, `StructuralIntegrityPresenter`,
-  `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`) bypass
-  occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
-  ([audio-foundation](../2026-07_audio-foundation.md), deferred).
+  `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`,
+  `CommsFeedController` non-diegetic announce/welcome) bypass occlusion today — consolidating
+  positional ones onto `PlayAudioSource` is content-roster work ([audio-foundation](../2026-07_audio-foundation.md),
+  deferred). UI chimes stay client-local / non-spatial.
 - Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
   thin — no Map Editor UI yet). Reachable in-game via the `areaambience (trackId|clear)` dev console
   command (`AreaAmbienceCommand`), which always targets the calling player's own current area (same

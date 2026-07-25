@@ -59,6 +59,11 @@ namespace SS3D.Systems.Inputs
             MouseSensitivity = 0.001f;
             Inputs = new Controls();
 
+            // Legacy hold-to-show objectives (Fade) and debug Spawn Cans both bound Tab in the
+            // generated Controls asset. Erase those bindings — Tab is compose-only now.
+            EraseAllBindings(Inputs.Other.Fade);
+            EraseAllBindings(Inputs.Other.SpawnCans);
+
             BuildSystemActions();
 
             List<InputAction> allActions = CollectAllActions();
@@ -66,6 +71,14 @@ namespace SS3D.Systems.Inputs
 
             // Always-on baseline; never released.
             _arbiter.PushContext(InputContext.Global);
+        }
+
+        private static void EraseAllBindings(InputAction action)
+        {
+            for (int i = action.bindings.Count - 1; i >= 0; i--)
+            {
+                action.ChangeBinding(i).Erase();
+            }
         }
 
         #region Public API
@@ -168,8 +181,8 @@ namespace SS3D.Systems.Inputs
                     new[] { console },
                     System.Array.Empty<InputAction>()),
 
-                // Text field focused (local-speech compose, future feed fields): everything off;
-                // Enter/Escape handled by UITK KeyDownEvent, not Input System actions.
+                // Text field focused (local-speech compose): gameplay off; Tab is read from
+                // Keyboard device in LocalSpeechBubbleController (UITK focus eats InputActions).
                 [InputContext.TextEntry] = new InputContextDefinition(
                     System.Array.Empty<InputActionMap>(),
                     System.Array.Empty<InputAction>()),

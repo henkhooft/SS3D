@@ -1,10 +1,9 @@
 namespace SS3D.Systems.Comms
 {
     /// <summary>
-    /// How a speech event was uttered. Speak is the live local-speech path; Whisper/Shout/Emote
-    /// are reserved for upcoming compose-input slices. Radio and Announcement are included so the
-    /// subtitle view can already carry mode CSS — those channels still target the non-diegetic
-    /// feed per comms.md §6–§8 when that slice lands.
+    /// How a local speech line was uttered. Whisper/Shout/Emote are compose modifiers.
+    /// Radio and Announcement exist for subtitle CSS preview only — live radio/announce
+    /// use <see cref="CommsMessage"/> and the non-diegetic feed.
     /// </summary>
     public enum SpeechMode : byte
     {
