@@ -11,21 +11,23 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 
 **Near-term operational push** — [test-server.md](test-server.md):
 
-- **T1** — Loadable Windows build (Addressables/content/permissions — diagnose a real build)
+- **T1** — Loadable Windows build (Addressables/content/permissions)
 - **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
-- **T3** — Session stability: flawless round start/stop, connect/disconnect, graceful server + client handling, no gross host/client sync gaps (includes known remote drop/selection break)
+- **T3** — Session stability: round/connect lifecycle, doors under MP, admin wedge tools, Nuke Ops happy-path smoke, test-station perf floor
+- **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
 
-**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat foundation + M2 structural/blast API shipped):
+**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 shipped):
 
-- **M0** — Basic editor-built test station; vault/disk; per-role loadouts + assignment
-- **M1p** — Combat feel: weapon VFX/decals/blood/sounds, aim IK, two-hand rules, no hit-debug UI in normal play
-- **M3** — Nuke loop + disk pinpoint + breaching charges / realistic-ish explosions
-- **M4** — Objectives + win/lose checking
-- **M5** — End-game screen + round restart (**shared with T4**)
-- **M7** — Health feel: ragdoll on crit; screen effects that composite cleanly
-- **M8** — Atmos→health (spacing/fire/temp) + armor environmental seal + air alarms
+- **M0** — Test station; vault/disk/nuke; loadouts (ammo, ID/access, defuse tools, internals); assignment; ops/crew identity
+- **M1p** — Combat feel: VFX/decals/blood/sounds, aim IK, two-hand, reload cues, knockdown clarity, sprint, no debug chrome
+- **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
+- **M4** — Objectives + win/lose
+- **M5** — End-game screen + restart; spectators still see the outcome
+- **M7** — Health feel (crit ragdoll, screen-effect compositing) + thin field med + drag
+- **M8** — Env→health + armor seal + internals + air alarms that alarm + thin fire response
+- **M9** — Test-map APC lights matter + wall damage readable at range
 
-Not focus: Area-id merge on breach, shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, server browser / accounts.
+Not focus: Area-id merge on breach, re-wiring client atmos VFX (already shipped), shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, full radio, server browser / accounts.
 
 The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) remains a parallel capacity track; test server only needs a minimal join/spawn path.
 
