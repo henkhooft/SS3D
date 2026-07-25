@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing + turf env→health shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: 9965980a7 — 2026-07-25
+> Verified: 627e59c2c — 2026-07-25
 
 # Health
 
@@ -76,6 +76,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Screen-effect/personal-audio Clear from other bodies:** only clear when `_drivingLocalPresentation` — other players' mind unassign must not wipe the local owner's Volume intensities or heartbeat cue.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
 - **No tile/atmos yet ≠ vacuum:** `SampleEnvironmentAtBody` returns `HealthEnvironmentState.SafeDefault` (breathable) when Tile/Atmos aren't ready — do not treat missing samples as vacuum or lobby spawns suffocate. `atmosdamage off` forces SafeDefault every tick.
+- **Off-map / past atmos chunks is vacuum:** once Tile+Atmos are ready, `HumanoidSpaceSupport.IsUnsupportedAt` (no plenum / no occupancy) keeps exposure as vacuum even when `TryGetCellDebugInfo` fails outside `_coordToIndex`. Do not fall back to SafeDefault there or deep-space float becomes breathable.
 - **LowOxygen flicker in station air:** turf hypoxia uses O₂ **partial pressure** (mole% × kPa), not raw mole fraction or `OxyDebt > 0`. Comfortable ≥18 kPa PO₂ (station ~20); alert soft-start for systemic debt is `LowOxygenAlertSoftStart`.
 - **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).
 

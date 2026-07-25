@@ -12,6 +12,7 @@ using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.ScreenEffects;
@@ -482,8 +483,25 @@ namespace SS3D.Systems.Health
             TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
             AtmosSimulation simulation = atmos.Simulation;
 
+            // Off the atmos grid (past chunk extents) or no plenum: open space stays vacuum.
+            // Do not use SafeDefault here — that is only for tile/atmos not ready (lobby / load).
+            if (HumanoidSpaceSupport.IsUnsupportedAt(Transform.position))
+            {
+                if (simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo vacuumInfo))
+                {
+                    return HealthEnvironmentExposure.FromVacuumCell(
+                        vacuumInfo.Temperature,
+                        vacuumInfo.BurnIntensity);
+                }
+
+                return HealthEnvironmentExposure.FromVacuumCell(
+                    AtmosConstants.SpaceTemperature,
+                    burnIntensity: 0f);
+            }
+
             if (!simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo info))
             {
+                // Floor present but atmos cell missing (init gap) — do not treat as space.
                 return HealthEnvironmentState.SafeDefault;
             }
 
