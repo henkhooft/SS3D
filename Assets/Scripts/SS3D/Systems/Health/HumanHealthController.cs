@@ -38,6 +38,7 @@ namespace SS3D.Systems.Health
         private WoundVfx _woundVfx;
         private HumanAnatomyController _anatomy;
         private Ragdoll _ragdoll;
+        private HumanoidCombatController _combatController;
         private HumanInventory _inventory;
         private bool _deathTriggered;
         private bool _healthCollapseActive;
@@ -230,7 +231,40 @@ namespace SS3D.Systems.Health
             {
                 float intensity = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
                 RpcBloodImpactBurst(zone, intensity);
+                TryApplyHitFlinch(brute);
             }
+        }
+
+        /// <summary>
+        /// Standing flinch via <see cref="HumanoidCombatController.OnHitReceived"/> — only while locomotion.
+        /// </summary>
+        [Server]
+        private void TryApplyHitFlinch(float brute)
+        {
+            if (_ragdoll == null)
+            {
+                _ragdoll = GetComponent<Ragdoll>();
+            }
+
+            if (_ragdoll != null && _ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
+            if (_combatController == null)
+            {
+                _combatController = GetComponent<HumanoidCombatController>();
+            }
+
+            if (_combatController == null)
+            {
+                return;
+            }
+
+            float t = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
+            // Keep stagger through most of the flinch clip so additive/override weights don't snap off early.
+            float staggerSeconds = Mathf.Lerp(0.55f, 0.85f, t);
+            _combatController.OnHitReceived(Vector3.zero, knockbackForce: 0f, staggerSeconds);
         }
 
         /// <summary>

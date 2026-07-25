@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 42ffadade — 2026-07-25
+> Verified: c7c66f1a5 — 2026-07-25
 
 # Entities
 
@@ -26,7 +26,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — presentation authority (`ServerSetPresentation` / `ApplyPresentation`)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — holds, stance, limp + `InjuredLeg` / arms, rare hurt Emote, `MirrorUpperBody`; suppresses while `Presentation != Locomotion`
-- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — Harm intent toggle; `OnHitReceived` → stagger/`Flinch` (called from health `ApplyDamage`)
+- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch** (GettingHit / gut / HitReaction)
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
@@ -36,7 +37,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 ## Extension points
 
 - Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips.
-- Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag; **exception:** `X Bot@Floating.fbx` (`Mix_Floating`) drives living space float + ghosts.
+- Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
+- Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch`. Animator selects clip by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), `Mix_StandingReactLargeGut` (Melee), `Mix_HitReaction` (Ranged). `Mix_ShoulderHitAndFall` / get-ups deferred (need knockdown presentation).
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
@@ -57,6 +59,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Injured oneshots:** Jump / Turn90 / Emote while limping → Injured Jump / Turn / Wave (Base Layer); healthy oneshots require `LimpSide == 0`. **Jump/Turn90 are not bound in `Controls.inputed`** and nothing calls `PlayLocomotionTrigger` yet — presentation only.
 - **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement owns loco.
 - **Batch rebuild while Editor open:** run the rebuild menu, or drop a **user-writable** `artifacts/force-rebuild-animator.flag` (root-owned flags fail to delete and skip rebuild). Batchmode cannot open a held project.
+- **Do not flinch when collapsed/dead:** `TryApplyHitFlinch` requires `Ragdoll.Presentation == Locomotion` — never invent a parallel fall path from `Mix_ShoulderHitAndFall` here.
 - **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
 - **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. Missing tile map ≠ unsupported (do not float before map ready).
 - **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
