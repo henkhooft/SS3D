@@ -120,14 +120,17 @@ namespace SS3D.Systems.Health
 
         private static Severity ComputeLowOxygen(HealthEnvironmentState env)
         {
-            // Turf hypoxia (distinct from systemic oxy-debt alert; Main HUD takes max of both).
-            if (env.IsVacuum || env.AtmosphereBreathability <= 0.05f)
+            // Turf hypoxia via O₂ partial pressure (not raw mole fraction — avoids flicker at ~20% O₂).
+            float po2 = HealthEnvironmentExposure.OxygenPartialPressureKpa(
+                env.OxygenMoleFraction,
+                env.PressureKpa);
+
+            if (env.IsVacuum || po2 <= HealthConstants.OxygenPartialPressureCriticalKpa)
             {
                 return Severity.Critical;
             }
 
-            if (env.AtmosphereBreathability < 0.75f
-                || env.OxygenMoleFraction < AirAlarmConstants.LowOxygenMoleFraction)
+            if (po2 < HealthConstants.OxygenPartialPressureHypoxiaOnsetKpa)
             {
                 return Severity.Warning;
             }

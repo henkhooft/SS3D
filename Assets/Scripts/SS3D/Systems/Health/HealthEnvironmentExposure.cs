@@ -10,6 +10,20 @@ namespace SS3D.Systems.Health
     /// </summary>
     public static class HealthEnvironmentExposure
     {
+        /// <summary>O₂ partial pressure in kPa (mole fraction × total pressure).</summary>
+        public static float OxygenPartialPressureKpa(float oxygenMoleFraction, float pressureKpa)
+        {
+            if (pressureKpa <= 0f || oxygenMoleFraction <= 0f)
+            {
+                return 0f;
+            }
+
+            return oxygenMoleFraction * pressureKpa;
+        }
+
+        /// <summary>
+        /// 1 at/above comfortable PO₂, 0 at/below unbreathable. Station air (~20 kPa PO₂) stays full.
+        /// </summary>
         public static float NormalizeBreathability(float oxygenMoleFraction, float pressureKpa, bool isVacuum)
         {
             if (isVacuum || pressureKpa <= 0f)
@@ -17,17 +31,21 @@ namespace SS3D.Systems.Health
                 return 0f;
             }
 
-            float stationFraction = HealthEnvironmentState.StationOxygenMoleFraction;
-            float breathability = stationFraction > 0f
-                ? Mathf.Clamp01(oxygenMoleFraction / stationFraction)
-                : 0f;
-
-            if (pressureKpa < AirAlarmConstants.LowPressureKpa)
+            float po2 = OxygenPartialPressureKpa(oxygenMoleFraction, pressureKpa);
+            if (po2 >= HealthConstants.OxygenPartialPressureComfortableKpa)
             {
-                breathability *= Mathf.Clamp01(pressureKpa / AirAlarmConstants.LowPressureKpa);
+                return 1f;
             }
 
-            return breathability;
+            if (po2 <= HealthConstants.OxygenPartialPressureUnbreathableKpa)
+            {
+                return 0f;
+            }
+
+            return Mathf.InverseLerp(
+                HealthConstants.OxygenPartialPressureUnbreathableKpa,
+                HealthConstants.OxygenPartialPressureComfortableKpa,
+                po2);
         }
 
         public static float ToxinIntakeFromPlasma(float plasmaMoleFraction)

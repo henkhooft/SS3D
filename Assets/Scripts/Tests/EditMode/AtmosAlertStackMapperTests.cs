@@ -51,6 +51,38 @@ namespace EditorTests
         }
 
         [Test]
+        public void StationPressureNormalMixDoesNotRaiseLowOxygen()
+        {
+            HealthEnvironmentState env = HealthEnvironmentState.SafeDefault;
+            env.HasSample = true;
+            env.PressureKpa = AtmosConstants.StandardPressure;
+            env.OxygenMoleFraction = HealthEnvironmentState.StationOxygenMoleFraction;
+            env.AtmosphereBreathability = 1f;
+
+            AtmosAlertStackMapper.AtmosAlertSignals signals = AtmosAlertStackMapper.Compute(env);
+
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.None, signals.LowOxygen);
+        }
+
+        [Test]
+        public void LowPartialPressureRaisesLowOxygenWarning()
+        {
+            HealthEnvironmentState env = HealthEnvironmentState.SafeDefault;
+            env.HasSample = true;
+            env.PressureKpa = AtmosConstants.StandardPressure;
+            // PO₂ ≈ 14 kPa — below hypoxia onset (16), above critical (10).
+            env.OxygenMoleFraction = 0.14f;
+            env.AtmosphereBreathability = HealthEnvironmentExposure.NormalizeBreathability(
+                env.OxygenMoleFraction,
+                env.PressureKpa,
+                isVacuum: false);
+
+            AtmosAlertStackMapper.AtmosAlertSignals signals = AtmosAlertStackMapper.Compute(env);
+
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.Warning, signals.LowOxygen);
+        }
+
+        [Test]
         public void AtmosphericDamageDisabledClearsAtmosAlerts()
         {
             bool previous = HealthEnvironmentSettings.AtmosphericDamageDisabled;

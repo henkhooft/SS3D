@@ -9,11 +9,27 @@ namespace EditorTests
     public class HealthEnvironmentExposureTests
     {
         [Test]
-        public void StationOxygenNormalizesToFullBreathability()
+        public void StationAirHasFullBreathability()
         {
             float station = HealthEnvironmentState.StationOxygenMoleFraction;
             float breathability = HealthEnvironmentExposure.NormalizeBreathability(
                 station,
+                AtmosConstants.StandardPressure,
+                isVacuum: false);
+
+            Assert.AreEqual(1f, breathability, 0.001f);
+            float po2 = HealthEnvironmentExposure.OxygenPartialPressureKpa(
+                station,
+                AtmosConstants.StandardPressure);
+            Assert.Greater(po2, HealthConstants.OxygenPartialPressureComfortableKpa);
+        }
+
+        [Test]
+        public void SlightlyLeanMixAtStationPressureStaysFullBreathability()
+        {
+            // ~18% O₂ at 101 kPa → PO₂ ≈ 18.2 kPa — still at/above comfortable band.
+            float breathability = HealthEnvironmentExposure.NormalizeBreathability(
+                0.18f,
                 AtmosConstants.StandardPressure,
                 isVacuum: false);
 
@@ -32,16 +48,27 @@ namespace EditorTests
         }
 
         [Test]
-        public void LowPressureScalesBreathabilityDown()
+        public void LowPartialPressureReducesBreathability()
         {
-            float station = HealthEnvironmentState.StationOxygenMoleFraction;
-            float halfPressure = AirAlarmConstants.LowPressureKpa * 0.5f;
+            // 10% O₂ at 101 kPa → PO₂ ≈ 10.1 kPa — between unbreathable and comfortable.
             float breathability = HealthEnvironmentExposure.NormalizeBreathability(
-                station,
-                halfPressure,
+                0.10f,
+                AtmosConstants.StandardPressure,
                 isVacuum: false);
 
-            Assert.AreEqual(0.5f, breathability, 0.001f);
+            Assert.Greater(breathability, 0f);
+            Assert.Less(breathability, 1f);
+        }
+
+        [Test]
+        public void UnbreathablePartialPressureIsZero()
+        {
+            float breathability = HealthEnvironmentExposure.NormalizeBreathability(
+                0.04f,
+                AtmosConstants.StandardPressure,
+                isVacuum: false);
+
+            Assert.AreEqual(0f, breathability, 0.001f);
         }
 
         [Test]

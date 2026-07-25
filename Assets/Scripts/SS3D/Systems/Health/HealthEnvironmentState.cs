@@ -5,7 +5,7 @@ namespace SS3D.Systems.Health
 {
     /// <summary>
     /// Synced turf exposure snapshot for alert / screen mappers on all peers.
-    /// Breathability 1 = station-normal O₂; 0 = vacuum / no oxygen.
+    /// Breathability is derived from O₂ partial pressure (1 at ≥18 kPa PO₂; station air ~20).
     /// </summary>
     [Serializable]
     public struct HealthEnvironmentState

@@ -29,7 +29,15 @@
         public const float LiverClearanceRate = 0.02f;
         public const float RenalClearanceFactor = 0.5f;
 
-        // Environment → health (turf exposure). Breathability 1 = station O₂ fraction.
+        // Environment → health (turf exposure). Breathability uses O₂ partial pressure
+        // (mole fraction × pressure), not raw mole fraction — station air ~20 kPa PO₂.
+        // Comfortable ≥18 kPa → full breath; unbreathable ≤6 kPa → zero (hypoxia onset ~16).
+        public const float OxygenPartialPressureComfortableKpa = 18f;
+        public const float OxygenPartialPressureHypoxiaOnsetKpa = 16f;
+        public const float OxygenPartialPressureCriticalKpa = 10f;
+        public const float OxygenPartialPressureUnbreathableKpa = 6f;
+        /// <summary>Systemic LowOxygen alert Warning starts here — ignore micro-debt flicker.</summary>
+        public const float LowOxygenAlertSoftStart = 0.05f;
         public const float BreathOxygenMolesPerTick = 0.05f;
         public const float PlasmaToxinIntakeScale = 0.08f;
         public const float ColdWarningTemperatureKelvin = 273.15f;

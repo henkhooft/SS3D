@@ -122,5 +122,22 @@ namespace EditorTests
                 HealthAlertStackMapper.Severity.Critical,
                 HealthAlertStackMapper.Compute(byFlag).LowOxygen);
         }
+
+        [Test]
+        public void MicroOxyDebtDoesNotRaiseLowOxygenWarning()
+        {
+            HealthSnapshot micro = HealthSnapshot.Default;
+            micro.Pools.OxyDebt = HealthConstants.LowOxygenAlertSoftStart * 0.5f;
+
+            HealthSnapshot softStart = HealthSnapshot.Default;
+            softStart.Pools.OxyDebt = HealthConstants.LowOxygenAlertSoftStart;
+
+            Assert.AreEqual(
+                HealthAlertStackMapper.Severity.None,
+                HealthAlertStackMapper.Compute(micro).LowOxygen);
+            Assert.AreEqual(
+                HealthAlertStackMapper.Severity.Warning,
+                HealthAlertStackMapper.Compute(softStart).LowOxygen);
+        }
     }
 }
