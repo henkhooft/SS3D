@@ -17,6 +17,8 @@ MonoBehaviour:
   DisplayTitle: ALL-STATION
   Color: {r: 0.8301887, g: 0.66064215, b: 0, a: 1}
   Kind: 1
-  CodeOnlyChannel: 1
+  CodeOnlyChannel: 0
+  AvailableInCompose: 0
+  ComposePrefix: announce
   RoleRequiredToUse: 0
   RequiredTraitInHeadset: {fileID: 0}

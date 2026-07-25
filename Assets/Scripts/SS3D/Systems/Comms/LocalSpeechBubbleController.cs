@@ -190,6 +190,42 @@ namespace SS3D.Systems.Comms
         private CommsChannel CurrentComposeRadioChannel =>
             IsComposeOnRadio ? _composeRadioChannels[_composeChannelIndex - 1] : null;
 
+        /// <summary>
+        /// Prefix overrides Tab selection for draft chrome (and commit).
+        /// </summary>
+        private void ResolveComposeDraftChrome(out SpeechMode mode, out string channelHeader, out bool isAnnouncement)
+        {
+            mode = _composeMode;
+            channelHeader = null;
+            isAnnouncement = false;
+
+            string draftText = _view?.DraftField?.value;
+            CommsSubSystem comms = _commsSubSystem != null ? _commsSubSystem : SubSystems.Get<CommsSubSystem>();
+            if (CommsComposePrefix.TrySplit(draftText, out string token, out _)
+                && comms != null
+                && comms.TryResolveComposePrefix(token, out CommsChannel prefixChannel))
+            {
+                if (prefixChannel.Kind == CommsChannelKind.Announcement)
+                {
+                    isAnnouncement = true;
+                    mode = SpeechMode.Announcement;
+                    channelHeader = prefixChannel.ResolveAnnouncementTitle();
+                    return;
+                }
+
+                mode = SpeechMode.Speak;
+                channelHeader = prefixChannel.ResolveRadioHeader();
+                return;
+            }
+
+            CommsChannel radio = CurrentComposeRadioChannel;
+            if (radio != null)
+            {
+                mode = SpeechMode.Speak;
+                channelHeader = radio.ResolveRadioHeader();
+            }
+        }
+
         private void CycleComposeChannel(int delta)
         {
             // Rebuild in case channel settings recovered after compose opened with an empty list.
@@ -236,6 +272,31 @@ namespace SS3D.Systems.Comms
 
             if (_localViewer == null || !_localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
             {
+                EndCompose(clearText: true);
+                return;
+            }
+
+            CommsSubSystem comms = _commsSubSystem != null ? _commsSubSystem : SubSystems.Get<CommsSubSystem>();
+            if (CommsComposePrefix.TrySplit(text, out string token, out string body)
+                && comms != null
+                && comms.TryResolveComposePrefix(token, out CommsChannel prefixChannel))
+            {
+                body = body.Trim();
+                if (string.IsNullOrEmpty(body))
+                {
+                    EndCompose(clearText: true);
+                    return;
+                }
+
+                if (prefixChannel.Kind == CommsChannelKind.Announcement)
+                {
+                    emitter.CmdSendAnnouncement(body);
+                }
+                else
+                {
+                    emitter.CmdSendRadio(prefixChannel.name, body);
+                }
+
                 EndCompose(clearText: true);
                 return;
             }
@@ -624,13 +685,14 @@ namespace SS3D.Systems.Comms
 
             if (_isComposing && localDraftScreen.HasValue)
             {
-                CommsChannel radio = CurrentComposeRadioChannel;
+                ResolveComposeDraftChrome(out SpeechMode draftMode, out string channelHeader, out bool isAnnouncement);
                 _view.ShowDraft(
                     localDraftScreen.Value.x,
                     localDraftScreen.Value.y,
                     speakerName: null,
-                    radio != null ? SpeechMode.Speak : _composeMode,
-                    radio != null ? radio.ResolveRadioHeader() : null);
+                    draftMode,
+                    channelHeader,
+                    isAnnouncement);
             }
             else if (!_isComposing)
             {

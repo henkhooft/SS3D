@@ -1,6 +1,6 @@
 > Implements: Documents/design/comms.md §5 (compose), §6 (radio / non-positional), §8 (announcements)
 > Touches systems: chat-audio-screens (comms), ui-shell, rounds-lobby, entities, inputs
-> Status: shipped (feed + Tab compose + Chat purge; headset/PDA/radial deferred)
+> Status: shipped (feed + Tab/slash compose + Chat purge; headset/PDA/radial deferred)
 
 # Comms non-diegetic feed + Tab compose (Jul 2026)
 
@@ -9,7 +9,8 @@ Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hu
 ## Deviates from design
 
 - **Channel pick:** Tab / Shift+Tab while drafting instead of hold-comms → channel radial ([comms.md](../design/comms.md) §6). Radial deferred; recorded on the system map.
-- **Announcements:** All `Announcement`-kind traffic uses the top-middle banner this pass (no routine→feed split yet).
+- **Slash prefixes:** interim `/eng`, `/sec`, `/announce` in T-compose (design §5 rejects typed prefixes). Prefix wins over Tab; Announcement is prefix-only (not in Tab cycle).
+- **Announcements:** All `Announcement`-kind traffic uses the top-middle banner this pass (no routine→feed split yet). Player `/announce` unlocked until headset/role gating.
 - **Placement:** Radio stack on the left (mock); design said bottom-left of main HUD — same family.
 
 ## Phases

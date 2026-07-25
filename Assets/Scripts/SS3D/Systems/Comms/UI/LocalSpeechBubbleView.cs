@@ -185,9 +185,15 @@ namespace SS3D.Systems.Comms.UI
 
         /// <summary>
         /// Positions the live draft chip at the same screen anchor a finished line would use.
-        /// Always shows channel chrome: LOCAL, or a radio header when Tab-cycled onto a channel.
+        /// Always shows channel chrome: LOCAL, radio header, or ALL-STATION for announcements.
         /// </summary>
-        public void ShowDraft(float left, float bottom, string speakerName, SpeechMode mode, string radioChannelHeader = null)
+        public void ShowDraft(
+            float left,
+            float bottom,
+            string speakerName,
+            SpeechMode mode,
+            string channelHeader = null,
+            bool isAnnouncement = false)
         {
             if (_draftChip == null)
             {
@@ -202,20 +208,24 @@ namespace SS3D.Systems.Comms.UI
             _draftAnchorLeft = left;
             _draftAnchorBottom = bottom;
 
-            // Channel chrome always visible so Tab cycling is obvious (LOCAL vs ENG > OPEN).
-            bool isRadio = !string.IsNullOrEmpty(radioChannelHeader);
-            string nameText = isRadio
-                ? radioChannelHeader.ToUpperInvariant()
-                : "LOCAL";
+            bool isChannelled = isAnnouncement || !string.IsNullOrEmpty(channelHeader);
+            string nameText = isAnnouncement
+                ? (string.IsNullOrEmpty(channelHeader) ? "ALL-STATION" : channelHeader.ToUpperInvariant())
+                : isChannelled
+                    ? channelHeader.ToUpperInvariant()
+                    : "LOCAL";
 
-            SpeechMode effectiveMode = isRadio ? SpeechMode.Speak : mode;
+            SpeechMode effectiveMode = isAnnouncement
+                ? SpeechMode.Announcement
+                : isChannelled
+                    ? SpeechMode.Speak
+                    : mode;
             if (justOpened || _draftMode != effectiveMode)
             {
                 ApplyDraftModeClass(effectiveMode);
             }
 
-            // After mode classes — forces header styles and kills field overlap margin.
-            ApplyDraftChannelChrome(nameText, isRadio);
+            ApplyDraftChannelChrome(nameText, isRadio: isChannelled && !isAnnouncement, isAnnouncement);
             FitDraftChipWidth();
         }
 
@@ -223,7 +233,7 @@ namespace SS3D.Systems.Comms.UI
         /// Force channel header styles in code — USS alone is easy to lose under .font-body /
         /// TextField defaults, and the field's negative margin used to cover the name.
         /// </summary>
-        private void ApplyDraftChannelChrome(string header, bool isRadio)
+        private void ApplyDraftChannelChrome(string header, bool isRadio, bool isAnnouncement)
         {
             if (_draftName == null)
             {
@@ -241,24 +251,29 @@ namespace SS3D.Systems.Comms.UI
             _draftName.style.marginBottom = 2f;
             _draftName.style.paddingTop = 0;
             _draftName.style.paddingBottom = 0;
-            _draftName.style.fontSize = isRadio ? 13f : 14f;
-            _draftName.style.letterSpacing = 1f;
-            _draftName.style.unityTextAlign = isRadio ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
-            _draftName.style.color = isRadio
-                ? new Color(95f / 255f, 134f / 255f, 179f / 255f, 1f)
-                : new Color(200f / 255f, 200f / 255f, 190f / 255f, 1f);
+            _draftName.style.fontSize = isRadio || isAnnouncement ? 13f : 14f;
+            _draftName.style.letterSpacing = isAnnouncement ? 2f : 1f;
+            _draftName.style.unityTextAlign = isRadio || isAnnouncement
+                ? TextAnchor.MiddleLeft
+                : TextAnchor.MiddleCenter;
+            _draftName.style.color = isAnnouncement
+                ? new Color(240f / 255f, 196f / 255f, 125f / 255f, 1f)
+                : isRadio
+                    ? new Color(95f / 255f, 134f / 255f, 179f / 255f, 1f)
+                    : new Color(200f / 255f, 200f / 255f, 190f / 255f, 1f);
 
-            // Spessman terminal look matches the radio mock header; keep it for LOCAL too.
             _draftName.EnableInClassList("font-titling", false);
-            _draftName.EnableInClassList("font-terminal", true);
+            _draftName.EnableInClassList("font-terminal", !isAnnouncement);
+            _draftName.EnableInClassList("font-arcade", isAnnouncement);
             _draftName.EnableInClassList("comms-draft__name--radio", isRadio);
+            _draftName.EnableInClassList("comms-draft__name--announce", isAnnouncement);
 
             _draftChip.EnableInClassList("comms-draft--radio", isRadio);
-            _draftChip.EnableInClassList("comms-draft--channelled", true);
+            _draftChip.EnableInClassList("comms-draft--announce", isAnnouncement);
+            _draftChip.EnableInClassList("comms-draft--channelled", isRadio || isAnnouncement);
 
             if (_draftField != null)
             {
-                // Do not pull the TextField up over the channel header.
                 _draftField.style.marginTop = 0;
             }
         }

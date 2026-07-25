@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 4319bd170 — 2026-07-25 (announce→welcome+banner sequence)
+> Verified: 35b40f897 — 2026-07-25 (slash compose prefixes)
 
 # Chat / audio / screens
 
@@ -16,15 +16,17 @@ announcements (global `CommsMessage` broadcast). Legacy `ChatSubSystem` / `Engin
 channel SOs live under `Assets/Content/Data/Comms/Channels/` (`CommsChannel` / `CommsChannels`).
 
 Local speech: weighted chips + T-compose (Enter speak / Shift+Enter whisper / Ctrl+Enter shout).
-**Tab / Shift+Tab** cycles Local → compose-available radio (Engineering/Security); radio commit uses
-`CmdSendRadio` (no head bubble). Feed UI on `UiShell` HUD: middle-left radio stack + top ALL-STATION
-banner.
+**Tab / Shift+Tab** cycles Local → compose-available radio (Engineering/Security). Leading slash
+prefixes (`/eng`, `/sec`, `/announce`) also route commit (prefix wins over Tab); Announcement is
+prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnouncement`. Feed UI on
+`UiShell` HUD: middle-left radio stack + top ALL-STATION banner.
 
 ## Start here
 
-- `CommsSubSystem.cs` — local + radio/announce hub; `SendAnnouncement`; `OnLocalSpeechReceived` /
-  `OnCommsMessageReceived`; transcript `Logs/Comms.txt` on server.
-- `LocalSpeechEmitter` — `CmdSpeak` / `CmdSendRadio` on the speaking Entity.
+- `CommsSubSystem.cs` — local + radio/announce hub; `SendAnnouncement` / `HandleAnnouncementRequest`;
+  `TryResolveComposePrefix`; transcript `Logs/Comms.txt` on server.
+- `LocalSpeechEmitter` — `CmdSpeak` / `CmdSendRadio` / `CmdSendAnnouncement` on the speaking Entity.
+- `CommsComposePrefix` — pure `/token` parse/strip (EditMode-tested).
 - `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
   `UiShell` `UiLayer.Overlay` (not the hub/MI UIDocument).
 - `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio middle-left (header +
@@ -39,11 +41,15 @@ banner.
 - **Local speech on UiShell Overlay:** do not attach bubbles/compose to the hub UIDocument —
   `MachineInterfaceHost` disables it while closed, and a child `UIDocument` under the hub cannot
   set its own `PanelSettings` (Unity asserts parent panel mismatch). Use `UiLayer.Overlay`.
-- **Tab-in-compose** replaces design §6 channel radial for this slice — do not add typed `;` prefixes.
+- **Channel pick (design deviation):** Tab cycle + slash prefixes replace design §6 radial /
+  §5 “no typed prefixes” for this slice. Do **not** add SS13 `;` / `:h` aliases — slash only.
+  `CommsChannel.ComposePrefix` optional; Radio defaults to lowercased Abbreviation. Unknown `/token`
+  stays literal local text. Empty body after a known prefix closes compose.
 - **Announcements:** all `Announcement`-kind traffic uses the top banner (no routine→feed split yet).
   Client always plays `StationAnnounce` first; missing clip falls through to immediate reveal.
   Optional `CommsMessage.SoundId` is a follow-up started with the banner (round-start:
-  `StationWelcome` + welcome copy). Third-party clip credit:
+  `StationWelcome` + welcome copy). Player `/announce` is unlocked (`StationAlerts` not CodeOnly);
+  not listed in Tab. Third-party clip credit:
   [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab compose only lists
   channels with `AvailableInCompose` (Engineering + Security for now).
@@ -57,7 +63,8 @@ banner.
 - **Tab channel cycle:** while composing, Tab is edge-detected from `Keyboard.current` in
   `LateUpdate` — UITK TextField focus swallows Tab (focus navigation) so InputActions/KeyDown are
   unreliable. Also ignore `NavigationMoveEvent` on the draft. Draft chrome shows `LOCAL` /
-  `ENG > OPEN`. Empty channel settings recover via loaded assets / Editor AssetDatabase.
+  `ENG > OPEN` / `ALL-STATION` (prefix). Empty channel settings recover via loaded assets / Editor
+  AssetDatabase.
 - **Objectives hold-to-show removed:** legacy `Other/Fade` (Tab) binding erased; uGUI panel stays
   hidden until the PDA objectives tab ships.
 - **UITK:** do not combine `border-radius` + `overflow: hidden` on the same element.

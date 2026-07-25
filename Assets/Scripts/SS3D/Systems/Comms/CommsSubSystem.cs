@@ -154,6 +154,37 @@ namespace SS3D.Systems.Comms
             return result;
         }
 
+        /// <summary>
+        /// Resolve a T-compose slash token (<c>eng</c>, <c>announce</c>) to a player-writable channel.
+        /// </summary>
+        public bool TryResolveComposePrefix(string token, out CommsChannel channel)
+        {
+            channel = null;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            EnsureChannelRegistry();
+            string needle = token.Trim().ToLowerInvariant();
+            foreach (CommsChannel candidate in _channelsById.Values)
+            {
+                if (candidate == null || !candidate.IsComposePrefixWritable())
+                {
+                    continue;
+                }
+
+                string prefix = candidate.ResolveComposePrefix();
+                if (string.Equals(prefix, needle, StringComparison.Ordinal))
+                {
+                    channel = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public override void OnStopNetwork()
         {
             if (InstanceFinder.ClientManager != null)
@@ -252,6 +283,61 @@ namespace SS3D.Systems.Comms
         }
 
         /// <summary>
+        /// Server-only: player station announcement from an owned LocalSpeechEmitter.
+        /// </summary>
+        public void HandleAnnouncementRequest(LocalSpeechEmitter emitter, string text)
+        {
+            if (!IsServer || emitter == null)
+            {
+                return;
+            }
+
+            if (!TryNormalizeText(text, out text))
+            {
+                return;
+            }
+
+            EnsureChannelRegistry();
+            CommsChannel channel = _channelSettings != null ? _channelSettings.AnnouncementChannel : null;
+            if (channel == null)
+            {
+                TryGetChannel("StationAlerts", out channel);
+            }
+
+            if (channel == null
+                || channel.Kind != CommsChannelKind.Announcement
+                || channel.CodeOnlyChannel
+                || !channel.IsComposePrefixWritable())
+            {
+                return;
+            }
+
+            Entity entity = emitter.GetComponent<Entity>();
+            if (entity == null || entity.Mind == null || entity.Mind == Mind.Empty || entity.Mind.player == null)
+            {
+                return;
+            }
+
+            Player player = entity.Mind.player;
+            if (channel.RoleRequiredToUse != ServerRoleTypes.None)
+            {
+                PermissionSubSystem permissionSystem = SubSystems.Get<PermissionSubSystem>();
+                if (permissionSystem == null || !permissionSystem.IsAtLeast(player.Ckey, channel.RoleRequiredToUse))
+                {
+                    return;
+                }
+            }
+
+            BroadcastCommsMessage(new CommsMessage
+            {
+                ChannelId = channel.name,
+                Sender = player.Ckey,
+                Text = text,
+                Kind = CommsChannelKind.Announcement,
+            });
+        }
+
+        /// <summary>
         /// Server-only: station / code announcement (top banner).
         /// Clients always play <see cref="CommsAudioTrackIds.StationAnnounce"/> first, then reveal
         /// the banner; <paramref name="soundId"/> is an optional follow-up clip started with the
@@ -300,7 +386,7 @@ namespace SS3D.Systems.Comms
 
         private void OnServerReceiveCommsMessage(NetworkConnection conn, CommsMessage msg)
         {
-            // Clients must not forge global broadcasts — radio goes through LocalSpeechEmitter ServerRpc.
+            // Clients must not forge global broadcasts — radio/announce go through LocalSpeechEmitter ServerRpc.
         }
 
         private void OnClientReceiveCommsMessage(CommsMessage message)

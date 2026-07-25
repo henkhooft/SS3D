@@ -39,6 +39,10 @@ namespace SS3D.Systems.Comms
         [Tooltip("If true, Tab-compose can select this radio channel. Keep the Tab list short for now.")]
         public bool AvailableInCompose;
 
+        [Tooltip(
+            "Slash token for T-compose (e.g. announce → /announce). Empty: Radio uses lowercased Abbreviation (ENG → /eng); Announcement requires an explicit value.")]
+        public string ComposePrefix;
+
         [Tooltip("Admin role gate (enforced when non-None).")]
         public ServerRoleTypes RoleRequiredToUse = ServerRoleTypes.None;
 
@@ -81,6 +85,43 @@ namespace SS3D.Systems.Comms
             }
 
             return "ALL-STATION";
+        }
+
+        /// <summary>
+        /// Slash token without leading slash (lowercase). Null/empty = not prefix-writable.
+        /// </summary>
+        public string ResolveComposePrefix()
+        {
+            if (!string.IsNullOrWhiteSpace(ComposePrefix))
+            {
+                return ComposePrefix.Trim().ToLowerInvariant();
+            }
+
+            if (Kind == CommsChannelKind.Radio)
+            {
+                return ResolveAbbreviation().ToLowerInvariant();
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Whether players may target this channel via a leading <c>/prefix</c> in T-compose.
+        /// Announcement is prefix-only (not Tab); radio also needs <see cref="AvailableInCompose"/>.
+        /// </summary>
+        public bool IsComposePrefixWritable()
+        {
+            if (CodeOnlyChannel || string.IsNullOrEmpty(ResolveComposePrefix()))
+            {
+                return false;
+            }
+
+            return Kind switch
+            {
+                CommsChannelKind.Radio => AvailableInCompose,
+                CommsChannelKind.Announcement => true,
+                _ => false,
+            };
         }
     }
 }
