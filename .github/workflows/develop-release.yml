@@ -460,12 +460,26 @@ jobs:
           TAG="${{ steps.tag.outputs.tag_name }}"
           mkdir -p dist
 
+          # Paths.cs resolves Config/ and Data/ from process CWD (bats/scripts cd next to the
+          # binary). Unity player builds do not include those trees — seed the git-tracked
+          # fixtures from Builds/Game. Never copy Data/ServerMeta (runtime state).
+          seed_cwd_data() {
+            local dest="$1"
+            test -f Builds/Game/Config/permissions.txt
+            test -f Builds/Game/Config/network.json
+            test -d Builds/Game/Data/Tilemaps
+            mkdir -p "${dest}/Config" "${dest}/Data/Tilemaps"
+            cp -a Builds/Game/Config/. "${dest}/Config/"
+            cp -a Builds/Game/Data/Tilemaps/. "${dest}/Data/Tilemaps/"
+          }
+
           # --- Primary: Windows client + launch bats ---
           WIN_ROOT="staging/SS3D-Windows-${TAG}"
           mkdir -p "${WIN_ROOT}/Game"
           # Artifact is the StandaloneWindows64 tree (SS3D.exe + *_Data, etc.).
           test -f build-windows/SS3D.exe
           cp -a build-windows/. "${WIN_ROOT}/Game/"
+          seed_cwd_data "${WIN_ROOT}/Game"
           cp Builds/Start_SS3D_*.bat "${WIN_ROOT}/"
           cp Builds/README.txt "${WIN_ROOT}/"
           (cd staging && zip -qq -r "../dist/SS3D-Windows-${TAG}.zip" "SS3D-Windows-${TAG}")
@@ -476,6 +490,8 @@ jobs:
           if [ "${{ needs.prepare.outputs.build_linux }}" = "true" ]; then
             test -d build-linux/GameServer/StandaloneLinux64
             test -d build-linux/Game/StandaloneLinux64
+            seed_cwd_data build-linux/GameServer/StandaloneLinux64
+            seed_cwd_data build-linux/Game/StandaloneLinux64
             zip -qq -r "dist/SS3D-Linux-Server-${TAG}.zip" build-linux/GameServer
             zip -qq -r "dist/SS3D-Linux-Client-${TAG}.zip" build-linux/Game
             FILES="$(printf '%s\n%s\n%s' "$FILES" "dist/SS3D-Linux-Server-${TAG}.zip" "dist/SS3D-Linux-Client-${TAG}.zip")"

@@ -105,9 +105,9 @@ echo "Staging isolated build trees (hardlink when possible)..."
 stage_build "$SERVER_BUILD_DIR" "$RUN_DIR/server" || exit 1
 chmod +x "$RUN_DIR/server/$SERVER_BIN_NAME"
 
-# Fresh player builds (CI) have no CWD Data/Tilemaps. TileSubSystem.Load() then logs
-# "No station templates found" and atmos starts with 0 cells — atmos-client-sync cannot pass.
-# Seed the tracked Editor fixtures (Builds/Game/Data/Tilemaps is in git; GameServer Data is not).
+# Ensure CWD Data/Tilemaps exists for this run. develop-release seeds the same fixtures into
+# published zips; local/CI player trees and GameServer still often lack them. Without maps,
+# TileSubSystem.Load() logs "No station templates found" and atmos-client-sync cannot pass.
 TILEMAP_FIXTURES="${SS3D_TILEMAP_FIXTURES:-$REPO_ROOT/Builds/Game/Data/Tilemaps}"
 if [[ -d "$TILEMAP_FIXTURES" ]]; then
     mkdir -p "$RUN_DIR/server/Data/Tilemaps"

@@ -11,7 +11,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 
 **Near-term operational push** — [test-server.md](test-server.md):
 
-- **T1** — Loadable Windows build (Addressables/content/permissions)
+- **T1** — Loadable Windows build (verify packaging of Config + Tilemaps on next cut)
 - **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
 - **T3** — Session stability: round/connect lifecycle, doors under MP, admin wedge tools, Nuke Ops happy-path smoke, test-station perf floor
 - **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
