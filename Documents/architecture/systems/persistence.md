@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: 5db5299b1 — 2026-07-23
+> Verified: f1c9476af — 2026-07-25
 
 # Persistence
 
@@ -38,6 +38,7 @@ Layered contributor-based disk persistence for station templates and server meta
 
 ## Pitfalls
 
+- **Empty `Data/Tilemaps` (and no StationTemplates) logs `No station templates found to load`.** Fresh Unity player builds have neither tree; loadable releases must ship legacy fixtures from `Builds/Game/Data/Tilemaps/` next to the binary (see [data-codegen](data-codegen.md) Paths pitfall / [CI develop-release](../2026-07_ci-develop-release-pipeline.md)). Smoke seeds the same path when staging.
 - **Contributor registration vs LoadServerMeta:** register built-in contributors in `OnAwake`, not `OnStart`. Hub spawn can run other systems' `OnStartServer` before Unity `Start`; LoadServerMeta itself runs from Persistence `OnStart` after all Awakes, so `PermissionSubSystem` is already registered for restore. Do not call `LoadServerMeta` from Tile or other domains.
 - **Missing spawn chunk leaves stale markers:** tilemap restore calls `TileMap.Clear`, which clears `TileSubSystem.SpawnPoints`. Do not remove that clear — templates without `spawn-points` must start empty.
 - **Station restore epoch:** `RestoreStationTemplate` calls `WorldReadinessSubSystem.NotifyStationTemplateRestoreBeginning` directly (Persistence is hub-spawned; WorldReadiness is DDOL — do not rely on OnBeforeRestore subscription alone).

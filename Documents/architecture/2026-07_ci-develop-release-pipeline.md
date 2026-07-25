@@ -53,9 +53,13 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    (`buildName: SS3D`). Same TomNAS Library stash / `runAsHostUser` when self-hosted. Not
    smoke-tested on Windows. Skipped when `skip_release` is set.
 6. **Prerelease** — primary zip `SS3D-Windows-<tag>.zip` with layout:
-   `Start_SS3D_*.bat` + `README.txt` beside `Game/SS3D.exe` (matches [`Builds/`](../../Builds/)
-   locally). Linux client/server zips when Linux was built. Tag `develop-nightly` (schedule)
-   or `develop-<shortsha>` / `tag_suffix`. `prerelease: true`.
+   `Start_SS3D_*.bat` + `README.txt` beside `Game/SS3D.exe`, plus CWD fixtures
+   `Game/Config/` (`permissions.txt`, `network.json`) and `Game/Data/Tilemaps/`
+   copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
+   `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime).
+   Linux client/server zips get the same seed under each `StandaloneLinux64/` tree when
+   Linux was built. Tag `develop-nightly` (schedule) or `develop-<shortsha>` /
+   `tag_suffix`. `prerelease: true`.
 
 ### Related workflow changes
 
@@ -72,6 +76,13 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 
 ## Pitfalls recorded for operators
 
+- **Player zips must seed `Config/` + `Data/Tilemaps/` next to the binary.** Symptom on
+  `develop-f1c9476` Windows: starts, empty `Game/Data/`, no `Config/`, host log
+  `No station templates found to load` — Addressables were fine. Cause: release staging
+  copied only the Unity player + bats; `Paths.GetPath(GamePaths.Config|Data)` is CWD-relative
+  (`Start_SS3D_*.bat` / smoke `cd` beside the exe). Fix: `seed_cwd_data` in
+  `develop-release.yml` from tracked `Builds/Game/Config` + `Builds/Game/Data/Tilemaps`.
+  Do not ship `Data/ServerMeta/` (gitignored runtime envelope preferred over `permissions.txt`).
 - **License secrets live on the `unity_tests` Environment.** Jobs without
   `environment: unity_tests` see empty `UNITY_LICENSE` / `UNITY_SERIAL` even when EditMode is
   green (the old `main.yml` hit this before Environment was wired).
