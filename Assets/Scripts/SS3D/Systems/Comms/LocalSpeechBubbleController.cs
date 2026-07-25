@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
+using Actor = SS3D.Core.Behaviours.Actor;
 
 namespace SS3D.Systems.Comms
 {

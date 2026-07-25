@@ -1,5 +1,4 @@
 using SS3D.Permissions;
-using SS3D.Systems.Traits;
 using UnityEngine;
 
 namespace SS3D.Systems.Comms
