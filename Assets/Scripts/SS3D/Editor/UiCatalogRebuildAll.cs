@@ -34,7 +34,7 @@ namespace SS3D.Editor
             if (!TryRebuildAll(out string error))
             {
                 Debug.LogError(error);
-                if (Application.isBatchMode)
+                if (UnityEngine.Application.isBatchMode)
                 {
                     EditorApplication.Exit(1);
                 }
@@ -43,7 +43,7 @@ namespace SS3D.Editor
             }
 
             Debug.Log("[UiCatalogRebuildAll] All UI catalogs rebuilt.");
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

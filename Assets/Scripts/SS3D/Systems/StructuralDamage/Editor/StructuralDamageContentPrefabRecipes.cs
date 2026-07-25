@@ -29,7 +29,7 @@ namespace SS3D.Systems.StructuralDamage.Editor
             int integrity = StructuralIntegrityPrefabSetup.SetupAll();
             Debug.Log($"[StructuralDamageContentPrefabRecipes] Blast VFX done; integrity {integrity}.");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

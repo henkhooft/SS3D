@@ -1,4 +1,5 @@
 using FishNet.Object;
+using SS3D.Engine.Chat;
 using SS3D.Networking;
 using SS3D.Permissions;
 using SS3D.Substances;

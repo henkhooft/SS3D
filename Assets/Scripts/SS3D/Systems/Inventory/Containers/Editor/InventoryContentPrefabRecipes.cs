@@ -32,7 +32,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             Debug.Log(
                 $"[InventoryContentPrefabRecipes] Clothing {clothing}; Storage {storage}.");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

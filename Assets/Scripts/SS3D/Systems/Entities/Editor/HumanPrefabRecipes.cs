@@ -60,7 +60,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"LocalSpeechEmitter {(speechEmitterAdded ? "added" : "already present")}; " +
                 "resynced Human.prefab against its body-part prefabs.");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

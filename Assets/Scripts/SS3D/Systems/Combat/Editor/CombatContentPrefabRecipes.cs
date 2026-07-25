@@ -35,7 +35,7 @@ namespace SS3D.Systems.Combat.Editor
             Debug.Log(
                 $"[CombatContentPrefabRecipes] Melee {melee}; Ranged {ranged}; Armor {armor}.");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }
