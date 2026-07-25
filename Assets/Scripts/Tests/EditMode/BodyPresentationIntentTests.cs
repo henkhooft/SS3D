@@ -39,6 +39,19 @@ namespace EditorTests
         }
 
         [Test]
+        public void CriticalWhileConsciousMapsToCollapsed()
+        {
+            HealthSnapshot snapshot = HealthSnapshot.Default;
+            snapshot.IsConscious = true;
+            snapshot.IsCardiacArrest = false;
+            snapshot.State = HealthState.Critical;
+
+            Assert.AreEqual(
+                BodyPresentationState.Collapsed,
+                BodyPresentationIntent.FromSnapshot(snapshot));
+        }
+
+        [Test]
         public void DeadMapsToDeadEvenIfFlagsLinger()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;

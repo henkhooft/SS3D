@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing shipped; screen-effects + alert stack wired; vitals HUD Phase 6 remainder)
-> Verified: 7f90106b6 — 2026-07-23
+> Verified: 7e92045dc — 2026-07-25
 
 # Health
 
@@ -69,7 +69,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Bleed particles float beside the limb:** do not parent VFX to `AnatomyNode` roots first — those prefab pivots do not follow the skinned mesh. Prefer `ZoneTargetCollider` bone transforms (see `WoundVfx.EnsureAnchors`).
 - **Death re-triggers every health tick:** `TickHealth` must latch death (`_deathTriggered`) and stop ticking; otherwise `Human.Kill()` re-runs every second (ghost spam / dispose races). `WoundVfx` also clears and disables on `HealthState.Dead`.
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
-- **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Cardiac arrest collapses even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
+- **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect/personal-audio Clear from other bodies:** only clear when `_drivingLocalPresentation` — other players' mind unassign must not wipe the local owner's Volume intensities or heartbeat cue.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
 - **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).

@@ -4,7 +4,7 @@ namespace SS3D.Systems.Health
 {
     /// <summary>
     /// Maps health vitals to body presentation intent. Health emits this; <see cref="Ragdoll"/> applies it.
-    /// Cardiac arrest collapses even while <see cref="HealthSnapshot.IsConscious"/> remains true.
+    /// Critical and cardiac arrest collapse even while <see cref="HealthSnapshot.IsConscious"/> remains true.
     /// </summary>
     public static class BodyPresentationIntent
     {
@@ -15,7 +15,9 @@ namespace SS3D.Systems.Health
                 return BodyPresentationState.Dead;
             }
 
-            if (!snapshot.IsConscious || snapshot.IsCardiacArrest)
+            if (!snapshot.IsConscious
+                || snapshot.IsCardiacArrest
+                || snapshot.State == HealthState.Critical)
             {
                 return BodyPresentationState.Collapsed;
             }
