@@ -39,6 +39,8 @@ namespace SS3D.Systems.Entities.Humanoid
         private bool _ownerPredictedAttack;
         private float _upperBodyWeight;
         private float _upperBodyWeightTarget;
+        private float _additiveWeight;
+        private float _additiveWeightTarget;
         private bool _posingSuppressed;
         private int _nextAttackVariant;
 
@@ -49,10 +51,18 @@ namespace SS3D.Systems.Entities.Humanoid
         private const float StumbleLegThreshold = 0.65f;
 
         /// <summary>
+        /// Soft Additive weight while Staggered so Additive Flinch (gut) fades in/out.
+        /// Do not slam to 1 — Empty Additive is remapped to hurting idle and reads as a snap.
+        /// </summary>
+        private const float StaggerAdditiveWeight = 0.75f;
+
+        /// <summary>
         /// Soft fade when entering/leaving Melee stance (Upper Body layer on/off).
         /// Swing clip lifetime is Animator exit-time owned — do not add swing duration constants here.
         /// </summary>
         [SerializeField] private float _upperBodyWeightLerp = 6f;
+
+        [SerializeField] private float _additiveWeightLerp = 8f;
 
         public Animator Animator => _animator;
 
@@ -206,6 +216,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
             ApplyLocomotionVelocity();
             TickUpperBodyWeight();
+            TickAdditiveWeight();
         }
 
         /// <summary>
@@ -317,6 +328,20 @@ namespace SS3D.Systems.Entities.Humanoid
                 _upperBodyWeightTarget,
                 Time.deltaTime * _upperBodyWeightLerp);
             _animator.SetLayerWeight(1, _upperBodyWeight);
+        }
+
+        private void TickAdditiveWeight()
+        {
+            if (_animator == null || _animator.layerCount <= 2)
+            {
+                return;
+            }
+
+            _additiveWeight = Mathf.MoveTowards(
+                _additiveWeight,
+                _additiveWeightTarget,
+                Time.deltaTime * _additiveWeightLerp);
+            _animator.SetLayerWeight(2, _additiveWeight);
         }
 
         public void ApplySnapshot(BodyAnimationSnapshot snapshot)
@@ -455,28 +480,27 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 float armMax = Mathf.Max(snapshot.InjuredArmLeft, snapshot.InjuredArmRight);
                 float leg = snapshot.InjuredLeg;
-                bool staggered = snapshot.State == BodyState.Staggered;
 
-                float weight;
-                if (staggered)
-                {
-                    weight = 1f;
-                }
-                else if (leg >= StumbleLegThreshold && leg >= armMax)
+                float injuryWeight;
+                if (leg >= StumbleLegThreshold && leg >= armMax)
                 {
                     // Stumble idle already reads on base; keep arm additive light.
-                    weight = armMax * 0.25f;
+                    injuryWeight = armMax * 0.25f;
                 }
                 else if (armMax > 0.01f)
                 {
-                    weight = Mathf.Lerp(0.15f, 0.55f, armMax);
+                    injuryWeight = Mathf.Lerp(0.15f, 0.55f, armMax);
                 }
                 else
                 {
-                    weight = 0f;
+                    injuryWeight = 0f;
                 }
 
-                _animator.SetLayerWeight(2, weight);
+                // Soft target only — TickAdditiveWeight lerps. Stagger raises Additive so unmuted
+                // Additive Flinch (gut) shows; never slam Empty Additive (hurting idle) to 1.
+                _additiveWeightTarget = snapshot.State == BodyState.Staggered
+                    ? Mathf.Max(injuryWeight, StaggerAdditiveWeight)
+                    : injuryWeight;
             }
         }
 
@@ -487,11 +511,11 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
+            // Staggered uses Base + Additive Flinch — do not half-weight Full Body Override.
             float overrideWeight = snapshot.State switch
             {
                 BodyState.Seated => 1f,
                 BodyState.Crawling => 1f,
-                BodyState.Staggered => 0.5f,
                 _ => 0f,
             };
             _animator.SetLayerWeight(3, overrideWeight);

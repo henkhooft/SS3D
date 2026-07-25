@@ -56,7 +56,13 @@ namespace SS3D.Systems.Health
             float bloodDelta = -SumBleedingRates(zones) * HealthConstants.BleedingBloodDrainScale;
             float lungIntake = LungIntake(organs, atmosphereO2, pools.BloodVolumeRatio);
             float heartDelivery = HeartDelivery(organs, pools.BloodVolumeRatio);
-            float oxyDelta = lungIntake - heartDelivery - HealthConstants.BaseOxygenDemand;
+            // Supply is the bottleneck of intake vs delivery. Unmet demand raises oxy debt;
+            // meeting demand recovers at the old healthy surplus rate (vacuum must not recover).
+            float supplied = Math.Min(lungIntake, heartDelivery);
+            float shortfall = HealthConstants.BaseOxygenDemand - supplied;
+            float oxyDelta = shortfall > 0f
+                ? shortfall
+                : -HealthConstants.BaseOxygenDemand;
 
             // Hemorrhagic hypoxia scales continuously with blood lost — shock before empty.
             oxyDelta += (1f - pools.BloodVolumeRatio) * HealthConstants.LowBloodOxyDebtGainScale;
@@ -288,6 +294,7 @@ namespace SS3D.Systems.Health
                 CanUseArms = OrganSimulation.CanUseArms(zones),
                 CriticalFlags = BuildCriticalFlags(pools, brainEffective),
                 CanDefibrillate = IsCardiacArrest(heartStored) && brainStored > 0f,
+                Environment = HealthEnvironmentState.SafeDefault,
             };
         }
 

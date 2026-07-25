@@ -43,8 +43,9 @@ namespace SS3D.UI.MainHud
     /// </para>
     /// <para>
     /// The alert icon stack is live for health hazards (Bleeding, Dying, CardiacArrest, LowOxygen) via
-    /// <see cref="HumanHealthController.SnapshotChanged"/> and <see cref="HealthAlertStackMapper"/>. Atmos /
-    /// hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist —
+    /// <see cref="HumanHealthController.SnapshotChanged"/> + <see cref="HealthAlertStackMapper"/>, and for
+    /// turf exposure (Hot/Cold/pressure/Fire + turf LowOxygen) via <see cref="AtmosAlertStackMapper"/>.
+    /// Hunger / thirst / pulling / restrained / radiation stay all-clear until those systems exist —
     /// F4 / <c>alertstack</c> remain a full-stack debug override when set.
     /// </para>
     /// <para>
@@ -467,7 +468,8 @@ namespace SS3D.UI.MainHud
             }
 
             PushAlertState(ToAlertStackState(
-                HealthAlertStackMapper.Compute(_healthController.Snapshot)));
+                HealthAlertStackMapper.Compute(_healthController.Snapshot),
+                AtmosAlertStackMapper.Compute(_healthController.Snapshot.Environment)));
         }
 
         private void HandleHealthSnapshotChanged(HealthSnapshot snapshot)
@@ -477,7 +479,9 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
-            PushAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+            PushAlertState(ToAlertStackState(
+                HealthAlertStackMapper.Compute(snapshot),
+                AtmosAlertStackMapper.Compute(snapshot.Environment)));
         }
 
         /// <summary>
@@ -497,16 +501,26 @@ namespace SS3D.UI.MainHud
         }
 
         /// <summary>
-        /// Copies health signals into an <see cref="AlertStackState"/>; non-health fields stay None.
+        /// Merges health + atmos alert signals into one <see cref="AlertStackState"/>.
+        /// LowOxygen takes the worse of systemic oxy-debt and turf hypoxia.
         /// </summary>
-        private static AlertStackState ToAlertStackState(HealthAlertStackMapper.HealthAlertSignals signals)
+        private static AlertStackState ToAlertStackState(
+            HealthAlertStackMapper.HealthAlertSignals health,
+            AtmosAlertStackMapper.AtmosAlertSignals atmos)
         {
             return new AlertStackState
             {
-                Bleeding = ToAlertSeverity(signals.Bleeding),
-                Dying = ToAlertSeverity(signals.Dying),
-                CardiacArrest = ToAlertSeverity(signals.CardiacArrest),
-                LowOxygen = ToAlertSeverity(signals.LowOxygen),
+                Bleeding = ToAlertSeverity(health.Bleeding),
+                Dying = ToAlertSeverity(health.Dying),
+                CardiacArrest = ToAlertSeverity(health.CardiacArrest),
+                LowOxygen = MaxSeverity(
+                    ToAlertSeverity(health.LowOxygen),
+                    ToAlertSeverity(atmos.LowOxygen)),
+                Fire = ToAlertSeverity(atmos.Fire),
+                Hot = ToAlertSeverity(atmos.Hot),
+                Cold = ToAlertSeverity(atmos.Cold),
+                LowPressure = ToAlertSeverity(atmos.LowPressure),
+                HighPressure = ToAlertSeverity(atmos.HighPressure),
             };
         }
 
@@ -516,6 +530,16 @@ namespace SS3D.UI.MainHud
             HealthAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
             _ => AlertSeverity.None,
         };
+
+        private static AlertSeverity ToAlertSeverity(AtmosAlertStackMapper.Severity severity) => severity switch
+        {
+            AtmosAlertStackMapper.Severity.Warning => AlertSeverity.Warning,
+            AtmosAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
+            _ => AlertSeverity.None,
+        };
+
+        private static AlertSeverity MaxSeverity(AlertSeverity a, AlertSeverity b) =>
+            (AlertSeverity)Math.Max((int)a, (int)b);
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {

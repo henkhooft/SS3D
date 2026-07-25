@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: be4ea6eea — 2026-07-25
 
 # Entities
 
@@ -18,12 +18,16 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateMachine.cs` — authoritative body/combat snapshot
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidPredictedMovement.cs` — FishNet predicted move + space float (when enabled)
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/HumanoidLivingController.cs` — **live** loco path (`Human.prefab` has PredictedMovement disabled); owns space float coast + `SetFloating`
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidSpaceSupport.cs` — shared plenum/unsupported check
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee Upper Body weight; `SetPosingSuppressed` for collapse
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/BodyPresentationState.cs` — locomotion / collapsed / dead enum
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — presentation authority (`ServerSetPresentation` / `ApplyPresentation`)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — holds, stance, limp + `InjuredLeg` / arms, rare hurt Emote, `MirrorUpperBody`; suppresses while `Presentation != Locomotion`
-- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — Harm intent toggle; `OnHitReceived` → stagger/`Flinch` (called from health `ApplyDamage`)
+- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch** (GettingHit / gut / HitReaction)
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
@@ -33,10 +37,12 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 ## Extension points
 
 - Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips.
-- Shelved clips (not wired): `Assets/Art/Animations/Misc/`, `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag content.
+- Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
+- Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch` (one packed publish). Base selects by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), gut (Melee), `Mix_HitReaction` (Ranged). Additive layer also takes `Flinch` → gut with a **lerped** weight (~0.75) while Staggered. `Mix_ShoulderHitAndFall` / get-ups deferred.
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
+- **Space float:** living bodies — no plenum (or no occupancy) underfoot → `SetFloating(true)`, skip gravity/WASD, coast last planar velocity. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path (predicted keeps the same logic for when re-enabled). Ghosts still set Floating on spawn.
 
 ## Pitfalls
 
@@ -53,16 +59,24 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Injured oneshots:** Jump / Turn90 / Emote while limping → Injured Jump / Turn / Wave (Base Layer); healthy oneshots require `LimpSide == 0`. **Jump/Turn90 are not bound in `Controls.inputed`** and nothing calls `PlayLocomotionTrigger` yet — presentation only.
 - **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement owns loco.
 - **Batch rebuild while Editor open:** run the rebuild menu, or drop a **user-writable** `artifacts/force-rebuild-animator.flag` (root-owned flags fail to delete and skip rebuild). Batchmode cannot open a held project.
+- **Do not flinch when collapsed/dead:** `TryApplyHitFlinch` requires `Ragdoll.Presentation == Locomotion` — never invent a parallel fall path from `Mix_ShoulderHitAndFall` here.
+- **Stagger Additive is soft + Flinch, not Empty Additive:** `Empty Additive` is remapped to `Mix_InjuredHurtingIdle`. Slamming Additive weight to 1 on stagger shows hurting idle (looks like a flinch) then snaps off. Drive Additive via unmuted `Flinch` → gut and **lerp** weight (see `StaggerAdditiveWeight` / `TickAdditiveWeight`). Do not half-weight Full Body Override on stagger.
 - **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
+- **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. Missing tile map ≠ unsupported (do not float before map ready).
+- **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
+- **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar.
+- **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
 
 ## Depends on / Used by
 
-- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md), [audio](audio.md) (`LocalPlayerObjectChanged` — `ListenerPosition`, `AmbienceSubSystem`)
+- **Depends on:** [tile](tile.md) (plenum occupancy for living space float)
+- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md), [audio](audio.md) (`LocalPlayerObjectChanged` — `ListenerPosition`, `AmbienceSubSystem`; footsteps skip while `IsFloating`)
 
 ## Related docs
 
 - [2026-07_animation-polish](../2026-07_animation-polish.md) — **shipped** melee/limp/mirror/severity polish
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** collapse/death presentation
+- [2026-07_health-env-feel](../2026-07_health-env-feel.md) — **shipped** hit flinch / critical feel (adjacent)
 - [2026-07_player-body-animation](../2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
 - [2026-07_editor-tooling-tiers](../2026-07_editor-tooling-tiers.md) — Editor MenuItem A/B/C policy

@@ -14,7 +14,8 @@ namespace SS3D.Systems.Audio
     /// out from ordinary positional SFX (§3). Self-bootstrapped by <c>SystemsBootstrap</c>
     /// (process-wide DDOL), same pattern as <c>ScreenEffectsSubSystem</c> / <c>AmbienceSubSystem</c>.
     /// Domain mappers (<c>HealthPersonalAudioMapper</c>, <c>StaminaPersonalAudioMapper</c>) push
-    /// intensities in; this subsystem only owns playback.
+    /// intensities in; this subsystem only owns playback. Breathing takes the max of stamina and
+    /// health contributors so neither overwrites the other.
     /// </summary>
     public sealed class PersonalAudioSubSystem : SubSystem
     {
@@ -30,6 +31,8 @@ namespace SS3D.Systems.Audio
         private AudioSource _alertCueSource;
 
         private float _heartbeatTarget;
+        private float _staminaBreathingTarget;
+        private float _healthBreathingTarget;
         private float _breathingTarget;
         private float _nextAlertCueTime;
 
@@ -71,11 +74,35 @@ namespace SS3D.Systems.Audio
         }
 
         /// <summary>
-        /// Sets the target breathing intensity (0 silent/resting .. 1 fully exhausted).
+        /// Stamina-driven breathing contribution (0 silent/resting .. 1 fully exhausted).
+        /// Combined with health via max — see <see cref="SetHealthBreathingIntensity"/>.
         /// </summary>
-        public void SetBreathingIntensity(float intensity)
+        public void SetStaminaBreathingIntensity(float intensity)
         {
-            _breathingTarget = Mathf.Clamp01(intensity);
+            _staminaBreathingTarget = Mathf.Clamp01(intensity);
+            RefreshBreathingTarget();
+        }
+
+        /// <summary>
+        /// Health-driven labored breathing (oxy debt / critical). Combined with stamina via max.
+        /// </summary>
+        public void SetHealthBreathingIntensity(float intensity)
+        {
+            _healthBreathingTarget = Mathf.Clamp01(intensity);
+            RefreshBreathingTarget();
+        }
+
+        /// <summary>
+        /// Clears health breathing on ownership loss without touching stamina contribution.
+        /// </summary>
+        public void ClearHealthBreathing()
+        {
+            SetHealthBreathingIntensity(0f);
+        }
+
+        private void RefreshBreathingTarget()
+        {
+            _breathingTarget = Mathf.Max(_staminaBreathingTarget, _healthBreathingTarget);
             EnsurePlayingIfAudible(_breathingSource, AudioTrackIds.HeavyBreathing, _breathingTarget);
         }
 

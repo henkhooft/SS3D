@@ -1,6 +1,6 @@
 > Implements: Documents/design/main-hud.md §5 (screen-space feedback)
-> Touches systems: screen-effects, ingame-console, health (wired), atmospherics (integration deferred)
-> Status: shipped (foundation + health wiring; atmos deferred)
+> Touches systems: screen-effects, ingame-console, health (wired), atmospherics (temp/fire via HealthSnapshot.Environment)
+> Status: shipped (foundation + health + turf temp/fire; UiShell deferred)
 
 # Screen-space effects foundation (Jul 2026)
 
@@ -17,8 +17,9 @@ Shipped a `ScreenEffectsSubSystem` that drives URP Volume effects (vignette, chr
 - F2 debug menu (lazy UI, no duplicate EventSystem)
 - Console: `screeneffect`, hit-flash command
 - **Health wiring:** `HealthScreenEffectMapper` maps local-owner `HealthSnapshot` → health-driven intensities; `HumanHealthController` TargetRpc fires hit flash on damage
+- **Turf temp/fire:** `AtmosScreenEffectMapper` from synced `HealthSnapshot.Environment` ([2026-07_health-env-feel](2026-07_health-env-feel.md))
 
 ## Deferred
 
-- Drive HotRoom/OnFire/ColdRoom/Freezing from atmospherics
 - Optional move of bootstrap into Boot.unity once preferred
+- Direct atmos→screen path without health snapshot (not needed while Environment is synced)

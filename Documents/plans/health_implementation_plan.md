@@ -408,10 +408,11 @@ Ships between Phase 5 and Phase 6. Design authority: health.md §5 (Severed tier
 | Track | Scope |
 |-------|-------|
 | 7a Stamina | **Shipped (core):** regen = f(heart, lungs, blood) × carried-weight; overdraw → `ApplyOxyDebt`; no bar. Combat drains deferred. See [systems/stamina.md](../architecture/systems/stamina.md). |
-| 7b Armor | Per-zone absorption before `ApplyDamage`; seal breach |
+| 7b Armor | Per-zone absorption before `ApplyDamage` **shipped** (combat plan Phase 5); seal breach deferred |
 | 7c Surgery | Incise → clamp → repair → close; unclamped-close → internal bleed |
 | 7d Death/cloning | DNA record, defib polish, cloning pod |
 | 7e Chemistry | Reagents → pools via `IHealthEffectModifier`; sedation for surgery; disease cures are ordinary recipes (virology.md §6) |
+| Feel / env | **Shipped:** [2026-07_health-env-feel.md](../architecture/2026-07_health-env-feel.md) — crit ragdoll, screen FX, turf breath/exposure, blood spray, personal/hit SFX |
 
 Deferred organ gameplay when assets exist: eyes (vision), stomach (hunger), ears, kidneys (replace interim clearance).
 

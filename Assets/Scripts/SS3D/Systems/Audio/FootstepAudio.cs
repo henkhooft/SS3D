@@ -3,6 +3,7 @@ using SS3D.Data;
 using SS3D.Data.Generated;
 using SS3D.Logging;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using UnityEngine;
@@ -27,6 +28,7 @@ namespace SS3D.Systems.Audio
         private const float MaxDistance = 12f;
 
         private HumanoidController _controller;
+        private HumanoidBodyStateMachine _bodyStateMachine;
         private HumanInventory _inventory;
         private Ragdoll _ragdoll;
         private AudioSource _source;
@@ -40,6 +42,7 @@ namespace SS3D.Systems.Audio
         private void Awake()
         {
             _controller = GetComponent<HumanoidController>();
+            _bodyStateMachine = GetComponent<HumanoidBodyStateMachine>();
             _inventory = GetComponent<HumanInventory>();
             _ragdoll = GetComponent<Ragdoll>();
 
@@ -80,6 +83,12 @@ namespace SS3D.Systems.Audio
         private void Update()
         {
             if (_ragdoll != null && _ragdoll.IsKnockedDown)
+            {
+                StopFootsteps();
+                return;
+            }
+
+            if (_bodyStateMachine != null && _bodyStateMachine.Snapshot.IsFloating)
             {
                 StopFootsteps();
                 return;

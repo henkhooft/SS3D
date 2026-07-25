@@ -19,6 +19,11 @@ namespace SS3D.Editor
         private const string ShooterPack = "Assets/Art/Animations/Basic Shooter Pack";
         private const string InjuredPack = "Assets/Art/Animations/Male Injured Pack";
 
+        // Soft blend into/out of hit flinch (Any State entry + exit-time return to loco).
+        private const float FlinchEntryDuration = 0.2f;
+        private const float FlinchExitDuration = 0.28f;
+        private const float FlinchExitTime = 0.7f;
+
         private static readonly (string File, string ClipName, Vector2 Pos)[] PeacefulClips =
         {
             ("idle.fbx", "Mix_Idle", new Vector2(0f, 0f)),
@@ -131,7 +136,7 @@ namespace SS3D.Editor
                     "Rebuild Combat Stance Blend Trees",
                     "Rebuild Base Layer Peaceful / Melee / Ranged / Injured FreeformCartesian2D locomotion " +
                     "switched by CombatStance + LimpSide. Restores AttackSwing trigger on Upper Body; " +
-                    "remaps Flinch / injured-arm additive.\n\n" +
+                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); remaps injured-arm additive.\n\n" +
                     "Modifies HumanCharacterAnimator.controller.",
                     "Rebuild",
                     "Cancel"))
@@ -337,7 +342,12 @@ namespace SS3D.Editor
             WireJumpAndTurnOneshots(controller, baseMachine, peaceful, melee, ranged, injured);
             WireInjuredWaveEmote(baseMachine, injured);
 
-            RemapStateMotion(baseMachine, "Flinch", $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
+            WireStanceAwareFlinch(baseMachine, peaceful, melee, ranged, injured);
+            RemapStateMotion(
+                baseMachine,
+                "Floating",
+                "Assets/Art/Animations/Misc/X Bot@Floating.fbx",
+                "Mix_Floating");
 
             // Base layer must not consume AttackSwing — upper body owns the swing trigger.
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
@@ -396,6 +406,9 @@ namespace SS3D.Editor
                     $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
                 RemapStateMotion(additive, "Empty Additive",
                     $"{InjuredPack}/injured hurting idle.fbx", "Mix_InjuredHurtingIdle");
+                // Additive Flinch is the soft upper-body hit overlay (orchestrator lerps layer weight).
+                // Keep unmuted — muted Additive + stagger weight only showed Empty Additive hurting idle.
+                WireAdditiveFlinch(additive);
             }
 
             EditorUtility.SetDirty(controller);
@@ -403,7 +416,179 @@ namespace SS3D.Editor
             AssetDatabase.Refresh();
 
             return "OK: Rebuilt stance blends; injured idle severity; limp Jump/Turn90; Injured Wave Emote; "
-                   + "AttackSwing variants + MirrorUpperBody; Flinch / injured-arm additive remapped.";
+                   + "AttackSwing variants + MirrorUpperBody; stance-aware Flinch (GettingHit/gut/HitReaction); "
+                   + "Floating → Mix_Floating.";
+        }
+
+        /// <summary>
+        /// Base Flinch oneshots: GettingHit (Peaceful or limp), StandingReactLargeGut (Melee),
+        /// HitReaction (Ranged). Legacy single Flinch state is removed.
+        /// </summary>
+        private static void WireStanceAwareFlinch(
+            AnimatorStateMachine baseMachine,
+            AnimatorState peaceful,
+            AnimatorState melee,
+            AnimatorState ranged,
+            AnimatorState injured)
+        {
+            MuteAnyStateTrigger(baseMachine, "Flinch");
+            RemoveStateIfPresent(baseMachine, "Flinch");
+
+            AnimationClip gettingHit = LoadPackClip(
+                "Assets/Art/Animations/Misc/X Bot@Getting Hit.fbx", "Mix_GettingHit");
+            AnimationClip gut = LoadPackClip(
+                $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
+            AnimationClip hitReaction = LoadPackClip(
+                $"{ShooterPack}/hit reaction.fbx", "Mix_HitReaction");
+
+            AnimatorState flinchGettingHit = FindOrCreateState(
+                baseMachine, "Flinch GettingHit", new Vector3(50, 280, 0));
+            if (gettingHit != null)
+            {
+                flinchGettingHit.motion = gettingHit;
+                flinchGettingHit.writeDefaultValues = true;
+            }
+
+            AnimatorState flinchMelee = FindOrCreateState(
+                baseMachine, "Flinch Melee", new Vector3(50, 340, 0));
+            if (gut != null)
+            {
+                flinchMelee.motion = gut;
+                flinchMelee.writeDefaultValues = true;
+            }
+
+            AnimatorState flinchRanged = FindOrCreateState(
+                baseMachine, "Flinch Ranged", new Vector3(50, 400, 0));
+            if (hitReaction != null)
+            {
+                flinchRanged.motion = hitReaction;
+                flinchRanged.writeDefaultValues = true;
+            }
+
+            // Limp → GettingHit; Peaceful (stance 0, not limping) → GettingHit.
+            EnsureAnyStateFlinch(baseMachine, flinchGettingHit, limpGreaterThanZero: true, combatStance: null);
+            EnsureAnyStateFlinch(baseMachine, flinchGettingHit, limpGreaterThanZero: false, combatStance: 0);
+            EnsureAnyStateFlinch(baseMachine, flinchMelee, limpGreaterThanZero: false, combatStance: 1);
+            EnsureAnyStateFlinch(baseMachine, flinchRanged, limpGreaterThanZero: false, combatStance: 2);
+
+            ClearTransitions(flinchGettingHit);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, injured, requireLimping: true, combatStance: null);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchGettingHit);
+
+            ClearTransitions(flinchMelee);
+            EnsureExitToStateWithLimpGate(flinchMelee, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchMelee, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchMelee, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchMelee);
+
+            ClearTransitions(flinchRanged);
+            EnsureExitToStateWithLimpGate(flinchRanged, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchRanged, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchRanged, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchRanged);
+        }
+
+        private static void SoftenFlinchStateExits(AnimatorState flinchState)
+        {
+            foreach (AnimatorStateTransition transition in flinchState.transitions)
+            {
+                transition.hasExitTime = true;
+                transition.exitTime = FlinchExitTime;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchExitDuration;
+            }
+        }
+
+        /// <summary>
+        /// Unmute Additive Any→Flinch and soften entry/exit so gut overlay matches Base flinch blends.
+        /// </summary>
+        private static void WireAdditiveFlinch(AnimatorStateMachine additive)
+        {
+            AnimatorState flinch = FindState(additive, "Flinch");
+            if (flinch == null)
+            {
+                return;
+            }
+
+            foreach (AnimatorStateTransition transition in additive.anyStateTransitions)
+            {
+                if (transition.destinationState != flinch
+                    || !transition.conditions.Any(c => c.parameter == "Flinch"))
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = false;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchEntryDuration;
+            }
+
+            SoftenFlinchStateExits(flinch);
+        }
+
+        private static void EnsureAnyStateFlinch(
+            AnimatorStateMachine machine,
+            AnimatorState destination,
+            bool limpGreaterThanZero,
+            int? combatStance)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.destinationState != destination)
+                {
+                    continue;
+                }
+
+                if (!transition.conditions.Any(c => c.parameter == "Flinch"))
+                {
+                    continue;
+                }
+
+                bool limpOk = limpGreaterThanZero
+                    ? transition.conditions.Any(c => c.parameter == "LimpSide" && c.mode == AnimatorConditionMode.Greater)
+                    : transition.conditions.Any(c => c.parameter == "LimpSide" && c.mode == AnimatorConditionMode.Equals);
+                bool stanceOk = combatStance == null
+                    ? !transition.conditions.Any(c => c.parameter == "CombatStance")
+                    : transition.conditions.Any(
+                        c => c.parameter == "CombatStance" && (int)c.threshold == combatStance.Value);
+
+                if (!limpOk || !stanceOk)
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = false;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchEntryDuration;
+                return;
+            }
+
+            AnimatorStateTransition created = machine.AddAnyStateTransition(destination);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = FlinchEntryDuration;
+            created.canTransitionToSelf = false;
+            created.AddCondition(AnimatorConditionMode.If, 0f, "Flinch");
+            if (limpGreaterThanZero)
+            {
+                created.AddCondition(AnimatorConditionMode.Greater, 0f, "LimpSide");
+            }
+            else
+            {
+                created.AddCondition(AnimatorConditionMode.Equals, 0f, "LimpSide");
+            }
+
+            if (combatStance.HasValue)
+            {
+                created.AddCondition(AnimatorConditionMode.Equals, combatStance.Value, "CombatStance");
+            }
         }
 
         private static BlendTree BuildInjuredBlendTree(AnimatorController controller)

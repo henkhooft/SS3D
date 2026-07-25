@@ -15,6 +15,81 @@ MonoBehaviour:
   m_GroupName: Sounds
   m_GUID: 5a93ce093ec9bfc4aab900a7ff98e41a
   m_SerializeEntries:
+  - m_GUID: e18d13637373424e80cb345f0503b37b
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Personal/Heartbeat.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b17ea6aba01249a183507785b28ca73c
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Personal/HeavyBreathing.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d6487a9829df4ceaa6afc34160b91d3c
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Personal/Breathing.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c25cbf72a814b7daecb30325916da0a
+    m_Address: Assets/Art/Sound/UI/Health/Beep1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d6baab8c168a439ba6e13e00d7941e2e
+    m_Address: Assets/Art/Sound/World/Fluids/Blood1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bbc50505d2224753aabe5f1dc915dcb1
+    m_Address: Assets/Art/Sound/World/Fluids/Splat.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6fab86354b054a54b8b4828f689970e4
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Combat/Punch1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 82588e82537544f59a9a0d330ff3d7ee
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Combat/Punch2.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 36c53e237ddb426ea20825ce79dd1737
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Combat/GenHit1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d592855338f1467d897447bbfee4dc11
+    m_Address: Assets/Art/Sound/Entities/Humanoid/Combat/WeakHit1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af894a169f7d4c48a994fb179522120a
+    m_Address: Assets/Art/Sound/Entities/Humanoids/Human/Vocal/Choke&Gasp/Choke1.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: df444e0d1e054fc2adf0962a9fff737b
+    m_Address: Assets/Art/Sound/Entities/Humanoids/Human/Vocal/Choke&Gasp/Choke2.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1def14b96f674142b91b19ef80f8936d
+    m_Address: Assets/Art/Sound/Entities/Humanoids/Human/Vocal/Choke&Gasp/Choke3.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 138d84b5a26140d3903b878f1b001564
+    m_Address: Assets/Art/Sound/Entities/Humanoids/Human/Vocal/Choke&Gasp/MaleGasp1.mp3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dbf6b684f1e247489f2e02739ac9c27b
+    m_Address: Assets/Art/Sound/Entities/Humanoids/Human/Vocal/Scream/MaleScream1.wav
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9731827fc0204964ade3d0d8083813b0
     m_Address: Assets/Art/Sound/Furniture/Machines/Vendors/VendingMachine.wav
     m_ReadOnly: 0

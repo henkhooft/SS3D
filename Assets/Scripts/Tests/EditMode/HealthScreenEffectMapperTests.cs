@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using SS3D.Systems.Health;
+using UnityEngine;
 
 namespace EditorTests
 {
@@ -120,9 +121,52 @@ namespace EditorTests
             float high = HealthScreenEffectMapper.Compute(highBrain).DyingCritical;
             float low = HealthScreenEffectMapper.Compute(lowBrain).DyingCritical;
 
-            Assert.AreEqual(0.5f, high, 0.001f);
+            Assert.AreEqual(HealthScreenEffectMapper.CriticalDyingFloor, high, 0.001f);
             Assert.AreEqual(1f, low, 0.001f);
             Assert.Greater(low, high);
+        }
+
+        [Test]
+        public void CriticalAttenuatesLowOxygenScreenIntensity()
+        {
+            HealthSnapshot oxyOnly = HealthSnapshot.Default;
+            oxyOnly.Pools.OxyDebt = HealthConstants.CriticalOxyDebt;
+
+            HealthSnapshot criticalWithOxy = HealthSnapshot.Default;
+            criticalWithOxy.State = HealthState.Critical;
+            criticalWithOxy.BrainFunctionPercent = 100f;
+            criticalWithOxy.Pools.OxyDebt = HealthConstants.CriticalOxyDebt;
+
+            float alone = HealthScreenEffectMapper.Compute(oxyOnly).LowOxygen;
+            HealthScreenEffectMapper.Intensities stacked =
+                HealthScreenEffectMapper.Compute(criticalWithOxy);
+
+            Assert.AreEqual(1f, alone, 0.001f);
+            Assert.AreEqual(HealthScreenEffectMapper.CriticalDyingFloor, stacked.DyingCritical, 0.001f);
+            float expectedLowOxy = Mathf.Lerp(
+                1f,
+                HealthScreenEffectMapper.LowOxygenUnderDyingFloor,
+                stacked.DyingCritical);
+            Assert.AreEqual(expectedLowOxy, stacked.LowOxygen, 0.001f);
+            Assert.Less(stacked.LowOxygen, alone);
+        }
+
+        [Test]
+        public void CardiacArrestNearlyMutesLowOxygenScreen()
+        {
+            HealthSnapshot snapshot = HealthSnapshot.Default;
+            snapshot.IsCardiacArrest = true;
+            snapshot.State = HealthState.CardiacArrest;
+            snapshot.Pools.OxyDebt = HealthConstants.CriticalOxyDebt;
+
+            HealthScreenEffectMapper.Intensities intensities =
+                HealthScreenEffectMapper.Compute(snapshot);
+
+            Assert.AreEqual(1f, intensities.DyingCritical, 0.001f);
+            Assert.AreEqual(
+                HealthScreenEffectMapper.LowOxygenUnderDyingFloor,
+                intensities.LowOxygen,
+                0.001f);
         }
 
         [Test]

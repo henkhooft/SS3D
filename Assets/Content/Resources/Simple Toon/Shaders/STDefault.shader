@@ -70,6 +70,9 @@
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            // DBuffer blood / surface marks (body wounds, floor splatters) — without this,
+            // worn clothing and other ST meshes never receive URP DecalProjector albedo.
+            #pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3
             #pragma multi_compile_instancing
 
             #include "STForwardPass.hlsl"

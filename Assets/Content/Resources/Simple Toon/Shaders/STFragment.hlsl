@@ -2,6 +2,7 @@
 #define SS3D_ST_FRAGMENT_INCLUDED
 
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DBuffer.hlsl"
 #include "STLighting.hlsl"
 
 // Cotangent frame from screen-space derivatives — works when the mesh has no
@@ -56,6 +57,12 @@ half4 ST_FragLit(STVaryings input, bool swapLightColorBlend, bool gateZeroLight,
 {
     UNITY_SETUP_INSTANCE_ID(input);
     float4 col = ST_EvaluateLighting(ST_GetSurface(input), input.positionCS, swapLightColorBlend, gateZeroLight, alphaMultiplier);
+    // Only when a DBuffer MRT keyword is on — unbound samples decode to weight 0 and black out ST.
+#ifdef _DBUFFER
+    half3 baseColor = col.rgb;
+    ApplyDecalToBaseColor(input.positionCS, baseColor);
+    col.rgb = baseColor;
+#endif
     return col;
 }
 

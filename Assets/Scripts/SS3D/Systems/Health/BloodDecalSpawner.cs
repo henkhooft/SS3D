@@ -121,9 +121,9 @@ namespace SS3D.Systems.Health
         /// <summary>
         /// Align projector local +Z into the surface, then spin the splat in the surface plane.
         /// </summary>
-        private static Quaternion DecalRotationOntoSurface(Vector3 normal, float spinDegrees)
+        public static Quaternion RotationOntoSurface(Vector3 surfaceNormal, float spinDegrees)
         {
-            Vector3 intoSurface = -normal.normalized;
+            Vector3 intoSurface = -surfaceNormal.normalized;
             // When projecting straight down/up, pick a stable tangent so LookRotation is well-defined.
             Vector3 reference = Mathf.Abs(Vector3.Dot(intoSurface, Vector3.up)) > 0.99f
                 ? Vector3.forward
@@ -131,6 +131,11 @@ namespace SS3D.Systems.Health
             Vector3 tangent = Vector3.Cross(intoSurface, reference).normalized;
             Quaternion align = Quaternion.LookRotation(intoSurface, tangent);
             return align * Quaternion.Euler(0f, 0f, spinDegrees);
+        }
+
+        private static Quaternion DecalRotationOntoSurface(Vector3 normal, float spinDegrees)
+        {
+            return RotationOntoSurface(normal, spinDegrees);
         }
 
         private static GameObject CreateDecalInstance()

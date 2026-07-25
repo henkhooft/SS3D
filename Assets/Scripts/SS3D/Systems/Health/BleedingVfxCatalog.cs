@@ -8,8 +8,8 @@ namespace SS3D.Systems.Health
     /// </summary>
     public sealed class BleedingVfxCatalog : ScriptableObject
     {
-        // Match WoundVfx particle blood; white mask splatters are multiplied by this.
-        private static readonly Color DecalTint = new(90f / 255f, 8f / 255f, 10f / 255f, 1f);
+        // Shared blood red for particles + tinted decal splatters.
+        public static readonly Color BloodColor = new(90f / 255f, 8f / 255f, 10f / 255f, 1f);
 
         [SerializeField] private Texture2D[] _splatters;
         [SerializeField] private Material _particleMaterial;
@@ -115,7 +115,7 @@ namespace SS3D.Systems.Health
                 _tintBlitMaterial = new Material(tintShader);
             }
 
-            _tintBlitMaterial.SetColor("_Color", DecalTint);
+            _tintBlitMaterial.SetColor("_Color", BloodColor);
 
             RenderTexture rt = RenderTexture.GetTemporary(
                 source.width,

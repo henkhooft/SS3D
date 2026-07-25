@@ -19,8 +19,9 @@ namespace SS3D.Systems.ScreenEffects
     ///
     /// Health drives dying/blood-loss/oxy/concussion/unconscious and hit flash via
     /// <c>HealthScreenEffectMapper</c> / <see cref="TriggerHitFlash"/>. Blast flash via
-    /// <see cref="TriggerBlastFlash"/>. Temperature and fire/frost remain debug/console-only until
-    /// atmospherics wires them.
+    /// <see cref="TriggerBlastFlash"/>. Dying also pulses Dual Kawase through the same
+    /// <see cref="UiBackdropBlurContext"/> as machine UI (max of channels). Temperature and
+    /// fire/frost remain debug/console-only until atmospherics wires them.
     /// </summary>
     public sealed class ScreenEffectsSubSystem : SubSystem
     {
@@ -48,6 +49,19 @@ namespace SS3D.Systems.ScreenEffects
         private float _blastFlashStrength = 1f;
         private float _uiBackdropBlurTarget;
         private float _uiBackdropBlurCurrent;
+        private float _healthBackdropBlurCurrent;
+        private bool _debugOverrideActive;
+
+        /// <summary>
+        /// When true, health/atmos mappers must not call <see cref="SetEffect"/> for their channels —
+        /// F2 / <c>screeneffect</c> owns intensities until the override is cleared.
+        /// </summary>
+        public bool IsDebugOverrideActive => _debugOverrideActive;
+
+        public void SetDebugOverrideActive(bool active)
+        {
+            _debugOverrideActive = active;
+        }
 
         private sealed class ScreenParticle
         {
@@ -95,9 +109,9 @@ namespace SS3D.Systems.ScreenEffects
         }
 
         /// <summary>
-        /// Softens the 3D world behind a sharp UI Toolkit overlay (e.g. diegetic machine panels)
-        /// via Dual Kawase fullscreen blur. Independent of <see cref="ScreenEffectType"/> so
-        /// health/atmos clears do not wipe it.
+        /// Softens the 3D world via Dual Kawase fullscreen blur (machine UI focus, and other callers).
+        /// Independent of <see cref="ScreenEffectType"/>. Composited with health-driven Kawase via max —
+        /// opening a diegetic panel does not wipe a critical pulse, and vice versa.
         /// </summary>
         public void SetUiBackdropBlur(float intensity)
         {
@@ -259,9 +273,8 @@ namespace SS3D.Systems.ScreenEffects
                 _currentIntensity[type] = Mathf.MoveTowards(_currentIntensity[type], _targetIntensity[type], smoothSpeed * deltaTime);
             }
 
-            // Faster than health blur so the world softens as the panel appears/disappears.
+            // UI channel + health channel; Dual Kawase takes the stronger of the two.
             _uiBackdropBlurCurrent = Mathf.MoveTowards(_uiBackdropBlurCurrent, _uiBackdropBlurTarget, 10f * deltaTime);
-            UiBackdropBlurContext.Intensity = _uiBackdropBlurCurrent;
 
             float vignetteIntensity = 0f;
             Color vignetteColorSum = Color.black;
@@ -271,6 +284,7 @@ namespace SS3D.Systems.ScreenEffects
             float contrast = 0f;
             float blur = 0f;
             float blackoutAlpha = 0f;
+            float healthKawaseTarget = 0f;
 
             void AddVignette(float amount, Color color)
             {
@@ -327,22 +341,29 @@ namespace SS3D.Systems.ScreenEffects
                 saturation -= freezing * 55f;
             }
 
+            // Dying first so low-oxy can yield vignette weight when critical is active.
+            float dying = _currentIntensity[ScreenEffectType.DyingCritical];
+            float dyingBeat = dying > 0f ? Heartbeat(1.6f) : 0f;
+            Color dyingVignetteColor = new(0.5f, 0.05f, 0.05f);
+
             float lowOxygen = _currentIntensity[ScreenEffectType.LowOxygen];
             if (lowOxygen > 0f)
             {
+                float oxyVignetteScale = dying > 0f
+                    ? Mathf.Lerp(1f, 0.1f, Mathf.Clamp01(dying / 0.5f))
+                    : 1f;
                 float breathe = Breathe(4.4f);
-                AddVignette(lowOxygen * (0.75f + 0.35f * breathe), new Color(0.3f, 0.45f, 0.65f));
-                saturation -= lowOxygen * (90f + 25f * breathe);
+                AddVignette(lowOxygen * (0.75f + 0.35f * breathe) * oxyVignetteScale, new Color(0.3f, 0.45f, 0.65f));
+                saturation -= lowOxygen * (90f + 25f * breathe) * oxyVignetteScale;
             }
 
-            // Both blur and a dark-red vignette, pulsing together on the heartbeat - matches the design's
-            // "Dying" mockup exactly (backdrop-filter blur + inset box-shadow, same animation timing).
-            float dying = _currentIntensity[ScreenEffectType.DyingCritical];
+            // Critical blink: near-quiet between beats, hard red flash on the lub-dub (design §5 pulse).
+            // Strong Dual Kawase (same path as machine UI) pulses with the beat — DoF alone is too soft.
             if (dying > 0f)
             {
-                float beat = Heartbeat(1.6f);
-                AddVignette(dying * (0.65f + 0.35f * beat), new Color(0.5f, 0.05f, 0.05f));
-                blur += dying * (0.35f + 0.35f * beat);
+                float blink = Mathf.Lerp(0.08f, 1f, dyingBeat);
+                AddVignette(dying * blink * 0.95f, dyingVignetteColor);
+                healthKawaseTarget = dying * Mathf.Lerp(0.15f, 0.8f, dyingBeat);
             }
 
             float bloodLoss = _currentIntensity[ScreenEffectType.BloodLossTunnelVision];
@@ -360,6 +381,7 @@ namespace SS3D.Systems.ScreenEffects
                 chromaticAberration += concussion * (0.65f + 0.55f * Flicker(0.9f, 8.6f));
             }
 
+            // Unconscious ends in a clean flat blackout (previous look) — do not pulse/tint it with dying.
             float unconscious = _currentIntensity[ScreenEffectType.Unconscious];
             if (unconscious > 0f)
             {
@@ -383,6 +405,12 @@ namespace SS3D.Systems.ScreenEffects
             UpdateParticles(_emberParticles, fire, true);
             UpdateParticles(_frostParticles, freezing, false);
 
+            _healthBackdropBlurCurrent = Mathf.MoveTowards(
+                _healthBackdropBlurCurrent,
+                healthKawaseTarget,
+                8f * deltaTime);
+            UiBackdropBlurContext.Intensity = Mathf.Max(_uiBackdropBlurCurrent, _healthBackdropBlurCurrent);
+
             Color finalVignetteColor = vignetteWeightSum > 0f ? vignetteColorSum / vignetteWeightSum : Color.black;
             float finalVignetteIntensity = Mathf.Clamp01(vignetteIntensity);
 
@@ -401,6 +429,9 @@ namespace SS3D.Systems.ScreenEffects
             ApplyDepthOfField(blur);
 
             Color blackoutColor = _blackout.color;
+            blackoutColor.r = 0f;
+            blackoutColor.g = 0f;
+            blackoutColor.b = 0f;
             blackoutColor.a = blackoutAlpha;
             _blackout.color = blackoutColor;
         }

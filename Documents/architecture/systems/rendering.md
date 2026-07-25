@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 23cb4d2d5 — 2026-07-21
+> Verified: 26ae013e5 — 2026-07-25
 
 # Rendering
 
@@ -9,7 +9,7 @@
 
 URP rendering extensions for this fork. The selection pick pass ([selection](selection.md)) is gameplay-critical for interaction targeting. The atmospherics pass ([atmospherics](atmospherics.md)) composites gas scatter, plasma glow, and heat distortion from sim GPU textures via `AtmosRenderContext`. **Decal Renderer** is enabled on the forward renderer (Use Rendering Layers on) for health blood decals and future surface marks — see `DecalRenderingLayers`. **Atmos snapshot is server-built only** — clients render when a snapshot is present; multiplayer client sync is not implemented yet.
 
-Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles.
+Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles, and ForwardLit samples DBuffer (`ApplyDecalToBaseColor`) so health blood / surface `DecalProjector`s tint skin and worn clothing.
 
 Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts from `Entity.ViewPoint` (`VisionSubSystem` → `_VisionMap`) and composited by `VisionRendererFeature`. Unseen areas are fully opaque black, not soft fog. Rays advance in `RaycastCommand` waves, skipping furniture/props until the nearest wall/door (non-window); a capped multi-hit buffer previously filled with props and leaked vision through walls. Triggers and inventory preview cameras are ignored.
 
@@ -32,11 +32,12 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 
 - New render features: add URP `ScriptableRendererFeature` under `Rendering/URP/`.
 - Outline / auxiliary meshes that must not participate in pick: set rendering layer `SelectionRenderingLayers.ExcludeFromSelectionPick`.
-- World surface marks: stamp `DecalRenderingLayers.ReceiveWorldDecals` on receiver renderers; point floor `DecalProjector`s at `WorldFloorProjectorMask`. Custom opaque shaders must implement DepthNormals with `_WRITE_RENDERING_LAYERS` or Decal Layers will not exclude them.
+- World surface marks: stamp `DecalRenderingLayers.ReceiveWorldDecals` on receiver renderers; point floor `DecalProjector`s at `WorldFloorProjectorMask`. Custom opaque shaders must implement DepthNormals with `_WRITE_RENDERING_LAYERS` or Decal Layers will not exclude them, and must sample DBuffer (`ApplyDecalToBaseColor` / `_DBUFFER_MRT*`) or Automatic→DBuffer projectors never tint albedo (worn jumpsuit / ST floors).
 
 ## Pitfalls
 
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
+- **ST meshes ignore blood/floor DecalProjectors:** Automatic Decal technique is DBuffer on desktop. `STDefault` ForwardLit must keep `#pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3` and `ApplyDecalToBaseColor` under `#ifdef _DBUFFER` — calling it without the keyword samples an unbound buffer (weight 0 → black mesh). DepthNormals alone only fixes Decal Layers filtering, not albedo tint.
 - **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
 - **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
 - **Vision FOV must not use fixed multi-hit RaycastAll buffers:** a dense prop pile can exhaust the hit slots and report a clear line through walls. Keep iterative/wave single-hit casts that skip non-occluders (`VisionSubSystem` `RaycastCommand` waves + collider occluder cache).

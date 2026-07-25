@@ -15,7 +15,7 @@ Shipped refactor. Banked after the health-rewrite collapse bugs (death crash, up
 1. **One writer for collapsed/dead presentation.** Health emits intent (`BodyPresentationIntent.FromSnapshot`). `Ragdoll` applies via replicated `BodyPresentationState`.
 2. **Do not use transport quirks as control flow.** `ServerRpc` from server is a no-op. SyncVar `OnChange` may not fire on the server when assigning. `OnDisable` during ownership/network teardown is not “recover.” Apply in `ServerSetPresentation` **and** `OnStartNetwork` / OnChange.
 3. **`enabled = false` is insufficient with Coimbra `UpdateEvent`.** Use `AnimationOrchestrator.SetPosingSuppressed`.
-4. **Match gameplay words to signals.** Cardiac arrest can still report conscious until brain ≤10% — collapse must OR cardiac.
+4. **Match gameplay words to signals.** Critical and cardiac arrest can still report conscious until brain ≤10% — collapse must OR those states, not only `!IsConscious`.
 5. **Lifecycle contracts are sacred.** `OnAwake` → `base.OnAwake()`, never `base.Awake()` (ghost stack-overflow).
 
 ## Shipped architecture
@@ -43,6 +43,7 @@ Shipped refactor. Banked after the health-rewrite collapse bugs (death crash, up
 ## Play Mode smoke checklist
 
 - [ ] Host: go unconscious → ragdoll → wake → stand-up
+- [ ] Conscious critical (brain still &gt; 10%) → collapsed
 - [ ] Cardiac arrest while still reporting conscious → collapsed
 - [ ] Death after unconscious → stays Dead; no walk cycle
 - [ ] Late-join observer sees existing corpse collapsed
