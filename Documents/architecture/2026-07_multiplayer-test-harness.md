@@ -133,15 +133,14 @@ Manual / partial:
   `SS3D_TILEMAP_FIXTURES`).
 
 ### CI
-- `.github/workflows/develop-release.yml` — **manual** gated path: EditMode → Linux
-  server+client builds (separate `buildsPath` dirs, `versioning: None`) → `basic-round` +
-  `late-join 2` + `reconnect` + `atmos-client-sync` → Windows client zip with
-  `Builds/Start_SS3D_*.bat` → GitHub prerelease. See
+- `.github/workflows/develop-release.yml` — **manual** Windows-default prerelease + **nightly**
+  full cut (Windows + Linux client/server → floating `develop-nightly`); TomNAS prefer;
+  Linux via `BuildBothForCi`. See
   [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
-- `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke only (`workflow_dispatch` or PR
-  label `test:multiplayer`); no longer runs on every `develop` push. Same build scripts and
-  harness as the release workflow’s smoke stage.
-- `.github/workflows/editmodetestrunner.yml` — cheap EditMode on PR/`develop` push (unchanged).
+- `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke (`workflow_dispatch` or PR
+  label `test:multiplayer`) plus nightly 04:00 UTC; same harness as the release smoke stage.
+- `.github/workflows/editmodetestrunner.yml` — cheap EditMode on PR/`develop` push
+  (TomNAS preferred, GitHub-hosted fallback).
 - `.github/workflows/main.yml` — **removed**; Windows cuts use `develop-release.yml`.
 
 ### Removed (superseded)
