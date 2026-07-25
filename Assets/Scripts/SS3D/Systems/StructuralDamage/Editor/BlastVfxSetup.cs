@@ -20,24 +20,15 @@ namespace SS3D.Systems.StructuralDamage.Editor
         private const string BloodDecalMatPath = "Assets/Content/WorldObjects/World/VFX/Health/BloodDecal.mat";
         private const string BloodParticleMatPath = "Assets/Content/WorldObjects/World/VFX/Health/BloodParticle.mat";
 
-        [MenuItem("SS3D/Structural Damage/Setup Blast VFX Assets")]
-        public static void SetupMenu()
-        {
-            SetupAll();
-            EditorUtility.DisplayDialog(
-                "Blast VFX",
-                "Created/updated blast explosion catalog, prefab, and scorch assets.\nAssign a boom AudioClip on BlastVfxCatalog when available.",
-                "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.BlastVfxSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.BlastVfxSetup.SetupBatch</c>
+        /// Prefer <see cref="StructuralDamageContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             SetupAll();
             Debug.Log("[BlastVfxSetup] Done.");
         }
 
-        private static void SetupAll()
+        public static void SetupAll()
         {
             EnsureFolder(ContentRoot);
 

@@ -25,7 +25,6 @@ namespace SS3D.Editor.URPMigration
             };
         }
 
-        [MenuItem("SS3D/URP Migration/Wire Selection Pick Renderer Feature")]
         public static void WireFromMenu()
         {
             if (WireIfNeeded(silent: false))

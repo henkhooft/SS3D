@@ -146,7 +146,7 @@ namespace SS3D.UI.MainHud
 #endif
                 Debug.LogError(
                     $"MainHudSubSystem could not load Resources/{MainHudAssetPaths.ResourcesCatalogName}. "
-                    + "Run SS3D → Main HUD → Rebuild Asset Catalog and commit the asset.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs and commit the asset.",
                     this);
                 return false;
             }
@@ -155,7 +155,7 @@ namespace SS3D.UI.MainHud
             {
                 Debug.LogError(
                     $"MainHudAssetCatalog is missing required assets ({missingField}). "
-                    + "Run SS3D → Main HUD → Rebuild Asset Catalog.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs.",
                     this);
                 return false;
             }

@@ -182,10 +182,6 @@ namespace SS3D.Editor
             }
         }
 
-        // Keep old menu entry as alias.
-        [MenuItem("SS3D/Animation/Rebuild Locomotion Pack Blend Tree")]
-        public static void RebuildLocomotionBlendTreeMenu() => RebuildCombatStanceBlendTreesMenu();
-
         public static void RebuildLocomotionBlendTreeBatch() => RebuildCombatStanceBlendTreesBatch();
 
         [MenuItem("SS3D/Animation/Rebind Humanoid Animator Parameters")]

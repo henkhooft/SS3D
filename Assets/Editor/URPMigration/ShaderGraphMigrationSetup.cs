@@ -44,7 +44,6 @@ namespace SS3D.Editor.URPMigration
             };
         }
 
-        [MenuItem("SS3D/URP Migration/Convert VFX Shader Graphs To URP")]
         public static void ConvertFromMenu()
         {
             if (Run(silent: false))

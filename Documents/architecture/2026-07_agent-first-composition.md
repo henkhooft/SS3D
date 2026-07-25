@@ -20,14 +20,14 @@ Pressure already in-tree:
 
 - New features **must not** require edits to `Boot.unity` / `Game.unity` to register systems or UI hosts (unless the task *is* the bootstrap effort).
 - Subsystems are code-owned: `SystemsBootstrap` (process-wide DDOL) + `NetworkSystemsHub` prefab (Online) — not scene-placed GameObjects.
-- Networked subsystems: one hub NetworkObject — rebuild via `SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab`.
+- Networked subsystems: one hub NetworkObject — rebuild via **SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab** (tier A).
 
 ## Prefab composition policy
 
 - Content prefabs own mesh/rig/colliders/`NetworkObject` and a **small** root surface.
-- Features attach via code, ScriptableObject recipes, or **Editor setup tools** (`PrefabUtility` / menu items) — not “open Human.prefab and Add Component.”
+- Features attach via code, ScriptableObject recipes, or **tier-B Editor recipes** (`PrefabUtility` statics registered on a domain **Run All …** aggregator — not a new permanent `SS3D/.../Setup …` MenuItem). See [2026-07_editor-tooling-tiers.md](2026-07_editor-tooling-tiers.md).
 - Agents **must not** hand-edit mega-prefab YAML.
-- Domain redesigns that touch entity wiring purge obsolete components and leave a thinner root — do not grow the dump. Model: [health_implementation_plan.md](../plans/health_implementation_plan.md) Phase 0d (strip-and-rewire). Longer-term: recipe/setup tools so even that rewire is tool-mediated.
+- Domain redesigns that touch entity wiring purge obsolete components and leave a thinner root — do not grow the dump. Model: [health_implementation_plan.md](../plans/health_implementation_plan.md) Phase 0d (strip-and-rewire). Recipe/setup tools mediate that rewire.
 
 ## UI policy
 
@@ -68,7 +68,7 @@ Do not extend by hand. Owning redesigns purge + rewire (preferably via Editor to
 | Asset | Notes |
 |---|---|
 | `Human.prefab` + body-part/organ prefabs | Canonical mega-prefab; health / inventory / entity redesigns own strip-and-rewire |
-| Vendor / machine prefabs with MI controllers | Same debt class at smaller scale; prefer setup menus over raw YAML |
+| Vendor / machine prefabs with MI controllers | Same debt class at smaller scale; prefer tier-B PrefabUtility recipes over raw YAML |
 
 ## Follow-on code efforts
 

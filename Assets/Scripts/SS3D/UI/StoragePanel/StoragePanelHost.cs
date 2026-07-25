@@ -129,7 +129,7 @@ namespace SS3D.UI.StoragePanel
 #endif
                 Debug.LogError(
                     $"StoragePanelHost could not load Resources/{StoragePanelAssetPaths.ResourcesCatalogName}. "
-                    + "Run SS3D → Storage Panel → Rebuild Asset Catalog and commit the asset.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs and commit the asset.",
                     this);
                 return false;
             }
@@ -138,7 +138,7 @@ namespace SS3D.UI.StoragePanel
             {
                 Debug.LogError(
                     $"StoragePanelAssetCatalog is missing required assets ({missingField}). "
-                    + "Run SS3D → Storage Panel → Rebuild Asset Catalog.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs.",
                     this);
                 return false;
             }

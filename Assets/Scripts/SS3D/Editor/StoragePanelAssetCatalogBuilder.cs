@@ -10,22 +10,10 @@ namespace SS3D.Editor
 {
     /// <summary>
     /// Rebuilds the committed <see cref="StoragePanelAssetCatalog"/> from <see cref="StoragePanelAssetPaths"/>.
+    /// Menu: use <see cref="UiCatalogRebuildAll"/>.
     /// </summary>
     public static class StoragePanelAssetCatalogBuilder
     {
-        [MenuItem("SS3D/Storage Panel/Rebuild Asset Catalog")]
-        public static void RebuildCatalogMenu()
-        {
-            if (!TryRebuildCatalog(out string error))
-            {
-                Debug.LogError(error);
-                EditorUtility.DisplayDialog("Storage Panel Asset Catalog", error, "OK");
-                return;
-            }
-
-            Debug.Log($"Rebuilt Storage Panel asset catalog at {StoragePanelAssetPaths.CatalogAssetPath}");
-        }
-
         public static bool TryRebuildCatalog(out string error)
         {
             error = null;

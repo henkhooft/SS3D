@@ -12,14 +12,8 @@ namespace SS3D.Systems.Combat.Editor
     {
         private const string SecurityJumpsuit = "Assets/Content/WorldObjects/Items/Clothing/JumpsuitSecurity.prefab";
 
-        [MenuItem("SS3D/Combat/Setup Armor Prefabs")]
-        public static void SetupMenu()
-        {
-            int updated = SetupAll();
-            EditorUtility.DisplayDialog("Armor Prefabs", $"Updated {updated} prefabs.", "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.ArmorPrefabSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.ArmorPrefabSetup.SetupBatch</c>
+        /// Prefer <see cref="CombatContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             int updated = SetupAll();

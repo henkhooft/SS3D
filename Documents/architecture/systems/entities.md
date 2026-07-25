@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 76295c94b — 2026-07-23
+> Verified: f1c9476af — 2026-07-25
 
 # Entities
 
@@ -27,7 +27,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
-- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single entry point for every `Human.prefab`-targeting recipe tool (dev-hack removal, ContainerInteractive strip, hands wiring); add new Human-prefab recipes here rather than leaving them as undiscoverable one-off menu items
+- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
+- Clip bake helpers (`HumanoidClipBakeUtility`) are demoted statics (no menu) — rare Mixamo/placeholder path; call from batch/code if needed.
 
 ## Extension points
 
@@ -64,6 +65,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** collapse/death presentation
 - [2026-07_player-body-animation](../2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
+- [2026-07_editor-tooling-tiers](../2026-07_editor-tooling-tiers.md) — Editor MenuItem A/B/C policy
 - [2026-07_human-prefab-decomposition](../2026-07_human-prefab-decomposition.md) — **planned** Human.prefab paydown
 - [animation_system_design plan](../../plans/animation_system_design_250de599.plan.md)
 - [INDEX.md](../INDEX.md)

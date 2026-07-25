@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/ (integrity stage + occupancy + blast VFX Rpc)
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: b1fcfbbce — 2026-07-23
+> Verified: f1c9476af — 2026-07-25
 
 # Structural destruction
 
@@ -25,8 +25,9 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - `Assets/Scripts/SS3D/Systems/Tile/TileOccupancyEvaluator.cs` — Cracked → not airtight
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/HurtStructureCommand.cs` — admin `hurtstructure [force]`
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/BlastCommand.cs` — admin `blast [yield] [falloff]`
-- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/StructuralIntegrityPrefabSetup.cs` — wall/window presenter + examinable
-- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/BlastVfxSetup.cs` — blast catalog/prefab/scorch assets
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/StructuralDamageContentPrefabRecipes.cs` — **SS3D → Structural Damage → Run Content Prefab Recipes**
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/StructuralIntegrityPrefabSetup.cs` — wall/window presenter + examinable statics
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/BlastVfxSetup.cs` — blast catalog/prefab/scorch statics
 - `Assets/Scripts/Tests/EditMode/StructuralDamageTests.cs` / `BlastResolutionTests.cs` / `StructuralIntegrityPresentationTests.cs` / `BlastVfxFalloffTests.cs`
 
 ## Extension points
@@ -34,8 +35,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, ranged hitscan, blast hops, chemistry, etc. — one apply path. Sources include `StructuralDamageSource.Melee` / `Ranged` / `Blast` / `Console`.
 - Call `StructuralDamageSubSystem.ResolveBlast(epicenter, yield, falloff)` from grenades/charges (Phase 5) — also broadcasts blast VFX.
 - Override max HP per SO via `TileObjectSo.structuralMaxIntegrity` (> 0).
-- Wall/window prefabs: **SS3D → Structural Damage → Setup Wall Integrity Presentation**.
-- Blast assets: **SS3D → Structural Damage → Setup Blast VFX Assets**; assign boom `AudioClip` on `BlastVfxCatalog`.
+- Wall/window prefabs + blast assets: **SS3D → Structural Damage → Run Content Prefab Recipes**; assign boom `AudioClip` on `BlastVfxCatalog`.
 
 ## Pitfalls
 

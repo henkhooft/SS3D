@@ -6,7 +6,7 @@ namespace SS3D.UI.MainHud
 {
     /// <summary>
     /// Committed resolved refs for the Main HUD. Rebuild via
-    /// <c>SS3D → Main HUD → Rebuild Asset Catalog</c>. Loaded at runtime with <c>Resources.Load</c>
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c>. Loaded at runtime with <c>Resources.Load</c>
     /// so standalone builds work without Editor AssetDatabase.
     /// </summary>
     [CreateAssetMenu(

@@ -7,17 +7,16 @@ namespace SS3D.Systems.Entities.Editor
 {
     /// <summary>
     /// Single discoverable entry point for every registered <c>Human.prefab</c> recipe tool — the
-    /// "recipe" convention named in 2026-07_human-prefab-decomposition.md Phase 2: a
-    /// <see cref="PrefabUtility"/>-based Editor menu item per concern, registered here, instead of an
-    /// agent needing tribal knowledge of which scattered menu items exist or need re-running after a
-    /// merge. Add a line here whenever a new recipe targeting <c>Human.prefab</c> or its body-part
-    /// prefabs is added.
+    /// "recipe" convention named in 2026-07_human-prefab-decomposition.md Phase 2 and
+    /// 2026-07_editor-tooling-tiers.md tier B: a <see cref="PrefabUtility"/>-based static per concern,
+    /// registered here, instead of an agent needing tribal knowledge of which scattered menu items
+    /// exist or need re-running after a merge. Add a line here whenever a new recipe targeting
+    /// <c>Human.prefab</c> or its body-part prefabs is added.
     /// </summary>
     /// <remarks>
     /// Scoped to recipes that mutate <c>Human.prefab</c>/its nested body-part prefabs specifically.
     /// Recipes for unrelated prefabs (e.g. <c>MeleePrefabSetup</c> on hand tools, <c>StorageContainerPrefabSetup</c>
-    /// on backpacks/lockers) already exist and follow the same convention independently — they are not
-    /// included here, since running them has nothing to do with Human.prefab decomposition.
+    /// on backpacks/lockers) live on their own domain aggregators — they are not included here.
     /// </remarks>
     public static class HumanPrefabRecipes
     {
@@ -27,6 +26,7 @@ namespace SS3D.Systems.Entities.Editor
             int devHacksRemoved = HumanPrefabHygiene.RemoveDevHacks();
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
             bool handsRewired = HandsPrefabSetup.Wire();
+            bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
 
             // Recipes that remove a component directly on a nested body-part prefab (e.g. the strip
             // above) don't retroactively refresh Human.prefab's own stripped mirror of that instance —
@@ -39,6 +39,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"Removed {devHacksRemoved} dev-only component(s).\n" +
                 $"Stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s).\n" +
                 $"Hands wiring: {(handsRewired ? "rewired" : "already correct")}.\n" +
+                $"LocalSpeechEmitter: {(speechEmitterAdded ? "added" : "already present")}.\n" +
                 "Resynced Human.prefab against its body-part prefabs.",
                 "OK");
         }
@@ -49,15 +50,17 @@ namespace SS3D.Systems.Entities.Editor
             int devHacksRemoved = HumanPrefabHygiene.RemoveDevHacks();
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
             bool handsRewired = HandsPrefabSetup.Wire();
+            bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
             HumanPrefabHygiene.ResyncNestedPrefabInstances();
 
             UnityEngine.Debug.Log(
                 $"[HumanPrefabRecipes] Removed {devHacksRemoved} dev-only component(s); " +
                 $"stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s); " +
                 $"hands wiring {(handsRewired ? "rewired" : "already correct")}; " +
+                $"LocalSpeechEmitter {(speechEmitterAdded ? "added" : "already present")}; " +
                 "resynced Human.prefab against its body-part prefabs.");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

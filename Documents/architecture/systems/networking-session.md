@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: dcc88500c — 2026-07-24 (SyncVarGuard Behaviour=/Object= enrichment for denylist triage)
+> Verified: f1c9476af — 2026-07-25 (SyncVarGuard Behaviour=/Object= enrichment for denylist triage; Editor menu tiers)
 
 # Networking (session)
 
@@ -18,7 +18,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again
 - `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide (incl. NetworkSession via type name)
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — harness script runner (bootstrapped via SystemsBootstrap); Empty offline redirect never restores Boot
-- `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — Phase 3h hub rebuild / scene strip
+- `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — **SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab** (tier A); Phase 3h strip helpers remain as `-executeMethod` statics only
 - `Testing/multiplayer/run_smoketest.sh` — multiplayer harness
 
 ## Extension points
@@ -26,7 +26,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - Boot.unity's `ServerManager._startOnHeadless` must stay `0`.
 - Boot.unity `DefaultScene._offlineScene` stays Boot for cold start; CCR arms Empty after first Online.
 - Prefer `SessionState` / `ClientConnectionRecovery.Instance` over inferring session status from subsystem presence.
-- New networked SubSystem: add to hub rebuild menu — never hand-edit Game.unity.
+- New networked SubSystem: add to hub rebuild (**SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab**) — never hand-edit Game.unity.
 
 ## Pitfalls
 

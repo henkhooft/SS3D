@@ -2,7 +2,7 @@ namespace SS3D.UI.MainHud
 {
     /// <summary>
     /// Stable asset paths for the Main HUD. Rebuild the committed catalog with
-    /// <c>SS3D → Main HUD → Rebuild Asset Catalog</c>.
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c>.
     /// </summary>
     public static class MainHudAssetPaths
     {

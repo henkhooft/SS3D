@@ -16,7 +16,10 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string GasFolder = RootFolder + "/Gases";
         private const string RegistryPath = RootFolder + "/CoreGasRegistry.asset";
 
-        [MenuItem("SS3D/Atmospherics/Create Core Gas Registry")]
+        /// <summary>
+        /// Creates/updates the core gas registry. Tier B — no MenuItem; call from batch or code.
+        /// BatchMode: <c>-executeMethod SS3D.Systems.Atmospherics.Editor.AtmosRegistryGenerator.CreateCoreGasRegistry</c>
+        /// </summary>
         public static void CreateCoreGasRegistry()
         {
             EnsureFolder("Assets/Content/Systems", "Atmospherics");

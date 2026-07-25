@@ -2,7 +2,7 @@ namespace SS3D.UI.StoragePanel
 {
     /// <summary>
     /// Stable asset paths for the storage panel surface. Rebuild the committed catalog with
-    /// <c>SS3D → Storage Panel → Rebuild Asset Catalog</c>. Mirrors MainHudAssetPaths/
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c>. Mirrors MainHudAssetPaths/
     /// MachineUiAssetPaths — a third copy of the path-catalog pattern is expected per
     /// Documents/architecture/systems/ui-shell.md § Future work (shared catalog helper deferred).
     /// </summary>

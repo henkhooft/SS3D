@@ -5,7 +5,7 @@ namespace SS3D.UI.Shell.Catalog
 {
     /// <summary>
     /// Committed resolved refs for <see cref="UiShellSubSystem"/>. Rebuild via
-    /// <c>SS3D → UI Shell → Rebuild Asset Catalog</c> from <see cref="UiShellAssetPaths"/>.
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c> from <see cref="UiShellAssetPaths"/>.
     /// Loaded at runtime with <c>Resources.Load</c>.
     /// </summary>
     [CreateAssetMenu(

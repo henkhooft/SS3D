@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-23
+**Last updated:** 2026-07-25
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -56,7 +56,7 @@ from adding a 127th *unrelated* component; only the denylisted/known-bad ones ar
 prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
 and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
 on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
-`HandsPrefabSetup` (**SS3D → Inventory → Wire Human Hands**). Every other domain directly on
+`HandsPrefabSetup` (**SS3D → Entities → Run All Human Prefab Recipes**). Every other domain directly on
 `Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
 forced — pick up each when its own redesign next touches entity wiring.
 
@@ -75,7 +75,7 @@ forced — pick up each when its own redesign next touches entity wiring.
 **Blast radius: medium, compounding — trend: getting worse**
 
 Machine UI, Main HUD, and the Storage Panel each ship their own `*AssetPaths` constants class +
-`*AssetCatalog` ScriptableObject + a dedicated Editor "Rebuild Asset Catalog" menu item, because
+`*AssetCatalog` ScriptableObject + an Editor rebuild path (now umbrella **SS3D → Data → Rebuild All UI Catalogs**), because
 [ui-shell.md](systems/ui-shell.md) (the intended shared composition root) has stayed `Status: stub`
 across every UI effort that has shipped since it was proposed. Each copy independently reinvents the
 same failure mode (stale catalog after adding a UXML path without remembering to run the rebuild
@@ -86,17 +86,20 @@ at which point it's four copies to migrate instead of one.
 
 ### 1.5 One-off Editor rebuild-menu proliferation (data-codegen)
 
-**Blast radius: medium — trend: getting worse**
+**Blast radius: medium — trend: shrinking (menu hygiene shipped; catalog pipeline still open)**
 
-[data-codegen.md](systems/data-codegen.md) § Architecture smells names this explicitly: feature work
-keeps landing a new `MenuItem` that clones/rewrites assets and registers them (interaction icon
-sprites, the three catalog builders in 1.4), each with its own GUID-preservation hacks and "did
-anyone remember to run this" drift, instead of one shared import → Addressables →
+PrefabUtility **one-shot setup MenuItems** and finished migration menus were thinned under
+[2026-07_editor-tooling-tiers.md](2026-07_editor-tooling-tiers.md) (tier A keep / tier B recipe
+aggregators / tier C delete). Remaining debt is the **catalog rebuild** class named in
+[data-codegen.md](systems/data-codegen.md) § Architecture smells: feature work still lands
+per-surface rebuild scripts (interaction icon sprites, UI path catalogs in §1.4) with GUID hacks and
+"did anyone run the menu?" drift, instead of one shared import → Addressables →
 `AssetDatabase.LoadAssetsFromAssetGroup` → codegen pipeline. No CI check verifies a committed catalog
 asset is in sync with the C# path constants it should mirror — drift is discovered at Play Mode/build
-time, not at PR time.
+time, not at PR time. Do not add another per-surface rebuild MenuItem; use the umbrella /
+`UiCatalogBuilderKit`.
 
-- Related: [data-codegen.md](systems/data-codegen.md)
+- Related: [data-codegen.md](systems/data-codegen.md), [2026-07_editor-tooling-tiers.md](2026-07_editor-tooling-tiers.md)
 
 ### 1.6 Crafting is dead code that hasn't been deleted
 

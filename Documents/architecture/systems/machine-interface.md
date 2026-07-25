@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/MachineInterface/, Assets/Content/Systems/UI/MachineInterface/
 > Entry points: MachineInterfaceSubSystem, MachineInterfaceHost, MachineInterfaceRegistry, MachineUiAssetCatalog
 > Status: shipped
-> Verified: 4516b813f — 2026-07-22
+> Verified: f1c9476af — 2026-07-25
 
 # Machine interface UI
 
@@ -16,7 +16,8 @@ UI Toolkit panels for station machines, networked via FishNet snapshots. Templat
 - `Assets/Scripts/SS3D/UI/MachineInterface/MachineUiAssetPaths.cs` — path constants for templates/styles
 - `Assets/Scripts/SS3D/UI/MachineInterface/MachineUiAssetCatalog.cs` — ScriptableObject catalog type
 - `Assets/Content/Systems/UI/MachineInterface/Resources/MachineUiAssetCatalog.asset` — committed runtime catalog
-- `Assets/Scripts/SS3D/Editor/MachineUiAssetCatalogBuilder.cs` — `SS3D → Machine Interface → Rebuild Asset Catalog`
+- `Assets/Scripts/SS3D/Editor/MachineUiAssetCatalogBuilder.cs` — builder statics; menu via **SS3D → Data → Rebuild All UI Catalogs**
+- `Assets/Scripts/SS3D/Editor/UiCatalogRebuildAll.cs` — umbrella UI catalog rebuild
 - `Assets/Scripts/SS3D/UI/MachineInterface/MachineUiCatalog.cs` — registers UI templates/binders into `MachineInterfaceRegistry`
 - `Assets/Scripts/SS3D/UI/MachineInterface/MachineInterfaceBehaviour.cs` — networked open/refresh/close base
 - `Assets/Scripts/SS3D/UI/MachineInterface/AccessGatedMachineInterfaceBehaviour.cs` — server ID scan; syncs access states
@@ -30,7 +31,7 @@ UI Toolkit panels for station machines, networked via FishNet snapshots. Templat
 1. Add id in `MachineInterfaceIds`; control ids in `MachineInterfaceControlIds` if needed.
 2. Snapshot + FishNet serializer + view model + mapper + binder + UXML/USS.
 3. Prefab controller subclassing `MachineInterfaceBehaviour` (concrete TargetRpc snapshot types — FishNet does not support generic RPC parameters). Prefer Editor setup tools over hand-editing machine prefab YAML ([agent-first composition](../2026-07_agent-first-composition.md)).
-4. Add paths to `MachineUiAssetPaths` + entry in `MachineUiCatalog.RegisterAll`; run **SS3D → Machine Interface → Rebuild Asset Catalog** and commit the catalog asset (no Game.unity template wiring).
+4. Add paths to `MachineUiAssetPaths` + entry in `MachineUiCatalog.RegisterAll`; run **SS3D → Data → Rebuild All UI Catalogs** and commit the catalog asset (no Game.unity template wiring).
 5. Register snapshot in `MachineInterfaceNetworkRegistry`.
 6. Add `IMachineOptimisticControlHandler` for client optimistic Apply* (register in `MachineOptimisticControlRegistry.EnsureRegistered`).
 7. Optional: dev harness scenario / editor preview.
@@ -44,8 +45,8 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 ## Pitfalls
 
 - **Missing catalog in builds:** host loads `Resources/MachineUiAssetCatalog`. If the asset was never rebuilt/committed, Play Mode and builds fail at awake with an explicit error — not a silent null at panel open (that was the old `EnsureEditorAssets` trap). Main HUD now has the same trap/fix class (`MainHudAssetCatalog`); do not grow a third copy — see [ui-shell](ui-shell.md) § Future work.
-- **New UXML without rebuild:** adding paths in C# without running **Rebuild Asset Catalog** leaves the committed SO stale; Editor Play Mode uses the SO, not `AssetDatabase` path strings.
-- **Editor asmdef:** `MachineUiAssetCatalogBuilder` needs `SS3D.Core` referenced from `SS3D.Editor` (so `MachineInterfaceHost` / `View` resolve for scene cleanup). Without it, `FindObjectsByType<MachineInterfaceHost>` fails to compile.
+- **New UXML without rebuild:** adding paths in C# without running **SS3D → Data → Rebuild All UI Catalogs** leaves the committed SO stale; Editor Play Mode uses the SO, not `AssetDatabase` path strings.
+- **Editor asmdef:** builders live in `SS3D.Editor` and must reference the UI assemblies for catalog types. Do not add another per-surface rebuild MenuItem.
 - **No UITK backdrop-filter:** USS cannot blur the 3D world behind a panel. Diegetic focus uses a dark overlay scrim plus Dual Kawase fullscreen blur (`UiBackdropBlurRendererFeature` via [screen-effects](screen-effects.md) `SetUiBackdropBlur`); the Screen Space Overlay chassis stays sharp on top. URP Gaussian DoF is too weak for this — do not reintroduce DoF for UI focus.
 - **Close must await dismiss tween:** disabling `UIDocument` mid-DOTween kills the tree. `MachineInterfaceHost.Close(onComplete)` teardowns only after the sequence; SubSystem keeps input blocked / `IsOpen` until then. Starting the close tween must not clear `_pendingCloseComplete` — that skipped `FinishClose` and left `InputContext.MachineUI` stuck (no movement).
 - **Do not hide Main HUD / storage from MI:** chrome visibility is owned by [inventory](inventory.md) `MainHudSubSystem` and `StoragePanelHost` observing `InterfaceOpened` / `InterfaceClosed` (asmdef is MainHud/StoragePanel → MI; reverse would cycle). That owner currently fully hides the HUD rather than layering MI on top of it, a known fork deviation from `main-hud.md` — see [inventory](inventory.md) § Fork deviation. Don't reimplement visibility logic here either way.

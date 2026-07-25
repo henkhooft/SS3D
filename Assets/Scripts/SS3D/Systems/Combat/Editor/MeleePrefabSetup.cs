@@ -17,14 +17,8 @@ namespace SS3D.Systems.Combat.Editor
         private const string Hatchet = "Assets/Content/WorldObjects/Items/Functional/Tools/Botany/Hatchet.prefab";
         private const string KitchenKnife = "Assets/Content/WorldObjects/Items/Functional/Tools/Kitchen/KitchenKnife.prefab";
 
-        [MenuItem("SS3D/Combat/Setup Melee Prefabs (Hands + Tools)")]
-        public static void SetupMenu()
-        {
-            int updated = SetupAll();
-            EditorUtility.DisplayDialog("Melee Prefabs", $"Updated {updated} prefabs.", "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.MeleePrefabSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.MeleePrefabSetup.SetupBatch</c>
+        /// Prefer <see cref="CombatContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             int updated = SetupAll();

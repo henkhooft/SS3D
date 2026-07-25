@@ -71,10 +71,10 @@ Run the **`update-system-docs`** skill (`.cursor/skills/update-system-docs/SKILL
 Before adding a SubSystem, entity behaviour, or UI surface, read [Documents/architecture/2026-07_agent-first-composition.md](Documents/architecture/2026-07_agent-first-composition.md).
 
 - **Do not** edit `Boot.unity` / `Game.unity` to register systems or UI hosts unless the task *is* the bootstrap effort.
-- **Do not** hand-edit mega-prefabs (especially `Human.prefab`) to add features — write Editor setup scripts or wait for the owning redesign’s Phase 0 rewire; never grow the component dump “just this once.”
+- **Do not** hand-edit mega-prefabs (especially `Human.prefab`) to add features — write a **tier-B PrefabUtility recipe** (static `SetupAll`/`Wire`, registered on a domain **Run All …** aggregator) or wait for the owning redesign’s Phase 0 rewire; never grow the component dump “just this once.” Do **not** add a permanent `SS3D/.../Setup …` MenuItem for one-shot wiring — see [2026-07_editor-tooling-tiers.md](Documents/architecture/2026-07_editor-tooling-tiers.md).
 - **Do not** add or extend uGUI / TMP gameplay UI; **do not** “migrate” condemned views to UI Toolkit as a bridge.
 - **Do not** “fix” or feature-extend system maps marked **condemned** — replace per the linked design doc with a Phase 0 purge.
-- New UI: UI Toolkit (UXML/USS) + catalog/path pattern. Interim reference until UiShell exists: [machine-interface](Documents/architecture/systems/machine-interface.md). Target shell: [ui-shell](Documents/architecture/systems/ui-shell.md).
+- New UI: UI Toolkit (UXML/USS) + catalog/path pattern. Interim reference until UiShell exists: [machine-interface](Documents/architecture/systems/machine-interface.md). Target shell: [ui-shell](Documents/architecture/systems/ui-shell.md). Do **not** add another per-surface `Rebuild Asset Catalog` MenuItem — extend `UiCatalogBuilderKit` / the umbrella rebuild.
 
 ## Authoring conventions
 

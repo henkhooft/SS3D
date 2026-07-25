@@ -23,19 +23,8 @@ namespace SS3D.Systems.Inventory.Containers.Editor
     {
         private const string HumanPrefabPath = "Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab";
 
-        [MenuItem("SS3D/Inventory/Wire Human Hands")]
-        public static void WireMenu()
-        {
-            bool changed = Wire();
-            EditorUtility.DisplayDialog(
-                "Wire Human Hands",
-                changed
-                    ? "Human.prefab's Hands.PlayerHands was (re)wired."
-                    : "Already correctly wired — no change.",
-                "OK");
-        }
-
-        /// <summary>BatchMode entry: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.HandsPrefabSetup.WireBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.HandsPrefabSetup.WireBatch</c>
+        /// Prefer <see cref="SS3D.Systems.Entities.Editor.HumanPrefabRecipes.RunAllBatch"/> for Human re-runs.</summary>
         public static void WireBatch()
         {
             bool changed = Wire();
