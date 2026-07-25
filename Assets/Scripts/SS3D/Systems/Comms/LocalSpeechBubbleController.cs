@@ -1,3 +1,4 @@
+using Coimbra;
 using Coimbra.Services.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -56,6 +57,8 @@ namespace SS3D.Systems.Comms
         private bool _overlayReady;
         private bool _isComposing;
         private SpeechMode _composeMode = SpeechMode.Speak;
+        private int _composeChannelIndex;
+        private readonly List<CommsChannel> _composeRadioChannels = new();
 
         protected override void OnAwake()
         {
@@ -165,6 +168,8 @@ namespace SS3D.Systems.Comms
 
             _isComposing = true;
             _composeMode = SpeechMode.Speak;
+            _composeChannelIndex = 0;
+            RebuildComposeChannelList();
             _composeEntry.Enter();
             _view.SetRetainDraftFocus(true);
             _view.DraftField.value = string.Empty;
@@ -172,6 +177,42 @@ namespace SS3D.Systems.Comms
             // (that was eating the first Enter and requiring a second press to commit).
             _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
             _view.FocusDraft();
+        }
+
+        private void RebuildComposeChannelList()
+        {
+            _composeRadioChannels.Clear();
+            CommsChannels settings = ScriptableSettings.GetOrFind<CommsChannels>();
+            if (settings == null)
+            {
+                return;
+            }
+
+            foreach (CommsChannel channel in settings.GetWritableRadioChannels())
+            {
+                _composeRadioChannels.Add(channel);
+            }
+        }
+
+        private bool IsComposeOnRadio => _composeChannelIndex > 0
+            && _composeChannelIndex <= _composeRadioChannels.Count;
+
+        private CommsChannel CurrentComposeRadioChannel =>
+            IsComposeOnRadio ? _composeRadioChannels[_composeChannelIndex - 1] : null;
+
+        private void CycleComposeChannel(int delta)
+        {
+            int count = 1 + _composeRadioChannels.Count;
+            if (count <= 1)
+            {
+                return;
+            }
+
+            _composeChannelIndex = (_composeChannelIndex + delta) % count;
+            if (_composeChannelIndex < 0)
+            {
+                _composeChannelIndex += count;
+            }
         }
 
         private void CommitCompose()
@@ -183,7 +224,6 @@ namespace SS3D.Systems.Comms
 
             string text = _view.DraftField.value?.Replace("\r", string.Empty).Replace("\n", " ").Trim()
                 ?? string.Empty;
-            SpeechMode mode = ResolveComposeModeFromModifiers();
 
             if (string.IsNullOrEmpty(text))
             {
@@ -191,8 +231,20 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            if (_localViewer != null && _localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
+            if (_localViewer == null || !_localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
             {
+                EndCompose(clearText: true);
+                return;
+            }
+
+            CommsChannel radioChannel = CurrentComposeRadioChannel;
+            if (radioChannel != null)
+            {
+                emitter.CmdSendRadio(radioChannel.name, text);
+            }
+            else
+            {
+                SpeechMode mode = ResolveComposeModeFromModifiers();
                 emitter.CmdSpeak(text, mode);
             }
 
@@ -219,12 +271,24 @@ namespace SS3D.Systems.Comms
             _composeEntry.Exit();
             _isComposing = false;
             _composeMode = SpeechMode.Speak;
+            _composeChannelIndex = 0;
         }
 
         private void HandleDraftKeyDown(KeyDownEvent evt)
         {
             if (!_isComposing)
             {
+                return;
+            }
+
+            if (evt.keyCode == KeyCode.Tab || evt.character == '\t')
+            {
+                evt.StopImmediatePropagation();
+                evt.PreventDefault();
+                bool reverse = evt.shiftKey
+                    || (Keyboard.current != null
+                        && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed));
+                CycleComposeChannel(reverse ? -1 : 1);
                 return;
             }
 
@@ -487,8 +551,21 @@ namespace SS3D.Systems.Comms
 
             if (_isComposing && localDraftScreen.HasValue)
             {
-                string draftName = ResolveSpeakerName(_localViewer);
-                _view.ShowDraft(localDraftScreen.Value.x, localDraftScreen.Value.y, draftName, _composeMode);
+                CommsChannel radio = CurrentComposeRadioChannel;
+                if (radio != null)
+                {
+                    _view.ShowDraft(
+                        localDraftScreen.Value.x,
+                        localDraftScreen.Value.y,
+                        speakerName: null,
+                        SpeechMode.Speak,
+                        radio.ResolveRadioHeader());
+                }
+                else
+                {
+                    string draftName = ResolveSpeakerName(_localViewer);
+                    _view.ShowDraft(localDraftScreen.Value.x, localDraftScreen.Value.y, draftName, _composeMode);
+                }
             }
             else if (!_isComposing)
             {

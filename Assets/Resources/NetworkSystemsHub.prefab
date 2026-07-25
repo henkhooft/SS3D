@@ -100,7 +100,6 @@ MonoBehaviour:
   - {fileID: 7940338062880343993}
   - {fileID: 9100501647995449836}
   - {fileID: 2704830289899808022}
-  - {fileID: 8831365089977646638}
   - {fileID: 6009669659697083544}
   - {fileID: 7841343881523922060}
   - {fileID: 7813750346173923788}
@@ -415,21 +414,6 @@ MonoBehaviour:
   _componentIndexCache: 13
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
---- !u!114 &8831365089977646638
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a894827ddaaa4a74bc4cdd1f1da7f0c8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SS3D.Systems::SS3D.Engine.Chat.ChatSubSystem
-  _componentIndexCache: 14
-  _addedNetworkObject: {fileID: 100004}
-  _networkObjectCache: {fileID: 100004}
 --- !u!114 &6009669659697083544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -442,7 +426,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d18f4f0b92f43b5a6bbf16c89f3d621, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Comms.CommsSubSystem
-  _componentIndexCache: 15
+  _componentIndexCache: 14
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
 --- !u!114 &242730867129844347
@@ -460,6 +444,19 @@ MonoBehaviour:
   _document: {fileID: 0}
   _bubbleStyleSheet: {fileID: 7433441132597879392, guid: 748a61f2204743ec8607f66ccb8b20d2, type: 3}
   _config: {fileID: 11400000, guid: 9c42426bc8ce465799af4da38d195944, type: 2}
+--- !u!114 &6100110011001100123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fad600f79f17468582d3c405ebc8ad03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Comms.CommsFeedController
+  _styleSheet: {fileID: 7433441132597879392, guid: 2534ecf24e7b40a89a13455358fd68eb, type: 3}
 --- !u!114 &7841343881523922060
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -472,7 +469,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 374c6d705c273f649b4bf6d795cc5cd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.ExamineSubSystem
-  _componentIndexCache: 16
+  _componentIndexCache: 15
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
 --- !u!114 &2396080331397820885
@@ -528,7 +525,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66514eb812f2fbf4fbd6348b1f0a168b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Audio.AudioSubSystem
-  _componentIndexCache: 17
+  _componentIndexCache: 16
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
   SfxAudioSourcePrefab: {fileID: 2009473039716497087, guid: c06c615017500c94686e0eb5eb4402cf, type: 3}
@@ -550,7 +547,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eec537a766a7b0e49878c6edbbcbc22c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Permissions::SS3D.Permissions.PermissionSubSystem
-  _componentIndexCache: 18
+  _componentIndexCache: 17
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
   HasLoadedPermissions: 0
@@ -566,7 +563,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d8e2f16a3b4c5d9e0f1a2b3c4d5e6f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.IdAccess.IdAccessSubSystem
-  _componentIndexCache: 19
+  _componentIndexCache: 18
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
 --- !u!114 &1773152946861829430
@@ -581,7 +578,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16647fb19ee14c44e979af85557daf59, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Substances.SubstancesSubSystem
-  _componentIndexCache: 20
+  _componentIndexCache: 19
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
   substancesList: []

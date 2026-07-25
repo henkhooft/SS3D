@@ -1,0 +1,46 @@
+> Implements: Documents/design/comms.md §5 (compose), §6 (radio / non-positional), §8 (announcements)
+> Touches systems: chat-audio-screens (comms), ui-shell, rounds-lobby, entities, inputs
+> Status: shipped (feed + Tab compose + Chat purge; headset/PDA/radial deferred)
+
+# Comms non-diegetic feed + Tab compose (Jul 2026)
+
+Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hub: local speech (already shipped) plus radio and station announcements. Purges the headless legacy `ChatSubSystem` (`SS3D.Engine.Chat`) after salvaging channel ScriptableObject data.
+
+## Deviates from design
+
+- **Channel pick:** Tab / Shift+Tab while drafting instead of hold-comms → channel radial ([comms.md](../design/comms.md) §6). Radial deferred; recorded on the system map.
+- **Announcements:** All `Announcement`-kind traffic uses the top-middle banner this pass (no routine→feed split yet).
+- **Placement:** Radio stack on the left (mock); design said bottom-left of main HUD — same family.
+
+## Phases
+
+### Phase 1 — Channel model under Comms — this pass
+
+- `CommsChannel` / `CommsChannels` settings (salvaged abbr, color, flags, headset trait ref).
+- Drop DistanceBased Local/Whisper/Shout channel SOs (redundant with `SpeechMode`).
+- Kinds: Radio (left feed), Announcement (banner), Meta (OOC/system — not Tab-writable this pass).
+
+### Phase 2 — Hub + purge — this pass
+
+- `CommsMessage` FishNet broadcast; `SendRadio` / `SendAnnouncement` on `CommsSubSystem`.
+- Retarget Round/Entity station alerts.
+- Delete `ChatSubSystem` / `ChatMessage` / hub registration.
+
+### Phase 3 — Feed UI + Tab compose — this pass
+
+- `CommsFeedController` on `UiLayer.Hud`: left radio cards + top ALL-STATION banner.
+- Existing T-compose: Tab cycles Local + radio; radio commit via Comms (no head bubble).
+
+## Deferred (MVP2 / later)
+
+- Headset trait / ID gating for channels
+- PDA history log ([comms.md](../design/comms.md) §9)
+- Channel radial
+- OOC/LOOC/dead distinct typography
+- Migrating local-speech overlay onto UiShell
+
+## Related
+
+- Plan: [Documents/plans/comms_non_diegetic_feed.plan.md](../plans/comms_non_diegetic_feed.plan.md)
+- Design: [Documents/design/comms.md](../design/comms.md)
+- Map: [systems/chat-audio-screens.md](systems/chat-audio-screens.md)

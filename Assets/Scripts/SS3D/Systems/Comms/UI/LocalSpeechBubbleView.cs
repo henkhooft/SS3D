@@ -186,7 +186,7 @@ namespace SS3D.Systems.Comms.UI
         /// <summary>
         /// Positions the live draft chip at the same screen anchor a finished line would use.
         /// </summary>
-        public void ShowDraft(float left, float bottom, string speakerName, SpeechMode mode)
+        public void ShowDraft(float left, float bottom, string speakerName, SpeechMode mode, string radioChannelHeader = null)
         {
             if (_draftChip == null)
             {
@@ -199,13 +199,20 @@ namespace SS3D.Systems.Comms.UI
             _draftAnchorLeft = left;
             _draftAnchorBottom = bottom;
 
-            string nameText = string.IsNullOrEmpty(speakerName) ? string.Empty : speakerName.ToUpperInvariant();
+            bool isRadio = !string.IsNullOrEmpty(radioChannelHeader);
+            string nameText = isRadio
+                ? radioChannelHeader.ToUpperInvariant()
+                : (string.IsNullOrEmpty(speakerName) ? string.Empty : speakerName.ToUpperInvariant());
             _draftName.text = nameText;
             _draftName.style.display = string.IsNullOrEmpty(nameText) ? DisplayStyle.None : DisplayStyle.Flex;
 
-            if (justOpened || _draftMode != mode)
+            _draftChip.EnableInClassList("comms-draft--radio", isRadio);
+            _draftName.EnableInClassList("comms-draft__name--radio", isRadio);
+
+            SpeechMode effectiveMode = isRadio ? SpeechMode.Speak : mode;
+            if (justOpened || _draftMode != effectiveMode)
             {
-                ApplyDraftModeClass(mode);
+                ApplyDraftModeClass(effectiveMode);
             }
 
             FitDraftChipWidth();
