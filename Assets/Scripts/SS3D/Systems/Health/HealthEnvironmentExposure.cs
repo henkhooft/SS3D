@@ -58,6 +58,10 @@ namespace SS3D.Systems.Health
             return plasmaMoleFraction * HealthConstants.PlasmaToxinIntakeScale;
         }
 
+        /// <summary>
+        /// Per-zone burn from ambient temperature and fire. Pressure is not burn —
+        /// use <see cref="PressureLungDamage"/> for barotrauma.
+        /// </summary>
         public static float EnvironmentalBurnDamage(
             float temperatureKelvin,
             float burnIntensity)
@@ -81,7 +85,37 @@ namespace SS3D.Systems.Health
                 burn += burnIntensity * HealthConstants.FireBurnPerIntensity;
             }
 
-            return Math.Min(burn, HealthConstants.MaxEnvironmentalBurnPerTick);
+            return Math.Min(burn, HealthConstants.MaxEnvironmentalBurnPerZonePerTick);
+        }
+
+        /// <summary>
+        /// Lung function drain from vacuum / low / high pressure (barotrauma).
+        /// Station pressure returns 0. Applied equally to left and right lung.
+        /// </summary>
+        public static float PressureLungDamage(float pressureKpa, bool isVacuum)
+        {
+            if (isVacuum || pressureKpa <= 0f)
+            {
+                return Math.Min(
+                    HealthConstants.VacuumLungDamagePerTick,
+                    HealthConstants.MaxPressureLungDamagePerTick);
+            }
+
+            float damage = 0f;
+
+            if (pressureKpa < AirAlarmConstants.LowPressureKpa)
+            {
+                damage += (AirAlarmConstants.LowPressureKpa - pressureKpa)
+                    * HealthConstants.LowPressureLungDamagePerKpa;
+            }
+
+            if (pressureKpa > AirAlarmConstants.HighPressureKpa)
+            {
+                damage += (pressureKpa - AirAlarmConstants.HighPressureKpa)
+                    * HealthConstants.HighPressureLungDamagePerKpa;
+            }
+
+            return Math.Min(damage, HealthConstants.MaxPressureLungDamagePerTick);
         }
 
         public static HealthEnvironmentState FromTileSample(

@@ -43,10 +43,18 @@
         public const float ColdWarningTemperatureKelvin = 273.15f;
         public const float ColdDamageTemperatureKelvin = 260f;
         public const float FreezingTemperatureKelvin = 240f;
-        public const float HotDamageBurnPerKelvin = 0.04f;
-        public const float ColdDamageBurnPerKelvin = 0.03f;
-        public const float FireBurnPerIntensity = 2.5f;
-        public const float MaxEnvironmentalBurnPerTick = 8f;
+        // Per-zone ambient burn (applied to all seven zones). Slower than the old
+        // chest-only dump so whole-body heat/cold cooks over time, not instantly.
+        public const float HotDamageBurnPerKelvin = 0.012f;
+        public const float ColdDamageBurnPerKelvin = 0.01f;
+        public const float FireBurnPerIntensity = 0.75f;
+        public const float MaxEnvironmentalBurnPerZonePerTick = 2.5f;
+        // Pressure extremes → lung barotrauma (function % drain per lung per tick).
+        // Distinct from hypoxia (breathability / oxy debt) and from zone burn.
+        public const float VacuumLungDamagePerTick = 4f;
+        public const float LowPressureLungDamagePerKpa = 0.1f;
+        public const float HighPressureLungDamagePerKpa = 0.08f;
+        public const float MaxPressureLungDamagePerTick = 6f;
 
         public const float GroinTorsoBandFraction = 0.35f;
 

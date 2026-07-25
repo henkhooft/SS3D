@@ -79,6 +79,7 @@ namespace EditorTests
                 burnIntensity: 0f);
 
             Assert.Greater(burn, 0f);
+            Assert.LessOrEqual(burn, HealthConstants.MaxEnvironmentalBurnPerZonePerTick);
         }
 
         [Test]
@@ -99,6 +100,50 @@ namespace EditorTests
                 burnIntensity: 1f);
 
             Assert.AreEqual(HealthConstants.FireBurnPerIntensity, burn, 0.001f);
+        }
+
+        [Test]
+        public void StationPressureProducesNoLungDamage()
+        {
+            float damage = HealthEnvironmentExposure.PressureLungDamage(
+                AtmosConstants.StandardPressure,
+                isVacuum: false);
+
+            Assert.AreEqual(0f, damage, 0.001f);
+        }
+
+        [Test]
+        public void VacuumProducesLungBarotrauma()
+        {
+            float damage = HealthEnvironmentExposure.PressureLungDamage(0f, isVacuum: true);
+
+            Assert.AreEqual(HealthConstants.VacuumLungDamagePerTick, damage, 0.001f);
+        }
+
+        [Test]
+        public void LowPressureProducesLungDamage()
+        {
+            float pressure = AirAlarmConstants.LowPressureKpa - 40f;
+            float damage = HealthEnvironmentExposure.PressureLungDamage(pressure, isVacuum: false);
+
+            Assert.Greater(damage, 0f);
+            Assert.AreEqual(
+                40f * HealthConstants.LowPressureLungDamagePerKpa,
+                damage,
+                0.001f);
+        }
+
+        [Test]
+        public void HighPressureProducesLungDamage()
+        {
+            float pressure = AirAlarmConstants.HighPressureKpa + 50f;
+            float damage = HealthEnvironmentExposure.PressureLungDamage(pressure, isVacuum: false);
+
+            Assert.Greater(damage, 0f);
+            Assert.AreEqual(
+                50f * HealthConstants.HighPressureLungDamagePerKpa,
+                damage,
+                0.001f);
         }
 
         [Test]

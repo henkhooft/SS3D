@@ -461,7 +461,7 @@ namespace SS3D.Systems.Health
             }
 
             _environment = SampleEnvironmentAtBody();
-            ApplyEnvironmentalBurn(_environment);
+            ApplyEnvironmentalExposure(_environment);
             ApplyBreathExchange(_environment);
 
             float toxinIntake = HealthEnvironmentExposure.ToxinIntakeFromPlasma(
@@ -520,17 +520,28 @@ namespace SS3D.Systems.Health
         }
 
         [Server]
-        private void ApplyEnvironmentalBurn(HealthEnvironmentState env)
+        private void ApplyEnvironmentalExposure(HealthEnvironmentState env)
         {
+            // Heat / cold / fire: surface burn across the whole body (slow per zone).
             float burn = HealthEnvironmentExposure.EnvironmentalBurnDamage(
                 env.TemperatureKelvin,
                 env.BurnIntensity);
-            if (burn <= 0f)
+            if (burn > 0f)
             {
-                return;
+                for (int zone = 0; zone < _zones.Length; zone++)
+                {
+                    ApplyEnvironmentalZoneBurn((BodyZone)zone, burn);
+                }
             }
 
-            ApplyEnvironmentalZoneBurn(BodyZone.Chest, burn);
+            // Pressure extremes: lung barotrauma — not chest burn.
+            float lungDamage = HealthEnvironmentExposure.PressureLungDamage(
+                env.PressureKpa,
+                env.IsVacuum);
+            if (lungDamage > 0f)
+            {
+                OrganSimulation.ApplyLungDamage(_organs, lungDamage);
+            }
         }
 
         [Server]
@@ -543,15 +554,18 @@ namespace SS3D.Systems.Health
             }
 
             ZoneDamageState state = _zones[index];
-            state.Burn += burn;
-            HealthSimulation.RefreshZoneDerivedState(ref state);
-            if (!state.IsSevered)
+            if (state.IsSevered)
             {
-                state.BleedingRate = HealthSimulation.BleedingRateForSeverity(state.Severity);
+                return;
             }
 
+            state.Burn += burn;
+            HealthSimulation.RefreshZoneDerivedState(ref state);
+            state.BleedingRate = HealthSimulation.BleedingRateForSeverity(state.Severity);
+
             _zones[index] = state;
-            OrganSimulation.ApplyZoneDamageToOrgans(zone, brute: 0f, burn, _organs);
+            // Temp/fire burn is dermal — do not cascade chest burn into heart/lung organ
+            // damage here; pressure owns lung trauma via ApplyLungDamage.
         }
 
         [Server]
