@@ -654,7 +654,7 @@ namespace SS3D.Systems.Comms
 
             _layerHost = new VisualElement { name = "local-speech-overlay" };
             _layerHost.pickingMode = PickingMode.Ignore;
-            _layerHost.style.position = Position.Absolute;
+            _layerHost.style.position = UnityEngine.UIElements.Position.Absolute;
             _layerHost.style.left = 0;
             _layerHost.style.top = 0;
             _layerHost.style.right = 0;
