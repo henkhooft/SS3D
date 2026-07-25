@@ -241,7 +241,7 @@ namespace SS3D.Systems.Comms.UI
             _draftName.style.marginBottom = 2f;
             _draftName.style.paddingTop = 0;
             _draftName.style.paddingBottom = 0;
-            _draftName.style.fontSize = isRadio ? 10f : 11f;
+            _draftName.style.fontSize = isRadio ? 13f : 14f;
             _draftName.style.letterSpacing = 1f;
             _draftName.style.unityTextAlign = isRadio ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
             _draftName.style.color = isRadio
@@ -437,9 +437,9 @@ namespace SS3D.Systems.Comms.UI
 
             float fontSize = mode switch
             {
-                SpeechMode.Whisper => 13f,
-                SpeechMode.Shout => 19f,
-                _ => 17f,
+                SpeechMode.Whisper => 16f,
+                SpeechMode.Shout => 23f,
+                _ => 21f,
             };
             FontStyle fontStyle = mode switch
             {
@@ -574,9 +574,9 @@ namespace SS3D.Systems.Comms.UI
                 {
                     fontSize = _draftMode switch
                     {
-                        SpeechMode.Whisper => 13f,
-                        SpeechMode.Shout => 19f,
-                        _ => 17f,
+                        SpeechMode.Whisper => 16f,
+                        SpeechMode.Shout => 23f,
+                        _ => 21f,
                     };
                 }
 

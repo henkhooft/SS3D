@@ -660,7 +660,7 @@ namespace SS3D.Systems.Comms
             return speakerName;
         }
 
-        private static string FormatDisplayText(ActiveSpeech entry, AudibilityTier tier, string speakerName, bool isNewest)
+        private static string FormatDisplayText(ActiveSpeech entry, AudibilityTier tier, string speakerName, bool _)
         {
             string body = tier == AudibilityTier.Clear
                 ? entry.Text
@@ -672,17 +672,10 @@ namespace SS3D.Systems.Comms
                 SpeechMode.Emote => $"{speakerName} {body}",
                 SpeechMode.Radio => body,
                 SpeechMode.Announcement => body,
-                // Whisper never quotes; speak/shout quote only the newest line.
                 SpeechMode.Whisper => body,
-                SpeechMode.Shout => FormatShoutLine(body, isNewest),
-                _ => isNewest ? $"\"{body}\"" : body,
+                SpeechMode.Shout => body.ToUpperInvariant(),
+                _ => body,
             };
-        }
-
-        private static string FormatShoutLine(string body, bool isNewest)
-        {
-            string upper = body.ToUpperInvariant();
-            return isNewest ? $"\"{upper}\"" : upper;
         }
 
         private static float StackOpacity(int fromNewest)

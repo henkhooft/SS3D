@@ -57,7 +57,7 @@
     flex-grow: 1;
     flex-shrink: 1;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 1px;
     color: rgb(95, 134, 179);
     -unity-text-align: middle-left;
@@ -70,7 +70,7 @@
     flex-grow: 0;
     flex-shrink: 0;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 1px;
     color: rgb(170, 185, 200);
     -unity-text-align: middle-right;
@@ -81,7 +81,7 @@
     margin-top: 2px;
     padding: 0;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 15px;
+    font-size: 19px;
     color: rgb(255, 255, 255);
     -unity-text-align: middle-left;
     white-space: normal;
@@ -109,7 +109,7 @@
     margin: 0;
     padding: 0;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/OdetoIdleGamingSDF.asset");
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     color: rgb(240, 196, 125);
     -unity-text-align: middle-center;
@@ -120,7 +120,7 @@
     margin-top: 2px;
     padding: 0;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
-    font-size: 17px;
+    font-size: 21px;
     letter-spacing: 1px;
     color: rgb(255, 255, 255);
     -unity-text-align: middle-center;

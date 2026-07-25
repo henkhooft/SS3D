@@ -27,7 +27,7 @@
     white-space: nowrap;
     -unity-text-align: middle-center;
     /* .font-titling → Gurajada — pull tight against the line below */
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 1px;
     color: rgb(170, 170, 170);
     -unity-font-style: normal;
@@ -39,12 +39,12 @@
     white-space: normal;
     -unity-text-align: middle-center;
     /* .font-body → UI sans */
-    font-size: 17px;
+    font-size: 21px;
     color: rgb(255, 255, 255); /* --text-primary */
     -unity-font-style: normal;
 }
 
-/* Older stacked lines — smaller, no name, quotes already stripped in C#. */
+/* Older stacked lines — smaller, no name. */
 .comms-subtitle--aged {
     border-radius: 8px;
     padding: 5px 12px;
@@ -53,12 +53,12 @@
 
 .comms-subtitle--aged .comms-subtitle__line {
     margin-top: 0;
-    font-size: 15px;
+    font-size: 18px;
     color: rgb(200, 200, 200);
 }
 
 .comms-subtitle--aged-far .comms-subtitle__line {
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .comms-subtitle--muffled {
@@ -82,7 +82,7 @@
 
 .comms-subtitle--whisper .comms-subtitle__line {
     margin-top: 0;
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 1px;
     color: rgb(220, 220, 220);
     -unity-font-style: italic;
@@ -97,12 +97,12 @@
 }
 
 .comms-subtitle--shout .comms-subtitle__name {
-    font-size: 14px;
+    font-size: 17px;
     color: rgb(216, 216, 216);
 }
 
 .comms-subtitle--shout .comms-subtitle__line {
-    font-size: 19px;
+    font-size: 23px;
     color: rgb(255, 255, 255);
     -unity-font-style: bold;
     letter-spacing: 1px;
@@ -125,7 +125,7 @@
 
 .comms-subtitle--emote .comms-subtitle__line {
     margin-top: 0;
-    font-size: 15px;
+    font-size: 18px;
     color: rgb(220, 220, 220);
     -unity-font-style: italic;
 }
@@ -146,14 +146,14 @@
 .comms-subtitle--radio .comms-subtitle__name {
     /* channel tag uses terminal face */
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 1px;
     color: rgb(95, 134, 179);
 }
 
 .comms-subtitle--radio .comms-subtitle__line {
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 15px;
+    font-size: 19px;
     color: rgb(255, 255, 255);
     -unity-text-align: middle-left;
 }
@@ -173,7 +173,7 @@
 .comms-subtitle--announce .comms-subtitle__name {
     /* arcade-ish small label — OdeToIdleGaming */
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/OdetoIdleGamingSDF.asset");
-    font-size: 9px;
+    font-size: 12px;
     letter-spacing: 1px;
     color: rgb(240, 196, 125); /* ramp-amber-300 */
 }
@@ -181,7 +181,7 @@
 .comms-subtitle--announce .comms-subtitle__line {
     /* announce body stays titling */
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
-    font-size: 17px;
+    font-size: 21px;
     letter-spacing: 1px;
     color: rgb(255, 255, 255);
 }
@@ -197,7 +197,7 @@
 }
 
 .comms-overflow-chip__label {
-    font-size: 11px;
+    font-size: 13px;
     color: rgb(113, 124, 127);
 }
 
@@ -225,12 +225,12 @@
 .comms-draft__name {
     margin: 0 0 2px 0;
     padding: 0;
-    min-height: 14px;
+    min-height: 16px;
     flex-grow: 0;
     flex-shrink: 0;
     white-space: nowrap;
     -unity-text-align: middle-center;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 1px;
     color: rgb(200, 200, 190);
     -unity-font-style: normal;
@@ -250,19 +250,19 @@
     opacity: 0;
     margin: 0;
     padding: 0;
-    font-size: 17px;
+    font-size: 21px;
     white-space: nowrap;
     -unity-font-style: normal;
 }
 
 .comms-draft--whisper .comms-draft__measure {
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 1px;
     -unity-font-style: italic;
 }
 
 .comms-draft--shout .comms-draft__measure {
-    font-size: 19px;
+    font-size: 23px;
     letter-spacing: 1px;
     -unity-font-style: bold;
 }
@@ -279,12 +279,12 @@
     flex-shrink: 0;
     min-width: 12px;
     background-color: rgba(0, 0, 0, 0);
-    font-size: 17px;
+    font-size: 21px;
     color: rgb(245, 245, 245);
 }
 
 .comms-draft__field.font-body {
-    font-size: 17px;
+    font-size: 21px;
     color: rgb(245, 245, 245);
 }
 
@@ -302,7 +302,7 @@
 .comms-draft__field Label {
     margin: 0;
     padding: 0;
-    font-size: 17px;
+    font-size: 21px;
     color: rgb(245, 245, 245);
     -unity-text-align: middle-center;
     white-space: normal;
@@ -322,13 +322,13 @@
 
 .comms-draft--whisper .comms-draft__field,
 .comms-draft--whisper .comms-draft__field.font-body {
-    font-size: 13px;
+    font-size: 16px;
     color: rgb(235, 235, 235);
 }
 
 .comms-draft--whisper .comms-draft__field .unity-base-text-field__input > TextElement,
 .comms-draft--whisper .comms-draft__field Label {
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 1px;
     -unity-font-style: italic;
     color: rgb(235, 235, 235);
@@ -342,19 +342,19 @@
 }
 
 .comms-draft--shout .comms-draft__name {
-    font-size: 14px;
+    font-size: 17px;
     color: rgb(216, 216, 216);
 }
 
 .comms-draft--shout .comms-draft__field,
 .comms-draft--shout .comms-draft__field.font-body {
-    font-size: 19px;
+    font-size: 23px;
     color: rgb(255, 255, 255);
 }
 
 .comms-draft--shout .comms-draft__field .unity-base-text-field__input > TextElement,
 .comms-draft--shout .comms-draft__field Label {
-    font-size: 19px;
+    font-size: 23px;
     letter-spacing: 1px;
     -unity-font-style: bold;
     color: rgb(255, 255, 255);
@@ -374,7 +374,7 @@
 
 .comms-draft__name--radio {
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 1px;
     color: rgb(95, 134, 179);
     -unity-text-align: middle-left;
