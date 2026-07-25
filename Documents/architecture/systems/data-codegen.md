@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/
 > Entry points: AssetDatabase, AssetDatabasesCodeGenerator, AssetProvider
 > Status: partial
-> Verified: 3b1f4a422 — 2026-07-24
+> Verified: f1c9476af — 2026-07-25
 
 # Data / codegen
 
@@ -23,15 +23,17 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 - `Assets/Scripts/SS3D/Data/AssetDatabases/AssetDatabasesCodeGenerator.cs` — codegen entry
 - `Assets/Scripts/SS3D/Data/Generated/AssetDatabases.cs` — generated database refs
 - `Assets/Scripts/SS3D/Data/Management/LocalStorage.cs` — `JsonUtility` file I/O, append JSONL, legacy path helpers
+- `Assets/Scripts/SS3D/Editor/UiCatalogRebuildAll.cs` — **SS3D → Data → Rebuild All UI Catalogs** (MI / Main HUD / UI Shell / Storage Panel)
 - Tests: `Assets/Scripts/Tests/EditMode/AssetProviderTests.cs` (ref-count / missing key / concurrent missing / preload cache)
 ## Extension points
 
 - New asset categories: extend asset database settings and rerun codegen.
 - New interaction icons: drop PNGs under `Assets/Art/Graphics/UI/Interactions/InteractionIcons/`, then **SS3D → Interactions → Rebuild Interaction Icon Sprites**. Output sprites register into the Addressables group; InteractionIcons DB is `AddressablesAsync` (no eager SO dict). Prefer migrating other DBs onto `LoadMode = AddressablesAsync` + `AssetKeys` rather than growing eager dictionaries.
+- New UI path-catalog surface: extend `UiCatalogBuilderKit` / register in `UiCatalogRebuildAll` — do **not** add another `SS3D/.../Rebuild Asset Catalog` MenuItem ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)).
 
 ## Architecture smells
 
-1. **One-off Editor rebuild menus keep multiplying.** Feature work often lands a new `MenuItem` that clones/rewrites assets then registers them (`InteractionIconSpriteBuilder`, MI/Main HUD path-catalog rebuild menus — same pattern called out under [ui-shell](ui-shell.md)). Each fixes a local import/codegen gap but accumulates debt: GUID preservation hacks, `Sprite.Create` vs Instantiate pitfalls, asmdef wiring, and “did anyone run the menu?” drift. Target: one shared import → Addressables → codegen path; delete per-feature rebuild scripts as categories migrate onto it. Do not add another one-shot importer without updating this smell.
+1. **Catalog rebuild still not one shared pipeline.** PrefabUtility one-shot MenuItems were thinned (tier B aggregators / tier C deleted), but UI path catalogs + InteractionIcons still rely on Editor rebuild scripts with GUID hacks and “did anyone run the menu?” drift — same pattern under [ui-shell](ui-shell.md). Target: one shared import → Addressables → codegen path; delete per-feature rebuild scripts as categories migrate onto it. Do not add another one-shot importer without updating this smell.
 2. **Addressables async loading is partial.** InteractionIcons uses `AssetDatabaseLoadMode.AddressablesAsync` + `AssetProvider` warm preload; Items/Materials/Sounds/ParticlesEffects/WorldSpaceUI still eager-load via serialized `Assets` dict. No FishNet preload barrier yet (Phase 4). Migration: [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md).
 
 ## Pitfalls
@@ -48,5 +50,5 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 ## Related docs
 
 - [INDEX.md](../INDEX.md)
-- Related catalog debt: [ui-shell](ui-shell.md) § Future work (shared path-catalog helper)
+- Related catalog debt: [ui-shell](ui-shell.md) § Future work (shared path-catalog helper); [2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)
 - [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md) — Phases 1–3 done; 4–6 open

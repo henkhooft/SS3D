@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 3b1f4a42d — 2026-07-24
+> Verified: f1c9476af — 2026-07-25
 
 # Combat
 
@@ -39,17 +39,18 @@ stamina drain), projectile/thrown.
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — melee swing + connect
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` / `HandMeleeExtension.cs`
 - `Assets/Scripts/SS3D/Systems/Combat/MeleeWeaponProfile.cs` / `MeleeStructuralHitResolver.cs` / `MeleeRecoveryTracker.cs`
-- `Assets/Scripts/SS3D/Systems/Combat/Editor/RangedPrefabSetup.cs` — **SS3D → Combat → Setup Ranged Prefabs (M4)**
-- `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — melee hands/tools
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/CombatContentPrefabRecipes.cs` — **SS3D → Combat → Run Content Prefab Recipes**
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/RangedPrefabSetup.cs` — ranged M4 statics (tier B)
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs` — melee hands/tools statics (tier B)
 - `Assets/Scripts/SS3D/Systems/Combat/CombatDummyBootstrap.cs` + `spawndummy` — freezes controls; equips `JumpsuitSecurity` for armor tests
 - `Assets/Scripts/SS3D/Systems/Combat/ArmorProfile.cs` / `ArmorSimulation.cs` / `ArmorItemExtension.cs` — per-zone absorption data, math, per-item integrity
-- `Assets/Scripts/SS3D/Systems/Combat/Editor/ArmorPrefabSetup.cs` — **SS3D → Combat → Setup Armor Prefabs** (interim: `JumpsuitSecurity.prefab`; world form via inventory clothing presentation on Grey base)
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/ArmorPrefabSetup.cs` — armor statics (interim: `JumpsuitSecurity.prefab`; world form via inventory clothing presentation on Grey base)
 - `Assets/Scripts/SS3D/Systems/Health/HumanHealthController.cs` — `ApplyArmorAbsorption` (armor hook inside `ApplyDamage`)
 
 ## Extension points
 
-- New firearm: add `RangedWeaponItemExtension` + profile via `RangedPrefabSetup` / PrefabUtility — do not hand-edit `Human.prefab`.
-- New armor piece: add `ArmorItemExtension` + profile via `ArmorPrefabSetup` / PrefabUtility on a clothing item prefab — do not hand-edit `Human.prefab`; coverage is `BodyZoneMask`, independent of which clothing slot the item occupies.
+- New firearm: add `RangedWeaponItemExtension` + profile via `RangedPrefabSetup` / **SS3D → Combat → Run Content Prefab Recipes** — do not hand-edit `Human.prefab`.
+- New armor piece: add `ArmorItemExtension` + profile via `ArmorPrefabSetup` / same aggregator on a clothing item prefab — do not hand-edit `Human.prefab`; coverage is `BodyZoneMask`, independent of which clothing slot the item occupies.
 - Stance: `HumanoidBodyStateBridge.ResolveCombatStance` prefers the extension component.
 - Shared LOS: call `LineOfSight.HasLineOfSight` / `TryGetFirstHit` — do not fork parallel raycasts.
 

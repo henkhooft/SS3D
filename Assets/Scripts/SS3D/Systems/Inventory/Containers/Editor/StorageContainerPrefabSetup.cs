@@ -39,17 +39,8 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             new("Assets/Content/WorldObjects/Furniture/Storage/Lockers/SecurityLocker.prefab", 4, 4, SizeClass.Bulky, 80f),
         };
 
-        [MenuItem("SS3D/Inventory/Hook Up Storage Prefabs (Backpack/Toolbelt/Lockers)")]
-        public static void HookUpMenu()
-        {
-            int updated = HookUpAll();
-            EditorUtility.DisplayDialog(
-                "Storage Prefabs",
-                $"Hooked up {updated} / {Targets.Length} prefabs.",
-                "OK");
-        }
-
-        /// <summary>BatchMode entry: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.StorageContainerPrefabSetup.HookUpBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.StorageContainerPrefabSetup.HookUpBatch</c>
+        /// Prefer <see cref="InventoryContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void HookUpBatch()
         {
             int updated = HookUpAll();

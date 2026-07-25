@@ -24,19 +24,8 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             "Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanTorso.prefab",
         };
 
-        [MenuItem("SS3D/Inventory/Strip Head/Torso ContainerInteractive")]
-        public static void StripMenu()
-        {
-            int stripped = StripAll();
-            EditorUtility.DisplayDialog(
-                "Strip Head/Torso ContainerInteractive",
-                stripped > 0
-                    ? $"Stripped root ContainerInteractive from {stripped} prefab(s)."
-                    : "Nothing to strip — already clean.",
-                "OK");
-        }
-
-        /// <summary>BatchMode entry: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.BodyPartContainerInteractiveStrip.StripBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.BodyPartContainerInteractiveStrip.StripBatch</c>
+        /// Prefer <see cref="SS3D.Systems.Entities.Editor.HumanPrefabRecipes.RunAllBatch"/> for Human re-runs.</summary>
         public static void StripBatch()
         {
             int stripped = StripAll();

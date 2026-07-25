@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: bdae69ca5 — 2026-07-25
+> Verified: f1c9476af — 2026-07-25
 
 # Atmospherics
 
@@ -38,7 +38,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 ## Extension points
 
-- New gases: add `GasDefinition` assets under `Assets/Content/Systems/Atmospherics/Gases/`; run `AtmosRegistryGenerator` editor tool to refresh registry slots.
+- New gases: add `GasDefinition` assets under `Assets/Content/Systems/Atmospherics/Gases/`; call `AtmosRegistryGenerator.CreateCoreGasRegistry` (tier B static — no MenuItem) to refresh registry slots.
 - Per-gas visuals: assign `GasVisualProfile` on each `GasDefinition` (scatter tint, emission, smoke). `GasVisualProfileBuilder.Build` caches per registry instance.
 - React to tile changes: implement `ITileMutationObserver` or call `TileSubSystem.NotifyTileStateChanged` from dynamic occupants (see [tile](tile.md) `IDynamicTileOccupant`).
 - New render passes: extend `AtmosRendererFeature` or add sibling URP features under `Rendering/URP/`.

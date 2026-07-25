@@ -18,17 +18,8 @@ namespace SS3D.Systems.Inventory.Containers.Editor
         private static readonly Vector3 ColliderSize = new(0.43f, 0.173f, 0.351f);
         private static readonly Vector3 ColliderCenter = new(0f, 0.015f, -0.015f);
 
-        [MenuItem("SS3D/Inventory/Setup Clothing World Presentation (Jumpsuits)")]
-        public static void SetupMenu()
-        {
-            int updated = SetupAll();
-            EditorUtility.DisplayDialog(
-                "Clothing Presentation",
-                $"Updated {updated} prefab(s).",
-                "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.ClothingPrefabSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.ClothingPrefabSetup.SetupBatch</c>
+        /// Prefer <see cref="InventoryContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             int updated = SetupAll();

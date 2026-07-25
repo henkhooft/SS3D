@@ -5,7 +5,7 @@ namespace SS3D.UI.StoragePanel
 {
     /// <summary>
     /// Committed resolved refs for the storage panel surface. Rebuild via
-    /// <c>SS3D → Storage Panel → Rebuild Asset Catalog</c>. Loaded at runtime with
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c>. Loaded at runtime with
     /// <c>Resources.Load</c> so standalone builds work without Editor AssetDatabase — same
     /// pattern as MainHudAssetCatalog / MachineUiAssetCatalog.
     /// </summary>

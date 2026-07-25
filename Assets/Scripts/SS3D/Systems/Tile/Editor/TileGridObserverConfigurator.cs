@@ -17,7 +17,10 @@ namespace SS3D.Systems.Tile.Editor
         private const string GridConditionPath =
             "Assets/FishNet/Runtime/Observing/Conditions/GridCondition/GridCondition.asset";
 
-        [MenuItem("SS3D/Networking/Apply GridCondition To Tile Prefabs")]
+        /// <summary>
+        /// Applies GridCondition observers to tile prefabs. Tier B — no MenuItem.
+        /// BatchMode: <c>-executeMethod SS3D.Systems.Tile.Editor.TileGridObserverConfigurator.ApplyGridConditionToTilePrefabs</c>
+        /// </summary>
         public static void ApplyGridConditionToTilePrefabs()
         {
             GridCondition gridCondition = AssetDatabase.LoadAssetAtPath<GridCondition>(GridConditionPath);

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud)
 > Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog
 > Status: partial (Phase 0-1 shipped: scaffolding + radial/armed migration)
-> Verified: 2026-07-18
+> Verified: f1c9476af — 2026-07-25
 
 # UI shell
 
@@ -20,8 +20,10 @@ Effort doc: [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidatio
 
 | Surface | Paths + SO | Rebuild menu | Map |
 |---|---|---|---|
-| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | **SS3D → Machine Interface → Rebuild Asset Catalog** | [machine-interface](machine-interface.md), [mi-path-catalog](../2026-07_mi-path-catalog.md) |
-| Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | **SS3D → Main HUD → Rebuild Asset Catalog** | [inventory](inventory.md) |
+| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [machine-interface](machine-interface.md), [mi-path-catalog](../2026-07_mi-path-catalog.md) |
+| Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
+| Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
+| UI Shell | `UiShellAssetPaths` / `UiShellAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | this map |
 
 Migrating MI and Main HUD onto `UiShellSubSystem` + `UiAssetCatalogBase` is later, separate work (Main HUD next,
 MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 wedge this doc currently reflects.
@@ -43,8 +45,8 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 
 - New UI: UITK only. Attach into an existing `UiShellSubSystem` layer (see `2026-07_ui-shell-consolidation.md`
   agent checklist) rather than a private `UIDocument`. For a surface that still needs its own asset catalog,
-  derive from `UiAssetCatalogBase` and use `UiCatalogBuilderKit` for the Editor rebuild-menu boilerplate instead of
-  hand-copying the old MI/Main HUD Paths+SO+Builder stack.
+  derive from `UiAssetCatalogBase` and use `UiCatalogBuilderKit` + the umbrella **SS3D → Data → Rebuild All UI Catalogs** instead of
+  hand-copying another per-surface rebuild MenuItem ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)).
 - Do not place new `UIDocument` hosts in Boot/Game scenes; `UiShellSubSystem` self-bootstraps the one document new
   surfaces should attach into.
 

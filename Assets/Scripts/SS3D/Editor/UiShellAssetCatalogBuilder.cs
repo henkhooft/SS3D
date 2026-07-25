@@ -9,22 +9,10 @@ namespace SS3D.Editor
 {
     /// <summary>
     /// Rebuilds the committed <see cref="UiShellAssetCatalog"/> from <see cref="UiShellAssetPaths"/>.
+    /// Menu: use <see cref="UiCatalogRebuildAll"/>.
     /// </summary>
     public static class UiShellAssetCatalogBuilder
     {
-        [MenuItem("SS3D/UI Shell/Rebuild Asset Catalog")]
-        public static void RebuildCatalogMenu()
-        {
-            if (!TryRebuildCatalog(out string error))
-            {
-                Debug.LogError(error);
-                EditorUtility.DisplayDialog("UI Shell Asset Catalog", error, "OK");
-                return;
-            }
-
-            Debug.Log($"Rebuilt UI shell asset catalog at {UiShellAssetPaths.CatalogAssetPath}");
-        }
-
         public static bool TryRebuildCatalog(out string error)
         {
             List<string> missing = new();

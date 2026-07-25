@@ -24,17 +24,8 @@ namespace SS3D.Systems.StructuralDamage.Editor
             "Assets/Content/WorldObjects/Structures/Walls/SteelGirder.prefab",
         };
 
-        [MenuItem("SS3D/Structural Damage/Setup Wall Integrity Presentation")]
-        public static void SetupMenu()
-        {
-            int updated = SetupAll();
-            EditorUtility.DisplayDialog(
-                "Structural Integrity Presentation",
-                $"Updated {updated} prefabs.",
-                "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.StructuralIntegrityPrefabSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.StructuralIntegrityPrefabSetup.SetupBatch</c>
+        /// Prefer <see cref="StructuralDamageContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             int updated = SetupAll();

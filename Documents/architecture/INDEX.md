@@ -170,6 +170,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) | planned (audit + taxonomy + phased plan written; Phase 0 docs/tooling + CI-enforced `AssetTaxonomyTests` landed, Phase 1+ file moves not started) |
 | [2026-07_audio-foundation](2026-07_audio-foundation.md) | in-progress (Phase 1 client-local SFX occlusion + Phase 2 per-area ambience + Phase 3 personal heartbeat/breathing + Phase 4 alert-stack cues shipped; Phase 0 mixer groups, Phase 5 music/settings pending) |
 | [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) | in-progress (TomNAS-unity online; EditMode + develop-release TomNAS+GitHub fallback; warm smoke proof open; Phases 1–2 pending; rendered-client + soak deferred) |
+| [2026-07_editor-tooling-tiers](2026-07_editor-tooling-tiers.md) | shipped (A/B/C Editor menu tiers; demote one-shot PrefabSetup MenuItems to recipe aggregators; delete finished migrations; catalog rebuild pipeline still TECH_DEBT 1.4/1.5) |
 
 ## Implementation plans
 

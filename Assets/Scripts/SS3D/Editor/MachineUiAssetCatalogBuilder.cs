@@ -2,50 +2,21 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using SS3D.UI.MachineInterface;
 
 namespace SS3D.Editor
 {
     /// <summary>
-    /// Rebuilds the committed <see cref="MachineUiAssetCatalog"/> from <see cref="MachineUiAssetPaths"/>
-    /// and strips obsolete SerializeField template refs from the Game-scene host.
+    /// Rebuilds the committed <see cref="MachineUiAssetCatalog"/> from <see cref="MachineUiAssetPaths"/>.
+    /// Menu: use <see cref="UiCatalogRebuildAll"/> (do not add a per-surface rebuild MenuItem).
     /// </summary>
     public static class MachineUiAssetCatalogBuilder
     {
-        private const string GameScenePath = "Assets/Content/Scenes/Game.unity";
-
-        [MenuItem("SS3D/Machine Interface/Rebuild Asset Catalog")]
-        public static void RebuildCatalogMenu()
-        {
-            if (!TryRebuildCatalog(out string error))
-            {
-                Debug.LogError(error);
-                EditorUtility.DisplayDialog("Machine UI Asset Catalog", error, "OK");
-                return;
-            }
-
-            Debug.Log($"Rebuilt machine UI asset catalog at {MachineUiAssetPaths.CatalogAssetPath}");
-        }
-
-        [MenuItem("SS3D/Machine Interface/Clear Host Scene Template Refs")]
-        public static void ClearHostSceneRefsMenu()
-        {
-            if (!TryClearHostSceneRefs(out string error))
-            {
-                Debug.LogError(error);
-                EditorUtility.DisplayDialog("Machine UI Host Cleanup", error, "OK");
-                return;
-            }
-
-            Debug.Log("Cleared obsolete MachineInterfaceHost template fields from Game.unity.");
-        }
-
         /// <summary>
-        /// Batchmode entry: rebuild catalog and clear Game.unity host template fields.
+        /// Batchmode entry: rebuild catalog. Host-scene template clear was a one-shot migration (removed).
+        /// Prefer <see cref="UiCatalogRebuildAll.RebuildAllBatch"/>.
         /// </summary>
         public static void RebuildCatalogAndClearHost()
         {
@@ -56,15 +27,8 @@ namespace SS3D.Editor
                 return;
             }
 
-            if (!TryClearHostSceneRefs(out string clearError))
-            {
-                Debug.LogError(clearError);
-                EditorApplication.Exit(1);
-                return;
-            }
-
             AssetDatabase.SaveAssets();
-            Debug.Log("Machine UI path catalog rebuild + Game.unity host cleanup succeeded.");
+            Debug.Log("Machine UI path catalog rebuild succeeded.");
             EditorApplication.Exit(0);
         }
 
@@ -175,31 +139,6 @@ namespace SS3D.Editor
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            return true;
-        }
-
-        public static bool TryClearHostSceneRefs(out string error)
-        {
-            error = null;
-            Scene scene = EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
-            MachineInterfaceHost[] hosts = Object.FindObjectsByType<MachineInterfaceHost>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
-
-            if (hosts.Length == 0)
-            {
-                error = $"No {nameof(MachineInterfaceHost)} found in {GameScenePath}.";
-                return false;
-            }
-
-            for (int i = 0; i < hosts.Length; i++)
-            {
-                // After host SerializeFields were removed, saving the scene drops orphaned YAML.
-                EditorUtility.SetDirty(hosts[i]);
-            }
-
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
             return true;
         }
 
