@@ -553,6 +553,9 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            weapon.GetMuzzleWorldPose(out Vector3 muzzlePosition, out Vector3 muzzleForward);
+            ObserversNotifyMuzzleFlash(muzzlePosition, muzzleForward);
+
             TargetNotifyRangedFireState(
                 Owner,
                 weapon.Profile.FireCooldownSeconds,
@@ -562,6 +565,15 @@ namespace SS3D.Systems.Interactions
                 hasImpact,
                 impactPoint,
                 shotDirection);
+        }
+
+        /// <summary>
+        /// Diegetic muzzle flash for all observers (not owner-only TargetRpc impact chrome).
+        /// </summary>
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversNotifyMuzzleFlash(Vector3 worldPosition, Vector3 worldForward)
+        {
+            MuzzleFlashVfx.Play(worldPosition, worldForward);
         }
 
         [TargetRpc]

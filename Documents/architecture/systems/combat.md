@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: 1e0bab6f5 — 2026-07-25
 
 # Combat
 
@@ -11,7 +11,7 @@ Phase 0–1 melee + Phase 3 ranged + Phase 5 armor slice per [combat_implementat
 
 **Melee (unchanged):** Harm primary always swings (windup → connect → recovery) via `CmdRunMeleeSwing`. Connect resolves from synced camera aim (exclude self); living zone or structural Turf. Fists / improvised / crowbar·hatchet·knife.
 
-**Ranged (Phase 3):** Holding `RangedWeaponItemExtension` (M4) — Harm LMB **fires** hitscan inside a weapon accuracy cone (base + recoil + movement bloom + range falloff). Server samples cone, resolves a living zone first, then checks shared `LineOfSight` (Default + Walls) only to that limb; otherwise structural turf / soft surface. Mag + fire cooldown + timed reload (E / Use, or empty-mag fire). Reticle bloom tracks current spread at aim distance; damaging hits flash the cross; every shot with a surface shows a brief world impact marker (gold = damaging, grey = whiff surface). No projectile travel or loose ammo this pass.
+**Ranged (Phase 3 + feel Phase 1):** Holding `RangedWeaponItemExtension` (M4) — Harm LMB **fires** hitscan inside a weapon accuracy cone (base + recoil + movement bloom + range falloff). Server samples cone, resolves a living zone first, then checks shared `LineOfSight` (Default + Walls) only to that limb; otherwise structural turf / soft surface. Mag + fire cooldown + timed reload (E / Use, or empty-mag fire). Reticle bloom tracks current spread at aim distance; damaging hits flash the cross; every shot with a surface shows a brief world impact marker (gold = damaging, grey = whiff surface). **Muzzle flash:** procedural point light + particle burst at the weapon `Muzzle` socket (`MuzzleFlashVfx`), broadcast via `ObserversNotifyMuzzleFlash` so all observers see it. No projectile travel or loose ammo this pass.
 
 **Armor (Phase 5):** `HumanHealthController.ApplyDamage(BodyZone, float, float)` — the single chokepoint both melee and ranged funnel through — runs incoming brute/burn through every worn armor piece covering the hit zone before it reaches the limb model. Worn pieces are discovered from existing clothing containers (`ContainerType.IsWornSlot()`), no new equip UI. `ArmorItemExtension` (per-item, `SyncVar` integrity) depletes by the amount actually absorbed; a depleted piece stops absorbing. Pure math in `ArmorSimulation.ResolveAbsorption`. Environmental seal/breach (`armor.md` §3) deferred — no environment→health exposure pipeline exists yet.
 
@@ -33,7 +33,7 @@ stamina drain), projectile/thrown.
 
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm branch: ranged fire / reload Cmds; melee swing; aim + TargetRpcs
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/RangedWeaponItemExtension.cs` — profile, mag, recoil, cooldown, reload
-- `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs`
+- `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs` / `MuzzleFlashVfx.cs`
 - `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (gunfire, reload magazine-out) registered from imported SS3D-Art content; `InteractionController.PlayGunfireSound` / `ServerNotifyRangedReloadStarted` play them through `AudioSubSystem.PlayAudioSource` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
 - `Assets/Scripts/SS3D/Utils/LineOfSight.cs` — shared occlusion (Drop, LocalSpeech, combat)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — melee swing + connect
@@ -57,7 +57,7 @@ stamina drain), projectile/thrown.
 ## Testing
 
 1. Host admin: `spawndummy`; Harm + empty hand — melee as before.
-2. Spawn/give M4; Harm — Ranged stance; LMB fires; zone damage at range; reticle blooms with movement/recoil; impact marker shows where the round lands.
+2. Spawn/give M4; Harm — Ranged stance; LMB fires; zone damage at range; reticle blooms with movement/recoil; impact marker shows where the round lands; muzzle flash pops at the barrel tip (visible to other clients too).
 3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
 4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
 5. Help + M4 must not swing/fire; Harm must not Drop.
@@ -76,6 +76,7 @@ stamina drain), projectile/thrown.
 - **Reticle bloom is single-composer** — set via `ZoneReticleDriver.SetBloomInput` only; no parallel writers. Bloom uses live aim-ray distance (not a fake mid-range), so close targets stay tight.
 - **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - **Ranged impact marker is client-local** — `RangedShotFeedback` after `TargetNotifyRangedFireState`; gold = damaging connect (also cross-flash), grey = surface whiff. Living hits pull the marker toward the shooter so it isn't buried inside BodyParts colliders. Do not invent a second hit-VFX path.
+- **Muzzle flash is ObserversRpc** — `ObserversNotifyMuzzleFlash` → `MuzzleFlashVfx.Play` at `RangedWeaponItemExtension.GetMuzzleWorldPose` (wired `Muzzle` child via `RangedPrefabSetup`). Do not fold flash into the owner-only TargetRpc impact path or remotes will never see it.
 - **Hitscan must resolve living before full-range Default occlusion** — Characters are not on the Default mask, so a max-range Default cast goes *through* the dummy and can “block” on floor/props behind them (no limb damage; marker far behind or easy to miss). Order: zone hit → LOS (Default+Walls) only to that limb → structural/soft. Do not early-out on `IsOccluded` for the full weapon range.
 - **Armor absorption is a single chokepoint** — lives inside `HumanHealthController.ApplyDamage(BodyZone, float, float)`, not duplicated in melee/ranged call sites; also applies to `StructuralDamageSubSystem`'s debris-collapse call (intentional, not excluded).
 - **Armor coverage ≠ clothing slot** — `ArmorProfile.CoveredZones` (`BodyZoneMask`) is independent of which `ContainerType` slot the item occupies; only "is it worn" (`IsWornSlot()`) gates lookup, not slot identity.

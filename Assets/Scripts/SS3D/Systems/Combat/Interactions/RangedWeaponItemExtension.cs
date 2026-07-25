@@ -12,6 +12,8 @@ namespace SS3D.Systems.Combat.Interactions
     public class RangedWeaponItemExtension : MonoBehaviour, IInteractionSourceExtension
     {
         [SerializeField] private RangedWeaponProfile _profile = RangedWeaponProfile.M4;
+        [Tooltip("Barrel tip — muzzle flash and future aim alignment. Wired by RangedPrefabSetup.")]
+        [SerializeField] private Transform _muzzle;
 
         private int _rounds;
         private float _recoilStacks;
@@ -21,6 +23,9 @@ namespace SS3D.Systems.Combat.Interactions
         private bool _initialized;
 
         public RangedWeaponProfile Profile => _profile;
+
+        /// <summary>Barrel tip transform when the prefab recipe has wired one; otherwise null.</summary>
+        public Transform Muzzle => _muzzle != null ? _muzzle : transform.Find("Muzzle");
 
         public int RoundsRemaining => _rounds;
 
@@ -158,6 +163,24 @@ namespace SS3D.Systems.Combat.Interactions
             EnsureInitialized();
             DecayRecoil();
             return AccuracyCone.ComputeSpreadDegrees(_profile, _recoilStacks, horizontalSpeed, aimDistanceMeters, exertionPenalty);
+        }
+
+        /// <summary>
+        /// World pose for muzzle flash / presentation. Uses the wired socket when present;
+        /// otherwise a short offset along the item forward so flash still reads without a recipe re-run.
+        /// </summary>
+        public void GetMuzzleWorldPose(out Vector3 position, out Vector3 forward)
+        {
+            Transform muzzle = Muzzle;
+            if (muzzle != null && muzzle != transform)
+            {
+                position = muzzle.position;
+                forward = muzzle.forward.sqrMagnitude > 0.0001f ? muzzle.forward.normalized : transform.forward;
+                return;
+            }
+
+            forward = transform.forward.sqrMagnitude > 0.0001f ? transform.forward.normalized : Vector3.forward;
+            position = transform.position + (forward * 0.35f);
         }
 
         private void EnsureInitialized()
