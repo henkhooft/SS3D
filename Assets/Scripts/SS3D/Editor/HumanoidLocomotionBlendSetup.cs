@@ -406,6 +406,9 @@ namespace SS3D.Editor
                     $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
                 RemapStateMotion(additive, "Empty Additive",
                     $"{InjuredPack}/injured hurting idle.fbx", "Mix_InjuredHurtingIdle");
+                // Additive Flinch is the soft upper-body hit overlay (orchestrator lerps layer weight).
+                // Keep unmuted — muted Additive + stagger weight only showed Empty Additive hurting idle.
+                WireAdditiveFlinch(additive);
             }
 
             EditorUtility.SetDirty(controller);
@@ -497,6 +500,35 @@ namespace SS3D.Editor
                 transition.hasFixedDuration = true;
                 transition.duration = FlinchExitDuration;
             }
+        }
+
+        /// <summary>
+        /// Unmute Additive Any→Flinch and soften entry/exit so gut overlay matches Base flinch blends.
+        /// </summary>
+        private static void WireAdditiveFlinch(AnimatorStateMachine additive)
+        {
+            AnimatorState flinch = FindState(additive, "Flinch");
+            if (flinch == null)
+            {
+                return;
+            }
+
+            foreach (AnimatorStateTransition transition in additive.anyStateTransitions)
+            {
+                if (transition.destinationState != flinch
+                    || !transition.conditions.Any(c => c.parameter == "Flinch"))
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = false;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchEntryDuration;
+            }
+
+            SoftenFlinchStateExits(flinch);
         }
 
         private static void EnsureAnyStateFlinch(

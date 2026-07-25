@@ -262,7 +262,7 @@ namespace SS3D.Systems.Health
             }
 
             float t = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
-            // Keep stagger through most of the flinch clip so additive/override weights don't snap off early.
+            // Keep stagger through most of the flinch clip so Additive Flinch weight can lerp out softly.
             float staggerSeconds = Mathf.Lerp(0.55f, 0.85f, t);
             _combatController.OnHitReceived(Vector3.zero, knockbackForce: 0f, staggerSeconds);
         }

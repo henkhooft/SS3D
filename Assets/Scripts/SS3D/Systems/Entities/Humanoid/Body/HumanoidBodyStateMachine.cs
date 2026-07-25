@@ -310,10 +310,22 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public void ApplyStagger(float duration = -1f)
         {
             _staggerTimer = duration > 0f ? duration : _staggerDuration;
-            SetBodyState(BodyState.Staggered);
+            // Pack Flinch + Staggered in one publish. SetBodyState-then-trigger left a window where
+            // SyncTriggerSequence could rebuild from a pack without ActiveTrigger.
             _snapshot.ActiveTrigger = AnimationTriggerId.Flinch;
             _triggerSequence++;
-            ApplyLocalSnapshot();
+            if (_snapshot.State != BodyState.Staggered)
+            {
+                _previousBodyState = _snapshot.State;
+                _snapshot.State = BodyState.Staggered;
+                ApplyLocalSnapshot();
+                OnBodyStateChanged?.Invoke(_previousBodyState, BodyState.Staggered);
+                OnCapabilitiesChanged?.Invoke(Capabilities);
+            }
+            else
+            {
+                ApplyLocalSnapshot();
+            }
         }
 
         [Server]
