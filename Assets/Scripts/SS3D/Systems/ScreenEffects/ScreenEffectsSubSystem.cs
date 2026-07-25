@@ -48,6 +48,18 @@ namespace SS3D.Systems.ScreenEffects
         private float _blastFlashStrength = 1f;
         private float _uiBackdropBlurTarget;
         private float _uiBackdropBlurCurrent;
+        private bool _debugOverrideActive;
+
+        /// <summary>
+        /// When true, health/atmos mappers must not call <see cref="SetEffect"/> for their channels —
+        /// F2 / <c>screeneffect</c> owns intensities until the override is cleared.
+        /// </summary>
+        public bool IsDebugOverrideActive => _debugOverrideActive;
+
+        public void SetDebugOverrideActive(bool active)
+        {
+            _debugOverrideActive = active;
+        }
 
         private sealed class ScreenParticle
         {
@@ -327,22 +339,32 @@ namespace SS3D.Systems.ScreenEffects
                 saturation -= freezing * 55f;
             }
 
+            // Dying is resolved first so low-oxy can yield vignette weight/color to the heartbeat cue.
+            float dying = _currentIntensity[ScreenEffectType.DyingCritical];
+            float dyingBeat = dying > 0f ? Heartbeat(1.6f) : 0f;
+            Color dyingVignetteColor = new(0.5f, 0.05f, 0.05f);
+
             float lowOxygen = _currentIntensity[ScreenEffectType.LowOxygen];
             if (lowOxygen > 0f)
             {
+                // Compositor defense-in-depth: even if debug/console stacks LowOxygen + Dying at 1,
+                // blue oxy vignette must not wash out the red critical pulse.
+                float oxyVignetteScale = dying > 0f
+                    ? Mathf.Lerp(1f, 0.1f, Mathf.Clamp01(dying / 0.5f))
+                    : 1f;
                 float breathe = Breathe(4.4f);
-                AddVignette(lowOxygen * (0.75f + 0.35f * breathe), new Color(0.3f, 0.45f, 0.65f));
-                saturation -= lowOxygen * (90f + 25f * breathe);
+                AddVignette(lowOxygen * (0.75f + 0.35f * breathe) * oxyVignetteScale, new Color(0.3f, 0.45f, 0.65f));
+                saturation -= lowOxygen * (90f + 25f * breathe) * oxyVignetteScale;
             }
 
             // Both blur and a dark-red vignette, pulsing together on the heartbeat - matches the design's
             // "Dying" mockup exactly (backdrop-filter blur + inset box-shadow, same animation timing).
-            float dying = _currentIntensity[ScreenEffectType.DyingCritical];
+            // Extra vignette weight so weighted-average color stays red when other effects still contribute.
             if (dying > 0f)
             {
-                float beat = Heartbeat(1.6f);
-                AddVignette(dying * (0.65f + 0.35f * beat), new Color(0.5f, 0.05f, 0.05f));
-                blur += dying * (0.35f + 0.35f * beat);
+                const float dyingVignetteWeight = 2.25f;
+                AddVignette(dying * (0.65f + 0.35f * dyingBeat) * dyingVignetteWeight, dyingVignetteColor);
+                blur += dying * (0.35f + 0.35f * dyingBeat);
             }
 
             float bloodLoss = _currentIntensity[ScreenEffectType.BloodLossTunnelVision];
@@ -361,11 +383,23 @@ namespace SS3D.Systems.ScreenEffects
             }
 
             float unconscious = _currentIntensity[ScreenEffectType.Unconscious];
+            Color blackoutRgb = Color.black;
             if (unconscious > 0f)
             {
                 saturation -= unconscious * 100f;
                 contrast -= unconscious * 75f;
-                blackoutAlpha = Mathf.Clamp01(unconscious * 1.6f - 0.3f);
+                float baseAlpha = Mathf.Clamp01(unconscious * 1.6f - 0.3f);
+                if (dying > 0f)
+                {
+                    // Flat α=1 covered the dying pulse; keep a heartbeat-modulated dark-red veil instead.
+                    float pulseAlpha = Mathf.Lerp(0.52f, 0.86f, dyingBeat);
+                    blackoutAlpha = baseAlpha * pulseAlpha;
+                    blackoutRgb = new Color(0.14f, 0.02f, 0.02f);
+                }
+                else
+                {
+                    blackoutAlpha = baseAlpha;
+                }
             }
 
             float hitFlash = ComputeHitFlash(deltaTime);
@@ -383,7 +417,14 @@ namespace SS3D.Systems.ScreenEffects
             UpdateParticles(_emberParticles, fire, true);
             UpdateParticles(_frostParticles, freezing, false);
 
-            Color finalVignetteColor = vignetteWeightSum > 0f ? vignetteColorSum / vignetteWeightSum : Color.black;
+            Color averagedVignette = vignetteWeightSum > 0f ? vignetteColorSum / vignetteWeightSum : Color.black;
+            Color finalVignetteColor = averagedVignette;
+            if (dying > 0.25f && vignetteWeightSum > 0f)
+            {
+                float dominate = Mathf.InverseLerp(0.25f, 1f, dying);
+                finalVignetteColor = Color.Lerp(averagedVignette, dyingVignetteColor, dominate * 0.85f);
+            }
+
             float finalVignetteIntensity = Mathf.Clamp01(vignetteIntensity);
 
             _vignette.active = finalVignetteIntensity > 0.001f;
@@ -400,9 +441,7 @@ namespace SS3D.Systems.ScreenEffects
 
             ApplyDepthOfField(blur);
 
-            Color blackoutColor = _blackout.color;
-            blackoutColor.a = blackoutAlpha;
-            _blackout.color = blackoutColor;
+            _blackout.color = new Color(blackoutRgb.r, blackoutRgb.g, blackoutRgb.b, blackoutAlpha);
         }
 
         private float ComputeHitFlash(float deltaTime)

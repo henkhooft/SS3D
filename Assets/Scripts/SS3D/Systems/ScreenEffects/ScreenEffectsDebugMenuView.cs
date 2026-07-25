@@ -4,6 +4,7 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Inputs;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -14,6 +15,8 @@ namespace SS3D.Systems.ScreenEffects
     /// Dev-only panel to trigger and tune every <see cref="ScreenEffectType"/> plus the hit-flash event,
     /// without needing the health/atmospherics systems that will eventually drive these for real.
     /// Toggle with F2. Built entirely at runtime - no prefab/scene dependency.
+    /// While open, engages <see cref="ScreenEffectsSubSystem.SetDebugOverrideActive"/> so live health
+    /// mapping cannot zero the sliders every snapshot tick.
     /// </summary>
     public sealed class ScreenEffectsDebugMenuView : View
     {
@@ -35,6 +38,9 @@ namespace SS3D.Systems.ScreenEffects
         }
 
         private GameObject _panel;
+        private readonly Dictionary<ScreenEffectType, Slider> _sliders = new();
+        private readonly Dictionary<ScreenEffectType, Text> _valueLabels = new();
+        private bool _syncingSliders;
 
         protected override void OnAwake()
         {
@@ -64,7 +70,42 @@ namespace SS3D.Systems.ScreenEffects
                 _panel.SetActive(false);
             }
 
-            _panel.SetActive(!_panel.activeSelf);
+            bool opening = !_panel.activeSelf;
+            _panel.SetActive(opening);
+
+            ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            if (effects == null)
+            {
+                return;
+            }
+
+            // Hold override only while the panel is open so health can drive again after close.
+            effects.SetDebugOverrideActive(opening);
+            if (opening)
+            {
+                SyncSlidersFromEffects(effects);
+            }
+        }
+
+        private void SyncSlidersFromEffects(ScreenEffectsSubSystem effects)
+        {
+            _syncingSliders = true;
+            try
+            {
+                foreach (KeyValuePair<ScreenEffectType, Slider> pair in _sliders)
+                {
+                    float intensity = effects.GetEffectIntensity(pair.Key);
+                    pair.Value.SetValueWithoutNotify(intensity);
+                    if (_valueLabels.TryGetValue(pair.Key, out Text label))
+                    {
+                        label.text = intensity.ToString("0.00");
+                    }
+                }
+            }
+            finally
+            {
+                _syncingSliders = false;
+            }
         }
 
         private void BuildUi()
@@ -107,6 +148,7 @@ namespace SS3D.Systems.ScreenEffects
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             AddLabel(_panel.transform, "Screen Effects (F2)", 18);
+            AddLabel(_panel.transform, "Override on while open", 11);
 
             foreach (ScreenEffectType type in Enum.GetValues(typeof(ScreenEffectType)))
             {
@@ -145,8 +187,16 @@ namespace SS3D.Systems.ScreenEffects
             LayoutElement valueElement = valueLabel.gameObject.AddComponent<LayoutElement>();
             valueElement.preferredWidth = 40f;
 
+            _sliders[type] = slider;
+            _valueLabels[type] = valueLabel;
+
             slider.onValueChanged.AddListener(value =>
             {
+                if (_syncingSliders)
+                {
+                    return;
+                }
+
                 valueLabel.text = value.ToString("0.00");
                 SubSystems.Get<ScreenEffectsSubSystem>()?.SetEffect(type, value);
             });

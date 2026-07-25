@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/ScreenEffects/
 > Entry points: ScreenEffectsSubSystem
 > Status: partial (health wired; atmos deferred)
-> Verified: 82c1fed63 — 2026-07-21
+> Verified: e1bf86d8a — 2026-07-25
 
 # Screen-space effects
 
@@ -9,7 +9,7 @@
 
 Client-only URP Volume overlays for diegetic feedback from [main-hud](../../design/main-hud.md) §5: temperature, fire/freezing, low oxygen, dying/critical, blood-loss tunnel vision, concussion, unconsciousness, plus momentary melee hit flash and blast flash. Driven by intensity (0..1) via `SetEffect` / `TriggerHitFlash` / `TriggerBlastFlash`. Also hosts `SetUiBackdropBlur`, which drives Dual Kawase fullscreen blur (`UiBackdropBlurContext` → [rendering](rendering.md) `UiBackdropBlurRendererFeature`) for soft world focus behind sharp UI Toolkit overlays — separate from `ScreenEffectType` so health clears do not wipe it. Diegetic panels also paint a dark UITK scrim on the overlay root.
 
-**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. Temperature/fire/frost remain debug/console-only until atmospherics wires them. Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
+**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. While dying/critical is active, LowOxygen screen intensity is attenuated and the compositor prefers the red heartbeat vignette (and pulses unconscious blackout) so critical stays readable under oxy/unconscious. Temperature/fire/frost remain debug/console-only until atmospherics wires them. Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
 
 Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it can land without scene YAML edits.
 
@@ -34,6 +34,8 @@ Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it
 
 - **Other players wipe your overlays:** `ScreenEffectsSubSystem` is global. Only clear health-driven intensities from a controller that was driving them (`_drivingLocalScreenEffects`); never `Clear` on every non-owner mind change.
 - **Do not fold UI blur into `ScreenEffectType`:** `HealthScreenEffectMapper.Clear` zeros health types; UI backdrop blur must stay on the separate `SetUiBackdropBlur` path.
+- **Critical washed out by LowOxy + Unconscious:** do not re-average Dying and LowOxygen vignette colors equally, and do not leave unconscious blackout at flat α=1 while dying — mapper attenuates LowOxygen under dying; compositor scales oxy vignette, boosts dying vignette weight / color dominate, and heartbeat-pulses a dark-red blackout veil.
+- **F2 / screeneffect wiped by health:** live `HealthScreenEffectMapper.Apply` overwrites health channels every snapshot. F2 holds `SetDebugOverrideActive(true)` while open; `screeneffect` engages the same override until `screeneffect release` or F2 close. Mappers must no-op Apply/Clear while override is active.
 
 ## Depends on / Used by
 
