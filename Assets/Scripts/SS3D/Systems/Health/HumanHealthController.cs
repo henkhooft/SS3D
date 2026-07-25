@@ -225,6 +225,12 @@ namespace SS3D.Systems.Health
             {
                 RpcHitFlash(Owner);
             }
+
+            if (brute >= HealthConstants.BloodSprayMinBrute)
+            {
+                float intensity = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
+                RpcBloodImpactBurst(zone, intensity);
+            }
         }
 
         /// <summary>
@@ -403,6 +409,7 @@ namespace SS3D.Systems.Health
 
             _anatomy.ExecuteServerSeverance(zone);
             RpcApplySeveranceVisuals(zone);
+            RpcBloodImpactBurst(zone, 1f);
             PublishSnapshot();
             return true;
         }
@@ -411,6 +418,12 @@ namespace SS3D.Systems.Health
         private void RpcApplySeveranceVisuals(BodyZone zone)
         {
             _anatomy?.ApplyVisualSeverance(zone);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcBloodImpactBurst(BodyZone zone, float intensity)
+        {
+            _woundVfx?.PlayImpactBurst(zone, intensity);
         }
 
         [Server]

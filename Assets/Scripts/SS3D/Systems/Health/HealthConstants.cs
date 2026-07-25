@@ -68,6 +68,10 @@
         public const float BurnSevereThreshold = 50f;
         public const float BurnDisabledThreshold = 75f;
 
+        // On-hit blood spray (WoundVfx ObserversRpc). Intensity 1 at WoundThreshold brute.
+        public const float BloodSprayMinBrute = 1f;
+        public const float BloodSprayFullBrute = WoundThreshold;
+
         // Organ damage mapping (zone hits → stored organ function loss).
         public const float HeadBruteToBrainDamageScale = 0.4f;
         public const float HeadBurnToBrainDamageScale = 0.25f;
