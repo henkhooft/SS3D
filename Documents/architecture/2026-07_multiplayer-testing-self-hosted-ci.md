@@ -1,6 +1,6 @@
 > Implements: none (infrastructure — CI/test tooling, not a gameplay domain)
 > Touches systems: networking-session, electricity, area, ingame-console, logging
-> Status: in-progress (Phase 0 TomNAS-unity online; warm smoke proof pending; Phases 1–2 open)
+> Status: in-progress (Phase 0 TomNAS-unity online; EditMode + develop-release prefer TomNAS with GitHub fallback; warm smoke proof pending; Phases 1–2 open)
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 
@@ -50,7 +50,8 @@ minutes.
 | Labels | `self-hosted`, `linux`/`Linux`, `x64`/`X64`, `unity` |
 | Install dir | `/home/cu6e/actions-runner` |
 | Service | user systemd `github-actions-runner.service` (`systemctl --user …`) |
-| Library stash | `/home/cu6e/.cache/ss3d/Library` (same FS as `/home/cu6e` — `mv` is rename) |
+| Library stash (smoke) | `/home/cu6e/.cache/ss3d/Library` (same FS as `/home/cu6e` — `mv` is rename) |
+| Library stash (EditMode) | `/home/cu6e/.cache/ss3d/Library-editmode` (separate so a failed EditMode discard cannot wipe the warm build cache) |
 | Manual clone slot | `/home/cu6e/Dev/` (optional; CI checks out into runner `_work`) |
 
 Still required once was: docker group + linger + image pull (done Jul 2026). Pre-pull:
@@ -68,10 +69,20 @@ the user systemd unit dies when all `cu6e` sessions end.
   `runs-on: [self-hosted, linux, x64, unity]`; restore/save Library stash via `mv`;
   **one** `unity-builder` step with `ClientAndServerBuildScript.BuildBothForCi`;
   `runAsHostUser: true`; nightly `cron: "0 4 * * *"`.
-- Build methods for isolated server/client still exist for local/menu use; smoke CI must not
-  split them across two Editor sessions.
-- Later: same labels for `editmodetestrunner.yml` / Linux path of `develop-release.yml`
-  (develop-release still uses two builder steps — same PackageCache pitfall if moved here).
+- [`.github/workflows/editmodetestrunner.yml`](../../.github/workflows/editmodetestrunner.yml):
+  `pick_runner` on `ubuntu-latest` queries whether `TomNAS-unity` is **online**; if so
+  `run_tests` uses `[self-hosted, linux, x64, unity]` + `Library-editmode` stash +
+  `runAsHostUser: true`, else falls back to `ubuntu-latest`. `workflow_dispatch` input
+  `runner: auto|tomnas|github` can force either side. Offline self-hosted would otherwise
+  queue forever (job `timeout-minutes` does not cover queue wait), so the API probe is
+  required for automatic fallback.
+- [`.github/workflows/develop-release.yml`](../../.github/workflows/develop-release.yml):
+  same TomNAS-prefer probe in `prepare`; Linux via **one** `BuildBothForCi` step; shares
+  smoke’s `/home/cu6e/.cache/ss3d/Library` stash on self-hosted; nightly `cron: "0 5 * * *"`
+  (Windows + Linux client/server → floating `develop-nightly`). Manual dispatch stays
+  Windows-default with opt-in Linux.
+- Build methods for isolated server/client still exist for local/menu use; smoke / release
+  Linux CI must not split them across two Editor sessions.
 
 Net effect: the exact 45-min / metered-minutes pain the CI-pipeline doc
 ([2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md)) records
@@ -155,6 +166,14 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
   secrets ([2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md)
   Pitfalls) — a self-hosted runner does not change that a job without `environment: unity_tests`
   sees empty `UNITY_LICENSE`/`UNITY_SERIAL`.
+- **EditMode fallback needs an online probe, not a second `runs-on`.** A job pinned only to
+  TomNAS queues forever when the runner is offline (`timeout-minutes` starts after assign).
+  `editmodetestrunner.yml` therefore has a cheap `pick_runner` on `ubuntu-latest` that reads
+  `TomNAS-unity`'s Actions status and chooses self-hosted vs hosted. If GitHub marks the
+  runner offline while the systemd unit is still up, force `runner=tomnas` via
+  `workflow_dispatch` or restart `github-actions-runner.service` on TomNAS.
+- **Separate EditMode Library stash.** EditMode uses `Library-editmode`; smoke uses `Library`.
+  Sharing would let a failed EditMode discard wipe the warm build cache.
 
 ## Out of scope
 
