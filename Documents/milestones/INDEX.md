@@ -16,7 +16,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 - **T3** — Session stability: round/connect lifecycle, doors under MP, admin wedge tools, Nuke Ops happy-path smoke, test-station perf floor
 - **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
 
-**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 shipped):
+**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 
 - **M0** — Test station; vault/disk/nuke; loadouts (ammo, ID/access, defuse tools, internals); assignment; ops/crew identity
 - **M1p** — Combat feel: VFX/decals/blood/sounds, aim IK, two-hand, reload cues, knockdown clarity, sprint, no debug chrome
@@ -24,7 +24,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 - **M4** — Objectives + win/lose
 - **M5** — End-game screen + restart; spectators still see the outcome
 - **M7** — Health feel (crit ragdoll, screen-effect compositing) + thin field med + drag
-- **M8** — Env→health + armor seal + internals + air alarms that alarm + thin fire response
+- **M8** — Env→health + armor seal + internals + air alarms that alarm + thin fire response (turf equal-P mixing shipped; seal/alarms/fire still open)
 - **M9** — Test-map APC lights matter + wall damage readable at range
 
 Not focus: Area-id merge on breach, re-wiring client atmos VFX (already shipped), shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, full radio, server browser / accounts.

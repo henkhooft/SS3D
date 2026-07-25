@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Tile;
 using System.Collections.Generic;
 using UnityEngine;
@@ -220,6 +221,56 @@ namespace EditorTests.Atmospherics
             }
         }
 
+        [Test]
+        public void SealedRoom_EqualPressureCompositionDiffuses()
+        {
+            const int size = 3;
+            const float breathSwapMoles = 5f;
+
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            InitializeSealedRoomSimulation(context, size, out AtmosSimulation simulation);
+            using (simulation)
+            {
+                // Let pressure settle so the room is uniform before the breath-like swap.
+                for (int tick = 0; tick < 20; tick++)
+                    simulation.Tick(AtmosConstants.TickInterval);
+
+                var center = AtmosTestFixtures.InteriorCoord(context.Map.MapId, size);
+                var neighbour = new TileCoord(center.MapId, center.Grid.x + 1, center.Grid.y);
+
+                Assert.IsTrue(simulation.TryRemoveMoles(
+                    center,
+                    AtmosConstants.Oxygen,
+                    breathSwapMoles,
+                    out float removed,
+                    out float sourceTemperature));
+                Assert.AreEqual(breathSwapMoles, removed, 0.01f);
+                Assert.IsTrue(simulation.TryAddMolesAtTemperature(
+                    center,
+                    AtmosConstants.CarbonDioxide,
+                    removed,
+                    sourceTemperature));
+
+                float initialCenterCo2 = simulation.DebugGetMoles(center, AtmosConstants.CarbonDioxide);
+                float initialNeighbourCo2 = simulation.DebugGetMoles(neighbour, AtmosConstants.CarbonDioxide);
+                float initialMoles = simulation.GetTotalMoles();
+                Assert.Greater(initialCenterCo2, initialNeighbourCo2);
+
+                for (int tick = 0; tick < 80; tick++)
+                    simulation.Tick(AtmosConstants.TickInterval);
+
+                float finalCenterCo2 = simulation.DebugGetMoles(center, AtmosConstants.CarbonDioxide);
+                float finalNeighbourCo2 = simulation.DebugGetMoles(neighbour, AtmosConstants.CarbonDioxide);
+
+                Assert.Less(finalCenterCo2, initialCenterCo2);
+                Assert.Greater(finalNeighbourCo2, initialNeighbourCo2);
+                Assert.AreEqual(initialMoles, simulation.GetTotalMoles(), initialMoles * 0.005f);
+
+                GetPressureSpread(simulation, context.Map.MapId, size, out float minPressure, out float maxPressure);
+                Assert.Less(maxPressure - minPressure, AtmosFluxConstants.PressureEpsilon * 2f);
+            }
+        }
+
         private static void EvacuateInterior(int mapId, int interiorSize, AtmosSimulation simulation)
         {
             for (int x = 0; x < interiorSize; x++)
@@ -267,6 +318,23 @@ namespace EditorTests.Atmospherics
                         out AtmosCellDebugInfo info));
                     min = Mathf.Min(min, info.Temperature);
                     max = Mathf.Max(max, info.Temperature);
+                }
+            }
+        }
+
+        private static void GetPressureSpread(
+            AtmosSimulation simulation, int mapId, int interiorSize, out float min, out float max)
+        {
+            min = float.MaxValue;
+            max = float.MinValue;
+            for (int x = 0; x < interiorSize; x++)
+            {
+                for (int z = 0; z < interiorSize; z++)
+                {
+                    float pressure = simulation.GetCellPressure(
+                        new TileCoord(mapId, AtmosTestFixtures.InteriorOrigin + x, AtmosTestFixtures.InteriorOrigin + z));
+                    min = Mathf.Min(min, pressure);
+                    max = Mathf.Max(max, pressure);
                 }
             }
         }
