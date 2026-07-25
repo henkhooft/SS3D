@@ -1,4 +1,3 @@
-using Coimbra;
 using Coimbra.Services.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -10,20 +9,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Actor = SS3D.Core.Behaviours.Actor;
 
 namespace SS3D.Systems.Comms
 {
     /// <summary>
     /// Drives the local speech subtitle overlay: subscribes to CommsSubSystem's speech events,
     /// stacks up to a few lines per speaker with fade + upward drift, and applies mode-specific
-    /// visual treatments. Owns its own UIDocument, following RadialInteractionSubSystem's
-    /// convention of a dedicated overlay per feature rather than a shared HUD document.
+    /// visual treatments. Owns a dedicated UIDocument child — must not share MachineInterfaceHost's
+    /// hub document (that one stays disabled while MI is closed).
     /// Also owns local-speech compose (T → draft chip at the head anchor → Enter commits).
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
     public sealed class LocalSpeechBubbleController : Actor
     {
+        private const string OverlayChildName = "LocalSpeechOverlay";
         private const float BubbleWorldHeightOffset = 0.15f;
         private const float FadeOutTailSeconds = 1f;
 
@@ -65,10 +63,7 @@ namespace SS3D.Systems.Comms
         {
             base.OnAwake();
 
-            if (_document == null)
-            {
-                _document = GetComponent<UIDocument>();
-            }
+            EnsureDedicatedDocument();
 
 #if UNITY_EDITOR
             EnsureEditorAssets();
@@ -85,6 +80,32 @@ namespace SS3D.Systems.Comms
             InputInterface.RegisterDocument(_document);
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
+        }
+
+        /// <summary>
+        /// MachineInterfaceHost disables the hub UIDocument while closed. Local speech must not
+        /// share that document or T-compose / bubbles silently no-op (root.panel == null).
+        /// </summary>
+        private void EnsureDedicatedDocument()
+        {
+            Transform child = Transform.Find(OverlayChildName);
+            if (child == null)
+            {
+                GameObject go = new(OverlayChildName);
+                go.transform.SetParent(Transform, false);
+                child = go.transform;
+            }
+
+            if (!child.TryGetComponent(out UIDocument document))
+            {
+                document = child.gameObject.AddComponent<UIDocument>();
+            }
+
+            _document = document;
+            if (!_document.enabled)
+            {
+                _document.enabled = true;
+            }
         }
 
         protected override void OnEnabled()
@@ -183,7 +204,9 @@ namespace SS3D.Systems.Comms
         private void RebuildComposeChannelList()
         {
             _composeRadioChannels.Clear();
-            CommsChannels settings = ScriptableSettings.GetOrFind<CommsChannels>();
+            CommsChannels settings = _commsSubSystem != null
+                ? _commsSubSystem.ChannelSettings
+                : SubSystems.Get<CommsSubSystem>()?.ChannelSettings;
             if (settings == null)
             {
                 return;

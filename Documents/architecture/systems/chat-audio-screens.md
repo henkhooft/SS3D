@@ -31,6 +31,9 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
 
 ## Pitfalls
 
+- **Shared hub UIDocument:** `MachineInterfaceHost` disables the hub `UIDocument` while closed.
+  Local speech owns a child `LocalSpeechOverlay` UIDocument — do not point compose/bubbles at the MI
+  document or T-compose silently no-ops (`root.panel == null`).
 - **Tab-in-compose** replaces design §6 channel radial for this slice — do not add typed `;` prefixes.
 - **Announcements:** all `Announcement`-kind traffic uses the top banner (no routine→feed split yet).
 - **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab lists all writable radio.

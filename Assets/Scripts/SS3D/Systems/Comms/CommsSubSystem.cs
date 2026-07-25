@@ -39,28 +39,46 @@ namespace SS3D.Systems.Comms
 
         public CommsChannels ChannelSettings => _channelSettings;
 
+        protected override void OnAwake()
+        {
+            base.OnAwake();
+            EnsureChannelRegistry();
+        }
+
         public override void OnStartNetwork()
         {
             base.OnStartNetwork();
 
             _commsLogPath = $"{UnityEngine.Application.dataPath}/../Logs/{CommsLogFolderName}.txt";
-            _channelSettings = ScriptableSettings.GetOrFind<CommsChannels>();
-            _channelsById.Clear();
-            if (_channelSettings != null)
-            {
-                foreach (CommsChannel channel in _channelSettings.AllChannels)
-                {
-                    if (channel == null)
-                    {
-                        continue;
-                    }
-
-                    _channelsById[channel.name] = channel;
-                }
-            }
+            EnsureChannelRegistry();
 
             InstanceFinder.ClientManager.RegisterBroadcast<CommsMessage>(OnClientReceiveCommsMessage);
             InstanceFinder.ServerManager.RegisterBroadcast<CommsMessage>(OnServerReceiveCommsMessage);
+        }
+
+        private void EnsureChannelRegistry()
+        {
+            if (_channelSettings != null && _channelsById.Count > 0)
+            {
+                return;
+            }
+
+            _channelSettings = ScriptableSettings.GetOrFind<CommsChannels>();
+            _channelsById.Clear();
+            if (_channelSettings == null)
+            {
+                return;
+            }
+
+            foreach (CommsChannel channel in _channelSettings.AllChannels)
+            {
+                if (channel == null)
+                {
+                    continue;
+                }
+
+                _channelsById[channel.name] = channel;
+            }
         }
 
         public override void OnStopNetwork()
