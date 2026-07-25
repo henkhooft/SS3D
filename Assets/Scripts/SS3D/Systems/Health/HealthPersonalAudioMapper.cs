@@ -4,16 +4,23 @@ using UnityEngine;
 namespace SS3D.Systems.Health
 {
     /// <summary>
-    /// Maps a local player's <see cref="HealthSnapshot"/> onto the personal heartbeat cue
-    /// (audio.md §4, worked example C). Deliberately diverges from
+    /// Maps a local player's <see cref="HealthSnapshot"/> onto personal heartbeat and labored
+    /// breathing cues (audio.md §4, worked example C). Deliberately diverges from
     /// <see cref="HealthScreenEffectMapper"/>'s cardiac-arrest handling: the screen vignette stays at
     /// full intensity through cardiac arrest (still dying, still worth showing), but the heartbeat
     /// sound represents an actual beating heart, so it goes silent the moment the heart stops and
     /// resumes only when a defib restarts it — "resuming on a successful defib" only makes sense if
     /// something was silenced first.
+    /// Breathing is max-merged with stamina in <see cref="PersonalAudioSubSystem"/>.
     /// </summary>
     public static class HealthPersonalAudioMapper
     {
+        /// <summary>Oxy debt at/above this starts labored breathing (matches soft low-O₂ alert).</summary>
+        public const float BreathingOxyDebtStart = HealthConstants.LowOxygenAlertSoftStart;
+
+        /// <summary>Oxy debt at full breathing intensity.</summary>
+        public const float BreathingOxyDebtFull = HealthConstants.CriticalOxyDebt;
+
         public static float ComputeHeartbeatIntensity(HealthSnapshot snapshot)
         {
             // IsCardiacArrest is the operative flag (mirrors HealthScreenEffectMapper.ComputeDyingCritical,
@@ -38,14 +45,51 @@ namespace SS3D.Systems.Health
             return Mathf.Clamp01(0.4f + 0.6f * brainFactor);
         }
 
+        /// <summary>
+        /// Labored breathing from oxy debt and critical state. Vacuum / low breathability amplify
+        /// via elevated oxy debt already — no separate env path required.
+        /// </summary>
+        public static float ComputeBreathingIntensity(HealthSnapshot snapshot)
+        {
+            if (snapshot.State == HealthState.Dead || !snapshot.IsConscious)
+            {
+                return 0f;
+            }
+
+            float fromOxy = Mathf.Clamp01(Mathf.InverseLerp(
+                BreathingOxyDebtStart,
+                BreathingOxyDebtFull,
+                snapshot.Pools.OxyDebt));
+
+            float fromCritical = 0f;
+            if (snapshot.State == HealthState.Critical && !snapshot.IsCardiacArrest)
+            {
+                fromCritical = 0.55f;
+            }
+
+            return Mathf.Max(fromOxy, fromCritical);
+        }
+
         public static void Apply(HealthSnapshot snapshot, PersonalAudioSubSystem personalAudio)
         {
-            personalAudio?.SetHeartbeatIntensity(ComputeHeartbeatIntensity(snapshot));
+            if (personalAudio == null)
+            {
+                return;
+            }
+
+            personalAudio.SetHeartbeatIntensity(ComputeHeartbeatIntensity(snapshot));
+            personalAudio.SetHealthBreathingIntensity(ComputeBreathingIntensity(snapshot));
         }
 
         public static void Clear(PersonalAudioSubSystem personalAudio)
         {
-            personalAudio?.SetHeartbeatIntensity(0f);
+            if (personalAudio == null)
+            {
+                return;
+            }
+
+            personalAudio.SetHeartbeatIntensity(0f);
+            personalAudio.ClearHealthBreathing();
         }
     }
 }

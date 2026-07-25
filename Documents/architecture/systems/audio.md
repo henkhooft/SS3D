@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
-> Status: partial
-> Verified: 6ce5ab235 — 2026-07-25
+> Status: partial (personal heartbeat/breathing/alert clips registered; health hit one-shots wired)
+> Verified: b2842bb73 — 2026-07-25
 
 # Audio
 
@@ -41,16 +41,19 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   between the old/new `AreaSubSystem.TryGetAmbienceTrackId` clip. No occlusion (non-positional, §2 vs §3).
 - `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — **Phase 3**: personal, internal
   audio (§4) — heartbeat + heavy breathing, non-positional, no occlusion, owner-only.
-  Self-bootstrapped like `AmbienceSubSystem`; owns playback only (`SetHeartbeatIntensity`/
-  `SetBreathingIntensity`, 0..1) — domain mappers push intensities in, it doesn't poll anything itself.
+  Self-bootstrapped like `AmbienceSubSystem`; owns playback only. Breathing takes
+  `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Heartbeat via
+  `SetHeartbeatIntensity`. Alert ding via `PlayAlertCue`.
 - `Assets/Scripts/SS3D/Systems/Health/HealthPersonalAudioMapper.cs`,
   `Assets/Scripts/SS3D/Systems/Stamina/StaminaPersonalAudioMapper.cs` — `HealthSnapshot`/stamina
-  ratio → heartbeat/breathing intensity, unit-tested. Called from each domain's existing local-owner
+  ratio → heartbeat + labored breathing intensity, unit-tested. Called from each domain's existing local-owner
   hook (`HumanHealthController.ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` alongside
   `HealthScreenEffectMapper`; `StaminaController.SyncCurrentStamina`'s `IsOwner` gate) — not a new
-  subscription.
+  subscription. Health also drives positional gasp/choke/scream/flesh-hit via `AudioSubSystem`
+  (`HealthAudioTrackIds`, `CombatAudioTrackIds.FleshHit`).
 - `Assets/Scripts/SS3D/Systems/Audio/AudioTrackIds.cs` — fixed personal-audio clip ids
-  (`Heartbeat`/`HeavyBreathing`/`AlertCue`) — architecturally fixed, unlike content-authored ambience tracks.
+  (`Heartbeat`/`HeavyBreathing`/`AlertCue`) — Unity audio GUIDs once registered in `Sounds.asset`.
+  FreeSound heartbeat/heavy breathing + SS14 beep1.
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — **Phase 4** (§6): pure
   `HasNewAlert(previous, current)` diff over `AlertStackState` — true only when a hazard goes
   None → any severity, not on an escalation already showing. Unit-tested
@@ -114,9 +117,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   anything today).
 - **Footwear footsteps (Socks/Shoes/Boots)** are registered *and* wired via `FootstepAudio` — not the
   availability-only pattern above.
-- Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`
-  directly for any future systemic cue (virology's symptomatic-stage cue is this same category,
-  per audio.md §4) rather than building a parallel non-positional playback path.
+- Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity` /
+  `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge) for systemic cues
+  (virology's symptomatic-stage cue is this same category, per audio.md §4) rather than building a
+  parallel non-positional playback path. Do not call a single shared `SetBreathingIntensity` — stamina
+  and health would overwrite each other.
 - **Not yet built:** power-gating power-dependent ambience tracks off `AreaLightingState` (needs a
   per-track "requires power" data field — deferred, see Pitfalls), PDA notification cues (no PDA
   notification chip system exists yet to hook — same gap [chat-audio-screens](chat-audio-screens.md)
@@ -158,6 +163,9 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   built here on purpose: inventing the flag without an authoring surface or content decision on which
   tracks use it would be dead schema. `AreaSubSystem.OnAreaLightingStateChanged` /
   `TryGetLightingStateForTile` are the signal to consume once the flag exists.
+- **Breathing contributors must max-merge:** stamina and health both drive heavy breathing. Use
+  `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` — a single setter lets the last
+  writer silence the other domain's cue.
 - **"New alert" means None → any severity, not any change.** `AlertStackAudioMapper.HasNewAlert`
   deliberately does not fire on Warning → Critical escalation — the visual chip is already showing,
   so re-cueing it would contradict §6's "not a continuous loop, only draws attention when something's

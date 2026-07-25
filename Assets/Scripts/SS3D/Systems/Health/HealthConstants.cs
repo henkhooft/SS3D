@@ -72,6 +72,10 @@
         public const float BloodSprayMinBrute = 1f;
         public const float BloodSprayFullBrute = WoundThreshold;
 
+        // Positional hit SFX (flesh + blood) — same brute gate as spray.
+        public const float ScreamMinBrute = 18f;
+        public const float ScreamCooldownSeconds = 10f;
+
         // Organ damage mapping (zone hits → stored organ function loss).
         public const float HeadBruteToBrainDamageScale = 0.4f;
         public const float HeadBurnToBrainDamageScale = 0.25f;

@@ -14,5 +14,14 @@ namespace SS3D.Systems.Combat
 
         /// <summary>Empty magazine pulled free — plays when a reload begins (manual or auto-on-empty).</summary>
         public const string ReloadMagazineOut = "16b906b99fb5471fa72060f8c4c8cadd";
+
+        /// <summary>Flesh impact variety (SS14 punch / genhit / weak_hit) — health damage path.</summary>
+        public static readonly string[] FleshHit =
+        {
+            "6fab86354b054a54b8b4828f689970e4",
+            "82588e82537544f59a9a0d330ff3d7ee",
+            "36c53e237ddb426ea20825ce79dd1737",
+            "d592855338f1467d897447bbfee4dc11",
+        };
     }
 }

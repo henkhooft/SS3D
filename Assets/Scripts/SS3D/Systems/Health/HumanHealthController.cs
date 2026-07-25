@@ -9,6 +9,7 @@ using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Audio;
+using AudioType = SS3D.Systems.Audio.AudioType;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
@@ -44,6 +45,9 @@ namespace SS3D.Systems.Health
         private bool _healthCollapseActive;
         private bool _drivingLocalPresentation;
         private HealthEnvironmentState _environment = HealthEnvironmentState.SafeDefault;
+        private HealthState _previousAudioHealthState = HealthState.Healthy;
+        private bool _previousAudioVacuum;
+        private float _nextScreamTime;
 
         [SyncVar(OnChange = nameof(SyncSnapshot))]
         private HealthSnapshot _snapshot = HealthSnapshot.Default;
@@ -232,6 +236,8 @@ namespace SS3D.Systems.Health
                 float intensity = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
                 RpcBloodImpactBurst(zone, intensity);
                 TryApplyHitFlinch(brute);
+                PlayHitImpactSounds(intensity);
+                TryPlayPainScream(brute);
             }
         }
 
@@ -458,6 +464,96 @@ namespace SS3D.Systems.Health
         private void RpcBloodImpactBurst(BodyZone zone, float intensity)
         {
             _woundVfx?.PlayImpactBurst(zone, intensity);
+        }
+
+        /// <summary>
+        /// Positional flesh + blood SFX at the body (audio.md §3). Server-triggered so the pool
+        /// fans out via ObserversRpc; parent null so StopAudioSource on the body cannot kill it.
+        /// </summary>
+        [Server]
+        private void PlayHitImpactSounds(float intensity)
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                return;
+            }
+
+            Vector3 position = Transform.position;
+            string[] flesh = CombatAudioTrackIds.FleshHit;
+            string fleshId = flesh[UnityEngine.Random.Range(0, flesh.Length)];
+            float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
+            audio.PlayAudioSource(AudioType.Sfx, fleshId, position, null, false, 0.75f, pitch);
+
+            string bloodId = intensity >= 0.65f ? HealthAudioTrackIds.Splat : HealthAudioTrackIds.Blood1;
+            audio.PlayAudioSource(AudioType.Sfx, bloodId, position, null, false, 0.55f + 0.35f * intensity, pitch);
+        }
+
+        [Server]
+        private void TryPlayPainScream(float brute)
+        {
+            if (brute < HealthConstants.ScreamMinBrute || Time.time < _nextScreamTime)
+            {
+                return;
+            }
+
+            _nextScreamTime = Time.time + HealthConstants.ScreamCooldownSeconds;
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx,
+                HealthAudioTrackIds.MaleScream,
+                Transform.position,
+                null,
+                false,
+                0.85f,
+                UnityEngine.Random.Range(0.95f, 1.05f));
+        }
+
+        /// <summary>
+        /// Gasp/choke on entering critical or vacuum — positional so nearby players hear it.
+        /// </summary>
+        [Server]
+        private void TryPlayHealthStateAudio(HealthSnapshot snapshot)
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                _previousAudioHealthState = snapshot.State;
+                _previousAudioVacuum = snapshot.Environment.IsVacuum;
+                return;
+            }
+
+            bool enteredCritical = snapshot.State == HealthState.Critical
+                && _previousAudioHealthState != HealthState.Critical
+                && snapshot.IsConscious
+                && !snapshot.IsCardiacArrest;
+
+            bool enteredVacuum = snapshot.Environment.IsVacuum && !_previousAudioVacuum;
+
+            if (enteredCritical || enteredVacuum)
+            {
+                string clipId;
+                if (enteredVacuum)
+                {
+                    string[] choke = HealthAudioTrackIds.Choke;
+                    clipId = choke[UnityEngine.Random.Range(0, choke.Length)];
+                }
+                else
+                {
+                    clipId = HealthAudioTrackIds.MaleGasp;
+                }
+
+                audio.PlayAudioSource(
+                    AudioType.Sfx,
+                    clipId,
+                    Transform.position,
+                    null,
+                    false,
+                    0.8f,
+                    UnityEngine.Random.Range(0.95f, 1.05f));
+            }
+
+            _previousAudioHealthState = snapshot.State;
+            _previousAudioVacuum = snapshot.Environment.IsVacuum;
         }
 
         [Server]
@@ -692,6 +788,7 @@ namespace SS3D.Systems.Health
             ApplyBodyPresentationIntent(snapshot);
             // Same host gap for local screen overlays and HUD alert consumers.
             ApplyScreenEffectsFromSnapshot(snapshot);
+            TryPlayHealthStateAudio(snapshot);
             SnapshotChanged?.Invoke(snapshot);
         }
 

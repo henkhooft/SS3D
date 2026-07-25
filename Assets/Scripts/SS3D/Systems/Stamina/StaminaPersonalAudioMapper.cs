@@ -21,7 +21,7 @@ namespace SS3D.Systems.Stamina
 
         public static void Apply(float staminaRatio, PersonalAudioSubSystem personalAudio)
         {
-            personalAudio?.SetBreathingIntensity(ComputeBreathingIntensity(staminaRatio));
+            personalAudio?.SetStaminaBreathingIntensity(ComputeBreathingIntensity(staminaRatio));
         }
     }
 }

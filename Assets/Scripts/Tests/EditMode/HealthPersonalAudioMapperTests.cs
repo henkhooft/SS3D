@@ -65,5 +65,45 @@ namespace EditorTests
 
             Assert.Greater(HealthPersonalAudioMapper.ComputeHeartbeatIntensity(resumed), 0f);
         }
+
+        [Test]
+        public void HealthySnapshotProducesNoLaboredBreathing()
+        {
+            Assert.AreEqual(0f, HealthPersonalAudioMapper.ComputeBreathingIntensity(HealthSnapshot.Default), 0.001f);
+        }
+
+        [Test]
+        public void OxyDebtRampsLaboredBreathing()
+        {
+            HealthSnapshot soft = HealthSnapshot.Default;
+            soft.Pools.OxyDebt = HealthPersonalAudioMapper.BreathingOxyDebtStart;
+
+            HealthSnapshot full = HealthSnapshot.Default;
+            full.Pools.OxyDebt = HealthPersonalAudioMapper.BreathingOxyDebtFull;
+
+            Assert.AreEqual(0f, HealthPersonalAudioMapper.ComputeBreathingIntensity(soft), 0.001f);
+            Assert.AreEqual(1f, HealthPersonalAudioMapper.ComputeBreathingIntensity(full), 0.001f);
+        }
+
+        [Test]
+        public void CriticalWithoutArrestProducesLaboredBreathingFloor()
+        {
+            HealthSnapshot snapshot = HealthSnapshot.Default;
+            snapshot.State = HealthState.Critical;
+            snapshot.IsCardiacArrest = false;
+
+            Assert.AreEqual(0.55f, HealthPersonalAudioMapper.ComputeBreathingIntensity(snapshot), 0.001f);
+        }
+
+        [Test]
+        public void UnconsciousSilencesLaboredBreathing()
+        {
+            HealthSnapshot snapshot = HealthSnapshot.Default;
+            snapshot.State = HealthState.Critical;
+            snapshot.IsConscious = false;
+            snapshot.Pools.OxyDebt = 1f;
+
+            Assert.AreEqual(0f, HealthPersonalAudioMapper.ComputeBreathingIntensity(snapshot), 0.001f);
+        }
     }
 }

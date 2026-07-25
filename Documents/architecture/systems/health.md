@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
-> Status: partial (Phase 5b severing + turf env→health shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: 627e59c2c — 2026-07-25
+> Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
+> Verified: b2842bb73 — 2026-07-25
 
 # Health
 
@@ -9,7 +9,7 @@
 
 Greenfield rewrite per [health_implementation_plan.md](../../plans/health_implementation_plan.md). Phase 1 shipped bleeding, bandage, and VFX. Phase 2 wires asset-backed organs into pool math, cardiac arrest, and movement debuffs (`Snapshot.MovementSpeedMultiplier` — consumed by humanoid gait/limp presentation after the develop integration). Phase 3 adds multi-threshold critical state, cardiac arrest → defib window, and chest defibrillation. Phase 4 adds BodyParts raycast zone resolution for melee combat. Phase 5 adds field treatments (burn dressing, splint, O2, CPR, transfusion, antitoxin). Phase 5b adds limb severing (zone `IsSevered`, anatomy hide, world drops, head mind-swap). Bleeding visuals now use tuned particle streams plus URP Decal blood marks (body + floor). Bleed drain uses `BleedingBloodDrainScale = 0.010` with oxy gain / arrest brain drain synced so hypoxia tracks bleed (see plan hemorrhage tuning).
 
-Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`, and turf temp/fire via `AtmosScreenEffectMapper` from `HealthSnapshot.Environment`. Main HUD alert icons merge `HealthAlertStackMapper` + `AtmosAlertStackMapper` (Hot/Cold/pressure/Fire + LowOxygen from debt or turf). Server `TickHealthFromEnvironment` samples the occupant tile each 1 Hz tick: O₂ partial-pressure breathability, O₂→CO₂ breath exchange, plasma toxin intake, hot/cold/fire burn on **all zones**, and low/high/vacuum pressure → **lung** barotrauma (not chest burn). `atmosdamage off` / Health Debug checkbox skips turf coupling (`HealthEnvironmentSettings.AtmosphericDamageDisabled`). Vitals cluster UITK and examine-self readout remain Phase 6.
+Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`, and turf temp/fire via `AtmosScreenEffectMapper` from `HealthSnapshot.Environment`. Main HUD alert icons merge `HealthAlertStackMapper` + `AtmosAlertStackMapper` (Hot/Cold/pressure/Fire + LowOxygen from debt or turf). Personal [audio](audio.md): heartbeat + labored breathing (`HealthPersonalAudioMapper`, max-merged with stamina); alert ding; positional flesh/blood/gasp/scream on damage and critical/vacuum edges. Server `TickHealthFromEnvironment` samples the occupant tile each 1 Hz tick: O₂ partial-pressure breathability, O₂→CO₂ breath exchange, plasma toxin intake, hot/cold/fire burn on **all zones**, and low/high/vacuum pressure → **lung** barotrauma (not chest burn). `atmosdamage off` / Health Debug checkbox skips turf coupling (`HealthEnvironmentSettings.AtmosphericDamageDisabled`). Vitals cluster UITK and examine-self readout remain Phase 6.
 
 **Stamina Phase 7a core shipped:** see [stamina](stamina.md) — push-past-empty calls `ApplyOxyDebt`; obsolete `StaminaBar` purged from PlayerCanvas. Combat stamina costs still deferred.
 
@@ -31,7 +31,9 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `Assets/Scripts/SS3D/Systems/Health/OrganSimulation.cs` — zone→organ damage, organ tick drains, perfusion, limb multipliers
 - `Assets/Scripts/SS3D/Systems/Health/OrganInstance.cs` — organ registration on Human prefab / organ item prefabs
 - `Assets/Scripts/SS3D/Systems/Health/Interactions/BandageInteraction.cs` — stop bleeding (Phase 1)
-- `Assets/Scripts/SS3D/Systems/Health/WoundVfx.cs` — per-zone trickle + **on-hit impact spray** (`PlayImpactBurst`); anchors prefer armature `ZoneTargetCollider` bones; trickle/decal/floor drip scale with snapshot bleed rates; spray is ObserversRpc from `ApplyDamage` / sever (not bleed-onset alone)
+- `Assets/Scripts/SS3D/Systems/Health/HealthPersonalAudioMapper.cs` — local-owner heartbeat + labored breathing (oxy/critical); max-merged with stamina in `PersonalAudioSubSystem`
+- `Assets/Scripts/SS3D/Systems/Health/HealthAudioTrackIds.cs` — gasp/choke/scream/blood clip ids
+- `Assets/Scripts/SS3D/Systems/Health/WoundVfx.cs` — per-zone trickle + **on-hit impact spray** (`PlayImpactBurst`); anchors prefer armature `ZoneTargetCollider` bones; trickle/decal/floor drip scale with snapshot bleed rates; spray is ObserversRpc from `ApplyDamage` / sever (not bleed-onset alone). Hit flesh/blood SFX play server-side alongside spray.
 - `Assets/Scripts/SS3D/Systems/Health/HealthSnapshot.cs` — synced vitals + `BleedingRatePacked` / `TotalBleedingRate` for client VFX
 - `Assets/Scripts/SS3D/Systems/Health/BloodDecalSpawner.cs` — pooled URP floor blood decals
 - `Assets/Scripts/SS3D/Systems/Health/BleedingVfxCatalog.cs` — Resources catalog; tints white mask splatters for Decal `Base_Map`
@@ -60,7 +62,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `ZoneTargetResolver.TryResolveHoverZone` / `GetReticleLabel` / `IsMeleeZoneReachInRange` — Main HUD + combat (exclude-self overload; AnatomyNode limb meshes; closest-point melee reach). Hover/hitscan accept optional `maxRayDistance` (default 8 m; ranged passes weapon max range).
 - `GetZoneBruteFraction(BodyZone)` — 0..1 zone brute for gait/limp presentation (replaces legacy `FootBodyPart.RelativeDamage`)
 - Screen feedback: [screen-effects](screen-effects.md) via `HealthScreenEffectMapper` + hit-flash TargetRpc — do not reimplement Volume overlays in Health.
-- Personal heartbeat cue: [audio](audio.md) via `HealthPersonalAudioMapper` (`PersonalAudioSubSystem`) — driven from the same `ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` local-owner hooks as screen effects, not a separate subscription. Deliberately treats `IsCardiacArrest` as silence (opposite of the screen vignette) since the cue represents an actual beating heart.
+- Personal heartbeat + labored breathing: [audio](audio.md) via `HealthPersonalAudioMapper` (`PersonalAudioSubSystem`) — driven from the same `ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` local-owner hooks as screen effects, not a separate subscription. Deliberately treats `IsCardiacArrest` as heartbeat silence (opposite of the screen vignette). Breathing max-merges with stamina.
 - Alert stack: emit via `SnapshotChanged`; map with `HealthAlertStackMapper` only — [inventory](inventory.md) Main HUD owns `AlertStackState` / icon rendering.
 - Body presentation: map vitals with `BodyPresentationIntent.FromSnapshot` and call `Ragdoll.ServerSetPresentation` — never apply ragdoll/animator visuals from Health.
 
