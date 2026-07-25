@@ -34,7 +34,9 @@ namespace SS3D.Systems.Comms
                     continue;
                 }
 
-                if (channel.Kind == CommsChannelKind.Radio && !channel.CodeOnlyChannel)
+                if (channel.Kind == CommsChannelKind.Radio
+                    && !channel.CodeOnlyChannel
+                    && channel.AvailableInCompose)
                 {
                     result.Add(channel);
                 }

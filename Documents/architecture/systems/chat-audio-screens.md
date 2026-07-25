@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 137f439dc — 2026-07-25
+> Verified: 7bfd20fbb — 2026-07-25
 
 # Chat / audio / screens
 
@@ -16,8 +16,9 @@ announcements (global `CommsMessage` broadcast). Legacy `ChatSubSystem` / `Engin
 channel SOs live under `Assets/Content/Data/Comms/Channels/` (`CommsChannel` / `CommsChannels`).
 
 Local speech: weighted chips + T-compose (Enter speak / Shift+Enter whisper / Ctrl+Enter shout).
-**Tab / Shift+Tab** cycles Local → writable radio channels; radio commit uses `CmdSendRadio` (no head
-bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
+**Tab / Shift+Tab** cycles Local → compose-available radio (Engineering/Security); radio commit uses
+`CmdSendRadio` (no head bubble). Feed UI on `UiShell` HUD: middle-left radio stack + top ALL-STATION
+banner.
 
 ## Start here
 
@@ -26,7 +27,8 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
 - `LocalSpeechEmitter` — `CmdSpeak` / `CmdSendRadio` on the speaking Entity.
 - `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
   `UiShell` `UiLayer.Overlay` (not the hub/MI UIDocument).
-- `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio left, announce top.
+- `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio middle-left (header +
+  sender top row), announce top.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
@@ -37,7 +39,10 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
   set its own `PanelSettings` (Unity asserts parent panel mismatch). Use `UiLayer.Overlay`.
 - **Tab-in-compose** replaces design §6 channel radial for this slice — do not add typed `;` prefixes.
 - **Announcements:** all `Announcement`-kind traffic uses the top banner (no routine→feed split yet).
-- **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab lists all writable radio.
+- **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab compose only lists
+  channels with `AvailableInCompose` (Engineering + Security for now).
+- **Radio feed:** middle-left stack (`justify-content: center`); top row is channel header left +
+  sender (ckey) right.
 - **Do not resurrect UGUI always-on chat.**
 - **Speech bubbles invisible / NaN size:** `EnsureOverlay` must require `root.panel != null` and tear
   down on disable (UIDocument rebuild orphans).
@@ -47,7 +52,8 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
   `LateUpdate` — UITK TextField focus swallows Tab (focus navigation) so InputActions/KeyDown are
   unreliable. Also ignore `NavigationMoveEvent` on the draft. Draft chrome shows `LOCAL` /
   `ENG > OPEN`. Empty channel settings recover via loaded assets / Editor AssetDatabase.
-- **Objectives hold-to-show removed:** legacy `Other/Fade` (Tab) binding erased; panel stays visible.
+- **Objectives hold-to-show removed:** legacy `Other/Fade` (Tab) binding erased; uGUI panel stays
+  hidden until the PDA objectives tab ships.
 - **UITK:** do not combine `border-radius` + `overflow: hidden` on the same element.
 - **Occlusion:** shared `SS3D.Utils.LineOfSight` — no private raycast in `LocalSpeechListener`.
 - **`CameraFollow` ignores `enabled = false`:** Coimbra `UpdateEvent` needs `isActiveAndEnabled` early-out.

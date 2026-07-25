@@ -142,21 +142,11 @@ namespace SS3D.Systems.Comms
             List<CommsChannel> result = new();
             foreach (CommsChannel channel in _channelsById.Values)
             {
-                if (channel.Kind == CommsChannelKind.Radio && !channel.CodeOnlyChannel)
+                if (channel.Kind == CommsChannelKind.Radio
+                    && !channel.CodeOnlyChannel
+                    && channel.AvailableInCompose)
                 {
                     result.Add(channel);
-                }
-            }
-
-            // If Kind/CodeOnly filters wiped everything (bad salvage data), still offer non-meta.
-            if (result.Count == 0)
-            {
-                foreach (CommsChannel channel in _channelsById.Values)
-                {
-                    if (channel.Kind != CommsChannelKind.Announcement && !channel.CodeOnlyChannel)
-                    {
-                        result.Add(channel);
-                    }
                 }
             }
 
@@ -230,7 +220,8 @@ namespace SS3D.Systems.Comms
 
             if (!TryGetChannel(channelId, out CommsChannel channel)
                 || channel.Kind != CommsChannelKind.Radio
-                || channel.CodeOnlyChannel)
+                || channel.CodeOnlyChannel
+                || !channel.AvailableInCompose)
             {
                 return;
             }

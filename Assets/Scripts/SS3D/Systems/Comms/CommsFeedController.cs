@@ -90,7 +90,7 @@ namespace SS3D.Systems.Comms
                 ? channel.ResolveRadioHeader()
                 : (message.ChannelId ?? "RADIO").ToUpperInvariant();
             Color accent = channel != null ? channel.Color : new Color(0.37f, 0.53f, 0.7f);
-            _view.PushRadio(header, message.Text, accent);
+            _view.PushRadio(header, message.Sender, message.Text, accent);
         }
 
         private bool EnsureView()

@@ -5,7 +5,8 @@ using UnityEngine.UIElements;
 namespace SS3D.Systems.Comms.UI
 {
     /// <summary>
-    /// Screen-space radio stack (left) and all-station announcement banner (top-middle).
+    /// Screen-space radio stack (middle-left) and all-station announcement banner (top-middle).
+    /// Radio cards: channel header left + sender right on the top row, body below.
     /// </summary>
     public sealed class CommsFeedView
     {
@@ -27,6 +28,7 @@ namespace SS3D.Systems.Comms.UI
         {
             public VisualElement Root;
             public Label Header;
+            public Label Sender;
             public Label Body;
             public float Expiry;
         }
@@ -84,7 +86,7 @@ namespace SS3D.Systems.Comms.UI
             _radioCards.Clear();
         }
 
-        public void PushRadio(string header, string body, Color accent)
+        public void PushRadio(string header, string sender, string body, Color accent)
         {
             if (_radioStack == null)
             {
@@ -93,6 +95,10 @@ namespace SS3D.Systems.Comms.UI
 
             RadioCard card = AcquireRadioCard();
             card.Header.text = header ?? string.Empty;
+            card.Sender.text = string.IsNullOrEmpty(sender) ? string.Empty : sender.ToUpperInvariant();
+            card.Sender.style.display = string.IsNullOrEmpty(card.Sender.text)
+                ? DisplayStyle.None
+                : DisplayStyle.Flex;
             card.Body.text = string.IsNullOrEmpty(body) ? string.Empty : body.ToUpperInvariant();
             card.Root.style.borderLeftColor = accent;
             card.Header.style.color = accent;
@@ -191,9 +197,19 @@ namespace SS3D.Systems.Comms.UI
             card.Root.AddToClassList("comms-feed__radio-card");
             card.Root.pickingMode = PickingMode.Ignore;
 
+            VisualElement topRow = new VisualElement();
+            topRow.AddToClassList("comms-feed__radio-top");
+            topRow.pickingMode = PickingMode.Ignore;
+
             card.Header = new Label();
             card.Header.AddToClassList("comms-feed__radio-header");
-            card.Root.Add(card.Header);
+            topRow.Add(card.Header);
+
+            card.Sender = new Label();
+            card.Sender.AddToClassList("comms-feed__radio-sender");
+            topRow.Add(card.Sender);
+
+            card.Root.Add(topRow);
 
             card.Body = new Label();
             card.Body.AddToClassList("comms-feed__radio-body");

@@ -18,15 +18,17 @@
 .comms-feed__radio-stack {
     position: absolute;
     left: 16px;
-    bottom: 96px;
+    top: 0;
+    bottom: 0;
     width: 320px;
     flex-direction: column-reverse;
+    justify-content: center;
     align-items: flex-start;
 }
 
 .comms-feed__radio-card {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     background-color: rgba(18, 28, 42, 0.72);
     border-left-width: 2px;
     border-left-color: rgb(95, 134, 179);
@@ -37,16 +39,41 @@
     padding: 7px 12px 8px 12px;
     margin-top: 6px;
     max-width: 320px;
+    min-width: 220px;
+}
+
+.comms-feed__radio-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .comms-feed__radio-header {
     margin: 0;
     padding: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
     font-size: 10px;
     letter-spacing: 1px;
     color: rgb(95, 134, 179);
     -unity-text-align: middle-left;
+    white-space: nowrap;
+}
+
+.comms-feed__radio-sender {
+    margin: 0 0 0 8px;
+    padding: 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: rgb(170, 185, 200);
+    -unity-text-align: middle-right;
     white-space: nowrap;
 }
 

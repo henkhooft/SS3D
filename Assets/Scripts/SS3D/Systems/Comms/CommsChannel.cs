@@ -36,6 +36,9 @@ namespace SS3D.Systems.Comms
         [Tooltip("If true, players cannot send on this channel — server/code only.")]
         public bool CodeOnlyChannel;
 
+        [Tooltip("If true, Tab-compose can select this radio channel. Keep the Tab list short for now.")]
+        public bool AvailableInCompose;
+
         [Tooltip("Admin role gate (enforced when non-None).")]
         public ServerRoleTypes RoleRequiredToUse = ServerRoleTypes.None;
 

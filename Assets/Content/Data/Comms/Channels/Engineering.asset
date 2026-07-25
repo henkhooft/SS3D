@@ -18,5 +18,6 @@ MonoBehaviour:
   Color: {r: 0.9843137, g: 0.3372549, b: 0.07450981, a: 1}
   Kind: 0
   CodeOnlyChannel: 0
+  AvailableInCompose: 1
   RoleRequiredToUse: 0
   RequiredTraitInHeadset: {fileID: 11400000, guid: fb93106681974e74d8c3f654af725c05, type: 2}

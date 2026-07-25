@@ -10,8 +10,8 @@ using Actor = SS3D.Core.Behaviours.Actor;
 namespace SS3D.Systems.Gamemodes.UI
 {
     /// <summary>
-    /// Shows assigned gamemode objectives. Always visible when present — no hold-to-show hotkey
-    /// (legacy Tab/Fade binding removed; objectives move to the PDA tab per design).
+    /// Legacy uGUI objectives panel — kept for data wiring but hidden on screen.
+    /// Design surface is the PDA objectives tab (objectives.md §8).
     /// </summary>
     public class GamemodeObjectivePanelView : Actor
     {
@@ -35,10 +35,15 @@ namespace SS3D.Systems.Gamemodes.UI
         {
             base.OnStart();
 
-            // Always shown — no Tab/Alt hold-to-reveal.
+            // Hidden until the PDA objectives tab ships — no hold-to-show hotkey revival.
             if (_fade != null)
             {
-                _fade.SetFade(true);
+                _fade.SetFade(false);
+            }
+
+            if (_content != null)
+            {
+                _content.SetActive(false);
             }
         }
 
@@ -54,6 +59,7 @@ namespace SS3D.Systems.Gamemodes.UI
 
         public void ProcessObjectiveUpdated(GamemodeObjective objective)
         {
+            // Panel is disabled; still accept updates so state is ready when PDA tab lands.
             bool hasValue = _gamemodeObjectiveItems.TryGetValue(objective.Id, out GamemodeObjectiveItemView view);
 
             if (hasValue)
@@ -68,8 +74,13 @@ namespace SS3D.Systems.Gamemodes.UI
 
         private void CreateItemView(GamemodeObjective objective)
         {
+            if (_itemViewPrefab == null || _content == null)
+            {
+                return;
+            }
+
             GamemodeObjectiveItemView itemView = Instantiate(_itemViewPrefab, _content.transform);
-            itemView.SetActive(true);
+            itemView.SetActive(false);
 
             _gamemodeObjectiveItems.Add(objective.Id, itemView);
             itemView.UpdateObjective(objective);
