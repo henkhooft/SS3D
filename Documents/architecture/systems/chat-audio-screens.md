@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 35b40f897 — 2026-07-25 (slash compose prefixes)
+> Verified: 6ce5ab235 — 2026-07-25
 
 # Chat / audio / screens
 
@@ -77,8 +77,9 @@ prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnounc
 
 - Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
 - PDA log / history ([comms.md](../../design/comms.md) §9).
-- Channel radial; headset/ID gating (MVP2 S4).
-- Migrate local-speech overlay onto UiShell (feed already on Hud).
+- Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
+- More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +
+  `AvailableInCompose` / announcement writability flags.
 
 ## Depends on / Used by
 

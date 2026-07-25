@@ -33,5 +33,8 @@ See [2026-07_comms-non-diegetic-feed.md](../architecture/2026-07_comms-non-diege
 
 - Channel assets moved to `Assets/Content/Data/Comms/Channels/`; settings `CommsChannelsSettings.asset`.
 - Radio send is `LocalSpeechEmitter.CmdSendRadio` → server `CommsMessage` broadcast (clients cannot forge).
-- Feed attaches to `UiLayer.Hud`; local-speech overlay still owns a private UIDocument.
-- Play Mode: confirm round welcome banner + Tab radio after hub loads `CommsFeedController` stylesheet.
+- Player announce: `CmdSendAnnouncement` → `HandleAnnouncementRequest` (`StationAlerts` not CodeOnly; prefix-only).
+- Feed attaches to `UiLayer.Hud`; local-speech compose/chips on `UiShell` Overlay (not a private UIDocument).
+- Compose: Tab Local↔Eng↔Sec; slash `/eng` `/sec` `/announce` (prefix wins). Radio body uses Liberation Sans.
+- Announce audio: `StationAnnounce` then banner (+ `StationWelcome` follow-up at round start).
+- Radio cards show tinted `delapouite/radio-tower.svg` VectorImage.

@@ -27,18 +27,20 @@ Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hu
 - Retarget Round/Entity station alerts.
 - Delete `ChatSubSystem` / `ChatMessage` / hub registration.
 
-### Phase 3 — Feed UI + Tab compose — this pass
+### Phase 3 — Feed UI + Tab/slash compose — this pass
 
-- `CommsFeedController` on `UiLayer.Hud`: left radio cards + top ALL-STATION banner.
-- Existing T-compose: Tab cycles Local + radio; radio commit via Comms (no head bubble).
+- `CommsFeedController` on `UiLayer.Hud`: left radio cards (radio-tower icon) + top ALL-STATION banner.
+- Announce SFX: always `StationAnnounce`, then banner + optional follow-up (`StationWelcome` at round start).
+- T-compose: Tab cycles Local + Eng/Sec; slash prefixes `/eng` `/sec` `/announce` (prefix wins; announce not in Tab).
+- Local-speech compose/chips on `UiShell` `UiLayer.Overlay`.
 
 ## Deferred (MVP2 / later)
 
 - Headset trait / ID gating for channels
 - PDA history log ([comms.md](../design/comms.md) §9)
-- Channel radial
+- Channel radial (replaces interim Tab + slash prefixes)
 - OOC/LOOC/dead distinct typography
-- Migrating local-speech overlay onto UiShell
+- Re-lock player `/announce` behind role/access when gating lands
 
 ## Related
 

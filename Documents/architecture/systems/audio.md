@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: 6ac41562b — 2026-07-24
+> Verified: 6ce5ab235 — 2026-07-25
 
 # Audio
 
@@ -96,9 +96,10 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   pattern for naming registered ids in code rather than inlining raw GUID strings. Third-party
   imports: add a row to [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - Ad-hoc `AudioSource` users outside the pool (`AirlockStateMachine`, `StructuralIntegrityPresenter`,
-  `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`) bypass
-  occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
-  ([audio-foundation](../2026-07_audio-foundation.md), deferred).
+  `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`,
+  `CommsFeedController` non-diegetic announce/welcome) bypass occlusion today — consolidating
+  positional ones onto `PlayAudioSource` is content-roster work ([audio-foundation](../2026-07_audio-foundation.md),
+  deferred). UI chimes stay client-local / non-spatial.
 - Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
   thin — no Map Editor UI yet). Reachable in-game via the `areaambience (trackId|clear)` dev console
   command (`AreaAmbienceCommand`), which always targets the calling player's own current area (same
