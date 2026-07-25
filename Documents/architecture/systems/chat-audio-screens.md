@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 7bfd20fbb — 2026-07-25
+> Verified: 6ac884faf — 2026-07-25
 
 # Chat / audio / screens
 
@@ -28,7 +28,8 @@ banner.
 - `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
   `UiShell` `UiLayer.Overlay` (not the hub/MI UIDocument).
 - `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio middle-left (header +
-  sender top row), announce top.
+  sender top row), announce top. Announcements play `CommsAudioTrackIds.StationAnnounce` chime
+  first, then reveal the banner when the clip ends.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
@@ -39,6 +40,9 @@ banner.
   set its own `PanelSettings` (Unity asserts parent panel mismatch). Use `UiLayer.Overlay`.
 - **Tab-in-compose** replaces design §6 channel radial for this slice — do not add typed `;` prefixes.
 - **Announcements:** all `Announcement`-kind traffic uses the top banner (no routine→feed split yet).
+  Client plays `Assets/Art/Sound/UI/Comms/Announce.ogg` before revealing the banner; missing clip
+  falls through to immediate show. Third-party clip credit:
+  [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab compose only lists
   channels with `AvailableInCompose` (Engineering + Security for now).
 - **Radio feed:** middle-left stack (`justify-content: center`); top row is channel header left +

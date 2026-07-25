@@ -65,6 +65,9 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
   (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
   the old Can1 placeholder).
+- `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — station-announce chime
+  (`Assets/Art/Sound/UI/Comms/Announce.ogg`); `CommsFeedController` plays it before revealing the
+  ALL-STATION banner. Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
@@ -88,7 +91,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   `Id = <clip's own asset GUID>`, `Database = AssetDatabases.Sounds`'s `DatabaseID`, then add a
   matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000,
   guid: <clip guid>, type: 3}`). `CombatAudioTrackIds` (per-domain, mirrors `AudioTrackIds`) is the
-  pattern for naming registered ids in code rather than inlining raw GUID strings.
+  pattern for naming registered ids in code rather than inlining raw GUID strings. Third-party
+  imports: add a row to [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - Ad-hoc `AudioSource` users outside the pool (`AirlockStateMachine`, `StructuralIntegrityPresenter`,
   `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`) bypass
   occlusion today — consolidating them onto `PlayAudioSource` is content-roster work
