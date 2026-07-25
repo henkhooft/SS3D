@@ -3,6 +3,7 @@ using Coimbra;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Logging;
 using SS3D.Rendering.URP;
 using SS3D.Systems.Selection;
 using UnityEngine;
@@ -211,9 +212,15 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            // Must stay in GraphicsSettings Always Included Shaders — no prefab/material
+            // reference pulls this into player builds, and Shader.Find then returns null.
             Shader shader = Shader.Find("Custom/InteractionOutline");
             if (shader == null)
             {
+                Log.Warning(
+                    typeof(InteractionOutlineView),
+                    "Custom/InteractionOutline missing from the player (stripped). Add it to Always Included Shaders.",
+                    Logs.Important);
                 return;
             }
 
