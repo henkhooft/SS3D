@@ -10,6 +10,8 @@ Not an official RE:SS3D build. Unzip so you have:
   ...
 
 1. Double-click Start_SS3D_Host.bat (self-hosts; skips the launcher).
+   Host needs loopback for its own client: `-host -ip=127.0.0.1 …`. If an older zip's Host.bat
+   omits `-ip=`, edit it to put `-ip=127.0.0.1` *before* `-host` (or re-download a newer cut).
 2. On the same PC (or another on the LAN), run a Client bat — default is 127.0.0.1:1151.
    Client bats only differ by ckey; language is an in-game setting.
 
