@@ -568,12 +568,25 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Diegetic muzzle flash for all observers (not owner-only TargetRpc impact chrome).
+        /// Diegetic muzzle flash for all observers. Each client resolves the local held muzzle
+        /// so the light parents to the visual barrel tip (fallback: server-sampled world pose).
         /// </summary>
         [ObserversRpc(RunLocally = true)]
-        private void ObserversNotifyMuzzleFlash(Vector3 worldPosition, Vector3 worldForward)
+        private void ObserversNotifyMuzzleFlash(Vector3 fallbackPosition, Vector3 fallbackForward)
         {
-            MuzzleFlashVfx.Play(worldPosition, worldForward);
+            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                Transform muzzle = weapon.Muzzle;
+                if (muzzle != null)
+                {
+                    MuzzleFlashVfx.Play(muzzle);
+                    return;
+                }
+
+                weapon.GetMuzzleWorldPose(out fallbackPosition, out fallbackForward);
+            }
+
+            MuzzleFlashVfx.Play(fallbackPosition, fallbackForward);
         }
 
         [TargetRpc]

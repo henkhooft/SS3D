@@ -6,15 +6,39 @@ namespace SS3D.Systems.Combat
 {
     /// <summary>
     /// Procedural muzzle flash — short point light + particle burst at the firearm muzzle socket.
-    /// Client-local presentation; spawned via ObserversRpc so all observers see the shot report.
+    /// Client-local presentation; prefer parenting to the live <c>Muzzle</c> transform so the light
+    /// stays on the barrel tip rather than a stale server-sampled world point.
     /// </summary>
     public static class MuzzleFlashVfx
     {
         private const float LifetimeSeconds = 0.08f;
         private const float LightIntensity = 6.5f;
-        private const float LightRange = 2.2f;
+        /// <summary>Tight range so the flash reads at the tip, not as a body wash.</summary>
+        private const float LightRange = 1.1f;
         private static Material _particleMaterial;
 
+        /// <summary>
+        /// Spawn flash parented to <paramref name="muzzle"/> (local origin). Light and particles
+        /// share that transform, so both are exactly at the socket.
+        /// </summary>
+        public static void Play(Transform muzzle)
+        {
+            if (muzzle == null)
+            {
+                return;
+            }
+
+            GameObject root = new("MuzzleFlash");
+            // Keep visible in the hierarchy briefly so Play Mode inspection can confirm origin.
+            root.transform.SetParent(muzzle, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+
+            MuzzleFlashEffect effect = root.AddComponent<MuzzleFlashEffect>();
+            effect.Play(LifetimeSeconds, LightIntensity, LightRange);
+        }
+
+        /// <summary>Fallback when no muzzle socket is wired — world-space one-shot.</summary>
         public static void Play(Vector3 worldPosition, Vector3 worldForward)
         {
             if (worldForward.sqrMagnitude < 0.0001f)
@@ -23,7 +47,6 @@ namespace SS3D.Systems.Combat
             }
 
             GameObject root = new("MuzzleFlash");
-            root.hideFlags = HideFlags.HideAndDontSave;
             root.transform.SetPositionAndRotation(
                 worldPosition,
                 Quaternion.LookRotation(worldForward.normalized));
@@ -77,6 +100,7 @@ namespace SS3D.Systems.Combat
 
             private void EnsureConfigured()
             {
+                // Light lives on this root — same world position as the muzzle socket when parented.
                 _light = gameObject.AddComponent<Light>();
                 _light.type = LightType.Point;
                 _light.shadows = LightShadows.None;
