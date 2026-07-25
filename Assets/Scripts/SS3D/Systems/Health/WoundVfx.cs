@@ -21,8 +21,10 @@ namespace SS3D.Systems.Health
         private const float ReferenceBleedRate = 2f;
         private const float FloorDecalIntervalMinSeconds = 0.22f;
         private const float FloorDecalIntervalMaxSeconds = 1.2f;
-        private const float BodyDecalSizeMin = 0.1f;
-        private const float BodyDecalSizeMax = 0.22f;
+        private const float BodyDecalSizeMin = 0.14f;
+        private const float BodyDecalSizeMax = 0.28f;
+        private const float BodyDecalOutwardOffset = 0.07f;
+        private const float BodyDecalProjectionDepth = 0.55f;
         private const float ImpactBurstCountMin = 12f;
         private const float ImpactBurstCountMax = 36f;
         private const float ImpactSpeedMin = 2.4f;
@@ -37,6 +39,7 @@ namespace SS3D.Systems.Health
 
         private readonly Dictionary<BodyZone, GameObject> _activeParticles = new();
         private readonly Dictionary<BodyZone, DecalProjector> _bodyDecals = new();
+        private readonly Dictionary<BodyZone, float> _bodyDecalSpin = new();
         private readonly Dictionary<BodyZone, Transform> _anchors = new();
         private readonly HashSet<BodyZone> _particlesInitialized = new();
 
@@ -127,6 +130,10 @@ namespace SS3D.Systems.Health
             {
                 return;
             }
+
+            // Keep wound projectors aimed into the mesh as bones animate — identity
+            // local rotation on the bone rarely intersects skin/clothing.
+            RefreshActiveBodyDecals();
 
             _floorDecalTimer -= Time.deltaTime;
             if (_floorDecalTimer > 0f)
@@ -299,6 +306,43 @@ namespace SS3D.Systems.Health
             {
                 bodyDecal.gameObject.SetActive(false);
             }
+
+            _bodyDecalSpin.Remove(zone);
+        }
+
+        private void RefreshActiveBodyDecals()
+        {
+            foreach (KeyValuePair<BodyZone, DecalProjector> pair in _bodyDecals)
+            {
+                DecalProjector decal = pair.Value;
+                if (decal == null || !decal.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (!_anchors.TryGetValue(pair.Key, out Transform anchor) || anchor == null)
+                {
+                    continue;
+                }
+
+                OrientBodyDecal(decal, anchor, pair.Key);
+            }
+        }
+
+        private void OrientBodyDecal(DecalProjector decal, Transform anchor, BodyZone zone)
+        {
+            Vector3 outward = ComputeOutward(anchor);
+            if (!_bodyDecalSpin.TryGetValue(zone, out float spin))
+            {
+                spin = Random.Range(0f, 360f);
+                _bodyDecalSpin[zone] = spin;
+            }
+
+            // Same into-surface convention as floor stamps: project along -normal.
+            Quaternion rotation = BloodDecalSpawner.RotationOntoSurface(outward, spin);
+            decal.transform.SetPositionAndRotation(
+                anchor.position + outward * BodyDecalOutwardOffset,
+                rotation);
         }
 
         private void EnableParticle(BodyZone zone, Transform anchor, float bleedRate)
@@ -371,15 +415,15 @@ namespace SS3D.Systems.Health
             if (!_bodyDecals.TryGetValue(zone, out DecalProjector decal) || decal == null)
             {
                 var decalObject = new GameObject($"BloodWoundDecal_{zone}");
-                decalObject.transform.SetParent(anchor, false);
-                decalObject.transform.localPosition = Vector3.zero;
-                decalObject.transform.localRotation = Quaternion.identity;
+                decalObject.transform.SetParent(anchor, true);
 
                 decal = decalObject.AddComponent<DecalProjector>();
                 decal.scaleMode = DecalScaleMode.ScaleInvariant;
                 decal.drawDistance = 24f;
                 decal.startAngleFade = 180f;
                 decal.endAngleFade = 180f;
+                decal.pivot = new Vector3(0f, 0f, BodyDecalProjectionDepth * 0.35f);
+                // Mask first, then material — same DecalEntityManager refresh order as floor.
                 decal.renderingLayerMask = DecalRenderingLayers.CharacterProjectorMask;
                 decal.material = BloodDecalSpawner.CreateBodyDecalMaterial();
                 _bodyDecals[zone] = decal;
@@ -397,8 +441,9 @@ namespace SS3D.Systems.Health
 
             float t = NormalizeBleedRate(bleedRate);
             float size = Mathf.Lerp(BodyDecalSizeMin, BodyDecalSizeMax, t);
-            decal.size = new Vector3(size, size, 0.35f);
+            decal.size = new Vector3(size, size, BodyDecalProjectionDepth);
             decal.fadeFactor = Mathf.Lerp(0.75f, 1f, t);
+            OrientBodyDecal(decal, anchor, zone);
             decal.gameObject.SetActive(true);
         }
 

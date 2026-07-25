@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: be4ea6eea — 2026-07-25
+> Verified: 26ae013e5 — 2026-07-25
 
 # Health
 
@@ -74,6 +74,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Bleed particles float beside the limb:** do not parent VFX to `AnatomyNode` roots first — those prefab pivots do not follow the skinned mesh. Prefer `ZoneTargetCollider` bone transforms (see `WoundVfx.EnsureAnchors`).
 - **Bleed particle look:** `BloodParticle.mat` uses soft `blood_droplet.png` (round falloff), not `splatter.png` (decal mask). Keep drip emission visible; weird “paper cutout” drips were the texture, not rate.
 - **Drips visible spawning on the mesh:** emission is at the bone anchor. Fade alpha in over the first ~5% of lifetime (`DripSpawnInvisibleLifetimeFraction` in `WoundVfx`) so droplets clear the surface before drawing; do not only raise start speed (that still shows a spawn pop).
+- **Body blood missing on worn jumpsuit:** worn cloth is `ClothesDisplayer` → `ClothedBodyPart` on Default. Simple Toon must sample DBuffer (`#ifdef _DBUFFER` + `ApplyDecalToBaseColor`). Wound projectors must aim into the mesh (`BloodDecalSpawner.RotationOntoSurface` + outward offset) — identity local rotation on the bone misses skin/clothing so only floor stamps from `BloodDecalSpawner.SpawnAtAnchor` were visible.
 - **Death re-triggers every health tick:** `TickHealth` must latch death (`_deathTriggered`) and stop ticking; otherwise `Human.Kill()` re-runs every second (ghost spam / dispose races). `WoundVfx` also clears and disables on `HealthState.Dead`.
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
 - **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
