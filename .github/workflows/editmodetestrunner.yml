@@ -25,8 +25,9 @@ jobs:
     name: Pick runner
     runs-on: ubuntu-latest
     permissions:
+      # No `administration` — not a valid GITHUB_TOKEN permission key (workflow fails validation).
+      # Listing runners may 403; pick step already falls back to ubuntu-latest on API failure.
       actions: read
-      administration: read
       contents: read
     outputs:
       runs_on: ${{ steps.pick.outputs.runs_on }}
