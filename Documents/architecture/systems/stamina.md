@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: StaminaController, StaminaFactory
 > Status: partial
-> Verified: b1fcfbbce — 2026-07-23
+> Verified: be4ea6eea — 2026-07-25
 
 # Stamina
 

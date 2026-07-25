@@ -31,6 +31,9 @@ namespace SS3D.Systems.Health
         private const float ImpactLifetimeMax = 0.4f;
         private const float ImpactSizeMin = 0.015f;
         private const float ImpactSizeMax = 0.04f;
+        // Color-over-lifetime is normalized 0..1; ~0.05 ≈ 40–80 ms for drip lifetimes,
+        // so droplets clear the mesh before becoming visible.
+        private const float DripSpawnInvisibleLifetimeFraction = 0.05f;
 
         private readonly Dictionary<BodyZone, GameObject> _activeParticles = new();
         private readonly Dictionary<BodyZone, DecalProjector> _bodyDecals = new();
@@ -446,7 +449,9 @@ namespace SS3D.Systems.Health
                 },
                 new[]
                 {
-                    new GradientAlphaKey(1f, 0f),
+                    // Start invisible so continuous drips aren't seen popping on the skinned mesh.
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, DripSpawnInvisibleLifetimeFraction),
                     new GradientAlphaKey(1f, 0.45f),
                     new GradientAlphaKey(0.35f, 0.75f),
                     new GradientAlphaKey(0f, 1f),

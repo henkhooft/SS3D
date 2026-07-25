@@ -23,8 +23,8 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 - **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
 - **M4** — Objectives + win/lose
 - **M5** — End-game screen + restart; spectators still see the outcome
-- **M7** — Health feel (crit ragdoll, screen-effect compositing) + thin field med + drag
-- **M8** — Env→health + armor seal + internals + air alarms that alarm + thin fire response
+- **M7** — Drag body/carrier remainder (crit ragdoll, screen FX, feel SFX shipped)
+- **M8** — Armor seal + internals + air alarms that alarm + thin fire response (turf→health exposure shipped)
 - **M9** — Test-map APC lights matter + wall damage readable at range
 
 Not focus: Area-id merge on breach, re-wiring client atmos VFX (already shipped), shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, full radio, server browser / accounts.

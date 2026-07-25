@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: b2842bb73 — 2026-07-25
+> Verified: be4ea6eea — 2026-07-25
 
 # Health
 
@@ -73,6 +73,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Floor blood paints through the player / looks cut off:** Mesh Bias only affects mesh decals. Cutoffs: align with `DecalRotationOntoSurface` (never bare `LookRotation(-normal)` on flats). Through-player: URP Decal Layers need receivers to write rendering layers in a **DepthNormals** pass — Simple Toon lacked that, so character pixels kept the floor’s layer and still matched floor projectors. `STDefault` now has DepthNormals/`_WRITE_RENDERING_LAYERS`; tiles stamp `ReceiveWorldDecals`, floor projectors use `WorldFloorProjectorMask`.
 - **Bleed particles float beside the limb:** do not parent VFX to `AnatomyNode` roots first — those prefab pivots do not follow the skinned mesh. Prefer `ZoneTargetCollider` bone transforms (see `WoundVfx.EnsureAnchors`).
 - **Bleed particle look:** `BloodParticle.mat` uses soft `blood_droplet.png` (round falloff), not `splatter.png` (decal mask). Keep drip emission visible; weird “paper cutout” drips were the texture, not rate.
+- **Drips visible spawning on the mesh:** emission is at the bone anchor. Fade alpha in over the first ~5% of lifetime (`DripSpawnInvisibleLifetimeFraction` in `WoundVfx`) so droplets clear the surface before drawing; do not only raise start speed (that still shows a spawn pop).
 - **Death re-triggers every health tick:** `TickHealth` must latch death (`_deathTriggered`) and stop ticking; otherwise `Human.Kill()` re-runs every second (ghost spam / dispose races). `WoundVfx` also clears and disables on `HealthState.Dead`.
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
 - **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
@@ -82,13 +83,14 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Off-map / past atmos chunks is vacuum:** once Tile+Atmos are ready, `HumanoidSpaceSupport.IsUnsupportedAt` (no plenum / no occupancy) keeps exposure as vacuum even when `TryGetCellDebugInfo` fails outside `_coordToIndex`. Do not fall back to SafeDefault there or deep-space float becomes breathable.
 - **LowOxygen flicker in station air:** turf hypoxia uses O₂ **partial pressure** (mole% × kPa), not raw mole fraction or `OxyDebt > 0`. Comfortable ≥18 kPa PO₂ (station ~20); alert soft-start for systemic debt is `LowOxygenAlertSoftStart`.
 - **Pressure ≠ burn:** low/high/vacuum pressure damages **lungs** (`PressureLungDamage` → `OrganSimulation.ApplyLungDamage`). Hot/cold/fire burn **all zones** at per-zone rates. Do not dump pressure into chest burn or cascade ambient dermal burn into organ damage.
+- **`AudioType` ambiguous in Health:** `HumanHealthController` imports `UnityEngine` and `SS3D.Systems.Audio` — use `using AudioType = SS3D.Systems.Audio.AudioType;` (same as `InteractionController`) before `PlayAudioSource`.
 - **Melee self-hit / missed limbs:** connect and reticle must pass `excludeHealth` (attacker) into `TryResolveHoverZone`; include detachable `AnatomyNode` mesh colliders and check reach with `IsMeleeZoneReachInRange` (closest point), not the ray impact alone — see [combat](combat.md).
 
 ## Depends on / Used by
 
-- **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md), [audio](audio.md) (`PersonalAudioSubSystem`)
+- **Depends on:** [entities](entities.md), [interactions-framework](interactions-framework.md), [screen-effects](screen-effects.md), [audio](audio.md) (`PersonalAudioSubSystem`, hit/gasp pool), [atmospherics](atmospherics.md) (turf sample)
 - **Used by:** [combat](combat.md) (melee zone hits), [inventory](inventory.md) (Main HUD alert stack), dev console `hurt`/`heal`, `HumanoidLivingController` / `HumanoidPredictedMovement` / `HumanoidBodyStateBridge` (movement multiplier / limp + `InjuredLeg` / injured-arm presentation), `Hand` (arm debuff stub)
-- **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; combat drains deferred
+- **Stamina:** [stamina](stamina.md) Phase 7a core — regen/encumbrance/overdraw→oxy; breathing max-merge with health
 
 ## Related docs
 
@@ -97,6 +99,8 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
 - Stamina map: [stamina](stamina.md)
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** single authority for collapse/death presentation
+- [2026-07_health-env-feel](../2026-07_health-env-feel.md) — **shipped** turf exposure + feel polish (M7/M8 exposure)
 - [2026-07_animation-polish](../2026-07_animation-polish.md) — limp/injured gait, severity idle, arm overlay, left-hand mirror
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [screen-effects](screen-effects.md)
+- Milestone: [mvp1-nuke-ops.md](../../milestones/mvp1-nuke-ops.md) M7 / M8

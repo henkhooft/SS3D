@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: c7c66f1a5 — 2026-07-25
+> Verified: be4ea6eea — 2026-07-25
 
 # Entities
 
@@ -76,6 +76,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 - [2026-07_animation-polish](../2026-07_animation-polish.md) — **shipped** melee/limp/mirror/severity polish
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** collapse/death presentation
+- [2026-07_health-env-feel](../2026-07_health-env-feel.md) — **shipped** hit flinch / critical feel (adjacent)
 - [2026-07_player-body-animation](../2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
 - [2026-07_editor-tooling-tiers](../2026-07_editor-tooling-tiers.md) — Editor MenuItem A/B/C policy

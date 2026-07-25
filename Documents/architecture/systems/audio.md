@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial (personal heartbeat/breathing/alert clips registered; health hit one-shots wired)
-> Verified: b2842bb73 — 2026-07-25
+> Verified: be4ea6eea — 2026-07-25
 
 # Audio
 
@@ -187,10 +187,10 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`), [stamina](stamina.md) (`StaminaPersonalAudioMapper`), [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`), [combat](combat.md) (gunfire/reload SFX via the pool, `CombatAudioTrackIds`); furniture/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); furniture/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
 
 ## Related docs
 
 - Design (read-only): [Documents/design/audio.md](../../design/audio.md)
-- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md)
+- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../2026-07_health-env-feel.md)
 - Precedent: [2026-07_screen-space-effects](../2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)
