@@ -310,11 +310,6 @@ namespace SS3D.Systems.Health
             bool needsFullSetup = !_particlesInitialized.Contains(zone);
             if (needsFullSetup)
             {
-                if (particleSystem.isPlaying)
-                {
-                    particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                }
-
                 InitializeParticle(particleSystem, bleedRate);
                 _particlesInitialized.Add(zone);
             }
@@ -344,6 +339,15 @@ namespace SS3D.Systems.Health
 
                 particle = Instantiate(prefab, anchor.position, anchor.rotation, anchor);
                 _activeParticles[zone] = particle;
+
+                // Prefab may playOnAwake — stop before any duration/loop writes.
+                ParticleSystem spawned = particle.GetComponentInChildren<ParticleSystem>();
+                if (spawned != null)
+                {
+                    ParticleSystem.MainModule spawnedMain = spawned.main;
+                    spawnedMain.playOnAwake = false;
+                    spawned.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
             }
 
             particle.transform.SetParent(anchor, false);
@@ -402,12 +406,19 @@ namespace SS3D.Systems.Health
                 return;
             }
 
+            // Duration/loop cannot change while playing — impact spray hits this path
+            // when the prefab auto-starts or a prior emit left the system running.
+            if (particleSystem.isPlaying || particleSystem.particleCount > 0)
+            {
+                particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
             float t = NormalizeBleedRate(bleedRate);
 
             ParticleSystem.MainModule main = particleSystem.main;
+            main.playOnAwake = false;
             main.duration = 5f;
             main.loop = true;
-            main.playOnAwake = false;
             main.startLifetime = new ParticleSystem.MinMaxCurve(
                 Mathf.Lerp(0.7f, 1.1f, t),
                 Mathf.Lerp(1.2f, 1.8f, t));
