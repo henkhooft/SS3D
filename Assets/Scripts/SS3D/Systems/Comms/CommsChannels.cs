@@ -1,6 +1,7 @@
 using Coimbra;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SS3D.Systems.Comms
 {
@@ -11,12 +12,21 @@ namespace SS3D.Systems.Comms
     [ProjectSettings("SS3D/Assets", "Comms Channels")]
     public class CommsChannels : ScriptableSettings
     {
+        // Keep legacy ChatChannels serialized names so Unity does not wipe the list on script swap.
+        [FormerlySerializedAs("allChannels")]
         public List<CommsChannel> AllChannels = new();
+
+        [FormerlySerializedAs("stationAlertsChannel")]
         public CommsChannel AnnouncementChannel;
 
         public IReadOnlyList<CommsChannel> GetWritableRadioChannels()
         {
             List<CommsChannel> result = new();
+            if (AllChannels == null)
+            {
+                return result;
+            }
+
             foreach (CommsChannel channel in AllChannels)
             {
                 if (channel == null)
@@ -36,7 +46,7 @@ namespace SS3D.Systems.Comms
         public bool TryGetChannel(string id, out CommsChannel channel)
         {
             channel = null;
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id) || AllChannels == null)
             {
                 return false;
             }

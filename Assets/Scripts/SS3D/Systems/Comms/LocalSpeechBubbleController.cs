@@ -53,6 +53,8 @@ namespace SS3D.Systems.Comms
         private bool _isComposing;
         private SpeechMode _composeMode = SpeechMode.Speak;
         private int _composeChannelIndex;
+        private int _lastTabCycleFrame = -1;
+        private bool _tabHeld;
         private readonly List<CommsChannel> _composeRadioChannels = new();
 
         protected override void OnAwake()
@@ -147,31 +149,39 @@ namespace SS3D.Systems.Comms
             _isComposing = true;
             _composeMode = SpeechMode.Speak;
             _composeChannelIndex = 0;
+            _tabHeld = false;
             RebuildComposeChannelList();
             _composeEntry.Enter();
             _view.SetRetainDraftFocus(true);
             _view.DraftField.value = string.Empty;
-            // TrickleDown so Enter is caught before multiline TextField treats it as a newline
-            // (that was eating the first Enter and requiring a second press to commit).
+            // Enter/Escape via UITK; Tab is polled from Keyboard in LateUpdate because UITK
+            // focus navigation swallows Tab before InputActions / field KeyDown see it.
             _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+            _view.DraftField.RegisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
+            if (_layerHost != null)
+            {
+                _layerHost.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _layerHost.RegisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
+            }
+
             _view.FocusDraft();
         }
 
         private void RebuildComposeChannelList()
         {
             _composeRadioChannels.Clear();
-            CommsChannels settings = _commsSubSystem != null
-                ? _commsSubSystem.ChannelSettings
-                : SubSystems.Get<CommsSubSystem>()?.ChannelSettings;
-            if (settings == null)
+            CommsSubSystem comms = _commsSubSystem;
+            if (comms == null)
+            {
+                comms = SubSystems.Get<CommsSubSystem>();
+            }
+
+            if (comms == null)
             {
                 return;
             }
 
-            foreach (CommsChannel channel in settings.GetWritableRadioChannels())
-            {
-                _composeRadioChannels.Add(channel);
-            }
+            _composeRadioChannels.AddRange(comms.GetWritableRadioChannels());
         }
 
         private bool IsComposeOnRadio => _composeChannelIndex > 0
@@ -182,12 +192,25 @@ namespace SS3D.Systems.Comms
 
         private void CycleComposeChannel(int delta)
         {
+            // Rebuild in case channel settings recovered after compose opened with an empty list.
+            if (_composeRadioChannels.Count == 0)
+            {
+                RebuildComposeChannelList();
+            }
+
             int count = 1 + _composeRadioChannels.Count;
             if (count <= 1)
             {
                 return;
             }
 
+            // Debounce: Keyboard poll + UITK NavigationMove can both fire in one frame.
+            if (_lastTabCycleFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            _lastTabCycleFrame = Time.frameCount;
             _composeChannelIndex = (_composeChannelIndex + delta) % count;
             if (_composeChannelIndex < 0)
             {
@@ -241,10 +264,17 @@ namespace SS3D.Systems.Comms
             if (_view?.DraftField != null)
             {
                 _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _view.DraftField.UnregisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
                 if (clearText)
                 {
                     _view.DraftField.value = string.Empty;
                 }
+            }
+
+            if (_layerHost != null)
+            {
+                _layerHost.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _layerHost.UnregisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
             }
 
             _view?.HideDraft();
@@ -252,6 +282,29 @@ namespace SS3D.Systems.Comms
             _isComposing = false;
             _composeMode = SpeechMode.Speak;
             _composeChannelIndex = 0;
+            _tabHeld = false;
+        }
+
+        private void HandleDraftNavigationMove(NavigationMoveEvent evt)
+        {
+            if (!_isComposing)
+            {
+                return;
+            }
+
+            // UITK routes Tab / Shift+Tab as focus navigation, not always as KeyDownEvent.
+            if (evt.direction == NavigationMoveEvent.Direction.Next)
+            {
+                SuppressUiToolkitDefault(evt);
+                CycleComposeChannel(1);
+                return;
+            }
+
+            if (evt.direction == NavigationMoveEvent.Direction.Previous)
+            {
+                SuppressUiToolkitDefault(evt);
+                CycleComposeChannel(-1);
+            }
         }
 
         private void HandleDraftKeyDown(KeyDownEvent evt)
@@ -263,8 +316,7 @@ namespace SS3D.Systems.Comms
 
             if (evt.keyCode == KeyCode.Tab || evt.character == '\t')
             {
-                evt.StopImmediatePropagation();
-                evt.PreventDefault();
+                SuppressUiToolkitDefault(evt);
                 bool reverse = evt.shiftKey
                     || (Keyboard.current != null
                         && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed));
@@ -276,17 +328,29 @@ namespace SS3D.Systems.Comms
                 || evt.character is '\n' or '\r';
             if (isSubmit)
             {
-                evt.StopImmediatePropagation();
-                evt.PreventDefault();
+                SuppressUiToolkitDefault(evt);
                 CommitCompose();
                 return;
             }
 
             if (evt.keyCode == KeyCode.Escape)
             {
-                evt.StopImmediatePropagation();
-                evt.PreventDefault();
+                SuppressUiToolkitDefault(evt);
                 EndCompose(clearText: true);
+            }
+        }
+
+        private static void SuppressUiToolkitDefault(EventBase evt)
+        {
+            evt.StopImmediatePropagation();
+            evt.PreventDefault();
+            if (evt.currentTarget is VisualElement element)
+            {
+                element.focusController?.IgnoreEvent(evt);
+            }
+            else if (evt.target is VisualElement target)
+            {
+                target.focusController?.IgnoreEvent(evt);
             }
         }
 
@@ -367,6 +431,35 @@ namespace SS3D.Systems.Comms
             }
 
             RenderFrame();
+        }
+
+        /// <summary>
+        /// Tab must be read from the Keyboard device after UITK has processed the frame.
+        /// Focused TextFields swallow Tab as focus navigation; InputActions stay silent too.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (!_isComposing)
+            {
+                _tabHeld = false;
+                return;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                _tabHeld = false;
+                return;
+            }
+
+            bool tabDown = keyboard.tabKey.isPressed;
+            if (tabDown && !_tabHeld)
+            {
+                bool reverse = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
+                CycleComposeChannel(reverse ? -1 : 1);
+            }
+
+            _tabHeld = tabDown;
         }
 
         private static SpeechMode PeekComposeModeFromModifiers()
@@ -532,20 +625,12 @@ namespace SS3D.Systems.Comms
             if (_isComposing && localDraftScreen.HasValue)
             {
                 CommsChannel radio = CurrentComposeRadioChannel;
-                if (radio != null)
-                {
-                    _view.ShowDraft(
-                        localDraftScreen.Value.x,
-                        localDraftScreen.Value.y,
-                        speakerName: null,
-                        SpeechMode.Speak,
-                        radio.ResolveRadioHeader());
-                }
-                else
-                {
-                    string draftName = ResolveSpeakerName(_localViewer);
-                    _view.ShowDraft(localDraftScreen.Value.x, localDraftScreen.Value.y, draftName, _composeMode);
-                }
+                _view.ShowDraft(
+                    localDraftScreen.Value.x,
+                    localDraftScreen.Value.y,
+                    speakerName: null,
+                    radio != null ? SpeechMode.Speak : _composeMode,
+                    radio != null ? radio.ResolveRadioHeader() : null);
             }
             else if (!_isComposing)
             {

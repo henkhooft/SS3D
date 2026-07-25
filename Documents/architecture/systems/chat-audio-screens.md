@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 4bc2ae93d — 2026-07-25
+> Verified: 137f439dc — 2026-07-25
 
 # Chat / audio / screens
 
@@ -43,6 +43,11 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
   down on disable (UIDocument rebuild orphans).
 - **Compose:** `TextEntry` + `InputTextEntryScope` + TrickleDown Enter/Tab; draft focus lock; measure
   draft width via Label proxy; no USS `translate: -50%` on draft or announce banner.
+- **Tab channel cycle:** while composing, Tab is edge-detected from `Keyboard.current` in
+  `LateUpdate` — UITK TextField focus swallows Tab (focus navigation) so InputActions/KeyDown are
+  unreliable. Also ignore `NavigationMoveEvent` on the draft. Draft chrome shows `LOCAL` /
+  `ENG > OPEN`. Empty channel settings recover via loaded assets / Editor AssetDatabase.
+- **Objectives hold-to-show removed:** legacy `Other/Fade` (Tab) binding erased; panel stays visible.
 - **UITK:** do not combine `border-radius` + `overflow: hidden` on the same element.
 - **Occlusion:** shared `SS3D.Utils.LineOfSight` — no private raycast in `LocalSpeechListener`.
 - **`CameraFollow` ignores `enabled = false`:** Coimbra `UpdateEvent` needs `isActiveAndEnabled` early-out.

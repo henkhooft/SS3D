@@ -223,14 +223,23 @@
 }
 
 .comms-draft__name {
-    margin: 0;
+    margin: 0 0 2px 0;
     padding: 0;
+    min-height: 14px;
+    flex-grow: 0;
+    flex-shrink: 0;
     white-space: nowrap;
     -unity-text-align: middle-center;
-    font-size: 13px;
+    font-size: 11px;
     letter-spacing: 1px;
-    color: rgb(170, 170, 170);
+    color: rgb(200, 200, 190);
     -unity-font-style: normal;
+    opacity: 1;
+}
+
+/* Channel header present — never let the TextField climb on top of it. */
+.comms-draft--channelled .comms-draft__field {
+    margin-top: 0;
 }
 
 /* Off-screen text measure proxy (must stay display:flex so fonts resolve). */
@@ -261,7 +270,7 @@
 /* Visible TextField — real UITK caret; wrap budget matches finished chips.
  * Size/color also forced in C# (ApplyDraftTypeStyles) — .font-body is 11px gray. */
 .comms-draft__field {
-    margin-top: -6px;
+    margin-top: 0;
     margin-bottom: 0;
     margin-left: 0;
     margin-right: 0;
@@ -369,4 +378,8 @@
     letter-spacing: 1px;
     color: rgb(95, 134, 179);
     -unity-text-align: middle-left;
+}
+
+.comms-draft--channelled .comms-draft__name {
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
 }

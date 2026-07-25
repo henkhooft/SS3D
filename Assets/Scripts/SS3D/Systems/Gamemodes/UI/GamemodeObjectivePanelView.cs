@@ -1,38 +1,30 @@
 ﻿using System.Collections.Generic;
 using Coimbra;
 using Coimbra.Services.Events;
-using SS3D.Core;
-using SS3D.Systems.Inputs;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Events;
 using SS3D.Utils;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Actor = SS3D.Core.Behaviours.Actor;
-using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Gamemodes.UI
 {
+    /// <summary>
+    /// Shows assigned gamemode objectives. Always visible when present — no hold-to-show hotkey
+    /// (legacy Tab/Fade binding removed; objectives move to the PDA tab per design).
+    /// </summary>
     public class GamemodeObjectivePanelView : Actor
     {
         [SerializeField] private UiFade _fade;
 
         [SerializeField] private GamemodeObjectiveItemView _itemViewPrefab;
         [SerializeField] private GameObject _content;
-        private Controls.OtherActions _controls;
 
         private Dictionary<int, GamemodeObjectiveItemView> _gamemodeObjectiveItems;
-        
+
         protected override void OnAwake()
         {
             base.OnAwake();
-            
-            InputSubSystem inputSystem = SubSystems.Get<InputSubSystem>();
-
-            if (inputSystem)
-            {
-                _controls = inputSystem.Inputs.Other;
-            }
 
             _gamemodeObjectiveItems = new Dictionary<int, GamemodeObjectiveItemView>();
 
@@ -43,33 +35,11 @@ namespace SS3D.Systems.Gamemodes.UI
         {
             base.OnStart();
 
-            _fade.SetFade(false);
-        }
-
-        protected override void OnEnabled()
-        {
-            base.OnEnabled();
-            
-            _controls.Fade.performed += HandleFadePerformed;
-            _controls.Fade.canceled += HandleFadeCanceled;
-        }
-        
-        protected override void OnDisabled()
-        {
-            base.OnDisabled();
-            
-            _controls.Fade.performed -= HandleFadePerformed;
-            _controls.Fade.canceled -= HandleFadeCanceled;
-        }
-
-        private void HandleFadePerformed(InputAction.CallbackContext context)
-        {
-            _fade.SetFade(true);
-        }
-
-        private void HandleFadeCanceled(InputAction.CallbackContext context)
-        {
-            _fade.SetFade(false);
+            // Always shown — no Tab/Alt hold-to-reveal.
+            if (_fade != null)
+            {
+                _fade.SetFade(true);
+            }
         }
 
         private void HandleRoundStateUpdated(ref EventContext context, in RoundStateUpdated e)
@@ -90,7 +60,6 @@ namespace SS3D.Systems.Gamemodes.UI
             {
                 view.UpdateObjective(objective);
             }
-
             else
             {
                 CreateItemView(objective);
@@ -108,7 +77,7 @@ namespace SS3D.Systems.Gamemodes.UI
 
         private void ClearObjectivesList()
         {
-            foreach (KeyValuePair<int,GamemodeObjectiveItemView> view in _gamemodeObjectiveItems)
+            foreach (KeyValuePair<int, GamemodeObjectiveItemView> view in _gamemodeObjectiveItems)
             {
                 view.Value.GameObject.Dispose(true);
             }

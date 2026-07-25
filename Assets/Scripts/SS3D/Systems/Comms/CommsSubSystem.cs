@@ -58,27 +58,110 @@ namespace SS3D.Systems.Comms
 
         private void EnsureChannelRegistry()
         {
-            if (_channelSettings != null && _channelsById.Count > 0)
-            {
-                return;
-            }
-
-            _channelSettings = ScriptableSettings.GetOrFind<CommsChannels>();
-            _channelsById.Clear();
             if (_channelSettings == null)
             {
-                return;
+                _channelSettings = ScriptableSettings.GetOrFind<CommsChannels>();
             }
 
-            foreach (CommsChannel channel in _channelSettings.AllChannels)
+            _channelsById.Clear();
+
+            if (_channelSettings != null && _channelSettings.AllChannels != null)
             {
-                if (channel == null)
+                foreach (CommsChannel channel in _channelSettings.AllChannels)
+                {
+                    if (channel == null)
+                    {
+                        continue;
+                    }
+
+                    _channelsById[channel.name] = channel;
+                }
+            }
+
+            if (_channelsById.Count == 0)
+            {
+                RecoverChannelsFromLoadedAssets();
+            }
+
+            // Still empty (common right after Chat→Comms script swap in Editor) — load from disk.
+#if UNITY_EDITOR
+            if (_channelsById.Count == 0)
+            {
+                RecoverChannelsFromAssetDatabase();
+            }
+#endif
+
+            if (_channelSettings != null && _channelSettings.AllChannels != null
+                && _channelSettings.AllChannels.Count == 0 && _channelsById.Count > 0)
+            {
+                _channelSettings.AllChannels.AddRange(_channelsById.Values);
+                if (_channelSettings.AnnouncementChannel == null
+                    && _channelsById.TryGetValue("StationAlerts", out CommsChannel alerts))
+                {
+                    _channelSettings.AnnouncementChannel = alerts;
+                }
+            }
+        }
+
+        private void RecoverChannelsFromLoadedAssets()
+        {
+            foreach (CommsChannel channel in Resources.FindObjectsOfTypeAll<CommsChannel>())
+            {
+                if (channel == null || string.IsNullOrEmpty(channel.name))
                 {
                     continue;
                 }
 
                 _channelsById[channel.name] = channel;
             }
+        }
+
+#if UNITY_EDITOR
+        private void RecoverChannelsFromAssetDatabase()
+        {
+            string[] guids = UnityEditor.AssetDatabase.FindAssets(
+                "t:CommsChannel", new[] { "Assets/Content/Data/Comms/Channels" });
+            foreach (string guid in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                CommsChannel channel = UnityEditor.AssetDatabase.LoadAssetAtPath<CommsChannel>(path);
+                if (channel == null || string.IsNullOrEmpty(channel.name))
+                {
+                    continue;
+                }
+
+                _channelsById[channel.name] = channel;
+            }
+        }
+#endif
+
+        /// <summary>Writable radio channels for Tab compose (Local is not included).</summary>
+        public List<CommsChannel> GetWritableRadioChannels()
+        {
+            EnsureChannelRegistry();
+            List<CommsChannel> result = new();
+            foreach (CommsChannel channel in _channelsById.Values)
+            {
+                if (channel.Kind == CommsChannelKind.Radio && !channel.CodeOnlyChannel)
+                {
+                    result.Add(channel);
+                }
+            }
+
+            // If Kind/CodeOnly filters wiped everything (bad salvage data), still offer non-meta.
+            if (result.Count == 0)
+            {
+                foreach (CommsChannel channel in _channelsById.Values)
+                {
+                    if (channel.Kind != CommsChannelKind.Announcement && !channel.CodeOnlyChannel)
+                    {
+                        result.Add(channel);
+                    }
+                }
+            }
+
+            result.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return result;
         }
 
         public override void OnStopNetwork()

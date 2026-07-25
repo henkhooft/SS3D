@@ -51,6 +51,8 @@ the context table, and the migration from the old refcount API.
   [chat-audio-screens](chat-audio-screens.md) `LocalSpeechDebugTrigger` — alert-stack debug uses **F4**.
   Prefer a console command first; hotkey debug panels are tracked debt —
   [TECH_DEBT.md](../TECH_DEBT.md) § 1.13.
+- **Tab ownership:** compose channel cycle owns Tab while drafting (Keyboard poll in
+  `LocalSpeechBubbleController`). Legacy objectives `Other/Fade` Tab binding is erased at startup.
 
 ## Conventions
 
