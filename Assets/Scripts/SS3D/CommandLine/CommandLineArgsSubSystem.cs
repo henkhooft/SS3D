@@ -79,9 +79,10 @@ namespace SS3D.CommandLine
                 _networkSettings.NetworkType = NetworkType.Host;
             }
 
+            // Address only — do not force Client. Host also needs 127.0.0.1 for its local
+            // client; combining -host with -ip= used to flip NetworkType to Client.
             if (arg.Contains(CommandLineArgs.Ip))
             {
-                _networkSettings.NetworkType = NetworkType.Client;
                 _networkSettings.ServerAddress = arg.Replace(CommandLineArgs.Ip, "");
             }
 

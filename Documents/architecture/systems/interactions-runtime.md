@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 818aaab59 — 2026-07-23
+> Verified: f529c699b — 2026-07-25 (InteractionOutline Always Included for player builds)
 
 # Interactions (runtime)
 
@@ -51,6 +51,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 
 ## Pitfalls
 
+- **Player builds silently omit hover outlines:** `InteractionOutlineView` uses `Shader.Find("Custom/InteractionOutline")` with no material/prefab reference. Editor finds it; player strips it (`Custom/InteractionOutline` absent from `SS3D_Data`). Symptom: clicks/MI still work (Selection pick shader is wired on the URP feature), but no green/yellow/blue hull. Keep the shader in **Always Included Shaders** (`GraphicsSettings`); warn if Find returns null.
 - **Spawn NRE in `OnAwake` / `SubscribeToInput`:** if `CameraSubSystem.PlayerCamera` is null (hub before Game camera — see [chat-audio-screens](chat-audio-screens.md)), wiring `_controls` after the camera line leaves SubscribeToInput cascading. Resolve inputs first; tolerate a late camera.
 - **`ArmedInteractionSubSystem` must not `Get<SelectionSubSystem>` in Awake.** Selection is a sibling on `NetworkSystemsHub`; Awake order can leave it unregistered, and FishNet also briefly enables scene copies before the hub exists. Lazy `TryGet` + null-safe enable/disable.
 - **Outline on every hover while holding an item:** `Item` discovers Drop via `InteractionEntry.SourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (no source discovery) or `FilterForOutline` — never treat full Discover as hover-available.

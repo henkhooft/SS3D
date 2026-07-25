@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: f1c9476af — 2026-07-25 (SyncVarGuard Behaviour=/Object= enrichment for denylist triage; Editor menu tiers)
+> Verified: 5e0734c65 — 2026-07-25 (host empty-address → fe80 disconnect; CCR OnGUI OS font)
 
 # Networking (session)
 
@@ -30,6 +30,8 @@ FishNet session management — host/join, network type and port settings. Distin
 
 ## Pitfalls
 
+- **Host `-host` without a loopback address.** Built apps call `NetworkSettings.ResetOnBuiltApplication()` which clears `ServerAddress`. Older `Start_SS3D_Host.bat` omitted `-ip=`, so Host's local client called `StartConnection("", port)`. LiteNetLib resolves empty via DNS (IPv6-first) → link-local `fe80::…` instead of `127.0.0.1`. Symptom (esp. Wine): world loads / WorldReady OK, then `Client 0 fe80::… disconnected` spam ≈ every 500 ms, session → WaitingForServer, empty OnGUI Retry/Quit, lobby stuck `Stopped - 0` (no stable Player auth). Fix: Host defaults empty address to `127.0.0.1`; `-ip=` only sets address (no longer forces Client); Host.bat includes `-ip=127.0.0.1`. **Existing zips:** edit the bat to `-ip=127.0.0.1 -host -port=1151 …` (`-ip` before `-host` on pre-fix builds so NetworkType stays Host).
+- **CCR OnGUI + LegacyRuntime.** Recovery dialog uses IMGUI; player default font fails under Wine (`Unable to load font face for [LegacyRuntime]` × per frame → blank buttons). Prefer OS fonts (`Segoe UI` / `DejaVu Sans` …) in `ClientConnectionRecovery`.
 - **Disconnect must not reload Boot after first Online.** CCR arms Empty; Automation must not restore Boot offline after reconnect.
 - **Intro auto-join is Cold-only** (`IntroUIHelper` checks `SessionState.Cold`).
 - **`SubSystems.Get` during Disconnecting / WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`. Suppress starts on Disconnecting so hub/device `OnDestroy` during `StopConnection` does not Error before WaitingForServer.

@@ -1,7 +1,7 @@
 > Goal: A stranger clicks the latest GitHub release link, downloads, and joins the live test server in a few clicks — no config files, no localhost editing, no technical setup
 > Status: planned
 > Depends on: — (parallel operational track; reuses MVP1 [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M5 round-end loop when it lands, but does not require MVP1 gameplay)
-> Current focus: T1 (verify loadable Windows cut after Config/Tilemaps packaging), T2 (zero-setup remote join), T3 (session stability — round/connect lifecycle, doors under MP, admin wedge tools, smoke happy-path, perf floor), T4 (end screen + restart + latejoin)
+> Current focus: T1 (re-cut Windows after host loopback fix; packaging verified on develop-059e3dd), T2 (zero-setup remote join), T3 (session stability — round/connect lifecycle, doors under MP, admin wedge tools, smoke happy-path, perf floor), T4 (end screen + restart + latejoin)
 
 # Test server — hop-on/off playtest gate
 
@@ -58,7 +58,7 @@ flowchart TB
   loop --> server
 ```
 
-- **Loadable build** — root cause on `develop-f1c9476`: release staging omitted CWD `Config/` + `Data/Tilemaps/` (not Addressables — catalog/bundles were present; host log `No station templates found to load`). Fix in [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md); verify on next Windows cut.
+- **Loadable build** — packaging of CWD `Config/` + `Data/Tilemaps/` verified on `develop-059e3dd` (station loads, WorldReady). Separate host bug: empty `ServerAddress` → IPv6 link-local disconnect (see [networking-session](../architecture/systems/networking-session.md) pitfalls); needs a re-cut to confirm playable Host.bat.
 - **Zero-setup remote join** — launch bats hardcode `-ip=127.0.0.1` ([`Builds/`](../../Builds/)); public builds must default to the hosted server ([networking-session](../architecture/systems/networking-session.md)).
 - **Session stability** — foundations shipped ([2026-07_headless-dedicated-server.md](../architecture/2026-07_headless-dedicated-server.md), [2026-07_session-world-lifecycle.md](../architecture/2026-07_session-world-lifecycle.md)); still **partial**. Covers: graceful round start/stop + connect/disconnect; no silent mind→spawn→loadout failures; remote drop/selection break; **doors/airlocks under MP**; host admin wedge tools; happy-path smoke ([2026-07_multiplayer-test-harness.md](../architecture/2026-07_multiplayer-test-harness.md)); test-station performance floor.
 - **End-game screen + restart + latejoin** — shared with MVP1 M5 ([round-end.md](../design/round-end.md) §5–§6; [lobby.md](../design/lobby.md) §7). Latejoin as ghost or late crew must not brick the session; ghosts must still receive the end screen.
@@ -68,7 +68,7 @@ flowchart TB
 | Id | Name | Status | Links |
 |----|------|--------|-------|
 | T0 | CI release-cut path | shipped | [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md) |
-| T1 | Loadable build (content + permissions) | partial — packaging fix landed; **verify next Windows cut** | [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md); [data-codegen](../architecture/systems/data-codegen.md) |
+| T1 | Loadable build (content + permissions) | partial — Config/Tilemaps packaging verified on `059e3dd`; host loopback fix pending re-cut | [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md); [networking-session](../architecture/systems/networking-session.md) |
 | T2 | Zero-setup remote join (default server target) | pending — **focus** | [networking-session](../architecture/systems/networking-session.md); [`Builds/`](../../Builds/) |
 | T3 | Session stability (lifecycle, doors under MP, admin wedge, happy-path smoke, perf floor) | partial — **focus** | [networking-session](../architecture/systems/networking-session.md); [furniture](../architecture/systems/furniture.md) (airlocks); [ingame-console](../architecture/systems/ingame-console.md) / [admin-tools.md](../design/admin-tools.md); [2026-07_multiplayer-test-harness.md](../architecture/2026-07_multiplayer-test-harness.md) |
 | T4 | End-game screen + round restart + latejoin (no softlock; spectator sees outcome) | pending — **focus**; shared with MVP1 M5 | [round-end.md](../design/round-end.md) §5–§6; [lobby.md](../design/lobby.md) §7; [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M5 |

@@ -83,6 +83,10 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
   (`Start_SS3D_*.bat` / smoke `cd` beside the exe). Fix: `seed_cwd_data` in
   `develop-release.yml` from tracked `Builds/Game/Config` + `Builds/Game/Data/Tilemaps`.
   Do not ship `Data/ServerMeta/` (gitignored runtime envelope preferred over `permissions.txt`).
+- **Host.bat must give the local client a loopback address.** `ResetOnBuiltApplication` clears
+  `ServerAddress`; Host without `-ip=` used to DNS-resolve empty → `fe80::…` and drop the
+  session after WorldReady (Wine reproduces hard). See networking-session pitfalls; Host.bat
+  now passes `-ip=127.0.0.1` and code defaults empty Host address to loopback.
 - **License secrets live on the `unity_tests` Environment.** Jobs without
   `environment: unity_tests` see empty `UNITY_LICENSE` / `UNITY_SERIAL` even when EditMode is
   green (the old `main.yml` hit this before Environment was wired).
