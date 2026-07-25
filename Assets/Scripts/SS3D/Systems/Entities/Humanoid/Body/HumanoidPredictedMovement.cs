@@ -43,11 +43,13 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             public Vector3 Position;
             public Quaternion Rotation;
+            public Vector3 CoastVelocity;
 
-            public ReconcileData(Vector3 position, Quaternion rotation)
+            public ReconcileData(Vector3 position, Quaternion rotation, Vector3 coastVelocity)
             {
                 Position = position;
                 Rotation = rotation;
+                CoastVelocity = coastVelocity;
                 _tick = 0;
             }
 
@@ -81,6 +83,8 @@ namespace SS3D.Systems.Entities.Humanoid
         private bool _tickSubscribed;
         private bool _networkStarted;
         private float _smoothedSpeedScale;
+        /// <summary>Planar world velocity while unsupported (no plenum). Reconciled for prediction.</summary>
+        private Vector3 _coastVelocity;
 
         protected override void OnAwake()
         {
@@ -235,7 +239,7 @@ namespace SS3D.Systems.Entities.Humanoid
             if (IsServer)
             {
                 Move(default, true);
-                ReconcileData rd = new(transform.position, transform.rotation);
+                ReconcileData rd = new(transform.position, transform.rotation, _coastVelocity);
                 Reconciliation(rd, true);
             }
         }
@@ -296,6 +300,38 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             float tickDelta = (float)InstanceFinder.TimeManager.TickDelta;
+            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            bool wasFloating = _bodyStateMachine.Snapshot.IsFloating;
+
+            if (unsupported)
+            {
+                if (!wasFloating)
+                {
+                    _coastVelocity = CaptureCoastVelocity(md);
+                }
+
+                ApplyFloatingCoast(md, caps, tickDelta);
+                return;
+            }
+
+            if (wasFloating)
+            {
+                _bodyStateMachine.SetFloating(false);
+                if (md.Horizontal == 0f && md.Vertical == 0f)
+                {
+                    _coastVelocity = Vector3.zero;
+                    _smoothedSpeedScale = 0f;
+                }
+                else
+                {
+                    // Seed gait from residual coast so landing with input held does not snap-stop.
+                    float coastSpeed = _coastVelocity.magnitude;
+                    float maxSpeed = Mathf.Max(_movementSpeed, 0.01f);
+                    _smoothedSpeedScale = Mathf.Clamp01(coastSpeed / maxSpeed);
+                    _coastVelocity = Vector3.zero;
+                }
+            }
+
             _characterController.Move(tickDelta * Physics.gravity);
 
             if (md.Horizontal == 0f && md.Vertical == 0f)
@@ -356,6 +392,64 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
+        /// No plenum underfoot (or no occupancy) once the tile map is ready. Missing map ≠ unsupported.
+        /// </summary>
+        private static bool IsUnsupportedAt(Vector3 worldPosition) =>
+            HumanoidSpaceSupport.IsUnsupportedAt(worldPosition);
+
+        private Vector3 CaptureCoastVelocity(MoveData md)
+        {
+            if (md.Horizontal != 0f || md.Vertical != 0f)
+            {
+                Vector3 moveDirection = GetCameraRelativeDirection(md.Horizontal, md.Vertical);
+                float speedFactor = _healthController != null ? _healthController.Snapshot.MovementSpeedMultiplier : 1f;
+                float exertionFactor = _staminaController != null
+                    ? Mathf.Lerp(1f, 0.55f, _staminaController.ExertionPenalty)
+                    : 1f;
+                float speed = _movementSpeed * speedFactor * exertionFactor * _smoothedSpeedScale;
+                return moveDirection * speed;
+            }
+
+            // Idle at the edge — keep residual gait along facing if any.
+            if (_smoothedSpeedScale > 0.01f)
+            {
+                float speedFactor = _healthController != null ? _healthController.Snapshot.MovementSpeedMultiplier : 1f;
+                float speed = _movementSpeed * speedFactor * _smoothedSpeedScale;
+                Vector3 facing = transform.forward;
+                facing.y = 0f;
+                if (facing.sqrMagnitude > 0.0001f)
+                {
+                    return facing.normalized * speed;
+                }
+            }
+
+            return Vector3.zero;
+        }
+
+        private void ApplyFloatingCoast(MoveData md, BodyCapabilities caps, float tickDelta)
+        {
+            // Do not call SetLocomotionMode(Idle/Walk/Run) — that clears IsFloating.
+            if (!_bodyStateMachine.Snapshot.IsFloating)
+            {
+                _bodyStateMachine.SetFloating(true);
+                _bodyStateMachine.SetLocomotionSpeed(0f);
+            }
+
+            _livingController?.PublishPredictedLocomotionVelocity(0f, 0f);
+            _smoothedSpeedScale = 0f;
+
+            if (_coastVelocity.sqrMagnitude > 0.0001f)
+            {
+                _characterController.Move(_coastVelocity * tickDelta);
+            }
+
+            if (caps.CanRotate && md.HasCombatAim)
+            {
+                ApplyCombatAimRotation(md.AimYaw, tickDelta);
+            }
+        }
+
+        /// <summary>
         /// Fraction of max run speed for the current gait / stance.
         /// Combat (melee + ranged) uses slow combat walk/run scales so feet and clips stay in sync.
         /// </summary>
@@ -392,6 +486,7 @@ namespace SS3D.Systems.Entities.Humanoid
         {
             transform.position = rd.Position;
             transform.rotation = rd.Rotation;
+            _coastVelocity = rd.CoastVelocity;
         }
 
         private void ApplyCombatAimRotation(float aimYaw, float tickDelta)

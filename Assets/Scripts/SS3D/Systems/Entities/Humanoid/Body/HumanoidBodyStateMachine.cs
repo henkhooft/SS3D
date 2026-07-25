@@ -403,6 +403,14 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsServer)
             {
                 ApplyLocalSnapshot();
+                return;
+            }
+
+            // Owner prediction: apply locally so Floating / gait bools hit the Animator
+            // before the server SyncVar round-trip (PublishSnapshot used to no-op on clients).
+            if (IsOwner)
+            {
+                ApplyOwnerSnapshot();
             }
         }
 

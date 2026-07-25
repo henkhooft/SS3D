@@ -338,6 +338,11 @@ namespace SS3D.Editor
             WireInjuredWaveEmote(baseMachine, injured);
 
             RemapStateMotion(baseMachine, "Flinch", $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
+            RemapStateMotion(
+                baseMachine,
+                "Floating",
+                "Assets/Art/Animations/Misc/X Bot@Floating.fbx",
+                "Mix_Floating");
 
             // Base layer must not consume AttackSwing — upper body owns the swing trigger.
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
@@ -403,7 +408,8 @@ namespace SS3D.Editor
             AssetDatabase.Refresh();
 
             return "OK: Rebuilt stance blends; injured idle severity; limp Jump/Turn90; Injured Wave Emote; "
-                   + "AttackSwing variants + MirrorUpperBody; Flinch / injured-arm additive remapped.";
+                   + "AttackSwing variants + MirrorUpperBody; Flinch / injured-arm additive remapped; "
+                   + "Floating → Mix_Floating.";
         }
 
         private static BlendTree BuildInjuredBlendTree(AnimatorController controller)

@@ -1,13 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using FishNet.Object.Synchronizing;
-using SS3D.Core;
-using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Stamina;
-using SS3D.Systems.Screens;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid
@@ -30,7 +23,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
         public bool IsDragging { get; set; }
 
-
+        /// <summary>Planar coast while unsupported (no plenum). Used when predicted movement is disabled.</summary>
+        private Vector3 _coastVelocity;
 
 		public override void OnStartClient()
         {
@@ -60,9 +54,18 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            ProcessPlayerInput(publishSpeed: _predictedMovement == null || !_predictedMovement.enabled);
+            bool predictedOwnsLoco = _predictedMovement != null && _predictedMovement.enabled;
+            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            // Avoid publishing walk Speed the same frame we enter space float (clears Floating via gait).
+            ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !unsupported);
 
-            if (_predictedMovement != null && _predictedMovement.enabled)
+            if (predictedOwnsLoco)
+            {
+                return;
+            }
+
+            // Human.prefab ships PredictedMovement disabled — this path owns living space float.
+            if (TryProcessSpaceFloat(unsupported))
             {
                 return;
             }
@@ -99,6 +102,73 @@ namespace SS3D.Systems.Entities.Humanoid
 
                 PublishLocomotionVelocity(Vector3.zero, 0f);
             }
+        }
+
+        /// <summary>
+        /// When no plenum underfoot: Floating anim, no gravity/WASD, coast last planar velocity.
+        /// Returns true when space float consumed this frame.
+        /// </summary>
+        private bool TryProcessSpaceFloat(bool unsupported)
+        {
+            bool wasFloating = BodyStateMachine != null && BodyStateMachine.Snapshot.IsFloating;
+
+            if (!unsupported)
+            {
+                if (wasFloating)
+                {
+                    BodyStateMachine.SetFloating(false);
+                    if (Input.magnitude < 0.01f)
+                    {
+                        _coastVelocity = Vector3.zero;
+                    }
+                }
+
+                return false;
+            }
+
+            if (!wasFloating)
+            {
+                _coastVelocity = CaptureLivingCoastVelocity();
+                BodyStateMachine?.SetFloating(true);
+            }
+
+            if (_coastVelocity.sqrMagnitude > 0.0001f)
+            {
+                _characterController.Move(_coastVelocity * Time.deltaTime);
+            }
+
+            MoveMovementTarget(Vector2.zero, 5);
+            if (IsCombatMode() && !IsDragging)
+            {
+                RotatePlayerToCombatAim();
+            }
+
+            PublishLocomotionVelocity(Vector3.zero, 0f);
+            return true;
+        }
+
+        private Vector3 CaptureLivingCoastVelocity()
+        {
+            if (TargetMovement.sqrMagnitude < 0.0001f)
+            {
+                return Vector3.zero;
+            }
+
+            float healthMultiplier = _healthController != null
+                ? _healthController.Snapshot.MovementSpeedMultiplier
+                : 1f;
+            float combatFactor = 1f;
+            if (IsCombatMode())
+            {
+                combatFactor = IsRunning ? _combatRunSpeedFactor : _combatWalkSpeedFactor;
+            }
+
+            float exertionFactor = _staminaController != null
+                ? Mathf.Lerp(1f, 0.55f, _staminaController.ExertionPenalty)
+                : 1f;
+            float gait = FilterSpeed();
+            float speed = _movementSpeed * healthMultiplier * combatFactor * exertionFactor * gait;
+            return TargetMovement.normalized * speed;
         }
 
         protected override float FilterSpeed()

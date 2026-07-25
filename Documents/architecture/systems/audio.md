@@ -61,7 +61,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   footsteps (§3): Socks / Shoes / Boots under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`.
   **Client-local** `AudioSource` loop (not the networked pool) — host `Move(default)` clears server
   locomotion every tick, so a server-pooled loop never stayed audible. Owner uses predicted
-  locomotion velocity; remotes use transform delta. Runtime-added from `HumanoidPredictedMovement`.
+  locomotion velocity; remotes use transform delta. Skips while `BodyAnimationSnapshot.IsFloating`
+  (space coast). Runtime-added from `HumanoidPredictedMovement`.
 - `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
   (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
   the old Can1 placeholder).
