@@ -21,9 +21,11 @@ namespace SS3D.Systems.Comms
     public sealed class CommsFeedController : SubSystem
     {
         private const string StyleSheetPath = "Assets/Content/Systems/UI/Comms/Feed/CommsFeed.uss";
+        private const string RadioIconPath = "Assets/Art/Icons/External/delapouite/radio-tower.svg";
         private const float AnnounceCueVolume = 0.9f;
 
         [SerializeField] private StyleSheet _styleSheet;
+        [SerializeField] private VectorImage _radioIcon;
 
         private CommsFeedView _view;
         private CommsSubSystem _comms;
@@ -199,7 +201,7 @@ namespace SS3D.Systems.Comms
 
             InputInterface.RegisterDocument(uiShell.Document);
 
-            _view = new CommsFeedView(_styleSheet);
+            _view = new CommsFeedView(_styleSheet, _radioIcon);
             _view.Attach(layerRoot);
             _attached = true;
             return true;
@@ -218,6 +220,11 @@ namespace SS3D.Systems.Comms
             if (_styleSheet == null)
             {
                 _styleSheet = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(StyleSheetPath);
+            }
+
+            if (_radioIcon == null)
+            {
+                _radioIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<VectorImage>(RadioIconPath);
             }
         }
 #endif

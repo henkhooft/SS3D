@@ -6,7 +6,7 @@ namespace SS3D.Systems.Comms.UI
 {
     /// <summary>
     /// Screen-space radio stack (middle-left) and all-station announcement banner (top-middle).
-    /// Radio cards: channel header left + sender right on the top row, body below.
+    /// Radio cards: radio-tower icon + channel header left, sender right on the top row, body below.
     /// </summary>
     public sealed class CommsFeedView
     {
@@ -15,6 +15,7 @@ namespace SS3D.Systems.Comms.UI
         private const float AnnounceFadeSeconds = 10f;
 
         private readonly StyleSheet _styleSheet;
+        private readonly VectorImage _radioIcon;
         private readonly List<RadioCard> _radioCards = new();
 
         private VisualElement _root;
@@ -27,15 +28,17 @@ namespace SS3D.Systems.Comms.UI
         private sealed class RadioCard
         {
             public VisualElement Root;
+            public VisualElement Icon;
             public Label Header;
             public Label Sender;
             public Label Body;
             public float Expiry;
         }
 
-        public CommsFeedView(StyleSheet styleSheet)
+        public CommsFeedView(StyleSheet styleSheet, VectorImage radioIcon = null)
         {
             _styleSheet = styleSheet;
+            _radioIcon = radioIcon;
         }
 
         public void Attach(VisualElement layerRoot)
@@ -102,6 +105,11 @@ namespace SS3D.Systems.Comms.UI
             card.Body.text = body ?? string.Empty;
             card.Root.style.borderLeftColor = accent;
             card.Header.style.color = accent;
+            if (card.Icon != null)
+            {
+                card.Icon.style.unityBackgroundImageTintColor = accent;
+            }
+
             card.Expiry = Time.time + RadioFadeSeconds;
             card.Root.style.opacity = 1f;
             card.Root.style.display = DisplayStyle.Flex;
@@ -201,9 +209,25 @@ namespace SS3D.Systems.Comms.UI
             topRow.AddToClassList("comms-feed__radio-top");
             topRow.pickingMode = PickingMode.Ignore;
 
+            VisualElement headerCluster = new VisualElement();
+            headerCluster.AddToClassList("comms-feed__radio-header-cluster");
+            headerCluster.pickingMode = PickingMode.Ignore;
+
+            card.Icon = new VisualElement();
+            card.Icon.AddToClassList("comms-feed__radio-icon");
+            card.Icon.pickingMode = PickingMode.Ignore;
+            if (_radioIcon != null)
+            {
+                card.Icon.style.backgroundImage = new StyleBackground(_radioIcon);
+            }
+
+            headerCluster.Add(card.Icon);
+
             card.Header = new Label();
             card.Header.AddToClassList("comms-feed__radio-header");
-            topRow.Add(card.Header);
+            headerCluster.Add(card.Header);
+
+            topRow.Add(headerCluster);
 
             card.Sender = new Label();
             card.Sender.AddToClassList("comms-feed__radio-sender");

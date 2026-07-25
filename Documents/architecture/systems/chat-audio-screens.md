@@ -30,9 +30,9 @@ prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnounc
 - `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
   `UiShell` `UiLayer.Overlay` (not the hub/MI UIDocument).
 - `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio middle-left (header +
-  sender top row), announce top. Announcements always play `StationAnnounce` first; when it ends,
-  the banner reveals and optional `CommsMessage.SoundId` follow-up (e.g. `StationWelcome`) starts
-  in parallel.
+  radio-tower icon + sender top row), announce top. Announcements always play `StationAnnounce`
+  first; when it ends, the banner reveals and optional `CommsMessage.SoundId` follow-up (e.g.
+  `StationWelcome`) starts in parallel.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
@@ -53,8 +53,9 @@ prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnounc
   [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab compose only lists
   channels with `AvailableInCompose` (Engineering + Security for now).
-- **Radio feed:** middle-left stack (`justify-content: center`); top row is channel header left +
-  sender (ckey) right.
+- **Radio feed:** middle-left stack (`justify-content: center`); top row is radio-tower icon +
+  channel header left + sender (ckey) right. Icon is `delapouite/radio-tower.svg` (VectorImage),
+  tinted to the channel accent.
 - **Do not resurrect UGUI always-on chat.**
 - **Speech bubbles invisible / NaN size:** `EnsureOverlay` must require `root.panel != null` and tear
   down on disable (UIDocument rebuild orphans).
