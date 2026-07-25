@@ -14,5 +14,12 @@ namespace SS3D.Systems.Comms
         public string Sender;
         public string Text;
         public CommsChannelKind Kind;
+
+        /// <summary>
+        /// Optional follow-up <c>AssetDatabases.Sounds</c> id started with the announcement banner
+        /// after <see cref="CommsAudioTrackIds.StationAnnounce"/> finishes. Empty = chime then
+        /// banner only (no second clip).
+        /// </summary>
+        public string SoundId;
     }
 }

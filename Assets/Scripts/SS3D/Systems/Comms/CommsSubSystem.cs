@@ -253,8 +253,11 @@ namespace SS3D.Systems.Comms
 
         /// <summary>
         /// Server-only: station / code announcement (top banner).
+        /// Clients always play <see cref="CommsAudioTrackIds.StationAnnounce"/> first, then reveal
+        /// the banner; <paramref name="soundId"/> is an optional follow-up clip started with the
+        /// banner (e.g. <see cref="CommsAudioTrackIds.StationWelcome"/>).
         /// </summary>
-        public void SendAnnouncement([NotNull] string text)
+        public void SendAnnouncement([NotNull] string text, string soundId = null)
         {
             if (!IsServer)
             {
@@ -275,6 +278,7 @@ namespace SS3D.Systems.Comms
                 Sender = "Server",
                 Text = text,
                 Kind = CommsChannelKind.Announcement,
+                SoundId = soundId,
             });
         }
 

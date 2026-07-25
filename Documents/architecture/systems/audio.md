@@ -65,9 +65,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
   (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
   the old Can1 placeholder).
-- `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — station-announce chime
-  (`Assets/Art/Sound/UI/Comms/Announce.ogg`); `CommsFeedController` plays it before revealing the
-  ALL-STATION banner. Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
+- `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — announcement chimes
+  (`Announce.ogg` always first; optional `Welcome.ogg` follow-up with the banner); `CommsFeedController`
+  plays `StationAnnounce`, then reveals the ALL-STATION banner and any `CommsMessage.SoundId`
+  follow-up in parallel. Third-party credits:
+  [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
 - `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
   group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
   output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less

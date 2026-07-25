@@ -111,9 +111,9 @@ namespace SS3D.Systems.Rounds
 
             RoundState = RoundState.Ongoing;
             Log.Information(this, "Starting round tick", Logs.ServerOnly);
-            // TODO: use captain character name here
             SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
-                "Welcome aboard crew, you're under no captain. Enjoy!");
+                "Welcome to the station crew, enjoy your stay.",
+                CommsAudioTrackIds.StationWelcome);
 
             while (IsOngoing)
             {

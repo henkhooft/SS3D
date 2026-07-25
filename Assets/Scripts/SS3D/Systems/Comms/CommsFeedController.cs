@@ -14,8 +14,9 @@ namespace SS3D.Systems.Comms
 {
     /// <summary>
     /// Drives the non-diegetic radio feed and announcement banner on the UiShell HUD layer.
-    /// Announcements play <see cref="CommsAudioTrackIds.StationAnnounce"/> first, then reveal
-    /// the banner when the chime finishes.
+    /// Announcements always play <see cref="CommsAudioTrackIds.StationAnnounce"/> first; when that
+    /// ends, the banner reveals and any optional follow-up clip (<see cref="CommsMessage.SoundId"/>,
+    /// e.g. welcome.ogg) starts in parallel.
     /// </summary>
     public sealed class CommsFeedController : SubSystem
     {
@@ -28,7 +29,7 @@ namespace SS3D.Systems.Comms
         private CommsSubSystem _comms;
         private bool _attached;
         private AudioSource _announceSource;
-        private readonly Queue<(string Title, string Body)> _pendingAnnouncements = new();
+        private readonly Queue<(string Title, string Body, string FollowUpSoundId)> _pendingAnnouncements = new();
         private bool _announceSequenceRunning;
 
         protected override void OnAwake()
@@ -95,7 +96,7 @@ namespace SS3D.Systems.Comms
                 || (channel != null && channel.Kind == CommsChannelKind.Announcement))
             {
                 string title = channel != null ? channel.ResolveAnnouncementTitle() : "ALL-STATION";
-                EnqueueAnnouncement(title, message.Text);
+                EnqueueAnnouncement(title, message.Text, message.SoundId);
                 return;
             }
 
@@ -111,9 +112,9 @@ namespace SS3D.Systems.Comms
             _view.PushRadio(header, message.Sender, message.Text, accent);
         }
 
-        private void EnqueueAnnouncement(string title, string body)
+        private void EnqueueAnnouncement(string title, string body, string followUpSoundId)
         {
-            _pendingAnnouncements.Enqueue((title, body ?? string.Empty));
+            _pendingAnnouncements.Enqueue((title, body ?? string.Empty, followUpSoundId ?? string.Empty));
             if (!_announceSequenceRunning)
             {
                 StartCoroutine(PlayAnnouncementSequence());
@@ -126,12 +127,19 @@ namespace SS3D.Systems.Comms
 
             while (_pendingAnnouncements.Count > 0)
             {
-                (string title, string body) = _pendingAnnouncements.Dequeue();
+                (string title, string body, string followUpSoundId) = _pendingAnnouncements.Dequeue();
 
-                float delay = PlayAnnounceCue();
+                float delay = PlayAnnounceCue(CommsAudioTrackIds.StationAnnounce);
                 if (delay > 0f)
                 {
                     yield return new WaitForSeconds(delay);
+                }
+
+                // Reveal + optional follow-up (welcome.ogg) start together after the announce chime.
+                if (!string.IsNullOrEmpty(followUpSoundId)
+                    && followUpSoundId != CommsAudioTrackIds.StationAnnounce)
+                {
+                    PlayAnnounceCue(followUpSoundId);
                 }
 
                 if (_view != null)
@@ -144,11 +152,12 @@ namespace SS3D.Systems.Comms
         }
 
         /// <summary>
-        /// Plays the station-announce chime; returns clip length in seconds (0 if unavailable).
+        /// Plays the given announcement chime; returns clip length in seconds (0 if unavailable).
         /// </summary>
-        private float PlayAnnounceCue()
+        private float PlayAnnounceCue(string soundId)
         {
-            if (!Assets.TryGet(AssetDatabases.Sounds, CommsAudioTrackIds.StationAnnounce, out AudioClip clip)
+            if (string.IsNullOrEmpty(soundId)
+                || !Assets.TryGet(AssetDatabases.Sounds, soundId, out AudioClip clip)
                 || clip == null)
             {
                 return 0f;
