@@ -2,7 +2,9 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Health;
@@ -216,6 +218,12 @@ namespace SS3D.Systems.Stamina
 
         private void SyncCurrentStamina(float old, float value, bool asServer)
         {
+            if (!IsOwner)
+            {
+                return;
+            }
+
+            StaminaPersonalAudioMapper.Apply(value, SubSystems.Get<PersonalAudioSubSystem>());
         }
     }
 }

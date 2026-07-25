@@ -41,14 +41,14 @@ grep -i "airlock" Documents/art-available-for-import.json
 
 ## Available for import
 
-**1618** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
+**1607** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
 
 | Category | Available |
 |----------|----------:|
 | Models | 672 |
 | Textures | 537 |
 | Graphics | 204 |
-| Sound | 177 |
+| Sound | 166 |
 | Animations | 18 |
 | Fonts | 10 |
 
@@ -58,9 +58,9 @@ Full list: [`art-available-for-import.json`](art-available-for-import.json)
 
 | Metric | Count |
 |--------|------:|
-| Already imported (in-game + SS3D-Art) | 637 |
+| Already imported (in-game + SS3D-Art) | 648 |
 | In-game only | 90 |
-| Available for import | 1618 |
+| Available for import | 1607 |
 | Promotional artwork (not game-ready) | 215 |
 
 Complete data with import status: [`art-asset-index.json`](art-asset-index.json)

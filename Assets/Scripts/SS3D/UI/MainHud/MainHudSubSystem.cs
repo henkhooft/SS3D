@@ -6,6 +6,7 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
@@ -84,6 +85,7 @@ namespace SS3D.UI.MainHud
 
         private MainHudView _view;
         private AlertStackState? _debugAlertOverride;
+        private AlertStackState _lastAlertState;
         private GameObject _localPlayer;
         private HumanHealthController _healthController;
         private StaminaController _stamina;
@@ -432,7 +434,7 @@ namespace SS3D.UI.MainHud
         public void SetDebugAlertOverride(AlertStackState state)
         {
             _debugAlertOverride = state;
-            _view?.SetAlertState(state);
+            PushAlertState(state);
         }
 
         public void ClearDebugAlertOverride()
@@ -454,17 +456,17 @@ namespace SS3D.UI.MainHud
 
             if (_debugAlertOverride.HasValue)
             {
-                _view.SetAlertState(_debugAlertOverride.Value);
+                PushAlertState(_debugAlertOverride.Value);
                 return;
             }
 
             if (_healthController == null)
             {
-                _view.SetAlertState(default);
+                PushAlertState(default);
                 return;
             }
 
-            _view.SetAlertState(ToAlertStackState(
+            PushAlertState(ToAlertStackState(
                 HealthAlertStackMapper.Compute(_healthController.Snapshot)));
         }
 
@@ -475,7 +477,23 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
-            _view?.SetAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+            PushAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+        }
+
+        /// <summary>
+        /// Single funnel for every <see cref="AlertStackState"/> push (health-driven, debug override,
+        /// or cleared). Fires the personal alert cue (audio.md §6) when a hazard newly appears — an
+        /// escalation already showing does not re-trigger it — then forwards to the view.
+        /// </summary>
+        private void PushAlertState(AlertStackState newState)
+        {
+            if (AlertStackAudioMapper.HasNewAlert(_lastAlertState, newState))
+            {
+                SubSystems.Get<PersonalAudioSubSystem>()?.PlayAlertCue();
+            }
+
+            _lastAlertState = newState;
+            _view?.SetAlertState(newState);
         }
 
         /// <summary>

@@ -1,5 +1,4 @@
-﻿using FishNet.Object;
-using SS3D.Core;
+﻿using SS3D.Core;
 using SS3D.Data;
 using SS3D.Data.Generated;
 using SS3D.Systems.Audio;
@@ -30,16 +29,22 @@ namespace SS3D.Systems.Furniture
 
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
+            // Play at the door's world position with no parent — parenting to the NetworkObject
+            // tied the pooled source to the sliding mesh and (with Doppler) warbled the open/close
+            // attack. Positional one-shot is enough for a stationary door cycle.
+            Vector3 position = animator.transform.position;
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+
             if (stateInfo.IsName(Opening))
             {
                 ChangeColors(_openingColor, animator);
-                SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Sfx, Sounds.AirlockOpen, animator.GetComponent<NetworkObject>());
+                audio.PlayAudioSource(AudioType.Sfx, Sounds.AirlockOpen, position, null);
             }
 
             if (stateInfo.IsName(Closing))
             {
                 ChangeColors(_closingColor, animator);
-                SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Sfx, Sounds.AirlockClose, animator.GetComponent<NetworkObject>());
+                audio.PlayAudioSource(AudioType.Sfx, Sounds.AirlockClose, position, null);
             }
         }
 

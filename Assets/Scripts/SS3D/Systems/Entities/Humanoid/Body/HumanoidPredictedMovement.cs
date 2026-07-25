@@ -4,6 +4,7 @@ using FishNet.Object.Prediction;
 using FishNet.Transporting;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
@@ -111,6 +112,12 @@ namespace SS3D.Systems.Entities.Humanoid
             base.OnStartNetwork();
             _networkStarted = true;
             TrySubscribeTick();
+
+            // Client-local footsteps on every peer (owner + remotes). Do not edit Human.prefab.
+            if (GetComponent<FootstepAudio>() == null)
+            {
+                gameObject.AddComponent<FootstepAudio>();
+            }
         }
 
         protected override void OnEnabled()

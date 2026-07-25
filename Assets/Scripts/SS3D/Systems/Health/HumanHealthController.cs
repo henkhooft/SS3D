@@ -5,6 +5,7 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
@@ -35,7 +36,7 @@ namespace SS3D.Systems.Health
         private HumanInventory _inventory;
         private bool _deathTriggered;
         private bool _healthCollapseActive;
-        private bool _drivingLocalScreenEffects;
+        private bool _drivingLocalPresentation;
 
         [SyncVar(OnChange = nameof(SyncSnapshot))]
         private HealthSnapshot _snapshot = HealthSnapshot.Default;
@@ -495,26 +496,30 @@ namespace SS3D.Systems.Health
                 return;
             }
 
-            _drivingLocalScreenEffects = true;
+            _drivingLocalPresentation = true;
             ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            PersonalAudioSubSystem personalAudio = SubSystems.Get<PersonalAudioSubSystem>();
             if (snapshot.State == HealthState.Dead)
             {
                 HealthScreenEffectMapper.Clear(effects);
+                HealthPersonalAudioMapper.Clear(personalAudio);
                 return;
             }
 
             HealthScreenEffectMapper.Apply(snapshot, effects);
+            HealthPersonalAudioMapper.Apply(snapshot, personalAudio);
         }
 
         private void ClearScreenEffectsIfDriving()
         {
-            if (!_drivingLocalScreenEffects)
+            if (!_drivingLocalPresentation)
             {
                 return;
             }
 
-            _drivingLocalScreenEffects = false;
+            _drivingLocalPresentation = false;
             HealthScreenEffectMapper.Clear(SubSystems.Get<ScreenEffectsSubSystem>());
+            HealthPersonalAudioMapper.Clear(SubSystems.Get<PersonalAudioSubSystem>());
         }
 
         private bool IsLocalOwnerMind()

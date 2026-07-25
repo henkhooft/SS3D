@@ -34,6 +34,7 @@ stamina drain), projectile/thrown.
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm branch: ranged fire / reload Cmds; melee swing; aim + TargetRpcs
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/RangedWeaponItemExtension.cs` — profile, mag, recoil, cooldown, reload
 - `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs`
+- `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (gunfire, reload magazine-out) registered from imported SS3D-Art content; `InteractionController.PlayGunfireSound` / `ServerNotifyRangedReloadStarted` play them through `AudioSubSystem.PlayAudioSource` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
 - `Assets/Scripts/SS3D/Utils/LineOfSight.cs` — shared occlusion (Drop, LocalSpeech, combat)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — melee swing + connect
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` / `HandMeleeExtension.cs`
@@ -79,10 +80,11 @@ stamina drain), projectile/thrown.
 - **Armor coverage ≠ clothing slot** — `ArmorProfile.CoveredZones` (`BodyZoneMask`) is independent of which `ContainerType` slot the item occupies; only "is it worn" (`IsWornSlot()`) gates lookup, not slot identity.
 - **Armor Item is not a dual prefab** — `ArmorItemExtension` stays on the clothing Item (`JumpsuitSecurity`); world folded look is `ClothingItemPresentation` on the same NO ([inventory](inventory.md)). Do not spawn a separate folded NetworkObject for drops.
 - Melee pitfalls (connect aim, exclude self, structural reach, Harm whitelist, etc.) still apply — see git history / prior map notes.
+- **No dedicated "AR-15 fire" sound exists in the source pack** — the AR-15 SS3D-Art folder only has charging/dry-fire/selector/magazine foley, not a gunshot; `CombatAudioTrackIds.GunFire` uses the generic `Sound/Items/Weapons/Firearms/Gun Firing1-2.wav` pair instead. `AR Charging`/`AR Dry Fire`/`AR Fire Selector Up-Down`/`AR Magazine Full In` and the whole Pump Shotgun set are imported (`Assets/Art/Sound/Items/Weapons/Firearms/`) but deliberately left unwired — no clean existing event for "reload complete" (reload is lazily polled, not a fired callback), no fire-mode toggle, and no shotgun weapon exists in code yet.
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md), [stamina](stamina.md) (melee + ranged fire costs, exertion feedback into windup/cone; armor weight also feeds `CarriedWeight`), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md) (worn armor lookup via `HumanInventory`/`ContainerType`), [structural-destruction](structural-destruction.md)
+- **Depends on:** [health](health.md), [stamina](stamina.md) (melee + ranged fire costs, exertion feedback into windup/cone; armor weight also feeds `CarriedWeight`), [interactions-runtime](interactions-runtime.md), [entities](entities.md), [inventory](inventory.md) (worn armor lookup via `HumanInventory`/`ContainerType`), [structural-destruction](structural-destruction.md), [audio](audio.md) (`AudioSubSystem.PlayAudioSource` — gunfire/reload SFX)
 - **Used by:** Harm-intent Run Primary; Hotkeys Use (reload)
 
 ## Related docs

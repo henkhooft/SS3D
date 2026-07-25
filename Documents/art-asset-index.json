@@ -13,13 +13,13 @@
     }
   },
   "summary": {
-    "in_game_files": 717,
+    "in_game_files": 728,
     "ss3d_art_files": 2480,
     "unique_assets": 2560,
-    "imported": 637,
+    "imported": 648,
     "in_game_only": 90,
-    "ss3d_art_only": 1833,
-    "available_for_import": 1618,
+    "ss3d_art_only": 1822,
+    "available_for_import": 1607,
     "artwork_only": 215
   },
   "categories": [
@@ -73,11 +73,11 @@
     },
     {
       "path": "Sound",
-      "in_game": 44,
+      "in_game": 55,
       "ss3d_art": 218,
-      "imported": 41,
+      "imported": 52,
       "in_game_only": 3,
-      "ss3d_art_only": 177
+      "ss3d_art_only": 166
     },
     {
       "path": "Textures",
@@ -1691,27 +1691,27 @@
     },
     {
       "path": "Sound/Items/Weapons/Firearms",
-      "in_game": 0,
+      "in_game": 2,
       "ss3d_art": 2,
-      "imported": 0,
+      "imported": 2,
       "in_game_only": 0,
-      "ss3d_art_only": 2
+      "ss3d_art_only": 0
     },
     {
       "path": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game": 0,
+      "in_game": 6,
       "ss3d_art": 6,
-      "imported": 0,
+      "imported": 6,
       "in_game_only": 0,
-      "ss3d_art_only": 6
+      "ss3d_art_only": 0
     },
     {
       "path": "Sound/Items/Weapons/Firearms/Pump Shotgun",
-      "in_game": 0,
+      "in_game": 3,
       "ss3d_art": 3,
-      "imported": 0,
+      "imported": 3,
       "in_game_only": 0,
-      "ss3d_art_only": 3
+      "ss3d_art_only": 0
     },
     {
       "path": "Sound/Structures/Airlocks",
@@ -22721,121 +22721,121 @@
       "stem": "gun firing1",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/Gun Firing1.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/Gun Firing1.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/Gun Firing1.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/Gun Firing1.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Gun Firing2.wav",
       "stem": "gun firing2",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/Gun Firing2.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/Gun Firing2.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/Gun Firing2.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/Gun Firing2.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Charging.wav",
       "stem": "ar charging",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Charging.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Charging.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Charging.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Charging.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Dry Fire.wav",
       "stem": "ar dry fire",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Dry Fire.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Dry Fire.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Dry Fire.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Dry Fire.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Fire Selector Down.wav",
       "stem": "ar fire selector down",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Down.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Down.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Down.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Down.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Fire Selector Up.wav",
       "stem": "ar fire selector up",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Up.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Up.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Up.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Fire Selector Up.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Magazine Empty Out.wav",
       "stem": "ar magazine empty out",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Empty Out.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Empty Out.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Empty Out.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Empty Out.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "AR Magazine Full In.wav",
       "stem": "ar magazine full in",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/AR-15",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Full In.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Full In.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Full In.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/AR-15/AR Magazine Full In.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Shotgun Load.wav",
       "stem": "shotgun load",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/Pump Shotgun",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Load.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Load.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Load.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Load.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Shotgun Pump.wav",
       "stem": "shotgun pump",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/Pump Shotgun",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Pump.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Pump.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Pump.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Pump.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Shotgun Shell Box Open.wav",
       "stem": "shotgun shell box open",
       "extension": "wav",
       "category": "Sound/Items/Weapons/Firearms/Pump Shotgun",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Shell Box Open.wav",
       "ss3d_art_path": "Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Shell Box Open.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Shell Box Open.wav",
       "import_target_path": "Assets/Art/Sound/Items/Weapons/Firearms/Pump Shotgun/Shotgun Shell Box Open.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Airlock Bolt Drop.wav",
