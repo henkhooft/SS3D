@@ -24,16 +24,17 @@ bubble). Feed UI on `UiShell` HUD: left radio stack + top ALL-STATION banner.
 - `CommsSubSystem.cs` — local + radio/announce hub; `SendAnnouncement`; `OnLocalSpeechReceived` /
   `OnCommsMessageReceived`; transcript `Logs/Comms.txt` on server.
 - `LocalSpeechEmitter` — `CmdSpeak` / `CmdSendRadio` on the speaking Entity.
-- `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose (own UIDocument).
+- `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
+  `UiShell` `UiLayer.Overlay` (not the hub/MI UIDocument).
 - `CommsFeedController` + `CommsFeedView` — attaches to `UiLayer.Hud`; radio left, announce top.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
 ## Pitfalls
 
-- **Shared hub UIDocument:** `MachineInterfaceHost` disables the hub `UIDocument` while closed.
-  Local speech owns a child `LocalSpeechOverlay` UIDocument — do not point compose/bubbles at the MI
-  document or T-compose silently no-ops (`root.panel == null`).
+- **Local speech on UiShell Overlay:** do not attach bubbles/compose to the hub UIDocument —
+  `MachineInterfaceHost` disables it while closed, and a child `UIDocument` under the hub cannot
+  set its own `PanelSettings` (Unity asserts parent panel mismatch). Use `UiLayer.Overlay`.
 - **Tab-in-compose** replaces design §6 channel radial for this slice — do not add typed `;` prefixes.
 - **Announcements:** all `Announcement`-kind traffic uses the top banner (no routine→feed split yet).
 - **Headset traits** on `CommsChannel` are data-only until MVP2 gating — Tab lists all writable radio.

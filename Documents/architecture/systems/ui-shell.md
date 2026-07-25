@@ -62,8 +62,7 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay; comms feed (`CommsFeedController` on Hud)
-- **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), lobby UI, local-speech overlay migration, examine overlays, console (as redesigns land)
+- **Owns:** radial interaction menu, armed overlay; local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud)
 
 ## Related docs
 

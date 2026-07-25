@@ -441,7 +441,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24b216bb26404adba79baceff555f191, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Comms.LocalSpeechBubbleController
-  _document: {fileID: 0}
   _bubbleStyleSheet: {fileID: 7433441132597879392, guid: 748a61f2204743ec8607f66ccb8b20d2, type: 3}
   _config: {fileID: 11400000, guid: 9c42426bc8ce465799af4da38d195944, type: 2}
 --- !u!114 &6100110011001100123

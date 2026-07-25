@@ -5,6 +5,7 @@ using SS3D.Systems.Comms.UI;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Inputs;
+using SS3D.UI.Shell;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,19 +14,14 @@ using UnityEngine.UIElements;
 namespace SS3D.Systems.Comms
 {
     /// <summary>
-    /// Drives the local speech subtitle overlay: subscribes to CommsSubSystem's speech events,
-    /// stacks up to a few lines per speaker with fade + upward drift, and applies mode-specific
-    /// visual treatments. Owns a dedicated UIDocument child — must not share MachineInterfaceHost's
-    /// hub document (that one stays disabled while MI is closed).
-    /// Also owns local-speech compose (T → draft chip at the head anchor → Enter commits).
+    /// Drives the local speech subtitle overlay and T-compose draft on the UiShell Overlay layer
+    /// (same attachment pattern as radial / armed — never share MachineInterfaceHost's hub UIDocument).
     /// </summary>
     public sealed class LocalSpeechBubbleController : Actor
     {
-        private const string OverlayChildName = "LocalSpeechOverlay";
         private const float BubbleWorldHeightOffset = 0.15f;
         private const float FadeOutTailSeconds = 1f;
 
-        [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _bubbleStyleSheet;
         [SerializeField] private LocalSpeechConfig _config;
 
@@ -45,7 +41,7 @@ namespace SS3D.Systems.Comms
         private readonly InputTextEntryScope _composeEntry = new(InputContext.TextEntry);
 
         private LocalSpeechBubbleView _view;
-        private VisualElement _attachedRoot;
+        private VisualElement _layerHost;
         private LocalSpeechListener _listener;
         private CrowdCapRanker _ranker;
         private Entity _localViewer;
@@ -63,8 +59,6 @@ namespace SS3D.Systems.Comms
         {
             base.OnAwake();
 
-            EnsureDedicatedDocument();
-
 #if UNITY_EDITOR
             EnsureEditorAssets();
 #endif
@@ -72,40 +66,7 @@ namespace SS3D.Systems.Comms
             _listener = new LocalSpeechListener(_config);
             _ranker = new CrowdCapRanker();
 
-            // Subtitles never pick (see LocalSpeechBubbleView - the whole overlay is
-            // PickingMode.Ignore), so this never changes IsPointerOverInterface's answer, but
-            // every runtime UIDocument owner registers per the input-arbitration convention -
-            // see Documents/architecture/2026-07_input-arbitration.md. The draft TextField does
-            // pick, so RegisterDocument also keeps world clicks clear while composing.
-            InputInterface.RegisterDocument(_document);
-
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
-        }
-
-        /// <summary>
-        /// MachineInterfaceHost disables the hub UIDocument while closed. Local speech must not
-        /// share that document or T-compose / bubbles silently no-op (root.panel == null).
-        /// </summary>
-        private void EnsureDedicatedDocument()
-        {
-            Transform child = Transform.Find(OverlayChildName);
-            if (child == null)
-            {
-                GameObject go = new(OverlayChildName);
-                go.transform.SetParent(Transform, false);
-                child = go.transform;
-            }
-
-            if (!child.TryGetComponent(out UIDocument document))
-            {
-                document = child.gameObject.AddComponent<UIDocument>();
-            }
-
-            _document = document;
-            if (!_document.enabled)
-            {
-                _document.enabled = true;
-            }
         }
 
         protected override void OnEnabled()
@@ -142,16 +103,11 @@ namespace SS3D.Systems.Comms
             }
 
             EndCompose(clearText: true);
-
-            // UIDocument destroys/rebuilds its visual tree across disable/enable. Drop the
-            // cached view so EnsureOverlay re-attaches to the live root instead of driving
-            // orphaned VisualElements (panel=null, NaN layout, invisible bubbles).
             TearDownOverlay();
         }
 
         protected override void OnDestroyed()
         {
-            InputInterface.UnregisterDocument(_document);
             EndCompose(clearText: true);
             TearDownOverlay();
             base.OnDestroyed();
@@ -678,30 +634,35 @@ namespace SS3D.Systems.Comms
 
         private bool EnsureOverlay()
         {
-            if (_document == null)
-            {
-                return false;
-            }
-
-            VisualElement root = _document.rootVisualElement;
-
-            // rootVisualElement can exist before the runtime panel is ready, and UIDocument
-            // replaces the root across disable/enable. Only treat the overlay as ready when we
-            // are attached to the *current* rooted panel.
-            if (root == null || root.panel == null)
-            {
-                return false;
-            }
-
-            if (_overlayReady && _view != null && _attachedRoot == root)
+            if (_overlayReady && _view != null && _layerHost != null && _layerHost.panel != null)
             {
                 return true;
             }
 
-            _view?.Detach();
+            if (!SubSystems.TryGet(out UiShellSubSystem uiShell)
+                || !uiShell.TryGetLayer(UiLayer.Overlay, out VisualElement layerRoot)
+                || layerRoot.panel == null)
+            {
+                return false;
+            }
+
+            // Shared shell document — register is idempotent; do not unregister on teardown
+            // (same rule as RadialInteractionSubSystem).
+            InputInterface.RegisterDocument(uiShell.Document);
+
+            TearDownOverlay();
+
+            _layerHost = new VisualElement { name = "local-speech-overlay" };
+            _layerHost.pickingMode = PickingMode.Ignore;
+            _layerHost.style.position = Position.Absolute;
+            _layerHost.style.left = 0;
+            _layerHost.style.top = 0;
+            _layerHost.style.right = 0;
+            _layerHost.style.bottom = 0;
+            layerRoot.Add(_layerHost);
+
             _view = new LocalSpeechBubbleView(_bubbleStyleSheet);
-            _view.Attach(root);
-            _attachedRoot = root;
+            _view.Attach(_layerHost);
             _overlayReady = true;
             return true;
         }
@@ -710,7 +671,8 @@ namespace SS3D.Systems.Comms
         {
             _view?.Detach();
             _view = null;
-            _attachedRoot = null;
+            _layerHost?.RemoveFromHierarchy();
+            _layerHost = null;
             _overlayReady = false;
         }
 
@@ -727,12 +689,6 @@ namespace SS3D.Systems.Comms
             {
                 _config = UnityEditor.AssetDatabase.LoadAssetAtPath<LocalSpeechConfig>(
                     "Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/LocalSpeechConfig.asset");
-            }
-
-            if (_document != null && _document.panelSettings == null)
-            {
-                _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>(
-                    "Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/CommsOverlayPanelSettings.asset");
             }
         }
 #endif
