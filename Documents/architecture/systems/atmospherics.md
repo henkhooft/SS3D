@@ -1,20 +1,20 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: ed384fd83 — 2026-07-25
 
 # Atmospherics
 
 ## Overview
 
-Server-authoritative open-tile gas simulation on the turf grid. Each walkable cell holds a sparse gas mixture; pressure equalizes between neighbours via ideal-gas-law sharing, heat conducts per gas specific heat, and plasma burns with oxygen into CO₂. Runs in a dedicated ECS world with Burst jobs, driven by tilemap mutation notifications. GPU textures feed URP scatter/glow/distortion passes for fog, fire, and plasma visuals. **Pipe layer:** vents, scrubbers, and pumps register with `AtmosPortRegistry` and exchange gas with turf cells after pipe bulk sim; ports cache network IDs against `GasPipeNetworkRegistry.TopologyVersion` so steady ticks do not re-walk the tilemap. **Air alarms** sample the turf cell in front of the wall mount (APC-style tile resolution), discover area vents/scrubbers, and dispatch preset modes to real port devices. Port commands are validated against the air alarm’s resolved area to avoid cross-area toggles on shared wall tiles. **Client VFX:** Phase 1 dirty-chunk sync shipped ([2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)) — pure clients build atlases from `AtmosChunkPatch` RPCs via `AtmosClientVisualizationBridge`; late-join bootstrap / AOI remain Phase 2.
+Server-authoritative open-tile gas simulation on the turf grid. Each walkable cell holds a sparse gas mixture; pressure equalizes between neighbours via ideal-gas-law sharing, and when total pressures already match, composition still mixes via slower partial-pressure diffusion (`DiffusionSpeed`). Heat conducts per gas specific heat, and plasma burns with oxygen into CO₂. Runs in a dedicated ECS world with Burst jobs, driven by tilemap mutation notifications. GPU textures feed URP scatter/glow/distortion passes for fog, fire, and plasma visuals. **Pipe layer:** vents, scrubbers, and pumps register with `AtmosPortRegistry` and exchange gas with turf cells after pipe bulk sim; ports cache network IDs against `GasPipeNetworkRegistry.TopologyVersion` so steady ticks do not re-walk the tilemap. **Air alarms** sample the turf cell in front of the wall mount (APC-style tile resolution), discover area vents/scrubbers, and dispatch preset modes to real port devices. Port commands are validated against the air alarm’s resolved area to avoid cross-area toggles on shared wall tiles. **Client VFX:** Phase 1 dirty-chunk sync shipped ([2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)) — pure clients build atlases from `AtmosChunkPatch` RPCs via `AtmosClientVisualizationBridge`; late-join bootstrap / AOI remain Phase 2.
 
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop; `IWorldReady`; awaits `TileMapLoaded` then notifies `AtmosReady` (`SS3D.Atmos.Sim` / `Upload` markers)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSimulation.cs` — native cell buffers, active-cell scheduling, job dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Bridge/AtmosTileObserver.cs` — `ITileMutationObserver`; refreshes cells on placement, clear, and door state
-- `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ShareGasJob.cs` — pressure-driven mole sharing
+- `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ShareGasJob.cs` — pressure-driven mole sharing + equal-pressure composition diffusion
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ConductHeatJob.cs` — specific-heat heat exchange
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ReactAtmosJob.cs` — plasma combustion and burn intensity
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Data/GasRegistry.cs` — core gas slot lookup (`CoreGasRegistry.asset`)
@@ -51,11 +51,12 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - **~1 MB GC attributed to `AtmosSubSystem.Update` on GPU upload:** `EncodeComposition` used `new float[4]` per cell and lambdas captured locals — use stack locals / cached method-group delegates; sample flow gradients from atlas scratch, not `TryGetCellIndex`.
 - **`TileCoord` dictionary lookups box (~24 B) on Mono:** keys must implement `IEquatable<TileCoord>` / `GetHashCode` (see [tile](tile.md)); otherwise `ValueType.DefaultEquals` dominates flow upload and other hot maps.
 - **Port ticks allocating via `GetAllPlacedObject`:** that API always builds a new `List`. Pipe layers are single-occupancy — use `TryGetPlacedObject`. Do not re-resolve pipe networks every tick; cache against `GasPipeNetworkRegistry.TopologyVersion`.
+- **Equal-pressure breath pockets:** a 1:1 O₂→CO₂ swap does not change total pressure, so pressure-only sharing never diluted the tile. `ShareGasJob` must run equal-P partial-pressure diffusion (`DiffusionSpeed`); composition gradients keep cells awake until the room mixes, then sleep again. Vacuum edges stay pressure-vent only.
 
 ## Depends on / Used by
 
 - **Depends on:** [tile](tile.md) (`ITileQueryService`, `ITileMutationObserver`, `IDynamicTileOccupant`, `TileCoord`), [rendering](rendering.md) (`AtmosRendererFeature`), [area](area.md) (air-alarm area membership and tile-in-front resolution)
-- **Used by:** [machine-interface](machine-interface.md) (air alarm / scrubber / vent / pump panels), (future) [substances](substances.md), [health](health.md)
+- **Used by:** [machine-interface](machine-interface.md) (air alarm / scrubber / vent / pump panels), [health](health.md) (turf sample → breathability / O₂↔CO₂ / env burn; armor seal still deferred), (future) [substances](substances.md)
 
 ## Related docs
 

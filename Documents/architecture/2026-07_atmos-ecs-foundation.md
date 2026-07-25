@@ -11,14 +11,18 @@ Ship turf gas simulation with tile-driven neighbour graph, plasma combustion, GP
 ## Shipped
 
 1. **ECS world** — `AtmosWorld`, native cell buffers, active-cell sleep/wake, chunk resize preservation.
-2. **Jobs** — `ShareGasJob` (pressure equalization), `ConductHeatJob`, `ReactAtmosJob` (plasma burn).
+2. **Jobs** — `ShareGasJob` (pressure equalization + equal-pressure composition diffusion via `DiffusionSpeed`), `ConductHeatJob`, `ReactAtmosJob` (plasma burn).
 3. **Gas data** — four core gases (O₂, N₂, CO₂, plasma); `GasRegistry` + `GasDefinition` ScriptableObjects; molar mass and specific heat on each gas.
 4. **Tile bridge** — `AtmosTileObserver` on `ITileMutationObserver`; `AtmosNeighbourBuilder`; deferred refresh on tile clear.
 5. **Dynamic occupancy** — `IDynamicTileOccupant` on airlocks; `TileSubSystem.NotifyTileStateChanged` reopens/closes gas paths when doors move.
 6. **Visualization** — `AtmosGpuUploader` → pressure/temperature/composition/fire textures; `AtmosRendererFeature` scatter + plasma glow + heat distortion; per-gas visual profiles. **Server/host only** until [client visualization sync](2026-07_atmos-client-visualization-sync.md) ships.
 7. **Debug** — `AtmosDebugController` overlay; shader debug views on renderer feature.
 8. **Scene wiring** — `AtmosSystem` on `Game.unity`; renderer feature on `SS3D_ForwardPlusRenderer.asset`.
-9. **Tests** — `AtmosFluxTests`, `AtmosCombustionTests`, `AtmosNeighbourTests`, `AtmosGpuUploaderTests`, `AtmosVisualMetricsTests`.
+9. **Tests** — `AtmosFluxTests` (incl. equal-pressure composition mix), `AtmosCombustionTests`, `AtmosNeighbourTests`, `AtmosGpuUploaderTests`, `AtmosVisualMetricsTests`.
+
+## Follow-on (2026-07) — equal-pressure diffusion
+
+Breath O₂→CO₂ swaps conserve moles, so stable rooms never mixed under pressure-only sharing and local CO₂ pockets could kill a standing player. `ShareGasJob` now transfers along partial-pressure gradients when `|ΔP| ≤ PressureEpsilon` (open neighbours only; vacuum still pressure-vents). Tunables: `AtmosFluxConstants.DiffusionSpeed`, `PartialPressureEpsilon`.
 
 ## Deferred (design §4–§9, §13)
 
