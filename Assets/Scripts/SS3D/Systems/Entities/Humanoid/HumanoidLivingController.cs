@@ -1,3 +1,4 @@
+using FishNet.Connection;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Stamina;
@@ -26,7 +27,7 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>Planar coast while unsupported (no plenum). Used when predicted movement is disabled.</summary>
         private Vector3 _coastVelocity;
 
-		public override void OnStartClient()
+        public override void OnStartClient()
         {
             base.OnStartClient();
             _healthController = GetComponent<HumanHealthController>();
@@ -34,10 +35,62 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _predictedMovement = GetComponent<HumanoidPredictedMovement>();
             }
+
+            ApplyCharacterControllerOwnership();
             if (!IsOwner)
             {
                 return;
-            }    
+            }
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            ApplyCharacterControllerOwnership();
+        }
+
+        public override void OnOwnershipClient(NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+            ApplyCharacterControllerOwnership();
+        }
+
+        public override void OnOwnershipServer(NetworkConnection prevOwner)
+        {
+            base.OnOwnershipServer(prevOwner);
+            ApplyCharacterControllerOwnership();
+        }
+
+        /// <summary>
+        /// Only the owning peer simulates CharacterController. Remotes (including on the server)
+        /// must keep it disabled so client-authoritative NetworkTransform can move the transform;
+        /// an enabled CC ignores teleports and freezes server-side proximity (airlocks, etc.).
+        /// </summary>
+        private void ApplyCharacterControllerOwnership()
+        {
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            if (_characterController == null)
+            {
+                return;
+            }
+
+            if (!IsOwner)
+            {
+                _characterController.enabled = false;
+                return;
+            }
+
+            if (TryGetComponent(out Ragdoll ragdoll) && ragdoll.IsKnockedDown)
+            {
+                _characterController.enabled = false;
+                return;
+            }
+
+            _characterController.enabled = true;
         }
 
         /// <summary>

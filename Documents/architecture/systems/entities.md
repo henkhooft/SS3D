@@ -55,6 +55,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Remote ragdoll twitches:** observers must stay kinematic while bone NetworkTransforms receive. Only owner (living knockdown) or server (death corpse) runs non-kinematic physics + AlignToHips. Do not `CharacterController.Move` while presentation ≠ Locomotion.
+- **Remote CharacterController must stay disabled:** client-authoritative NetworkTransform cannot move the server transform while CC is enabled (teleports are ignored). Keep CC on only for `IsOwner`; otherwise server-side proximity (airlocks) never sees remotes. Hit 2026-07-26.
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Timed knockdown from server:** call `ServerRecover`, not `Recover()` (ServerRpc is a no-op from server).
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2: horizontal / downward / backhand).

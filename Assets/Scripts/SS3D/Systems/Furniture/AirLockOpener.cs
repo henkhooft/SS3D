@@ -1,29 +1,45 @@
-﻿using FishNet.Object;
-using FishNet.Object.Synchronizing;
-using SS3D.Core;
-using SS3D.Systems.Tile;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using SS3D.Core;
 using SS3D.Systems.Electricity;
-using SS3D.Systems.IdAccess;
+using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Tile;
 using UnityEngine;
 
 namespace SS3D.Systems.Furniture
 {
     /// <summary>
-    /// Script controlling the opening and closing of airlocks.
-    /// When a player get close to an airlock, open the airlock. Keep the airlock opened as long as a player
-    /// is close to the opened airlock. When no player are close to it, close the airlock.
+    /// Opens when an authorized character is in the door volume, stays open while occupied,
+    /// and closes after a delay when empty.
     /// </summary>
+    /// <remarks>
+    /// Proximity uses spawned entity transforms against the door trigger (with padding), not
+    /// CharacterController physics triggers. Remotes are NetworkTransformed on the server;
+    /// CC.Move never runs for them, so OnTriggerEnter / OverlapBox against the CC miss them.
+    /// </remarks>
     public class AirLockOpener : NetworkBehaviour, IDynamicTileOccupant
     {
         /// <summary>
-        /// Time in second before the door start to close when player are out of the trigger collider of the airlock.
+        /// Seconds before the door starts closing once the volume is empty.
         /// </summary>
-        private const float DOOR_WAIT_CLOSE_TIME = 2.0f;
+        private const float DoorWaitCloseTime = 2.0f;
+
+        /// <summary>
+        /// Sample slightly above the feet so the point sits near the door volume centerline.
+        /// </summary>
+        private const float OccupantSampleHeight = 0.5f;
+
+        /// <summary>
+        /// Extra reach beyond the trigger collider. Closed door solids stop characters ~5–10cm
+        /// outside the OBB, so a strict contains check never authorizes.
+        /// </summary>
+        private const float ProximityPadding = 0.85f;
+
+        private static readonly int OpenId = Animator.StringToHash("Open");
 
         [SerializeField]
         private Animator _animator;
@@ -31,39 +47,48 @@ namespace SS3D.Systems.Furniture
         [SerializeField]
         private BasicPowerConsumer _powerConsumer;
 
-        /// <summary>
-        /// The animation's id of the animation we want to trigger
-        /// </summary>
-        private static readonly int OpenId = Animator.StringToHash("Open");
+        [SerializeField]
+        private LayerMask doorTriggerLayers = -1;
 
-        [SerializeField] private LayerMask doorTriggerLayers = -1;
-
-        /// <summary>
-        /// Authorized occupants currently in the trigger volume.
-        /// </summary>
-        private readonly HashSet<Collider> _authorizedOccupants = new();
-
-        /// <summary>
-        /// Coroutine to eventually close the door when no one is around.
-        /// </summary>
-        private Coroutine closeTimer; // Server Only
-
-        private AirLockAccessGate _accessGate;
-
-        [SyncVar(OnChange = nameof(OnOpenChanged))]
-        private bool _isOpen;
+        /// <summary>Optional; if unset, first trigger collider under this object is used.</summary>
+        [SerializeField]
+        private Collider _proximityVolume;
 
         [SerializeField]
         private List<MeshRenderer> _meshesToColor;
 
-        public ReadOnlyCollection<MeshRenderer> MeshesToColor => _meshesToColor.AsReadOnly();
-
         [SerializeField]
         private List<SkinnedMeshRenderer> _skinnedMeshesToColor;
+
+        [SyncVar(OnChange = nameof(OnOpenChanged))]
+        private bool _isOpen;
+
+        private readonly HashSet<HumanInventory> _authorizedOccupants = new();
+
+        private AirLockAccessGate _accessGate;
+        private Coroutine _closeTimer;
+
+        public ReadOnlyCollection<MeshRenderer> MeshesToColor => _meshesToColor.AsReadOnly();
 
         public ReadOnlyCollection<SkinnedMeshRenderer> SkinnedMeshesToColor => _skinnedMeshesToColor.AsReadOnly();
 
         public bool IsOpen => _isOpen;
+
+        private void Awake()
+        {
+            if (_proximityVolume == null)
+            {
+                Collider[] colliders = GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < colliders.Length; i++)
+                {
+                    if (colliders[i] != null && colliders[i].isTrigger)
+                    {
+                        _proximityVolume = colliders[i];
+                        break;
+                    }
+                }
+            }
+        }
 
         public override void OnStartServer()
         {
@@ -81,12 +106,14 @@ namespace SS3D.Systems.Furniture
                 _powerConsumer.OnPowerStatusUpdated += HandlePowerStatusUpdated;
             }
 
+            UpdateAnimator();
             NotifyTileStateChanged();
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
+            UpdateAnimator();
             NotifyTileStateChanged();
         }
 
@@ -100,49 +127,102 @@ namespace SS3D.Systems.Furniture
             base.OnStopServer();
         }
 
-        public void OnTriggerEnter(Collider other)
+        private void FixedUpdate()
         {
-            if (!IsServer) return;
-            if ((1 << other.gameObject.layer & doorTriggerLayers) == 0) return;
-            if (!IsPowered()) return;
-
-            if (_accessGate != null && !_accessGate.TryAuthorizeCollider(other, out HumanInventory _, out _))
+            if (!IsServer)
             {
                 return;
             }
 
-            if (_authorizedOccupants.Add(other) && _authorizedOccupants.Count == 1)
-            {
-                if (closeTimer != null)
-                {
-                    StopCoroutine(closeTimer);
-                    closeTimer = null;
-                }
-
-                SetOpen(true);
-            }
+            ServerUpdateProximity();
         }
 
-        public void OnTriggerExit(Collider other)
+        [Server]
+        private void ServerUpdateProximity()
         {
-            if(!IsServer) return;
-            if ((1 << other.gameObject.layer & doorTriggerLayers) == 0) return;
-
-            if (!_authorizedOccupants.Remove(other))
+            if (_proximityVolume == null)
             {
                 return;
             }
 
-            if (_authorizedOccupants.Count == 0)
+            if (!IsPowered())
+            {
+                if (_authorizedOccupants.Count > 0)
+                {
+                    _authorizedOccupants.Clear();
+                    ScheduleCloseAfterDelay();
+                }
+
+                return;
+            }
+
+            if (!SubSystems.TryGet(out EntitySubSystem entitySubSystem))
+            {
+                return;
+            }
+
+            bool wasEmpty = _authorizedOccupants.Count == 0;
+            _authorizedOccupants.Clear();
+
+            List<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
+            for (int i = 0; i < spawnedPlayers.Count; i++)
+            {
+                Entity entity = spawnedPlayers[i];
+                if (entity == null)
+                {
+                    continue;
+                }
+
+                if ((doorTriggerLayers.value & (1 << entity.gameObject.layer)) == 0)
+                {
+                    continue;
+                }
+
+                Vector3 sample = entity.transform.position + Vector3.up * OccupantSampleHeight;
+                if (!IsPointInProximity(sample))
+                {
+                    continue;
+                }
+
+                HumanInventory inventory = entity.GetComponent<HumanInventory>();
+                if (inventory == null)
+                {
+                    continue;
+                }
+
+                if (_accessGate != null &&
+                    !_accessGate.TryAuthorizeInventory(inventory, out _))
+                {
+                    continue;
+                }
+
+                _authorizedOccupants.Add(inventory);
+            }
+
+            bool isEmpty = _authorizedOccupants.Count == 0;
+            if (wasEmpty && !isEmpty)
+            {
+                CancelCloseTimer();
+                SetOpen(true);
+            }
+            else if (!wasEmpty && isEmpty)
             {
                 ScheduleCloseAfterDelay();
             }
         }
 
+        private bool IsPointInProximity(Vector3 worldPoint)
+        {
+            // ClosestPoint returns the point when inside; outside it returns the surface.
+            // Padding covers the gap between the closed door mesh and the trigger volume.
+            Vector3 closest = _proximityVolume.ClosestPoint(worldPoint);
+            return (closest - worldPoint).sqrMagnitude <= ProximityPadding * ProximityPadding;
+        }
+
         private IEnumerator RunCloseEventually(float time)
         {
             yield return new WaitForSeconds(time);
-            closeTimer = null;
+            _closeTimer = null;
             SetOpen(false);
         }
 
@@ -155,12 +235,21 @@ namespace SS3D.Systems.Furniture
             }
 
             _isOpen = open;
-            _animator.SetBool(OpenId, open);
+            UpdateAnimator();
         }
 
         private void OnOpenChanged(bool _, bool __, bool asServer)
         {
+            UpdateAnimator();
             NotifyTileStateChanged();
+        }
+
+        private void UpdateAnimator()
+        {
+            if (_animator != null)
+            {
+                _animator.SetBool(OpenId, _isOpen);
+            }
         }
 
         private void NotifyTileStateChanged()
@@ -187,12 +276,23 @@ namespace SS3D.Systems.Furniture
 
             // Do not restart a running timer. Power-status churn (or repeated exits) used to
             // reset the 2s delay forever so the door never closed.
-            if (closeTimer != null)
+            if (_closeTimer != null)
             {
                 return;
             }
 
-            closeTimer = StartCoroutine(RunCloseEventually(DOOR_WAIT_CLOSE_TIME));
+            _closeTimer = StartCoroutine(RunCloseEventually(DoorWaitCloseTime));
+        }
+
+        private void CancelCloseTimer()
+        {
+            if (_closeTimer == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_closeTimer);
+            _closeTimer = null;
         }
 
         private bool IsPowered()

@@ -678,9 +678,12 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _humanoidLivingController.enabled = enable;
             }
+
             if (_characterController != null)
             {
-                _characterController.enabled = enable;
+                // Non-owners must keep CC off so NetworkTransform can drive the server transform.
+                // Enabling CC on remotes leaves them stuck at spawn for proximity (doors, etc.).
+                _characterController.enabled = enable && IsOwner;
             }
 
             if (TryGetComponent(out HumanoidPredictedMovement predictedMovement))
