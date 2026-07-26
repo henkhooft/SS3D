@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 965d40550 — 2026-07-26
+> Verified: 8833371a1 — 2026-07-26
 
 # Combat
 
@@ -88,6 +88,7 @@ stamina drain), projectile/thrown.
 - Melee pitfalls (connect aim, exclude self, structural reach, Harm whitelist, etc.) still apply — see git history / prior map notes.
 - **M4 gun audio is the SS14 rifle set** — `GunFire` = `Rifle`/`Rifle2`; empty = `Empty`; reload start = `LtRifleMagOut`; reload complete = `LtRifleMagIn` + `LtRifleCock` (server `TryCompleteReloadIfDue`). Legacy SS3D-Art `Gun Firing1-2` / AR-15 folder / Pump Shotgun remain on disk but unwired. Surface impacts: `SurfaceHit` (`BulletHit` + `Ric1`–`Ric5`).
 - **Two-hand M4 is right-only** — `RangedWeaponProfile.RequiresBothHands` + `RequiredHand=Right`. Equip/transfer gates live in `AttachedContainer.CanContainItem` via `TwoHandedWeaponRules` (also Pickup/TakeFirst). Do not only gate `PickupInteraction` — HUD drag must fail too. **Auto-route:** `TryResolveHandForItem` / `Hand.Pickup` / HUD drop redirect put the rifle in the required hand when the off-hand is active; `Hands` selects that grip on attach. **Reserved HUD:** `MainHudSubSystem.RefreshHandReservedState` → `inventory-slot--reserved` ban badge on the off-hand well. **No hand-switch onto reserved:** `Hands.CanSelectHand` / `CmdSetActiveHand` / swap / HUD click ignore a reserved off-hand. Fire/reload/bloom/stance use `TryGetWieldedRangedWeapon` (right-held rifle), not bare `SelectedHand`. `MirrorUpperBody` must stay false while the rifle is wielded.
+- **M4 drop ignores gravity on pure client:** item `NetworkTransform` must stay server-authoritative — see [inventory](inventory.md) pitfall (client-auth NT + kinematic client RB). Hit 2026-07-26.
 
 ## Depends on / Used by
 
