@@ -534,7 +534,7 @@ namespace SS3D.Systems.Inventory.Items
             Sprite icon;
             try
             {
-                // Bright full-toon ObjectIcon + white silhouette — not live half-toon world mats.
+                // Bright full-toon ObjectIcon — not live half-toon world mats.
                 Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
                 icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
                     new Vector2(0.5f, 0.5f), 100);

@@ -5,15 +5,12 @@ using Object = UnityEngine.Object;
 namespace SS3D.Utils
 {
     /// <summary>
-    /// Bright full-toon UI icons: swaps preview renderers to <c>Unlit/ObjectIcon</c>,
-    /// renders via <see cref="RuntimePreviewGenerator"/>, then bakes a white silhouette outline.
+    /// Bright full-toon UI icons: swaps preview renderers to <c>Unlit/ObjectIcon</c>
+    /// and renders via <see cref="RuntimePreviewGenerator"/>.
     /// </summary>
     public static class IconPreviewGenerator
     {
         public const string ObjectIconShaderName = "Unlit/ObjectIcon";
-
-        private const int DefaultOutlineRadius = 2;
-        private const float AlphaThreshold = 0.08f;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -23,7 +20,7 @@ namespace SS3D.Utils
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
         /// <summary>
-        /// Renders <paramref name="model"/> as a bright icon texture with a white outline.
+        /// Renders <paramref name="model"/> as a bright ObjectIcon texture.
         /// When <paramref name="shouldCloneModel"/> is false, the caller owns the transform
         /// (materials are restored afterward). When true, a temporary clone is destroyed.
         /// </summary>
@@ -56,7 +53,6 @@ namespace SS3D.Utils
 
             Color previousBackground = RuntimePreviewGenerator.BackgroundColor;
             bool previousOrthographic = RuntimePreviewGenerator.OrthographicMode;
-            bool previousMarkNonReadable = RuntimePreviewGenerator.MarkTextureNonReadable;
 
             try
             {
@@ -64,22 +60,13 @@ namespace SS3D.Utils
 
                 RuntimePreviewGenerator.BackgroundColor = new Color(0f, 0f, 0f, 0f);
                 RuntimePreviewGenerator.OrthographicMode = true;
-                RuntimePreviewGenerator.MarkTextureNonReadable = false;
 
-                Texture2D texture = RuntimePreviewGenerator.GenerateModelPreview(preview, width, height, false);
-                if (texture != null)
-                {
-                    ApplyWhiteSilhouetteOutline(texture, DefaultOutlineRadius);
-                    texture.Apply(false, true);
-                }
-
-                return texture;
+                return RuntimePreviewGenerator.GenerateModelPreview(preview, width, height, false);
             }
             finally
             {
                 RuntimePreviewGenerator.BackgroundColor = previousBackground;
                 RuntimePreviewGenerator.OrthographicMode = previousOrthographic;
-                RuntimePreviewGenerator.MarkTextureNonReadable = previousMarkNonReadable;
 
                 RestoreMaterials(originals);
                 for (int i = 0; i < tempMaterials.Count; i++)
@@ -181,80 +168,6 @@ namespace SS3D.Utils
                     pair.Key.sharedMaterials = pair.Value;
                 }
             }
-        }
-
-        /// <summary>
-        /// Dilates opaque silhouette by <paramref name="radius"/> pixels and paints white
-        /// in the ring (transparent → white edge). Mutates <paramref name="texture"/> in place.
-        /// </summary>
-        private static void ApplyWhiteSilhouetteOutline(Texture2D texture, int radius)
-        {
-            if (texture == null || radius <= 0)
-            {
-                return;
-            }
-
-            int width = texture.width;
-            int height = texture.height;
-            Color32[] pixels = texture.GetPixels32();
-            int count = pixels.Length;
-
-            bool[] opaque = new bool[count];
-            for (int i = 0; i < count; i++)
-            {
-                opaque[i] = pixels[i].a / 255f > AlphaThreshold;
-            }
-
-            bool[] dilated = new bool[count];
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int index = y * width + x;
-                    if (opaque[index])
-                    {
-                        dilated[index] = true;
-                        continue;
-                    }
-
-                    bool found = false;
-                    for (int dy = -radius; dy <= radius && !found; dy++)
-                    {
-                        int ny = y + dy;
-                        if (ny < 0 || ny >= height)
-                        {
-                            continue;
-                        }
-
-                        for (int dx = -radius; dx <= radius; dx++)
-                        {
-                            int nx = x + dx;
-                            if (nx < 0 || nx >= width)
-                            {
-                                continue;
-                            }
-
-                            if (opaque[ny * width + nx])
-                            {
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    dilated[index] = found;
-                }
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                if (dilated[i] && !opaque[i])
-                {
-                    pixels[i] = new Color32(255, 255, 255, 255);
-                }
-            }
-
-            texture.SetPixels32(pixels);
         }
     }
 }
