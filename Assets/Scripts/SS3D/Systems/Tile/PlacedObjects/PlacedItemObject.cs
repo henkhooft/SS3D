@@ -32,7 +32,7 @@ namespace SS3D.Systems.Tile
             
             if (existingItem != null)
             {
-                // Use the existing item GameObject
+                // Use the existing item GameObject (rotation already composed by drop/place callers).
                 placedGameObject = existingItem;
             }
             else
@@ -43,7 +43,13 @@ namespace SS3D.Systems.Tile
 #if UNITY_SERVER
                 ServerVisualsUtility.DisableRenderingComponents(placedGameObject);
 #endif
+                // Map-editor / tile spawn passes yaw-only; preserve authored rest pitch/roll (e.g. M4 -90° X).
+                if (placedGameObject.TryGetComponent(out SS3D.Systems.Inventory.Items.Item item))
+                {
+                    rotation = item.GetWorldFacing(rotation.eulerAngles.y);
+                }
             }
+
             placedGameObject.transform.SetPositionAndRotation(worldPosition, rotation);
 
             PlacedItemObject placedObject = placedGameObject.GetComponent<PlacedItemObject>();

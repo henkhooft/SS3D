@@ -172,6 +172,35 @@ namespace SS3D.Systems.Inventory.Items
         public Item Prefab => Asset ? Assets.Get<Item>(Asset) : null;
 
         /// <summary>
+        /// Authored pitch/roll from the item prefab (e.g. -90° X so long items lie on their side).
+        /// </summary>
+        public Quaternion WorldRestRotation
+        {
+            get
+            {
+                Item prefab = Prefab;
+                if (prefab != null && prefab != this)
+                {
+                    return prefab.transform.localRotation;
+                }
+
+                return transform.localRotation;
+            }
+        }
+
+        /// <summary>
+        /// World rotation for floor spawn/drop: entity yaw composed with <see cref="WorldRestRotation"/>.
+        /// </summary>
+        public Quaternion GetWorldFacing(float yawDegrees) =>
+            ComposeWorldFacing(WorldRestRotation, yawDegrees);
+
+        /// <summary>
+        /// Compose yaw with an authored rest rotation (for callers that only have the prefab).
+        /// </summary>
+        public static Quaternion ComposeWorldFacing(Quaternion restRotation, float yawDegrees) =>
+            Quaternion.Euler(0f, yawDegrees, 0f) * restRotation;
+
+        /// <summary>
         /// Initialise this item fields. Can only be called once.
         /// </summary>
         public void Init(string itemName, float weight,  List<Trait> traits)
@@ -497,60 +526,74 @@ namespace SS3D.Systems.Inventory.Items
                 return null;
             }
 
+            Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
+            RuntimePreviewGenerator.PreviewRotation = WorldRestRotation;
+
             // Find stored items
             AttachedContainer[] containers = GetComponentsInChildren<AttachedContainer>();
             // If stored items are found, temporarily set their parents to null,
             // so IconPreviewGenerator won't generate stored items
             Dictionary<Transform, Transform> storedItemsWithParents = new Dictionary<Transform, Transform>();
-            foreach (AttachedContainer attachedContainer in containers)
-            {
-                IEnumerable<Item> storedItems = attachedContainer.Items;
-                foreach (Item item in storedItems)
-                {
-                    Transform itemTransform = item.transform;
-                    storedItemsWithParents.Add(itemTransform, itemTransform.parent);
-                }
-            }
-            foreach (Transform storedItem in storedItemsWithParents.Keys)
-            {
-                storedItem.parent = null;
-            }
-
-            Transform previewObject = Instantiate(transform, null, false);
-            previewObject.gameObject.hideFlags = HideFlags.HideAndDontSave;
-            RemoveInteractionOutlines(previewObject);
-            Item previewItem = previewObject.GetComponent<Item>();
-            if (useWornShapedForm && previewItem.TryGetComponent(out ClothingItemPresentation presentation))
-            {
-                // Bypass SetVisibility — that re-applies world (folded) form.
-                presentation.ApplyWornShapedForm();
-                SetChildRenderersEnabled(previewObject, true);
-            }
-            else
-            {
-                previewItem.SetVisibility(true);
-            }
-
-            Sprite icon;
+            Transform previewObject = null;
+            Sprite icon = null;
             try
             {
-                // Bright full-toon ObjectIcon — not live half-toon world mats.
-                Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
-                icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
-                    new Vector2(0.5f, 0.5f), 100);
-                icon.name = transform.name;
+                foreach (AttachedContainer attachedContainer in containers)
+                {
+                    IEnumerable<Item> storedItems = attachedContainer.Items;
+                    foreach (Item item in storedItems)
+                    {
+                        Transform itemTransform = item.transform;
+                        storedItemsWithParents.Add(itemTransform, itemTransform.parent);
+                    }
+                }
+                foreach (Transform storedItem in storedItemsWithParents.Keys)
+                {
+                    storedItem.parent = null;
+                }
+
+                previewObject = Instantiate(transform, null, false);
+                previewObject.gameObject.hideFlags = HideFlags.HideAndDontSave;
+                RemoveInteractionOutlines(previewObject);
+                Item previewItem = previewObject.GetComponent<Item>();
+                if (useWornShapedForm && previewItem.TryGetComponent(out ClothingItemPresentation presentation))
+                {
+                    // Bypass SetVisibility — that re-applies world (folded) form.
+                    presentation.ApplyWornShapedForm();
+                    SetChildRenderersEnabled(previewObject, true);
+                }
+                else
+                {
+                    previewItem.SetVisibility(true);
+                }
+
+                try
+                {
+                    // Bright full-toon ObjectIcon — not live half-toon world mats.
+                    Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
+                    icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
+                        new Vector2(0.5f, 0.5f), 100);
+                    icon.name = transform.name;
+                }
+                catch (NullReferenceException)
+                {
+                    Log.Warning(this, "Can't generate icon for " + name + ".");
+                    icon = null;
+                }
             }
-            catch (NullReferenceException)
+            finally
             {
-                Log.Warning(this, "Can't generate icon for " + name + ".");
-                icon = null;
+                RuntimePreviewGenerator.PreviewRotation = previousPreviewRotation;
+                if (previewObject != null)
+                {
+                    previewObject.gameObject.Dispose(false);
+                }
+                foreach (KeyValuePair<Transform, Transform> storedItemWithParent in storedItemsWithParents)
+                {
+                    storedItemWithParent.Key.parent = storedItemWithParent.Value;
+                }
             }
-            // Return stored items back to their parents
-            previewObject.gameObject.Dispose(false);
-            foreach (KeyValuePair<Transform, Transform> storedItemWithParent in storedItemsWithParents)
-            {
-                storedItemWithParent.Key.parent = storedItemWithParent.Value;
-            }
+
             return icon;
 #endif
         }

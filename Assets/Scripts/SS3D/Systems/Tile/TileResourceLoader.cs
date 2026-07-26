@@ -71,7 +71,17 @@ namespace SS3D.Systems.Tile
                     continue;
                 }
 
-		        Texture2D texture = IconPreviewGenerator.Generate(prefab.transform, 128, 128, shouldCloneModel: true);
+		        Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
+		        RuntimePreviewGenerator.PreviewRotation = prefab.transform.localRotation;
+		        Texture2D texture;
+		        try
+		        {
+			        texture = IconPreviewGenerator.Generate(prefab.transform, 128, 128, shouldCloneModel: true);
+		        }
+		        finally
+		        {
+			        RuntimePreviewGenerator.PreviewRotation = previousPreviewRotation;
+		        }
 
 		        tempIcons.Add(texture);
 	        }
