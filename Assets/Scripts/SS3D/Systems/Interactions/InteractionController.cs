@@ -1572,7 +1572,11 @@ namespace SS3D.Systems.Interactions
                     _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
                 }
 
-                _activeOutlineView?.SetState(InteractionOutlineView.OutlineState.Pending);
+                if (_activeOutlineView)
+                {
+                    _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Pending);
+                }
+
                 return;
             }
 
@@ -1583,7 +1587,7 @@ namespace SS3D.Systems.Interactions
                 _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
             }
 
-            if (_activeOutlineView == null)
+            if (!_activeOutlineView)
             {
                 return;
             }
@@ -1638,7 +1642,8 @@ namespace SS3D.Systems.Interactions
 
         private void ClearInteractionOutline()
         {
-            if (_activeOutlineView != null)
+            // Unity fake-null: destroyed views compare unequal to null via ==.
+            if (_activeOutlineView)
             {
                 _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Hidden);
             }

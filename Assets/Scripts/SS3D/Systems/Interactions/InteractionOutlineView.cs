@@ -55,8 +55,11 @@ namespace SS3D.Systems.Interactions
                 Build();
             }
 
+            PruneDestroyedEntries();
+
             if (_entries.Count == 0)
             {
+                _currentState = OutlineState.Hidden;
                 return;
             }
 
@@ -86,6 +89,11 @@ namespace SS3D.Systems.Interactions
 
             foreach (OutlineEntry entry in _entries)
             {
+                if (entry.Renderer == null)
+                {
+                    continue;
+                }
+
                 entry.PropertyBlock.SetColor(OutlineColorId, color);
                 entry.Renderer.SetPropertyBlock(entry.PropertyBlock);
                 entry.Renderer.enabled = true;
@@ -326,9 +334,31 @@ namespace SS3D.Systems.Interactions
 
         private void SetRenderersEnabled(bool enabled)
         {
-            foreach (OutlineEntry entry in _entries)
+            for (int i = _entries.Count - 1; i >= 0; i--)
             {
-                entry.Renderer.enabled = enabled;
+                Renderer renderer = _entries[i].Renderer;
+                if (renderer == null)
+                {
+                    _entries.RemoveAt(i);
+                    continue;
+                }
+
+                renderer.enabled = enabled;
+            }
+        }
+
+        /// <summary>
+        /// Outline MeshRenderers are parented under source meshes. Structural destruction can wipe
+        /// those children while this view (on the Selectable) still lives — drop stale refs.
+        /// </summary>
+        private void PruneDestroyedEntries()
+        {
+            for (int i = _entries.Count - 1; i >= 0; i--)
+            {
+                if (_entries[i].Renderer == null)
+                {
+                    _entries.RemoveAt(i);
+                }
             }
         }
     }
