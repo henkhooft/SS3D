@@ -83,9 +83,7 @@ namespace SS3D.Systems.Entities.Humanoid
             if (TryGetComponent(out Ragdoll ragdoll)
                 && ragdoll.Presentation != BodyPresentationState.Locomotion)
             {
-                _characterController.Move(Physics.gravity);
-                MoveMovementTarget(Vector2.zero, 5);
-                MovePlayer();
+                // Collapse disables this controller; do not Move gravity/CC while down (fights ragdoll).
                 return;
             }
 
