@@ -226,7 +226,12 @@ namespace SS3D.Systems.Health
 
             PublishSnapshot();
 
-            if (brute + burn > 0f && Owner.IsValid)
+            // Dead / unminded corpses must not flash the ghost's screen — Owner may still be valid
+            // briefly if SetMind(null) has not run yet; never TargetRpc after death latch.
+            if (brute + burn > 0f
+                && Owner.IsValid
+                && !_deathTriggered
+                && _snapshot.State != HealthState.Dead)
             {
                 RpcHitFlash(Owner);
             }
@@ -644,9 +649,15 @@ namespace SS3D.Systems.Health
             TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
             AtmosSimulation simulation = atmos.Simulation;
 
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(Transform.position);
+            if (support == HumanoidSupportState.Unknown)
+            {
+                // Map/AOI not ready — same spirit as missing Tile/Atmos above.
+                return HealthEnvironmentState.SafeDefault;
+            }
+
             // Off the atmos grid (past chunk extents) or no plenum: open space stays vacuum.
-            // Do not use SafeDefault here — that is only for tile/atmos not ready (lobby / load).
-            if (HumanoidSpaceSupport.IsUnsupportedAt(Transform.position))
+            if (support == HumanoidSupportState.Unsupported)
             {
                 if (simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo vacuumInfo))
                 {
@@ -821,6 +832,12 @@ namespace SS3D.Systems.Health
         [TargetRpc(RunLocally = true)]
         private void RpcHitFlash(NetworkConnection target)
         {
+            // Belt-and-suspenders: only flash while this body still has a local living mind.
+            if (!IsLocalOwnerMind() || _deathTriggered || _snapshot.State == HealthState.Dead)
+            {
+                return;
+            }
+
             SubSystems.Get<ScreenEffectsSubSystem>()?.TriggerHitFlash();
         }
 

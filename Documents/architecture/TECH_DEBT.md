@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-07-25
+**Last updated:** 2026-07-26
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -258,6 +258,28 @@ until remaining DBs migrate.
 
 **Resolved 2026-07-23** — see [§6 Resolved](#6-resolved). Optional reconnect exponential backoff and
 UI-host consolidation remain deferred elsewhere (not reopen criteria for this item).
+
+### 1.17 Incomplete tile knowledge treated as confirmed open space
+
+**Blast radius: medium (float, vacuum, any future tile-backed probe) — trend: partially mitigated; still a contract gap**
+
+Server owns a full tilemap after `TileMapLoaded`; pure clients hold an empty map that fills via HashGrid
+AOI `PlacedTileObject` mirrors (layers can arrive out of order — non-plenum before Plenum). Gameplay
+probes that treat `!TryGetOccupancy` or client `!HasPlenum` as “confirmed void” will false-positive at
+join/AOI lag, and packing that into a SyncVar (e.g. Floating) makes the mistake sticky for owners who
+then “keep coast” while local support is still Unknown.
+
+**Partial paydown (2026-07-26):** `HumanoidSupportState` / `HumanoidSpaceSupport.GetSupportAt`
+(`Unknown` / `Supported` / `Unsupported`) — client miss and client `!HasPlenum` → Unknown; server
+occupancy-miss → Unsupported only after `TileMapLoaded`; server clears Floating while Unknown. Health
+vacuum sampling uses the same probe. See [entities.md](systems/entities.md) § Pitfalls (client spawn
+float) and [health.md](systems/health.md) § Pitfalls (Unknown vs Unsupported).
+
+**Still open:** this is not yet a shared tile-query contract. New float/vacuum/passability/vision-style
+call sites can reintroduce “miss = space.” Prefer `GetSupportAt` (or a future tile façade), gate
+server past-map conclusions on `TileMapLoaded`, and keep sparse-client *consequences* server-authoritative.
+
+- Related: [tile.md](systems/tile.md) § Pitfalls (client mirror ≠ full map), [entities.md](systems/entities.md), [health.md](systems/health.md), [core-subsystems.md](systems/core-subsystems.md) (`WorldReadyPhase.TileMapLoaded`)
 
 ---
 

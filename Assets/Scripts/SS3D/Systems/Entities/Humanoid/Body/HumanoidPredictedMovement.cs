@@ -300,18 +300,39 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             float tickDelta = (float)InstanceFinder.TimeManager.TickDelta;
-            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
             bool wasFloating = _bodyStateMachine.Snapshot.IsFloating;
 
-            if (unsupported)
+            if (support == HumanoidSupportState.Unsupported
+                || (support == HumanoidSupportState.Unknown && wasFloating))
             {
-                if (!wasFloating)
+                if (support == HumanoidSupportState.Unsupported && !wasFloating)
                 {
                     _coastVelocity = CaptureCoastVelocity(md);
                 }
 
                 ApplyFloatingCoast(md, caps, tickDelta);
                 return;
+            }
+
+            // Client AOI lag: skip gravity until a physical floor exists; do not soft-lock walk.
+            if (support == HumanoidSupportState.Unknown)
+            {
+                if (!HasPhysicalFloorUnderfoot())
+                {
+                    // Planar only — no gravity until tile colliders arrive.
+                    if (md.Horizontal == 0f && md.Vertical == 0f)
+                    {
+                        _bodyStateMachine.SetLocomotionSpeed(0f);
+                        _bodyStateMachine.SetLocomotionMode(LocomotionMode.Idle);
+                        _livingController?.PublishPredictedLocomotionVelocity(0f, 0f);
+                        return;
+                    }
+
+                    // Fall through to the normal planar Move below (after the gravity line is skipped).
+                    ApplyUnknownAoiPlanarMove(md, caps, tickDelta);
+                    return;
+                }
             }
 
             if (wasFloating)
@@ -392,10 +413,63 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// No plenum underfoot (or no occupancy) once the tile map is ready. Missing map ≠ unsupported.
+        /// Unknown tile support with no floor colliders yet: planar move only (no gravity).
         /// </summary>
-        private static bool IsUnsupportedAt(Vector3 worldPosition) =>
-            HumanoidSpaceSupport.IsUnsupportedAt(worldPosition);
+        private void ApplyUnknownAoiPlanarMove(MoveData md, BodyCapabilities caps, float tickDelta)
+        {
+            if (_characterController != null && IsOwner && !_characterController.enabled)
+            {
+                _characterController.enabled = true;
+            }
+
+            Vector3 moveDirection = GetCameraRelativeDirection(md.Horizontal, md.Vertical);
+            float speedFactor = _healthController != null ? _healthController.Snapshot.MovementSpeedMultiplier : 1f;
+            float exertionFactor = _staminaController != null
+                ? Mathf.Lerp(1f, 0.55f, _staminaController.ExertionPenalty)
+                : 1f;
+            HumanoidCombatMode combatMode = _bodyStateMachine.CombatMode;
+            float targetSpeedScale = GetTargetSpeedScale(md.IsRunning, combatMode);
+            float scaleT = Mathf.Clamp01(tickDelta * _speedScaleLerp);
+            _smoothedSpeedScale = Mathf.Lerp(_smoothedSpeedScale, targetSpeedScale, scaleT);
+
+            float speed = _movementSpeed * speedFactor * exertionFactor * _smoothedSpeedScale;
+            float animSpeed = GetAnimSpeedForScale(_smoothedSpeedScale, combatMode);
+
+            _characterController.Move(moveDirection * (tickDelta * speed));
+
+            if (caps.CanRotate)
+            {
+                if (md.HasCombatAim)
+                {
+                    ApplyCombatAimRotation(md.AimYaw, tickDelta);
+                }
+                else
+                {
+                    transform.rotation = Quaternion.LookRotation(moveDirection);
+                }
+            }
+
+            _bodyStateMachine.SetLocomotionSpeed(animSpeed);
+            _bodyStateMachine.SetLocomotionMode(md.IsRunning ? LocomotionMode.Run : LocomotionMode.Walk);
+            if (_livingController != null)
+            {
+                Vector3 local = transform.InverseTransformDirection(moveDirection);
+                _livingController.PublishPredictedLocomotionVelocity(local.x * animSpeed, local.z * animSpeed);
+            }
+        }
+
+        private bool HasPhysicalFloorUnderfoot()
+        {
+            if (_characterController == null)
+            {
+                return false;
+            }
+
+            float probe = (_characterController.height * 0.5f) + _characterController.skinWidth + 0.2f;
+            Vector3 origin = transform.position + Vector3.up * 0.05f;
+            return Physics.Raycast(origin, Vector3.down, probe, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+        }
 
         private Vector3 CaptureCoastVelocity(MoveData md)
         {

@@ -33,6 +33,7 @@ Outline shells and other auxiliary meshes use `SelectionRenderingLayers.ExcludeF
 
 ## Pitfalls
 
+- **Outline bleed into item icons:** `Item.GenerateIcon` clones the live item (including hover shells). Strip with `DestroyImmediate` before bake — deferred `Destroy` leaves enabled outline meshes in the same-frame preview pass. Hit 2026-07-26.
 - **`SelectionCamera` must not `Get` Selection in Start.** It lives on `PlayerCamera` in Game, which loads before `NetworkSystemsHub` Online. Use `TryGet` and resolve lazily in the pick readback.
 - **`ClosestPoint` spam on hover:** ray-miss fallback must not call `Collider.ClosestPoint` on non-convex `MeshCollider` (or TerrainCollider). Unity warns every `LateUpdate`. Use `ClosestPointOnBounds` for unsupported shapes (`SelectionTargetUtility.GetClosestPoint`; same rule in [examine](examine.md) `ExamineRangeUtility`).
 - **Pickable without collider breaks range:** shader ID pick does not need colliders; interaction-point resolution does. Wall mounts missing colliders left `Point` at default zero and (historically) made `RangeCheck` a no-op — see [interactions-framework](interactions-framework.md) smells #3–4. Light switch / air alarm now carry `BoxCollider`s; keep that requirement for new wall mounts.

@@ -332,7 +332,7 @@ MonoBehaviour:
   _animator: {fileID: 6205019768642409540}
   _smoothFloats: 1
   _interpolation: 2
-  _clientAuthoritative: 1
+  _clientAuthoritative: 0
   _sendToOwner: 0
 --- !u!114 &-4703641988129057345
 MonoBehaviour:
@@ -392,7 +392,7 @@ MonoBehaviour:
   _animator: {fileID: 6205019768642409540}
   doorTriggerLayers:
     serializedVersion: 2
-    m_Bits: 2048
+    m_Bits: 4294967295
   _meshesToColor:
   - {fileID: 7941901518868879156}
   - {fileID: 6060823761219191581}

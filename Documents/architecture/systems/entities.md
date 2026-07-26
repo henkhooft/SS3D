@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 965d40550 — 2026-07-26
+> Verified: f7990ea18 — 2026-07-26
 
 # Entities
 
@@ -20,7 +20,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateMachine.cs` — authoritative body/combat snapshot
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidPredictedMovement.cs` — FishNet predicted move + space float (when enabled)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/HumanoidLivingController.cs` — **live** loco path (`Human.prefab` has PredictedMovement disabled); owns space float coast + `SetFloating`
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidSpaceSupport.cs` — shared plenum/unsupported check
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidSpaceSupport.cs` — `GetSupportAt` / `HumanoidSupportState` (Unknown / Supported / Unsupported)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee/Ranged Upper Body weight; Ranged CrossFade to Rifle Aim Idle; `SetPosingSuppressed` for collapse
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/BodyPresentationState.cs` — locomotion / collapsed / dead enum
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — presentation authority (`ServerSetPresentation` / `ApplyPresentation`)
@@ -43,15 +43,20 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
-- **Space float:** living bodies — no plenum (or no occupancy) underfoot → `SetFloating(true)`, skip gravity/WASD, coast last planar velocity. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path (predicted keeps the same logic for when re-enabled). Ghosts still set Floating on spawn.
+- **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; skip gravity only while no physical floor collider is underfoot (raycast), then resume normal loco so spawn is not soft-locked when the map is visible but occupancy is still Unknown. Keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.
 
 ## Pitfalls
 
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
+- **Remote fire/reload never plays:** `CmdFireTrigger` / stagger must `ApplyLocalSnapshot()` (pack `ActiveTrigger`) **before** `_triggerSequence++`. SyncVar OnChange rebuilds from the old pack synchronously and otherwise wipes the trigger — owner still sees local prediction.
 - **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
+- **`SetMind(null)` must `RemoveOwnership()`:** death `SwapMinds` assigns the ghost's empty mind to the corpse. Leaving FishNet Owner on the corpse delivers corpse TargetRpcs (hit flash) to the ghost — see [health](health.md). Server still `AlignToHips` on death ragdolls; do not write `IsFacingDown` (ServerRpc setter) without ownership — use a local facing bool.
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
+- **Remote ragdoll twitches:** observers must stay kinematic while bone NetworkTransforms receive. Only owner (living knockdown) or server (death corpse) runs non-kinematic physics + AlignToHips. Do not `CharacterController.Move` while presentation ≠ Locomotion.
+- **Remote CharacterController must stay disabled:** client-authoritative NetworkTransform cannot move the server transform while CC is enabled (teleports are ignored). Keep CC on only for `IsOwner`; otherwise server-side proximity (airlocks) never sees remotes. Hit 2026-07-26.
+- **Reclaim must fire `LocalPlayerObjectChanged`:** `TryReclaimEntity` restores ownership without Mind SyncVar change. `Entity.OnOwnershipClient` invokes the event so HUD/lobby leave the menu — see [player-control](player-control.md). Hit 2026-07-26.
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Timed knockdown from server:** call `ServerRecover`, not `Recover()` (ServerRpc is a no-op from server).
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2: horizontal / downward / backhand).
@@ -65,9 +70,11 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Do not flinch when collapsed/dead:** `TryApplyHitFlinch` requires `Ragdoll.Presentation == Locomotion` — never invent a parallel fall path from `Mix_ShoulderHitAndFall` here.
 - **Stagger Additive is soft + Flinch, not Empty Additive:** `Empty Additive` is remapped to `Mix_InjuredHurtingIdle`. Slamming Additive weight to 1 on stagger shows hurting idle (looks like a flinch) then snaps off. Drive Additive via unmuted `Flinch` → gut and **lerp** weight (see `StaggerAdditiveWeight` / `TickAdditiveWeight`). Do not half-weight Full Body Override on stagger.
 - **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
-- **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. Missing tile map ≠ unsupported (do not float before map ready).
+- **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. `SetFloating(false)` restores Idle when leaving Floating locomotion.
+- **Client spawn stuck in Mix_Floating:** pure-client maps start empty and AOI often delivers non-plenum layers first. `GetSupportAt` must return `Unknown` for client occupancy-miss **and** client `!HasPlenum` — never local Unsupported. Server occupancy-miss is Unsupported only after `TileMapLoaded` (empty UnnamedMap must not pack Floating). Deep-space float on clients is SyncVar-driven (`ServerReconcileSpaceSupport`); Unknown keep-coast only while that SyncVar is already true. Structural register: [TECH_DEBT.md](../TECH_DEBT.md) §1.17.
+- **Early Embark fall-through floor:** `Unknown` used to make `TryProcessSpaceFloat` return false → living path applied `CharacterController.Move(Physics.gravity)` with no tile colliders yet. Skip gravity on Unknown only while a downward raycast finds no floor; once colliders exist (or allow planar walk with no gravity), resume loco — a hard hold soft-locked movement after the map was visible but client `!HasPlenum` stayed Unknown. Same guard in `HumanoidPredictedMovement` when enabled. Hit 2026-07-26.
 - **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
-- **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar.
+- **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar; dedicated server still reconciles Floating via `ServerReconcileSpaceSupport`.
 - **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
 
 ## Depends on / Used by

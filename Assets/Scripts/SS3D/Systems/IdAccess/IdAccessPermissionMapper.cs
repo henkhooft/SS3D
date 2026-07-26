@@ -55,6 +55,7 @@ namespace SS3D.Systems.IdAccess
             AccessLevel.Security,
             AccessLevel.Armory,
             AccessLevel.EvidenceLockup,
+            AccessLevel.Civilian,
             AccessLevel.Crew,
             AccessLevel.Maintenance);
 

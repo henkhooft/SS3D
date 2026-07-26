@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial (personal heartbeat/breathing/alert clips registered; health hit one-shots wired)
-> Verified: be4ea6eea — 2026-07-25
+> Verified: ee090d4f3 — 2026-07-26
 
 # Audio
 
@@ -69,6 +69,9 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
   (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
   the old Can1 placeholder).
+- `Assets/Scripts/SS3D/Systems/Furniture/AirlockAudioTrackIds.cs` — airlock deny clip id
+  (`AirlockDeny.ogg` from SS14 Machines); `AirLockOpener.ServerPlayAccessDenied` plays it. Open/close
+  still use generated `Sounds.AirlockOpen` / `Sounds.AirlockClose`.
 - `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — announcement chimes
   (`Announce.ogg` always first; optional `Welcome.ogg` follow-up with the banner); `CommsFeedController`
   plays `StationAnnounce`, then reveals the ALL-STATION banner and any `CommsMessage.SoundId`
@@ -187,7 +190,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); furniture/structural-destruction ad-hoc `AudioSource` users (candidates for pool consolidation)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); [furniture](furniture.md) (airlock open/close/deny + boombox; structural-destruction ad-hoc emitters are consolidation candidates)
 
 ## Related docs
 

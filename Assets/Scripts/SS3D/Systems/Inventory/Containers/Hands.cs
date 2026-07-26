@@ -115,11 +115,20 @@ namespace SS3D.Systems.Inventory.Containers
         {
         }
 
-        [Client]
+        /// <summary>
+        /// Link this hands controller to an inventory. Safe on server and client.
+        /// Hotkey bind stays client-only via <see cref="OnInventorySetUp"/>.
+        /// </summary>
         public void SetInventory(HumanInventory inventory)
         {
             Inventory = inventory;
-            Inventory.OnInventorySetUp += OnInventorySetUp;
+            if (!IsClient || inventory == null)
+            {
+                return;
+            }
+
+            inventory.OnInventorySetUp -= OnInventorySetUp;
+            inventory.OnInventorySetUp += OnInventorySetUp;
         }
 
         [Client]

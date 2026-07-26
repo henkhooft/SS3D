@@ -203,6 +203,13 @@ namespace SS3D.Systems.Entities.Humanoid
 	        {
 		        return;
 	        }
+
+            // Dedicated server never owns the body — still pack Floating from full-map support.
+            if (IsServer)
+            {
+                ServerReconcileSpaceSupport();
+            }
+
             if (!IsOwner)
             {
                 return;
@@ -221,6 +228,13 @@ namespace SS3D.Systems.Entities.Humanoid
             }
             
             ProcessCharacterMovement();
+        }
+
+        /// <summary>
+        /// Server-only: reconcile Floating SyncVar from tile support. Living overrides; ghosts no-op.
+        /// </summary>
+        protected virtual void ServerReconcileSpaceSupport()
+        {
         }
 
         /// <summary>

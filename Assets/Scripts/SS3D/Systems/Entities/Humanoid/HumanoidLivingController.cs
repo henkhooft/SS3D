@@ -1,3 +1,4 @@
+using FishNet.Connection;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Stamina;
@@ -26,7 +27,7 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>Planar coast while unsupported (no plenum). Used when predicted movement is disabled.</summary>
         private Vector3 _coastVelocity;
 
-		public override void OnStartClient()
+        public override void OnStartClient()
         {
             base.OnStartClient();
             _healthController = GetComponent<HumanHealthController>();
@@ -34,10 +35,97 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _predictedMovement = GetComponent<HumanoidPredictedMovement>();
             }
+
+            ApplyCharacterControllerOwnership();
             if (!IsOwner)
             {
                 return;
-            }    
+            }
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            ApplyCharacterControllerOwnership();
+        }
+
+        public override void OnOwnershipClient(NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+            ApplyCharacterControllerOwnership();
+        }
+
+        public override void OnOwnershipServer(NetworkConnection prevOwner)
+        {
+            base.OnOwnershipServer(prevOwner);
+            ApplyCharacterControllerOwnership();
+        }
+
+        /// <summary>
+        /// Only the owning peer simulates CharacterController. Remotes (including on the server)
+        /// must keep it disabled so client-authoritative NetworkTransform can move the transform;
+        /// an enabled CC ignores teleports and freezes server-side proximity (airlocks, etc.).
+        /// </summary>
+        private void ApplyCharacterControllerOwnership()
+        {
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            if (_characterController == null)
+            {
+                return;
+            }
+
+            if (!IsOwner)
+            {
+                _characterController.enabled = false;
+                return;
+            }
+
+            if (TryGetComponent(out Ragdoll ragdoll) && ragdoll.IsKnockedDown)
+            {
+                _characterController.enabled = false;
+                return;
+            }
+
+            _characterController.enabled = true;
+        }
+
+        /// <summary>
+        /// Server packs Floating SyncVar from full-map support so pure clients / remotes see deep space.
+        /// </summary>
+        protected override void ServerReconcileSpaceSupport()
+        {
+            if (BodyStateMachine == null)
+            {
+                return;
+            }
+
+            if (TryGetComponent(out Ragdoll ragdoll)
+                && ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            if (support == HumanoidSupportState.Unknown)
+            {
+                // Map/AOI not authoritative yet — never leave a stale Floating SyncVar packed.
+                if (BodyStateMachine.Snapshot.IsFloating)
+                {
+                    BodyStateMachine.SetFloating(false);
+                }
+
+                return;
+            }
+
+            bool shouldFloat = support == HumanoidSupportState.Unsupported;
+            if (BodyStateMachine.Snapshot.IsFloating != shouldFloat)
+            {
+                BodyStateMachine.SetFloating(shouldFloat);
+            }
         }
 
         /// <summary>
@@ -48,16 +136,15 @@ namespace SS3D.Systems.Entities.Humanoid
             if (TryGetComponent(out Ragdoll ragdoll)
                 && ragdoll.Presentation != BodyPresentationState.Locomotion)
             {
-                _characterController.Move(Physics.gravity);
-                MoveMovementTarget(Vector2.zero, 5);
-                MovePlayer();
+                // Collapse disables this controller; do not Move gravity/CC while down (fights ragdoll).
                 return;
             }
 
             bool predictedOwnsLoco = _predictedMovement != null && _predictedMovement.enabled;
-            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            bool coasting = ShouldCoast(support);
             // Avoid publishing walk Speed the same frame we enter space float (clears Floating via gait).
-            ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !unsupported);
+            ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !coasting);
 
             if (predictedOwnsLoco)
             {
@@ -65,7 +152,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             // Human.prefab ships PredictedMovement disabled — this path owns living space float.
-            if (TryProcessSpaceFloat(unsupported))
+            if (TryProcessSpaceFloat(support))
             {
                 return;
             }
@@ -106,13 +193,16 @@ namespace SS3D.Systems.Entities.Humanoid
 
         /// <summary>
         /// When no plenum underfoot: Floating anim, no gravity/WASD, coast last planar velocity.
-        /// Returns true when space float consumed this frame.
+        /// Unknown (client AOI lag): never enter float. Skip gravity only while no physical floor
+        /// exists yet (prevents fall-through); once colliders are underfoot, walk normally even if
+        /// tile occupancy is still Incomplete. Keep coasting only if SyncVar already Floating.
+        /// Returns true when space float / AOI hold consumed this frame.
         /// </summary>
-        private bool TryProcessSpaceFloat(bool unsupported)
+        private bool TryProcessSpaceFloat(HumanoidSupportState support)
         {
             bool wasFloating = BodyStateMachine != null && BodyStateMachine.Snapshot.IsFloating;
 
-            if (!unsupported)
+            if (support == HumanoidSupportState.Supported)
             {
                 if (wasFloating)
                 {
@@ -126,7 +216,27 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            if (!wasFloating)
+            if (support == HumanoidSupportState.Unknown)
+            {
+                if (!wasFloating)
+                {
+                    // Tile knowledge incomplete (!HasPlenum / AOI miss). Do not float.
+                    // If floor colliders already mirrored, resume normal loco — holding forever
+                    // soft-locks spawn after the map is visible but occupancy still Unknown.
+                    if (HasPhysicalFloorUnderfoot())
+                    {
+                        ApplyCharacterControllerOwnership();
+                        return false;
+                    }
+
+                    // No colliders yet: no gravity (fall-through), but allow planar walk and
+                    // keep the owner CharacterController enabled.
+                    ApplyCharacterControllerOwnership();
+                    ProcessUnknownAoiHold();
+                    return true;
+                }
+            }
+            else if (!wasFloating)
             {
                 _coastVelocity = CaptureLivingCoastVelocity();
                 BodyStateMachine?.SetFloating(true);
@@ -145,6 +255,72 @@ namespace SS3D.Systems.Entities.Humanoid
 
             PublishLocomotionVelocity(Vector3.zero, 0f);
             return true;
+        }
+
+        /// <summary>
+        /// AOI gap with no floor colliders: skip gravity, still accept WASD so spawn is not frozen.
+        /// </summary>
+        private void ProcessUnknownAoiHold()
+        {
+            float gaitSpeed = FilterSpeed();
+            if (Input.magnitude != 0)
+            {
+                MoveMovementTarget(Input);
+                if (!IsDragging)
+                {
+                    if (IsCombatMode())
+                    {
+                        RotatePlayerToCombatAim();
+                    }
+                    else
+                    {
+                        RotatePlayerToMovement();
+                    }
+                }
+
+                MovePlayer();
+                PublishLocomotionVelocity(TargetMovement, gaitSpeed);
+            }
+            else
+            {
+                MovePlayer();
+                MoveMovementTarget(Vector2.zero, 5);
+                if (IsCombatMode() && !IsDragging)
+                {
+                    RotatePlayerToCombatAim();
+                }
+
+                PublishLocomotionVelocity(Vector3.zero, 0f);
+            }
+        }
+
+        /// <summary>
+        /// True when a non-trigger collider sits under the capsule (tile meshes mirrored even if
+        /// <see cref="HumanoidSpaceSupport"/> is still Unknown).
+        /// </summary>
+        private bool HasPhysicalFloorUnderfoot()
+        {
+            if (_characterController == null)
+            {
+                return false;
+            }
+
+            float probe = (_characterController.height * 0.5f) + _characterController.skinWidth + 0.2f;
+            Vector3 origin = transform.position + Vector3.up * 0.05f;
+            return Physics.Raycast(origin, Vector3.down, probe, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        private bool ShouldCoast(HumanoidSupportState support)
+        {
+            if (support == HumanoidSupportState.Unsupported)
+            {
+                return true;
+            }
+
+            return support == HumanoidSupportState.Unknown
+                && BodyStateMachine != null
+                && BodyStateMachine.Snapshot.IsFloating;
         }
 
         private Vector3 CaptureLivingCoastVelocity()

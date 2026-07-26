@@ -139,15 +139,30 @@ namespace SS3D.Systems.Inventory.Containers
         /// </summary>
         private void SyncInventoryContainerChange(SyncListOperation op, int index, AttachedContainer oldContainer, AttachedContainer newContainer, bool asServer)
         {
-            if (asServer) return;
+            if (asServer)
+            {
+                return;
+            }
+
             switch (op)
             {
                 case SyncListOperation.Add:
+                    // Server AddContainer already wires contents; clients only get this SyncList path.
+                    SubscribeContainerContents(newContainer);
                     OnInventoryContainerAdded?.Invoke(newContainer);
                     OnCarriedWeightChanged?.Invoke();
                     break;
                 case SyncListOperation.RemoveAt:
+                    UnsubscribeContainerContents(oldContainer);
                     OnInventoryContainerRemoved?.Invoke(oldContainer);
+                    OnCarriedWeightChanged?.Invoke();
+                    break;
+                case SyncListOperation.Complete:
+                    foreach (AttachedContainer container in ContainersOnPlayer)
+                    {
+                        SubscribeContainerContents(container);
+                    }
+
                     OnCarriedWeightChanged?.Invoke();
                     break;
             }
@@ -162,6 +177,12 @@ namespace SS3D.Systems.Inventory.Containers
             }
 
             Hands.SetInventory(this);
+
+            // Catch containers already present before OnChange (or if Complete already fired).
+            foreach (AttachedContainer container in ContainersOnPlayer)
+            {
+                SubscribeContainerContents(container);
+            }
         }
 
         public void TriggerInventorySetup()
@@ -181,6 +202,11 @@ namespace SS3D.Systems.Inventory.Containers
         {
             base.OnStartServer();
             SetUpContainers();
+            // Owning clients set this in OnStartClient; server/dedicated need it for Hands consumers.
+            if (Hands != null)
+            {
+                Hands.SetInventory(this);
+            }
         }
 
         /// <summary>
@@ -211,7 +237,7 @@ namespace SS3D.Systems.Inventory.Containers
         private void AddContainer(AttachedContainer container)
         {
             ContainersOnPlayer.Add(container);
-            container.OnContentsChanged += HandleContainerContentChanged;
+            SubscribeContainerContents(container);
             container.OnItemAttached += HandleTryAddContainerOnItemAttached;
             container.OnItemDetached += HandleTryRemoveContainerOnItemDetached;
 
@@ -229,10 +255,35 @@ namespace SS3D.Systems.Inventory.Containers
         private void RemoveContainer(AttachedContainer container)
         {
             ContainersOnPlayer.Remove(container);
-            container.OnContentsChanged -= HandleContainerContentChanged;
+            UnsubscribeContainerContents(container);
             container.OnItemAttached -= HandleTryAddContainerOnItemAttached;
             container.OnItemDetached -= HandleTryRemoveContainerOnItemDetached;
             container.OnAttachedContainerDisabled -= RemoveContainer;
+        }
+
+        /// <summary>
+        /// Wire content changes into <see cref="OnContainerContentChanged"/> (Main HUD icons, weight).
+        /// Idempotent: safe on host where server <see cref="AddContainer"/> already subscribed.
+        /// </summary>
+        private void SubscribeContainerContents(AttachedContainer container)
+        {
+            if (container == null)
+            {
+                return;
+            }
+
+            container.OnContentsChanged -= HandleContainerContentChanged;
+            container.OnContentsChanged += HandleContainerContentChanged;
+        }
+
+        private void UnsubscribeContainerContents(AttachedContainer container)
+        {
+            if (container == null)
+            {
+                return;
+            }
+
+            container.OnContentsChanged -= HandleContainerContentChanged;
         }
 
         /// <summary>
