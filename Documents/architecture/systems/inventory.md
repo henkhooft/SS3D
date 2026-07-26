@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: e2122f498 — 2026-07-26 (ObjectIcon HUD icons + world rest orientation)
+> Verified: 6c2ce617b — 2026-07-26
 
 # Inventory
 
@@ -64,6 +64,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Pitfalls
 
+- **Client Main HUD item icons never update:** `HumanInventory.AddContainer` (server-only) used to be the only place that subscribed `AttachedContainer.OnContentsChanged` → `OnContainerContentChanged`. Pure clients get containers via the SyncList and never subscribed, so pickup/equip refreshed nothing on the gear strip. Wire contents in `SyncInventoryContainerChange` / `OnStartClient` via `SubscribeContainerContents` (idempotent `-=` then `+=`). Hit 2026-07-26.
 - **Item icons look dark / muddy after half-toon:** do not render HUD icons with live `STDefault` materials. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` material swap). Keep `ObjectIcon` in Always Included Shaders.
 - **Long items spawn/drop upright / icons point down / hologram upright:** prefabs bake side-lying pitch/roll on the root (e.g. M4 `-90° X`). Yaw-only place, `Instantiate(..., identity)`, map holograms, and `RuntimePreviewGenerator` used to wipe that. Use `Item.GetWorldFacing` / `WorldRestRotation`; `SpawnItem` maps identity → rest; `PlacedItemObject.Create` composes for new tile spawns; holograms capture prefab `localRotation` into `TargetWorldRotation`. Icons set `RuntimePreviewGenerator.PreviewRotation` and frame with world up (`Vector3.up`) — using `previewObject.up` after a -90° X rest makes a side-lying gun look vertical. `AssetDatabase.TryGet<T>` must resolve Components via `GetComponent` like `Get`.
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Data → Rebuild All UI Catalogs** and commit the asset (same pattern as Machine UI; second copy of that stack).
