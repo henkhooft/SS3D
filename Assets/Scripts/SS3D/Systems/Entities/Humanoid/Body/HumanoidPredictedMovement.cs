@@ -300,12 +300,13 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             float tickDelta = (float)InstanceFinder.TimeManager.TickDelta;
-            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
             bool wasFloating = _bodyStateMachine.Snapshot.IsFloating;
 
-            if (unsupported)
+            if (support == HumanoidSupportState.Unsupported
+                || (support == HumanoidSupportState.Unknown && wasFloating))
             {
-                if (!wasFloating)
+                if (support == HumanoidSupportState.Unsupported && !wasFloating)
                 {
                     _coastVelocity = CaptureCoastVelocity(md);
                 }
@@ -390,12 +391,6 @@ namespace SS3D.Systems.Entities.Humanoid
                 _livingController.PublishPredictedLocomotionVelocity(velX, velZ);
             }
         }
-
-        /// <summary>
-        /// No plenum underfoot (or no occupancy) once the tile map is ready. Missing map ≠ unsupported.
-        /// </summary>
-        private static bool IsUnsupportedAt(Vector3 worldPosition) =>
-            HumanoidSpaceSupport.IsUnsupportedAt(worldPosition);
 
         private Vector3 CaptureCoastVelocity(MoveData md)
         {

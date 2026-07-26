@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: 26ae013e5 — 2026-07-25
+> Verified: f7c10ac73 — 2026-07-26
 
 # Health
 
@@ -81,8 +81,8 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect/personal-audio Clear from other bodies:** only clear when `_drivingLocalPresentation` — other players' mind unassign must not wipe the local owner's Volume intensities or heartbeat cue.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
-- **No tile/atmos yet ≠ vacuum:** `SampleEnvironmentAtBody` returns `HealthEnvironmentState.SafeDefault` (breathable) when Tile/Atmos aren't ready — do not treat missing samples as vacuum or lobby spawns suffocate. `atmosdamage off` forces SafeDefault every tick.
-- **Off-map / past atmos chunks is vacuum:** once Tile+Atmos are ready, `HumanoidSpaceSupport.IsUnsupportedAt` (no plenum / no occupancy) keeps exposure as vacuum even when `TryGetCellDebugInfo` fails outside `_coordToIndex`. Do not fall back to SafeDefault there or deep-space float becomes breathable.
+- **No tile/atmos yet ≠ vacuum:** `SampleEnvironmentAtBody` returns `HealthEnvironmentState.SafeDefault` (breathable) when Tile/Atmos aren't ready — do not treat missing samples as vacuum or lobby spawns suffocate. `atmosdamage off` forces SafeDefault every tick. `HumanoidSupportState.Unknown` (map missing / not ready) also → SafeDefault.
+- **Off-map / past atmos chunks is vacuum:** once Tile+Atmos are ready, `HumanoidSupportState.Unsupported` (server: no plenum, or occupancy-miss **after** `TileMapLoaded`) keeps exposure as vacuum even when `TryGetCellDebugInfo` fails outside `_coordToIndex`. Do not fall back to SafeDefault there or deep-space float becomes breathable. Client `!HasPlenum` / occupancy-miss is Unknown (AOI), not Unsupported — see [entities](entities.md).
 - **LowOxygen flicker in station air:** turf hypoxia uses O₂ **partial pressure** (mole% × kPa), not raw mole fraction or `OxyDebt > 0`. Comfortable ≥18 kPa PO₂ (station ~20); alert soft-start for systemic debt is `LowOxygenAlertSoftStart`.
 - **Pressure ≠ burn:** low/high/vacuum pressure damages **lungs** (`PressureLungDamage` → `OrganSimulation.ApplyLungDamage`). Hot/cold/fire burn **all zones** at per-zone rates. Do not dump pressure into chest burn or cascade ambient dermal burn into organ damage.
 - **`AudioType` ambiguous in Health:** `HumanHealthController` imports `UnityEngine` and `SS3D.Systems.Audio` — use `using AudioType = SS3D.Systems.Audio.AudioType;` (same as `InteractionController`) before `PlayAudioSource`.

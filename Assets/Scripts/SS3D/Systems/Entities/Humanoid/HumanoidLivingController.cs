@@ -41,6 +41,41 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
+        /// Server packs Floating SyncVar from full-map support so pure clients / remotes see deep space.
+        /// </summary>
+        protected override void ServerReconcileSpaceSupport()
+        {
+            if (BodyStateMachine == null)
+            {
+                return;
+            }
+
+            if (TryGetComponent(out Ragdoll ragdoll)
+                && ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            if (support == HumanoidSupportState.Unknown)
+            {
+                // Map/AOI not authoritative yet — never leave a stale Floating SyncVar packed.
+                if (BodyStateMachine.Snapshot.IsFloating)
+                {
+                    BodyStateMachine.SetFloating(false);
+                }
+
+                return;
+            }
+
+            bool shouldFloat = support == HumanoidSupportState.Unsupported;
+            if (BodyStateMachine.Snapshot.IsFloating != shouldFloat)
+            {
+                BodyStateMachine.SetFloating(shouldFloat);
+            }
+        }
+
+        /// <summary>
         /// Executes the movement code and updates the IK targets
         /// </summary>
         protected override void ProcessCharacterMovement()
@@ -55,9 +90,10 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             bool predictedOwnsLoco = _predictedMovement != null && _predictedMovement.enabled;
-            bool unsupported = HumanoidSpaceSupport.IsUnsupportedAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            bool coasting = ShouldCoast(support);
             // Avoid publishing walk Speed the same frame we enter space float (clears Floating via gait).
-            ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !unsupported);
+            ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !coasting);
 
             if (predictedOwnsLoco)
             {
@@ -65,7 +101,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             // Human.prefab ships PredictedMovement disabled — this path owns living space float.
-            if (TryProcessSpaceFloat(unsupported))
+            if (TryProcessSpaceFloat(support))
             {
                 return;
             }
@@ -106,13 +142,14 @@ namespace SS3D.Systems.Entities.Humanoid
 
         /// <summary>
         /// When no plenum underfoot: Floating anim, no gravity/WASD, coast last planar velocity.
+        /// Unknown (client AOI lag) does not enter float; keeps coasting if already floating (SyncVar).
         /// Returns true when space float consumed this frame.
         /// </summary>
-        private bool TryProcessSpaceFloat(bool unsupported)
+        private bool TryProcessSpaceFloat(HumanoidSupportState support)
         {
             bool wasFloating = BodyStateMachine != null && BodyStateMachine.Snapshot.IsFloating;
 
-            if (!unsupported)
+            if (support == HumanoidSupportState.Supported)
             {
                 if (wasFloating)
                 {
@@ -126,7 +163,14 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            if (!wasFloating)
+            if (support == HumanoidSupportState.Unknown)
+            {
+                if (!wasFloating)
+                {
+                    return false;
+                }
+            }
+            else if (!wasFloating)
             {
                 _coastVelocity = CaptureLivingCoastVelocity();
                 BodyStateMachine?.SetFloating(true);
@@ -145,6 +189,18 @@ namespace SS3D.Systems.Entities.Humanoid
 
             PublishLocomotionVelocity(Vector3.zero, 0f);
             return true;
+        }
+
+        private bool ShouldCoast(HumanoidSupportState support)
+        {
+            if (support == HumanoidSupportState.Unsupported)
+            {
+                return true;
+            }
+
+            return support == HumanoidSupportState.Unknown
+                && BodyStateMachine != null
+                && BodyStateMachine.Snapshot.IsFloating;
         }
 
         private Vector3 CaptureLivingCoastVelocity()

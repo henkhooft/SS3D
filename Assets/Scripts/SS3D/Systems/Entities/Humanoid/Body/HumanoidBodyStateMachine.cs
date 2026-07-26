@@ -225,11 +225,19 @@ namespace SS3D.Systems.Entities.Humanoid.Body
 
         public void SetFloating(bool floating)
         {
-            _snapshot.IsFloating = floating;
-            if (floating)
+            LocomotionMode nextLocomotion = floating
+                ? LocomotionMode.Floating
+                : (_snapshot.Locomotion == LocomotionMode.Floating
+                    ? LocomotionMode.Idle
+                    : _snapshot.Locomotion);
+
+            if (_snapshot.IsFloating == floating && _snapshot.Locomotion == nextLocomotion)
             {
-                _snapshot.Locomotion = LocomotionMode.Floating;
+                return;
             }
+
+            _snapshot.IsFloating = floating;
+            _snapshot.Locomotion = nextLocomotion;
             PublishSnapshot();
         }
 
