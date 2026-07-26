@@ -77,27 +77,27 @@ namespace SS3D.Systems.Combat
             return BruteDamage * 0.5f;
         }
 
-        /// <summary>Assault rifle — readable cone at station ranges; movement bloom is mild so standing still is accurate.</summary>
+        /// <summary>Assault rifle — tight standing cone at station ranges; bloom stays readable under move/recoil.</summary>
         public static RangedWeaponProfile M4 => new()
         {
             BruteDamage = 18f,
             BurnDamage = 0f,
             CanSever = false,
-            BaseSpreadDegrees = 0.55f,
-            RecoilClimbDegrees = 0.35f,
+            BaseSpreadDegrees = 0.32f,
+            RecoilClimbDegrees = 0.2f,
             RecoilPerShot = 1f,
-            RecoilDecayPerSecond = 3f,
-            MovementBloomPerSpeed = 0.35f,
-            FalloffStartMeters = 18f,
-            FalloffEndMeters = 45f,
-            FalloffExtraSpreadDegrees = 2.5f,
+            RecoilDecayPerSecond = 4f,
+            MovementBloomPerSpeed = 0.2f,
+            FalloffStartMeters = 22f,
+            FalloffEndMeters = 50f,
+            FalloffExtraSpreadDegrees = 1.4f,
             MaxRangeMeters = 50f,
             FireCooldownSeconds = 0.12f,
             MagazineSize = 30,
             ReloadSeconds = 2.2f,
             StructuralForce = 12f,
             StaminaCost = 3f,
-            ExhaustionSpreadDegrees = 3f,
+            ExhaustionSpreadDegrees = 1.6f,
             RequiresBothHands = true,
             RequiredHand = HandSide.Right,
         };

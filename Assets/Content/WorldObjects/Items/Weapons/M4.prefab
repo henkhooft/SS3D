@@ -283,21 +283,21 @@ MonoBehaviour:
     BruteDamage: 18
     BurnDamage: 0
     CanSever: 0
-    BaseSpreadDegrees: 0.55
-    RecoilClimbDegrees: 0.35
+    BaseSpreadDegrees: 0.32
+    RecoilClimbDegrees: 0.2
     RecoilPerShot: 1
-    RecoilDecayPerSecond: 3
-    MovementBloomPerSpeed: 0.35
-    FalloffStartMeters: 18
-    FalloffEndMeters: 45
-    FalloffExtraSpreadDegrees: 2.5
+    RecoilDecayPerSecond: 4
+    MovementBloomPerSpeed: 0.2
+    FalloffStartMeters: 22
+    FalloffEndMeters: 50
+    FalloffExtraSpreadDegrees: 1.4
     MaxRangeMeters: 50
     FireCooldownSeconds: 0.12
     MagazineSize: 30
     ReloadSeconds: 2.2
     StructuralForce: 12
     StaminaCost: 3
-    ExhaustionSpreadDegrees: 3
+    ExhaustionSpreadDegrees: 1.6
     RequiresBothHands: 1
     RequiredHand: 0
   _muzzle: {fileID: 7123456789012345678}
