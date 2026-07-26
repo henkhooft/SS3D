@@ -497,6 +497,24 @@ namespace SS3D.Systems.Health
                 return;
             }
 
+            // Dead / unconscious / collapsed bodies do not vocalize — flesh impact SFX still play.
+            if (_deathTriggered
+                || _snapshot.State == HealthState.Dead
+                || !_snapshot.IsConscious)
+            {
+                return;
+            }
+
+            if (_ragdoll == null)
+            {
+                _ragdoll = GetComponent<Ragdoll>();
+            }
+
+            if (_ragdoll != null && _ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
             _nextScreamTime = Time.time + HealthConstants.ScreamCooldownSeconds;
             SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
                 AudioType.Sfx,
