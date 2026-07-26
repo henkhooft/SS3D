@@ -322,13 +322,16 @@ namespace SS3D.Systems.Interactions
             // Empty mag → server dry-fire (+ reload if possible); do not fall through to melee.
             if (weapon.RoundsRemaining <= 0)
             {
-                if (!IsServer)
+                bool startingReload = weapon.CanStartReload();
+                if (!IsServer && startingReload)
                 {
                     // Optimistic reload lock when a reload can start; dry-fire audio is server-side.
-                    if (weapon.CanStartReload())
-                    {
-                        weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
-                    }
+                    weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
+                }
+
+                if (startingReload)
+                {
+                    TryPlayRangedReloadTelegraph();
                 }
 
                 TrySyncMeleeAimToServer();
@@ -346,6 +349,7 @@ namespace SS3D.Systems.Interactions
                 weapon.BeginLocalFireCooldown();
             }
 
+            TryPlayRangedFireTelegraph();
             TrySyncMeleeAimToServer();
             CmdRunRangedFire();
             return true;
@@ -369,6 +373,7 @@ namespace SS3D.Systems.Interactions
                 weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
             }
 
+            TryPlayRangedReloadTelegraph();
             CmdRunRangedReload();
             return true;
         }
@@ -942,6 +947,26 @@ namespace SS3D.Systems.Interactions
             }
 
             combat.RequestAttack(AnimationTriggerId.AttackSwing);
+        }
+
+        private void TryPlayRangedFireTelegraph()
+        {
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.FireRifle);
+        }
+
+        private void TryPlayRangedReloadTelegraph()
+        {
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.Reload);
         }
 
         [Client]

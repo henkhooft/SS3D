@@ -121,6 +121,8 @@ namespace SS3D.Editor
             ("Throw", AnimatorControllerParameterType.Trigger),
             ("Emote", AnimatorControllerParameterType.Trigger),
             ("Flinch", AnimatorControllerParameterType.Trigger),
+            ("FireRifle", AnimatorControllerParameterType.Trigger),
+            ("Reload", AnimatorControllerParameterType.Trigger),
             ("VelX", AnimatorControllerParameterType.Float),
             ("VelZ", AnimatorControllerParameterType.Float),
             ("Turn", AnimatorControllerParameterType.Float),
@@ -136,7 +138,8 @@ namespace SS3D.Editor
                     "Rebuild Combat Stance Blend Trees",
                     "Rebuild Base Layer Peaceful / Melee / Ranged / Injured FreeformCartesian2D locomotion " +
                     "switched by CombatStance + LimpSide. Restores AttackSwing trigger on Upper Body; " +
-                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); remaps injured-arm additive.\n\n" +
+                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); Ranged FireRifle/Reload oneshots; " +
+                    "remaps injured-arm additive.\n\n" +
                     "Modifies HumanCharacterAnimator.controller.",
                     "Rebuild",
                     "Cancel"))
@@ -343,6 +346,7 @@ namespace SS3D.Editor
             WireInjuredWaveEmote(baseMachine, injured);
 
             WireStanceAwareFlinch(baseMachine, peaceful, melee, ranged, injured);
+            WireRangedFireAndReload(baseMachine, peaceful, melee, ranged, injured);
             RemapStateMotion(
                 baseMachine,
                 "Floating",
@@ -351,6 +355,13 @@ namespace SS3D.Editor
 
             // Base layer must not consume AttackSwing — upper body owns the swing trigger.
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
+            // Upper body must not steal ranged fire/reload — those oneshots live on Base (Ranged loco).
+            if (controller.layers.Length > 1)
+            {
+                AnimatorStateMachine upperMute = controller.layers[1].stateMachine;
+                MuteAnyStateTrigger(upperMute, "FireRifle");
+                MuteAnyStateTrigger(upperMute, "Reload");
+            }
 
             // Upper-body Attack Swing variants (cycle via AttackVariant 0/1/2); exit-time → Hold Default.
             if (controller.layers.Length > 1)
@@ -417,7 +428,113 @@ namespace SS3D.Editor
 
             return "OK: Rebuilt stance blends; injured idle severity; limp Jump/Turn90; Injured Wave Emote; "
                    + "AttackSwing variants + MirrorUpperBody; stance-aware Flinch (GettingHit/gut/HitReaction); "
-                   + "Floating → Mix_Floating.";
+                   + "Ranged FireRifle/Reload oneshots; Floating → Mix_Floating.";
+        }
+
+        /// <summary>
+        /// Base-layer oneshots for M4 fire/reload (Basic Shooter pack). Gated to CombatStance == Ranged
+        /// so melee/peaceful never consume the triggers. Upper Body weight is 0 in Ranged, so these
+        /// must live on Base alongside rifle locomotion.
+        /// </summary>
+        private static void WireRangedFireAndReload(
+            AnimatorStateMachine baseMachine,
+            AnimatorState peaceful,
+            AnimatorState melee,
+            AnimatorState ranged,
+            AnimatorState injured)
+        {
+            AnimationClip fireClip = LoadPackClip($"{ShooterPack}/firing rifle.fbx", "Mix_FiringRifle");
+            AnimationClip reloadClip = LoadPackClip($"{ShooterPack}/reloading.fbx", "Mix_Reloading");
+
+            AnimatorState fireState = FindOrCreateState(baseMachine, "Fire Rifle", new Vector3(50, 460, 0));
+            if (fireClip != null)
+            {
+                fireState.motion = fireClip;
+                fireState.writeDefaultValues = true;
+            }
+
+            AnimatorState reloadState = FindOrCreateState(baseMachine, "Reload Rifle", new Vector3(50, 520, 0));
+            if (reloadClip != null)
+            {
+                reloadState.motion = reloadClip;
+                reloadState.writeDefaultValues = true;
+            }
+
+            EnsureAnyStateTriggerWithCombatStance(
+                baseMachine, fireState, "FireRifle", combatStance: 2, canTransitionToSelf: true, entryDuration: 0.05f);
+            EnsureAnyStateTriggerWithCombatStance(
+                baseMachine, reloadState, "Reload", combatStance: 2, canTransitionToSelf: false, entryDuration: 0.1f);
+
+            ClearTransitions(fireState);
+            EnsureExitToStateWithLimpGate(fireState, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(fireState, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(fireState, ranged, requireLimping: false, combatStance: 2);
+            EnsureExitToStateWithLimpGate(fireState, injured, requireLimping: true, combatStance: null);
+            SoftenOneshotExits(fireState, exitTime: 0.75f, duration: 0.12f);
+
+            ClearTransitions(reloadState);
+            EnsureExitToStateWithLimpGate(reloadState, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(reloadState, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(reloadState, ranged, requireLimping: false, combatStance: 2);
+            EnsureExitToStateWithLimpGate(reloadState, injured, requireLimping: true, combatStance: null);
+            SoftenOneshotExits(reloadState, exitTime: 0.9f, duration: 0.2f);
+        }
+
+        private static void SoftenOneshotExits(AnimatorState state, float exitTime, float duration)
+        {
+            foreach (AnimatorStateTransition transition in state.transitions)
+            {
+                transition.hasExitTime = true;
+                transition.exitTime = exitTime;
+                transition.hasFixedDuration = true;
+                transition.duration = duration;
+            }
+        }
+
+        private static void EnsureAnyStateTriggerWithCombatStance(
+            AnimatorStateMachine machine,
+            AnimatorState destination,
+            string triggerName,
+            int combatStance,
+            bool canTransitionToSelf,
+            float entryDuration)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.destinationState != destination)
+                {
+                    continue;
+                }
+
+                if (!transition.conditions.Any(c => c.parameter == triggerName))
+                {
+                    continue;
+                }
+
+                bool stanceOk = transition.conditions.Any(
+                    c => c.parameter == "CombatStance" && (int)c.threshold == combatStance);
+                if (!stanceOk)
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = canTransitionToSelf;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = entryDuration;
+                MuteDuplicateAnyStateTriggers(machine, destination, triggerName, transition);
+                return;
+            }
+
+            AnimatorStateTransition created = machine.AddAnyStateTransition(destination);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = entryDuration;
+            created.canTransitionToSelf = canTransitionToSelf;
+            created.AddCondition(AnimatorConditionMode.If, 0f, triggerName);
+            created.AddCondition(AnimatorConditionMode.Equals, combatStance, "CombatStance");
+            MuteDuplicateAnyStateTriggers(machine, destination, triggerName, created);
         }
 
         /// <summary>
