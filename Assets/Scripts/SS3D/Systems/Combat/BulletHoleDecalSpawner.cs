@@ -15,8 +15,11 @@ namespace SS3D.Systems.Combat
         private const int MaxActiveDecals = 96;
         private const float MinSize = 0.12f;
         private const float MaxSize = 0.22f;
-        // Slightly deeper than blood floor stamps so vertical wall faces stay inside the volume.
-        private const float VolumeDepth = 0.2f;
+        private const float FloorVolumeDepth = 0.15f;
+        // Walls are thin face skins on a full-cell box collider — keep enough depth that the
+        // projector volume still overlaps the mesh if the hit lands slightly off the visual.
+        private const float WallVolumeDepth = 0.45f;
+        private const float SurfaceOutwardOffset = 0.02f;
 
         private static GameObject _floorDecalPrefab;
         private static Material _decalMaterialTemplate;
@@ -53,17 +56,26 @@ namespace SS3D.Systems.Combat
                 return;
             }
 
+            bool vertical = Mathf.Abs(Vector3.Dot(normal, Vector3.up)) < 0.5f;
+            float depth = vertical ? WallVolumeDepth : FloorVolumeDepth;
+
+            // Sit just outside the face; pivot at depth/2 so the box straddles the surface
+            // (same convention as floor blood — avoids half-clipped stamps).
             instance.transform.SetPositionAndRotation(
-                point + normal * 0.015f,
+                point + normal * SurfaceOutwardOffset,
                 BloodDecalSpawner.RotationOntoSurface(normal, Random.Range(0f, 360f)));
 
             if (instance.TryGetComponent(out DecalProjector projector))
             {
+                // Mask first, then a property that calls OnValidate — renderingLayerMask's
+                // setter does not refresh DecalEntityManager by itself.
                 projector.renderingLayerMask = DecalRenderingLayers.WorldFloorProjectorMask;
                 projector.material = CreateRandomDecalMaterial();
                 float size = Random.Range(MinSize, MaxSize);
-                projector.size = new Vector3(size, size, VolumeDepth);
-                projector.pivot = new Vector3(0f, 0f, VolumeDepth * 0.5f);
+                projector.size = new Vector3(size, size, depth);
+                projector.pivot = new Vector3(0f, 0f, depth * 0.5f);
+                projector.startAngleFade = 180f;
+                projector.endAngleFade = 180f;
                 projector.fadeFactor = 1f;
                 projector.uvScale = new Vector2(Random.Range(0.95f, 1.05f), Random.Range(0.95f, 1.05f));
                 projector.drawDistance = 50f;
@@ -78,15 +90,19 @@ namespace SS3D.Systems.Combat
             EnsureAssetsLoaded();
             if (_floorDecalPrefab != null)
             {
-                return Object.Instantiate(_floorDecalPrefab);
+                // Prefab is authored for floors (X=90). Spawn overwrites pose; strip that so
+                // wall hits don't briefly register a floor-oriented entity.
+                GameObject instance = Object.Instantiate(_floorDecalPrefab);
+                instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                return instance;
             }
 
-            var go = new GameObject("BulletHoleFloorDecal");
+            var go = new GameObject("BulletHoleDecal");
             DecalProjector projector = go.AddComponent<DecalProjector>();
             projector.material = _decalMaterialTemplate;
             projector.scaleMode = DecalScaleMode.ScaleInvariant;
-            projector.size = new Vector3(0.18f, 0.18f, VolumeDepth);
-            projector.pivot = new Vector3(0f, 0f, VolumeDepth * 0.5f);
+            projector.size = new Vector3(0.18f, 0.18f, FloorVolumeDepth);
+            projector.pivot = new Vector3(0f, 0f, FloorVolumeDepth * 0.5f);
             projector.drawDistance = 50f;
             projector.startAngleFade = 180f;
             projector.endAngleFade = 180f;
