@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 0b8800b28 — 2026-07-26
+> Verified: f7990ea18 — 2026-07-26
 
 # Entities
 
@@ -43,7 +43,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
-- **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.
+- **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; skip gravity only while no physical floor collider is underfoot (raycast), then resume normal loco so spawn is not soft-locked when the map is visible but occupancy is still Unknown. Keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.
 
 ## Pitfalls
 
@@ -72,6 +72,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
 - **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. `SetFloating(false)` restores Idle when leaving Floating locomotion.
 - **Client spawn stuck in Mix_Floating:** pure-client maps start empty and AOI often delivers non-plenum layers first. `GetSupportAt` must return `Unknown` for client occupancy-miss **and** client `!HasPlenum` — never local Unsupported. Server occupancy-miss is Unsupported only after `TileMapLoaded` (empty UnnamedMap must not pack Floating). Deep-space float on clients is SyncVar-driven (`ServerReconcileSpaceSupport`); Unknown keep-coast only while that SyncVar is already true. Structural register: [TECH_DEBT.md](../TECH_DEBT.md) §1.17.
+- **Early Embark fall-through floor:** `Unknown` used to make `TryProcessSpaceFloat` return false → living path applied `CharacterController.Move(Physics.gravity)` with no tile colliders yet. Skip gravity on Unknown only while a downward raycast finds no floor; once colliders exist (or allow planar walk with no gravity), resume loco — a hard hold soft-locked movement after the map was visible but client `!HasPlenum` stayed Unknown. Same guard in `HumanoidPredictedMovement` when enabled. Hit 2026-07-26.
 - **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
 - **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar; dedicated server still reconciles Floating via `ServerReconcileSpaceSupport`.
 - **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.

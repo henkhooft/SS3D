@@ -193,8 +193,10 @@ namespace SS3D.Systems.Entities.Humanoid
 
         /// <summary>
         /// When no plenum underfoot: Floating anim, no gravity/WASD, coast last planar velocity.
-        /// Unknown (client AOI lag) does not enter float; keeps coasting if already floating (SyncVar).
-        /// Returns true when space float consumed this frame.
+        /// Unknown (client AOI lag): never enter float. Skip gravity only while no physical floor
+        /// exists yet (prevents fall-through); once colliders are underfoot, walk normally even if
+        /// tile occupancy is still Incomplete. Keep coasting only if SyncVar already Floating.
+        /// Returns true when space float / AOI hold consumed this frame.
         /// </summary>
         private bool TryProcessSpaceFloat(HumanoidSupportState support)
         {
@@ -218,7 +220,20 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 if (!wasFloating)
                 {
-                    return false;
+                    // Tile knowledge incomplete (!HasPlenum / AOI miss). Do not float.
+                    // If floor colliders already mirrored, resume normal loco — holding forever
+                    // soft-locks spawn after the map is visible but occupancy still Unknown.
+                    if (HasPhysicalFloorUnderfoot())
+                    {
+                        ApplyCharacterControllerOwnership();
+                        return false;
+                    }
+
+                    // No colliders yet: no gravity (fall-through), but allow planar walk and
+                    // keep the owner CharacterController enabled.
+                    ApplyCharacterControllerOwnership();
+                    ProcessUnknownAoiHold();
+                    return true;
                 }
             }
             else if (!wasFloating)
@@ -240,6 +255,60 @@ namespace SS3D.Systems.Entities.Humanoid
 
             PublishLocomotionVelocity(Vector3.zero, 0f);
             return true;
+        }
+
+        /// <summary>
+        /// AOI gap with no floor colliders: skip gravity, still accept WASD so spawn is not frozen.
+        /// </summary>
+        private void ProcessUnknownAoiHold()
+        {
+            float gaitSpeed = FilterSpeed();
+            if (Input.magnitude != 0)
+            {
+                MoveMovementTarget(Input);
+                if (!IsDragging)
+                {
+                    if (IsCombatMode())
+                    {
+                        RotatePlayerToCombatAim();
+                    }
+                    else
+                    {
+                        RotatePlayerToMovement();
+                    }
+                }
+
+                MovePlayer();
+                PublishLocomotionVelocity(TargetMovement, gaitSpeed);
+            }
+            else
+            {
+                MovePlayer();
+                MoveMovementTarget(Vector2.zero, 5);
+                if (IsCombatMode() && !IsDragging)
+                {
+                    RotatePlayerToCombatAim();
+                }
+
+                PublishLocomotionVelocity(Vector3.zero, 0f);
+            }
+        }
+
+        /// <summary>
+        /// True when a non-trigger collider sits under the capsule (tile meshes mirrored even if
+        /// <see cref="HumanoidSpaceSupport"/> is still Unknown).
+        /// </summary>
+        private bool HasPhysicalFloorUnderfoot()
+        {
+            if (_characterController == null)
+            {
+                return false;
+            }
+
+            float probe = (_characterController.height * 0.5f) + _characterController.skinWidth + 0.2f;
+            Vector3 origin = transform.position + Vector3.up * 0.05f;
+            return Physics.Raycast(origin, Vector3.down, probe, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
         }
 
         private bool ShouldCoast(HumanoidSupportState support)

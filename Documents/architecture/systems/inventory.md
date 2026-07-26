@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 581fa6ab6 — 2026-07-26
+> Verified: f7990ea18 — 2026-07-26
 
 # Inventory
 
@@ -67,7 +67,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Client Main HUD item icons never update:** `HumanInventory.AddContainer` (server-only) used to be the only place that subscribed `AttachedContainer.OnContentsChanged` → `OnContainerContentChanged`. Pure clients get containers via the SyncList and never subscribed, so pickup/equip refreshed nothing on the gear strip. Wire contents in `SyncInventoryContainerChange` / `OnStartClient` via `SubscribeContainerContents` (idempotent `-=` then `+=`). Hit 2026-07-26.
 - **`Couldn't get player ckey` on pickup:** `PickupInteraction` used `Hands.Inventory.Body.Mind` — `Hands.Inventory` is only set on the owning client. Resolve ckey from `Entity.Mind.player` (and set `Hands.Inventory` on server in `HumanInventory.OnStartServer`). Do not wrap in a bare `catch`. Hit 2026-07-26.
 - **Green outline baked into HUD icons:** `RemoveInteractionOutlines` must `DestroyImmediate` on the preview clone — Coimbra `Dispose` → end-of-frame `Destroy`, but the icon camera renders same frame while hover shells are still enabled. Hit 2026-07-26.
-- **Worn jumpsuit icon wrong / `Can't generate icon`:** worn preview activates inactive shaped children; `SetChildRenderersEnabled` must use `GetComponentsInChildren<Renderer>(true)`. Null-check texture before `Sprite.Create`. Hit 2026-07-26.
+- **Worn jumpsuit icon wrong / `Can't generate icon`:** worn preview activates inactive shaped children; `SetChildRenderersEnabled` must use `GetComponentsInChildren<Renderer>(true)`. Null-check texture before `Sprite.Create`. Do **not** set `HideFlags.HideAndDontSave` on the preview before `IconPreviewGenerator.Generate` — that makes `scene.IsValid()` false, so `RuntimePreviewGenerator` re-clones and `ClothingItemPresentation.Awake` → `ApplyWorldForm` bakes the folded pile as the “worn” HUD sprite. Hit 2026-07-26.
 - **Client can't re-equip filtered clothing (gloves):** `TraitSerializer` CreateInstance copies break `Filter.acceptedTraits.Contains` (reference equality). Match traits by `Name`+`Category` in `Filter.CanStore` / `Item.HasTrait`. Hit 2026-07-26.
 - **Item icons look dark / muddy after half-toon:** do not render HUD icons with live `STDefault` materials. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` material swap). Keep `ObjectIcon` in Always Included Shaders.
 - **Long items spawn/drop upright / icons point down / hologram upright:** prefabs bake side-lying pitch/roll on the root (e.g. M4 `-90° X`). Yaw-only place, `Instantiate(..., identity)`, map holograms, and `RuntimePreviewGenerator` used to wipe that. Use `Item.GetWorldFacing` / `WorldRestRotation`; `SpawnItem` maps identity → rest; `PlacedItemObject.Create` composes for new tile spawns; holograms capture prefab `localRotation` into `TargetWorldRotation`. Icons set `RuntimePreviewGenerator.PreviewRotation` and frame with world up (`Vector3.up`) — using `previewObject.up` after a -90° X rest makes a side-lying gun look vertical. `AssetDatabase.TryGet<T>` must resolve Components via `GetComponent` like `Get`.

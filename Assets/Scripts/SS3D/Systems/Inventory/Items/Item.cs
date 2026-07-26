@@ -572,8 +572,10 @@ namespace SS3D.Systems.Inventory.Items
                     storedItem.parent = null;
                 }
 
+                // Stay in a loaded scene until bake finishes. HideAndDontSave makes
+                // scene.IsValid() false, so RuntimePreviewGenerator re-clones; ClothingItemPresentation.Awake
+                // then ApplyWorldForm and a worn bake becomes the folded pile again.
                 previewObject = Instantiate(transform, null, false);
-                previewObject.gameObject.hideFlags = HideFlags.HideAndDontSave;
                 RemoveInteractionOutlines(previewObject);
                 Item previewItem = previewObject.GetComponent<Item>();
                 if (useWornShapedForm && previewItem.TryGetComponent(out ClothingItemPresentation presentation))
