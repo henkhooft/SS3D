@@ -1,6 +1,7 @@
 ﻿using Coimbra.Services.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Rounds.Events;
@@ -8,7 +9,6 @@ using SS3D.Systems.Screens.Events;
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Screens
@@ -29,6 +29,7 @@ namespace SS3D.Systems.Screens
 
             AddHandle(ChangeGameScreenEvent.AddListener(HandleChangeGameScreen));
             AddHandle(SpawnedPlayersUpdated.AddListener(HandleSpawnedPlayersUpdated));
+            AddHandle(LocalPlayerObjectChanged.AddListener(HandleLocalPlayerObjectChanged));
             AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
 
             _controls = SubSystems.Get<InputSubSystem>().Inputs.Other;
@@ -37,14 +38,14 @@ namespace SS3D.Systems.Screens
         protected override void OnEnabled()
         {
             base.OnEnabled();
-            
+
             _controls.ToggleMenu.performed += HandleToggleMenu;
         }
-        
+
         protected override void OnDisabled()
         {
             base.OnDisabled();
-            
+
             _controls.ToggleMenu.performed -= HandleToggleMenu;
         }
 
@@ -61,7 +62,7 @@ namespace SS3D.Systems.Screens
 
         private void HandleSpawnedPlayersUpdated(ref EventContext context, in SpawnedPlayersUpdated e)
         {
-            bool isPlayerSpawned = e.SpawnedPlayers.Find(controllable => controllable.Owner == LocalConnection);
+            bool isPlayerSpawned = e.SpawnedPlayers.Exists(IsLocalSpawnedEntity);
 
             if (!isPlayerSpawned && _spawnedState == PlayerSpawnedState.ConfirmedSpawned)
             {
@@ -74,6 +75,30 @@ namespace SS3D.Systems.Screens
             }
 
             UpdateScreen();
+        }
+
+        private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
+        {
+            // Reclaim path: ownership/Mind local without a SyncList mutation — still leave lobby.
+            if (e.PlayerHasObject && e.PlayerObject != null)
+            {
+                GivePlayerAccessToGame();
+            }
+        }
+
+        private static bool IsLocalSpawnedEntity(Entity entity)
+        {
+            if (entity == null)
+            {
+                return false;
+            }
+
+            if (entity.IsOwner)
+            {
+                return true;
+            }
+
+            return entity.Mind?.player != null && entity.Mind.player.IsLocalConnection;
         }
 
         private void HandleRoundStateUpdated(ref EventContext context, in RoundStateUpdated e)
@@ -98,7 +123,6 @@ namespace SS3D.Systems.Screens
                 MarkNewlySpawnedPlayerAsAwaitingConfirmation();
             }
         }
-
 
         private void UpdateScreen()
         {

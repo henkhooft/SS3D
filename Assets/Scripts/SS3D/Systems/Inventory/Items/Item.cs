@@ -333,8 +333,9 @@ namespace SS3D.Systems.Inventory.Items
         
         /// <summary>
         /// Removes any interaction outline shells (added by <see cref="SS3D.Systems.Interactions.InteractionOutlineView"/>)
-        /// from a preview clone, so they can't be force-enabled by <see cref="SetVisibility"/> and leak into
-        /// generated icons.
+        /// from a preview clone, so they can't leak into generated icons.
+        /// Must DestroyImmediate: Coimbra Dispose → Destroy is end-of-frame, but the preview camera
+        /// renders in this frame while hover shells are still enabled.
         /// </summary>
         private static void RemoveInteractionOutlines(Transform root)
         {
@@ -343,7 +344,7 @@ namespace SS3D.Systems.Inventory.Items
                 Transform child = root.GetChild(i);
                 if (child.name == "InteractionOutline")
                 {
-                    child.gameObject.Dispose(true);
+                    UnityEngine.Object.DestroyImmediate(child.gameObject);
                     continue;
                 }
 
@@ -455,7 +456,26 @@ namespace SS3D.Systems.Inventory.Items
         [ServerOrClient]
         public bool HasTrait(Trait trait)
         {
-            return _traits.Contains(trait);
+            if (trait == null)
+            {
+                return false;
+            }
+
+            // SyncList traits on clients are CreateInstance copies — match Name+Category, not refs.
+            foreach (Trait owned in _traits)
+            {
+                if (owned == null)
+                {
+                    continue;
+                }
+
+                if (owned == trait || (owned.Name == trait.Name && owned.Category == trait.Category))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -571,9 +591,17 @@ namespace SS3D.Systems.Inventory.Items
                 {
                     // Bright full-toon ObjectIcon — not live half-toon world mats.
                     Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
-                    icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
-                        new Vector2(0.5f, 0.5f), 100);
-                    icon.name = transform.name;
+                    if (texture == null)
+                    {
+                        Log.Warning(this, "Can't generate icon for " + name + ".");
+                        icon = null;
+                    }
+                    else
+                    {
+                        icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
+                            new Vector2(0.5f, 0.5f), 100);
+                        icon.name = transform.name;
+                    }
                 }
                 catch (NullReferenceException)
                 {
@@ -600,7 +628,8 @@ namespace SS3D.Systems.Inventory.Items
 
         private static void SetChildRenderersEnabled(Transform root, bool visible)
         {
-            Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+            // includeInactive: worn-shaped clothing children start disabled; preview must enable them.
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             foreach (Renderer childRenderer in renderers)
             {
                 if (childRenderer.transform.name == "InteractionOutline")

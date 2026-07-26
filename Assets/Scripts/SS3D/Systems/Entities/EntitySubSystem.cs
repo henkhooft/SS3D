@@ -200,7 +200,7 @@ namespace SS3D.Systems.Entities
 
             entity.GiveOwnership(conn);
             entity.Mind?.GiveOwnership(conn);
-            conn.SetFirstObject(entity.NetworkObject);
+            ServerSetFirstObjectAndRebuildObservers(conn, entity.NetworkObject);
 
             RpcInvokeClientSpawned(entity.Owner);
 
@@ -277,6 +277,7 @@ namespace SS3D.Systems.Entities
             entity.SetMind(createdMind);
 
             player.Owner.SetFirstObject(entity.NetworkObject);
+            ServerRebuildObservers(player.Owner);
 
             SubSystems.Get<RoleSubSystem>().GiveRoleLoadoutToPlayer(entity);
 
@@ -285,6 +286,33 @@ namespace SS3D.Systems.Entities
             RpcInvokeClientSpawned(entity.Owner);
 
             Log.Information(this, "Spawning mind {createdMind} on {entity}", Logs.ServerOnly, createdMind.name, entity.name);
+        }
+
+        [Server]
+        private void ServerSetFirstObjectAndRebuildObservers(NetworkConnection conn, NetworkObject networkObject)
+        {
+            if (conn == null || !conn.IsValid || networkObject == null)
+            {
+                return;
+            }
+
+            conn.SetFirstObject(networkObject);
+            ServerRebuildObservers(conn);
+        }
+
+        /// <summary>
+        /// Warm HashGrid AOI immediately after FirstObject is set. Waiting for Entity.Update's
+        /// cell-cross interval leaves early Embark clients with an empty tilemap.
+        /// </summary>
+        [Server]
+        private void ServerRebuildObservers(NetworkConnection conn)
+        {
+            if (conn == null || !conn.IsValid || ServerManager?.Objects == null)
+            {
+                return;
+            }
+
+            ServerManager.Objects.RebuildObservers(conn, timedOnly: false);
         }
 
         /// <summary>
