@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-25T19:55:37.343620+00:00",
+  "generated_at": "2026-07-26T08:41:55.303236+00:00",
   "purpose": "Agent reference for locating SS3D art assets and determining import status.",
   "sources": {
     "in_game": {
       "root": "Assets/Art",
-      "file_count": 5178
+      "file_count": 5196
     },
     "ss3d_art": {
       "repo": "https://github.com/RE-SS3D/SS3D-Art",
@@ -13,13 +13,13 @@
     }
   },
   "summary": {
-    "in_game_files": 5178,
+    "in_game_files": 5196,
     "ss3d_art_files": 2480,
-    "unique_assets": 7454,
-    "imported": 204,
-    "in_game_only": 4984,
-    "ss3d_art_only": 2266,
-    "available_for_import": 2051,
+    "unique_assets": 7466,
+    "imported": 210,
+    "in_game_only": 4996,
+    "ss3d_art_only": 2260,
+    "available_for_import": 2045,
     "artwork_only": 215
   },
   "categories": [
@@ -81,19 +81,19 @@
     },
     {
       "path": "Sound",
-      "in_game": 76,
+      "in_game": 88,
       "ss3d_art": 218,
       "imported": 58,
-      "in_game_only": 18,
+      "in_game_only": 30,
       "ss3d_art_only": 160
     },
     {
       "path": "Textures",
-      "in_game": 79,
+      "in_game": 85,
       "ss3d_art": 579,
-      "imported": 60,
+      "imported": 66,
       "in_game_only": 25,
-      "ss3d_art_only": 519
+      "ss3d_art_only": 513
     }
   ],
   "subcategories": [
@@ -2170,6 +2170,14 @@
       "ss3d_art_only": 0
     },
     {
+      "path": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game": 12,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 12,
+      "ss3d_art_only": 0
+    },
+    {
       "path": "Sound/Structures/Airlocks",
       "in_game": 0,
       "ss3d_art": 4,
@@ -2707,11 +2715,11 @@
     },
     {
       "path": "Textures/World/VFX/BulletHoles",
-      "in_game": 0,
+      "in_game": 6,
       "ss3d_art": 22,
-      "imported": 0,
+      "imported": 6,
       "in_game_only": 0,
-      "ss3d_art_only": 22
+      "ss3d_art_only": 16
     },
     {
       "path": "Textures/World/VFX/DepartmentSymbols",
@@ -2832,7 +2840,7 @@
     "blend": 677,
     "fbx": 224,
     "wav": 160,
-    "ogg": 58,
+    "ogg": 70,
     "mp3": 18,
     "ma": 13,
     "mp4": 12,
@@ -77094,6 +77102,138 @@
       "status": "imported"
     },
     {
+      "name": "BulletHit.ogg",
+      "stem": "bullethit",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/BulletHit.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Empty.ogg",
+      "stem": "empty",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Empty.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "LtRifleCock.ogg",
+      "stem": "ltriflecock",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleCock.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "LtRifleMagIn.ogg",
+      "stem": "ltriflemagin",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleMagIn.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "LtRifleMagOut.ogg",
+      "stem": "ltriflemagout",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleMagOut.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Ric1.ogg",
+      "stem": "ric1",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric1.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Ric2.ogg",
+      "stem": "ric2",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Ric3.ogg",
+      "stem": "ric3",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric3.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Ric4.ogg",
+      "stem": "ric4",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric4.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Ric5.ogg",
+      "stem": "ric5",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric5.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Rifle.ogg",
+      "stem": "rifle",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Rifle.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "Rifle2.ogg",
+      "stem": "rifle2",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Firearms/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Firearms/SS14/Rifle2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
       "name": "Airlock Bolt Drop.wav",
       "stem": "airlock bolt drop",
       "extension": "wav",
@@ -81883,22 +82023,22 @@
       "stem": "bullethole",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHole.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHole.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHole.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHole.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds1.png",
       "stem": "bulletholeshreds1",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds10.png",
@@ -82015,11 +82155,11 @@
       "stem": "bulletholeshreds2",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds20.png",
@@ -82059,33 +82199,33 @@
       "stem": "bulletholeshreds3",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds4.png",
       "stem": "bulletholeshreds4",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds5.png",
       "stem": "bulletholeshreds5",
       "extension": "png",
       "category": "Textures/World/VFX/BulletHoles",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "BulletHoleShreds6.png",

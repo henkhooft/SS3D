@@ -463,6 +463,7 @@ namespace SS3D.Systems.Interactions
                 out bool hitLiving,
                 out bool hitStructural,
                 out Vector3 impactPoint,
+                out Vector3 impactNormal,
                 out bool hasImpact,
                 out Vector3 shotDirection);
 
@@ -486,6 +487,7 @@ namespace SS3D.Systems.Interactions
             if (hasImpact && !hitLiving)
             {
                 PlaySurfaceHitSound(impactPoint);
+                ObserversNotifyBulletHole(impactPoint, impactNormal);
             }
 
             ClearMeleeAimPoint();
@@ -614,6 +616,13 @@ namespace SS3D.Systems.Interactions
             }
 
             MuzzleFlashVfx.Play(fallbackPosition, fallbackForward);
+        }
+
+        /// <summary>Bullet-hole decal on non-living impacts — visible to all observers.</summary>
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversNotifyBulletHole(Vector3 impactPoint, Vector3 impactNormal)
+        {
+            BulletHoleDecalSpawner.Spawn(impactPoint, impactNormal);
         }
 
         [TargetRpc]

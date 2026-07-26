@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-25T19:55:37.343620+00:00",
+  "generated_at": "2026-07-26T08:41:55.303236+00:00",
   "purpose": "Game-ready SS3D-Art assets not yet imported into Assets/Art/.",
-  "count": 2051,
+  "count": 2045,
   "assets": [
     {
       "name": "HumanAnimRig.ma",
@@ -16267,24 +16267,6 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/Gas.png"
     },
     {
-      "name": "BulletHole.png",
-      "stem": "bullethole",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHole.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHole.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHole.png"
-    },
-    {
-      "name": "BulletHoleShreds1.png",
-      "stem": "bulletholeshreds1",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds1.png"
-    },
-    {
       "name": "BulletHoleShreds10.png",
       "stem": "bulletholeshreds10",
       "extension": "png",
@@ -16375,15 +16357,6 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds19.png"
     },
     {
-      "name": "BulletHoleShreds2.png",
-      "stem": "bulletholeshreds2",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds2.png"
-    },
-    {
       "name": "BulletHoleShreds20.png",
       "stem": "bulletholeshreds20",
       "extension": "png",
@@ -16409,33 +16382,6 @@
       "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds22.png",
       "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds22.png",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds22.png"
-    },
-    {
-      "name": "BulletHoleShreds3.png",
-      "stem": "bulletholeshreds3",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds3.png"
-    },
-    {
-      "name": "BulletHoleShreds4.png",
-      "stem": "bulletholeshreds4",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds4.png"
-    },
-    {
-      "name": "BulletHoleShreds5.png",
-      "stem": "bulletholeshreds5",
-      "extension": "png",
-      "category": "Textures/World/VFX/BulletHoles",
-      "ss3d_art_path": "Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
-      "import_target_path": "Assets/Art/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Textures/World/VFX/BulletHoles/BulletHoleShreds5.png"
     },
     {
       "name": "BulletHoleShreds6.png",
