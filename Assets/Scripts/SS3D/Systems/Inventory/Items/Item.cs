@@ -18,6 +18,7 @@ using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Health;
 using SS3D.Systems.Selection;
+using SS3D.Utils;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -525,14 +526,13 @@ namespace SS3D.Systems.Inventory.Items
                 return null;
             }
 
-            RuntimePreviewGenerator.BackgroundColor = new Color(0, 0, 0, 0);
-            RuntimePreviewGenerator.OrthographicMode = true;
             Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
             RuntimePreviewGenerator.PreviewRotation = WorldRestRotation;
+
             // Find stored items
             AttachedContainer[] containers = GetComponentsInChildren<AttachedContainer>();
             // If stored items are found, temporarily set their parents to null,
-            // so RuntimePreviewGenerator won't generate stored items
+            // so IconPreviewGenerator won't generate stored items
             Dictionary<Transform, Transform> storedItemsWithParents = new Dictionary<Transform, Transform>();
             Transform previewObject = null;
             Sprite icon = null;
@@ -569,7 +569,8 @@ namespace SS3D.Systems.Inventory.Items
 
                 try
                 {
-                    Texture2D texture = RuntimePreviewGenerator.GenerateModelPreview(previewObject, 128, 128);
+                    // Bright full-toon ObjectIcon — not live half-toon world mats.
+                    Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
                     icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
                         new Vector2(0.5f, 0.5f), 100);
                     icon.name = transform.name;

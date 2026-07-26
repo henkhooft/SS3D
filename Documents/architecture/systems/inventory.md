@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: c996212b2 — 2026-07-26 (item world rest orientation)
+> Verified: e2122f498 — 2026-07-26 (ObjectIcon HUD icons + world rest orientation)
 
 # Inventory
 
@@ -30,7 +30,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
-- `Assets/Scripts/SS3D/Systems/Inventory/Items/Item.cs` — `WorldRestRotation` / `GetWorldFacing` for floor spawn/drop/icons
+- `Assets/Scripts/SS3D/Systems/Inventory/Items/Item.cs` — `WorldRestRotation` / `GetWorldFacing`; `GenerateIcon` → `IconPreviewGenerator`
+- `Assets/Scripts/SS3D/Utils/IconPreviewGenerator.cs` — bright `Unlit/ObjectIcon` for HUD/tile icons
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainer.cs` — container primitive
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
@@ -63,6 +64,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Pitfalls
 
+- **Item icons look dark / muddy after half-toon:** do not render HUD icons with live `STDefault` materials. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` material swap). Keep `ObjectIcon` in Always Included Shaders.
 - **Long items spawn/drop upright / icons point down / hologram upright:** prefabs bake side-lying pitch/roll on the root (e.g. M4 `-90° X`). Yaw-only place, `Instantiate(..., identity)`, map holograms, and `RuntimePreviewGenerator` used to wipe that. Use `Item.GetWorldFacing` / `WorldRestRotation`; `SpawnItem` maps identity → rest; `PlacedItemObject.Create` composes for new tile spawns; holograms capture prefab `localRotation` into `TargetWorldRotation`. Icons set `RuntimePreviewGenerator.PreviewRotation` and frame with world up (`Vector3.up`) — using `previewObject.up` after a -90° X rest makes a side-lying gun look vertical. `AssetDatabase.TryGet<T>` must resolve Components via `GetComponent` like `Get`.
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Data → Rebuild All UI Catalogs** and commit the asset (same pattern as Machine UI; second copy of that stack).
 - **`ContainerViewer` must never reference `SS3D.UI.*`:** MainHudSubSystem hands the viewer to `StoragePanelHost` at bind/unbind. Do not add Systems→UI asmdef refs.

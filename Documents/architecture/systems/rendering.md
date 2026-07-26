@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: ec546f7d5 — 2026-07-26
+> Verified: 84192af6d — 2026-07-26 (UI icons via IconPreviewGenerator / ObjectIcon)
 
 # Rendering
 
@@ -26,6 +26,8 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - `Assets/Scripts/SS3D/Systems/Vision/VisionSubSystem.cs` — client `RaycastCommand` waves → R16 `_VisionMap` (occluder cache; float dilate + `SetPixelData`)
 - `Assets/Content/Resources/Simple Toon/Shaders/STLighting.hlsl` — half-toon lighting + palette emission sample
 - `Assets/Content/Resources/Simple Toon/Shaders/STDefault.shader` — opaque toon (+ DepthNormals for Decal Layers)
+- `Assets/Content/Resources/Simple Toon/Shaders/ObjectIcon.shader` — unlit bright full-toon for UI icon previews
+- `Assets/Scripts/SS3D/Utils/IconPreviewGenerator.cs` — ObjectIcon material swap for UI icon previews
 - `Assets/Settings/URP/` — pipeline asset and Forward+ renderer (includes Decal Renderer feature)
 
 ## Extension points
@@ -39,7 +41,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
 - **ST meshes ignore blood/floor DecalProjectors:** Automatic Decal technique is DBuffer on desktop. `STDefault` ForwardLit must keep `#pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3` and `ApplyDecalToBaseColor` under `#ifdef _DBUFFER` — calling it without the keyword samples an unbound buffer (weight 0 → black mesh). DepthNormals alone only fixes Decal Layers filtering, not albedo tint.
 - **Decal Layers must stay enabled:** `SS3D_ForwardPlusRenderer` Decal feature `decalLayers: 1`. Floor/bullet projectors target `ReceiveWorldDecals` only; characters stay Default. Turning layers off makes Lit tiles look fine while masking breaks for the intended filter path — do not disable during lighting/SSAO retunes.
-- **Item/tile icons go black after fixture-only lighting:** `RuntimePreviewGenerator` shared the game’s zero ambient + disabled main light. It now spawns temporary point lights (and flat ambient) for the preview render — do not rely on scene lighting for icons.
+- **Item/tile icons dark or black under half-toon / fixture-only lighting:** do not render icons with live ST half-toon mats or bare scene lights. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` overrides). `RuntimePreviewGenerator` still spawns temporary preview lights as a fallback path — do not rely on scene lighting. Keep `ObjectIcon` in Always Included Shaders (same pattern as InteractionOutline).
 - **Shiny player head under PointFill:** close URP point lights create a bright N·L hotspot on bald/curved meshes (bloom amplifies it). Soft-near atten in `STLighting.hlsl` + keep character `_SpecIntensity: 0`; raise/dim fill rather than copying Built-in intensities.
 - **Vision FOV must not use fixed multi-hit RaycastAll buffers:** a dense prop pile can exhaust the hit slots and report a clear line through walls. Keep iterative/wave single-hit casts that skip non-occluders (`VisionSubSystem` `RaycastCommand` waves + collider occluder cache).
 - **Vision map upload:** do not `new Color[]` / `SetPixels` on the LateUpdate path — dilate with persistent float scratch and upload R16 via `SetPixelData` (`Vision.VisionMap` was a multi-MB/frame GC hotspot).

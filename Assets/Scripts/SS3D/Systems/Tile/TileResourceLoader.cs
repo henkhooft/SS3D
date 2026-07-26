@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
+using SS3D.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -60,7 +61,6 @@ namespace SS3D.Systems.Tile
         private IEnumerator LoadAssetsWithIcon(GenericObjectSo[] assets)
         {
 	        List<Texture2D> tempIcons = new List<Texture2D>();
-	        RuntimePreviewGenerator.OrthographicMode = true;
 
 	        foreach (GenericObjectSo asset in assets)
 	        {
@@ -71,15 +71,12 @@ namespace SS3D.Systems.Tile
                     continue;
                 }
 
-                Transform prefabTransform = prefab.transform;
-		        Shader shader = Shader.Find("Unlit/ObjectIcon");
-
 		        Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
-		        RuntimePreviewGenerator.PreviewRotation = prefabTransform.localRotation;
+		        RuntimePreviewGenerator.PreviewRotation = prefab.transform.localRotation;
 		        Texture2D texture;
 		        try
 		        {
-			        texture = RuntimePreviewGenerator.GenerateModelPreviewWithShader(prefabTransform, shader, null, 128, 128, true);
+			        texture = IconPreviewGenerator.Generate(prefab.transform, 128, 128, shouldCloneModel: true);
 		        }
 		        finally
 		        {
