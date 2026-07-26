@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: fca02788c — 2026-07-26
+> Verified: 0b8800b28 — 2026-07-26
 
 # Entities
 
@@ -48,6 +48,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 ## Pitfalls
 
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
+- **Remote fire/reload never plays:** `CmdFireTrigger` / stagger must `ApplyLocalSnapshot()` (pack `ActiveTrigger`) **before** `_triggerSequence++`. SyncVar OnChange rebuilds from the old pack synchronously and otherwise wipes the trigger — owner still sees local prediction.
 - **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
 - **`SetMind(null)` must `RemoveOwnership()`:** death `SwapMinds` assigns the ghost's empty mind to the corpse. Leaving FishNet Owner on the corpse delivers corpse TargetRpcs (hit flash) to the ghost — see [health](health.md). Server still `AlignToHips` on death ragdolls; do not write `IsFacingDown` (ServerRpc setter) without ownership — use a local facing bool.
