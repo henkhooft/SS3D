@@ -126,9 +126,30 @@ namespace SS3D.UI.MainHud.Components
         {
             InventorySlot inventorySlot = GetHandInventorySlot(slot);
             inventorySlot.ItemIcon = itemIcon;
-            inventorySlot.SlotLabel = string.IsNullOrEmpty(itemName)
-                ? (slot == HandSlot.Left ? "Left hand" : "Right hand")
-                : itemName;
+            if (inventorySlot.Reserved && itemIcon == null)
+            {
+                inventorySlot.SlotLabel = "Reserved";
+            }
+            else
+            {
+                inventorySlot.SlotLabel = string.IsNullOrEmpty(itemName)
+                    ? (slot == HandSlot.Left ? "Left hand" : "Right hand")
+                    : itemName;
+            }
+        }
+
+        public void SetHandReserved(HandSlot slot, bool reserved)
+        {
+            InventorySlot inventorySlot = GetHandInventorySlot(slot);
+            inventorySlot.Reserved = reserved;
+            if (reserved && inventorySlot.ItemIcon == null)
+            {
+                inventorySlot.SlotLabel = "Reserved";
+            }
+            else if (!reserved && inventorySlot.ItemIcon == null)
+            {
+                inventorySlot.SlotLabel = slot == HandSlot.Left ? "Left hand" : "Right hand";
+            }
         }
 
         public void SetActiveHand(bool leftIsActive)

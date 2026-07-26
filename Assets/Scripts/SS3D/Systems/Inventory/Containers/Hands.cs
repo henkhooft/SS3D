@@ -8,6 +8,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Items;
@@ -64,9 +65,45 @@ namespace SS3D.Systems.Inventory.Containers
             {
                 hand.HandsController = this;
                 hand.OnHandDisabled += HandleHandRemoved;
+                if (hand.Container != null)
+                {
+                    hand.Container.OnItemAttached += HandleHandItemAttached;
+                }
             }
             // Set the selected hand to be the first available one.
             _selectedHand = PlayerHands.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// After a two-hand rifle lands in its required hand (pickup/transfer auto-route), make that
+        /// hand active so the HUD and verbs match the grip.
+        /// </summary>
+        [Server]
+        private void HandleHandItemAttached(object sender, Item item)
+        {
+            if (!TwoHandedWeaponRules.RequiresBothHands(item, out HandSide requiredSide))
+            {
+                return;
+            }
+
+            Hand grip = TwoHandedWeaponRules.FindHand(this, requiredSide);
+            if (grip == null || sender as AttachedContainer != grip.Container)
+            {
+                return;
+            }
+
+            _selectedHand = grip;
+        }
+
+        [Server]
+        public void ServerSelectHand(Hand hand)
+        {
+            if (hand == null || !PlayerHands.Contains(hand))
+            {
+                return;
+            }
+
+            _selectedHand = hand;
         }
 
         /// <summary>
@@ -227,6 +264,11 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         public void HandleHandRemoved(Hand hand)
         {
+            if (hand?.Container != null)
+            {
+                hand.Container.OnItemAttached -= HandleHandItemAttached;
+            }
+
             if (!PlayerHands.Remove(hand))
             {
                 return;
@@ -249,6 +291,13 @@ namespace SS3D.Systems.Inventory.Containers
         public void AddHand(Hand hand)
         {
             PlayerHands.Add(hand);
+            hand.HandsController = this;
+            hand.OnHandDisabled += HandleHandRemoved;
+            if (hand.Container != null)
+            {
+                hand.Container.OnItemAttached += HandleHandItemAttached;
+            }
+
             if(PlayerHands.Count == 1)
             {
                 _selectedHand = hand;

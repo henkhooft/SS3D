@@ -18,6 +18,7 @@ using System.Collections;
 using FishNet.Object.Synchronizing;
 using System.ComponentModel;
 using static UnityEngine.GraphicsBuffer;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Tile;
 
@@ -494,11 +495,14 @@ namespace SS3D.Systems.Inventory.Containers
             }
 
             // If selected hand is empty and an item is present on the slot position in the container, transfer it to hand.
+            // Two-hand rifles auto-route to RequiredHand even when the other hand is selected.
             if (Hands.SelectedHand.IsEmpty())
             {
-                if (item != null)
+                if (item != null
+                    && TwoHandedWeaponRules.TryResolveHandForItem(Hands, item, Hands.SelectedHand, out Hand targetHand)
+                    && targetHand?.Container != null)
                 {
-                    ClientTransferItem(item, Vector2Int.zero, Hands.SelectedHand.Container);
+                    ClientTransferItem(item, Vector2Int.zero, targetHand.Container);
                 }
             }
             // If selected hand has an item and there's no item on the slot in the container, transfer it to container slot.

@@ -1191,6 +1191,7 @@ namespace SS3D.UI.MainHud
                 HandsGearStrip.HandSlot.Right,
                 HandIconAt(1),
                 HandNameAt(1));
+            RefreshHandReservedState();
 
             SetGear(HandsGearStrip.GearSlot.Belt, ContainerType.Belt);
             SetGear(HandsGearStrip.GearSlot.Id, ContainerType.Identification);
@@ -1230,6 +1231,40 @@ namespace SS3D.UI.MainHud
         private Sprite HandIconAt(int position) => HandItemAt(position)?.ItemSprite;
 
         private string HandNameAt(int position) => HandItemAt(position)?.Name;
+
+        private void RefreshHandReservedState()
+        {
+            if (_view == null || _hands == null)
+            {
+                return;
+            }
+
+            bool leftReserved = false;
+            bool rightReserved = false;
+            if (_hands.PlayerHands != null)
+            {
+                foreach (Hand hand in _hands.PlayerHands)
+                {
+                    if (hand == null)
+                    {
+                        continue;
+                    }
+
+                    bool reserved = TwoHandedWeaponRules.IsHandReserved(hand, _hands);
+                    if (hand.Side == HandSide.Left)
+                    {
+                        leftReserved = reserved;
+                    }
+                    else if (hand.Side == HandSide.Right)
+                    {
+                        rightReserved = reserved;
+                    }
+                }
+            }
+
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Left, leftReserved);
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Right, rightReserved);
+        }
 
         private Item HandItemAt(int position)
         {

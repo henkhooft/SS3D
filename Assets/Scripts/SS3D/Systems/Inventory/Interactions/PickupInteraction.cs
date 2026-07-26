@@ -6,6 +6,7 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Systems.GameModes.Events;
 using UnityEngine;
 using SS3D.Data.Generated;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 
@@ -50,10 +51,11 @@ namespace SS3D.Systems.Inventory.Interactions
                     return false;
                 }
 
-                // check that our hand is empty
-                if (!hand.IsEmpty())
+                // check that our hand is empty (two-hand rifles may still route to the other hand)
+                Hands hands = hand.HandsController;
+                if (hands == null)
                 {
-                    return false;
+                    hands = hand.GetComponentInParent<Hands>();
                 }
 
                 // try to get the Item component from the GameObject we just interacted with
@@ -71,13 +73,8 @@ namespace SS3D.Systems.Inventory.Interactions
                     return false;
                 }
 
-                // Two-hand rifles: wrong hand / reserved off-hand must not offer Pick up.
-                if (hand.Container != null && !hand.Container.CanContainItem(item))
-                {
-                    return false;
-                }
-
-                return true;
+                // Active left + empty right still offers Pick up for an M4 (auto-routes to right).
+                return TwoHandedWeaponRules.TryResolveHandForItem(hands, item, hand, out _);
             }
 
             return false;
@@ -90,6 +87,7 @@ namespace SS3D.Systems.Inventory.Interactions
             if (interactionEvent.Source is Hand hand && interactionEvent.Target is Item target)
             {
                 // and then we run the function that adds it to the container
+                // (Hand.Pickup auto-routes two-hand rifles to RequiredHand)
                 hand.Pickup(target);
 
 

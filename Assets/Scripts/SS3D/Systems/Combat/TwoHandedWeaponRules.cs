@@ -57,6 +57,101 @@ namespace SS3D.Systems.Combat
         }
 
         /// <summary>
+        /// Picks the hand that should receive <paramref name="item"/>. Two-hand firearms route to
+        /// <see cref="RangedWeaponProfile.RequiredHand"/> even when the other hand is active.
+        /// </summary>
+        public static bool TryResolveHandForItem(Hands hands, Item item, Hand preferredHand, out Hand targetHand)
+        {
+            targetHand = null;
+            if (item == null || hands == null)
+            {
+                return false;
+            }
+
+            if (RequiresBothHands(item, out HandSide requiredSide))
+            {
+                Hand required = FindHand(hands, requiredSide);
+                if (required == null || !CanPlaceInHand(item, required, hands) || !required.IsEmpty())
+                {
+                    return false;
+                }
+
+                targetHand = required;
+                return true;
+            }
+
+            if (preferredHand == null || !preferredHand.IsEmpty() || !CanPlaceInHand(item, preferredHand, hands))
+            {
+                return false;
+            }
+
+            targetHand = preferredHand;
+            return true;
+        }
+
+        /// <summary>
+        /// When dropping onto a hand well, retarget two-hand firearms from the wrong/reserved hand
+        /// to the required grip hand so HUD highlight and transfer match pickup auto-route.
+        /// </summary>
+        public static bool TryResolveHandContainerForItem(
+            Hands hands,
+            Item item,
+            AttachedContainer preferredContainer,
+            out AttachedContainer targetContainer)
+        {
+            targetContainer = preferredContainer;
+            if (hands == null || item == null || preferredContainer == null)
+            {
+                return preferredContainer != null;
+            }
+
+            Hand preferredHand = FindHandForContainer(hands, preferredContainer);
+            if (!TryResolveHandForItem(hands, item, preferredHand, out Hand targetHand) || targetHand?.Container == null)
+            {
+                return false;
+            }
+
+            targetContainer = targetHand.Container;
+            return true;
+        }
+
+        public static Hand FindHand(Hands hands, HandSide side)
+        {
+            if (hands?.PlayerHands == null)
+            {
+                return null;
+            }
+
+            foreach (Hand hand in hands.PlayerHands)
+            {
+                if (hand != null && hand.Side == side)
+                {
+                    return hand;
+                }
+            }
+
+            return null;
+        }
+
+        public static Hand FindHandForContainer(Hands hands, AttachedContainer container)
+        {
+            if (hands?.PlayerHands == null || container == null)
+            {
+                return null;
+            }
+
+            foreach (Hand hand in hands.PlayerHands)
+            {
+                if (hand != null && hand.Container == container)
+                {
+                    return hand;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// True when the other hand holds a two-hand weapon in its required hand — this hand is blocked.
         /// </summary>
         public static bool IsHandReserved(Hand hand, Hands hands)

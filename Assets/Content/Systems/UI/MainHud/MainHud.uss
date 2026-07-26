@@ -43,9 +43,11 @@
     align-items: flex-end;
 }
 
-/* Icon wells only — design #161616. Scoped so Machine Interface slots keep diegetic tokens. */
+/* Icon wells only — design #161616. Scoped so Machine Interface slots keep diegetic tokens.
+ * Do NOT add overflow:hidden here — well already has border-radius (UITK white-block pitfall). */
 .main-hud .inventory-slot__well {
     background-color: var(--ss3d-surface-hud);
+    position: relative;
 }
 
 .main-hud .inventory-slot--unknown .inventory-slot__well {
@@ -112,6 +114,45 @@
 .main-hud .inventory-slot--active-hand .inventory-slot__well {
     border-width: 2px;
     border-color: var(--ss3d-accent-rust);
+}
+
+/* Off-hand reserved by a two-hand firearm — dim + ban badge. */
+.main-hud .inventory-slot--reserved .inventory-slot__well {
+    opacity: 0.55;
+    border-color: var(--ss3d-text-tertiary);
+}
+
+.main-hud .inventory-slot--reserved .inventory-slot__label {
+    opacity: 1;
+    color: var(--ss3d-text-tertiary);
+}
+
+.main-hud .inventory-slot__reserved-badge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.main-hud .inventory-slot__reserved-ring {
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    border-width: 2px;
+    border-color: var(--ss3d-accent-rust);
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.main-hud .inventory-slot__reserved-slash {
+    position: absolute;
+    width: 2px;
+    height: 30px;
+    background-color: var(--ss3d-accent-rust);
+    rotate: 45deg;
 }
 
 /* Zone targeting reticle (main-hud §6) — corner brackets + center dot; terminal zone label. */

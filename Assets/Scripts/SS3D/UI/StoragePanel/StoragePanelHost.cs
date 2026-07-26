@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
@@ -557,9 +558,9 @@ namespace SS3D.UI.StoragePanel
             {
                 if (hudTarget.Container != null
                     && hudTarget.Container != _dragSourceContainer
-                    && TryGetHudDropPosition(hudTarget, _dragItem, out Vector2Int dropPosition))
+                    && TryResolveHudDrop(_dragItem, hudTarget, out AttachedContainer dropContainer, out Vector2Int dropPosition))
                 {
-                    _localInventory.ClientTransferItem(_dragItem, dropPosition, hudTarget.Container);
+                    _localInventory.ClientTransferItem(_dragItem, dropPosition, dropContainer);
                 }
 
                 return;
@@ -683,27 +684,42 @@ namespace SS3D.UI.StoragePanel
             }
 
             // Prefer the registered cell; for multi-slot wells (pockets) scan for a free/merge cell.
-            bool hudValid = TryGetHudDropPosition(hudTarget, _dragItem, out _);
+            bool hudValid = TryResolveHudDrop(_dragItem, hudTarget, out _, out _);
             hudTarget.Element.EnableInClassList("inventory-slot--valid-drop", hudValid);
             hudTarget.Element.EnableInClassList("inventory-slot--invalid-drop", !hudValid);
             _highlightedHudElement = hudTarget.Element;
         }
 
-        private static bool TryGetHudDropPosition(HudDropTarget target, Item item, out Vector2Int position)
+        private bool TryResolveHudDrop(
+            Item item,
+            HudDropTarget target,
+            out AttachedContainer dropContainer,
+            out Vector2Int position)
         {
+            dropContainer = null;
             position = default;
             if (target?.Container == null || item == null)
             {
                 return false;
             }
 
-            if (target.Container.CanContainItemAtPosition(item, target.Position))
+            dropContainer = target.Container;
+            Hands hands = _localInventory != null ? _localInventory.Hands : null;
+            if (hands != null
+                && target.Container.Type == ContainerType.Hand
+                && TwoHandedWeaponRules.TryResolveHandContainerForItem(hands, item, target.Container, out AttachedContainer routed)
+                && routed != null)
+            {
+                dropContainer = routed;
+            }
+
+            if (dropContainer.CanContainItemAtPosition(item, target.Position))
             {
                 position = target.Position;
                 return true;
             }
 
-            return target.Container.TryFindPositionFor(item, out position);
+            return dropContainer.TryFindPositionFor(item, out position);
         }
 
         private void ClearDropHighlight()
