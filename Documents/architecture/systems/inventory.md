@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 965d40550 — 2026-07-26 (zone reticle ScreenToPanel + hit-flash pivot center)
+> Verified: c996212b2 — 2026-07-26 (icon preview: ObjectIcon + white silhouette)
 
 # Inventory
 
@@ -30,6 +30,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
+- `Assets/Scripts/SS3D/Systems/Inventory/Items/Item.cs` — item entity; `GenerateIcon` → `IconPreviewGenerator`
+- `Assets/Scripts/SS3D/Utils/IconPreviewGenerator.cs` — bright `Unlit/ObjectIcon` + white silhouette for HUD/tile icons
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainer.cs` — container primitive
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
@@ -61,6 +63,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Pitfalls
 
+- **Item icons look dark / muddy after half-toon:** do not render HUD icons with live `STDefault` materials. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` material swap + white silhouette outline). Keep `ObjectIcon` in Always Included Shaders.
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Data → Rebuild All UI Catalogs** and commit the asset (same pattern as Machine UI; second copy of that stack).
 - **`ContainerViewer` must never reference `SS3D.UI.*`:** MainHudSubSystem hands the viewer to `StoragePanelHost` at bind/unbind. Do not add Systems→UI asmdef refs.
 - **Stack-merge highlight must match `AddStoredItem`:** `CanContainItemAtPosition` treats mergeable occupied stacks as valid — keep in sync with merge room checks.

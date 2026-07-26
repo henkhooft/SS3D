@@ -94,7 +94,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | Permissions | [permissions](systems/permissions.md) | partial | Admin permission checks; persisted via [persistence](systems/persistence.md) envelope with legacy txt fallback |
-| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; client FOV hard mask (`VisionRendererFeature` + batched raycast `_VisionMap`) |
+| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick pass (+ exclude layers), atmospherics scatter/glow/distortion; Simple Toon palette emission; `IconPreviewGenerator` / ObjectIcon for UI icons; client FOV hard mask (`VisionRendererFeature` + batched raycast `_VisionMap`) |
 | Asset organization | [asset-organization](systems/asset-organization.md) | partial | Art/Content/Data folder taxonomy; Phase 1 icons under `Art/Icons/`; InteractionIcons + remaining Phase 1 leftovers open; audit in [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) |
 
 ## Gameplay

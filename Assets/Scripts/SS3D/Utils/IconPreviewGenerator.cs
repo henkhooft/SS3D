@@ -1,0 +1,260 @@
+using System.Collections.Generic;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace SS3D.Utils
+{
+    /// <summary>
+    /// Bright full-toon UI icons: swaps preview renderers to <c>Unlit/ObjectIcon</c>,
+    /// renders via <see cref="RuntimePreviewGenerator"/>, then bakes a white silhouette outline.
+    /// </summary>
+    public static class IconPreviewGenerator
+    {
+        public const string ObjectIconShaderName = "Unlit/ObjectIcon";
+
+        private const int DefaultOutlineRadius = 2;
+        private const float AlphaThreshold = 0.08f;
+
+        private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int ColIntenseId = Shader.PropertyToID("_ColIntense");
+        private static readonly int ColBrightId = Shader.PropertyToID("_ColBright");
+        private static readonly int EmissionMapId = Shader.PropertyToID("_EmissionMap");
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+
+        /// <summary>
+        /// Renders <paramref name="model"/> as a bright icon texture with a white outline.
+        /// When <paramref name="shouldCloneModel"/> is false, the caller owns the transform
+        /// (materials are restored afterward). When true, a temporary clone is destroyed.
+        /// </summary>
+        public static Texture2D Generate(Transform model, int width = 128, int height = 128, bool shouldCloneModel = false)
+        {
+            if (model == null)
+            {
+                return null;
+            }
+
+            Shader shader = Shader.Find(ObjectIconShaderName);
+            if (shader == null)
+            {
+                Debug.LogWarning(
+                    $"{ObjectIconShaderName} missing (stripped?). Add it to Always Included Shaders. Falling back to lit preview.");
+                return RuntimePreviewGenerator.GenerateModelPreview(model, width, height, shouldCloneModel);
+            }
+
+            Transform preview = model;
+            bool ownsClone = false;
+            if (shouldCloneModel)
+            {
+                preview = Object.Instantiate(model, null, false);
+                preview.gameObject.hideFlags = HideFlags.HideAndDontSave;
+                ownsClone = true;
+            }
+
+            var originals = new Dictionary<Renderer, Material[]>();
+            var tempMaterials = new List<Material>();
+
+            Color previousBackground = RuntimePreviewGenerator.BackgroundColor;
+            bool previousOrthographic = RuntimePreviewGenerator.OrthographicMode;
+            bool previousMarkNonReadable = RuntimePreviewGenerator.MarkTextureNonReadable;
+
+            try
+            {
+                ApplyObjectIconMaterials(preview, shader, originals, tempMaterials);
+
+                RuntimePreviewGenerator.BackgroundColor = new Color(0f, 0f, 0f, 0f);
+                RuntimePreviewGenerator.OrthographicMode = true;
+                RuntimePreviewGenerator.MarkTextureNonReadable = false;
+
+                Texture2D texture = RuntimePreviewGenerator.GenerateModelPreview(preview, width, height, false);
+                if (texture != null)
+                {
+                    ApplyWhiteSilhouetteOutline(texture, DefaultOutlineRadius);
+                    texture.Apply(false, true);
+                }
+
+                return texture;
+            }
+            finally
+            {
+                RuntimePreviewGenerator.BackgroundColor = previousBackground;
+                RuntimePreviewGenerator.OrthographicMode = previousOrthographic;
+                RuntimePreviewGenerator.MarkTextureNonReadable = previousMarkNonReadable;
+
+                RestoreMaterials(originals);
+                for (int i = 0; i < tempMaterials.Count; i++)
+                {
+                    if (tempMaterials[i] != null)
+                    {
+                        Object.DestroyImmediate(tempMaterials[i]);
+                    }
+                }
+
+                if (ownsClone && preview != null)
+                {
+                    Object.DestroyImmediate(preview.gameObject);
+                }
+            }
+        }
+
+        private static void ApplyObjectIconMaterials(
+            Transform root,
+            Shader shader,
+            Dictionary<Renderer, Material[]> originals,
+            List<Material> tempMaterials)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int r = 0; r < renderers.Length; r++)
+            {
+                Renderer renderer = renderers[r];
+                if (renderer == null || renderer.transform.name == "InteractionOutline")
+                {
+                    continue;
+                }
+
+                Material[] shared = renderer.sharedMaterials;
+                originals[renderer] = shared;
+
+                Material[] replacements = new Material[shared.Length];
+                for (int m = 0; m < shared.Length; m++)
+                {
+                    Material source = shared[m];
+                    Material iconMat = new Material(shader)
+                    {
+                        hideFlags = HideFlags.HideAndDontSave,
+                    };
+                    CopyIconProperties(source, iconMat);
+                    tempMaterials.Add(iconMat);
+                    replacements[m] = iconMat;
+                }
+
+                renderer.sharedMaterials = replacements;
+            }
+        }
+
+        private static void CopyIconProperties(Material source, Material destination)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            if (source.HasProperty(MainTexId))
+            {
+                destination.SetTexture(MainTexId, source.GetTexture(MainTexId));
+                destination.SetTextureScale(MainTexId, source.GetTextureScale(MainTexId));
+                destination.SetTextureOffset(MainTexId, source.GetTextureOffset(MainTexId));
+            }
+
+            if (source.HasProperty(ColorId))
+            {
+                destination.SetColor(ColorId, source.GetColor(ColorId));
+            }
+
+            if (source.HasProperty(ColIntenseId))
+            {
+                destination.SetFloat(ColIntenseId, source.GetFloat(ColIntenseId));
+            }
+
+            if (source.HasProperty(ColBrightId))
+            {
+                destination.SetFloat(ColBrightId, source.GetFloat(ColBrightId));
+            }
+
+            if (source.HasProperty(EmissionMapId))
+            {
+                destination.SetTexture(EmissionMapId, source.GetTexture(EmissionMapId));
+            }
+
+            if (source.HasProperty(EmissionColorId))
+            {
+                destination.SetColor(EmissionColorId, source.GetColor(EmissionColorId));
+            }
+        }
+
+        private static void RestoreMaterials(Dictionary<Renderer, Material[]> originals)
+        {
+            foreach (KeyValuePair<Renderer, Material[]> pair in originals)
+            {
+                if (pair.Key != null)
+                {
+                    pair.Key.sharedMaterials = pair.Value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Dilates opaque silhouette by <paramref name="radius"/> pixels and paints white
+        /// in the ring (transparent → white edge). Mutates <paramref name="texture"/> in place.
+        /// </summary>
+        private static void ApplyWhiteSilhouetteOutline(Texture2D texture, int radius)
+        {
+            if (texture == null || radius <= 0)
+            {
+                return;
+            }
+
+            int width = texture.width;
+            int height = texture.height;
+            Color32[] pixels = texture.GetPixels32();
+            int count = pixels.Length;
+
+            bool[] opaque = new bool[count];
+            for (int i = 0; i < count; i++)
+            {
+                opaque[i] = pixels[i].a / 255f > AlphaThreshold;
+            }
+
+            bool[] dilated = new bool[count];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    if (opaque[index])
+                    {
+                        dilated[index] = true;
+                        continue;
+                    }
+
+                    bool found = false;
+                    for (int dy = -radius; dy <= radius && !found; dy++)
+                    {
+                        int ny = y + dy;
+                        if (ny < 0 || ny >= height)
+                        {
+                            continue;
+                        }
+
+                        for (int dx = -radius; dx <= radius; dx++)
+                        {
+                            int nx = x + dx;
+                            if (nx < 0 || nx >= width)
+                            {
+                                continue;
+                            }
+
+                            if (opaque[ny * width + nx])
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    dilated[index] = found;
+                }
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (dilated[i] && !opaque[i])
+                {
+                    pixels[i] = new Color32(255, 255, 255, 255);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+        }
+    }
+}
