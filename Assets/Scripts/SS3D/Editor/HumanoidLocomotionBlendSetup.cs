@@ -138,7 +138,7 @@ namespace SS3D.Editor
                     "Rebuild Combat Stance Blend Trees",
                     "Rebuild Base Layer Peaceful / Melee / Ranged / Injured FreeformCartesian2D locomotion " +
                     "switched by CombatStance + LimpSide. Restores AttackSwing trigger on Upper Body; " +
-                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); Ranged FireRifle on Base / Reload on Upper Body; " +
+                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); Ranged Upper Body Aim Idle + Fire/Reload; " +
                     "remaps injured-arm additive.\n\n" +
                     "Modifies HumanCharacterAnimator.controller.",
                     "Rebuild",
@@ -346,21 +346,17 @@ namespace SS3D.Editor
             WireInjuredWaveEmote(baseMachine, injured);
 
             WireStanceAwareFlinch(baseMachine, peaceful, melee, ranged, injured);
-            // Base layer must not consume AttackSwing — upper body owns the swing trigger.
+            // Base layer must not consume AttackSwing / ranged oneshots — Upper Body owns those.
+            // Fire on Base resets the Ranged FreeformCartesian (feet pop back to idle every shot).
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
-            // Reload is Upper Body (legs keep walking). Fire stays on Base — the clip is ~0.3s;
-            // putting it on Upper Body + weight snap caused a visible twitch vs rifle loco.
+            MuteAnyStateTrigger(baseMachine, "FireRifle");
             MuteAnyStateTrigger(baseMachine, "Reload");
-            UnmuteAnyStateTrigger(baseMachine, "FireRifle");
-
-            WireRangedFireOneshot(baseMachine, peaceful, melee, ranged, injured);
 
             // Upper-body Attack Swing variants (cycle via AttackVariant 0/1/2); exit-time → Hold Default.
             if (controller.layers.Length > 1)
             {
                 AnimatorStateMachine upper = controller.layers[1].stateMachine;
                 MuteAnyStateTrigger(upper, "AttackSwing");
-                MuteAnyStateTrigger(upper, "FireRifle");
 
                 (string StateName, string File, string ClipName, int Variant, Vector3 Pos)[] swings =
                 {
@@ -402,7 +398,11 @@ namespace SS3D.Editor
                     }
                 }
 
-                WireRangedReloadOneshot(upper, holdDefault);
+                // Fire + Reload on Upper Body over Rifle Aim Idle. Upper Body stays weighted for the
+                // whole Ranged stance so shots don't pulse layer weight (that snap was the shot twitch).
+                AnimatorState aimIdle = WireRangedAimIdle(upper, holdDefault);
+                WireRangedFireOneshot(upper, aimIdle);
+                WireRangedReloadOneshot(upper, aimIdle);
             }
 
             RemapStateMotion(
@@ -429,50 +429,62 @@ namespace SS3D.Editor
 
             return "OK: Rebuilt stance blends; injured idle severity; limp Jump/Turn90; Injured Wave Emote; "
                    + "AttackSwing variants + MirrorUpperBody; stance-aware Flinch (GettingHit/gut/HitReaction); "
-                   + "Ranged FireRifle on Base, Reload on Upper Body; Floating → Mix_Floating.";
+                   + "Ranged Upper Body Aim Idle + FireRifle/Reload; Floating → Mix_Floating.";
         }
 
         /// <summary>
-        /// Short M4 fire oneshot on Base (Ranged loco). ~0.3s — acceptable full-body interrupt.
-        /// Do not put FireRifle on Upper Body: weight snap vs rifle loco twitches every shot.
+        /// Ranged rest pose on Upper Body (Mix_AimingIdle). Orchestrator keeps Upper Body
+        /// weight at 1 for the whole Ranged stance so Fire/Reload can oneshot without pulsing layer weight.
         /// </summary>
-        private static void WireRangedFireOneshot(
-            AnimatorStateMachine baseMachine,
-            AnimatorState peaceful,
-            AnimatorState melee,
-            AnimatorState ranged,
-            AnimatorState injured)
+        private static AnimatorState WireRangedAimIdle(AnimatorStateMachine upper, AnimatorState holdDefault)
+        {
+            AnimationClip aimClip = LoadPackClip($"{ShooterPack}/rifle aiming idle.fbx", "Mix_AimingIdle");
+            AnimatorState aimIdle = FindOrCreateState(upper, "Rifle Aim Idle", new Vector3(300, 400, 0));
+            if (aimClip != null)
+            {
+                aimIdle.motion = aimClip;
+                aimIdle.writeDefaultValues = true;
+            }
+
+            if (holdDefault != null)
+            {
+                EnsureCombatStanceTransition(holdDefault, aimIdle, combatStance: 2, duration: 0.1f);
+                EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 0, duration: 0.1f);
+                EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 1, duration: 0.1f);
+            }
+
+            return aimIdle;
+        }
+
+        /// <summary>
+        /// Short M4 fire oneshot on Upper Body. Exits to Rifle Aim Idle — Base Ranged FreeformCartesian
+        /// keeps foot phase; Upper Body weight stays up for the stance so there is no per-shot snap.
+        /// </summary>
+        private static void WireRangedFireOneshot(AnimatorStateMachine upper, AnimatorState aimIdle)
         {
             AnimationClip fireClip = LoadPackClip($"{ShooterPack}/firing rifle.fbx", "Mix_FiringRifle");
-            AnimatorState fireState = FindOrCreateState(baseMachine, "Fire Rifle", new Vector3(50, 460, 0));
+            AnimatorState fireState = FindOrCreateState(upper, "Fire Rifle", new Vector3(600, 220, 0));
             if (fireClip != null)
             {
                 fireState.motion = fireClip;
                 fireState.writeDefaultValues = true;
             }
 
+            UnmuteAnyStateTrigger(upper, "FireRifle");
             EnsureAnyStateTriggerWithCombatStance(
-                baseMachine, fireState, "FireRifle", combatStance: 2, canTransitionToSelf: true, entryDuration: 0.05f);
+                upper, fireState, "FireRifle", combatStance: 2, canTransitionToSelf: true, entryDuration: 0.05f);
 
             ClearTransitions(fireState);
-            EnsureExitToStateWithLimpGate(fireState, peaceful, requireLimping: false, combatStance: 0);
-            EnsureExitToStateWithLimpGate(fireState, melee, requireLimping: false, combatStance: 1);
-            EnsureExitToStateWithLimpGate(fireState, ranged, requireLimping: false, combatStance: 2);
-            EnsureExitToStateWithLimpGate(fireState, injured, requireLimping: true, combatStance: null);
-            foreach (AnimatorStateTransition transition in fireState.transitions)
+            if (aimIdle != null)
             {
-                transition.hasExitTime = true;
-                transition.exitTime = 0.75f;
-                transition.hasFixedDuration = true;
-                transition.duration = 0.12f;
+                EnsureExitToState(fireState, aimIdle, hasExitTime: true, exitTime: 0.85f, duration: 0.1f);
             }
         }
 
         /// <summary>
-        /// Long M4 reload oneshot on Upper Body so Base Ranged loco keeps the legs walking.
-        /// Orchestrator raises Upper Body weight only while Reload Rifle plays.
+        /// Long M4 reload oneshot on Upper Body; exits to Rifle Aim Idle.
         /// </summary>
-        private static void WireRangedReloadOneshot(AnimatorStateMachine upper, AnimatorState holdDefault)
+        private static void WireRangedReloadOneshot(AnimatorStateMachine upper, AnimatorState aimIdle)
         {
             AnimationClip reloadClip = LoadPackClip($"{ShooterPack}/reloading.fbx", "Mix_Reloading");
             AnimatorState reloadState = FindOrCreateState(upper, "Reload Rifle", new Vector3(600, 280, 0));
@@ -487,10 +499,43 @@ namespace SS3D.Editor
                 upper, reloadState, "Reload", combatStance: 2, canTransitionToSelf: false, entryDuration: 0.1f);
 
             ClearTransitions(reloadState);
-            if (holdDefault != null)
+            if (aimIdle != null)
             {
-                EnsureExitToState(reloadState, holdDefault, hasExitTime: true, exitTime: 0.9f, duration: 0.2f);
+                EnsureExitToState(reloadState, aimIdle, hasExitTime: true, exitTime: 0.9f, duration: 0.15f);
             }
+        }
+
+        private static void EnsureCombatStanceTransition(
+            AnimatorState from,
+            AnimatorState to,
+            int combatStance,
+            float duration)
+        {
+            foreach (AnimatorStateTransition transition in from.transitions)
+            {
+                if (transition.destinationState != to)
+                {
+                    continue;
+                }
+
+                bool stanceOk = transition.conditions.Any(
+                    c => c.parameter == "CombatStance"
+                         && c.mode == AnimatorConditionMode.Equals
+                         && (int)c.threshold == combatStance);
+                if (stanceOk)
+                {
+                    transition.hasExitTime = false;
+                    transition.hasFixedDuration = true;
+                    transition.duration = duration;
+                    return;
+                }
+            }
+
+            AnimatorStateTransition created = from.AddTransition(to);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = duration;
+            created.AddCondition(AnimatorConditionMode.Equals, combatStance, "CombatStance");
         }
 
         private static void EnsureAnyStateTriggerWithCombatStance(

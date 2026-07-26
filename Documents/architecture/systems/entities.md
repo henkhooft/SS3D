@@ -27,7 +27,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — holds, stance, limp + `InjuredLeg` / arms, rare hurt Emote, `MirrorUpperBody`; suppresses while `Presentation != Locomotion`
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — Harm intent toggle; `OnHitReceived` → stagger/`Flinch` (called from health `ApplyDamage`)
-- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch**; Ranged **FireRifle** on Base / **Reload** on Upper Body (`Mix_FiringRifle` / `Mix_Reloading`)
+- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch**; Ranged Upper Body **Rifle Aim Idle** + **FireRifle** / **Reload** (`Mix_AimingIdle` / `Mix_FiringRifle` / `Mix_Reloading`)
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
@@ -39,7 +39,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips (`SS3D → Animation → Rebuild Combat Stance Blend Trees`).
 - Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
 - Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch` (one packed publish). Base selects by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), gut (Melee), `Mix_HitReaction` (Ranged). Additive layer also takes `Flinch` → gut with a **lerped** weight (~0.75) while Staggered. `Mix_ShoulderHitAndFall` / get-ups deferred.
-- Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. **FireRifle** stays on **Base** (short ~0.3s oneshot — Upper Body weight snap twitches vs rifle loco). **Reload** is **Upper Body** so legs keep walking; orchestrator raises Upper Body weight only while `Reload Rifle` plays.
+- Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. Upper Body stays weighted for the whole Ranged stance on **Rifle Aim Idle** (`Mix_AimingIdle`); Fire/Reload oneshot and return there. Base Ranged FreeformCartesian keeps foot phase — do not pulse Upper Body weight per shot (that was the snap/twitch).
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
@@ -47,7 +47,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Pitfalls
 
-- **Ranged reload freezes legs:** put **Reload** on **Upper Body** (mask excludes hips/legs); orchestrator holds Upper Body weight while `Reload Rifle` plays. **Do not** put FireRifle on Upper Body with a weight snap — that twitches every shot against rifle loco; keep Fire on Base.
+- **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
