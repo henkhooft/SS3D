@@ -125,8 +125,15 @@ namespace SS3D.Systems.Entities
         [Server]
         public void SetMind(Mind mind)
         {
-            this._mind = mind;
-            if(mind == null) return;
+            _mind = mind;
+            // Ghosts ship with a null mind; SwapMinds assigns that to the corpse. Must clear FishNet
+            // ownership or the dead player keeps Owner and still receives corpse TargetRpcs (hit flash).
+            if (mind == null || mind == Mind.Empty)
+            {
+                RemoveOwnership();
+                return;
+            }
+
             GiveOwnership(mind.Owner);
         }
 

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: 63b0e32fc — 2026-07-26
+> Verified: b376eaa02 — 2026-07-26
 
 # Health
 
@@ -80,6 +80,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
 - **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **Screen-effect/personal-audio Clear from other bodies:** only clear when `_drivingLocalPresentation` — other players' mind unassign must not wipe the local owner's Volume intensities or heartbeat cue.
+- **Ghost still gets hit flash after death:** `SwapMinds` used to leave FishNet ownership on the corpse (`SetMind(null)` early-returned). `ApplyDamage` then `RpcHitFlash(Owner)` to the ghost. Clear ownership on null/`Mind.Empty`; skip hit flash when `_deathTriggered` / `HealthState.Dead`; `RpcHitFlash` also requires `IsLocalOwnerMind()`.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
 - **No tile/atmos yet ≠ vacuum:** `SampleEnvironmentAtBody` returns `HealthEnvironmentState.SafeDefault` (breathable) when Tile/Atmos aren't ready — do not treat missing samples as vacuum or lobby spawns suffocate. `atmosdamage off` forces SafeDefault every tick. `HumanoidSupportState.Unknown` (map missing / not ready) also → SafeDefault.
 - **Off-map / past atmos chunks is vacuum:** once Tile+Atmos are ready, `HumanoidSupportState.Unsupported` (server: no plenum, or occupancy-miss **after** `TileMapLoaded`) keeps exposure as vacuum even when `TryGetCellDebugInfo` fails outside `_coordToIndex`. Do not fall back to SafeDefault there or deep-space float becomes breathable. Client `!HasPlenum` / occupancy-miss is Unknown (AOI), not Unsupported — see [entities](entities.md) and [TECH_DEBT.md](../TECH_DEBT.md) §1.17.

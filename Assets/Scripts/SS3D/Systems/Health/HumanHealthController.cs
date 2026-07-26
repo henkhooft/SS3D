@@ -226,7 +226,12 @@ namespace SS3D.Systems.Health
 
             PublishSnapshot();
 
-            if (brute + burn > 0f && Owner.IsValid)
+            // Dead / unminded corpses must not flash the ghost's screen — Owner may still be valid
+            // briefly if SetMind(null) has not run yet; never TargetRpc after death latch.
+            if (brute + burn > 0f
+                && Owner.IsValid
+                && !_deathTriggered
+                && _snapshot.State != HealthState.Dead)
             {
                 RpcHitFlash(Owner);
             }
@@ -827,6 +832,12 @@ namespace SS3D.Systems.Health
         [TargetRpc(RunLocally = true)]
         private void RpcHitFlash(NetworkConnection target)
         {
+            // Belt-and-suspenders: only flash while this body still has a local living mind.
+            if (!IsLocalOwnerMind() || _deathTriggered || _snapshot.State == HealthState.Dead)
+            {
+                return;
+            }
+
             SubSystems.Get<ScreenEffectsSubSystem>()?.TriggerHitFlash();
         }
 

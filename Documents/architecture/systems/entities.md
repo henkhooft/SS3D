@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 63b0e32fc — 2026-07-26
+> Verified: b376eaa02 — 2026-07-26
 
 # Entities
 
@@ -50,6 +50,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
 - **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
+- **`SetMind(null)` must `RemoveOwnership()`:** death `SwapMinds` assigns the ghost's empty mind to the corpse. Leaving FishNet Owner on the corpse delivers corpse TargetRpcs (hit flash) to the ghost — see [health](health.md).
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
