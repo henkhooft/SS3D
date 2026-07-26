@@ -64,6 +64,13 @@ namespace SS3D.Systems.Entities.Humanoid
 
         [SerializeField] private float _additiveWeightLerp = 8f;
 
+        private static readonly int RifleAimIdleStateHash = Animator.StringToHash("Rifle Aim Idle");
+        private static readonly int FireRifleStateHash = Animator.StringToHash("Fire Rifle");
+        private static readonly int ReloadRifleStateHash = Animator.StringToHash("Reload Rifle");
+        private static readonly int HoldDefaultStateHash = Animator.StringToHash("Hold Default");
+
+        private HumanoidCombatMode _lastAppliedCombatMode = HumanoidCombatMode.Peaceful;
+
         public Animator Animator => _animator;
 
         protected override void OnStart()
@@ -471,6 +478,48 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetFloat(Animations.Humanoid.AimYaw, snapshot.AimYaw);
             _animator.SetFloat(Animations.Humanoid.AimPitch, snapshot.AimPitch);
             _ikController?.SetCombatLookAt(inCombat, snapshot.AimYaw, snapshot.AimPitch);
+
+            // Hold Item/Weapon have no path to Rifle Aim Idle unless wired — CrossFade on stance
+            // enter so a held gun doesn't show melee Hold Weapon until the first shot.
+            if (snapshot.CombatMode == HumanoidCombatMode.Ranged
+                && _lastAppliedCombatMode != HumanoidCombatMode.Ranged)
+            {
+                EnsureUpperBodyState(RifleAimIdleStateHash, 0.1f);
+            }
+            else if (snapshot.CombatMode == HumanoidCombatMode.Melee
+                     && _lastAppliedCombatMode == HumanoidCombatMode.Ranged)
+            {
+                EnsureUpperBodyState(HoldDefaultStateHash, 0.1f);
+            }
+
+            _lastAppliedCombatMode = snapshot.CombatMode;
+        }
+
+        private void EnsureUpperBodyState(int stateHash, float fixedTransitionDuration)
+        {
+            if (_animator == null || _animator.layerCount <= 1)
+            {
+                return;
+            }
+
+            AnimatorStateInfo current = _animator.GetCurrentAnimatorStateInfo(1);
+            if (current.shortNameHash == stateHash
+                || current.shortNameHash == FireRifleStateHash
+                || current.shortNameHash == ReloadRifleStateHash)
+            {
+                return;
+            }
+
+            if (_animator.IsInTransition(1))
+            {
+                int next = _animator.GetNextAnimatorStateInfo(1).shortNameHash;
+                if (next == stateHash || next == FireRifleStateHash || next == ReloadRifleStateHash)
+                {
+                    return;
+                }
+            }
+
+            _animator.CrossFadeInFixedTime(stateHash, fixedTransitionDuration, 1);
         }
 
         private void ApplyInjuries(BodyAnimationSnapshot snapshot)

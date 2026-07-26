@@ -400,7 +400,9 @@ namespace SS3D.Editor
 
                 // Fire + Reload on Upper Body over Rifle Aim Idle. Upper Body stays weighted for the
                 // whole Ranged stance so shots don't pulse layer weight (that snap was the shot twitch).
-                AnimatorState aimIdle = WireRangedAimIdle(upper, holdDefault);
+                AnimatorState holdItem = FindState(upper, "Hold Item");
+                AnimatorState holdWeapon = FindState(upper, "Hold Weapon");
+                AnimatorState aimIdle = WireRangedAimIdle(upper, holdDefault, holdItem, holdWeapon);
                 WireRangedFireOneshot(upper, aimIdle);
                 WireRangedReloadOneshot(upper, aimIdle);
             }
@@ -435,8 +437,14 @@ namespace SS3D.Editor
         /// <summary>
         /// Ranged rest pose on Upper Body (Mix_AimingIdle). Orchestrator keeps Upper Body
         /// weight at 1 for the whole Ranged stance so Fire/Reload can oneshot without pulsing layer weight.
+        /// All Hold* states must reach Aim Idle when CombatStance becomes Ranged — otherwise a held
+        /// weapon leaves Upper Body on Hold Weapon and shows a melee pose until the first shot.
         /// </summary>
-        private static AnimatorState WireRangedAimIdle(AnimatorStateMachine upper, AnimatorState holdDefault)
+        private static AnimatorState WireRangedAimIdle(
+            AnimatorStateMachine upper,
+            AnimatorState holdDefault,
+            AnimatorState holdItem,
+            AnimatorState holdWeapon)
         {
             AnimationClip aimClip = LoadPackClip($"{ShooterPack}/rifle aiming idle.fbx", "Mix_AimingIdle");
             AnimatorState aimIdle = FindOrCreateState(upper, "Rifle Aim Idle", new Vector3(300, 400, 0));
@@ -446,9 +454,16 @@ namespace SS3D.Editor
                 aimIdle.writeDefaultValues = true;
             }
 
+            foreach (AnimatorState hold in new[] { holdDefault, holdItem, holdWeapon })
+            {
+                if (hold != null)
+                {
+                    EnsureCombatStanceTransition(hold, aimIdle, combatStance: 2, duration: 0.1f);
+                }
+            }
+
             if (holdDefault != null)
             {
-                EnsureCombatStanceTransition(holdDefault, aimIdle, combatStance: 2, duration: 0.1f);
                 EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 0, duration: 0.1f);
                 EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 1, duration: 0.1f);
             }
