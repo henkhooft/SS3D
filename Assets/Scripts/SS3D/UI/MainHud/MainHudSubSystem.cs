@@ -819,6 +819,11 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
+            if (!_hands.CanSelectHand(hand))
+            {
+                return;
+            }
+
             // Same path as legacy SingleItemContainerSlot — ServerRpc via HumanInventory.ActivateHand.
             _inventory.ActivateHand(hand.Container);
 
