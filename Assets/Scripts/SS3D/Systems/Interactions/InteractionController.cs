@@ -319,14 +319,20 @@ namespace SS3D.Systems.Interactions
 
             weapon.ServerCompleteReloadIfDue();
 
-            // Empty mag → start reload instead of falling through to melee with the rifle.
+            // Empty mag → server dry-fire (+ reload if possible); do not fall through to melee.
             if (weapon.RoundsRemaining <= 0)
             {
-                if (weapon.CanStartReload())
+                if (!IsServer)
                 {
-                    TryRunRangedReloadPrimary();
+                    // Optimistic reload lock when a reload can start; dry-fire audio is server-side.
+                    if (weapon.CanStartReload())
+                    {
+                        weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
+                    }
                 }
 
+                TrySyncMeleeAimToServer();
+                CmdRunRangedFire();
                 return true;
             }
 
@@ -409,6 +415,7 @@ namespace SS3D.Systems.Interactions
 
             if (weapon.RoundsRemaining <= 0)
             {
+                PlayGunEmptySound(weapon);
                 if (weapon.ServerTryBeginReload())
                 {
                     ServerNotifyRangedReloadStarted(weapon);
@@ -487,6 +494,11 @@ namespace SS3D.Systems.Interactions
                 }
             }
 
+            if (hasImpact && !hitLiving)
+            {
+                PlaySurfaceHitSound(impactPoint);
+            }
+
             ClearMeleeAimPoint();
             ServerNotifyRangedFireState(weapon, landed, hasImpact, impactPoint, shotDirection);
         }
@@ -520,6 +532,29 @@ namespace SS3D.Systems.Interactions
             string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
             float pitch = UnityEngine.Random.Range(0.95f, 1.05f);
             SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(AudioType.Sfx, clipId, position, null, false, 0.9f, pitch);
+        }
+
+        [Server]
+        private void PlayGunEmptySound(RangedWeaponItemExtension weapon)
+        {
+            Vector3 position = transform.position;
+            if (weapon != null)
+            {
+                weapon.GetMuzzleWorldPose(out position, out _);
+            }
+
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, CombatAudioTrackIds.GunEmpty, position, null, false, 0.75f, 1f);
+        }
+
+        [Server]
+        private static void PlaySurfaceHitSound(Vector3 impactPoint)
+        {
+            string[] clips = CombatAudioTrackIds.SurfaceHit;
+            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
+            float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, clipId, impactPoint, null, false, 0.7f, pitch);
         }
 
         [Server]

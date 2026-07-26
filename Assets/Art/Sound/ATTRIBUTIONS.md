@@ -17,6 +17,18 @@ not original SS3D / SS3D-Art work. Keep paths relative to the repo root.
 | `Assets/Art/Sound/Entities/Humanoid/Combat/Punch2.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Weapons | SS14 `Resources/Audio/Weapons/punch2.ogg` |
 | `Assets/Art/Sound/Entities/Humanoid/Combat/GenHit1.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Weapons | SS14 `Resources/Audio/Weapons/genhit1.ogg` |
 | `Assets/Art/Sound/Entities/Humanoid/Combat/WeakHit1.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Effects | SS14 `Resources/Audio/Effects/weak_hit1.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Rifle.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Gunshots | SS14 `Resources/Audio/Weapons/Guns/Gunshots/rifle.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Rifle2.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Gunshots | SS14 `Resources/Audio/Weapons/Guns/Gunshots/rifle2.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Empty.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Empty | SS14 `Resources/Audio/Weapons/Guns/Empty/empty.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleMagOut.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/MagOut | SS14 `Resources/Audio/Weapons/Guns/MagOut/ltrifle_magout.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleMagIn.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/MagIn | SS14 `Resources/Audio/Weapons/Guns/MagIn/ltrifle_magin.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/LtRifleCock.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Cock | SS14 `Resources/Audio/Weapons/Guns/Cock/ltrifle_cock.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/BulletHit.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/bullet_hit.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric1.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric1.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric2.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric2.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric3.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric3.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric4.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric4.ogg` |
+| `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric5.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric5.ogg` |
 
 SS3D-Art vocals under `Assets/Art/Sound/Entities/Humanoids/Human/Vocal/` (Choke&Gasp, Scream)
 default to [Documents/LICENSE-ASSETS.md](../../Documents/LICENSE-ASSETS.md) (CC BY-NC-SA 4.0).

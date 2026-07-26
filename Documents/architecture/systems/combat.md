@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 1e0bab6f5 — 2026-07-25
+> Verified: 95b5052e7 — 2026-07-26
 
 # Combat
 
@@ -34,7 +34,7 @@ stamina drain), projectile/thrown.
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm branch: ranged fire / reload Cmds; melee swing; aim + TargetRpcs
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/RangedWeaponItemExtension.cs` — profile, mag, recoil, cooldown, reload
 - `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs` / `MuzzleFlashVfx.cs`
-- `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (gunfire, reload magazine-out) registered from imported SS3D-Art content; `InteractionController.PlayGunfireSound` / `ServerNotifyRangedReloadStarted` play them through `AudioSubSystem.PlayAudioSource` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
+- `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (SS14 rifle fire/empty/mag/cock + surface ricochet set) registered under `Assets/Art/Sound/Items/Weapons/Firearms/SS14/`; `InteractionController` plays fire/empty/surface via `AudioSubSystem.PlayAudioSource`, reload-complete mag-in/cock from `RangedWeaponItemExtension.TryCompleteReloadIfDue` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
 - `Assets/Scripts/SS3D/Utils/LineOfSight.cs` — shared occlusion (Drop, LocalSpeech, combat)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — melee swing + connect
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` / `HandMeleeExtension.cs`
@@ -77,12 +77,13 @@ stamina drain), projectile/thrown.
 - **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - **Ranged impact marker is client-local** — `RangedShotFeedback` after `TargetNotifyRangedFireState`; gold = damaging connect (also cross-flash), grey = surface whiff. Living hits pull the marker toward the shooter so it isn't buried inside BodyParts colliders. Do not invent a second hit-VFX path.
 - **Muzzle flash is ObserversRpc** — `ObserversNotifyMuzzleFlash` → each client parents `MuzzleFlashVfx` to the local held `Muzzle` socket (light + particles at that transform); server-sampled world pose is fallback only. Do not spawn the flash only from a baked server world point or remotes/owner visuals can drift.
+- **Surface impact SFX** — non-living hits play a random `CombatAudioTrackIds.SurfaceHit` clip (`BulletHit` + `Ric1`–`Ric5`) at the impact point; living hits keep health `FleshHit`. Do not play surface ricochets on limb connects.
 - **Hitscan must resolve living before full-range Default occlusion** — Characters are not on the Default mask, so a max-range Default cast goes *through* the dummy and can “block” on floor/props behind them (no limb damage; marker far behind or easy to miss). Order: zone hit → LOS (Default+Walls) only to that limb → structural/soft. Do not early-out on `IsOccluded` for the full weapon range.
 - **Armor absorption is a single chokepoint** — lives inside `HumanHealthController.ApplyDamage(BodyZone, float, float)`, not duplicated in melee/ranged call sites; also applies to `StructuralDamageSubSystem`'s debris-collapse call (intentional, not excluded).
 - **Armor coverage ≠ clothing slot** — `ArmorProfile.CoveredZones` (`BodyZoneMask`) is independent of which `ContainerType` slot the item occupies; only "is it worn" (`IsWornSlot()`) gates lookup, not slot identity.
 - **Armor Item is not a dual prefab** — `ArmorItemExtension` stays on the clothing Item (`JumpsuitSecurity`); world folded look is `ClothingItemPresentation` on the same NO ([inventory](inventory.md)). Do not spawn a separate folded NetworkObject for drops.
 - Melee pitfalls (connect aim, exclude self, structural reach, Harm whitelist, etc.) still apply — see git history / prior map notes.
-- **No dedicated "AR-15 fire" sound exists in the source pack** — the AR-15 SS3D-Art folder only has charging/dry-fire/selector/magazine foley, not a gunshot; `CombatAudioTrackIds.GunFire` uses the generic `Sound/Items/Weapons/Firearms/Gun Firing1-2.wav` pair instead. `AR Charging`/`AR Dry Fire`/`AR Fire Selector Up-Down`/`AR Magazine Full In` and the whole Pump Shotgun set are imported (`Assets/Art/Sound/Items/Weapons/Firearms/`) but deliberately left unwired — no clean existing event for "reload complete" (reload is lazily polled, not a fired callback), no fire-mode toggle, and no shotgun weapon exists in code yet.
+- **M4 gun audio is the SS14 rifle set** — `GunFire` = `Rifle`/`Rifle2`; empty = `Empty`; reload start = `LtRifleMagOut`; reload complete = `LtRifleMagIn` + `LtRifleCock` (server `TryCompleteReloadIfDue`). Legacy SS3D-Art `Gun Firing1-2` / AR-15 folder / Pump Shotgun remain on disk but unwired. Surface impacts: `SurfaceHit` (`BulletHit` + `Ric1`–`Ric5`).
 
 ## Depends on / Used by
 

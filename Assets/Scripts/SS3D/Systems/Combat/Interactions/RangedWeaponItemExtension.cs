@@ -1,7 +1,11 @@
+using FishNet.Object;
+using SS3D.Core;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Audio;
 using System.Collections.Generic;
 using UnityEngine;
+using AudioType = SS3D.Systems.Audio.AudioType;
 
 namespace SS3D.Systems.Combat.Interactions
 {
@@ -21,6 +25,7 @@ namespace SS3D.Systems.Combat.Interactions
         private float _reloadUntil;
         private float _lastRecoilDecayTime;
         private bool _initialized;
+        private NetworkObject _networkObject;
 
         public RangedWeaponProfile Profile => _profile;
 
@@ -61,7 +66,14 @@ namespace SS3D.Systems.Combat.Interactions
 
         private void Awake()
         {
+            _networkObject = GetComponent<NetworkObject>();
             EnsureInitialized();
+        }
+
+        private void Update()
+        {
+            // Ensure reload completion (and mag-in cue) fires even if nothing else polls this frame.
+            TryCompleteReloadIfDue();
         }
 
         public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
@@ -79,14 +91,14 @@ namespace SS3D.Systems.Combat.Interactions
         {
             EnsureInitialized();
             DecayRecoil();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             return !IsBusy && _rounds > 0;
         }
 
         public bool CanStartReload()
         {
             EnsureInitialized();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             return !IsReloading && _rounds < MagazineSize;
         }
 
@@ -116,7 +128,7 @@ namespace SS3D.Systems.Combat.Interactions
         {
             EnsureInitialized();
             DecayRecoil();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             if (IsBusy || _rounds <= 0)
             {
                 return false;
@@ -132,7 +144,7 @@ namespace SS3D.Systems.Combat.Interactions
         public bool ServerTryBeginReload()
         {
             EnsureInitialized();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             if (!CanStartReload())
             {
                 return false;
@@ -142,21 +154,31 @@ namespace SS3D.Systems.Combat.Interactions
             return true;
         }
 
-        public void ServerCompleteReloadIfDue()
+        /// <summary>Completes a due reload. On server, plays mag-in (+ cock) once when the timer elapses.</summary>
+        public bool TryCompleteReloadIfDue()
         {
             if (_reloadUntil <= 0f)
             {
-                return;
+                return false;
             }
 
             if (Time.time < _reloadUntil)
             {
-                return;
+                return false;
             }
 
             _rounds = MagazineSize;
             _reloadUntil = 0f;
+            if (IsServerAuthority())
+            {
+                PlayReloadCompleteSounds();
+            }
+
+            return true;
         }
+
+        /// <summary>Legacy name — prefer <see cref="TryCompleteReloadIfDue"/> when the return value matters.</summary>
+        public void ServerCompleteReloadIfDue() => TryCompleteReloadIfDue();
 
         public float CurrentSpreadDegrees(float horizontalSpeed, float aimDistanceMeters, float exertionPenalty = 0f)
         {
@@ -181,6 +203,24 @@ namespace SS3D.Systems.Combat.Interactions
 
             forward = transform.forward.sqrMagnitude > 0.0001f ? transform.forward.normalized : Vector3.forward;
             position = transform.position + (forward * 0.35f);
+        }
+
+        private bool IsServerAuthority()
+        {
+            return _networkObject != null && _networkObject.IsServer;
+        }
+
+        private void PlayReloadCompleteSounds()
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                return;
+            }
+
+            Vector3 position = transform.position;
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineIn, position, null);
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadCock, position, null, false, 0.85f, 1f);
         }
 
         private void EnsureInitialized()
