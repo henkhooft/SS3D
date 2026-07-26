@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: BulletHoleVfxCatalog
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Combat.BulletHoleVfxCatalog
   _holes:
-  - {fileID: 2800000, guid: d72364ba36a64cd19d6bf1fb6f0266d7, type: 3}
   - {fileID: 2800000, guid: 39e3bb5de29f4055a8d9702488a98faf, type: 3}
   - {fileID: 2800000, guid: efb7de4589024556bec4e064d55b50f4, type: 3}
   - {fileID: 2800000, guid: beb05f9e101249b6adfddfb2c13286a2, type: 3}
@@ -21,3 +20,4 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 497ecef5f5444fb3aa1da25360e1557e, type: 3}
   _decalMaterial: {fileID: 2100000, guid: cee41ebbce674bcdb7f5aaae0af2e34c, type: 2}
   _floorDecalPrefab: {fileID: 8123456789012345678, guid: e5edd16174b54cba8aa8a83fce892f5b, type: 3}
+  _multiplyTintShader: {fileID: 4800000, guid: cf88f09667ed419d98051a601f8c0f48, type: 3}

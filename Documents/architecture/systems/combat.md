@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: e2c894cfb — 2026-07-26
+> Verified: ec546f7d5 — 2026-07-26
 
 # Combat
 
@@ -77,7 +77,8 @@ stamina drain), projectile/thrown.
 - **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - **Ranged impact marker is client-local** — `RangedShotFeedback` after `TargetNotifyRangedFireState`; gold = damaging connect (also cross-flash), grey = surface whiff. Living hits pull the marker toward the shooter so it isn't buried inside BodyParts colliders. Do not invent a second hit-VFX path.
 - **Muzzle flash is ObserversRpc** — `ObserversNotifyMuzzleFlash` → each client parents `MuzzleFlashVfx` to the local held `Muzzle` socket (light + particles at that transform); server-sampled world pose is fallback only. Do not spawn the flash only from a baked server world point or remotes/owner visuals can drift.
-- **Bullet holes are ObserversRpc + world-floor decal layers** — `ObserversNotifyBulletHole` → `BulletHoleDecalSpawner` (cap 96). Living hits skip holes. Keep URP Decal material **Opaque**; projectors use `DecalRenderingLayers.WorldFloorProjectorMask` and `BloodDecalSpawner.RotationOntoSurface` (same floor-paint pitfalls as health blood).
+- **Bullet holes are ObserversRpc + world-floor decal layers** — `ObserversNotifyBulletHole` → `BulletHoleDecalSpawner` (cap 96). Living hits skip holes. Keep URP Decal material **Opaque**; projectors use `DecalRenderingLayers.WorldFloorProjectorMask` and `BloodDecalSpawner.RotationOntoSurface` (same floor-paint pitfalls as health blood). Catalog uses **Shreds only** (not `BulletHole.png`); white masks are charcoal-tinted at runtime via `Hidden/SS3D/MultiplyTint` like blood. Structural hits pass the wall collider normal (not a second probe).
+- **Holes only on URP Lit floors (e.g. TileGrey), missing on ST walls/floors** — Decal Renderer **Use Rendering Layers** must stay on (`decalLayers: 1` on `SS3D_ForwardPlusRenderer`). A lighting retune once flipped it off; with layers on, tiles need `ReceiveWorldDecals` (stamped by `PlacedTileObject`) and ST must sample DBuffer. Do not turn layers off to “fix” visibility.
 - **Surface impact SFX** — non-living hits play a random `CombatAudioTrackIds.SurfaceHit` clip (`BulletHit` + `Ric1`–`Ric5`) at the impact point; living hits keep health `FleshHit`. Do not play surface ricochets on limb connects.
 - **Hitscan must resolve living before full-range Default occlusion** — Characters are not on the Default mask, so a max-range Default cast goes *through* the dummy and can “block” on floor/props behind them (no limb damage; marker far behind or easy to miss). Order: zone hit → LOS (Default+Walls) only to that limb → structural/soft. Do not early-out on `IsOccluded` for the full weapon range.
 - **Armor absorption is a single chokepoint** — lives inside `HumanHealthController.ApplyDamage(BodyZone, float, float)`, not duplicated in melee/ranged call sites; also applies to `StructuralDamageSubSystem`'s debris-collapse call (intentional, not excluded).

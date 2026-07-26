@@ -15,7 +15,8 @@ namespace SS3D.Systems.Combat
         private const int MaxActiveDecals = 96;
         private const float MinSize = 0.12f;
         private const float MaxSize = 0.22f;
-        private const float VolumeDepth = 0.12f;
+        // Slightly deeper than blood floor stamps so vertical wall faces stay inside the volume.
+        private const float VolumeDepth = 0.2f;
 
         private static GameObject _floorDecalPrefab;
         private static Material _decalMaterialTemplate;

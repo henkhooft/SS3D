@@ -55,8 +55,8 @@ MonoBehaviour:
     serializedVersion: 0
     m_Bits: 2
   m_ScaleMode: 0
-  m_Offset: {x: 0, y: 0, z: 0.04}
-  m_Size: {x: 0.18, y: 0.18, z: 0.12}
+  m_Offset: {x: 0, y: 0, z: 0.1}
+  m_Size: {x: 0.18, y: 0.18, z: 0.2}
   m_FadeFactor: 1
   version: 1
   m_DecalLayerMask: 2

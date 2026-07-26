@@ -66,12 +66,12 @@ namespace SS3D.Systems.Combat
                         ? coverHit.distance
                         : Vector3.Distance(shotRay.origin, hitPoint);
 
-                    if (RangedStructuralHitResolver.TryResolve(shotRay, coverDistance + 0.05f, out structuralCoord, out float structuralDistance))
+                    if (RangedStructuralHitResolver.TryResolve(shotRay, coverDistance + 0.05f, out structuralCoord, out float structuralDistance, out Vector3 structuralNormal))
                     {
                         health = null;
                         hitStructural = true;
                         impactPoint = shotRay.GetPoint(structuralDistance);
-                        impactNormal = EstimateNormal(shotRay, impactPoint, -shotDir);
+                        impactNormal = structuralNormal;
                         hasImpact = true;
                         return true;
                     }
@@ -99,11 +99,11 @@ namespace SS3D.Systems.Combat
                 return true;
             }
 
-            if (RangedStructuralHitResolver.TryResolve(shotRay, maxRange, out structuralCoord, out float structDist))
+            if (RangedStructuralHitResolver.TryResolve(shotRay, maxRange, out structuralCoord, out float structDist, out Vector3 structNormal))
             {
                 hitStructural = true;
                 impactPoint = shotRay.GetPoint(structDist);
-                impactNormal = EstimateNormal(shotRay, impactPoint, -shotDir);
+                impactNormal = structNormal;
                 hasImpact = true;
                 return true;
             }
@@ -126,24 +126,6 @@ namespace SS3D.Systems.Combat
             }
 
             return false;
-        }
-
-        private static Vector3 EstimateNormal(Ray shotRay, Vector3 impactPoint, Vector3 fallback)
-        {
-            // Short probe for a real surface normal near the structural impact.
-            const float probe = 0.35f;
-            Vector3 origin = impactPoint - (shotRay.direction.normalized * probe);
-            if (Physics.Raycast(origin, shotRay.direction, out RaycastHit hit, probe * 2f, CoverOcclusionMask, QueryTriggerInteraction.Ignore))
-            {
-                return hit.normal;
-            }
-
-            if (Physics.Raycast(origin, shotRay.direction, out hit, probe * 2f, ~0, QueryTriggerInteraction.Ignore))
-            {
-                return hit.normal;
-            }
-
-            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.up;
         }
     }
 }
