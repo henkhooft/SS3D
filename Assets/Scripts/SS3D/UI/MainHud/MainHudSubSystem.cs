@@ -300,19 +300,18 @@ namespace SS3D.UI.MainHud
             readyProgress01 = 1f;
             recharging = false;
 
-            Hand hand = _hands?.SelectedHand;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 ranged.ServerCompleteReloadIfDue();
                 recharging = ranged.IsBusy;
                 readyProgress01 = ranged.ReadyProgress01;
                 return true;
+            }
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
             }
 
             if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
@@ -327,9 +326,7 @@ namespace SS3D.UI.MainHud
 
         private float GetSelectedRangedBloom01()
         {
-            Hand hand = _hands?.SelectedHand;
-            Item held = hand?.ItemInHand;
-            if (held == null || !held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (!TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 return 0f;
             }
@@ -382,8 +379,7 @@ namespace SS3D.UI.MainHud
                 return false;
             }
 
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension _))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out _))
             {
                 // Ranged: any resolved zone under the reticle is "in range" for the chip.
                 return zoneCollider != null;

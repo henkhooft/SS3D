@@ -130,11 +130,17 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         public void Pickup(Item item)
         {
-            item.GiveOwnership(Owner);
             if (!IsEmpty())
             {
                 return;
             }
+
+            if (Container == null || !Container.CanContainItem(item))
+            {
+                return;
+            }
+
+            item.GiveOwnership(Owner);
 
 			if (item.Container != null && item.Container != Container)
 			{

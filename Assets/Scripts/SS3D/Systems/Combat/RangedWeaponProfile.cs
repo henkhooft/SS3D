@@ -1,5 +1,6 @@
 using System;
 using SS3D.Systems.Health;
+using SS3D.Systems.Inventory.Containers;
 
 namespace SS3D.Systems.Combat
 {
@@ -55,6 +56,15 @@ namespace SS3D.Systems.Combat
         /// <summary>Extra spread degrees at full exhaustion (ExertionPenalty == 1).</summary>
         public float ExhaustionSpreadDegrees;
 
+        /// <summary>
+        /// When true, the gun may only occupy <see cref="RequiredHand"/> and reserves the other hand
+        /// (cannot pick up / receive items there) while wielded.
+        /// </summary>
+        public bool RequiresBothHands;
+
+        /// <summary>Primary grip hand for two-hand firearms (M4: Right).</summary>
+        public HandSide RequiredHand;
+
         public MeleeDamagePacket ToDamagePacket() => new(BruteDamage, BurnDamage, CanSever);
 
         public float ResolveStructuralForce()
@@ -88,6 +98,8 @@ namespace SS3D.Systems.Combat
             StructuralForce = 12f,
             StaminaCost = 3f,
             ExhaustionSpreadDegrees = 3f,
+            RequiresBothHands = true,
+            RequiredHand = HandSide.Right,
         };
     }
 }

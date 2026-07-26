@@ -71,6 +71,12 @@ namespace SS3D.Systems.Inventory.Interactions
                     return false;
                 }
 
+                // Two-hand rifles: wrong hand / reserved off-hand must not offer Pick up.
+                if (hand.Container != null && !hand.Container.CanContainItem(item))
+                {
+                    return false;
+                }
+
                 return true;
             }
 

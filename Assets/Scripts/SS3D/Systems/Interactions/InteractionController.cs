@@ -381,24 +381,8 @@ namespace SS3D.Systems.Interactions
         [ServerOrClient]
         private bool TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon)
         {
-            hand = null;
-            weapon = null;
-
             Hands hands = GetComponent<Hands>();
-            hand = hands != null ? hands.SelectedHand : null;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            Item item = hand.ItemInHand;
-            if (item == null || !item.TryGetComponent(out weapon))
-            {
-                weapon = null;
-                return false;
-            }
-
-            return true;
+            return TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out hand, out weapon);
         }
 
         [ServerRpc]
@@ -991,22 +975,22 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void HandleUse(InputAction.CallbackContext callbackContext)
         {
-            // Activate item in selected hand — reload takes priority for firearms.
+            // Activate item in selected hand — reload takes priority for firearms
+            // (including two-hand rifles still wielded while the off-hand is selected).
             Hands hands = GetComponent<Hands>();
             if (hands == null)
             {
                 return;
             }
 
-            Item item = hands.SelectedHand.ItemInHand;
-            if (item != null
-                && item.TryGetComponent(out RangedWeaponItemExtension ranged)
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out _, out RangedWeaponItemExtension ranged)
                 && ranged.CanStartReload())
             {
                 TryRunRangedReloadPrimary();
                 return;
             }
 
+            Item item = hands.SelectedHand?.ItemInHand;
             if (item != null)
             {
                 InteractInHand(item.gameObject, gameObject);

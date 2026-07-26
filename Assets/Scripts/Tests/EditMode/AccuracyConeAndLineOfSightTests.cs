@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using SS3D.Systems.Combat;
+using SS3D.Systems.Inventory.Containers;
 using SS3D.Utils;
 using UnityEngine;
 
@@ -93,6 +94,14 @@ namespace EditorTests
             RangedWeaponProfile m4 = RangedWeaponProfile.M4;
             Assert.Greater(m4.StaminaCost, 0f);
             Assert.Greater(m4.ExhaustionSpreadDegrees, 0f);
+        }
+
+        [Test]
+        public void M4_RequiresBothHandsOnRight()
+        {
+            RangedWeaponProfile m4 = RangedWeaponProfile.M4;
+            Assert.IsTrue(m4.RequiresBothHands);
+            Assert.AreEqual(HandSide.Right, m4.RequiredHand);
         }
 
         private static float ZoneTargetResolverDefaultRay() => 8f;

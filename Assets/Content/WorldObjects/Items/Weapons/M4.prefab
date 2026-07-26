@@ -298,6 +298,8 @@ MonoBehaviour:
     StructuralForce: 12
     StaminaCost: 3
     ExhaustionSpreadDegrees: 3
+    RequiresBothHands: 1
+    RequiredHand: 0
   _muzzle: {fileID: 7123456789012345678}
 --- !u!1 &6508855772059703352
 GameObject:
