@@ -105,12 +105,12 @@ namespace SS3D.UI.MainHud.Components
             if (t < 0f)
             {
                 _crossFlash.style.opacity = 0f;
-                _crossFlash.style.scale = new Scale(new Vector2(0.5f, 0.5f));
+                _crossFlash.style.scale = new Scale(new Vector2(0.4f, 0.4f));
                 _crossFlash.style.display = DisplayStyle.None;
                 return;
             }
 
-            float scale = 0.5f + (t * 0.7f);
+            float scale = 0.4f + (t * 0.55f);
             float opacity = t < CrossFlashPopFraction
                 ? t / CrossFlashPopFraction
                 : 1f - ((t - CrossFlashPopFraction) / (1f - CrossFlashPopFraction));
@@ -193,9 +193,9 @@ namespace SS3D.UI.MainHud.Components
             root.pickingMode = PickingMode.Ignore;
             root.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(50));
 
-            // Rotate a zero-size pivot, then offset the arm on local +X. A bare Translate(11,0) on
+            // Rotate a zero-size pivot, then offset the arm on local +X. A bare Translate(x,0) on
             // the arm is parent-space in UITK, so every spoke shifted right of the center dot.
-            const float outwardPx = 11f;
+            const float outwardPx = 7f;
             float[] angles = { 45f, 135f, 225f, 315f };
             for (int i = 0; i < angles.Length; i++)
             {
@@ -208,7 +208,7 @@ namespace SS3D.UI.MainHud.Components
                 arm.AddToClassList("zone-target-reticle__cross-arm");
                 arm.pickingMode = PickingMode.Ignore;
                 arm.style.left = outwardPx;
-                arm.style.top = -2f;
+                arm.style.top = -1.5f;
 
                 pivot.Add(arm);
                 root.Add(pivot);

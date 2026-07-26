@@ -278,10 +278,10 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 44px;
-    height: 44px;
-    margin-left: -22px;
-    margin-top: -22px;
+    width: 32px;
+    height: 32px;
+    margin-left: -16px;
+    margin-top: -16px;
     display: none;
     opacity: 0;
     transform-origin: 50% 50%;
@@ -297,10 +297,10 @@
 
 .zone-target-reticle__cross-arm {
     position: absolute;
-    left: 11px;
-    top: -2px;
-    width: 24px;
-    height: 4px;
+    left: 7px;
+    top: -1.5px;
+    width: 16px;
+    height: 3px;
     background-color: #ffffff;
     border-top-width: 1px;
     border-right-width: 1px;
