@@ -64,6 +64,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
         [SerializeField] private float _additiveWeightLerp = 8f;
 
+        private static readonly int ReloadRifleStateHash = Animator.StringToHash("Reload Rifle");
+
         public Animator Animator => _animator;
 
         protected override void OnStart()
@@ -311,6 +313,17 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _ownerPredictedAttack = true;
+            // Only Reload lives on Upper Body — FireRifle stays on Base to avoid weight-snap twitch.
+            if (trigger == AnimationTriggerId.Reload)
+            {
+                _upperBodyWeightTarget = 1f;
+                _upperBodyWeight = 1f;
+                if (_animator.layerCount > 1)
+                {
+                    _animator.SetLayerWeight(1, 1f);
+                }
+            }
+
             _animator.ResetTrigger(hash);
             _animator.SetTrigger(hash);
             return variant;
@@ -323,11 +336,42 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
+            float target = _upperBodyWeightTarget;
+            if (IsPlayingRangedReloadOneshot())
+            {
+                target = 1f;
+            }
+
             _upperBodyWeight = Mathf.MoveTowards(
                 _upperBodyWeight,
-                _upperBodyWeightTarget,
+                target,
                 Time.deltaTime * _upperBodyWeightLerp);
             _animator.SetLayerWeight(1, _upperBodyWeight);
+        }
+
+        /// <summary>
+        /// Reload lives on Upper Body; keep that layer weighted while Reload Rifle plays so Ranged
+        /// stance (normally Upper Body weight 0) still shows the oneshot over walking legs.
+        /// </summary>
+        private bool IsPlayingRangedReloadOneshot()
+        {
+            if (_animator.layerCount <= 1)
+            {
+                return false;
+            }
+
+            AnimatorStateInfo current = _animator.GetCurrentAnimatorStateInfo(1);
+            if (current.shortNameHash == ReloadRifleStateHash)
+            {
+                return true;
+            }
+
+            if (!_animator.IsInTransition(1))
+            {
+                return false;
+            }
+
+            return _animator.GetNextAnimatorStateInfo(1).shortNameHash == ReloadRifleStateHash;
         }
 
         private void TickAdditiveWeight()
@@ -453,7 +497,8 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            // Peaceful / Ranged: full base locomotion (ranged pack already has rifle poses).
+            // Peaceful: full base locomotion. Ranged: base rifle loco + short FireRifle oneshot on Base;
+            // Reload raises Upper Body weight only while playing (see IsPlayingRangedReloadOneshot).
             // Melee: Upper Body stays at weight 1 (Hold Default when empty; AttackSwing via trigger).
             bool needsUpperBodyLayer = snapshot.State != BodyState.Ragdoll
                 && snapshot.CombatMode == HumanoidCombatMode.Melee;
@@ -533,6 +578,16 @@ namespace SS3D.Systems.Entities.Humanoid
             if (trigger == AnimationTriggerId.AttackSwing)
             {
                 _animator.SetInteger(Animations.Humanoid.AttackVariant, attackVariant & 0x3);
+            }
+
+            if (trigger == AnimationTriggerId.Reload)
+            {
+                _upperBodyWeightTarget = 1f;
+                _upperBodyWeight = 1f;
+                if (_animator.layerCount > 1)
+                {
+                    _animator.SetLayerWeight(1, 1f);
+                }
             }
 
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
