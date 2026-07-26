@@ -202,6 +202,11 @@ namespace SS3D.Systems.Inventory.Containers
         {
             base.OnStartServer();
             SetUpContainers();
+            // Owning clients set this in OnStartClient; server/dedicated need it for Hands consumers.
+            if (Hands != null)
+            {
+                Hands.SetInventory(this);
+            }
         }
 
         /// <summary>
