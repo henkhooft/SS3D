@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/IngameConsoleSystem/
 > Entry points: CommandsController
 > Status: partial
-> Verified: 1ddd6404a — 2026-07-21
+> Verified: e1d43a531 — 2026-07-26
 
 # In-game console
 
@@ -18,6 +18,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/SpawnDummyCommand.cs` — admin `spawndummy` (combat test Human)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/IdAccessCommands/` — `accesscheck`, `accessgrant`, `accessrevoke`, `accesspreset` dev helpers
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectCommand.cs` — client `screeneffect` intensity setter
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/RangedDebugCommand.cs` — client `rangeddebug on|off|status` (gold/grey hitscan impact spheres)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectHitFlashCommand.cs` — client hit-flash trigger
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosDebugCommand.cs` — server `atmosdebug (heat|gas|wake)`, headless equivalent of `AtmosDebugController`'s GUI buttons, targets the caller's own tile
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosClientStatusCommand.cs` — offline `atmosclientstatus [assert]`, reports/asserts this process's `AtmosRenderContext` snapshot validity (multiplayer test harness use)
