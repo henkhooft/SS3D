@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: c996212b2 — 2026-07-26 (item hologram rest orientation)
+> Verified: 63b0e32fc — 2026-07-26
 
 # Tile / construction
 
@@ -64,6 +64,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
   `IsServer` first. `IsServer` reads `_networkObjectCache` with no null check; EditMode objects
   AddComponent'd without FishNet init NRE and break adjacency/pipe/cable tests.
 - **`OnMapCreated` ≠ map ready.** Domains must await `WorldReadyPhase.TileMapLoaded` ([core-subsystems](core-subsystems.md)); `OnMapCreated` fires when the map object exists but tiles may still be placing.
+- **Client tile map ≠ full station:** remote clients start with an empty map and mirror via AOI; occupancy miss or early `!HasPlenum` is incomplete knowledge, not confirmed open space. Do not invent “miss = vacuum/float” outside `HumanoidSpaceSupport.GetSupportAt` — see [TECH_DEBT.md](../TECH_DEBT.md) §1.17 and [entities](entities.md) / [health](health.md) pitfalls.
 - **Spawn markers vanish after loading an old template:** `TileMap.Clear` (called on every template restore) clears `SpawnPoints`. Templates without a `spawn-points` chunk intentionally stay empty — do not skip that clear or stale markers from the previous map survive.
 - **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.
 - **Dropper / Select always copied Plenum:** tile-location arrays are enum-ordered with Plenum at index 0, so a naive foreach sampled the base tile under every click. Use `MapEditorCursorPick` (physics hit when available, else furniture→turf→plenum priority; prefer visible layer groups).
