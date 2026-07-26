@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: be4ea6eea — 2026-07-25
+> Verified: 965d40550 — 2026-07-26
 
 # Entities
 
@@ -21,13 +21,13 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidPredictedMovement.cs` — FishNet predicted move + space float (when enabled)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/HumanoidLivingController.cs` — **live** loco path (`Human.prefab` has PredictedMovement disabled); owns space float coast + `SetFloating`
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidSpaceSupport.cs` — shared plenum/unsupported check
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee Upper Body weight; `SetPosingSuppressed` for collapse
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee/Ranged Upper Body weight; Ranged CrossFade to Rifle Aim Idle; `SetPosingSuppressed` for collapse
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/BodyPresentationState.cs` — locomotion / collapsed / dead enum
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — presentation authority (`ServerSetPresentation` / `ApplyPresentation`)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — holds, stance, limp + `InjuredLeg` / arms, rare hurt Emote, `MirrorUpperBody`; suppresses while `Presentation != Locomotion`
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — Harm intent toggle; `OnHitReceived` → stagger/`Flinch` (called from health `ApplyDamage`)
-- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch** (GettingHit / gut / HitReaction)
+- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch**; Ranged Upper Body **Rifle Aim Idle** + **FireRifle** / **Reload** (`Mix_AimingIdle` / `Mix_FiringRifle` / `Mix_Reloading`)
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
@@ -36,9 +36,10 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Extension points
 
-- Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips.
+- Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips (`SS3D → Animation → Rebuild Combat Stance Blend Trees`).
 - Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
 - Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch` (one packed publish). Base selects by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), gut (Melee), `Mix_HitReaction` (Ranged). Additive layer also takes `Flinch` → gut with a **lerped** weight (~0.75) while Staggered. `Mix_ShoulderHitAndFall` / get-ups deferred.
+- Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. Upper Body stays weighted for the whole Ranged stance on **Rifle Aim Idle** (`Mix_AimingIdle`); Fire/Reload oneshot and return there. Orchestrator CrossFades to Aim Idle on Ranged enter (Hold Weapon had no path otherwise). Base Ranged FreeformCartesian keeps foot phase — do not pulse Upper Body weight per shot.
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
@@ -46,13 +47,15 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Pitfalls
 
+- **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
+- **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Timed knockdown from server:** call `ServerRecover`, not `Recover()` (ServerRpc is a no-op from server).
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2: horizontal / downward / backhand).
-- **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* use `MirrorUpperBody` (`Hand.Side`). Do not mirror Base Layer FreeformCartesian — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight`, not mega `Human.prefab`.
+- **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* use `MirrorUpperBody` (`Hand.Side`). Do not mirror Base Layer FreeformCartesian — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight`, not mega `Human.prefab`. Two-hand rifles (`RequiresBothHands`) force `MirrorUpperBody=false` via `TwoHandedWeaponRules` even when the left hand is selected.
 - **Every body part is its own nested `NetworkObject`, not a flat component list:** `HumanTorso`/`HumanHead`/each limb prefab under `HumanBodyParts/` carries its own `NetworkObject` with `IsNested = true`. The root `NetworkObject`'s `_networkBehaviours` flattens across those nested boundaries (it lists behaviours living inside body-part prefabs directly). A recipe tool that reuses `StorageContainerPrefabSetup`-style behaviour collection (which stops descending at any child with a `NetworkObject`) will silently drop every nested body-part behaviour from the rebuilt list — only stop at a child Nob when `!IsNested`. See `HumanPrefabHygiene.CollectNetworkBehaviours` ([2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md)).
 - **Stale `m_Script` on stripped nested-prefab mirrors is cosmetic, not a broken reference:** a `stripped` MonoBehaviour placeholder's authoritative type comes from `m_CorrespondingSourceObject` in the source prefab, not its own cached `m_Script` GUID — the cache can go stale (and even reference a since-deleted class) after the source prefab's component type changes without Human.prefab being resaved in the Editor. Fix by updating the cached GUID to match the source's current type; do not delete the stripped block — it is a live entry in the root `NetworkObject`'s `_networkBehaviours` array and deleting it (versus correcting it) shifts every subsequent behaviour's index.
 - **Editing a nested body-part prefab asset directly leaves `Human.prefab`'s own mirror of it stale:** running a recipe that destroys a component on `HumanHead.prefab`/`HumanTorso.prefab` (e.g. `BodyPartContainerInteractiveStrip`) does not retroactively update `Human.prefab`'s stripped mirror of that instance — that only refreshes the next time `Human.prefab` itself is reloaded and resaved. `HumanPrefabRecipes.RunAllMenu` always calls `HumanPrefabHygiene.ResyncNestedPrefabInstances()` last, regardless of what the other recipes changed, specifically to converge this. Any new recipe that removes a component from a nested body-part prefab must trigger the same resync.

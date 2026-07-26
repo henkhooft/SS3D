@@ -5,8 +5,8 @@ using UnityEngine;
 namespace SS3D.Systems.Combat
 {
     /// <summary>
-    /// Client-local ranged shot outcome: cross-flash on damaging hits plus a brief world impact marker
-    /// so spread misses are readable (design whiffs stay silent on the reticle, but the impact point shows).
+    /// Client-local ranged shot outcome: cross-flash on damaging hits, plus optional debug world markers.
+    /// Gold/grey spheres are off by default — enable with <c>rangeddebug on</c>.
     /// </summary>
     public static class RangedShotFeedback
     {
@@ -18,6 +18,12 @@ namespace SS3D.Systems.Combat
         /// </summary>
         private const float PullTowardShooterHit = 0.28f;
         private const float PullTowardShooterWhiff = 0.06f;
+
+        /// <summary>
+        /// When true, spawn gold/grey impact spheres. Default off — diegetic feedback is bullet holes + muzzle flash.
+        /// Toggled by the <c>rangeddebug</c> console command.
+        /// </summary>
+        public static bool ShowImpactMarkers { get; set; }
 
         public static event Action<Vector3, bool> LocalShotImpact;
 
@@ -36,7 +42,10 @@ namespace SS3D.Systems.Combat
                 MeleeConnectFeedback.NotifyLocalConnectHitLanded();
             }
 
-            SpawnImpactMarker(displayPoint, damagingHit);
+            if (ShowImpactMarkers)
+            {
+                SpawnImpactMarker(displayPoint, damagingHit);
+            }
         }
 
         private static void SpawnImpactMarker(Vector3 worldPoint, bool damagingHit)

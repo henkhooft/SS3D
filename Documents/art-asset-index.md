@@ -6,7 +6,7 @@ Use this index when implementing a feature that needs art. Most game-ready asset
 live in [RE-SS3D/SS3D-Art](https://github.com/RE-SS3D/SS3D-Art) but are not yet
 imported into Unity.
 
-**Generated:** 2026-07-25T19:55:37.343620+00:00
+**Generated:** 2026-07-26T08:41:55.303236+00:00
 
 ## When to use
 
@@ -41,13 +41,13 @@ grep -i "airlock" Documents/art-available-for-import.json
 
 ## Available for import
 
-**2051** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
+**2045** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
 
 | Category | Available |
 |----------|----------:|
 | Graphics | 672 |
 | Models | 672 |
-| Textures | 519 |
+| Textures | 513 |
 | Sound | 160 |
 | Animations | 18 |
 | Fonts | 10 |
@@ -58,9 +58,9 @@ Full list: [`art-available-for-import.json`](art-available-for-import.json)
 
 | Metric | Count |
 |--------|------:|
-| Already imported (in-game + SS3D-Art) | 204 |
-| In-game only | 4984 |
-| Available for import | 2051 |
+| Already imported (in-game + SS3D-Art) | 210 |
+| In-game only | 4996 |
+| Available for import | 2045 |
 | Promotional artwork (not game-ready) | 215 |
 
 Complete data with import status: [`art-asset-index.json`](art-asset-index.json)

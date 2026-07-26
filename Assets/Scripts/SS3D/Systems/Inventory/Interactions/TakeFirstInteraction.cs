@@ -3,6 +3,7 @@ using SS3D.Data.Generated;
 using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using System.Linq;
@@ -43,12 +44,28 @@ namespace SS3D.Systems.Inventory.Interactions
                 return false;
             }
 
-            // Will only appear if the current hand is empty and the container isn't empty
+            // Will only appear when a hand can receive the first item (two-hand rifles auto-route).
             if (interactionEvent.Source is Hand hand && _attachedContainer != null)
             {
-                return hand.IsEmpty()
-                    && !_attachedContainer.Empty
-                    && _attachedContainer.IsAccessibleBy(hand.GetComponentInParent<HumanInventory>());
+                if (_attachedContainer.Empty
+                    || !_attachedContainer.IsAccessibleBy(hand.GetComponentInParent<HumanInventory>()))
+                {
+                    return false;
+                }
+
+                Item first = _attachedContainer.Items.FirstOrDefault();
+                if (first == null)
+                {
+                    return false;
+                }
+
+                Hands hands = hand.HandsController;
+                if (hands == null)
+                {
+                    hands = hand.GetComponentInParent<Hands>();
+                }
+
+                return TwoHandedWeaponRules.TryResolveHandForItem(hands, first, hand, out _);
             }
 
             return false;

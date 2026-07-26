@@ -58,6 +58,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         Throw = 3,
         Emote = 4,
         Flinch = 5,
+        FireRifle = 6,
+        Reload = 7,
     }
 
     [Serializable]

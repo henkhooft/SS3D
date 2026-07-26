@@ -29,6 +29,7 @@ namespace SS3D.Systems.Combat
             out bool hitLiving,
             out bool hitStructural,
             out Vector3 impactPoint,
+            out Vector3 impactNormal,
             out bool hasImpact,
             out Vector3 shotDirection)
         {
@@ -38,6 +39,7 @@ namespace SS3D.Systems.Combat
             hitLiving = false;
             hitStructural = false;
             impactPoint = default;
+            impactNormal = Vector3.up;
             hasImpact = false;
             shotDirection = aimRay.direction.sqrMagnitude > 0.0001f
                 ? aimRay.direction.normalized
@@ -64,31 +66,44 @@ namespace SS3D.Systems.Combat
                         ? coverHit.distance
                         : Vector3.Distance(shotRay.origin, hitPoint);
 
-                    if (RangedStructuralHitResolver.TryResolve(shotRay, coverDistance + 0.05f, out structuralCoord, out float structuralDistance))
+                    if (RangedStructuralHitResolver.TryResolve(shotRay, coverDistance + 0.05f, out structuralCoord, out float structuralDistance, out Vector3 structuralNormal))
                     {
                         health = null;
                         hitStructural = true;
                         impactPoint = shotRay.GetPoint(structuralDistance);
+                        impactNormal = structuralNormal;
                         hasImpact = true;
                         return true;
                     }
 
                     health = null;
-                    impactPoint = coverHit.collider != null ? coverHit.point : hitPoint;
+                    if (coverHit.collider != null)
+                    {
+                        impactPoint = coverHit.point;
+                        impactNormal = coverHit.normal;
+                    }
+                    else
+                    {
+                        impactPoint = hitPoint;
+                        impactNormal = -shotDir;
+                    }
+
                     hasImpact = true;
                     return false;
                 }
 
                 hitLiving = true;
                 impactPoint = hitPoint;
+                impactNormal = -shotDir;
                 hasImpact = true;
                 return true;
             }
 
-            if (RangedStructuralHitResolver.TryResolve(shotRay, maxRange, out structuralCoord, out float structDist))
+            if (RangedStructuralHitResolver.TryResolve(shotRay, maxRange, out structuralCoord, out float structDist, out Vector3 structNormal))
             {
                 hitStructural = true;
                 impactPoint = shotRay.GetPoint(structDist);
+                impactNormal = structNormal;
                 hasImpact = true;
                 return true;
             }
@@ -98,6 +113,7 @@ namespace SS3D.Systems.Combat
             if (LineOfSight.TryGetFirstHit(shotRay.origin, shotDir, maxRange, CoverOcclusionMask, out RaycastHit coverSurface))
             {
                 impactPoint = coverSurface.point;
+                impactNormal = coverSurface.normal;
                 hasImpact = true;
                 return false;
             }
@@ -105,6 +121,7 @@ namespace SS3D.Systems.Combat
             if (Physics.Raycast(shotRay, out RaycastHit anyHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
             {
                 impactPoint = anyHit.point;
+                impactNormal = anyHit.normal;
                 hasImpact = true;
             }
 

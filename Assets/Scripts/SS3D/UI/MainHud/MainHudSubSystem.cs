@@ -300,19 +300,18 @@ namespace SS3D.UI.MainHud
             readyProgress01 = 1f;
             recharging = false;
 
-            Hand hand = _hands?.SelectedHand;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 ranged.ServerCompleteReloadIfDue();
                 recharging = ranged.IsBusy;
                 readyProgress01 = ranged.ReadyProgress01;
                 return true;
+            }
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
             }
 
             if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
@@ -327,9 +326,7 @@ namespace SS3D.UI.MainHud
 
         private float GetSelectedRangedBloom01()
         {
-            Hand hand = _hands?.SelectedHand;
-            Item held = hand?.ItemInHand;
-            if (held == null || !held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (!TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 return 0f;
             }
@@ -382,8 +379,7 @@ namespace SS3D.UI.MainHud
                 return false;
             }
 
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension _))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out _))
             {
                 // Ranged: any resolved zone under the reticle is "in range" for the chip.
                 return zoneCollider != null;
@@ -823,6 +819,11 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
+            if (!_hands.CanSelectHand(hand))
+            {
+                return;
+            }
+
             // Same path as legacy SingleItemContainerSlot — ServerRpc via HumanInventory.ActivateHand.
             _inventory.ActivateHand(hand.Container);
 
@@ -1195,6 +1196,7 @@ namespace SS3D.UI.MainHud
                 HandsGearStrip.HandSlot.Right,
                 HandIconAt(1),
                 HandNameAt(1));
+            RefreshHandReservedState();
 
             SetGear(HandsGearStrip.GearSlot.Belt, ContainerType.Belt);
             SetGear(HandsGearStrip.GearSlot.Id, ContainerType.Identification);
@@ -1234,6 +1236,40 @@ namespace SS3D.UI.MainHud
         private Sprite HandIconAt(int position) => HandItemAt(position)?.ItemSprite;
 
         private string HandNameAt(int position) => HandItemAt(position)?.Name;
+
+        private void RefreshHandReservedState()
+        {
+            if (_view == null || _hands == null)
+            {
+                return;
+            }
+
+            bool leftReserved = false;
+            bool rightReserved = false;
+            if (_hands.PlayerHands != null)
+            {
+                foreach (Hand hand in _hands.PlayerHands)
+                {
+                    if (hand == null)
+                    {
+                        continue;
+                    }
+
+                    bool reserved = TwoHandedWeaponRules.IsHandReserved(hand, _hands);
+                    if (hand.Side == HandSide.Left)
+                    {
+                        leftReserved = reserved;
+                    }
+                    else if (hand.Side == HandSide.Right)
+                    {
+                        rightReserved = reserved;
+                    }
+                }
+            }
+
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Left, leftReserved);
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Right, rightReserved);
+        }
 
         private Item HandItemAt(int position)
         {

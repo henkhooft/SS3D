@@ -8,10 +8,10 @@ using UnityEngine.InputSystem;
 namespace SS3D.Systems.Entities.Humanoid
 {
     /// <summary>
-    /// Drives combat stance presentation and melee swing telegraph (#1246).
+    /// Drives combat stance presentation and attack telegraphs (#1246).
     /// <c>C</c> toggles Help/Harm intent (combat mode follows Harm via <see cref="InteractionController"/>).
     /// Combat subtype (Melee vs Ranged) comes from inventory via <see cref="HumanoidBodyStateBridge"/>.
-    /// Melee swing telegraph is requested by combat Hit dispatch via <see cref="RequestAttack"/>.
+    /// Melee swing / ranged fire / reload telegraphs are requested via <see cref="RequestAttack"/>.
     /// </summary>
     [RequireComponent(typeof(HumanoidBodyStateMachine))]
     public class HumanoidCombatController : NetworkActor

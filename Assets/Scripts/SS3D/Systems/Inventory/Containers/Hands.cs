@@ -8,6 +8,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Items;
@@ -64,9 +65,45 @@ namespace SS3D.Systems.Inventory.Containers
             {
                 hand.HandsController = this;
                 hand.OnHandDisabled += HandleHandRemoved;
+                if (hand.Container != null)
+                {
+                    hand.Container.OnItemAttached += HandleHandItemAttached;
+                }
             }
             // Set the selected hand to be the first available one.
             _selectedHand = PlayerHands.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// After a two-hand rifle lands in its required hand (pickup/transfer auto-route), make that
+        /// hand active so the HUD and verbs match the grip.
+        /// </summary>
+        [Server]
+        private void HandleHandItemAttached(object sender, Item item)
+        {
+            if (!TwoHandedWeaponRules.RequiresBothHands(item, out HandSide requiredSide))
+            {
+                return;
+            }
+
+            Hand grip = TwoHandedWeaponRules.FindHand(this, requiredSide);
+            if (grip == null || sender as AttachedContainer != grip.Container)
+            {
+                return;
+            }
+
+            _selectedHand = grip;
+        }
+
+        [Server]
+        public void ServerSelectHand(Hand hand)
+        {
+            if (hand == null || !PlayerHands.Contains(hand))
+            {
+                return;
+            }
+
+            _selectedHand = hand;
         }
 
         /// <summary>
@@ -119,6 +156,19 @@ namespace SS3D.Systems.Inventory.Containers
             {
                 return;
             }
+
+            int index = PlayerHands.FindIndex(0, x => x == SelectedHand);
+            if (index < 0)
+            {
+                return;
+            }
+
+            Hand next = PlayerHands[(index + 1) % PlayerHands.Count];
+            if (!CanSelectHand(next))
+            {
+                return;
+            }
+
             CmdNextHand();
         }
 
@@ -147,6 +197,11 @@ namespace SS3D.Systems.Inventory.Containers
 
             if (hand != null)
             {
+                if (!CanSelectHand(hand))
+                {
+                    return;
+                }
+
                 _selectedHand = hand;
             }
             else
@@ -196,8 +251,32 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         private void NextHand()
         {
+            if (PlayerHands.Count == 0)
+            {
+                return;
+            }
+
             int index = PlayerHands.FindIndex(0, x => x == SelectedHand);
-            _selectedHand = PlayerHands[(index + 1) % PlayerHands.Count];
+            if (index < 0)
+            {
+                index = 0;
+            }
+
+            for (int step = 1; step <= PlayerHands.Count; step++)
+            {
+                Hand candidate = PlayerHands[(index + step) % PlayerHands.Count];
+                if (CanSelectHand(candidate))
+                {
+                    _selectedHand = candidate;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>False while the hand is reserved by a two-hand firearm in the other grip.</summary>
+        public bool CanSelectHand(Hand hand)
+        {
+            return hand != null && !TwoHandedWeaponRules.IsHandReserved(hand, this);
         }
 
         /// <summary>
@@ -227,6 +306,11 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         public void HandleHandRemoved(Hand hand)
         {
+            if (hand?.Container != null)
+            {
+                hand.Container.OnItemAttached -= HandleHandItemAttached;
+            }
+
             if (!PlayerHands.Remove(hand))
             {
                 return;
@@ -249,6 +333,13 @@ namespace SS3D.Systems.Inventory.Containers
         public void AddHand(Hand hand)
         {
             PlayerHands.Add(hand);
+            hand.HandsController = this;
+            hand.OnHandDisabled += HandleHandRemoved;
+            if (hand.Container != null)
+            {
+                hand.Container.OnItemAttached += HandleHandItemAttached;
+            }
+
             if(PlayerHands.Count == 1)
             {
                 _selectedHand = hand;

@@ -185,6 +185,11 @@ namespace SS3D.UI.MainHud
             _handsGearStrip.SetHandContents(slot, itemIcon, itemName);
         }
 
+        public void SetHandReserved(HandsGearStrip.HandSlot slot, bool reserved)
+        {
+            _handsGearStrip.SetHandReserved(slot, reserved);
+        }
+
         public void SetActiveHand(bool leftIsActive)
         {
             _handsGearStrip.SetActiveHand(leftIsActive);
