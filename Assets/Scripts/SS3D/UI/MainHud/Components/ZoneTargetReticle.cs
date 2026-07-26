@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SS3D.Systems.Inputs;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -53,16 +54,30 @@ namespace SS3D.UI.MainHud.Components
                 return;
             }
 
+            // CursorScreen is bottom-left screen pixels (mouse / aim ray). UITK layout is panel
+            // space (top-left) — skip ScreenToPanel and the reticle drifts under scaled panels.
+            Vector2 cursorPanel = frame.CursorScreen;
+            IPanel panel = _root.panel;
+            if (panel != null)
+            {
+                cursorPanel = InputInterface.ScreenToPanel(panel, frame.CursorScreen);
+            }
+
             float size = ReticleSize + (frame.Bloom01 * ReticleBloomExtraPx);
             float half = size * 0.5f;
             _reticle.style.width = size;
             _reticle.style.height = size;
-            _reticle.style.left = frame.CursorScreen.x - half;
-            _reticle.style.bottom = frame.CursorScreen.y - half;
+            _reticle.style.left = cursorPanel.x - half;
+            _reticle.style.top = cursorPanel.y - half;
+            _reticle.style.bottom = StyleKeyword.Auto;
 
-            _chipLabel.style.left = frame.CursorScreen.x;
-            _chipLabel.style.bottom = frame.CursorScreen.y + half + ChipGapAboveReticle;
-            _chipLabel.style.translate = new Translate(new Length(-50, LengthUnit.Percent), 0);
+            _chipLabel.style.left = cursorPanel.x;
+            _chipLabel.style.top = cursorPanel.y - half - ChipGapAboveReticle;
+            _chipLabel.style.bottom = StyleKeyword.Auto;
+            // -50% X centers on cursor; -100% Y sits the label fully above the gap point.
+            _chipLabel.style.translate = new Translate(
+                new Length(-50, LengthUnit.Percent),
+                new Length(-100, LengthUnit.Percent));
 
             // Exactly one color modifier — clear all, then set the composed mode.
             _reticle.EnableInClassList("zone-target-reticle--valid", frame.Color == ZoneReticleColorMode.Valid);
@@ -102,6 +117,10 @@ namespace SS3D.UI.MainHud.Components
 
             _crossFlash.style.display = DisplayStyle.Flex;
             _crossFlash.style.opacity = Mathf.Clamp01(opacity);
+            // Scale about the reticle center — UITK defaults can bias top-left and drift the flash.
+            _crossFlash.style.transformOrigin = new TransformOrigin(
+                Length.Percent(50),
+                Length.Percent(50));
             _crossFlash.style.scale = new Scale(new Vector2(scale, scale));
         }
 
@@ -172,16 +191,27 @@ namespace SS3D.UI.MainHud.Components
             VisualElement root = new();
             root.AddToClassList("zone-target-reticle__cross-flash");
             root.pickingMode = PickingMode.Ignore;
+            root.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(50));
 
+            // Rotate a zero-size pivot, then offset the arm on local +X. A bare Translate(11,0) on
+            // the arm is parent-space in UITK, so every spoke shifted right of the center dot.
+            const float outwardPx = 11f;
             float[] angles = { 45f, 135f, 225f, 315f };
             for (int i = 0; i < angles.Length; i++)
             {
+                VisualElement pivot = new();
+                pivot.AddToClassList("zone-target-reticle__cross-pivot");
+                pivot.pickingMode = PickingMode.Ignore;
+                pivot.style.rotate = new Rotate(Angle.Degrees(angles[i]));
+
                 VisualElement arm = new();
                 arm.AddToClassList("zone-target-reticle__cross-arm");
                 arm.pickingMode = PickingMode.Ignore;
-                arm.style.rotate = new Rotate(Angle.Degrees(angles[i]));
-                arm.style.translate = new Translate(11f, 0f);
-                root.Add(arm);
+                arm.style.left = outwardPx;
+                arm.style.top = -2f;
+
+                pivot.Add(arm);
+                root.Add(pivot);
             }
 
             return root;

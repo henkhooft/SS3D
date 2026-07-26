@@ -284,17 +284,23 @@
     margin-top: -22px;
     display: none;
     opacity: 0;
-    transform-origin: center;
+    transform-origin: 50% 50%;
+}
+
+.zone-target-reticle__cross-pivot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
 }
 
 .zone-target-reticle__cross-arm {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    left: 11px;
+    top: -2px;
     width: 24px;
     height: 4px;
-    margin-left: -12px;
-    margin-top: -2px;
     background-color: #ffffff;
     border-top-width: 1px;
     border-right-width: 1px;
