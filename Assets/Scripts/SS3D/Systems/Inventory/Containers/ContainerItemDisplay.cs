@@ -1,6 +1,5 @@
 ﻿using Coimbra;
 using SS3D.Systems.Inventory.Items;
-using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -67,29 +66,26 @@ namespace SS3D.Systems.Inventory.Containers
 
             if (attachmentPoint != null)
             {
-                // Create new (temporary) point
-                // HACK: Required because rotation pivot can be different
+                // #1226 used attachmentPoint.root (the ITEM) * localRotation — mid-air tumble became the grip.
+                // Absolute world (identity * att) freezes world axes so hand-local drifts with facing.
+                // Use the hand display's character root: hold ≈ character.facing * Attachment (stable).
                 GameObject temporaryPoint = new GameObject("TempPivotPoint");
+                Transform display = attachedContainer.Displays[index].transform;
+                Transform characterRoot = display.root;
 
-                temporaryPoint.transform.SetParent(attachedContainer.Displays[index].transform, false);
+                temporaryPoint.transform.SetParent(display, false);
                 temporaryPoint.transform.localPosition = Vector3.zero;
 
-                // Assign parent
                 itemTransform.SetParent(temporaryPoint.transform, false);
-
-                // Very sketchy, as the root is not reliable to be things we want them to be.
-                // Maybe we can tweak this in the future
-                temporaryPoint.transform.rotation = attachmentPoint.root.rotation * attachmentPoint.localRotation;
-               
-                // Assign the relative position between the attachment point and the object
-                itemTransform.localPosition = -attachmentPoint.localPosition;
+                temporaryPoint.transform.rotation = characterRoot.rotation * attachmentPoint.localRotation;
                 itemTransform.localRotation = Quaternion.identity;
+                itemTransform.localPosition = -attachmentPoint.localPosition;
             }
             else
             {
                 itemTransform.SetParent(attachedContainer.Displays[index].transform, false);
-                itemTransform.localPosition = new Vector3();
-                itemTransform.localRotation = new Quaternion();
+                itemTransform.localPosition = Vector3.zero;
+                itemTransform.localRotation = Quaternion.identity;
             }
 
             _displayedItems[index] = item;

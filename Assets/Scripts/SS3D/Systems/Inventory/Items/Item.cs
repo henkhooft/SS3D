@@ -299,6 +299,14 @@ namespace SS3D.Systems.Inventory.Items
         {
             if (_rigidbody != null)
             {
+                // Clients keep items kinematic (server simulates). Setting velocity on a
+                // kinematic body warns every SyncList add — only clear when physics is live.
+                if (!_rigidbody.isKinematic)
+                {
+                    _rigidbody.linearVelocity = Vector3.zero;
+                    _rigidbody.angularVelocity = Vector3.zero;
+                }
+
                 _rigidbody.isKinematic = true;
             }
             ToggleCollider(false);
