@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 965d40550 — 2026-07-26 (zone reticle ScreenToPanel + hit-flash pivot center)
+> Verified: c996212b2 — 2026-07-26 (item world rest orientation)
 
 # Inventory
 
@@ -30,6 +30,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
+- `Assets/Scripts/SS3D/Systems/Inventory/Items/Item.cs` — `WorldRestRotation` / `GetWorldFacing` for floor spawn/drop/icons
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainer.cs` — container primitive
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/AttachedContainerLock.cs` — ID-gated world lock
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/HumanInventory.cs` — on-person containers, `CarriedWeight`
@@ -58,9 +59,11 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip via **SS3D → Entities → Run All Human Prefab Recipes**.
 - **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Assets/Art/Icons/Alerts/`, wire catalog/builder/editor fallback, rebuild catalogs via **SS3D → Data → Rebuild All UI Catalogs**; add F4 debug row + `AlertStackCommand` case.
 - **New clothing with dual mesh:** add folded + worn-shaped children on one Item, `Cloth` mesh map, `ClothingItemPresentation` + root collider via `ClothingPrefabSetup` (or same PrefabUtility pattern) — never a second NetworkObject for the folded form.
+- **World spawn/drop facing:** use `Item.GetWorldFacing(yaw)` (or `ComposeWorldFacing` with the prefab rest) — never yaw-only or `Quaternion.identity`, or long items (M4, knives, tools) stand upright. Map-editor place goes through `PlacedItemObject.Create` (composes rest); holograms use `ConstructionHologram.TargetWorldRotation`.
 
 ## Pitfalls
 
+- **Long items spawn/drop upright / icons point down / hologram upright:** prefabs bake side-lying pitch/roll on the root (e.g. M4 `-90° X`). Yaw-only place, `Instantiate(..., identity)`, map holograms, and `RuntimePreviewGenerator` used to wipe that. Use `Item.GetWorldFacing` / `WorldRestRotation`; `SpawnItem` maps identity → rest; `PlacedItemObject.Create` composes for new tile spawns; holograms capture prefab `localRotation` into `TargetWorldRotation`. Icons set `RuntimePreviewGenerator.PreviewRotation` and frame with world up (`Vector3.up`) — using `previewObject.up` after a -90° X rest makes a side-lying gun look vertical. `AssetDatabase.TryGet<T>` must resolve Components via `GetComponent` like `Get`.
 - **HUD works in Editor Play Mode, missing in player builds:** `MainHudSubSystem` self-bootstraps with no SerializeFields; Editor used to fill via `AssetDatabase`. Builds need `Resources/MainHudAssetCatalog` — run **SS3D → Data → Rebuild All UI Catalogs** and commit the asset (same pattern as Machine UI; second copy of that stack).
 - **`ContainerViewer` must never reference `SS3D.UI.*`:** MainHudSubSystem hands the viewer to `StoragePanelHost` at bind/unbind. Do not add Systems→UI asmdef refs.
 - **Stack-merge highlight must match `AddStoredItem`:** `CanContainItemAtPosition` treats mergeable occupied stacks as valid — keep in sync with merge room checks.

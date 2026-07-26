@@ -94,11 +94,10 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public bool Start(InteractionEvent interactionEvent, InteractionReference reference)
         {
-            // rotate the item based on the facing direction of the entity
+            // Face entity yaw while keeping the prefab's authored rest pitch/roll (side-lying guns/tools).
             Entity entity = interactionEvent.Source.GetComponentInParent<Entity>();
-            Quaternion rotation = Quaternion.Euler(0, entity.transform.eulerAngles.y, 0);
-
             Hand hand = interactionEvent.Source.GetRootSource() as Hand;
+            Quaternion rotation = hand.ItemInHand.GetWorldFacing(entity.transform.eulerAngles.y);
             hand.PlaceHeldItemOutOfHand(interactionEvent.Point, rotation);
 
             return false;

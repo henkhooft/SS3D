@@ -74,7 +74,17 @@ namespace SS3D.Systems.Tile
                 Transform prefabTransform = prefab.transform;
 		        Shader shader = Shader.Find("Unlit/ObjectIcon");
 
-		        Texture2D texture = RuntimePreviewGenerator.GenerateModelPreviewWithShader(prefabTransform, shader, null, 128, 128, true);
+		        Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
+		        RuntimePreviewGenerator.PreviewRotation = prefabTransform.localRotation;
+		        Texture2D texture;
+		        try
+		        {
+			        texture = RuntimePreviewGenerator.GenerateModelPreviewWithShader(prefabTransform, shader, null, 128, 128, true);
+		        }
+		        finally
+		        {
+			        RuntimePreviewGenerator.PreviewRotation = previousPreviewRotation;
+		        }
 
 		        tempIcons.Add(texture);
 	        }
