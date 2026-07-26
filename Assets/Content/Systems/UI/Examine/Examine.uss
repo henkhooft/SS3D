@@ -1,4 +1,5 @@
-/* Character-examine paperdoll grid — shared by the hover quick-look preview and the full window. */
+/* Examine overlay UI: generic hover/detail (all examinables) + character paperdoll grid, shared by
+   the hover quick-look preview and the full examine window. */
 
 .character-paperdoll-grid {
     flex-direction: column;
@@ -67,4 +68,59 @@
 .inventory-slot--drop-target .inventory-slot__well {
     border-color: var(--ss3d-feedback-info);
     background-color: var(--ss3d-feedback-info-bg);
+}
+
+/* Generic hover/detail (replaces the condemned uGUI ExamineUI/ExamineDetailedView/ExamineImageDetailedView) */
+
+.examine-hover-name {
+    position: absolute;
+    font-size: 12px;
+    color: var(--ss3d-text-primary);
+    background-color: var(--ss3d-surface-panel);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 3px 8px;
+    box-shadow: var(--ss3d-shadow-panel);
+}
+
+.examine-detail-text {
+    position: absolute;
+    flex-direction: column;
+    max-width: 320px;
+    background-color: var(--ss3d-surface-panel);
+    border-radius: var(--ss3d-radius-md);
+    box-shadow: var(--ss3d-shadow-panel);
+    padding: var(--ss3d-space-3);
+}
+
+.examine-detail-text__name {
+    font-size: 14px;
+    letter-spacing: 1px;
+    margin-bottom: var(--ss3d-space-1);
+}
+
+.examine-detail-text__description {
+    font-size: 12px;
+    white-space: normal;
+}
+
+.examine-detail-image {
+    position: absolute;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--ss3d-surface-panel);
+    border-radius: var(--ss3d-radius-md);
+    box-shadow: var(--ss3d-shadow-panel);
+    padding: var(--ss3d-space-3);
+}
+
+.examine-detail-image__image {
+    width: 260px;
+    height: 175px;
+}
+
+.examine-detail-image__caption {
+    margin-top: var(--ss3d-space-1);
+    font-size: 12px;
+    white-space: normal;
+    -unity-text-align: middle-center;
 }

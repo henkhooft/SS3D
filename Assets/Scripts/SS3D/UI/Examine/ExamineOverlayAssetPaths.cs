@@ -1,16 +1,16 @@
 namespace SS3D.UI.Examine
 {
     /// <summary>
-    /// Stable asset paths for the character-examine UI. Rebuild the committed catalog with
-    /// <c>SS3D → Examine → Rebuild Character Examine Asset Catalog</c>.
+    /// Stable asset paths for the examine overlay UI (generic hover/detail + character paperdoll).
+    /// Rebuild the committed catalog with <c>SS3D → Examine → Rebuild Examine Asset Catalog</c>.
     /// </summary>
-    public static class CharacterExamineAssetPaths
+    public static class ExamineOverlayAssetPaths
     {
-        public const string ResourcesCatalogName = "CharacterExamineAssetCatalog";
+        public const string ResourcesCatalogName = "ExamineOverlayAssetCatalog";
         public const string CatalogAssetPath =
-            "Assets/Content/Systems/UI/Examine/Resources/CharacterExamineAssetCatalog.asset";
+            "Assets/Content/Systems/UI/Examine/Resources/ExamineOverlayAssetCatalog.asset";
 
-        public const string StyleSheet = "Assets/Content/Systems/UI/Examine/CharacterExamine.uss";
+        public const string StyleSheet = "Assets/Content/Systems/UI/Examine/Examine.uss";
         public const string InventorySlotStyle =
             "Assets/Content/Systems/UI/MachineInterface/Components/InventorySlot.uss";
         public const string MachineWindowStyle =

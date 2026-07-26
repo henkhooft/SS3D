@@ -103,7 +103,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 |--------|-----|--------|---------|
 | Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines; Harm melee + intent↔stance; `C` double-bound with Cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
-| Examine | [examine](systems/examine.md) | partial | Hover/detailed examine; uGUI views condemned pending UITK redesign; character-examine target type shipped on UITK (hold-to-take is a UI-only stub) |
+| Examine | [examine](systems/examine.md) | partial | Hover/detailed examine on UITK (`ExamineOverlaySubSystem`, uGUI deleted); character-examine target type shipped (hold-to-take is a UI-only stub) |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim; awaits TileMapLoaded / notifies AtmosReady; GPU VFX server/host only (client sync planned) |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |

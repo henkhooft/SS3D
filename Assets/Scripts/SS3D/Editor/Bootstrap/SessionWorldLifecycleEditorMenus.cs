@@ -105,7 +105,6 @@ namespace SS3D.Editor.Bootstrap
             typeof(CommsSubSystem),
             typeof(LocalSpeechBubbleController),
             typeof(ExamineSubSystem),
-            typeof(ExamineUI),
             typeof(SelectionSubSystem),
             typeof(CameraSubSystem),
             typeof(AudioSubSystem),

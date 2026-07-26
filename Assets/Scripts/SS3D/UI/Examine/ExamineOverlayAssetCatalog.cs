@@ -4,17 +4,17 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.Examine
 {
     /// <summary>
-    /// Committed resolved refs for the character-examine UI. Rebuild via
-    /// <c>SS3D → Examine → Rebuild Character Examine Asset Catalog</c>. Loaded at runtime with
-    /// <c>Resources.Load</c> so <see cref="CharacterExamineSubSystem"/> can self-bootstrap without any
+    /// Committed resolved refs for the examine overlay UI. Rebuild via
+    /// <c>SS3D → Examine → Rebuild Examine Asset Catalog</c>. Loaded at runtime with
+    /// <c>Resources.Load</c> so <see cref="ExamineOverlaySubSystem"/> can self-bootstrap without any
     /// scene/prefab placement (same pattern as <c>UiShellAssetCatalog</c>/<c>MainHudAssetCatalog</c>).
     /// </summary>
     [CreateAssetMenu(
-        fileName = CharacterExamineAssetPaths.ResourcesCatalogName,
-        menuName = "SS3D/UI/Character Examine Asset Catalog")]
-    public sealed class CharacterExamineAssetCatalog : ScriptableObject
+        fileName = ExamineOverlayAssetPaths.ResourcesCatalogName,
+        menuName = "SS3D/UI/Examine Overlay Asset Catalog")]
+    public sealed class ExamineOverlayAssetCatalog : ScriptableObject
     {
-        [SerializeField] private StyleSheet _characterExamineStyle;
+        [SerializeField] private StyleSheet _examineStyle;
         [SerializeField] private StyleSheet _inventorySlotStyle;
         [SerializeField] private StyleSheet _diegeticTokensStyle;
         [SerializeField] private StyleSheet _machineWindowStyle;
@@ -34,7 +34,7 @@ namespace SS3D.UI.Examine
         [SerializeField] private Sprite _iconHandLeft;
         [SerializeField] private Sprite _iconHandRight;
 
-        public StyleSheet CharacterExamineStyle => _characterExamineStyle;
+        public StyleSheet ExamineStyle => _examineStyle;
 
         public StyleSheet InventorySlotStyle => _inventorySlotStyle;
 
@@ -62,7 +62,7 @@ namespace SS3D.UI.Examine
 
         public bool HasRequiredAssets(out string missingField)
         {
-            if (_characterExamineStyle == null
+            if (_examineStyle == null
                 || _inventorySlotStyle == null
                 || _diegeticTokensStyle == null
                 || _machineWindowStyle == null)
@@ -77,13 +77,13 @@ namespace SS3D.UI.Examine
 
 #if UNITY_EDITOR
         public void EditorAssign(
-            StyleSheet characterExamineStyle,
+            StyleSheet examineStyle,
             StyleSheet inventorySlotStyle,
             StyleSheet diegeticTokensStyle,
             StyleSheet machineWindowStyle,
             CharacterExamineIconSet icons)
         {
-            _characterExamineStyle = characterExamineStyle;
+            _examineStyle = examineStyle;
             _inventorySlotStyle = inventorySlotStyle;
             _diegeticTokensStyle = diegeticTokensStyle;
             _machineWindowStyle = machineWindowStyle;

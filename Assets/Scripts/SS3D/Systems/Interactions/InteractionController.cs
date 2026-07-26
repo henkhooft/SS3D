@@ -281,20 +281,21 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Requests the character-examine window if the hovered selectable resolves to a
-        /// <see cref="CharacterExaminable"/>. Routed through <see cref="ExamineSubSystem"/> rather than a
-        /// direct reference so the interactions layer never needs to depend on the UI-layer window.
+        /// Requests the character-examine window if the hovered examinable's data is tagged
+        /// <see cref="ExamineType.CHARACTER"/> (e.g. <c>Human.prefab</c>'s existing <c>SimpleExaminable</c>
+        /// — no dedicated marker component needed). Routed through <see cref="ExamineSubSystem"/> rather
+        /// than a direct reference so the interactions layer never needs to depend on the UI-layer window.
         /// </summary>
         [Client]
         private bool TryRequestCharacterExamineWindow()
         {
-            CharacterExaminable character = _selectionSystem.GetCurrentSelectable<CharacterExaminable>();
-            if (character == null)
+            IExaminable examinable = _selectionSystem.GetCurrentSelectable<IExaminable>();
+            if (examinable?.GetData()?.Type != ExamineType.CHARACTER)
             {
                 return false;
             }
 
-            SubSystems.Get<ExamineSubSystem>().RequestCharacterWindow(character);
+            SubSystems.Get<ExamineSubSystem>().RequestCharacterWindow(examinable);
             return true;
         }
 

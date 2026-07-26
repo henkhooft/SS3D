@@ -9,8 +9,9 @@ namespace SS3D.UI.Examine
 {
     /// <summary>
     /// Compact hover "quick-look" preview for character examine — a name header over a small
-    /// paperdoll grid, anchored near the cursor while a <see cref="CharacterExaminable"/> is hovered.
-    /// Unlike every other examinable, this shows on plain hover with no Shift/hold-to-peek gate — see
+    /// paperdoll grid, anchored near the cursor while an <see cref="ExamineType.CHARACTER"/>-tagged
+    /// examinable is hovered. Unlike every other examinable, this shows on plain hover with no
+    /// Shift/hold-to-peek gate — see
     /// Documents/architecture/systems/examine.md fork-deviations for why character examine's
     /// hover/Shift+Click model departs from the general hold-to-peek rule.
     /// </summary>
@@ -20,7 +21,7 @@ namespace SS3D.UI.Examine
         private const float OffsetY = 16f;
         private const float SlotSize = 40f;
 
-        private readonly StyleSheet _characterExamineStyle;
+        private readonly StyleSheet _examineStyle;
         private readonly StyleSheet _inventorySlotStyle;
         private readonly StyleSheet _diegeticTokensStyle;
         private readonly CharacterExamineIconSet _icons;
@@ -31,12 +32,12 @@ namespace SS3D.UI.Examine
         private CharacterPaperdollGrid _grid;
 
         public CharacterQuickLookView(
-            StyleSheet characterExamineStyle,
+            StyleSheet examineStyle,
             StyleSheet inventorySlotStyle,
             StyleSheet diegeticTokensStyle,
             CharacterExamineIconSet icons)
         {
-            _characterExamineStyle = characterExamineStyle;
+            _examineStyle = examineStyle;
             _inventorySlotStyle = inventorySlotStyle;
             _diegeticTokensStyle = diegeticTokensStyle;
             _icons = icons;
@@ -48,9 +49,9 @@ namespace SS3D.UI.Examine
             _root.style.flexGrow = 1;
             _root.pickingMode = PickingMode.Ignore;
 
-            if (_characterExamineStyle != null)
+            if (_examineStyle != null)
             {
-                _root.styleSheets.Add(_characterExamineStyle);
+                _root.styleSheets.Add(_examineStyle);
             }
 
             if (_inventorySlotStyle != null)

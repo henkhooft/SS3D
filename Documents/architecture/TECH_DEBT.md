@@ -115,20 +115,19 @@ follow-on **(b)**, not this item.
 Confirmed still condemned-but-present on `develop`: console panel
 ([ingame-console.md](systems/ingame-console.md)), lobby job-select/ready UI
 ([rounds-lobby.md](systems/rounds-lobby.md)), the ScreenEffects F2 debug canvas
-([screen-effects.md](systems/screen-effects.md)), TileMap Creator
-([tile.md](systems/tile.md)), and examine's hover/detailed uGUI panels
-([examine.md](systems/examine.md)). Each is "do not extend, replace when the owning redesign lands,"
-which is the right call individually, but there is no single burndown tracking how many of these
-are left or in what order they should go — five live legacy UI stacks is real maintenance surface
-(input arbitration, click-through, and pointer-over-UI code all still have to account for them).
+([screen-effects.md](systems/screen-effects.md)), and TileMap Creator
+([tile.md](systems/tile.md)). Each is "do not extend, replace when the owning redesign lands," which
+is the right call individually, but there is no single burndown tracking how many of these are left
+or in what order they should go — four live legacy UI stacks is real maintenance surface (input
+arbitration, click-through, and pointer-over-UI code all still have to account for them).
 
 - Crafting menu uGUI was purged with §1.6 (2026-07-23).
-
-- **Doc-hygiene note:** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
-  Condemned UI table still lists "Inventory / hands / intent uGUI" as condemned-pending-replacement,
-  but [inventory.md](systems/inventory.md) confirms that surface's "old UI purge" already shipped
-  (uGUI fully removed, not just disabled) as part of PR #16. That row is stale and should be removed
-  next time that doc is touched.
+- Examine's hover/detailed uGUI panels (`ExamineUI`/`ExamineDetailedView`/`ExamineImageDetailedView`)
+  were deleted (not ported) and replaced by `ExamineOverlaySubSystem` on UI Toolkit, alongside the new
+  character-examine paperdoll (2026-07-26) — see [examine.md](systems/examine.md).
+- **Doc-hygiene fixed (2026-07-26):** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
+  Condemned UI table's stale "Inventory / hands / intent uGUI" row (already purged per
+  [inventory.md](systems/inventory.md) / PR #16) is corrected.
 
 ### 1.9 God-classes forming in hot UI/interaction code
 

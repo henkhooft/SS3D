@@ -28,7 +28,7 @@ namespace SS3D.UI.Examine
 
         public event Action CloseRequested;
 
-        private readonly StyleSheet _characterExamineStyle;
+        private readonly StyleSheet _examineStyle;
         private readonly StyleSheet _inventorySlotStyle;
         private readonly StyleSheet _diegeticTokensStyle;
         private readonly StyleSheet _machineWindowStyle;
@@ -45,13 +45,13 @@ namespace SS3D.UI.Examine
         public bool IsOpen { get; private set; }
 
         public CharacterExamineWindowView(
-            StyleSheet characterExamineStyle,
+            StyleSheet examineStyle,
             StyleSheet inventorySlotStyle,
             StyleSheet diegeticTokensStyle,
             StyleSheet machineWindowStyle,
             CharacterExamineIconSet icons)
         {
-            _characterExamineStyle = characterExamineStyle;
+            _examineStyle = examineStyle;
             _inventorySlotStyle = inventorySlotStyle;
             _diegeticTokensStyle = diegeticTokensStyle;
             _machineWindowStyle = machineWindowStyle;
@@ -64,9 +64,9 @@ namespace SS3D.UI.Examine
             _root.style.flexGrow = 1;
             _root.pickingMode = PickingMode.Ignore;
 
-            if (_characterExamineStyle != null)
+            if (_examineStyle != null)
             {
-                _root.styleSheets.Add(_characterExamineStyle);
+                _root.styleSheets.Add(_examineStyle);
             }
 
             if (_inventorySlotStyle != null)

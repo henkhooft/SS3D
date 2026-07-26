@@ -15,10 +15,11 @@ owning a private document. Policy: [2026-07_agent-first-composition.md](../2026-
 Effort doc: [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md).
 
 **Migrated onto `UiShellSubSystem`:** radial interaction menu, armed overlay (`Assets/Scripts/SS3D/Systems/Interactions/`),
-character examine hover/window (`Assets/Scripts/SS3D/UI/Examine/` — see [examine](examine.md)). Character examine's
-`CharacterExamineAssetCatalog` is a lighter one-off catalog (no `PanelSettings`/document of its own, since it
-attaches into the shared document) rather than a full `UiAssetCatalogBase` derivative — reconcile the two if more
-self-bootstrapping overlay-only surfaces show up.
+the full examine overlay — generic hover/detail *and* character paperdoll — via `ExamineOverlaySubSystem`
+(`Assets/Scripts/SS3D/UI/Examine/` — see [examine](examine.md); this is also the redesign that deleted the
+condemned uGUI `ExamineUI`, not just a character-only addition). Its `ExamineOverlayAssetCatalog` is a lighter
+one-off catalog (no `PanelSettings`/document of its own, since it attaches into the shared document) rather than
+a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootstrapping overlay-only surfaces show up.
 
 **Not yet migrated (still own their own path-catalog wedge — duplicated pattern):**
 
@@ -64,7 +65,7 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay, character examine hover/window
+- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll)
 - **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), lobby UI, comms UI, examine overlays, console (as redesigns land)
 
 ## Related docs
