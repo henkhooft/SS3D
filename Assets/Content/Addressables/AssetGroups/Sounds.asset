@@ -160,6 +160,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a7f3e91c2b4d4856a1c0e8f92d35b647
+    m_Address: Assets/Art/Sound/World/Airlocks/AirlockDeny.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fd331e360db5fbb448e66367e41d1893
     m_Address: Assets/Art/Sound/World/Music/title3.ogg
     m_ReadOnly: 0

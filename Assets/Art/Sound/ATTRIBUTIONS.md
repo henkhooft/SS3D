@@ -29,6 +29,7 @@ not original SS3D / SS3D-Art work. Keep paths relative to the repo root.
 | `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric3.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric3.ogg` |
 | `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric4.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric4.ogg` |
 | `Assets/Art/Sound/Items/Weapons/Firearms/SS14/Ric5.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Guns/Hits | SS14 `Resources/Audio/Weapons/Guns/Hits/ric5.ogg` |
+| `Assets/Art/Sound/World/Airlocks/AirlockDeny.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Machines | SS14 `Resources/Audio/Machines/airlock_deny.ogg` |
 
 SS3D-Art vocals under `Assets/Art/Sound/Entities/Humanoids/Human/Vocal/` (Choke&Gasp, Scream)
 default to [Documents/LICENSE-ASSETS.md](../../Documents/LICENSE-ASSETS.md) (CC BY-NC-SA 4.0).

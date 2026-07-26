@@ -4,24 +4,30 @@ using System.Collections.ObjectModel;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Core;
+using SS3D.Interactions;
+using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Electricity;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Selection;
 using SS3D.Systems.Tile;
 using UnityEngine;
+using AudioType = SS3D.Systems.Audio.AudioType;
 
 namespace SS3D.Systems.Furniture
 {
     /// <summary>
     /// Opens when an authorized character is in the door volume, stays open while occupied,
-    /// and closes after a delay when empty.
+    /// and closes after a delay when empty. Also offers click Open/Close and access-denied feedback.
     /// </summary>
     /// <remarks>
     /// Proximity uses spawned entity transforms against the door trigger (with padding), not
     /// CharacterController physics triggers. Remotes are NetworkTransformed on the server;
     /// CC.Move never runs for them, so OnTriggerEnter / OverlapBox against the CC miss them.
     /// </remarks>
-    public class AirLockOpener : NetworkBehaviour, IDynamicTileOccupant
+    [RequireComponent(typeof(Selectable))]
+    public class AirLockOpener : NetworkBehaviour, IDynamicTileOccupant, IInteractionTarget
     {
         /// <summary>
         /// Seconds before the door starts closing once the volume is empty.
@@ -39,7 +45,15 @@ namespace SS3D.Systems.Furniture
         /// </summary>
         private const float ProximityPadding = 0.85f;
 
+        private const int DoorLightMaterialIndex = 1;
+        private const int DenyBlinkPulseCount = 3;
+        private const float DenyBlinkHalfPeriod = 0.22f;
+
         private static readonly int OpenId = Animator.StringToHash("Open");
+
+        public static readonly Color DoorLightOpeningColor = new Color(0.07f, 1f, 0.32f);
+        public static readonly Color DoorLightClosingColor = new Color(1f, 0.18f, 0.2f);
+        public static readonly Color DoorLightIdleColor = Color.black;
 
         [SerializeField]
         private Animator _animator;
@@ -64,15 +78,20 @@ namespace SS3D.Systems.Furniture
         private bool _isOpen;
 
         private readonly HashSet<HumanInventory> _authorizedOccupants = new();
+        private readonly HashSet<HumanInventory> _deniedOccupants = new();
+        private readonly HashSet<HumanInventory> _proximityScratch = new();
 
         private AirLockAccessGate _accessGate;
         private Coroutine _closeTimer;
+        private Coroutine _denyBlinkTimer;
 
         public ReadOnlyCollection<MeshRenderer> MeshesToColor => _meshesToColor.AsReadOnly();
 
         public ReadOnlyCollection<SkinnedMeshRenderer> SkinnedMeshesToColor => _skinnedMeshesToColor.AsReadOnly();
 
         public bool IsOpen => _isOpen;
+
+        public bool IsPowered => PowerGate.IsPowered(_powerConsumer, NullConsumerPolicy.Allow);
 
         private void Awake()
         {
@@ -127,6 +146,115 @@ namespace SS3D.Systems.Furniture
             base.OnStopServer();
         }
 
+        public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
+        {
+            return new IInteraction[]
+            {
+                new AirLockDoorInteraction(this)
+                {
+                    Name = IsOpen ? "Close" : "Open",
+                },
+            };
+        }
+
+        /// <summary>
+        /// Shared door-light presentation used by the animator state machine and access-denied blink.
+        /// </summary>
+        public void SetDoorLightColor(Color color)
+        {
+            if (_meshesToColor != null)
+            {
+                for (int i = 0; i < _meshesToColor.Count; i++)
+                {
+                    MeshRenderer renderer = _meshesToColor[i];
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    Material[] materials = renderer.materials;
+                    if (DoorLightMaterialIndex >= materials.Length)
+                    {
+                        continue;
+                    }
+
+                    materials[DoorLightMaterialIndex].color = color;
+                }
+            }
+
+            if (_skinnedMeshesToColor == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _skinnedMeshesToColor.Count; i++)
+            {
+                SkinnedMeshRenderer skinnedRenderer = _skinnedMeshesToColor[i];
+                if (skinnedRenderer == null)
+                {
+                    continue;
+                }
+
+                if (color == DoorLightOpeningColor)
+                {
+                    skinnedRenderer.SetBlendShapeWeight(1, 100);
+                    skinnedRenderer.SetBlendShapeWeight(2, 0);
+                }
+                else if (color == DoorLightClosingColor)
+                {
+                    skinnedRenderer.SetBlendShapeWeight(1, 0);
+                    skinnedRenderer.SetBlendShapeWeight(2, 100);
+                }
+                else
+                {
+                    skinnedRenderer.SetBlendShapeWeight(1, 0);
+                    skinnedRenderer.SetBlendShapeWeight(2, 0);
+                }
+            }
+        }
+
+        [Server]
+        public void ServerPlayAccessDenied()
+        {
+            if (!IsPowered)
+            {
+                return;
+            }
+
+            if (SubSystems.TryGet(out AudioSubSystem audio))
+            {
+                audio.PlayAudioSource(AudioType.Sfx, AirlockAudioTrackIds.AirlockDeny, transform.position, null);
+            }
+
+            RpcPlayAccessDeniedBlink();
+        }
+
+        [Server]
+        public bool TryServerOpenFromInteraction(HumanInventory inventory)
+        {
+            if (!IsPowered)
+            {
+                return false;
+            }
+
+            if (_accessGate != null && !_accessGate.TryAuthorizeInventory(inventory, out _))
+            {
+                ServerPlayAccessDenied();
+                return false;
+            }
+
+            CancelCloseTimer();
+            SetOpen(true);
+            ScheduleCloseAfterDelay();
+            return true;
+        }
+
+        [Server]
+        public void ServerCloseFromInteraction()
+        {
+            SetOpen(false);
+        }
+
         private void FixedUpdate()
         {
             if (!IsServer)
@@ -145,7 +273,7 @@ namespace SS3D.Systems.Furniture
                 return;
             }
 
-            if (!IsPowered())
+            if (!IsPowered)
             {
                 if (_authorizedOccupants.Count > 0)
                 {
@@ -153,6 +281,7 @@ namespace SS3D.Systems.Furniture
                     ScheduleCloseAfterDelay();
                 }
 
+                _deniedOccupants.Clear();
                 return;
             }
 
@@ -163,6 +292,7 @@ namespace SS3D.Systems.Furniture
 
             bool wasEmpty = _authorizedOccupants.Count == 0;
             _authorizedOccupants.Clear();
+            _proximityScratch.Clear();
 
             List<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
             for (int i = 0; i < spawnedPlayers.Count; i++)
@@ -190,22 +320,36 @@ namespace SS3D.Systems.Furniture
                     continue;
                 }
 
+                _proximityScratch.Add(inventory);
+
                 if (_accessGate != null &&
                     !_accessGate.TryAuthorizeInventory(inventory, out _))
                 {
+                    if (_deniedOccupants.Add(inventory))
+                    {
+                        ServerPlayAccessDenied();
+                    }
+
                     continue;
                 }
 
+                _deniedOccupants.Remove(inventory);
                 _authorizedOccupants.Add(inventory);
             }
 
+            _deniedOccupants.RemoveWhere(inventory => inventory == null || !_proximityScratch.Contains(inventory));
+
             bool isEmpty = _authorizedOccupants.Count == 0;
-            if (wasEmpty && !isEmpty)
+            if (!isEmpty)
             {
+                // Re-open if someone closed while authorized occupants remain (click Close).
                 CancelCloseTimer();
-                SetOpen(true);
+                if (!_isOpen)
+                {
+                    SetOpen(true);
+                }
             }
-            else if (!wasEmpty && isEmpty)
+            else if (!wasEmpty)
             {
                 ScheduleCloseAfterDelay();
             }
@@ -226,10 +370,34 @@ namespace SS3D.Systems.Furniture
             SetOpen(false);
         }
 
+        private IEnumerator RunDenyBlink()
+        {
+            for (int pulse = 0; pulse < DenyBlinkPulseCount; pulse++)
+            {
+                SetDoorLightColor(DoorLightClosingColor);
+                yield return new WaitForSeconds(DenyBlinkHalfPeriod);
+                SetDoorLightColor(DoorLightIdleColor);
+                yield return new WaitForSeconds(DenyBlinkHalfPeriod);
+            }
+
+            _denyBlinkTimer = null;
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcPlayAccessDeniedBlink()
+        {
+            if (_denyBlinkTimer != null)
+            {
+                StopCoroutine(_denyBlinkTimer);
+            }
+
+            _denyBlinkTimer = StartCoroutine(RunDenyBlink());
+        }
+
         [Server]
         private void SetOpen(bool open)
         {
-            if (open && !IsPowered())
+            if (open && !IsPowered)
             {
                 return;
             }
@@ -293,11 +461,6 @@ namespace SS3D.Systems.Furniture
 
             StopCoroutine(_closeTimer);
             _closeTimer = null;
-        }
-
-        private bool IsPowered()
-        {
-            return PowerGate.IsPowered(_powerConsumer, NullConsumerPolicy.Allow);
         }
     }
 }
