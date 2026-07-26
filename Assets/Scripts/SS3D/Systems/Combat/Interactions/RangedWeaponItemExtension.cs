@@ -219,8 +219,8 @@ namespace SS3D.Systems.Combat.Interactions
             }
 
             Vector3 position = transform.position;
-            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineIn, position, null);
-            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadCock, position, null, false, 0.85f, 1f);
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineIn, position, null, false, 1f, 1f, 8f, 40f);
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadCock, position, null, false, 0.95f, 1f, 8f, 40f);
         }
 
         private void EnsureInitialized()

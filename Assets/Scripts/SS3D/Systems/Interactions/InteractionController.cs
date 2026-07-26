@@ -531,7 +531,10 @@ namespace SS3D.Systems.Interactions
             string[] clips = CombatAudioTrackIds.GunFire;
             string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
             float pitch = UnityEngine.Random.Range(0.95f, 1.05f);
-            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(AudioType.Sfx, clipId, position, null, false, 0.9f, pitch);
+            // Full volume + generous minDistance so third-person / personal-breathing mix
+            // still reads the report as louder than internal cues.
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, clipId, position, null, false, 1f, pitch, 14f, 90f);
         }
 
         [Server]
@@ -544,7 +547,7 @@ namespace SS3D.Systems.Interactions
             }
 
             SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, CombatAudioTrackIds.GunEmpty, position, null, false, 0.75f, 1f);
+                AudioType.Sfx, CombatAudioTrackIds.GunEmpty, position, null, false, 1f, 1f, 8f, 40f);
         }
 
         [Server]
@@ -554,7 +557,7 @@ namespace SS3D.Systems.Interactions
             string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
             float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
             SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, clipId, impactPoint, null, false, 0.7f, pitch);
+                AudioType.Sfx, clipId, impactPoint, null, false, 0.95f, pitch, 6f, 50f);
         }
 
         [Server]
@@ -566,7 +569,7 @@ namespace SS3D.Systems.Interactions
             }
 
             SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineOut, transform.position, null);
+                AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineOut, transform.position, null, false, 1f, 1f, 8f, 40f);
 
             TargetNotifyRangedReload(
                 Owner,
