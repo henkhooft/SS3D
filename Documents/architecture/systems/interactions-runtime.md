@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 0a4aee084 — 2026-07-26 (outline prune destroyed MeshRenderers on wall destroy)
+> Verified: 965d40550 — 2026-07-26 (outline prune destroyed MeshRenderers on wall destroy)
 
 # Interactions (runtime)
 

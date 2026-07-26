@@ -19,7 +19,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 
 - **M0** — Test station; vault/disk/nuke; loadouts (ammo, ID/access, defuse tools, internals); assignment; ops/crew identity
-- **M1p** — Combat feel: VFX/decals/blood/sounds, aim IK, two-hand, reload cues, knockdown clarity, sprint, no debug chrome
+- **M1p** — Combat feel **partial:** muzzle/holes/SS14 audio/anims/two-hand/`rangeddebug` shipped; still blood, knockdown clarity, sprint, strip debug chrome (aim IK deferred)
 - **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
 - **M4** — Objectives + win/lose
 - **M5** — End-game screen + restart; spectators still see the outcome

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/IngameConsoleSystem/
 > Entry points: CommandsController
 > Status: partial
-> Verified: e1d43a531 — 2026-07-26
+> Verified: 965d40550 — 2026-07-26
 
 # In-game console
 

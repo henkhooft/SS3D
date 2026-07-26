@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: 965d40550 — 2026-07-26 (zone reticle ScreenToPanel + hit-flash pivot center)
 
 # Inventory
 
@@ -67,6 +67,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Spawn/round catch-up can re-show HUD over MI / map editor:** always route through `ApplyVisibility()` (includes `_machineUiOpen` / `_mapEditorOpen`). Do not call bare `SetVisible(true)` from bind/round handlers. Do not hide HUD from `MachineInterfaceHost` or `MapEditorSubSystem` — MainHud observes their events (asmdef direction). Storage panels have a parallel gate (`StoragePanelHost` + `InterfaceOpened`/`Closed`) — hiding Main HUD alone is not enough.
 - **UITK white block:** never put `border-radius` and `overflow: hidden` on the same element — split painted outer vs clip inner (`storage-panel` / `storage-panel__clip`, weight track same). Same rule as [machine-interface](machine-interface.md).
 - **HUD slot label recenter:** Main HUD hover chips live in `inventory-slot__label-host` (flex-centered). Do not center with `left: 50%; translate: -50%` — UITK keeps the old percentage width after `SlotLabel` changes (Head → item name).
+- **Zone reticle hit-flash sits right of the center dot:** do not `Translate(x, 0)` on rotated cross arms — UITK translate is parent-space, so every spoke shifts right. Rotate a zero-size pivot, offset the arm on local +X. Scale the flash with `transform-origin: 50% 50%`.
+- **Zone reticle drifts off the cursor:** `ZoneReticleFrame.CursorScreen` is bottom-left **screen** pixels (same as `ScreenPointToRay`). UITK `left`/`top` need **panel** space — convert with `InputInterface.ScreenToPanel` before layout. Do not assign raw mouse coords to style.left/bottom.
 - **Zone reticle misses limbs:** armature `ZoneTargetCollider` bones are on **Characters** (often triggers), not BodyParts. Resolve via `TryResolveHoverZone` → `TryResolveZoneFromRay` (Collider.Raycast), never BodyParts-only `Physics.RaycastAll` + `QueryTriggerInteraction.Ignore`. Do not gate the chip on `IsPointerOverInterface` (leftover uGUI can keep it true). Exclude local `HumanHealthController` or the reticle/connect hit yourself.
 - **Zone reticle color fight:** never toggle `--valid` / `--recharging` from separate setters. Push aim + recovery (+ bloom) into `ZoneReticleDriver`, then `Apply` one `ZoneReticleFrame` (priority Recharging > Valid > Idle). Cross flash is a frame field, not a parallel Hit color mode. Do not add a second bloom writer.
 - **Intent chip vs `C`:** HUD used to refresh intent only on chip click — `C` changed gameplay intent but not the highlight. `MainHudSubSystem` now polls `CurrentIntent` each frame (same pattern as active hand). Prefer an `IntentChanged` event on `IIntentProvider` when a second consumer appears — interim poll is accepted tech debt.
