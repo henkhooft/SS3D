@@ -131,11 +131,20 @@ namespace SS3D.Data.AssetDatabases
                 return AssetProvider.TryGetCached(index, out asset);
             }
 
-            bool hasValue = Assets.TryGetValue(index, out Object foundValue);
+            if (!Assets.TryGetValue(index, out Object foundValue))
+            {
+                asset = null;
+                return false;
+            }
+
+            if (typeof(T).IsSubclassOf(typeof(Component)) && foundValue is GameObject gameObject)
+            {
+                asset = gameObject.GetComponent<T>();
+                return asset != null;
+            }
 
             asset = foundValue as T;
-
-            return hasValue;
+            return asset != null;
         }
 
         /// <summary>

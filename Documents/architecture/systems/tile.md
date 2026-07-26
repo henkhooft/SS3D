@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
 > Status: partial
-> Verified: 3b1f4a422 — 2026-07-24
+> Verified: c996212b2 — 2026-07-26 (item hologram rest orientation)
 
 # Tile / construction
 
@@ -67,6 +67,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **Spawn markers vanish after loading an old template:** `TileMap.Clear` (called on every template restore) clears `SpawnPoints`. Templates without a `spawn-points` chunk intentionally stay empty — do not skip that clear or stale markers from the previous map survive.
 - **Wall Attachments hologram waited for hover:** Delete ghost only swapped to a mount prefab after `Resolve` found one under the cursor; Construct kept the previous subcategory’s selection. Selecting the Wall Attachments (or any) subcategory now picks a catalog prototype immediately — Delete uses it as the face-cycled ghost, Construct auto-selects the first asset in that tab.
 - **Dropper / Select always copied Plenum:** tile-location arrays are enum-ordered with Plenum at index 0, so a naive foreach sampled the base tile under every click. Use `MapEditorCursorPick` (physics hit when available, else furniture→turf→plenum priority; prefer visible layer groups).
+- **Item hologram stands upright while placed item lies on its side:** `CreateHologram` / `UpdateRotationAndPosition` used to force yaw-only. Capture prefab root rest into `ConstructionHologram` and use `TargetWorldRotation` (yaw × rest) — same composition as `PlacedItemObject.Create` / `Item.GetWorldFacing` ([inventory](inventory.md)).
 - **Construct hologram lingered after switching to Select:** `OnToolSelected` only cleared when leaving Delete, and hologram `HandleUpdate` early-out for Select/Dropper/Move skipped `DestroyHolograms`, so the last ghost froze in-world. Clear selection on non-Edit tools; destroy leftovers in the inactive-tool early-out; restore the ghost when returning to Construct from the current library selection.
 - **Map Selection Load/Del did nothing (New Map worked):** `HandleUpdate` called `RefreshMapList()` every frame while the maps/save popover was open, so `PopulateLoadList` destroyed and recreated Load/Del mid-click (pointer-down/up never hit the same element). New Map is built once in `BuildMapsPopover`, so it kept working. Refresh only on popover open and after save/delete.
 - **Map Selection empty after Save Map:** `MapEditorLocalPersistence` used to pass `SavePath + "/" + name` into `TileSubSystem.Save`/`Load`, but those APIs already prepend `StationTemplates/` via `PersistenceSubSystem` — files landed in `StationTemplates/StationTemplates/` while the UI listed only `StationTemplates/`. Pass bare template names; `ListMaps` uses `ListStationTemplates()` (includes legacy `Tilemaps/`) and migrates any doubled-path leftovers.

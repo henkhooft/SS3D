@@ -339,7 +339,7 @@ namespace SS3D.Systems.Inventory.Containers
 
             Hands hands = GetComponent<Hands>();
             Hand hand = hands != null ? hands.SelectedHand : null;
-            Quaternion rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            Quaternion rotation = item.GetWorldFacing(transform.eulerAngles.y);
 
             if (hand != null && hand.ItemInHand == item)
             {

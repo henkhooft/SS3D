@@ -15,11 +15,18 @@ namespace SS3D.Systems.Tile.TileMapCreator
         public GameObject Hologram;
         private Vector3 _targetPosition;
         private Direction _direction;
+        private Quaternion _worldRestRotation;
         public Direction Direction => _direction;
         public bool ActiveSelf => Hologram.activeSelf;
         public bool SetActive { set => Hologram.SetActive(value); }
         public Vector3 TargetPosition { get => _targetPosition; set => _targetPosition = value; }
         public float PlacementYOffset { get; private set; }
+
+        /// <summary>Yaw from direction composed with authored item rest pitch/roll.</summary>
+        public Quaternion TargetWorldRotation =>
+            SS3D.Systems.Inventory.Items.Item.ComposeWorldFacing(
+                _worldRestRotation,
+                TileHelper.GetRotationAngle(_direction));
         
         /// <summary>
         /// Build a new hologram
@@ -37,6 +44,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
             _targetPosition = targetPosition;
             PlacementYOffset = placementYOffset;
             _direction = dir;
+            // Capture authored root rest before CreateHologram overwrites with yaw-only (M4 -90° X, etc.).
+            _worldRestRotation = ghostObject.transform.localRotation;
 
             if (ghostObject.TryGetComponent(out ICustomGhostRotation customRotationComponent) 
                 && !customRotationComponent.GetAllowedRotations().Contains(dir))
@@ -116,7 +125,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 Hologram.transform.position,
                 _targetPosition + new Vector3(0, PlacementYOffset + 0.1f, 0),
                 Time.deltaTime * 15f);
-            Hologram.transform.rotation = Quaternion.Lerp(Hologram.transform.rotation, Quaternion.Euler(0, TileHelper.GetRotationAngle(_direction), 0), Time.deltaTime * 15f);
+            Hologram.transform.rotation = Quaternion.Lerp(Hologram.transform.rotation, TargetWorldRotation, Time.deltaTime * 15f);
         }
 
         /// <summary>

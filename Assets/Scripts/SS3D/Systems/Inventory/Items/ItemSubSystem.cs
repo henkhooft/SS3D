@@ -39,7 +39,14 @@ namespace SS3D.Systems.Inventory.Items
         {
             Item itemPrefab = Assets.Get<Item>(AssetDatabases.Items, id);
 
-            Item itemInstance = Instantiate(itemPrefab, position, rotation);
+            // Instantiate(..., identity) would wipe authored side-lying pitch/roll on long items.
+            Quaternion spawnRotation = rotation;
+            if (rotation == Quaternion.identity && itemPrefab != null)
+            {
+                spawnRotation = itemPrefab.WorldRestRotation;
+            }
+
+            Item itemInstance = Instantiate(itemPrefab, position, spawnRotation);
             ServerManager.Spawn(itemInstance.GameObject);
 
             Log.Information(this, "Item {itemInstance} spawned at {position}", Logs.ServerOnly, itemInstance.name, position);
