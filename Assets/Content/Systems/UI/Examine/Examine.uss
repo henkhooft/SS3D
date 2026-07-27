@@ -12,12 +12,20 @@
 }
 
 .character-paperdoll-grid__row > .inventory-slot {
-    margin-right: var(--ss3d-space-1);
-    margin-bottom: var(--ss3d-space-1);
+    margin-right: 2px;
+    margin-bottom: 2px;
+}
+
+/* Icon-only paperdoll: hide InventorySlot caption chips so wells pack tightly. */
+.character-paperdoll-grid .inventory-slot__label-host {
+    display: none;
+    margin-top: 0;
+    height: 0;
+    min-height: 0;
 }
 
 .character-paperdoll-grid__hand-row {
-    margin-top: var(--ss3d-space-1);
+    margin-top: 2px;
 }
 
 /* Hover quick-look preview */

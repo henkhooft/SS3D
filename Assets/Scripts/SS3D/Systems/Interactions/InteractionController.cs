@@ -252,15 +252,14 @@ namespace SS3D.Systems.Interactions
         [Client]
         public void HandleRunPrimary(InputAction.CallbackContext callbackContext)
         {
-            if (InputInterface.IsPointerOverInterface())
+            // Caps Lock is sprint; Shift is examine-only (2026-07 input scheme).
+            // Read Shift from Keyboard — DetailedExamine.IsPressed can lag behind the device.
+            if (IsShiftModifierHeld() && TryRequestCharacterExamineWindow())
             {
                 return;
             }
 
-            // Shift+Click opens the persistent character-examine window (Documents/architecture/systems
-            // /examine.md § character examine) — a distinct modifier combo from plain click, so it always
-            // takes priority over armed/harm/interaction resolution rather than competing with them.
-            if (_inputSystem.DetailedExamine.IsPressed() && TryRequestCharacterExamineWindow())
+            if (InputInterface.IsPointerOverInterface())
             {
                 return;
             }
@@ -315,14 +314,40 @@ namespace SS3D.Systems.Interactions
         [Client]
         private bool TryRequestCharacterExamineWindow()
         {
-            IExaminable examinable = _selectionSystem.GetCurrentSelectable<IExaminable>();
-            if (examinable?.GetData()?.Type != ExamineType.CHARACTER)
+            if (_selectionSystem == null)
+            {
+                SubSystems.TryGet(out _selectionSystem);
+            }
+
+            // Deepest pick is often worn clothing (SIMPLE_TEXT IExaminable). Walk to CHARACTER.
+            if (!CharacterExamineTargetUtility.TryResolveFromSelectable(
+                    _selectionSystem?.GetCurrentSelectable(),
+                    out IExaminable characterExaminable,
+                    out _))
             {
                 return false;
             }
 
-            SubSystems.Get<ExamineSubSystem>().RequestCharacterWindow(examinable);
+            if (!SubSystems.TryGet(out ExamineSubSystem examineSystem) || examineSystem == null)
+            {
+                return false;
+            }
+
+            examineSystem.RequestCharacterWindow(characterExaminable);
             return true;
+        }
+
+        private bool IsShiftModifierHeld()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null
+                && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed))
+            {
+                return true;
+            }
+
+            // Caps Lock is sprint; Shift is examine-only after the 2026-07 input scheme pass.
+            return _inputSystem != null && _inputSystem.DetailedExamine.IsPressed();
         }
 
         /// <summary>

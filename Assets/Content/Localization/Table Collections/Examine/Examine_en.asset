@@ -1208,6 +1208,10 @@ MonoBehaviour:
     m_Localized: "It is cracked and hissing \u2014 atmosphere is leaking through."
     m_Metadata:
       m_Items: []
+  - m_Id: 257390954050000000
+    m_Localized: Unidentified Crew Member
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

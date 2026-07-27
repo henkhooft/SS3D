@@ -71,7 +71,14 @@ namespace SS3D.UI.Examine
         public void Attach(VisualElement layerRoot)
         {
             _root = new VisualElement { name = "character-examine-window-surface" };
-            _root.style.flexGrow = 1;
+            // Fill the overlay. flexGrow siblings stack and only cover a slice of the panel;
+            // ScreenToPanel left/top are full-panel coords — relative to a bottom-third root
+            // that pushed worldBound.y past the visible screen (wy~1166 with top~530).
+            _root.style.position = Position.Absolute;
+            _root.style.left = 0;
+            _root.style.top = 0;
+            _root.style.right = 0;
+            _root.style.bottom = 0;
             _root.pickingMode = PickingMode.Ignore;
 
             if (_examineStyle != null)

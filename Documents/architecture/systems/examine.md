@@ -58,7 +58,8 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 - **Hover label off-screen / invisible:** UiShell `PanelSettings` is `ConstantPhysicalSize`. Cursor anchors must use `InputInterface.ScreenToPanel` then `style.left`/`style.top` (same as `ZoneTargetReticle`). Raw mouse + `style.bottom` places the label wrong / off-panel — silent, no error.
 - **Character quick-look “far below” cursor:** Switching bottom-edge mouse anchors to `style.top` without a `-100%` Y translate hangs the tall paperdoll under the pointer. Keep `-100%` translate (or subtract resolved height) so the panel sits above the cursor like the old `style.bottom` layout.
 - **Hover paperdoll blocks Shift+Click:** A pickable paperdoll under the cursor makes `IsPointerOverInterface` true → selection clears and `HandleRunPrimary` never opens the window. Character paperdoll is Shift+Click-only; hover is name tooltip.
-- **Shift+Click vs Toggle Run:** sprint is Caps Lock; Shift is examine-only
+- **Shift+Click vs Toggle Run:** sprint is Caps Lock; Shift is examine-only. Prefer `Keyboard.current` / `DetailedExamine` for the modifier.
+- **Clothing pick hides CHARACTER:** worn gear has its own `IExaminable` (SIMPLE_TEXT) and is often the deepest selection pick. Shift+Click must walk ancestors for `HumanInventory` + `ExamineType.CHARACTER` (`CharacterExamineTargetUtility`) — otherwise Shift-hold shows item detail and the paperdoll never opens.
   ([2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)). Prefer
   `Keyboard.current.*ShiftKey.isPressed` for the examine modifier when the code-defined
   `DetailedExamine` action can miss while another map also reads Shift.

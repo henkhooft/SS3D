@@ -1195,6 +1195,10 @@ MonoBehaviour:
     m_Key: examine.structural.cracked
     m_Metadata:
       m_Items: []
+  - m_Id: 257390954050000000
+    m_Key: character_examine.unidentified_crew_member
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

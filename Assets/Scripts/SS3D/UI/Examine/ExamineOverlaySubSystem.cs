@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Coimbra.Services.Events;
@@ -151,6 +152,51 @@ namespace SS3D.UI.Examine
             {
                 _quickLookView?.UpdateAnchor(mousePosition);
             }
+
+            TryOpenCharacterWindowOnShiftClick();
+        }
+
+        /// <summary>
+        /// Backup for InteractionController Shift+Click — opens when a character (or worn gear on one)
+        /// is under the cursor.
+        /// </summary>
+        private void TryOpenCharacterWindowOnShiftClick()
+        {
+            if (_windowView != null && _windowView.IsOpen)
+            {
+                return;
+            }
+
+            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            bool shiftHeld = keyboard != null
+                && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
+            if (!shiftHeld && (_inputSystem == null || !_inputSystem.DetailedExamine.IsPressed()))
+            {
+                return;
+            }
+
+            IExaminable target = _currentExaminable;
+            if (_hoveredCharacterInventory == null
+                || target == null
+                || ResolveCharacterInventory(target) == null)
+            {
+                // Re-resolve from live selection in case hover state lagged clothing picks.
+                if (!SubSystems.TryGet(out SelectionSubSystem selection)
+                    || !CharacterExamineTargetUtility.TryResolveFromSelectable(
+                        selection.GetCurrentSelectable(),
+                        out target,
+                        out _))
+                {
+                    return;
+                }
+            }
+
+            HandleWindowRequested(target);
         }
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
@@ -223,6 +269,18 @@ namespace SS3D.UI.Examine
             _wasDetailedExamineHeld = IsDetailedExamineHeld();
             _hoveredCharacterInventory = ResolveCharacterInventory(examinable);
 
+            // Clothing pick under a human: still treat as character hover for name / Shift+Click.
+            if (_hoveredCharacterInventory == null
+                && examinable is Component component
+                && CharacterExamineTargetUtility.TryResolveFromTransform(
+                    component.transform,
+                    out IExaminable characterExaminable,
+                    out HumanInventory inventory))
+            {
+                _currentExaminable = characterExaminable;
+                _hoveredCharacterInventory = inventory;
+            }
+
             if (!EnsureViews())
             {
                 return;
@@ -235,13 +293,9 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            if (_hoveredCharacterInventory != null)
-            {
-                _genericView.Hide();
-                ShowQuickLook(_hoveredCharacterInventory);
-                return;
-            }
-
+            // Characters: name tooltip on hover only — paperdoll is Shift+Click (CharacterExamineWindowView).
+            // Showing a pickable quick-look under the cursor made IsPointerOverInterface true, which
+            // cleared selection and blocked HandleRunPrimary's Shift+Click window request.
             _quickLookView.Hide();
             RefreshGenericDisplay();
         }
@@ -416,16 +470,6 @@ namespace SS3D.UI.Examine
             return component.TryGetComponent(out HumanInventory inventory) ? inventory : null;
         }
 
-        private void ShowQuickLook(HumanInventory inventory)
-        {
-            IReadOnlyList<CharacterExamineSlotContent> slots = CharacterExamineContentBuilder.BuildSlots(inventory);
-            _quickLookView.Show(ResolveDisplayName(inventory), slots);
-            if (Mouse.current != null)
-            {
-                _quickLookView.UpdateAnchor(Mouse.current.position.ReadValue());
-            }
-        }
-
         private static string ResolveDisplayName(HumanInventory inventory)
         {
             if (CharacterExamineContentBuilder.TryGetVisibleIdentity(inventory, out string name, out _))
@@ -447,10 +491,33 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            if (_hoveredCharacterInventory != null || _currentExaminable?.GetData() == null)
+            // Shift is held for Shift+Click open; Update() re-calls this every frame while detailed.
+            // Re-showing the hover name after HandleWindowRequested.Hide() is what stuck
+            // "Unidentified Crew Member" on the cursor with the paperdoll already open.
+            if (_windowView != null && _windowView.IsOpen)
+            {
+                _genericView.Hide();
+                return;
+            }
+
+            if (_currentExaminable?.GetData() == null)
             {
                 _genericView.Hide();
                 InvalidateContentCache();
+                return;
+            }
+
+            // Prefer visible identity for characters (ID card) over the static ExamineData name.
+            // Characters never use Shift-hold detailed text — paperdoll is Shift+Click only.
+            if (_hoveredCharacterInventory != null)
+            {
+                string displayName = ResolveDisplayName(_hoveredCharacterInventory);
+                _genericView.ShowHoverName(displayName);
+                if (Mouse.current != null)
+                {
+                    _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                }
+
                 return;
             }
 
@@ -459,6 +526,18 @@ namespace SS3D.UI.Examine
             if (IsDetailedExamineHeld())
             {
                 ExamineData data = _currentExaminable.GetData();
+                if (data.Type == ExamineType.CHARACTER)
+                {
+                    // Defensive: CHARACTER without resolved inventory still skips simple detail.
+                    _genericView.ShowHoverName(string.IsNullOrEmpty(content.Name) ? "???" : content.Name);
+                    if (Mouse.current != null)
+                    {
+                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                    }
+
+                    return;
+                }
+
                 if (data.Type == ExamineType.SIMPLE_IMAGE
                     && IsWithinDetailedImageRange(_currentExaminable, data)
                     && TryGetImageDetailedContent(_currentExaminable, content, out Sprite image, out string caption, out Vector2 imageSize))
@@ -578,6 +657,13 @@ namespace SS3D.UI.Examine
         private bool IsDetailedExamineHeld()
         {
             if (_pinnedDetailedExamine)
+            {
+                return true;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null
+                && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed))
             {
                 return true;
             }
