@@ -19,7 +19,7 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 
 - **Hover** → name tooltip only (`GenericExamineHoverView`, identity from ID when visible).
 - **Shift+Click** → persistent `CharacterExamineWindowView` paperdoll (× to close). Routed via `ExamineSubSystem.OnCharacterWindowRequested`. No hover paperdoll — a pickable quick-look under the cursor blocked Shift+Click via `IsPointerOverInterface` and cleared selection.
-- **Hold-to-take** — ~1.5s `TakeFromCharacterInteraction` (`DelayedInteraction`: cancel on move/range/Backspace/pointer-up). Server `Hand.Pickup` into the active hand. UITK slot spinner (`InventorySlot.SetTakeProgress`); no world LoadingBar. Gated by `CharacterLootUtility.IsLootable` (dead or unconscious; restrained deferred). Living conscious characters are examine-only.
+- **Click-to-take** — click a filled paperdoll slot to start ~1.5s `TakeFromCharacterInteraction` (`DelayedInteraction`: cancel on move/range/Cancel key / click same slot again / close window). Server `Hand.Pickup` into the active hand. UITK slot spinner (`InventorySlot.SetTakeProgress`); no world LoadingBar. Gated by `CharacterLootUtility.IsLootable` (dead or unconscious; restrained deferred). Living conscious characters are examine-only.
 - **Fork vs** [inventory-storage.md](../../design/inventory-storage.md) §9: design opens foreign gear as StoragePanels + drag; this pass keeps paperdoll delayed take. Accepted for now.
 - **Covered/obscured-slot filtering** not implemented (needs clothing “hidden by outer layer” data).
 - Slot↔`ContainerType`: `CharacterExamineSlotContainerMap` (Back→Bag, Shirt→Jumpsuit, Suit→ExoSuit, paired ears/feet/gloves).

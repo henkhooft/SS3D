@@ -16,9 +16,10 @@ namespace SS3D.UI.Examine
     /// mouse-leave) — a deliberate departure from examine.md §4's hold-to-peek/no-click-lock rule,
     /// scoped to character examine only (see examine.md fork-deviations).
     /// <para>
-    /// Hold-to-take: PointerDown on a filled slot (when <see cref="TakeAllowed"/>) raises
+    /// Click-to-take: click a filled slot (when <see cref="TakeAllowed"/>) raises
     /// <see cref="TakeHoldStarted"/>; the owning overlay starts a server delayed interaction.
-    /// Progress is drawn via <see cref="BeginTakeProgress"/> after the server accepts.
+    /// Progress is drawn via <see cref="BeginTakeProgress"/> after the server accepts. Cancel via
+    /// the Cancel key, leaving range, or closing the window — not by releasing the mouse.
     /// </para>
     /// </summary>
     public sealed class CharacterExamineWindowView : IUiSurface
@@ -42,7 +43,7 @@ namespace SS3D.UI.Examine
         private CharacterPaperdollGrid _grid;
         private Label _holdHintLabel;
 
-        private CharacterExamineSlot? _pendingHoldSlot;
+        private CharacterExamineSlot? _pendingTakeSlot;
         private CharacterExamineSlot? _progressSlot;
         private float _progressDelay;
         private float _progressElapsed;
@@ -128,7 +129,7 @@ namespace SS3D.UI.Examine
 
             TakeAllowed = takeAllowed;
             ApplySlots(title, slots);
-            CancelLocalHoldGesture();
+            CancelLocalTakeGesture();
             ClearTakeProgress();
             IsOpen = true;
             SetVisible(true);
@@ -171,7 +172,7 @@ namespace SS3D.UI.Examine
         public void Hide()
         {
             IsOpen = false;
-            CancelLocalHoldGesture();
+            CancelLocalTakeGesture();
             ClearTakeProgress();
             SetVisible(false);
         }
@@ -180,11 +181,14 @@ namespace SS3D.UI.Examine
         public void BeginTakeProgress(CharacterExamineSlot slot, float delaySeconds)
         {
             ClearTakeProgressVisualOnly();
+            _pendingTakeSlot = null;
             _progressSlot = slot;
             _progressDelay = Mathf.Max(0.01f, delaySeconds);
             _progressElapsed = 0f;
-            _grid.GetSlot(slot).SetTakeProgress(0.01f);
-            _holdHintLabel.text = $"Taking: {_grid.GetSlot(slot).SlotLabel}";
+            InventorySlot inventorySlot = _grid.GetSlot(slot);
+            inventorySlot.AddToClassList("inventory-slot--drop-target");
+            inventorySlot.SetTakeProgress(0.01f);
+            _holdHintLabel.text = $"Taking: {inventorySlot.SlotLabel}";
             _holdHintLabel.style.display = DisplayStyle.Flex;
         }
 
@@ -234,7 +238,7 @@ namespace SS3D.UI.Examine
 
             foreach (CharacterExamineSlot slot in Enum.GetValues(typeof(CharacterExamineSlot)))
             {
-                WireHoldGesture(slot, _grid.GetSlot(slot));
+                WireTakeClick(slot, _grid.GetSlot(slot));
             }
 
             _holdHintLabel = new Label();
@@ -246,46 +250,60 @@ namespace SS3D.UI.Examine
             _root.Add(_window);
         }
 
-        private void WireHoldGesture(CharacterExamineSlot slot, InventorySlot inventorySlot)
+        private void WireTakeClick(CharacterExamineSlot slot, InventorySlot inventorySlot)
         {
-            inventorySlot.RegisterCallback<PointerDownEvent>(_ => BeginHoldGesture(slot, inventorySlot));
-            inventorySlot.RegisterCallback<PointerUpEvent>(_ => CancelHoldGesture());
-            inventorySlot.RegisterCallback<PointerLeaveEvent>(_ => CancelHoldGesture());
+            inventorySlot.RegisterCallback<ClickEvent>(_ => BeginTakeClick(slot, inventorySlot));
         }
 
-        private void BeginHoldGesture(CharacterExamineSlot slot, InventorySlot inventorySlot)
+        private void BeginTakeClick(CharacterExamineSlot slot, InventorySlot inventorySlot)
         {
             if (!TakeAllowed || inventorySlot.ItemIcon == null)
             {
                 return;
             }
 
-            _pendingHoldSlot = slot;
+            // Click the in-progress slot again to cancel; otherwise replace any active windup.
+            if (_progressSlot == slot || _pendingTakeSlot == slot)
+            {
+                CancelTakeGesture();
+                return;
+            }
+
+            if (_progressSlot != null || _pendingTakeSlot != null)
+            {
+                CancelTakeGesture();
+            }
+
+            _pendingTakeSlot = slot;
             inventorySlot.AddToClassList("inventory-slot--drop-target");
-            _holdHintLabel.text = $"Hold to Take: {inventorySlot.SlotLabel}";
+            _holdHintLabel.text = $"Taking: {inventorySlot.SlotLabel}";
             _holdHintLabel.style.display = DisplayStyle.Flex;
             TakeHoldStarted?.Invoke(slot);
         }
 
-        private void CancelHoldGesture()
+        /// <summary>Cancels a pending/local take gesture and notifies the overlay to abort the server windup.</summary>
+        public void CancelTakeGesture()
         {
-            if (_pendingHoldSlot == null && _progressSlot == null)
+            if (_pendingTakeSlot == null && _progressSlot == null)
             {
                 return;
             }
 
-            CancelLocalHoldGesture();
+            CancelLocalTakeGesture();
+            ClearTakeProgressVisualOnly();
+            _progressSlot = null;
             TakeHoldCancelled?.Invoke();
+            UpdateHoldHintIdle();
         }
 
-        private void CancelLocalHoldGesture()
+        private void CancelLocalTakeGesture()
         {
-            if (_pendingHoldSlot != null)
+            if (_pendingTakeSlot != null)
             {
-                _grid.GetSlot(_pendingHoldSlot.Value).RemoveFromClassList("inventory-slot--drop-target");
+                _grid.GetSlot(_pendingTakeSlot.Value).RemoveFromClassList("inventory-slot--drop-target");
             }
 
-            _pendingHoldSlot = null;
+            _pendingTakeSlot = null;
         }
 
         private void ClearTakeProgressVisualOnly()
@@ -305,14 +323,14 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            if (TakeAllowed && IsOpen && _progressSlot == null)
+            if (TakeAllowed && IsOpen && _progressSlot == null && _pendingTakeSlot == null)
             {
-                _holdHintLabel.text = "Hold a slot to take";
+                _holdHintLabel.text = "Click a slot to take";
                 _holdHintLabel.style.display = DisplayStyle.Flex;
                 return;
             }
 
-            if (_progressSlot == null)
+            if (_progressSlot == null && _pendingTakeSlot == null)
             {
                 _holdHintLabel.style.display = DisplayStyle.None;
             }

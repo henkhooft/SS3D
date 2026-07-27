@@ -10,7 +10,7 @@ namespace SS3D.Systems.Inventory.Interactions
 {
     /// <summary>
     /// Delayed take of one worn/held item from another character into the active hand.
-    /// Started from the character-examine paperdoll (not Discover) — see examine hold-to-take.
+    /// Started from a click on the character-examine paperdoll (not Discover) — see examine click-to-take.
     /// </summary>
     public sealed class TakeFromCharacterInteraction : DelayedInteraction
     {

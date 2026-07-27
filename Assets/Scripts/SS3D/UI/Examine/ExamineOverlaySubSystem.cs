@@ -347,6 +347,12 @@ namespace SS3D.UI.Examine
                 return;
             }
 
+            // Click starts a new windup; replace any in-flight take first.
+            if (_interactionController.HasActiveDelayedInteraction)
+            {
+                _interactionController.CancelActiveDelayedInteraction();
+            }
+
             _interactionController.RequestTakeFromCharacter(_windowVictimInventory, slot);
         }
 
