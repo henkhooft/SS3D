@@ -323,7 +323,19 @@ namespace SS3D.Systems.Interactions
             if (!CharacterExamineTargetUtility.TryResolveFromSelectable(
                     _selectionSystem?.GetCurrentSelectable(),
                     out IExaminable characterExaminable,
-                    out _))
+                    out HumanInventory victimInventory))
+            {
+                return false;
+            }
+
+            // Own worn gear is already shown on Main HUD — do not open a second paperdoll on self.
+            HumanInventory selfInventory = GetComponent<HumanInventory>();
+            if (selfInventory == null)
+            {
+                selfInventory = GetComponentInChildren<HumanInventory>();
+            }
+
+            if (!CharacterLootUtility.IsOtherCharacter(selfInventory, victimInventory))
             {
                 return false;
             }

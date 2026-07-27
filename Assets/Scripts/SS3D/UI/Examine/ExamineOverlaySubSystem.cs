@@ -281,6 +281,20 @@ namespace SS3D.UI.Examine
                 _hoveredCharacterInventory = inventory;
             }
 
+            // Own character: no name chip / paperdoll — Main HUD already shows worn gear.
+            if (IsLocalPlayerInventory(_hoveredCharacterInventory))
+            {
+                _hoveredCharacterInventory = null;
+                _currentExaminable = null;
+                if (EnsureViews())
+                {
+                    _quickLookView.Hide();
+                    _genericView.Hide();
+                }
+
+                return;
+            }
+
             if (!EnsureViews())
             {
                 return;
@@ -310,6 +324,12 @@ namespace SS3D.UI.Examine
         {
             HumanInventory inventory = ResolveCharacterInventory(examinable);
             if (inventory == null || !EnsureViews())
+            {
+                return;
+            }
+
+            // Main HUD already shows the local player's worn inventory.
+            if (IsLocalPlayerInventory(inventory))
             {
                 return;
             }
@@ -474,6 +494,22 @@ namespace SS3D.UI.Examine
             }
 
             return component.TryGetComponent(out HumanInventory inventory) ? inventory : null;
+        }
+
+        private bool IsLocalPlayerInventory(HumanInventory inventory)
+        {
+            if (inventory == null || _localPlayer == null)
+            {
+                return false;
+            }
+
+            if (!_localPlayer.TryGetComponent(out HumanInventory localInventory))
+            {
+                localInventory = _localPlayer.GetComponentInChildren<HumanInventory>();
+            }
+
+            return localInventory != null
+                && !CharacterLootUtility.IsOtherCharacter(localInventory, inventory);
         }
 
         private static string ResolveDisplayName(HumanInventory inventory)
