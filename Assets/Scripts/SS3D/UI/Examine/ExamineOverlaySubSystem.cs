@@ -322,8 +322,7 @@ namespace SS3D.UI.Examine
                 return false;
             }
 
-            _interactionController = _localPlayer.GetComponent<InteractionController>();
-            if (_interactionController == null)
+            if (!_localPlayer.TryGetComponent(out _interactionController))
             {
                 _interactionController = _localPlayer.GetComponentInChildren<InteractionController>();
             }
@@ -364,12 +363,18 @@ namespace SS3D.UI.Examine
 
         private static HumanInventory ResolveCharacterInventory(IExaminable examinable)
         {
-            if (examinable?.GetData()?.Type != ExamineType.CHARACTER || examinable is not Component component)
+            if (examinable is not Component component)
             {
                 return null;
             }
 
-            return component.GetComponent<HumanInventory>();
+            ExamineData data = examinable.GetData();
+            if (data == null || data.Type != ExamineType.CHARACTER)
+            {
+                return null;
+            }
+
+            return component.TryGetComponent(out HumanInventory inventory) ? inventory : null;
         }
 
         private void ShowQuickLook(HumanInventory inventory)
@@ -497,7 +502,12 @@ namespace SS3D.UI.Examine
             }
 
             Hands hands = _localPlayer.GetComponentInChildren<Hands>();
-            Hand hand = hands?.SelectedHand;
+            if (hands == null)
+            {
+                return false;
+            }
+
+            Hand hand = hands.SelectedHand;
             if (hand == null)
             {
                 return false;

@@ -4,9 +4,11 @@
     "references": [
         "SS3D.Core",
         "SS3D.Systems",
+        "SS3D.Interactions",
         "SS3D.UI.MachineInterface",
         "SS3D.UI.Shell",
         "SS3D.Localization",
+        "FishNet.Runtime",
         "Unity.InputSystem",
         "Coimbra",
         "Coimbra.Services.Events"
