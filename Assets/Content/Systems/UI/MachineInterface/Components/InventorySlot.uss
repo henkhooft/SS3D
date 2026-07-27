@@ -12,7 +12,6 @@
     border-color: var(--ss3d-border-subtle);
     align-items: center;
     justify-content: center;
-    overflow: hidden;
 }
 
 .inventory-slot--unknown .inventory-slot__well {

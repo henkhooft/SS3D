@@ -52,6 +52,7 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 - **Take without Discover:** paperdoll slots are not `IInteractionTarget`s — start via `InteractionController.RequestTakeFromCharacter`, never `CmdRunInteraction` name resolve.
 - **Foreign `CmdTransferItem` rejects** containers not in `ContainerViewer` display list — take uses `Hand.Pickup` after lootability checks instead.
 - **Catalog missing in builds:** run **Rebuild Examine Asset Catalog** and commit `Resources` asset.
+- **`InventorySlot` white HUD:** never put `overflow: hidden` on `.inventory-slot__well` (it already has `border-radius`) — Main HUD shares that USS and turns into a flat white block. Take-progress spinner stays inset without clipping.
 
 ## Depends on / Used by
 
