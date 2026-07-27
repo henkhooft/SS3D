@@ -20,8 +20,12 @@ namespace SS3D.Systems.Inventory.Containers
                 return false;
             }
 
-            HumanHealthController health = inventory.GetComponent<HumanHealthController>()
-                ?? inventory.GetComponentInParent<HumanHealthController>();
+            HumanHealthController health = inventory.GetComponent<HumanHealthController>();
+            if (health == null)
+            {
+                health = inventory.GetComponentInParent<HumanHealthController>();
+            }
+
             if (health == null)
             {
                 return false;

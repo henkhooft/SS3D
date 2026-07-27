@@ -322,8 +322,12 @@ namespace SS3D.UI.Examine
                 return false;
             }
 
-            _interactionController = _localPlayer.GetComponent<InteractionController>()
-                ?? _localPlayer.GetComponentInChildren<InteractionController>();
+            _interactionController = _localPlayer.GetComponent<InteractionController>();
+            if (_interactionController == null)
+            {
+                _interactionController = _localPlayer.GetComponentInChildren<InteractionController>();
+            }
+
             if (_interactionController == null)
             {
                 return false;

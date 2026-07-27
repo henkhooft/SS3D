@@ -377,10 +377,17 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            HumanInventory victimInventory = victimObject.GetComponent<HumanInventory>()
-                ?? victimObject.GetComponentInChildren<HumanInventory>();
-            HumanInventory takerInventory = GetComponent<HumanInventory>()
-                ?? GetComponentInChildren<HumanInventory>();
+            HumanInventory victimInventory = victimObject.GetComponent<HumanInventory>();
+            if (victimInventory == null)
+            {
+                victimInventory = victimObject.GetComponentInChildren<HumanInventory>();
+            }
+
+            HumanInventory takerInventory = GetComponent<HumanInventory>();
+            if (takerInventory == null)
+            {
+                takerInventory = GetComponentInChildren<HumanInventory>();
+            }
 
             if (victimInventory == null
                 || !CharacterLootUtility.IsOtherCharacter(takerInventory, victimInventory)

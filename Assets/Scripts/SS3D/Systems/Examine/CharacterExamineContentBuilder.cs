@@ -121,8 +121,12 @@ namespace SS3D.Systems.Examine
                 return false;
             }
 
-            item = ItemIn(inventory, primary)
-                ?? (secondary != ContainerType.None ? ItemIn(inventory, secondary) : null);
+            item = ItemIn(inventory, primary);
+            if (item == null && secondary != ContainerType.None)
+            {
+                item = ItemIn(inventory, secondary);
+            }
+
             return item != null;
         }
 
