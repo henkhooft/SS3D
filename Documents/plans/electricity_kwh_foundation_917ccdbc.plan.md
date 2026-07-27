@@ -258,7 +258,7 @@ flowchart TD
 
 - Reactor throttle/fuel/heat/meltdown (design §2)
 - Breaker trips (design §4) — distinct from consumer shedding; APC breaker flip on wiring overload rating
-- Solar generation
+- Solar generation — **shipped** in [2026-07_solar-generation.md](../architecture/2026-07_solar-generation.md) (panels + tracker + stub cycle; real celestial still deferred)
 - Per-channel manual shed override from APC panel (design §4 allows engineer override of default priority; default order is in scope)
 
 ---

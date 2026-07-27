@@ -162,6 +162,11 @@ namespace SS3D.Systems.Electricity
                 return "Fuel generator";
             }
 
+            if (device is SolarPanel)
+            {
+                return "Solar panel";
+            }
+
             if (device is IPowerProducer)
             {
                 return "Generator";

@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: 3b1f4a422 — 2026-07-24
+> Verified: 00cbab299 — 2026-07-27
 
 # Electricity
 
 ## Overview
 
-Power circuit simulation, APC channel gating, SMES storage, and tile-linked electric devices under namespace `SS3D.Systems.Electricity`. Implements `ITileMutationObserver` for [tile](tile.md) placement reactions. Machine UI in [machine-interface](machine-interface.md). **Area-scoped power:** devices in an assigned area draw from that area's APC without a cable path to each device; the APC still connects to the station grid via cables. Channel gating and load accounting use [area](area.md) `TryGetEffectiveApcForDevice`. Per-tick APC consumer membership is indexed on `ElectricitySubSystem` (invalidated on device add/remove and area rebuild). Furniture/visuals gate power via `PowerGate`.
+Power circuit simulation, APC channel gating, SMES storage, and tile-linked electric devices under namespace `SS3D.Systems.Electricity`. Implements `ITileMutationObserver` for [tile](tile.md) placement reactions. Machine UI in [machine-interface](machine-interface.md). **Area-scoped power:** devices in an assigned area draw from that area's APC without a cable path to each device; the APC still connects to the station grid via cables. Channel gating and load accounting use [area](area.md) `TryGetEffectiveApcForDevice`. Per-tick APC consumer membership is indexed on `ElectricitySubSystem` (invalidated on device add/remove and area rebuild). Furniture/visuals gate power via `PowerGate`. **Solar:** `SolarPanel` producers on the HV cable grid with aim × stub `SolarCycle` output; `SolarTrackingBeacon` auto-aims nearby panels (world Toggle, no MI).
 
 ## Unit model
 
@@ -28,7 +28,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 **Consumer visuals:** `ConsumerPowerVisual` dims emissive materials (and optional panel indicators) from `BasicPowerConsumer` / `MachinePowerConsumer` power status and APC channel gating via `PowerGate`. Wired on vendor/jukebox prefabs, air alarms, and airlock panel lights.
 
-**Balancing defaults (prefabs):** APC cell 5 kWh / 10 kW charge & discharge; SMES 100 kWh / 50 kW, starts charged with output enabled.
+**Balancing defaults (prefabs):** APC cell 5 kWh / 10 kW charge & discharge; SMES 100 kWh / 50 kW, starts charged with output enabled; solar panel peak 2 kW.
 
 ## Start here
 
@@ -46,6 +46,10 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/BasicPowerConsumer.cs` — constant-load consumer
 - `Assets/Scripts/SS3D/Systems/Electricity/MachinePowerConsumer.cs` — idle/in-use load consumer
 - `Assets/Scripts/SS3D/Systems/Electricity/FuelPowerGenerator.cs` — Pacman generator (`IPowerProducer` + toggle FX)
+- `Assets/Scripts/SS3D/Systems/Electricity/SolarCycle.cs` — stub sun azimuth / intensity / eclipse for solar output
+- `Assets/Scripts/SS3D/Systems/Electricity/SolarPanel.cs` — solar `IPowerProducer` + Rotate aim
+- `Assets/Scripts/SS3D/Systems/Electricity/SolarTrackingBeacon.cs` — auto-aim nearby panels (Toggle, no MI)
+- `Assets/Scripts/SS3D/Systems/Electricity/Editor/ElectricityContentPrefabRecipes.cs` — tier-B solar prefab wiring aggregator
 - `Assets/Scripts/SS3D/Systems/Electricity/MachineVibrate.cs` — client vibrate FX; capture rest rotation on enable (not `OnStart`)
 - `Assets/Scripts/SS3D/Systems/Tile/Connections/BasicElectricDevice.cs` — tile-placed electric device base
 - `Assets/Scripts/SS3D/UI/MachineInterface/ApcController.cs` — APC façade; `IAreaApcOrigin` + storage SyncVars + MI
@@ -54,8 +58,9 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 - New powered devices: attach `BasicPowerConsumer` or `MachinePowerConsumer` plus `ConsumerPowerVisual`; gate gameplay with `PowerGate.IsPowered(..., NullConsumerPolicy)` (Allow = null means powered; Deny = null means unpowered).
 - Prefab examples: vendors/jukebox (`MachinePowerConsumer` + `ConsumerPowerVisual`); air alarm/airlocks (`BasicPowerConsumer`, Environment channel); light switch uses [area](area.md) `LightSwitchController` instead.
-- HV cable graph: only `IPowerProducer` and `IPowerStorage` participate via `ElectricCableConnectivity.ParticipatesInCableGrid`; consumers draw from area APCs.
-- Machine panels: register via [machine-interface](machine-interface.md).
+- HV cable graph: only `IPowerProducer` and `IPowerStorage` participate via `ElectricCableConnectivity.ParticipatesInCableGrid`; consumers draw from area APCs. Solar panels follow the Pacman producer path (FurnitureBase + `ElectricDeviceAdjacencyConnector` + Wire cable to SMES/APC).
+- Solar content prefabs: re-run `SS3D/Electricity/Run Content Prefab Recipes` (`SolarPrefabSetup`) after merge conflicts — do not hand-edit mega-prefab YAML. Recipe nests the full `SolarPanel.fbx` (base/arm/armature/panel) under a `Model` child; do not extract a single mesh.
+- Machine panels: register via [machine-interface](machine-interface.md). Solar tracker/panels intentionally have **no** MI (diegetic Toggle / Rotate only).
 - Area membership changes: Area APC register/unregister/rebuild calls `ElectricitySubSystem.InvalidateAreaConsumerIndex()`.
 - Powered-device init: await `ElectricityReady` / `WorldReady` (`IWorldReady` / `WorldReadinessSubSystem`) — obsolete `IsSetUp` is an `IsReady` shim only.
 
@@ -65,6 +70,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - **`PowerStatus` setter must allow EditMode/offline.** Guard pure clients with `NetworkObject != null && NetworkObject.IsSpawned && !IsServer` (not bare `!IsServer`). Bare `IsServer` NREs when `_networkObjectCache` is null, and treating all non-server as skip leaves Circuit EditMode tests stuck at `Inactive`. Same pattern as [tile](tile.md) adjacency SyncVar publishes / `PlacedTileObject.CanWriteIntegritySyncVars`.
 - **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/obsolete `IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.
 - **Machine "Turn on" snaps facing to prefab/default:** `MachineVibrate` used to cache rest rotation in `OnStart`, then force it when Enable becomes true. Tile-placed machines (Pacman / `FuelPowerGenerator`) often get their final yaw later (spawn sync, `PlacedTileObject` direction). Capture rest pose when vibration starts, restore it when stopping — never from a stale Start snapshot.
+- **Solar aim visual vs placement yaw:** `SolarPanel` SyncVar aim drives world yaw independently of tile placement direction. Never assign `rotation = Euler(0, yaw, 0)` on an FBX armature bone — that zeros Blender rest pitch/roll and tumbles the rig toward north. Capture rest, strip world-Y, then `AngleAxis(yaw, up) * restNoYaw`. Prefer aim transform = `Model` (FBX root), not a skinned bone.
 
 ## Depends on / Used by
 
@@ -73,6 +79,6 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Related docs
 
-- Architecture efforts: [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../2026-07_area-foundation.md), [session-world-lifecycle](../2026-07_session-world-lifecycle.md)
+- Architecture efforts: [solar-generation](../2026-07_solar-generation.md), [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../2026-07_area-foundation.md), [session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md), [electricity_kwh_foundation_917ccdbc.plan.md](../../plans/electricity_kwh_foundation_917ccdbc.plan.md)
-- Design (read-only): [Documents/design/area.md](../../design/area.md)
+- Design (read-only): [Documents/design/electricity.md](../../design/electricity.md)
