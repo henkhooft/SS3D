@@ -52,6 +52,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 ## Extension points
 
 - **New container-opening entry point:** `ContainerViewer.ShowContainerUI(container)` only — do not invent a second open path.
+- **Take from another character (examine paperdoll):** `InteractionController.RequestTakeFromCharacter` → `TakeFromCharacterInteraction` (`Hand.Pickup`); loot gate `CharacterLootUtility.IsLootable` (dead/unconscious). Do not use `CmdTransferItem` for foreign worn gear without opening the container in the viewer.
 - **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Storage Panel → Rebuild Asset Catalog**.
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip with **SS3D → Inventory → Strip Head/Torso ContainerInteractive**.

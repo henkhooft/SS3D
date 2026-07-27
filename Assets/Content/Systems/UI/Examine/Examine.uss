@@ -70,6 +70,11 @@
     background-color: var(--ss3d-feedback-info-bg);
 }
 
+.inventory-slot--taking .inventory-slot__well {
+    border-color: var(--ss3d-feedback-info);
+    background-color: var(--ss3d-feedback-info-bg);
+}
+
 /* Generic hover/detail (replaces the condemned uGUI ExamineUI/ExamineDetailedView/ExamineImageDetailedView) */
 
 .examine-hover-name {

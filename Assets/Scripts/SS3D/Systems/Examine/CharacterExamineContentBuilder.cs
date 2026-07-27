@@ -93,26 +93,61 @@ namespace SS3D.Systems.Examine
             return true;
         }
 
+        /// <summary>
+        /// Resolves the item currently shown in a paperdoll slot (container-backed or hand).
+        /// </summary>
+        public static bool TryGetItemInSlot(HumanInventory inventory, CharacterExamineSlot slot, out Item item)
+        {
+            item = null;
+            if (inventory == null)
+            {
+                return false;
+            }
+
+            if (slot == CharacterExamineSlot.HandLeft)
+            {
+                item = ItemInHand(inventory, 0);
+                return item != null;
+            }
+
+            if (slot == CharacterExamineSlot.HandRight)
+            {
+                item = ItemInHand(inventory, 1);
+                return item != null;
+            }
+
+            if (!CharacterExamineSlotContainerMap.TryGetContainerTypes(slot, out ContainerType primary, out ContainerType secondary))
+            {
+                return false;
+            }
+
+            item = ItemIn(inventory, primary)
+                ?? (secondary != ContainerType.None ? ItemIn(inventory, secondary) : null);
+            return item != null;
+        }
+
         private static CharacterExamineSlotContent BuildContainerSlot(HumanInventory inventory, CharacterExamineSlot slot)
         {
-            if (inventory == null
-                || !CharacterExamineSlotContainerMap.TryGetContainerTypes(slot, out ContainerType primary, out ContainerType secondary))
+            if (!TryGetItemInSlot(inventory, slot, out Item item))
             {
                 return new CharacterExamineSlotContent(slot, null, null);
             }
 
-            Item item = ItemIn(inventory, primary)
-                ?? (secondary != ContainerType.None ? ItemIn(inventory, secondary) : null);
-            return new CharacterExamineSlotContent(slot, item?.GetHudSprite(preferWornShape: true), item?.Name);
+            return new CharacterExamineSlotContent(slot, item.GetHudSprite(preferWornShape: true), item.Name);
         }
 
         private static CharacterExamineSlotContent BuildHandSlot(HumanInventory inventory, CharacterExamineSlot slot, int handIndex)
         {
+            Item item = ItemInHand(inventory, handIndex);
+            return new CharacterExamineSlotContent(slot, item?.ItemSprite, item?.Name);
+        }
+
+        private static Item ItemInHand(HumanInventory inventory, int handIndex)
+        {
             Hand hand = inventory?.Hands != null && handIndex < inventory.Hands.PlayerHands.Count
                 ? inventory.Hands.PlayerHands[handIndex]
                 : null;
-            Item item = hand?.ItemInHand;
-            return new CharacterExamineSlotContent(slot, item?.ItemSprite, item?.Name);
+            return hand?.ItemInHand;
         }
 
         private static Item ItemIn(HumanInventory inventory, ContainerType type)
@@ -123,3 +158,4 @@ namespace SS3D.Systems.Examine
         }
     }
 }
+

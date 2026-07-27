@@ -15,18 +15,18 @@ namespace SS3D.UI.Examine
     /// mouse-leave) — a deliberate departure from examine.md §4's hold-to-peek/no-click-lock rule,
     /// scoped to character examine only (see examine.md fork-deviations).
     /// <para>
-    /// Holding a slot ~650ms shows a "taking" affordance and clears that slot's icon locally.
-    /// FOLLOW-UP: this is a UI-only stub — no networked item transfer happens yet. Wiring a real
-    /// take-from-another-character transfer (range/permission checks, a server-validated request) is
-    /// out of scope for this pass.
+    /// Hold-to-take: PointerDown on a filled slot (when <see cref="TakeAllowed"/>) raises
+    /// <see cref="TakeHoldStarted"/>; the owning overlay starts a server delayed interaction.
+    /// Progress is drawn via <see cref="BeginTakeProgress"/> after the server accepts.
     /// </para>
     /// </summary>
     public sealed class CharacterExamineWindowView : IUiSurface
     {
         private const float SlotSize = 64f;
-        private const float HoldDurationSeconds = 0.65f;
 
         public event Action CloseRequested;
+        public event Action<CharacterExamineSlot> TakeHoldStarted;
+        public event Action TakeHoldCancelled;
 
         private readonly StyleSheet _examineStyle;
         private readonly StyleSheet _inventorySlotStyle;
@@ -39,10 +39,17 @@ namespace SS3D.UI.Examine
         private CharacterPaperdollGrid _grid;
         private Label _holdHintLabel;
 
-        private CharacterExamineSlot? _holdingSlot;
-        private float _holdElapsed;
+        private CharacterExamineSlot? _pendingHoldSlot;
+        private CharacterExamineSlot? _progressSlot;
+        private float _progressDelay;
+        private float _progressElapsed;
 
         public bool IsOpen { get; private set; }
+
+        /// <summary>
+        /// When false, pointer holds on slots do not start a take (living conscious examine-only).
+        /// </summary>
+        public bool TakeAllowed { get; set; }
 
         public CharacterExamineWindowView(
             StyleSheet examineStyle,
@@ -94,46 +101,81 @@ namespace SS3D.UI.Examine
             _root = null;
         }
 
-        public void Show(string title, IReadOnlyList<CharacterExamineSlotContent> slots)
+        public void Show(string title, IReadOnlyList<CharacterExamineSlotContent> slots, bool takeAllowed)
         {
             if (_window == null)
             {
                 return;
             }
 
-            _window.Title = title;
-            foreach (CharacterExamineSlotContent content in slots)
-            {
-                _grid.SetSlot(content);
-            }
-
-            CancelHold();
+            TakeAllowed = takeAllowed;
+            ApplySlots(title, slots);
+            CancelLocalHoldGesture();
+            ClearTakeProgress();
             IsOpen = true;
             SetVisible(true);
+            UpdateHoldHintIdle();
+        }
+
+        public void RefreshSlots(string title, IReadOnlyList<CharacterExamineSlotContent> slots)
+        {
+            if (_window == null || !IsOpen)
+            {
+                return;
+            }
+
+            ApplySlots(title, slots);
         }
 
         public void Hide()
         {
             IsOpen = false;
-            CancelHold();
+            CancelLocalHoldGesture();
+            ClearTakeProgress();
             SetVisible(false);
         }
 
-        /// <summary>Advances the hold-to-take timer. Driven by the owning subsystem's Update.</summary>
+        /// <summary>Starts the slot spinner after the server accepts the take windup.</summary>
+        public void BeginTakeProgress(CharacterExamineSlot slot, float delaySeconds)
+        {
+            ClearTakeProgressVisualOnly();
+            _progressSlot = slot;
+            _progressDelay = Mathf.Max(0.01f, delaySeconds);
+            _progressElapsed = 0f;
+            _grid.GetSlot(slot).SetTakeProgress(0.01f);
+            _holdHintLabel.text = $"Taking: {_grid.GetSlot(slot).SlotLabel}";
+            _holdHintLabel.style.display = DisplayStyle.Flex;
+        }
+
+        public void ClearTakeProgress()
+        {
+            ClearTakeProgressVisualOnly();
+            _progressSlot = null;
+            _progressDelay = 0f;
+            _progressElapsed = 0f;
+            UpdateHoldHintIdle();
+        }
+
+        /// <summary>Advances the confirmed take spinner. Driven by the owning subsystem's Update.</summary>
         public void Tick(float deltaTime)
         {
-            if (_holdingSlot == null)
+            if (_progressSlot == null)
             {
                 return;
             }
 
-            _holdElapsed += deltaTime;
-            if (_holdElapsed < HoldDurationSeconds)
-            {
-                return;
-            }
+            _progressElapsed += deltaTime;
+            float progress = Mathf.Clamp01(_progressElapsed / _progressDelay);
+            _grid.GetSlot(_progressSlot.Value).SetTakeProgress(Mathf.Max(0.01f, progress));
+        }
 
-            CompleteHold(_holdingSlot.Value);
+        private void ApplySlots(string title, IReadOnlyList<CharacterExamineSlotContent> slots)
+        {
+            _window.Title = title;
+            foreach (CharacterExamineSlotContent content in slots)
+            {
+                _grid.SetSlot(content);
+            }
         }
 
         private void BuildTree()
@@ -165,43 +207,74 @@ namespace SS3D.UI.Examine
 
         private void WireHoldGesture(CharacterExamineSlot slot, InventorySlot inventorySlot)
         {
-            inventorySlot.RegisterCallback<PointerDownEvent>(_ => BeginHold(slot, inventorySlot));
-            inventorySlot.RegisterCallback<PointerUpEvent>(_ => CancelHold());
-            inventorySlot.RegisterCallback<PointerLeaveEvent>(_ => CancelHold());
+            inventorySlot.RegisterCallback<PointerDownEvent>(_ => BeginHoldGesture(slot, inventorySlot));
+            inventorySlot.RegisterCallback<PointerUpEvent>(_ => CancelHoldGesture());
+            inventorySlot.RegisterCallback<PointerLeaveEvent>(_ => CancelHoldGesture());
         }
 
-        private void BeginHold(CharacterExamineSlot slot, InventorySlot inventorySlot)
+        private void BeginHoldGesture(CharacterExamineSlot slot, InventorySlot inventorySlot)
         {
-            if (inventorySlot.ItemIcon == null)
+            if (!TakeAllowed || inventorySlot.ItemIcon == null)
             {
                 return;
             }
 
-            _holdingSlot = slot;
-            _holdElapsed = 0f;
+            _pendingHoldSlot = slot;
             inventorySlot.AddToClassList("inventory-slot--drop-target");
             _holdHintLabel.text = $"Hold to Take: {inventorySlot.SlotLabel}";
             _holdHintLabel.style.display = DisplayStyle.Flex;
+            TakeHoldStarted?.Invoke(slot);
         }
 
-        private void CompleteHold(CharacterExamineSlot slot)
+        private void CancelHoldGesture()
         {
-            InventorySlot inventorySlot = _grid.GetSlot(slot);
-            // FOLLOW-UP: local-only — clears the displayed icon but does not move the item anywhere.
-            inventorySlot.ItemIcon = null;
-            CancelHold();
-        }
-
-        private void CancelHold()
-        {
-            if (_holdingSlot != null)
+            if (_pendingHoldSlot == null && _progressSlot == null)
             {
-                _grid.GetSlot(_holdingSlot.Value).RemoveFromClassList("inventory-slot--drop-target");
+                return;
             }
 
-            _holdingSlot = null;
-            _holdElapsed = 0f;
-            _holdHintLabel.style.display = DisplayStyle.None;
+            CancelLocalHoldGesture();
+            TakeHoldCancelled?.Invoke();
+        }
+
+        private void CancelLocalHoldGesture()
+        {
+            if (_pendingHoldSlot != null)
+            {
+                _grid.GetSlot(_pendingHoldSlot.Value).RemoveFromClassList("inventory-slot--drop-target");
+            }
+
+            _pendingHoldSlot = null;
+        }
+
+        private void ClearTakeProgressVisualOnly()
+        {
+            if (_progressSlot != null)
+            {
+                InventorySlot slot = _grid.GetSlot(_progressSlot.Value);
+                slot.ClearTakeProgress();
+                slot.RemoveFromClassList("inventory-slot--drop-target");
+            }
+        }
+
+        private void UpdateHoldHintIdle()
+        {
+            if (_holdHintLabel == null)
+            {
+                return;
+            }
+
+            if (TakeAllowed && IsOpen && _progressSlot == null)
+            {
+                _holdHintLabel.text = "Hold a slot to take";
+                _holdHintLabel.style.display = DisplayStyle.Flex;
+                return;
+            }
+
+            if (_progressSlot == null)
+            {
+                _holdHintLabel.style.display = DisplayStyle.None;
+            }
         }
 
         private void SetVisible(bool visible)

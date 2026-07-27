@@ -7,6 +7,7 @@ using SS3D.Localization;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.UI.Shell;
 using UnityEngine;
@@ -41,9 +42,12 @@ namespace SS3D.UI.Examine
 
         private IExaminable _currentExaminable;
         private HumanInventory _hoveredCharacterInventory;
+        private HumanInventory _windowVictimInventory;
+        private InteractionController _interactionController;
         private GameObject _localPlayer;
         private bool _pinnedDetailedExamine;
         private bool _wasDetailedExamineHeld;
+        private bool _takeInProgress;
 
         private IExaminable _cachedExaminable;
         private ExamineContent _cachedContent;
@@ -89,6 +93,7 @@ namespace SS3D.UI.Examine
             base.OnDisabled();
 
             LocalizedTextService.LocaleChanged -= HandleLocaleChanged;
+            UnsubscribeInteractionController();
 
             if (_examineSystem != null)
             {
@@ -100,6 +105,8 @@ namespace SS3D.UI.Examine
 
         protected override void OnDestroyed()
         {
+            UnsubscribeWindowView();
+            UnsubscribeInteractionController();
             _genericView?.Detach();
             _quickLookView?.Detach();
             _windowView?.Detach();
@@ -127,6 +134,12 @@ namespace SS3D.UI.Examine
                 _windowView.Tick(Time.deltaTime);
             }
 
+            if (_takeInProgress
+                && (_interactionController == null || !_interactionController.HasActiveDelayedInteraction))
+            {
+                HandleTakeFromCharacterEnded();
+            }
+
             if (Mouse.current == null)
             {
                 return;
@@ -142,7 +155,9 @@ namespace SS3D.UI.Examine
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
+            UnsubscribeInteractionController();
             _localPlayer = e.PlayerHasObject ? e.PlayerObject : null;
+            TryBindInteractionController();
         }
 
         private void HandleLocaleChanged()
@@ -209,16 +224,138 @@ namespace SS3D.UI.Examine
                 return;
             }
 
+            CancelActiveTake();
+            _windowVictimInventory = inventory;
+            TryBindInteractionController();
             _quickLookView.Hide();
             _genericView.Hide();
             IReadOnlyList<CharacterExamineSlotContent> slots = CharacterExamineContentBuilder.BuildSlots(inventory);
-            _windowView.Show(ResolveDisplayName(inventory), slots);
+            bool takeAllowed = CharacterLootUtility.IsLootable(inventory);
+            _windowView.Show(ResolveDisplayName(inventory), slots, takeAllowed);
         }
 
         private void HandleCloseRequested()
         {
+            CancelActiveTake();
+            _windowVictimInventory = null;
             _windowView.Hide();
             HandleExaminableChanged(_currentExaminable);
+        }
+
+        private void HandleTakeHoldStarted(CharacterExamineSlot slot)
+        {
+            if (_windowVictimInventory == null || !CharacterLootUtility.IsLootable(_windowVictimInventory))
+            {
+                return;
+            }
+
+            if (!TryBindInteractionController())
+            {
+                return;
+            }
+
+            _interactionController.RequestTakeFromCharacter(_windowVictimInventory, slot);
+        }
+
+        private void HandleTakeHoldCancelled()
+        {
+            CancelActiveTake();
+        }
+
+        private void HandleTakeFromCharacterStarted(CharacterExamineSlot slot, float delaySeconds)
+        {
+            if (_windowView == null || !_windowView.IsOpen)
+            {
+                return;
+            }
+
+            _takeInProgress = true;
+            _windowView.BeginTakeProgress(slot, delaySeconds);
+        }
+
+        private void HandleTakeFromCharacterEnded()
+        {
+            bool wasTaking = _takeInProgress;
+            _takeInProgress = false;
+            _windowView?.ClearTakeProgress();
+
+            if (wasTaking || (_windowView != null && _windowView.IsOpen))
+            {
+                RefreshWindowSlots();
+            }
+        }
+
+        private void CancelActiveTake()
+        {
+            if (_interactionController != null && _interactionController.HasActiveDelayedInteraction)
+            {
+                _interactionController.CancelActiveDelayedInteraction();
+            }
+
+            _takeInProgress = false;
+            _windowView?.ClearTakeProgress();
+        }
+
+        private void RefreshWindowSlots()
+        {
+            if (_windowView == null || !_windowView.IsOpen || _windowVictimInventory == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<CharacterExamineSlotContent> slots =
+                CharacterExamineContentBuilder.BuildSlots(_windowVictimInventory);
+            bool takeAllowed = CharacterLootUtility.IsLootable(_windowVictimInventory);
+            _windowView.TakeAllowed = takeAllowed;
+            _windowView.RefreshSlots(ResolveDisplayName(_windowVictimInventory), slots);
+        }
+
+        private bool TryBindInteractionController()
+        {
+            if (_interactionController != null)
+            {
+                return true;
+            }
+
+            if (_localPlayer == null)
+            {
+                return false;
+            }
+
+            _interactionController = _localPlayer.GetComponent<InteractionController>()
+                ?? _localPlayer.GetComponentInChildren<InteractionController>();
+            if (_interactionController == null)
+            {
+                return false;
+            }
+
+            _interactionController.TakeFromCharacterStarted += HandleTakeFromCharacterStarted;
+            _interactionController.TakeFromCharacterEnded += HandleTakeFromCharacterEnded;
+            return true;
+        }
+
+        private void UnsubscribeInteractionController()
+        {
+            if (_interactionController == null)
+            {
+                return;
+            }
+
+            _interactionController.TakeFromCharacterStarted -= HandleTakeFromCharacterStarted;
+            _interactionController.TakeFromCharacterEnded -= HandleTakeFromCharacterEnded;
+            _interactionController = null;
+        }
+
+        private void UnsubscribeWindowView()
+        {
+            if (_windowView == null)
+            {
+                return;
+            }
+
+            _windowView.CloseRequested -= HandleCloseRequested;
+            _windowView.TakeHoldStarted -= HandleTakeHoldStarted;
+            _windowView.TakeHoldCancelled -= HandleTakeHoldCancelled;
         }
 
         private static HumanInventory ResolveCharacterInventory(IExaminable examinable)
@@ -440,6 +577,8 @@ namespace SS3D.UI.Examine
                 icons);
             _windowView.Attach(overlayLayer);
             _windowView.CloseRequested += HandleCloseRequested;
+            _windowView.TakeHoldStarted += HandleTakeHoldStarted;
+            _windowView.TakeHoldCancelled += HandleTakeHoldCancelled;
 
             return true;
         }

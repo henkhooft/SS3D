@@ -11,6 +11,7 @@ namespace SS3D.UI.MachineInterface.Components
         private readonly Label _label;
         private readonly Label _unknownGlyph;
         private readonly Image _icon;
+        private readonly VisualElement _takeProgress;
         private bool _unknown = true;
         private float _size = 48f;
         private Sprite _emptyIcon;
@@ -32,6 +33,12 @@ namespace SS3D.UI.MachineInterface.Components
             _icon.AddToClassList("inventory-slot__icon");
             _icon.pickingMode = PickingMode.Ignore;
             _well.Add(_icon);
+
+            _takeProgress = new VisualElement();
+            _takeProgress.AddToClassList("inventory-slot__take-progress");
+            _takeProgress.pickingMode = PickingMode.Ignore;
+            _takeProgress.style.display = DisplayStyle.None;
+            _well.Add(_takeProgress);
 
             // Host sizes to the slot and centers the chip; avoids UITK translate:-50% sticking to the
             // previous text width when SlotLabel changes (e.g. Head → Trucker Cap).
@@ -109,6 +116,30 @@ namespace SS3D.UI.MachineInterface.Components
         {
             get => _label.text;
             set => _label.text = value;
+        }
+
+        /// <summary>
+        /// 0–1 take windup progress drawn as a spinner overlay on the well. Values ≤ 0 hide it.
+        /// </summary>
+        public void SetTakeProgress(float progress01)
+        {
+            if (progress01 <= 0f)
+            {
+                ClearTakeProgress();
+                return;
+            }
+
+            float clamped = Mathf.Clamp01(progress01);
+            _takeProgress.style.display = DisplayStyle.Flex;
+            _takeProgress.style.rotate = new Rotate(Angle.Degrees(clamped * 360f));
+            EnableInClassList("inventory-slot--taking", true);
+        }
+
+        public void ClearTakeProgress()
+        {
+            _takeProgress.style.display = DisplayStyle.None;
+            _takeProgress.style.rotate = new Rotate(Angle.Degrees(0f));
+            EnableInClassList("inventory-slot--taking", false);
         }
 
         private void ApplySize(float size)

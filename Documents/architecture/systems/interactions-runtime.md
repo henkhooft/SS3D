@@ -72,6 +72,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
 - Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
 - Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
+- UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
 
 ## Depends on / Used by
 

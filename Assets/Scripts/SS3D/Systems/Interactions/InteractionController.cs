@@ -24,6 +24,7 @@ using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Stamina;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile;
@@ -80,6 +81,21 @@ namespace SS3D.Systems.Interactions
         private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
+
+        /// <summary>
+        /// Fired on the owning client when a character-examine take windup is accepted by the server.
+        /// </summary>
+        public event Action<CharacterExamineSlot, float> TakeFromCharacterStarted;
+
+        /// <summary>
+        /// Fired on the owning client when a character-examine take ends (complete, cancel, or reject).
+        /// </summary>
+        public event Action TakeFromCharacterEnded;
+
+        /// <summary>
+        /// True while the owning client is tracking an active delayed interaction (including take-from-character).
+        /// </summary>
+        public bool HasActiveDelayedInteraction => IsClient && _clientActiveReferenceId >= 0;
 
         public override void OnStartServer()
         {
@@ -139,12 +155,19 @@ namespace SS3D.Systems.Interactions
 
         private void Update()
         {
+            if (IsServer)
+            {
+                RefreshServerDelayedInteractionTracking();
+            }
+
             if (!IsOwner)
             {
                 return;
             }
 
-            RefreshActiveInteractionTracking();
+            // Client-side tracking for interactions that registered a ClientInteract instance.
+            // Take-from-character (CreateClient => null) waits for TargetNotify / Cancel instead.
+            RefreshClientDelayedInteractionTracking();
             TrySyncMeleeAimDuringSwing();
         }
 
@@ -217,6 +240,7 @@ namespace SS3D.Systems.Interactions
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
+            TakeFromCharacterEnded?.Invoke();
             CmdCancelInteraction(referenceId);
         }
 
@@ -297,6 +321,115 @@ namespace SS3D.Systems.Interactions
 
             SubSystems.Get<ExamineSubSystem>().RequestCharacterWindow(examinable);
             return true;
+        }
+
+        /// <summary>
+        /// Starts a delayed take of the item in <paramref name="slot"/> from <paramref name="victim"/>
+        /// into the active hand. Paperdoll slots are not Discover targets — this bypasses
+        /// <see cref="CmdRunInteraction"/> name resolution.
+        /// </summary>
+        [Client]
+        public void RequestTakeFromCharacter(HumanInventory victim, CharacterExamineSlot slot)
+        {
+            if (!IsOwner || victim == null || victim.NetworkObject == null)
+            {
+                return;
+            }
+
+            CmdStartTakeFromCharacter(victim.NetworkObject, (byte)slot);
+        }
+
+        /// <summary>
+        /// Cancels the active delayed interaction (take windup, CPR, etc.) — same path as the Cancel key.
+        /// </summary>
+        [Client]
+        public void CancelActiveDelayedInteraction()
+        {
+            if (_clientActiveReferenceId < 0)
+            {
+                return;
+            }
+
+            int referenceId = _clientActiveReferenceId;
+            ClearClientActiveInteractionTracking();
+            InteractionOptimisticFeedback.Clear(transform);
+            InteractionOutlineView.ClearPending();
+            TakeFromCharacterEnded?.Invoke();
+            CmdCancelInteraction(referenceId);
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        private void CmdStartTakeFromCharacter(NetworkObject victimObject, byte slotByte)
+        {
+            if (victimObject == null
+                || !Enum.IsDefined(typeof(CharacterExamineSlot), (int)slotByte))
+            {
+                TargetRejectTakeFromCharacter(Owner);
+                return;
+            }
+
+            CharacterExamineSlot slot = (CharacterExamineSlot)slotByte;
+            Hands hands = GetComponent<Hands>();
+            Hand hand = hands?.SelectedHand;
+            if (hand == null)
+            {
+                TargetRejectTakeFromCharacter(Owner);
+                return;
+            }
+
+            HumanInventory victimInventory = victimObject.GetComponent<HumanInventory>()
+                ?? victimObject.GetComponentInChildren<HumanInventory>();
+            HumanInventory takerInventory = GetComponent<HumanInventory>()
+                ?? GetComponentInChildren<HumanInventory>();
+
+            if (victimInventory == null
+                || !CharacterLootUtility.IsOtherCharacter(takerInventory, victimInventory)
+                || !CharacterLootUtility.IsLootable(victimInventory)
+                || !CharacterExamineContentBuilder.TryGetItemInSlot(victimInventory, slot, out Item item))
+            {
+                TargetRejectTakeFromCharacter(Owner);
+                return;
+            }
+
+            Vector3 point = victimInventory.transform.position;
+            InteractionEvent interactionEvent = new(hand, item, point, Vector3.up);
+            TakeFromCharacterInteraction interaction = new(victimInventory, slot, item);
+
+            if (!interaction.CanInteract(interactionEvent) || !hand.CanExecuteInteraction(interaction))
+            {
+                TargetRejectTakeFromCharacter(Owner);
+                return;
+            }
+
+            InteractionReference reference = hand.Interact(interactionEvent, interaction);
+            TrackActiveInteraction(hand, reference, interaction);
+            TargetTakeFromCharacterStarted(Owner, (byte)slot, interaction.DelaySeconds, reference.Id);
+        }
+
+        [TargetRpc]
+        private void TargetTakeFromCharacterStarted(
+            NetworkConnection connection,
+            byte slotByte,
+            float delaySeconds,
+            int referenceId)
+        {
+            Hands hands = GetComponent<Hands>();
+            Hand hand = hands?.SelectedHand;
+            if (hand == null)
+            {
+                return;
+            }
+
+            _clientActiveSource = hand;
+            _clientActiveReferenceId = referenceId;
+            TakeFromCharacterStarted?.Invoke((CharacterExamineSlot)slotByte, delaySeconds);
+        }
+
+        [TargetRpc]
+        private void TargetRejectTakeFromCharacter(NetworkConnection connection)
+        {
+            ClearClientActiveInteractionTracking();
+            TakeFromCharacterEnded?.Invoke();
         }
 
         /// <summary>
@@ -1763,23 +1896,49 @@ namespace SS3D.Systems.Interactions
             _clientActiveSource = null;
         }
 
-        private void RefreshActiveInteractionTracking()
+        [Server]
+        private void RefreshServerDelayedInteractionTracking()
         {
-            if (IsServer && _serverActiveReference != null && _serverActiveSource != null
-                && !_serverActiveSource.HasInteraction(_serverActiveReference))
+            if (_serverActiveReference == null || _serverActiveSource == null)
             {
-                ClearActiveInteractionTracking();
+                return;
             }
 
-            if (IsClient && _clientActiveReferenceId >= 0 && _clientActiveSource != null)
+            if (_serverActiveSource.HasInteraction(_serverActiveReference))
             {
-                var reference = new InteractionReference(_clientActiveReferenceId);
-
-                if (!_clientActiveSource.HasInteraction(reference))
-                {
-                    ClearClientActiveInteractionTracking();
-                }
+                return;
             }
+
+            ClearActiveInteractionTracking();
+            if (Owner != null)
+            {
+                TargetNotifyDelayedInteractionEnded(Owner);
+            }
+        }
+
+        [Client]
+        private void RefreshClientDelayedInteractionTracking()
+        {
+            if (_clientActiveReferenceId < 0 || _clientActiveSource == null)
+            {
+                return;
+            }
+
+            var reference = new InteractionReference(_clientActiveReferenceId);
+            if (_clientActiveSource.HasInteraction(reference))
+            {
+                return;
+            }
+
+            // Host: RefreshServerDelayedInteractionTracking already TargetNotify'd this frame.
+            // Pure client with no client interaction instance: wait for TargetNotify / Cancel.
+        }
+
+        [TargetRpc]
+        private void TargetNotifyDelayedInteractionEnded(NetworkConnection connection)
+        {
+            ClearClientActiveInteractionTracking();
+            TakeFromCharacterEnded?.Invoke();
         }
 
         /// <summary>
@@ -1867,6 +2026,7 @@ namespace SS3D.Systems.Interactions
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
+            TakeFromCharacterEnded?.Invoke();
         }
 
         /// <summary>
