@@ -59,10 +59,10 @@
     align-items: center;
 }
 
-/* Full examine window */
-
-.character-examine-window {
-    width: 300px;
+/* Full examine window — beat .machine-window { width: 380px } so the chrome hugs the 3-slot grid
+   (3×64 + margins + content padding), not empty horizontal space. */
+.machine-window.character-examine-window {
+    width: 244px;
 }
 
 .character-examine-window__hint {
@@ -71,6 +71,12 @@
     letter-spacing: 1px;
     color: var(--ss3d-accent-rust);
     -unity-text-align: middle-center;
+}
+
+.character-examine-window .machine-window__title {
+    letter-spacing: 1px;
+    font-size: 11px;
+    white-space: normal;
 }
 
 /* Hold-to-take affordance — a modifier on the shared InventorySlot component's well. */

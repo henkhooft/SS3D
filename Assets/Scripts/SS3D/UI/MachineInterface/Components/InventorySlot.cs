@@ -178,10 +178,19 @@ namespace SS3D.UI.MachineInterface.Components
 
         private void ApplySize(float size)
         {
-            _well.style.width = size;
-            _well.style.height = size;
-            _well.style.minWidth = size;
-            _well.style.minHeight = size;
+            SetWellSize(size, size);
+        }
+
+        /// <summary>
+        /// Sets the well to a non-square size (e.g. paperdoll hand slots spanning half of a 3-slot row).
+        /// </summary>
+        public void SetWellSize(float width, float height)
+        {
+            _size = Mathf.Max(width, height);
+            _well.style.width = width;
+            _well.style.height = height;
+            _well.style.minWidth = width;
+            _well.style.minHeight = height;
         }
 
         private void ApplyUnknown(bool unknown)

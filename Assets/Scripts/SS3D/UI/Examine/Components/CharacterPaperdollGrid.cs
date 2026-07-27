@@ -13,6 +13,9 @@ namespace SS3D.UI.Examine.Components
     /// </summary>
     public sealed class CharacterPaperdollGrid : VisualElement
     {
+        /// <summary>Matches <c>.character-paperdoll-grid__row > .inventory-slot</c> margin-right in Examine.uss.</summary>
+        private const float SlotMargin = 2f;
+
         private readonly InventorySlot[] _slots = new InventorySlot[SlotOrder.Length];
 
         private static readonly CharacterExamineSlot[] SlotOrder =
@@ -51,6 +54,11 @@ namespace SS3D.UI.Examine.Components
             InventorySlot pocket = CreateSlot(CharacterExamineSlot.Pocket, "Pocket", icons.Pocket, slotSize);
             InventorySlot handLeft = CreateSlot(CharacterExamineSlot.HandLeft, "Left Hand", icons.HandLeft, slotSize);
             InventorySlot handRight = CreateSlot(CharacterExamineSlot.HandRight, "Right Hand", icons.HandRight, slotSize);
+
+            // Two hand wells span the same outer width as a 3-slot row (each slot has SlotMargin trailing).
+            float handWidth = (slotSize * 3f + SlotMargin) / 2f;
+            handLeft.SetWellSize(handWidth, slotSize);
+            handRight.SetWellSize(handWidth, slotSize);
 
             Add(BuildRow(BuildSpacer(slotSize), head, BuildSpacer(slotSize)));
             Add(BuildRow(eyes, face, ears));
