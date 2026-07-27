@@ -53,6 +53,8 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 - **Foreign `CmdTransferItem` rejects** containers not in `ContainerViewer` display list — take uses `Hand.Pickup` after lootability checks instead.
 - **Catalog missing in builds:** run **Rebuild Examine Asset Catalog** and commit `Resources` asset.
 - **`InventorySlot` white HUD:** never put `overflow: hidden` on `.inventory-slot__well` (it already has `border-radius`) — Main HUD shares that USS and turns into a flat white block. Take-progress spinner stays inset without clipping.
+- **DDOL overlay vs Online hub:** `ExamineOverlaySubSystem` is AfterSceneLoad DDOL; `ExamineSubSystem` only exists on `NetworkSystemsHub` after Online. One-shot subscribe in `OnEnabled` misses the hub — bind must retry in `Update` (and rebind after hub teardown).
+- **No `box-shadow` in USS:** UI Toolkit rejects it (Unknown style property). Use a 1px border for elevation; never combine `border-radius` + `overflow: hidden` on the same examine element either.
 
 ## Depends on / Used by
 

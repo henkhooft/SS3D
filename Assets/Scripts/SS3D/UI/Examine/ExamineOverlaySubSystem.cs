@@ -9,6 +9,7 @@ using SS3D.Systems.Examine;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Selection;
 using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -52,6 +53,7 @@ namespace SS3D.UI.Examine
         private IExaminable _cachedExaminable;
         private ExamineContent _cachedContent;
         private bool _hasCachedContent;
+        private bool _examineEventsBound;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -78,14 +80,8 @@ namespace SS3D.UI.Examine
 
             LocalizedTextService.EnsureInitialized();
             LocalizedTextService.LocaleChanged += HandleLocaleChanged;
-            _inputSystem = SubSystems.Get<InputSubSystem>();
-
-            if (TryResolveExamineSystem())
-            {
-                _examineSystem.OnExaminableChanged += HandleExaminableChanged;
-                _examineSystem.OnDetailedExamineRequested += HandleDetailedExamineRequested;
-                _examineSystem.OnCharacterWindowRequested += HandleWindowRequested;
-            }
+            SubSystems.TryGet(out _inputSystem);
+            TryBindExamineSystemEvents();
         }
 
         protected override void OnDisabled()
@@ -94,19 +90,14 @@ namespace SS3D.UI.Examine
 
             LocalizedTextService.LocaleChanged -= HandleLocaleChanged;
             UnsubscribeInteractionController();
-
-            if (_examineSystem != null)
-            {
-                _examineSystem.OnExaminableChanged -= HandleExaminableChanged;
-                _examineSystem.OnDetailedExamineRequested -= HandleDetailedExamineRequested;
-                _examineSystem.OnCharacterWindowRequested -= HandleWindowRequested;
-            }
+            UnsubscribeExamineSystemEvents();
         }
 
         protected override void OnDestroyed()
         {
             UnsubscribeWindowView();
             UnsubscribeInteractionController();
+            UnsubscribeExamineSystemEvents();
             _genericView?.Detach();
             _quickLookView?.Detach();
             _windowView?.Detach();
@@ -118,6 +109,15 @@ namespace SS3D.UI.Examine
 
         private void Update()
         {
+            // ExamineSubSystem lives on NetworkSystemsHub (Online only). This overlay is DDOL and
+            // often enables before the hub exists — keep retrying until events are bound.
+            TryBindExamineSystemEvents();
+
+            if (_inputSystem == null)
+            {
+                SubSystems.TryGet(out _inputSystem);
+            }
+
             bool detailedHeld = IsDetailedExamineHeld();
             if (detailedHeld != _wasDetailedExamineHeld)
             {
@@ -166,14 +166,50 @@ namespace SS3D.UI.Examine
             RefreshGenericDisplay();
         }
 
-        private bool TryResolveExamineSystem()
+        /// <summary>
+        /// Binds hover/window events once <see cref="ExamineSubSystem"/> is registered (after Online).
+        /// Hub teardown clears the bind so the next Online session can re-subscribe.
+        /// </summary>
+        private void TryBindExamineSystemEvents()
+        {
+            if (_examineEventsBound && _examineSystem == null)
+            {
+                _examineEventsBound = false;
+            }
+
+            if (_examineEventsBound)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out _examineSystem) || _examineSystem == null)
+            {
+                return;
+            }
+
+            _examineSystem.OnExaminableChanged += HandleExaminableChanged;
+            _examineSystem.OnDetailedExamineRequested += HandleDetailedExamineRequested;
+            _examineSystem.OnCharacterWindowRequested += HandleWindowRequested;
+            _examineEventsBound = true;
+
+            // Catch up whatever is under the cursor so hover is not blank until selection moves.
+            if (SubSystems.TryGet(out SelectionSubSystem selection))
+            {
+                HandleExaminableChanged(selection.GetCurrentSelectable<IExaminable>());
+            }
+        }
+
+        private void UnsubscribeExamineSystemEvents()
         {
             if (_examineSystem != null)
             {
-                return true;
+                _examineSystem.OnExaminableChanged -= HandleExaminableChanged;
+                _examineSystem.OnDetailedExamineRequested -= HandleDetailedExamineRequested;
+                _examineSystem.OnCharacterWindowRequested -= HandleWindowRequested;
             }
 
-            return SubSystems.TryGet(out _examineSystem);
+            _examineSystem = null;
+            _examineEventsBound = false;
         }
 
         private void HandleExaminableChanged(IExaminable examinable)
