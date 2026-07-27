@@ -281,20 +281,6 @@ namespace SS3D.UI.Examine
                 _hoveredCharacterInventory = inventory;
             }
 
-            // Own character: no name chip / paperdoll — Main HUD already shows worn gear.
-            if (IsLocalPlayerInventory(_hoveredCharacterInventory))
-            {
-                _hoveredCharacterInventory = null;
-                _currentExaminable = null;
-                if (EnsureViews())
-                {
-                    _quickLookView.Hide();
-                    _genericView.Hide();
-                }
-
-                return;
-            }
-
             if (!EnsureViews())
             {
                 return;
@@ -307,9 +293,8 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            // Characters: name tooltip on hover only — paperdoll is Shift+Click (CharacterExamineWindowView).
-            // Showing a pickable quick-look under the cursor made IsPointerOverInterface true, which
-            // cleared selection and blocked HandleRunPrimary's Shift+Click window request.
+            // Characters: name on hover, ExamineData details on Shift — paperdoll is Shift+Click
+            // on others only (CharacterExamineWindowView). No pickable quick-look under the cursor.
             _quickLookView.Hide();
             RefreshGenericDisplay();
         }
@@ -550,10 +535,23 @@ namespace SS3D.UI.Examine
             }
 
             // Prefer visible identity for characters (ID card) over the static ExamineData name.
-            // Characters never use Shift-hold detailed text — paperdoll is Shift+Click only.
+            // Hover = name; Shift = title + ExamineData details; Shift+Click paperdoll is others-only.
             if (_hoveredCharacterInventory != null)
             {
                 string displayName = ResolveDisplayName(_hoveredCharacterInventory);
+                ExamineContent content = GetCachedContent(_currentExaminable);
+
+                if (IsDetailedExamineHeld() && (content.HasDescription || content.Sections.Count > 0))
+                {
+                    _genericView.ShowDetailedText(displayName, BuildDetailedText(content));
+                    if (Mouse.current != null)
+                    {
+                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                    }
+
+                    return;
+                }
+
                 _genericView.ShowHoverName(displayName);
                 if (Mouse.current != null)
                 {
@@ -563,26 +561,19 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            ExamineContent content = GetCachedContent(_currentExaminable);
+            ExamineContent nonCharacterContent = GetCachedContent(_currentExaminable);
 
             if (IsDetailedExamineHeld())
             {
                 ExamineData data = _currentExaminable.GetData();
-                if (data.Type == ExamineType.CHARACTER)
-                {
-                    // Defensive: CHARACTER without resolved inventory still skips simple detail.
-                    _genericView.ShowHoverName(string.IsNullOrEmpty(content.Name) ? "???" : content.Name);
-                    if (Mouse.current != null)
-                    {
-                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
-                    }
-
-                    return;
-                }
-
                 if (data.Type == ExamineType.SIMPLE_IMAGE
                     && IsWithinDetailedImageRange(_currentExaminable, data)
-                    && TryGetImageDetailedContent(_currentExaminable, content, out Sprite image, out string caption, out Vector2 imageSize))
+                    && TryGetImageDetailedContent(
+                        _currentExaminable,
+                        nonCharacterContent,
+                        out Sprite image,
+                        out string caption,
+                        out Vector2 imageSize))
                 {
                     _genericView.ShowDetailedImage(image, caption, imageSize);
                     if (Mouse.current != null)
@@ -593,9 +584,9 @@ namespace SS3D.UI.Examine
                     return;
                 }
 
-                if (content.HasDescription || content.Sections.Count > 0)
+                if (nonCharacterContent.HasDescription || nonCharacterContent.Sections.Count > 0)
                 {
-                    _genericView.ShowDetailedText(content.Name, BuildDetailedText(content));
+                    _genericView.ShowDetailedText(nonCharacterContent.Name, BuildDetailedText(nonCharacterContent));
                     if (Mouse.current != null)
                     {
                         _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
@@ -605,7 +596,7 @@ namespace SS3D.UI.Examine
                 }
             }
 
-            string hoverName = string.IsNullOrEmpty(content.Name) ? "???" : content.Name;
+            string hoverName = string.IsNullOrEmpty(nonCharacterContent.Name) ? "???" : nonCharacterContent.Name;
             _genericView.ShowHoverName(hoverName);
             if (Mouse.current != null)
             {

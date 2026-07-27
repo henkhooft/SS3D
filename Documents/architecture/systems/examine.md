@@ -17,8 +17,9 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 
 **Character examine** (design §7): no new `Human.prefab` component — `Human.asset` is `Type: CHARACTER`; overlay reads sibling `HumanInventory`. Do **not** reintroduce `CharacterExaminable` ([TECH_DEBT.md](../TECH_DEBT.md) §1.1).
 
-- **Hover** → name tooltip only (`GenericExamineHoverView`, identity from ID when visible). Suppressed when the hovered character is the local player.
-- **Shift+Click** → persistent `CharacterExamineWindowView` paperdoll (× to close). Routed via `ExamineSubSystem.OnCharacterWindowRequested`. No hover paperdoll — a pickable quick-look under the cursor blocked Shift+Click via `IsPointerOverInterface` and cleared selection. **Not opened on the local player** — Main HUD already shows worn inventory.
+- **Hover** → name tooltip only (`GenericExamineHoverView`, identity from ID when visible). Works on self and others.
+- **Shift (hold)** → name + `ExamineData` details (self and others). Does not open the paperdoll.
+- **Shift+Click** → persistent `CharacterExamineWindowView` paperdoll (× to close) on **other** characters only — Main HUD already shows the local player's worn inventory. Routed via `ExamineSubSystem.OnCharacterWindowRequested`. No hover paperdoll — a pickable quick-look under the cursor blocked Shift+Click via `IsPointerOverInterface` and cleared selection.
 - **Click-to-take** — click a filled paperdoll slot to start ~1.5s `TakeFromCharacterInteraction` (`DelayedInteraction`: cancel on move/range/Cancel key / click same slot again / close window). Server `Hand.Pickup` into the active hand. UITK slot spinner (`InventorySlot.SetTakeProgress`); no world LoadingBar. Gated by `CharacterLootUtility.IsLootable` (dead or unconscious; restrained deferred). Living conscious characters are examine-only.
 - **Fork vs** [inventory-storage.md](../../design/inventory-storage.md) §9: design opens foreign gear as StoragePanels + drag; this pass keeps paperdoll delayed take. Accepted for now.
 - **Covered/obscured-slot filtering** not implemented (needs clothing “hidden by outer layer” data).
