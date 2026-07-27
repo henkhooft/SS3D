@@ -39,7 +39,7 @@ Update as part of `update-system-docs`.
 | round-config | [round-config.md](../design/round-config.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
 | round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
-| electricity | [electricity.md](../design/electricity.md) — active | none yet (electricity system is touched by [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md), but that effort implements area.md/main-hud.md, not electricity.md) | [electricity](systems/electricity.md) — partial |
+| electricity | [electricity.md](../design/electricity.md) — active | [solar-generation](2026-07_solar-generation.md) — shipped (panels + tracker + stub cycle; reactor / real celestial deferred); earlier touch via [mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md) (implements area.md/main-hud.md, not electricity.md) | [electricity](systems/electricity.md) — partial |
 | pda | [pda.md](../design/pda.md) — active | none yet | [inventory](systems/inventory.md) — partial |
 | cargo | [cargo.md](../design/cargo.md) — active | none yet | none yet |
 | disposal | [disposal.md](../design/disposal.md) — active | [disposal-item-network](2026-07_disposal-item-network.md) — shipped (item network; pipe craft, Cargo, player transit deferred) | [disposal](systems/disposal.md) — partial |
@@ -107,7 +107,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim (pressure share + equal-P composition diffusion); awaits TileMapLoaded / notifies AtmosReady; client VFX Phase 1 dirty-chunk sync shipped (late-join/AOI Phase 2 open) |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |
-| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; Pacman vibrate captures rest yaw on enable |
+| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; solar panels + tracker (stub `SolarCycle`); awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; Pacman vibrate captures rest yaw on enable |
 | Substances | [substances](systems/substances.md) | partial | Containers, transfer interactions, Tier 2 armed proof-of-concept; container `AsReadOnly` GC pitfall |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; clothing folded world form (`ClothingItemPresentation`) vs worn body mesh; HUD icons via `IconPreviewGenerator` / ObjectIcon; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash + ranged bloom; ScreenToPanel cursor + pivot-centered hit flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat swing/fire drains + exertion feedback (accuracy cone, windup/recovery) shipped; block drain deferred |
