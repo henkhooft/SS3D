@@ -1,3 +1,4 @@
+using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -13,7 +14,7 @@ namespace SS3D.UI.Examine
     public sealed class GenericExamineHoverView : IUiSurface
     {
         private const float OffsetX = 16f;
-        private const float OffsetY = -16f;
+        private const float OffsetY = 16f;
 
         private readonly StyleSheet _examineStyle;
 
@@ -116,6 +117,7 @@ namespace SS3D.UI.Examine
             HideAll();
         }
 
+        /// <param name="screenPosition">Bottom-left screen pixels (mouse / Input System).</param>
         public void UpdateAnchor(Vector2 screenPosition)
         {
             if (_activePanel == null)
@@ -123,24 +125,20 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            float width = _activePanel.resolvedStyle.width;
-            float height = _activePanel.resolvedStyle.height;
-
-            float left = screenPosition.x + OffsetX;
-            float bottom = screenPosition.y + OffsetY;
-
-            if (!float.IsNaN(width) && width > 0f)
+            // Match ZoneTargetReticle: mouse is bottom-left screen; UITK absolute layout is panel
+            // top-left. Do not clamp against Screen/root sizes — mismatched spaces pinned Y in the
+            // lower half of the screen (horizontal still tracked).
+            Vector2 panelPos = screenPosition;
+            IPanel panel = _activePanel.panel;
+            if (panel != null)
             {
-                left = Mathf.Clamp(left, 0f, Mathf.Max(0f, Screen.width - width));
+                panelPos = InputInterface.ScreenToPanel(panel, screenPosition);
             }
 
-            if (!float.IsNaN(height) && height > 0f)
-            {
-                bottom = Mathf.Clamp(bottom, 0f, Mathf.Max(0f, Screen.height - height));
-            }
-
-            _activePanel.style.left = left;
-            _activePanel.style.bottom = bottom;
+            _activePanel.style.left = panelPos.x + OffsetX;
+            _activePanel.style.top = panelPos.y + OffsetY;
+            _activePanel.style.right = StyleKeyword.Auto;
+            _activePanel.style.bottom = StyleKeyword.Auto;
         }
 
         private void SetActivePanel(VisualElement panel)

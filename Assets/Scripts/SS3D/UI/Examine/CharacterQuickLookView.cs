@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SS3D.Systems.Examine;
+using SS3D.Systems.Inputs;
 using SS3D.UI.Examine.Components;
 using SS3D.UI.Shell;
 using UnityEngine;
@@ -18,7 +19,8 @@ namespace SS3D.UI.Examine
     public sealed class CharacterQuickLookView : IUiSurface
     {
         private const float OffsetX = 24f;
-        private const float OffsetY = 16f;
+        /// <summary>Negative = above cursor in top-left panel space (was +16 with style.bottom).</summary>
+        private const float OffsetY = -16f;
         private const float SlotSize = 40f;
 
         private readonly StyleSheet _examineStyle;
@@ -100,6 +102,7 @@ namespace SS3D.UI.Examine
             SetVisible(false);
         }
 
+        /// <param name="screenPosition">Bottom-left screen pixels (mouse / Input System).</param>
         public void UpdateAnchor(Vector2 screenPosition)
         {
             if (_panel == null)
@@ -107,8 +110,16 @@ namespace SS3D.UI.Examine
                 return;
             }
 
-            _panel.style.left = screenPosition.x + OffsetX;
-            _panel.style.bottom = screenPosition.y + OffsetY;
+            Vector2 panelPos = screenPosition;
+            IPanel panel = _panel.panel;
+            if (panel != null)
+            {
+                panelPos = InputInterface.ScreenToPanel(panel, screenPosition);
+            }
+
+            _panel.style.left = panelPos.x + OffsetX;
+            _panel.style.top = panelPos.y + OffsetY;
+            _panel.style.bottom = StyleKeyword.Auto;
         }
 
         private void BuildTree()

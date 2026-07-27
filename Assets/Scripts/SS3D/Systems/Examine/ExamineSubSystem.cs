@@ -1,12 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using SS3D.Core;
 using SS3D.Core.Behaviours;
-using UnityEngine.UI;
-using UnityEngine.Experimental.Rendering;
-using System;
 using SS3D.Systems.Selection;
-using SS3D.Core;
+using UnityEngine;
 
 namespace SS3D.Systems.Examine
 {
@@ -28,44 +23,72 @@ namespace SS3D.Systems.Examine
         public event ExaminableChangedHandler OnCharacterWindowRequested;
 
         public delegate void ExaminableChangedHandler(IExaminable examinable);
-        
+
         private SelectionSubSystem _selectionSystem;
-        
-        protected override void OnAwake()
-        {
-            base.OnAwake();
-            // Sibling on NetworkSystemsHub — Awake order may run before Selection registers.
-            SubSystems.TryGet(out _selectionSystem);
-        }
+        private bool _selectionEventsBound;
 
         protected override void OnEnabled()
         {
             base.OnEnabled();
-
-            if (_selectionSystem == null)
-            {
-                SubSystems.TryGet(out _selectionSystem);
-            }
-
-            if (_selectionSystem != null)
-            {
-                _selectionSystem.OnSelectableChanged += UpdateExaminable;
-            }
+            TryBindSelectionEvents();
         }
 
         protected override void OnDisabled()
         {
             base.OnDisabled();
+            UnsubscribeSelectionEvents();
+        }
 
-            if (_selectionSystem != null)
+        private void Update()
+        {
+            // SelectionSubSystem may register after this NetworkSubSystem enables (hub component /
+            // FishNet enable order). One-shot OnEnabled subscribe misses it — retry like
+            // ExamineOverlaySubSystem → ExamineSubSystem.
+            TryBindSelectionEvents();
+        }
+
+        private void TryBindSelectionEvents()
+        {
+            if (_selectionEventsBound && _selectionSystem == null)
+            {
+                _selectionEventsBound = false;
+            }
+
+            if (_selectionEventsBound)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out _selectionSystem) || _selectionSystem == null)
+            {
+                return;
+            }
+
+            _selectionSystem.OnSelectableChanged += UpdateExaminable;
+            _selectionEventsBound = true;
+
+            // Catch up current hover so examine is not blank until the next selection change.
+            UpdateExaminable();
+        }
+
+        private void UnsubscribeSelectionEvents()
+        {
+            if (_selectionSystem != null && _selectionEventsBound)
             {
                 _selectionSystem.OnSelectableChanged -= UpdateExaminable;
             }
+
+            _selectionSystem = null;
+            _selectionEventsBound = false;
         }
 
         private void UpdateExaminable()
         {
-            // Get the examinable under the cursor
+            if (_selectionSystem == null)
+            {
+                return;
+            }
+
             IExaminable current = _selectionSystem.GetCurrentSelectable<IExaminable>();
             OnExaminableChanged?.Invoke(current);
         }

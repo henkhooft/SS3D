@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Examine/, Assets/Scripts/SS3D/UI/Examine/, Assets/Scripts/SS3D/Localization/
 > Entry points: ExamineSubSystem, ExamineOverlaySubSystem, ExamineContentResolver, TakeFromCharacterInteraction
 > Status: partial
-> Verified: c65a60cd9 — 2026-07-27
+> Verified: f19b8a38e — 2026-07-27
 
 # Examine
 
@@ -54,6 +54,8 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 - **Catalog missing in builds:** run **Rebuild Examine Asset Catalog** and commit `Resources` asset.
 - **`InventorySlot` white HUD:** never put `overflow: hidden` on `.inventory-slot__well` (it already has `border-radius`) — Main HUD shares that USS and turns into a flat white block. Take-progress spinner stays inset without clipping.
 - **DDOL overlay vs Online hub:** `ExamineOverlaySubSystem` is AfterSceneLoad DDOL; `ExamineSubSystem` only exists on `NetworkSystemsHub` after Online. One-shot subscribe in `OnEnabled` misses the hub — bind must retry in `Update` (and rebind after hub teardown).
+- **Examine ↔ Selection enable order:** `ExamineSubSystem` can `OnEnable` before `SelectionSubSystem` is registered. One-shot subscribe misses Selection — retry in `Update` (same pattern as overlay→examine). Without it, hover never fires `OnExaminableChanged` even though Selection picks items.
+- **Hover label off-screen / invisible:** UiShell `PanelSettings` is `ConstantPhysicalSize`. Cursor anchors must use `InputInterface.ScreenToPanel` then `style.left`/`style.top` (same as `ZoneTargetReticle`). Raw mouse + `style.bottom` places the label wrong / off-panel — silent, no error.
 - **No `box-shadow` in USS:** UI Toolkit rejects it (Unknown style property). Use a 1px border for elevation; never combine `border-radius` + `overflow: hidden` on the same examine element either.
 
 ## Depends on / Used by

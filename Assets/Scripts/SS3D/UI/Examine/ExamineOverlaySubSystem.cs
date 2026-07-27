@@ -64,7 +64,7 @@ namespace SS3D.UI.Examine
             }
 
             GameObject host = new(nameof(ExamineOverlaySubSystem));
-            Object.DontDestroyOnLoad(host);
+            UnityEngine.Object.DontDestroyOnLoad(host);
             host.AddComponent<ExamineOverlaySubSystem>();
         }
 
@@ -417,6 +417,10 @@ namespace SS3D.UI.Examine
         {
             IReadOnlyList<CharacterExamineSlotContent> slots = CharacterExamineContentBuilder.BuildSlots(inventory);
             _quickLookView.Show(ResolveDisplayName(inventory), slots);
+            if (Mouse.current != null)
+            {
+                _quickLookView.UpdateAnchor(Mouse.current.position.ReadValue());
+            }
         }
 
         private static string ResolveDisplayName(HumanInventory inventory)
@@ -457,17 +461,32 @@ namespace SS3D.UI.Examine
                     && TryGetImageDetailedContent(_currentExaminable, content, out Sprite image, out string caption, out Vector2 imageSize))
                 {
                     _genericView.ShowDetailedImage(image, caption, imageSize);
+                    if (Mouse.current != null)
+                    {
+                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                    }
+
                     return;
                 }
 
                 if (content.HasDescription || content.Sections.Count > 0)
                 {
                     _genericView.ShowDetailedText(content.Name, BuildDetailedText(content));
+                    if (Mouse.current != null)
+                    {
+                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                    }
+
                     return;
                 }
             }
 
-            _genericView.ShowHoverName(content.Name);
+            string hoverName = string.IsNullOrEmpty(content.Name) ? "???" : content.Name;
+            _genericView.ShowHoverName(hoverName);
+            if (Mouse.current != null)
+            {
+                _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+            }
         }
 
         private ExamineContent GetCachedContent(IExaminable examinable)
