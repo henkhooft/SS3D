@@ -404,6 +404,7 @@ namespace SS3D.Systems.Entities.Humanoid
             ApplyCollapseVisuals();
 
             if (applyImpulse
+                && IsRagdollPhysicsAuthority()
                 && _humanoidLivingController != null
                 && _ragdollParts != null)
             {
@@ -463,13 +464,28 @@ namespace SS3D.Systems.Entities.Humanoid
             ToggleController(false);
             ToggleAnimator(false);
             DisableAnimationDrivers();
-            ToggleKinematic(false);
+            // Observers must stay kinematic while bone NetworkTransforms receive — dual write twitches.
+            // Death: only server simulates (corpse unowned after SwapMinds). Living knockdown: owner.
+            ToggleKinematic(!IsRagdollPhysicsAuthority());
+        }
+
+        /// <summary>
+        /// Who runs non-kinematic ragdoll physics (and sends bone NetworkTransforms).
+        /// </summary>
+        private bool IsRagdollPhysicsAuthority()
+        {
+            if (_deathRagdoll)
+            {
+                return IsServer;
+            }
+
+            return IsOwner;
         }
 
         private void RagdollBehavior()
         {
-            // Owner aligns living ragdolls; server aligns death corpses (usually unowned).
-            if (!IsOwner && !(IsServer && _deathRagdoll))
+            // Owner aligns living ragdolls; server aligns death corpses (unowned after mind clear).
+            if (!IsRagdollPhysicsAuthority())
             {
                 return;
             }
@@ -482,7 +498,14 @@ namespace SS3D.Systems.Entities.Humanoid
         /// </summary>
         private void AlignToHips()
         {
-            IsFacingDown = _hips.transform.forward.y < 0;
+            // Prefer a local read — IsFacingDown's setter is a ServerRpc and requires ownership.
+            // Death corpses are unowned after SetMind(null); server still AlignToHips for root pose.
+            bool facingDown = _hips.transform.forward.y < 0;
+            if (IsOwner)
+            {
+                IsFacingDown = facingDown;
+            }
+
             Vector3 originalHipsPosition = _hips.position;
             Vector3 newPosition = _hips.position;
             // Get the lowest position
@@ -493,7 +516,7 @@ namespace SS3D.Systems.Entities.Humanoid
             _character.position = newPosition;
             _hips.position = originalHipsPosition;
             
-            Vector3 desiredDirection = _hips.up * (IsFacingDown ? 1 : -1);
+            Vector3 desiredDirection = _hips.up * (facingDown ? 1 : -1);
             desiredDirection.y = 0;
             desiredDirection.Normalize();
             Quaternion originalHipsRotation = _hips.rotation;
@@ -655,9 +678,12 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _humanoidLivingController.enabled = enable;
             }
+
             if (_characterController != null)
             {
-                _characterController.enabled = enable;
+                // Non-owners must keep CC off so NetworkTransform can drive the server transform.
+                // Enabling CC on remotes leaves them stuck at spawn for proximity (doors, etc.).
+                _characterController.enabled = enable && IsOwner;
             }
 
             if (TryGetComponent(out HumanoidPredictedMovement predictedMovement))

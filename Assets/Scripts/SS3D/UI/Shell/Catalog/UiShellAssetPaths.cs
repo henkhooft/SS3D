@@ -2,7 +2,7 @@ namespace SS3D.UI.Shell.Catalog
 {
     /// <summary>
     /// Stable asset paths for the <see cref="UiShellSubSystem"/> catalog. Rebuild the committed
-    /// catalog with <c>SS3D → UI Shell → Rebuild Asset Catalog</c>.
+    /// catalog with <c>SS3D → Data → Rebuild All UI Catalogs</c>.
     /// </summary>
     public static class UiShellAssetPaths
     {
@@ -11,7 +11,7 @@ namespace SS3D.UI.Shell.Catalog
         public const string CatalogAssetPath =
             "Assets/Content/Systems/UI/Shell/Resources/UiShellAssetCatalog.asset";
 
-        public const string RebuildMenuPath = "SS3D → UI Shell → Rebuild Asset Catalog";
+        public const string RebuildMenuPath = "SS3D → Data → Rebuild All UI Catalogs";
 
         // Reuses the existing HUD overlay panel settings (radial menu / armed overlay already render
         // through it) rather than minting a fourth PanelSettings asset for the same screen-space overlay.

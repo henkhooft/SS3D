@@ -1,3 +1,4 @@
+using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
@@ -115,8 +116,9 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Melee vs Ranged from the active hand item. Prefers <see cref="RangedWeaponItemExtension"/>;
-        /// falls back to ranged trait name match for unwired content.
+        /// Melee vs Ranged from the wielded combat item. Prefers a two-hand rifle in its required
+        /// hand (even when the off-hand is selected for UI); falls back to selected-hand item /
+        /// ranged trait name match for unwired content.
         /// </summary>
         public HumanoidCombatMode ResolveCombatStance()
         {
@@ -125,7 +127,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return HumanoidCombatMode.Melee;
             }
 
-            Item item = _hands.SelectedHand?.ItemInHand;
+            Item item = TwoHandedWeaponRules.ResolvePresentationItem(_hands);
             if (item == null)
             {
                 return HumanoidCombatMode.Melee;
@@ -183,8 +185,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            Hand activeHand = _hands.SelectedHand;
-            Item item = activeHand?.ItemInHand;
+            Item item = TwoHandedWeaponRules.ResolvePresentationItem(_hands);
             ArmHoldPose pose = ArmHoldPose.Default;
             if (item != null)
             {
@@ -212,9 +213,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            Hand active = _hands.SelectedHand;
-            bool mirror = active != null && active.Side == HandSide.Left;
-            _bodyStateMachine.SetMirrorUpperBody(mirror);
+            _bodyStateMachine.SetMirrorUpperBody(TwoHandedWeaponRules.ShouldMirrorUpperBody(_hands));
         }
 
         private void UpdateLimp()

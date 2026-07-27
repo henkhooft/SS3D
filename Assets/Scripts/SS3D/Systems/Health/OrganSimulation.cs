@@ -57,6 +57,21 @@ namespace SS3D.Systems.Health
             UpdateCriticalFlags(organs);
         }
 
+        /// <summary>
+        /// Direct lung barotrauma from pressure extremes (not zone-mapped chest burn).
+        /// </summary>
+        public static void ApplyLungDamage(IList<OrganState> organs, float damage)
+        {
+            if (damage <= 0f)
+            {
+                return;
+            }
+
+            ApplyOrganDamage(organs, OrganType.LeftLung, damage);
+            ApplyOrganDamage(organs, OrganType.RightLung, damage);
+            UpdateCriticalFlags(organs);
+        }
+
         public static void SetOrganFunction(IList<OrganState> organs, OrganType type, float functionPercent)
         {
             functionPercent = Math.Clamp(functionPercent, 0f, 100f);

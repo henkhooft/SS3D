@@ -6,6 +6,7 @@ using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
@@ -42,8 +43,9 @@ namespace SS3D.UI.MainHud
     /// </para>
     /// <para>
     /// The alert icon stack is live for health hazards (Bleeding, Dying, CardiacArrest, LowOxygen) via
-    /// <see cref="HumanHealthController.SnapshotChanged"/> and <see cref="HealthAlertStackMapper"/>. Atmos /
-    /// hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist —
+    /// <see cref="HumanHealthController.SnapshotChanged"/> + <see cref="HealthAlertStackMapper"/>, and for
+    /// turf exposure (Hot/Cold/pressure/Fire + turf LowOxygen) via <see cref="AtmosAlertStackMapper"/>.
+    /// Hunger / thirst / pulling / restrained / radiation stay all-clear until those systems exist —
     /// F4 / <c>alertstack</c> remain a full-stack debug override when set.
     /// </para>
     /// <para>
@@ -84,6 +86,7 @@ namespace SS3D.UI.MainHud
 
         private MainHudView _view;
         private AlertStackState? _debugAlertOverride;
+        private AlertStackState _lastAlertState;
         private GameObject _localPlayer;
         private HumanHealthController _healthController;
         private StaminaController _stamina;
@@ -144,7 +147,7 @@ namespace SS3D.UI.MainHud
 #endif
                 Debug.LogError(
                     $"MainHudSubSystem could not load Resources/{MainHudAssetPaths.ResourcesCatalogName}. "
-                    + "Run SS3D → Main HUD → Rebuild Asset Catalog and commit the asset.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs and commit the asset.",
                     this);
                 return false;
             }
@@ -153,7 +156,7 @@ namespace SS3D.UI.MainHud
             {
                 Debug.LogError(
                     $"MainHudAssetCatalog is missing required assets ({missingField}). "
-                    + "Run SS3D → Main HUD → Rebuild Asset Catalog.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs.",
                     this);
                 return false;
             }
@@ -297,19 +300,18 @@ namespace SS3D.UI.MainHud
             readyProgress01 = 1f;
             recharging = false;
 
-            Hand hand = _hands?.SelectedHand;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 ranged.ServerCompleteReloadIfDue();
                 recharging = ranged.IsBusy;
                 readyProgress01 = ranged.ReadyProgress01;
                 return true;
+            }
+
+            Hand hand = _hands?.SelectedHand;
+            if (hand == null)
+            {
+                return false;
             }
 
             if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
@@ -324,9 +326,7 @@ namespace SS3D.UI.MainHud
 
         private float GetSelectedRangedBloom01()
         {
-            Hand hand = _hands?.SelectedHand;
-            Item held = hand?.ItemInHand;
-            if (held == null || !held.TryGetComponent(out RangedWeaponItemExtension ranged))
+            if (!TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out RangedWeaponItemExtension ranged))
             {
                 return 0f;
             }
@@ -379,8 +379,7 @@ namespace SS3D.UI.MainHud
                 return false;
             }
 
-            Item held = hand.ItemInHand;
-            if (held != null && held.TryGetComponent(out RangedWeaponItemExtension _))
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out _))
             {
                 // Ranged: any resolved zone under the reticle is "in range" for the chip.
                 return zoneCollider != null;
@@ -432,7 +431,7 @@ namespace SS3D.UI.MainHud
         public void SetDebugAlertOverride(AlertStackState state)
         {
             _debugAlertOverride = state;
-            _view?.SetAlertState(state);
+            PushAlertState(state);
         }
 
         public void ClearDebugAlertOverride()
@@ -454,18 +453,19 @@ namespace SS3D.UI.MainHud
 
             if (_debugAlertOverride.HasValue)
             {
-                _view.SetAlertState(_debugAlertOverride.Value);
+                PushAlertState(_debugAlertOverride.Value);
                 return;
             }
 
             if (_healthController == null)
             {
-                _view.SetAlertState(default);
+                PushAlertState(default);
                 return;
             }
 
-            _view.SetAlertState(ToAlertStackState(
-                HealthAlertStackMapper.Compute(_healthController.Snapshot)));
+            PushAlertState(ToAlertStackState(
+                HealthAlertStackMapper.Compute(_healthController.Snapshot),
+                AtmosAlertStackMapper.Compute(_healthController.Snapshot.Environment)));
         }
 
         private void HandleHealthSnapshotChanged(HealthSnapshot snapshot)
@@ -475,20 +475,48 @@ namespace SS3D.UI.MainHud
                 return;
             }
 
-            _view?.SetAlertState(ToAlertStackState(HealthAlertStackMapper.Compute(snapshot)));
+            PushAlertState(ToAlertStackState(
+                HealthAlertStackMapper.Compute(snapshot),
+                AtmosAlertStackMapper.Compute(snapshot.Environment)));
         }
 
         /// <summary>
-        /// Copies health signals into an <see cref="AlertStackState"/>; non-health fields stay None.
+        /// Single funnel for every <see cref="AlertStackState"/> push (health-driven, debug override,
+        /// or cleared). Fires the personal alert cue (audio.md §6) when a hazard newly appears — an
+        /// escalation already showing does not re-trigger it — then forwards to the view.
         /// </summary>
-        private static AlertStackState ToAlertStackState(HealthAlertStackMapper.HealthAlertSignals signals)
+        private void PushAlertState(AlertStackState newState)
+        {
+            if (AlertStackAudioMapper.HasNewAlert(_lastAlertState, newState))
+            {
+                SubSystems.Get<PersonalAudioSubSystem>()?.PlayAlertCue();
+            }
+
+            _lastAlertState = newState;
+            _view?.SetAlertState(newState);
+        }
+
+        /// <summary>
+        /// Merges health + atmos alert signals into one <see cref="AlertStackState"/>.
+        /// LowOxygen takes the worse of systemic oxy-debt and turf hypoxia.
+        /// </summary>
+        private static AlertStackState ToAlertStackState(
+            HealthAlertStackMapper.HealthAlertSignals health,
+            AtmosAlertStackMapper.AtmosAlertSignals atmos)
         {
             return new AlertStackState
             {
-                Bleeding = ToAlertSeverity(signals.Bleeding),
-                Dying = ToAlertSeverity(signals.Dying),
-                CardiacArrest = ToAlertSeverity(signals.CardiacArrest),
-                LowOxygen = ToAlertSeverity(signals.LowOxygen),
+                Bleeding = ToAlertSeverity(health.Bleeding),
+                Dying = ToAlertSeverity(health.Dying),
+                CardiacArrest = ToAlertSeverity(health.CardiacArrest),
+                LowOxygen = MaxSeverity(
+                    ToAlertSeverity(health.LowOxygen),
+                    ToAlertSeverity(atmos.LowOxygen)),
+                Fire = ToAlertSeverity(atmos.Fire),
+                Hot = ToAlertSeverity(atmos.Hot),
+                Cold = ToAlertSeverity(atmos.Cold),
+                LowPressure = ToAlertSeverity(atmos.LowPressure),
+                HighPressure = ToAlertSeverity(atmos.HighPressure),
             };
         }
 
@@ -498,6 +526,16 @@ namespace SS3D.UI.MainHud
             HealthAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
             _ => AlertSeverity.None,
         };
+
+        private static AlertSeverity ToAlertSeverity(AtmosAlertStackMapper.Severity severity) => severity switch
+        {
+            AtmosAlertStackMapper.Severity.Warning => AlertSeverity.Warning,
+            AtmosAlertStackMapper.Severity.Critical => AlertSeverity.Critical,
+            _ => AlertSeverity.None,
+        };
+
+        private static AlertSeverity MaxSeverity(AlertSeverity a, AlertSeverity b) =>
+            (AlertSeverity)Math.Max((int)a, (int)b);
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
@@ -777,6 +815,11 @@ namespace SS3D.UI.MainHud
 
             Hand hand = _hands.PlayerHands[index];
             if (hand?.Container == null)
+            {
+                return;
+            }
+
+            if (!_hands.CanSelectHand(hand))
             {
                 return;
             }
@@ -1153,6 +1196,7 @@ namespace SS3D.UI.MainHud
                 HandsGearStrip.HandSlot.Right,
                 HandIconAt(1),
                 HandNameAt(1));
+            RefreshHandReservedState();
 
             SetGear(HandsGearStrip.GearSlot.Belt, ContainerType.Belt);
             SetGear(HandsGearStrip.GearSlot.Id, ContainerType.Identification);
@@ -1192,6 +1236,40 @@ namespace SS3D.UI.MainHud
         private Sprite HandIconAt(int position) => HandItemAt(position)?.ItemSprite;
 
         private string HandNameAt(int position) => HandItemAt(position)?.Name;
+
+        private void RefreshHandReservedState()
+        {
+            if (_view == null || _hands == null)
+            {
+                return;
+            }
+
+            bool leftReserved = false;
+            bool rightReserved = false;
+            if (_hands.PlayerHands != null)
+            {
+                foreach (Hand hand in _hands.PlayerHands)
+                {
+                    if (hand == null)
+                    {
+                        continue;
+                    }
+
+                    bool reserved = TwoHandedWeaponRules.IsHandReserved(hand, _hands);
+                    if (hand.Side == HandSide.Left)
+                    {
+                        leftReserved = reserved;
+                    }
+                    else if (hand.Side == HandSide.Right)
+                    {
+                        rightReserved = reserved;
+                    }
+                }
+            }
+
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Left, leftReserved);
+            _view.SetHandReserved(HandsGearStrip.HandSlot.Right, rightReserved);
+        }
 
         private Item HandItemAt(int position)
         {

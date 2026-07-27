@@ -5,7 +5,7 @@ namespace SS3D.UI.MachineInterface
 {
     /// <summary>
     /// Committed resolved refs for machine UI. Rebuild via
-    /// <c>SS3D → Machine Interface → Rebuild Asset Catalog</c> from <see cref="MachineUiAssetPaths"/>.
+    /// <c>SS3D → Data → Rebuild All UI Catalogs</c> from <see cref="MachineUiAssetPaths"/>.
     /// Loaded at runtime with <c>Resources.Load</c>.
     /// </summary>
     [CreateAssetMenu(

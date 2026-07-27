@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: StaminaController, StaminaFactory
 > Status: partial
-> Verified: b1fcfbbce — 2026-07-23
+> Verified: be4ea6eea — 2026-07-25
 
 # Stamina
 
@@ -22,6 +22,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 - Combat drains: melee swings and ranged fire both call `ServerDepleteStamina` via their profile's `StaminaCost` ([combat](combat.md)); block drain still deferred (no block interaction exists yet).
 - Compact HUD indicator near vitals: Main HUD / Phase 6 — do not revive `StaminaBarView`.
+- Personal breathing cue: [audio](audio.md) via `StaminaPersonalAudioMapper` (`PersonalAudioSubSystem.SetStaminaBreathingIntensity`), driven from `StaminaController.SyncCurrentStamina`'s `IsOwner` gate — max-merged with health labored breathing.
 
 ## Pitfalls
 
@@ -30,7 +31,7 @@ Actions are **not** hard-locked at zero (`CanCommenceInteraction` / `CanContinue
 
 ## Depends on / Used by
 
-- **Depends on:** [health](health.md), [inventory](inventory.md), [entities](entities.md)
+- **Depends on:** [health](health.md), [inventory](inventory.md), [entities](entities.md), [audio](audio.md) (`PersonalAudioSubSystem`)
 - **Used by:** [interactions-runtime](interactions-runtime.md) (`Hand` gates — currently always allow), [combat](combat.md) (swing/fire drains + exertion feedback into windup/cone), movement controllers, Main HUD ranged reticle bloom (`MainHudSubSystem.GetSelectedRangedBloom01`)
 
 ## Related docs

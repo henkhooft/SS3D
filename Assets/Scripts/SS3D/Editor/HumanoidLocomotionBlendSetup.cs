@@ -19,6 +19,11 @@ namespace SS3D.Editor
         private const string ShooterPack = "Assets/Art/Animations/Basic Shooter Pack";
         private const string InjuredPack = "Assets/Art/Animations/Male Injured Pack";
 
+        // Soft blend into/out of hit flinch (Any State entry + exit-time return to loco).
+        private const float FlinchEntryDuration = 0.2f;
+        private const float FlinchExitDuration = 0.28f;
+        private const float FlinchExitTime = 0.7f;
+
         private static readonly (string File, string ClipName, Vector2 Pos)[] PeacefulClips =
         {
             ("idle.fbx", "Mix_Idle", new Vector2(0f, 0f)),
@@ -116,6 +121,8 @@ namespace SS3D.Editor
             ("Throw", AnimatorControllerParameterType.Trigger),
             ("Emote", AnimatorControllerParameterType.Trigger),
             ("Flinch", AnimatorControllerParameterType.Trigger),
+            ("FireRifle", AnimatorControllerParameterType.Trigger),
+            ("Reload", AnimatorControllerParameterType.Trigger),
             ("VelX", AnimatorControllerParameterType.Float),
             ("VelZ", AnimatorControllerParameterType.Float),
             ("Turn", AnimatorControllerParameterType.Float),
@@ -131,7 +138,8 @@ namespace SS3D.Editor
                     "Rebuild Combat Stance Blend Trees",
                     "Rebuild Base Layer Peaceful / Melee / Ranged / Injured FreeformCartesian2D locomotion " +
                     "switched by CombatStance + LimpSide. Restores AttackSwing trigger on Upper Body; " +
-                    "remaps Flinch / injured-arm additive.\n\n" +
+                    "wires stance-aware Flinch (GettingHit / gut / HitReaction); Ranged Upper Body Aim Idle + Fire/Reload; " +
+                    "remaps injured-arm additive.\n\n" +
                     "Modifies HumanCharacterAnimator.controller.",
                     "Rebuild",
                     "Cancel"))
@@ -181,10 +189,6 @@ namespace SS3D.Editor
                 EditorApplication.Exit(1);
             }
         }
-
-        // Keep old menu entry as alias.
-        [MenuItem("SS3D/Animation/Rebuild Locomotion Pack Blend Tree")]
-        public static void RebuildLocomotionBlendTreeMenu() => RebuildCombatStanceBlendTreesMenu();
 
         public static void RebuildLocomotionBlendTreeBatch() => RebuildCombatStanceBlendTreesBatch();
 
@@ -341,10 +345,12 @@ namespace SS3D.Editor
             WireJumpAndTurnOneshots(controller, baseMachine, peaceful, melee, ranged, injured);
             WireInjuredWaveEmote(baseMachine, injured);
 
-            RemapStateMotion(baseMachine, "Flinch", $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
-
-            // Base layer must not consume AttackSwing — upper body owns the swing trigger.
+            WireStanceAwareFlinch(baseMachine, peaceful, melee, ranged, injured);
+            // Base layer must not consume AttackSwing / ranged oneshots — Upper Body owns those.
+            // Fire on Base resets the Ranged FreeformCartesian (feet pop back to idle every shot).
             MuteAnyStateTrigger(baseMachine, "AttackSwing");
+            MuteAnyStateTrigger(baseMachine, "FireRifle");
+            MuteAnyStateTrigger(baseMachine, "Reload");
 
             // Upper-body Attack Swing variants (cycle via AttackVariant 0/1/2); exit-time → Hold Default.
             if (controller.layers.Length > 1)
@@ -391,7 +397,21 @@ namespace SS3D.Editor
                         EnableMirrorParameter(hold, "MirrorUpperBody");
                     }
                 }
+
+                // Fire + Reload on Upper Body over Rifle Aim Idle. Upper Body stays weighted for the
+                // whole Ranged stance so shots don't pulse layer weight (that snap was the shot twitch).
+                AnimatorState holdItem = FindState(upper, "Hold Item");
+                AnimatorState holdWeapon = FindState(upper, "Hold Weapon");
+                AnimatorState aimIdle = WireRangedAimIdle(upper, holdDefault, holdItem, holdWeapon);
+                WireRangedFireOneshot(upper, aimIdle);
+                WireRangedReloadOneshot(upper, aimIdle);
             }
+
+            RemapStateMotion(
+                baseMachine,
+                "Floating",
+                "Assets/Art/Animations/Misc/X Bot@Floating.fbx",
+                "Mix_Floating");
 
             if (controller.layers.Length > 2)
             {
@@ -400,6 +420,9 @@ namespace SS3D.Editor
                     $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
                 RemapStateMotion(additive, "Empty Additive",
                     $"{InjuredPack}/injured hurting idle.fbx", "Mix_InjuredHurtingIdle");
+                // Additive Flinch is the soft upper-body hit overlay (orchestrator lerps layer weight).
+                // Keep unmuted — muted Additive + stagger weight only showed Empty Additive hurting idle.
+                WireAdditiveFlinch(additive);
             }
 
             EditorUtility.SetDirty(controller);
@@ -407,7 +430,344 @@ namespace SS3D.Editor
             AssetDatabase.Refresh();
 
             return "OK: Rebuilt stance blends; injured idle severity; limp Jump/Turn90; Injured Wave Emote; "
-                   + "AttackSwing variants + MirrorUpperBody; Flinch / injured-arm additive remapped.";
+                   + "AttackSwing variants + MirrorUpperBody; stance-aware Flinch (GettingHit/gut/HitReaction); "
+                   + "Ranged Upper Body Aim Idle + FireRifle/Reload; Floating → Mix_Floating.";
+        }
+
+        /// <summary>
+        /// Ranged rest pose on Upper Body (Mix_AimingIdle). Orchestrator keeps Upper Body
+        /// weight at 1 for the whole Ranged stance so Fire/Reload can oneshot without pulsing layer weight.
+        /// All Hold* states must reach Aim Idle when CombatStance becomes Ranged — otherwise a held
+        /// weapon leaves Upper Body on Hold Weapon and shows a melee pose until the first shot.
+        /// </summary>
+        private static AnimatorState WireRangedAimIdle(
+            AnimatorStateMachine upper,
+            AnimatorState holdDefault,
+            AnimatorState holdItem,
+            AnimatorState holdWeapon)
+        {
+            AnimationClip aimClip = LoadPackClip($"{ShooterPack}/rifle aiming idle.fbx", "Mix_AimingIdle");
+            AnimatorState aimIdle = FindOrCreateState(upper, "Rifle Aim Idle", new Vector3(300, 400, 0));
+            if (aimClip != null)
+            {
+                aimIdle.motion = aimClip;
+                aimIdle.writeDefaultValues = true;
+            }
+
+            foreach (AnimatorState hold in new[] { holdDefault, holdItem, holdWeapon })
+            {
+                if (hold != null)
+                {
+                    EnsureCombatStanceTransition(hold, aimIdle, combatStance: 2, duration: 0.1f);
+                }
+            }
+
+            if (holdDefault != null)
+            {
+                EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 0, duration: 0.1f);
+                EnsureCombatStanceTransition(aimIdle, holdDefault, combatStance: 1, duration: 0.1f);
+            }
+
+            return aimIdle;
+        }
+
+        /// <summary>
+        /// Short M4 fire oneshot on Upper Body. Exits to Rifle Aim Idle — Base Ranged FreeformCartesian
+        /// keeps foot phase; Upper Body weight stays up for the stance so there is no per-shot snap.
+        /// </summary>
+        private static void WireRangedFireOneshot(AnimatorStateMachine upper, AnimatorState aimIdle)
+        {
+            AnimationClip fireClip = LoadPackClip($"{ShooterPack}/firing rifle.fbx", "Mix_FiringRifle");
+            AnimatorState fireState = FindOrCreateState(upper, "Fire Rifle", new Vector3(600, 220, 0));
+            if (fireClip != null)
+            {
+                fireState.motion = fireClip;
+                fireState.writeDefaultValues = true;
+            }
+
+            UnmuteAnyStateTrigger(upper, "FireRifle");
+            EnsureAnyStateTriggerWithCombatStance(
+                upper, fireState, "FireRifle", combatStance: 2, canTransitionToSelf: true, entryDuration: 0.05f);
+
+            ClearTransitions(fireState);
+            if (aimIdle != null)
+            {
+                EnsureExitToState(fireState, aimIdle, hasExitTime: true, exitTime: 0.85f, duration: 0.1f);
+            }
+        }
+
+        /// <summary>
+        /// Long M4 reload oneshot on Upper Body; exits to Rifle Aim Idle.
+        /// </summary>
+        private static void WireRangedReloadOneshot(AnimatorStateMachine upper, AnimatorState aimIdle)
+        {
+            AnimationClip reloadClip = LoadPackClip($"{ShooterPack}/reloading.fbx", "Mix_Reloading");
+            AnimatorState reloadState = FindOrCreateState(upper, "Reload Rifle", new Vector3(600, 280, 0));
+            if (reloadClip != null)
+            {
+                reloadState.motion = reloadClip;
+                reloadState.writeDefaultValues = true;
+            }
+
+            UnmuteAnyStateTrigger(upper, "Reload");
+            EnsureAnyStateTriggerWithCombatStance(
+                upper, reloadState, "Reload", combatStance: 2, canTransitionToSelf: false, entryDuration: 0.1f);
+
+            ClearTransitions(reloadState);
+            if (aimIdle != null)
+            {
+                EnsureExitToState(reloadState, aimIdle, hasExitTime: true, exitTime: 0.9f, duration: 0.15f);
+            }
+        }
+
+        private static void EnsureCombatStanceTransition(
+            AnimatorState from,
+            AnimatorState to,
+            int combatStance,
+            float duration)
+        {
+            foreach (AnimatorStateTransition transition in from.transitions)
+            {
+                if (transition.destinationState != to)
+                {
+                    continue;
+                }
+
+                bool stanceOk = transition.conditions.Any(
+                    c => c.parameter == "CombatStance"
+                         && c.mode == AnimatorConditionMode.Equals
+                         && (int)c.threshold == combatStance);
+                if (stanceOk)
+                {
+                    transition.hasExitTime = false;
+                    transition.hasFixedDuration = true;
+                    transition.duration = duration;
+                    return;
+                }
+            }
+
+            AnimatorStateTransition created = from.AddTransition(to);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = duration;
+            created.AddCondition(AnimatorConditionMode.Equals, combatStance, "CombatStance");
+        }
+
+        private static void EnsureAnyStateTriggerWithCombatStance(
+            AnimatorStateMachine machine,
+            AnimatorState destination,
+            string triggerName,
+            int combatStance,
+            bool canTransitionToSelf,
+            float entryDuration)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.destinationState != destination)
+                {
+                    continue;
+                }
+
+                if (!transition.conditions.Any(c => c.parameter == triggerName))
+                {
+                    continue;
+                }
+
+                bool stanceOk = transition.conditions.Any(
+                    c => c.parameter == "CombatStance" && (int)c.threshold == combatStance);
+                if (!stanceOk)
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = canTransitionToSelf;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = entryDuration;
+                MuteDuplicateAnyStateTriggers(machine, destination, triggerName, transition);
+                return;
+            }
+
+            AnimatorStateTransition created = machine.AddAnyStateTransition(destination);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = entryDuration;
+            created.canTransitionToSelf = canTransitionToSelf;
+            created.AddCondition(AnimatorConditionMode.If, 0f, triggerName);
+            created.AddCondition(AnimatorConditionMode.Equals, combatStance, "CombatStance");
+            MuteDuplicateAnyStateTriggers(machine, destination, triggerName, created);
+        }
+
+        /// <summary>
+        /// Base Flinch oneshots: GettingHit (Peaceful or limp), StandingReactLargeGut (Melee),
+        /// HitReaction (Ranged). Legacy single Flinch state is removed.
+        /// </summary>
+        private static void WireStanceAwareFlinch(
+            AnimatorStateMachine baseMachine,
+            AnimatorState peaceful,
+            AnimatorState melee,
+            AnimatorState ranged,
+            AnimatorState injured)
+        {
+            MuteAnyStateTrigger(baseMachine, "Flinch");
+            RemoveStateIfPresent(baseMachine, "Flinch");
+
+            AnimationClip gettingHit = LoadPackClip(
+                "Assets/Art/Animations/Misc/X Bot@Getting Hit.fbx", "Mix_GettingHit");
+            AnimationClip gut = LoadPackClip(
+                $"{MeleePack}/standing react large gut.fbx", "Mix_StandingReactLargeGut");
+            AnimationClip hitReaction = LoadPackClip(
+                $"{ShooterPack}/hit reaction.fbx", "Mix_HitReaction");
+
+            AnimatorState flinchGettingHit = FindOrCreateState(
+                baseMachine, "Flinch GettingHit", new Vector3(50, 280, 0));
+            if (gettingHit != null)
+            {
+                flinchGettingHit.motion = gettingHit;
+                flinchGettingHit.writeDefaultValues = true;
+            }
+
+            AnimatorState flinchMelee = FindOrCreateState(
+                baseMachine, "Flinch Melee", new Vector3(50, 340, 0));
+            if (gut != null)
+            {
+                flinchMelee.motion = gut;
+                flinchMelee.writeDefaultValues = true;
+            }
+
+            AnimatorState flinchRanged = FindOrCreateState(
+                baseMachine, "Flinch Ranged", new Vector3(50, 400, 0));
+            if (hitReaction != null)
+            {
+                flinchRanged.motion = hitReaction;
+                flinchRanged.writeDefaultValues = true;
+            }
+
+            // Limp → GettingHit; Peaceful (stance 0, not limping) → GettingHit.
+            EnsureAnyStateFlinch(baseMachine, flinchGettingHit, limpGreaterThanZero: true, combatStance: null);
+            EnsureAnyStateFlinch(baseMachine, flinchGettingHit, limpGreaterThanZero: false, combatStance: 0);
+            EnsureAnyStateFlinch(baseMachine, flinchMelee, limpGreaterThanZero: false, combatStance: 1);
+            EnsureAnyStateFlinch(baseMachine, flinchRanged, limpGreaterThanZero: false, combatStance: 2);
+
+            ClearTransitions(flinchGettingHit);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, injured, requireLimping: true, combatStance: null);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchGettingHit, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchGettingHit);
+
+            ClearTransitions(flinchMelee);
+            EnsureExitToStateWithLimpGate(flinchMelee, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchMelee, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchMelee, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchMelee);
+
+            ClearTransitions(flinchRanged);
+            EnsureExitToStateWithLimpGate(flinchRanged, peaceful, requireLimping: false, combatStance: 0);
+            EnsureExitToStateWithLimpGate(flinchRanged, melee, requireLimping: false, combatStance: 1);
+            EnsureExitToStateWithLimpGate(flinchRanged, ranged, requireLimping: false, combatStance: 2);
+            SoftenFlinchStateExits(flinchRanged);
+        }
+
+        private static void SoftenFlinchStateExits(AnimatorState flinchState)
+        {
+            foreach (AnimatorStateTransition transition in flinchState.transitions)
+            {
+                transition.hasExitTime = true;
+                transition.exitTime = FlinchExitTime;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchExitDuration;
+            }
+        }
+
+        /// <summary>
+        /// Unmute Additive Any→Flinch and soften entry/exit so gut overlay matches Base flinch blends.
+        /// </summary>
+        private static void WireAdditiveFlinch(AnimatorStateMachine additive)
+        {
+            AnimatorState flinch = FindState(additive, "Flinch");
+            if (flinch == null)
+            {
+                return;
+            }
+
+            foreach (AnimatorStateTransition transition in additive.anyStateTransitions)
+            {
+                if (transition.destinationState != flinch
+                    || !transition.conditions.Any(c => c.parameter == "Flinch"))
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = false;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchEntryDuration;
+            }
+
+            SoftenFlinchStateExits(flinch);
+        }
+
+        private static void EnsureAnyStateFlinch(
+            AnimatorStateMachine machine,
+            AnimatorState destination,
+            bool limpGreaterThanZero,
+            int? combatStance)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.destinationState != destination)
+                {
+                    continue;
+                }
+
+                if (!transition.conditions.Any(c => c.parameter == "Flinch"))
+                {
+                    continue;
+                }
+
+                bool limpOk = limpGreaterThanZero
+                    ? transition.conditions.Any(c => c.parameter == "LimpSide" && c.mode == AnimatorConditionMode.Greater)
+                    : transition.conditions.Any(c => c.parameter == "LimpSide" && c.mode == AnimatorConditionMode.Equals);
+                bool stanceOk = combatStance == null
+                    ? !transition.conditions.Any(c => c.parameter == "CombatStance")
+                    : transition.conditions.Any(
+                        c => c.parameter == "CombatStance" && (int)c.threshold == combatStance.Value);
+
+                if (!limpOk || !stanceOk)
+                {
+                    continue;
+                }
+
+                transition.mute = false;
+                transition.canTransitionToSelf = false;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = true;
+                transition.duration = FlinchEntryDuration;
+                return;
+            }
+
+            AnimatorStateTransition created = machine.AddAnyStateTransition(destination);
+            created.hasExitTime = false;
+            created.hasFixedDuration = true;
+            created.duration = FlinchEntryDuration;
+            created.canTransitionToSelf = false;
+            created.AddCondition(AnimatorConditionMode.If, 0f, "Flinch");
+            if (limpGreaterThanZero)
+            {
+                created.AddCondition(AnimatorConditionMode.Greater, 0f, "LimpSide");
+            }
+            else
+            {
+                created.AddCondition(AnimatorConditionMode.Equals, 0f, "LimpSide");
+            }
+
+            if (combatStance.HasValue)
+            {
+                created.AddCondition(AnimatorConditionMode.Equals, combatStance.Value, "CombatStance");
+            }
         }
 
         private static BlendTree BuildInjuredBlendTree(AnimatorController controller)
@@ -1035,6 +1395,17 @@ namespace SS3D.Editor
                 if (transition.conditions.Any(c => c.parameter == triggerName))
                 {
                     transition.mute = true;
+                }
+            }
+        }
+
+        private static void UnmuteAnyStateTrigger(AnimatorStateMachine machine, string triggerName)
+        {
+            foreach (AnimatorStateTransition transition in machine.anyStateTransitions)
+            {
+                if (transition.conditions.Any(c => c.parameter == triggerName))
+                {
+                    transition.mute = false;
                 }
             }
         }

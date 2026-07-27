@@ -145,6 +145,17 @@ public static class RuntimePreviewGenerator
 		set { m_orthographicMode = value; }
 	}
 
+	private static Quaternion m_previewRotation = Quaternion.identity;
+	/// <summary>
+	/// Rotation applied to non-static preview roots before framing (default identity).
+	/// Item/tile icon callers set this to the prefab rest pose so long items render on their side.
+	/// </summary>
+	public static Quaternion PreviewRotation
+	{
+		get { return m_previewRotation; }
+		set { m_previewRotation = value; }
+	}
+
 	private static bool m_useLocalBounds = false;
 	public static bool UseLocalBounds
 	{
@@ -296,13 +307,13 @@ public static class RuntimePreviewGenerator
 			if( !isStatic )
 			{
 				previewObject.position = PREVIEW_POSITION;
-				previewObject.rotation = Quaternion.identity;
+				previewObject.rotation = m_previewRotation;
 			}
 
 			if( !wasActive )
 				previewObject.gameObject.SetActive( true );
 
-			Quaternion cameraRotation = Quaternion.LookRotation( previewObject.rotation * m_previewDirection, previewObject.up );
+			Quaternion cameraRotation = Quaternion.LookRotation( previewObject.rotation * m_previewDirection, Vector3.up );
 			Bounds previewBounds = new Bounds();
 			if( !CalculateBounds( previewObject, shouldIgnoreParticleSystems, cameraRotation, out previewBounds ) )
 			{

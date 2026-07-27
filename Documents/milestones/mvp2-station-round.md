@@ -64,10 +64,11 @@ Hidden blockers this sketch makes explicit (each its own future pass):
   minimal replacement path. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
   [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); access presets come
   from [id-access.md](../design/id-access.md) §5.
-- **"Atmos as a real threat when breached" pulls in two deferred pieces:** Area live-mutation
-  recompute ([2026-07_area-foundation.md](../architecture/2026-07_area-foundation.md), deferred) and
-  atmos client visualization sync ([2026-07_atmos-client-visualization-sync.md](../architecture/2026-07_atmos-client-visualization-sync.md),
-  planned). Without them a hull breach doesn't visibly or mechanically bite on clients.
+- **"Atmos as a real threat when breached"** — client atmos VFX Phase 1 is already shipped
+  ([2026-07_atmos-client-visualization-sync.md](../architecture/2026-07_atmos-client-visualization-sync.md));
+  mechanical bite is MVP1 **M8** (env→health + alarms). Area-id merge on breach stays out (see MVP1
+  deferred). MVP2 may still want richer station atmos tooling / late-join atmos Phase 2, not a
+  re-wire of client VFX.
 - **Cloning is a fabricator, and crafting is a stub.** The medical save path leans on defib (shipped)
   for the *thin* version; cloning/respawn ([death-cloning-respawn.md](../design/death-cloning-respawn.md)
   §5) rides `crafting.md` §3's fabricator pattern, and [crafting](../architecture/systems/crafting.md)
@@ -85,9 +86,9 @@ Hidden blockers this sketch makes explicit (each its own future pass):
 | Id | Name | Status | Links |
 |----|------|--------|-------|
 | S1 | Job system (bare roster) | pending — blocked on a job-select UI (condemned lobby) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) |
-| S2 | Station loop felt | pending — atmos-threat needs deferred area recompute + atmos client sync | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [2026-07_atmos-client-visualization-sync.md](../architecture/2026-07_atmos-client-visualization-sync.md); id-access doors |
+| S2 | Station loop felt | pending — builds on MVP1 M8 env exposure + alarms; Area-id merge still out | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M8; id-access doors |
 | S3 | Medical shift thin | pending — defib (shipped) is the thin save path; cloning rides crafting rewrite | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) §3, §5; [crafting](../architecture/systems/crafting.md) (fabricator); reuses MVP1 death spine |
-| S4 | Comms radio | pending — comms partial (local speech only) | [comms.md](../design/comms.md) §6 |
+| S4 | Comms radio | partial — feed + Tab/slash compose + announce SFX + Chat purge shipped; headset gating / PDA log / radial still open | [comms.md](../design/comms.md) §6; [2026-07_comms-non-diegetic-feed.md](../architecture/2026-07_comms-non-diegetic-feed.md) |
 | S5 | Traitor / Extended + objectives | pending — Extended is the cheap first path; Traitor needs deferred uplink | [antagonist-content.md](../design/antagonist-content.md) §2–§4; [objectives.md](../design/objectives.md); [round-config.md](../design/round-config.md) |
 | S6 | Evac end path | pending — **blocked on unbuilt shuttle framework** | [round-end.md](../design/round-end.md) §3; [shuttles.md](../design/shuttles.md) (evac only) |
 | S7 | Eng / cargo minimum | pending | electricity repair already partial; [cargo.md](../design/cargo.md) thin or mapped supply |

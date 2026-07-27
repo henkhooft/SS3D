@@ -9,7 +9,8 @@ namespace SS3D.Tests
     public static class CompiledBuildPaths
     {
         public const string MissingBuildMessage =
-            "Compiled SS3D player build not found. Build to Builds/Game (or Builds/StandaloneLinux64 on Linux CI) before running tests that launch external processes.";
+            "Compiled SS3D player build not found. Run SS3D → Build → Client (Linux) " +
+            "(or Client + Dedicated Server) so Builds/Game has an executable before tests that launch external processes.";
 
         public static bool HasCompiledBuild => TryResolveExecutablePath(out _);
 

@@ -582,7 +582,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 : 0f;
 
             ConstructionHologram hologram = new(tileObject, position, _lastRegisteredDirection, placementYOffset);
-            tileObject.transform.rotation = Quaternion.Euler(0, TileHelper.GetRotationAngle(hologram.Direction), 0);
+            tileObject.transform.rotation = hologram.TargetWorldRotation;
             tileObject.transform.position = hologram.TargetPosition + new Vector3(0, placementYOffset + 0.1f, 0);
             if (addToActive)
                 _holograms.Add(hologram);

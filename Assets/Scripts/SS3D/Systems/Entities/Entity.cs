@@ -77,6 +77,22 @@ namespace SS3D.Systems.Entities
             OnMindChanged?.Invoke(Mind);
         }
 
+        public override void OnOwnershipClient(NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+
+            // Reclaim restores ownership without changing Mind SyncVar — HUD listens to this
+            // event, but lobby used to wait only on SpawnedPlayersUpdated (which does not re-fire).
+            if (IsOwner)
+            {
+                InvokeLocalPlayerObjectChanged();
+            }
+            else if (prevOwner != null && prevOwner == LocalConnection)
+            {
+                new LocalPlayerObjectChanged(GameObject, false).Invoke(this);
+            }
+        }
+
         protected override void OnDestroyed()
         {
             base.OnDestroyed();
@@ -90,9 +106,9 @@ namespace SS3D.Systems.Entities
 
         private void InvokeLocalPlayerObjectChanged()
         {
-            if (Mind == null || Mind.player == null) return;
-
-            if (!Mind.player.IsLocalConnection)
+            bool isLocal = IsOwner
+                || (Mind?.player != null && Mind.player.IsLocalConnection);
+            if (!isLocal)
             {
                 return;
             }
@@ -125,8 +141,15 @@ namespace SS3D.Systems.Entities
         [Server]
         public void SetMind(Mind mind)
         {
-            this._mind = mind;
-            if(mind == null) return;
+            _mind = mind;
+            // Ghosts ship with a null mind; SwapMinds assigns that to the corpse. Must clear FishNet
+            // ownership or the dead player keeps Owner and still receives corpse TargetRpcs (hit flash).
+            if (mind == null || mind == Mind.Empty)
+            {
+                RemoveOwnership();
+                return;
+            }
+
             GiveOwnership(mind.Owner);
         }
 

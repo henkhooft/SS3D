@@ -2,7 +2,7 @@ namespace SS3D.UI.MachineInterface
 {
     /// <summary>
     /// Stable asset paths for machine UI templates and styles.
-    /// Rebuild the committed catalog with <c>SS3D → Machine Interface → Rebuild Asset Catalog</c>.
+    /// Rebuild the committed catalog with <c>SS3D → Data → Rebuild All UI Catalogs</c>.
     /// </summary>
     public static class MachineUiAssetPaths
     {

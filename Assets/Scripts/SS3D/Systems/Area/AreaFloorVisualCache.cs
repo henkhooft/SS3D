@@ -15,11 +15,13 @@ namespace SS3D.Systems.Area
 
         private readonly Dictionary<ushort, Color> _tints = new();
         private readonly Dictionary<Vector2Int, ushort[]> _chunkAreaIds = new();
+        private readonly Dictionary<ushort, string> _ambienceTrackIds = new();
 
         public void Clear()
         {
             _tints.Clear();
             _chunkAreaIds.Clear();
+            _ambienceTrackIds.Clear();
             OnDirty?.Invoke();
         }
 
@@ -72,6 +74,39 @@ namespace SS3D.Systems.Area
         public void NotifyDirty() => OnDirty?.Invoke();
 
         public bool TryGetTint(ushort areaId, out Color tint) => _tints.TryGetValue(areaId, out tint);
+
+        /// <summary>
+        /// Server-populated (host) or ObserversRpc-synced (client) per-area ambience track id
+        /// (audio.md §2 / <c>AreaRecord.AmbienceTrackId</c>). Separate broadcast channel from
+        /// tint/chunk data so it can be updated (e.g. on ambience authoring) without touching the
+        /// floor-stripe snapshot.
+        /// </summary>
+        public void SetAmbienceTrackId(ushort areaId, string trackId)
+        {
+            if (areaId == AreaId.None)
+                return;
+
+            if (string.IsNullOrEmpty(trackId))
+                _ambienceTrackIds.Remove(areaId);
+            else
+                _ambienceTrackIds[areaId] = trackId;
+        }
+
+        public bool TryGetAmbienceTrackId(ushort areaId, out string trackId) =>
+            _ambienceTrackIds.TryGetValue(areaId, out trackId);
+
+        public void ReplaceAmbienceTrackIds(IReadOnlyList<(ushort areaId, string trackId)> tracks)
+        {
+            _ambienceTrackIds.Clear();
+
+            if (tracks != null)
+            {
+                foreach ((ushort areaId, string trackId) in tracks)
+                    SetAmbienceTrackId(areaId, trackId);
+            }
+
+            OnDirty?.Invoke();
+        }
 
         public bool TryGetAreaId(Vector2Int chunkKey, int localX, int localY, out ushort areaId)
         {

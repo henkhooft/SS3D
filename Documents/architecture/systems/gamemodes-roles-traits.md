@@ -12,6 +12,7 @@ Round objectives, job roles/loadouts, and character traits (e.g. ID permissions)
 
 - `Assets/Scripts/SS3D/Systems/Gamemodes/GamemodeSubSystem.cs` — gamemode subsystem
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` — role assignment
+- `GamemodeObjectivePanelView` — legacy uGUI panel hidden (no Tab hotkey; PDA tab later)
 
 ## Extension points
 

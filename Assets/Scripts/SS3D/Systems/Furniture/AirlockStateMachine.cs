@@ -1,6 +1,4 @@
-﻿using FishNet.Object;
-using SS3D.Core;
-using SS3D.Data;
+﻿using SS3D.Core;
 using SS3D.Data.Generated;
 using SS3D.Systems.Audio;
 using UnityEngine;
@@ -17,62 +15,43 @@ namespace SS3D.Systems.Furniture
         private const string Opening = "Opening";
         private const string Closing = "Closing";
 
-        private readonly Color _openingColor = new Color(.07f, 1f, .32f);
-        private readonly Color _closingColor = new Color(1, 0.18f, .2f);
-        private readonly Color _idleColor = new Color(0, 0, 0);
-
-        private const int DoorLightMaterialIndex = 1;
-
         public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            ChangeColors(_idleColor, animator);
+            AirLockOpener opener = animator.GetComponent<AirLockOpener>();
+            if (opener != null)
+            {
+                opener.SetDoorLightColor(AirLockOpener.DoorLightIdleColor);
+            }
         }
 
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
+            // Play at the door's world position with no parent — parenting to the NetworkObject
+            // tied the pooled source to the sliding mesh and (with Doppler) warbled the open/close
+            // attack. Positional one-shot is enough for a stationary door cycle.
+            Vector3 position = animator.transform.position;
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            AirLockOpener opener = animator.GetComponent<AirLockOpener>();
+
             if (stateInfo.IsName(Opening))
             {
-                ChangeColors(_openingColor, animator);
-                SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Sfx, Sounds.AirlockOpen, animator.GetComponent<NetworkObject>());
+                if (opener != null)
+                {
+                    opener.SetDoorLightColor(AirLockOpener.DoorLightOpeningColor);
+                }
+
+                audio.PlayAudioSource(AudioType.Sfx, Sounds.AirlockOpen, position, null);
             }
 
             if (stateInfo.IsName(Closing))
             {
-                ChangeColors(_closingColor, animator);
-                SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Sfx, Sounds.AirlockClose, animator.GetComponent<NetworkObject>());
-            }
-        }
-
-        private void ChangeColors(Color color, Animator animator)
-        {
-            var renderers = animator.GetComponent<AirLockOpener>().MeshesToColor;
-            var skinnedRenderers = animator.GetComponent<AirLockOpener>().SkinnedMeshesToColor;
-            foreach (MeshRenderer renderer in renderers)
-            {
-                renderer.materials[DoorLightMaterialIndex].color = color;
-            }
-
-            foreach (SkinnedMeshRenderer skinnedRenderer in skinnedRenderers)
-            {
-                if (color == _openingColor)
+                if (opener != null)
                 {
-                    skinnedRenderer.SetBlendShapeWeight(1, 100);
-                    skinnedRenderer.SetBlendShapeWeight(2, 0);
+                    opener.SetDoorLightColor(AirLockOpener.DoorLightClosingColor);
                 }
-                else if (color == _closingColor)
-                {
-                    skinnedRenderer.SetBlendShapeWeight(1, 0);
-                    skinnedRenderer.SetBlendShapeWeight(2, 100);
-                }
-                else
-                {
-                    skinnedRenderer.SetBlendShapeWeight(1, 0);
-                    skinnedRenderer.SetBlendShapeWeight(2, 0);
-                }
-                
-            }
 
+                audio.PlayAudioSource(AudioType.Sfx, Sounds.AirlockClose, position, null);
+            }
         }
     }
 }
-    

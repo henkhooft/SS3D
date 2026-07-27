@@ -55,8 +55,10 @@ namespace SS3D.Systems.Audio
             
             if (AudioOn)
             {
+                // Diegetic music should carry across a room — prefab max is 15m; the old 5m
+                // override made the jukebox inaudible a couple tiles away.
                 SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Music, _songReferences[CurrentMusic].Id, GameObject.transform.position, NetworkObject,
-                    false, 0.7f, 1, 1, 5);
+                    false, 0.7f, 1, 3f, 20f);
             }
             else
             {
@@ -89,7 +91,7 @@ namespace SS3D.Systems.Audio
             SubSystems.Get<AudioSubSystem>().SetTimeAudioSource(NetworkObject, 0f);
             CurrentMusic = (CurrentMusic + 1) % _songReferences.Count;
             SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType.Music, _songReferences[CurrentMusic].Id, GameObject.transform.position, NetworkObject,
-                false, 0.7f, 1, 1, 5);
+                false, 0.7f, 1, 3f, 20f);
         }
 
         public override IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)

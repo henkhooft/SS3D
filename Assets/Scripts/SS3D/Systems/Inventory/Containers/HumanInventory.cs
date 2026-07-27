@@ -18,6 +18,7 @@ using System.Collections;
 using FishNet.Object.Synchronizing;
 using System.ComponentModel;
 using static UnityEngine.GraphicsBuffer;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Tile;
 
@@ -138,15 +139,30 @@ namespace SS3D.Systems.Inventory.Containers
         /// </summary>
         private void SyncInventoryContainerChange(SyncListOperation op, int index, AttachedContainer oldContainer, AttachedContainer newContainer, bool asServer)
         {
-            if (asServer) return;
+            if (asServer)
+            {
+                return;
+            }
+
             switch (op)
             {
                 case SyncListOperation.Add:
+                    // Server AddContainer already wires contents; clients only get this SyncList path.
+                    SubscribeContainerContents(newContainer);
                     OnInventoryContainerAdded?.Invoke(newContainer);
                     OnCarriedWeightChanged?.Invoke();
                     break;
                 case SyncListOperation.RemoveAt:
+                    UnsubscribeContainerContents(oldContainer);
                     OnInventoryContainerRemoved?.Invoke(oldContainer);
+                    OnCarriedWeightChanged?.Invoke();
+                    break;
+                case SyncListOperation.Complete:
+                    foreach (AttachedContainer container in ContainersOnPlayer)
+                    {
+                        SubscribeContainerContents(container);
+                    }
+
                     OnCarriedWeightChanged?.Invoke();
                     break;
             }
@@ -161,6 +177,12 @@ namespace SS3D.Systems.Inventory.Containers
             }
 
             Hands.SetInventory(this);
+
+            // Catch containers already present before OnChange (or if Complete already fired).
+            foreach (AttachedContainer container in ContainersOnPlayer)
+            {
+                SubscribeContainerContents(container);
+            }
         }
 
         public void TriggerInventorySetup()
@@ -180,6 +202,11 @@ namespace SS3D.Systems.Inventory.Containers
         {
             base.OnStartServer();
             SetUpContainers();
+            // Owning clients set this in OnStartClient; server/dedicated need it for Hands consumers.
+            if (Hands != null)
+            {
+                Hands.SetInventory(this);
+            }
         }
 
         /// <summary>
@@ -210,7 +237,7 @@ namespace SS3D.Systems.Inventory.Containers
         private void AddContainer(AttachedContainer container)
         {
             ContainersOnPlayer.Add(container);
-            container.OnContentsChanged += HandleContainerContentChanged;
+            SubscribeContainerContents(container);
             container.OnItemAttached += HandleTryAddContainerOnItemAttached;
             container.OnItemDetached += HandleTryRemoveContainerOnItemDetached;
 
@@ -228,10 +255,35 @@ namespace SS3D.Systems.Inventory.Containers
         private void RemoveContainer(AttachedContainer container)
         {
             ContainersOnPlayer.Remove(container);
-            container.OnContentsChanged -= HandleContainerContentChanged;
+            UnsubscribeContainerContents(container);
             container.OnItemAttached -= HandleTryAddContainerOnItemAttached;
             container.OnItemDetached -= HandleTryRemoveContainerOnItemDetached;
             container.OnAttachedContainerDisabled -= RemoveContainer;
+        }
+
+        /// <summary>
+        /// Wire content changes into <see cref="OnContainerContentChanged"/> (Main HUD icons, weight).
+        /// Idempotent: safe on host where server <see cref="AddContainer"/> already subscribed.
+        /// </summary>
+        private void SubscribeContainerContents(AttachedContainer container)
+        {
+            if (container == null)
+            {
+                return;
+            }
+
+            container.OnContentsChanged -= HandleContainerContentChanged;
+            container.OnContentsChanged += HandleContainerContentChanged;
+        }
+
+        private void UnsubscribeContainerContents(AttachedContainer container)
+        {
+            if (container == null)
+            {
+                return;
+            }
+
+            container.OnContentsChanged -= HandleContainerContentChanged;
         }
 
         /// <summary>
@@ -338,7 +390,7 @@ namespace SS3D.Systems.Inventory.Containers
 
             Hands hands = GetComponent<Hands>();
             Hand hand = hands != null ? hands.SelectedHand : null;
-            Quaternion rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            Quaternion rotation = item.GetWorldFacing(transform.eulerAngles.y);
 
             if (hand != null && hand.ItemInHand == item)
             {
@@ -494,11 +546,14 @@ namespace SS3D.Systems.Inventory.Containers
             }
 
             // If selected hand is empty and an item is present on the slot position in the container, transfer it to hand.
+            // Two-hand rifles auto-route to RequiredHand even when the other hand is selected.
             if (Hands.SelectedHand.IsEmpty())
             {
-                if (item != null)
+                if (item != null
+                    && TwoHandedWeaponRules.TryResolveHandForItem(Hands, item, Hands.SelectedHand, out Hand targetHand)
+                    && targetHand?.Container != null)
                 {
-                    ClientTransferItem(item, Vector2Int.zero, Hands.SelectedHand.Container);
+                    ClientTransferItem(item, Vector2Int.zero, targetHand.Container);
                 }
             }
             // If selected hand has an item and there's no item on the slot in the container, transfer it to container slot.

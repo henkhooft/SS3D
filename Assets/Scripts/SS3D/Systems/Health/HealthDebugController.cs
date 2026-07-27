@@ -181,6 +181,22 @@ namespace SS3D.Systems.Health
 
             DrawHealthReport(_selected.Snapshot, _selected.DebugDetail, _selected.gameObject.name);
 
+            GUILayout.Space(8f);
+            bool atmosDisabled = HealthEnvironmentSettings.AtmosphericDamageDisabled;
+            bool nextAtmosDisabled = GUILayout.Toggle(
+                atmosDisabled,
+                "Disable atmospheric damage (turf oxy / heat / vacuum)");
+            if (nextAtmosDisabled != atmosDisabled)
+            {
+                HealthEnvironmentSettings.AtmosphericDamageDisabled = nextAtmosDisabled;
+            }
+
+            HealthEnvironmentState env = _selected.Snapshot.Environment;
+            GUILayout.Label(
+                $"Env: breath={env.AtmosphereBreathability:0.00}  "
+                + $"T={env.TemperatureKelvin:0.0}K  P={env.PressureKpa:0.0}kPa  "
+                + $"vacuum={env.IsVacuum}  fire={env.BurnIntensity:0.00}");
+
             GUILayout.EndScrollView();
             GUI.DragWindow();
         }

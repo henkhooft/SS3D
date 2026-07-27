@@ -17,6 +17,8 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Audio;
+using AudioType = SS3D.Systems.Audio.AudioType;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Health;
@@ -485,14 +487,23 @@ namespace SS3D.Systems.Interactions
 
             weapon.ServerCompleteReloadIfDue();
 
-            // Empty mag → start reload instead of falling through to melee with the rifle.
+            // Empty mag → server dry-fire (+ reload if possible); do not fall through to melee.
             if (weapon.RoundsRemaining <= 0)
             {
-                if (weapon.CanStartReload())
+                bool startingReload = weapon.CanStartReload();
+                if (!IsServer && startingReload)
                 {
-                    TryRunRangedReloadPrimary();
+                    // Optimistic reload lock when a reload can start; dry-fire audio is server-side.
+                    weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
                 }
 
+                if (startingReload)
+                {
+                    TryPlayRangedReloadTelegraph();
+                }
+
+                TrySyncMeleeAimToServer();
+                CmdRunRangedFire();
                 return true;
             }
 
@@ -506,6 +517,7 @@ namespace SS3D.Systems.Interactions
                 weapon.BeginLocalFireCooldown();
             }
 
+            TryPlayRangedFireTelegraph();
             TrySyncMeleeAimToServer();
             CmdRunRangedFire();
             return true;
@@ -529,6 +541,7 @@ namespace SS3D.Systems.Interactions
                 weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
             }
 
+            TryPlayRangedReloadTelegraph();
             CmdRunRangedReload();
             return true;
         }
@@ -536,24 +549,8 @@ namespace SS3D.Systems.Interactions
         [ServerOrClient]
         private bool TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon)
         {
-            hand = null;
-            weapon = null;
-
             Hands hands = GetComponent<Hands>();
-            hand = hands != null ? hands.SelectedHand : null;
-            if (hand == null)
-            {
-                return false;
-            }
-
-            Item item = hand.ItemInHand;
-            if (item == null || !item.TryGetComponent(out weapon))
-            {
-                weapon = null;
-                return false;
-            }
-
-            return true;
+            return TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out hand, out weapon);
         }
 
         [ServerRpc]
@@ -575,6 +572,7 @@ namespace SS3D.Systems.Interactions
 
             if (weapon.RoundsRemaining <= 0)
             {
+                PlayGunEmptySound(weapon);
                 if (weapon.ServerTryBeginReload())
                 {
                     ServerNotifyRangedReloadStarted(weapon);
@@ -606,6 +604,8 @@ namespace SS3D.Systems.Interactions
                 aimRay = new Ray(origin, direction);
             }
 
+            PlayGunfireSound(aimRay.origin);
+
             float maxRange = Mathf.Max(1f, weapon.Profile.MaxRangeMeters);
             float aimDistance = maxRange;
             if (Physics.Raycast(aimRay, out RaycastHit aimHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
@@ -631,6 +631,7 @@ namespace SS3D.Systems.Interactions
                 out bool hitLiving,
                 out bool hitStructural,
                 out Vector3 impactPoint,
+                out Vector3 impactNormal,
                 out bool hasImpact,
                 out Vector3 shotDirection);
 
@@ -649,6 +650,12 @@ namespace SS3D.Systems.Interactions
                 {
                     landed = true;
                 }
+            }
+
+            if (hasImpact && !hitLiving)
+            {
+                PlaySurfaceHitSound(impactPoint);
+                ObserversNotifyBulletHole(impactPoint, impactNormal);
             }
 
             ClearMeleeAimPoint();
@@ -673,6 +680,45 @@ namespace SS3D.Systems.Interactions
             ServerNotifyRangedReloadStarted(weapon);
         }
 
+        /// <summary>
+        /// Positional gunshot report (audio.md §3) — a side effect of the existing fire event, not a
+        /// new trigger. Occlusion/falloff come free from the pool's <c>AudioSourceOcclusion</c>.
+        /// </summary>
+        [Server]
+        private void PlayGunfireSound(Vector3 position)
+        {
+            string[] clips = CombatAudioTrackIds.GunFire;
+            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
+            float pitch = UnityEngine.Random.Range(0.95f, 1.05f);
+            // Full volume + generous minDistance so third-person / personal-breathing mix
+            // still reads the report as louder than internal cues.
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, clipId, position, null, false, 1f, pitch, 14f, 90f);
+        }
+
+        [Server]
+        private void PlayGunEmptySound(RangedWeaponItemExtension weapon)
+        {
+            Vector3 position = transform.position;
+            if (weapon != null)
+            {
+                weapon.GetMuzzleWorldPose(out position, out _);
+            }
+
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, CombatAudioTrackIds.GunEmpty, position, null, false, 1f, 1f, 8f, 40f);
+        }
+
+        [Server]
+        private static void PlaySurfaceHitSound(Vector3 impactPoint)
+        {
+            string[] clips = CombatAudioTrackIds.SurfaceHit;
+            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
+            float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, clipId, impactPoint, null, false, 0.95f, pitch, 6f, 50f);
+        }
+
         [Server]
         public void ServerNotifyRangedReloadStarted(RangedWeaponItemExtension weapon)
         {
@@ -680,6 +726,9 @@ namespace SS3D.Systems.Interactions
             {
                 return;
             }
+
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineOut, transform.position, null, false, 1f, 1f, 8f, 40f);
 
             TargetNotifyRangedReload(
                 Owner,
@@ -701,6 +750,9 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            weapon.GetMuzzleWorldPose(out Vector3 muzzlePosition, out Vector3 muzzleForward);
+            ObserversNotifyMuzzleFlash(muzzlePosition, muzzleForward);
+
             TargetNotifyRangedFireState(
                 Owner,
                 weapon.Profile.FireCooldownSeconds,
@@ -710,6 +762,35 @@ namespace SS3D.Systems.Interactions
                 hasImpact,
                 impactPoint,
                 shotDirection);
+        }
+
+        /// <summary>
+        /// Diegetic muzzle flash for all observers. Each client resolves the local held muzzle
+        /// so the light parents to the visual barrel tip (fallback: server-sampled world pose).
+        /// </summary>
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversNotifyMuzzleFlash(Vector3 fallbackPosition, Vector3 fallbackForward)
+        {
+            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
+            {
+                Transform muzzle = weapon.Muzzle;
+                if (muzzle != null)
+                {
+                    MuzzleFlashVfx.Play(muzzle);
+                    return;
+                }
+
+                weapon.GetMuzzleWorldPose(out fallbackPosition, out fallbackForward);
+            }
+
+            MuzzleFlashVfx.Play(fallbackPosition, fallbackForward);
+        }
+
+        /// <summary>Bullet-hole decal on non-living impacts — visible to all observers.</summary>
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversNotifyBulletHole(Vector3 impactPoint, Vector3 impactNormal)
+        {
+            BulletHoleDecalSpawner.Spawn(impactPoint, impactNormal);
         }
 
         [TargetRpc]
@@ -1029,6 +1110,26 @@ namespace SS3D.Systems.Interactions
             combat.RequestAttack(AnimationTriggerId.AttackSwing);
         }
 
+        private void TryPlayRangedFireTelegraph()
+        {
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.FireRifle);
+        }
+
+        private void TryPlayRangedReloadTelegraph()
+        {
+            if (!TryGetComponent(out HumanoidCombatController combat))
+            {
+                return;
+            }
+
+            combat.RequestAttack(AnimationTriggerId.Reload);
+        }
+
         [Client]
         private void HandleView(InputAction.CallbackContext callbackContext)
         {
@@ -1051,22 +1152,22 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void HandleUse(InputAction.CallbackContext callbackContext)
         {
-            // Activate item in selected hand — reload takes priority for firearms.
+            // Activate item in selected hand — reload takes priority for firearms
+            // (including two-hand rifles still wielded while the off-hand is selected).
             Hands hands = GetComponent<Hands>();
             if (hands == null)
             {
                 return;
             }
 
-            Item item = hands.SelectedHand.ItemInHand;
-            if (item != null
-                && item.TryGetComponent(out RangedWeaponItemExtension ranged)
+            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out _, out RangedWeaponItemExtension ranged)
                 && ranged.CanStartReload())
             {
                 TryRunRangedReloadPrimary();
                 return;
             }
 
+            Item item = hands.SelectedHand?.ItemInHand;
             if (item != null)
             {
                 InteractInHand(item.gameObject, gameObject);
@@ -1639,7 +1740,11 @@ namespace SS3D.Systems.Interactions
                     _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
                 }
 
-                _activeOutlineView?.SetState(InteractionOutlineView.OutlineState.Pending);
+                if (_activeOutlineView)
+                {
+                    _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Pending);
+                }
+
                 return;
             }
 
@@ -1650,7 +1755,7 @@ namespace SS3D.Systems.Interactions
                 _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
             }
 
-            if (_activeOutlineView == null)
+            if (!_activeOutlineView)
             {
                 return;
             }
@@ -1705,7 +1810,8 @@ namespace SS3D.Systems.Interactions
 
         private void ClearInteractionOutline()
         {
-            if (_activeOutlineView != null)
+            // Unity fake-null: destroyed views compare unequal to null via ==.
+            if (_activeOutlineView)
             {
                 _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Hidden);
             }

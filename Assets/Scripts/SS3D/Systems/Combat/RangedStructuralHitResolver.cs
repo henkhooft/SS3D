@@ -22,10 +22,11 @@ namespace SS3D.Systems.Combat
             "Water",
         };
 
-        public static bool TryResolve(Ray shotRay, float maxDistance, out TileCoord coord, out float hitDistance)
+        public static bool TryResolve(Ray shotRay, float maxDistance, out TileCoord coord, out float hitDistance, out Vector3 hitNormal)
         {
             coord = default;
             hitDistance = 0f;
+            hitNormal = -shotRay.direction;
 
             if (!SubSystems.TryGet(out TileSubSystem tiles) || tiles.CurrentMap == null || tiles.QueryService == null)
             {
@@ -52,10 +53,19 @@ namespace SS3D.Systems.Combat
 
                 coord = new TileCoord(tiles.CurrentMap.MapId, placed.WorldOrigin.x, placed.WorldOrigin.y);
                 hitDistance = hit.distance;
+                hitNormal = hit.normal.sqrMagnitude > 0.0001f ? hit.normal.normalized : -shotRay.direction.normalized;
                 return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Resolves structural Turf and returns distance only (normal discarded).
+        /// </summary>
+        public static bool TryResolve(Ray shotRay, float maxDistance, out TileCoord coord, out float hitDistance)
+        {
+            return TryResolve(shotRay, maxDistance, out coord, out hitDistance, out _);
         }
 
         /// <summary>

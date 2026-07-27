@@ -10,22 +10,10 @@ namespace SS3D.Editor
 {
     /// <summary>
     /// Rebuilds the committed <see cref="MainHudAssetCatalog"/> from <see cref="MainHudAssetPaths"/>.
+    /// Menu: use <see cref="UiCatalogRebuildAll"/>.
     /// </summary>
     public static class MainHudAssetCatalogBuilder
     {
-        [MenuItem("SS3D/Main HUD/Rebuild Asset Catalog")]
-        public static void RebuildCatalogMenu()
-        {
-            if (!TryRebuildCatalog(out string error))
-            {
-                Debug.LogError(error);
-                EditorUtility.DisplayDialog("Main HUD Asset Catalog", error, "OK");
-                return;
-            }
-
-            Debug.Log($"Rebuilt Main HUD asset catalog at {MainHudAssetPaths.CatalogAssetPath}");
-        }
-
         public static bool TryRebuildCatalog(out string error)
         {
             error = null;

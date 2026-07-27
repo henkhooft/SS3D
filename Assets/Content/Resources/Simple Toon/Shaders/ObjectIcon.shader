@@ -3,6 +3,9 @@ Shader "Unlit/ObjectIcon"
     Properties
     {
         _MainTex ("Base (RGB)", 2D) = "white" {}
+        _Color ("Color", COLOR) = (1,1,1,1)
+        _ColIntense ("Intensity", Range(0,3)) = 1
+        _ColBright ("Brightness", Range(-1,1)) = 0
         _EmissionMap ("Emission Map", 2D) = "black" {}
         [HDR]_EmissionColor ("Emission Color", Color) = (0,0,0,0)
     }
@@ -40,6 +43,9 @@ Shader "Unlit/ObjectIcon"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
+                float4 _Color;
+                float _ColIntense;
+                float _ColBright;
                 float4 _EmissionColor;
             CBUFFER_END
 
@@ -83,7 +89,9 @@ Shader "Unlit/ObjectIcon"
                 float light = smoothstep(0.0, 0.75, ndotl) * 0.525 + 0.475;
                 float4 shadow = float4(0.0, 0.0, 0.04, 0.0) * (1.0 - light);
 
-                half4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord);
+                half4 texSample = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord);
+                half4 texColor = texSample * _Color * _ColIntense + _ColBright;
+                texColor.a = texSample.a * _Color.a;
                 half4 emission = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.texcoord) * _EmissionColor;
 
                 half3 color = texColor.rgb * light + shadow.rgb + emission.rgb;

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inventory.Items;
 using System.Linq;
 using SS3D.Interactions.Interfaces;
@@ -130,18 +131,31 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         public void Pickup(Item item)
         {
-            item.GiveOwnership(Owner);
-            if (!IsEmpty())
+            Hands hands = HandsController;
+            if (hands == null)
+            {
+                hands = GetComponentInParent<Hands>();
+            }
+
+            // Two-hand rifles auto-route to RequiredHand when the off-hand is active.
+            if (!TwoHandedWeaponRules.TryResolveHandForItem(hands, item, this, out Hand target) || target == null)
             {
                 return;
             }
 
-			if (item.Container != null && item.Container != Container)
+            if (target.Container == null || !target.Container.CanContainItem(item))
+            {
+                return;
+            }
+
+            item.GiveOwnership(target.Owner);
+
+			if (item.Container != null && item.Container != target.Container)
 			{
 				item.Container.RemoveItem(item);
 			}
 
-			Container.AddItem(item);
+			target.Container.AddItem(item);
 		}
 
         [ServerRpc]

@@ -40,6 +40,7 @@ Transform:
   m_Children:
   - {fileID: 8820324614539533550}
   - {fileID: 6044329156671728007}
+  - {fileID: 7123456789012345678}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8666134512129704501
@@ -152,7 +153,7 @@ MonoBehaviour:
   _enableTeleport: 0
   _teleportThreshold: 1
   _scaleThreshold: 1
-  _clientAuthoritative: 1
+  _clientAuthoritative: 0
   _sendToOwner: 1
   _enableNetworkLod: 1
   _interval: 1
@@ -235,6 +236,9 @@ MonoBehaviour:
   _asset: {fileID: 11400000, guid: ca4d73170d4d43419bc8e4f6f73b92b6, type: 2}
   _name: M4
   _weight: 1
+  _sizeClass: 2
+  _maxStackSize: 1
+  _stackCount: 1
   _startingTraits:
   - {fileID: 11400000, guid: 20862f95ca774742a249ac1535fc626e, type: 2}
   - {fileID: 11400000, guid: 2451e1298ccb42e09f990c0257cc0901, type: 2}
@@ -279,21 +283,24 @@ MonoBehaviour:
     BruteDamage: 18
     BurnDamage: 0
     CanSever: 0
-    BaseSpreadDegrees: 0.55
-    RecoilClimbDegrees: 0.35
+    BaseSpreadDegrees: 0.32
+    RecoilClimbDegrees: 0.2
     RecoilPerShot: 1
-    RecoilDecayPerSecond: 3
-    MovementBloomPerSpeed: 0.35
-    FalloffStartMeters: 18
-    FalloffEndMeters: 45
-    FalloffExtraSpreadDegrees: 2.5
+    RecoilDecayPerSecond: 4
+    MovementBloomPerSpeed: 0.2
+    FalloffStartMeters: 22
+    FalloffEndMeters: 50
+    FalloffExtraSpreadDegrees: 1.4
     MaxRangeMeters: 50
     FireCooldownSeconds: 0.12
     MagazineSize: 30
     ReloadSeconds: 2.2
     StructuralForce: 12
     StaminaCost: 3
-    ExhaustionSpreadDegrees: 3
+    ExhaustionSpreadDegrees: 1.6
+    RequiresBothHands: 1
+    RequiredHand: 0
+  _muzzle: {fileID: 7123456789012345678}
 --- !u!1 &6508855772059703352
 GameObject:
   m_ObjectHideFlags: 0
@@ -325,6 +332,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5758855948537007504}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7123456789012345601
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7123456789012345678}
+  m_Layer: 10
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7123456789012345678
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7123456789012345601}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: -0.56, z: 0.0388}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5758855948537007504}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!1 &8462573766707040983
 GameObject:
   m_ObjectHideFlags: 0

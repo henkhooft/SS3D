@@ -35,6 +35,24 @@ namespace SS3D.Systems.Comms
         }
 
         /// <summary>
+        /// Client -> server: send on a non-positional radio channel.
+        /// </summary>
+        [ServerRpc]
+        public void CmdSendRadio(string channelId, string text)
+        {
+            SubSystems.Get<CommsSubSystem>().HandleRadioRequest(this, channelId, text);
+        }
+
+        /// <summary>
+        /// Client -> server: station announcement (ALL-STATION banner).
+        /// </summary>
+        [ServerRpc]
+        public void CmdSendAnnouncement(string text)
+        {
+            SubSystems.Get<CommsSubSystem>().HandleAnnouncementRequest(this, text);
+        }
+
+        /// <summary>
         /// Server-only: broadcasts a validated speech event to this entity's current observers.
         /// </summary>
         public void ServerBroadcastSpeech(SpeechEvent speechEvent)

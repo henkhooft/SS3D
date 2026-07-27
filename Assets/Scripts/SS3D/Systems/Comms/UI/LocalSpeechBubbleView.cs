@@ -185,13 +185,22 @@ namespace SS3D.Systems.Comms.UI
 
         /// <summary>
         /// Positions the live draft chip at the same screen anchor a finished line would use.
+        /// Always shows channel chrome: LOCAL, radio header, or ALL-STATION for announcements.
         /// </summary>
-        public void ShowDraft(float left, float bottom, string speakerName, SpeechMode mode)
+        public void ShowDraft(
+            float left,
+            float bottom,
+            string speakerName,
+            SpeechMode mode,
+            string channelHeader = null,
+            bool isAnnouncement = false)
         {
             if (_draftChip == null)
             {
                 return;
             }
+
+            _ = speakerName;
 
             bool justOpened = !_draftShown;
             _draftShown = true;
@@ -199,16 +208,74 @@ namespace SS3D.Systems.Comms.UI
             _draftAnchorLeft = left;
             _draftAnchorBottom = bottom;
 
-            string nameText = string.IsNullOrEmpty(speakerName) ? string.Empty : speakerName.ToUpperInvariant();
-            _draftName.text = nameText;
-            _draftName.style.display = string.IsNullOrEmpty(nameText) ? DisplayStyle.None : DisplayStyle.Flex;
+            bool isChannelled = isAnnouncement || !string.IsNullOrEmpty(channelHeader);
+            string nameText = isAnnouncement
+                ? (string.IsNullOrEmpty(channelHeader) ? "ALL-STATION" : channelHeader.ToUpperInvariant())
+                : isChannelled
+                    ? channelHeader.ToUpperInvariant()
+                    : "LOCAL";
 
-            if (justOpened || _draftMode != mode)
+            SpeechMode effectiveMode = isAnnouncement
+                ? SpeechMode.Announcement
+                : isChannelled
+                    ? SpeechMode.Speak
+                    : mode;
+            if (justOpened || _draftMode != effectiveMode)
             {
-                ApplyDraftModeClass(mode);
+                ApplyDraftModeClass(effectiveMode);
             }
 
+            ApplyDraftChannelChrome(nameText, isRadio: isChannelled && !isAnnouncement, isAnnouncement);
             FitDraftChipWidth();
+        }
+
+        /// <summary>
+        /// Force channel header styles in code — USS alone is easy to lose under .font-body /
+        /// TextField defaults, and the field's negative margin used to cover the name.
+        /// </summary>
+        private void ApplyDraftChannelChrome(string header, bool isRadio, bool isAnnouncement)
+        {
+            if (_draftName == null)
+            {
+                return;
+            }
+
+            _draftName.text = header;
+            _draftName.style.display = DisplayStyle.Flex;
+            _draftName.style.visibility = Visibility.Visible;
+            _draftName.style.opacity = 1f;
+            _draftName.style.flexGrow = 0;
+            _draftName.style.flexShrink = 0;
+            _draftName.style.minHeight = 14f;
+            _draftName.style.marginTop = 0;
+            _draftName.style.marginBottom = 2f;
+            _draftName.style.paddingTop = 0;
+            _draftName.style.paddingBottom = 0;
+            _draftName.style.fontSize = isRadio || isAnnouncement ? 13f : 14f;
+            _draftName.style.letterSpacing = isAnnouncement ? 2f : 1f;
+            _draftName.style.unityTextAlign = isRadio || isAnnouncement
+                ? TextAnchor.MiddleLeft
+                : TextAnchor.MiddleCenter;
+            _draftName.style.color = isAnnouncement
+                ? new Color(240f / 255f, 196f / 255f, 125f / 255f, 1f)
+                : isRadio
+                    ? new Color(95f / 255f, 134f / 255f, 179f / 255f, 1f)
+                    : new Color(200f / 255f, 200f / 255f, 190f / 255f, 1f);
+
+            _draftName.EnableInClassList("font-titling", false);
+            _draftName.EnableInClassList("font-terminal", !isAnnouncement);
+            _draftName.EnableInClassList("font-arcade", isAnnouncement);
+            _draftName.EnableInClassList("comms-draft__name--radio", isRadio);
+            _draftName.EnableInClassList("comms-draft__name--announce", isAnnouncement);
+
+            _draftChip.EnableInClassList("comms-draft--radio", isRadio);
+            _draftChip.EnableInClassList("comms-draft--announce", isAnnouncement);
+            _draftChip.EnableInClassList("comms-draft--channelled", isRadio || isAnnouncement);
+
+            if (_draftField != null)
+            {
+                _draftField.style.marginTop = 0;
+            }
         }
 
         /// <summary>
@@ -294,8 +361,8 @@ namespace SS3D.Systems.Comms.UI
             _draftChip.style.translate = new Translate(0, 0);
             _draftChip.generateVisualContent += PaintDashedOutline;
 
-            _draftName = new Label();
-            _draftName.AddToClassList("font-titling");
+            _draftName = new Label("LOCAL");
+            _draftName.AddToClassList("font-terminal");
             _draftName.AddToClassList("comms-draft__name");
             _draftName.pickingMode = PickingMode.Ignore;
             _draftChip.Add(_draftName);
@@ -313,6 +380,15 @@ namespace SS3D.Systems.Comms.UI
             _draftField = new TextField { multiline = true, maxLength = 256, value = string.Empty };
             _draftField.AddToClassList("font-body");
             _draftField.AddToClassList("comms-draft__field");
+            // Exclude from UITK Tab focus ring so Tab can cycle comms channels instead.
+            _draftField.tabIndex = -1;
+            _draftField.focusable = true;
+            VisualElement textInput = _draftField.Q(TextField.textInputUssName);
+            if (textInput != null)
+            {
+                textInput.tabIndex = -1;
+            }
+
             _draftField.RegisterValueChangedCallback(OnDraftValueChanged);
             _draftField.RegisterCallback<FocusOutEvent>(HandleDraftFocusOut);
             _draftChip.Add(_draftField);
@@ -376,9 +452,9 @@ namespace SS3D.Systems.Comms.UI
 
             float fontSize = mode switch
             {
-                SpeechMode.Whisper => 13f,
-                SpeechMode.Shout => 19f,
-                _ => 17f,
+                SpeechMode.Whisper => 16f,
+                SpeechMode.Shout => 23f,
+                _ => 21f,
             };
             FontStyle fontStyle = mode switch
             {
@@ -461,8 +537,9 @@ namespace SS3D.Systems.Comms.UI
             float maxContent = Mathf.Max(8f, maxChip - padX);
             float letterSpacing = _draftMode is SpeechMode.Whisper or SpeechMode.Shout ? 1f : 0f;
             string lineText = _draftField.value ?? string.Empty;
+            // Prefer inline display (resolvedStyle can still be None the frame the chip opens).
             bool showName = _draftName != null
-                && _draftName.resolvedStyle.display != DisplayStyle.None
+                && _draftName.style.display != DisplayStyle.None
                 && !string.IsNullOrEmpty(_draftName.text);
             string nameText = showName ? _draftName.text : string.Empty;
 
@@ -481,9 +558,15 @@ namespace SS3D.Systems.Comms.UI
                 {
                     emptyNameW = _draftName.MeasureTextSize(
                         nameText, 4096f, VisualElement.MeasureMode.AtMost, 0f, VisualElement.MeasureMode.Undefined).x;
+                    if (!IsPlausibleTextWidth(nameText, emptyNameW))
+                    {
+                        emptyNameW = nameText.Length * 8f;
+                    }
                 }
 
-                _draftChip.style.width = Mathf.Min(Mathf.Ceil(Mathf.Max(12f, emptyNameW) + padX), maxChip);
+                // Keep enough width for the channel header even with an empty caret.
+                float minInner = showName ? Mathf.Max(emptyNameW, 56f) : 12f;
+                _draftChip.style.width = Mathf.Min(Mathf.Ceil(minInner + padX), maxChip);
                 _draftChipWidth = _draftChip.style.width.value.value;
                 ApplyDraftScreenPosition();
                 return;
@@ -506,9 +589,9 @@ namespace SS3D.Systems.Comms.UI
                 {
                     fontSize = _draftMode switch
                     {
-                        SpeechMode.Whisper => 13f,
-                        SpeechMode.Shout => 19f,
-                        _ => 17f,
+                        SpeechMode.Whisper => 16f,
+                        SpeechMode.Shout => 23f,
+                        _ => 21f,
                     };
                 }
 

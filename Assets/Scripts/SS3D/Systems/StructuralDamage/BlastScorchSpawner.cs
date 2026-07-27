@@ -1,5 +1,6 @@
 using Coimbra;
 using SS3D.Rendering.URP;
+using SS3D.Systems.Health;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -51,7 +52,7 @@ namespace SS3D.Systems.StructuralDamage
 
             instance.transform.SetPositionAndRotation(
                 hit.point + hit.normal * 0.02f,
-                DecalRotationOntoSurface(hit.normal, Random.Range(0f, 360f)));
+                BloodDecalSpawner.RotationOntoSurface(hit.normal, Random.Range(0f, 360f)));
 
             if (instance.TryGetComponent(out DecalProjector projector))
             {
@@ -89,17 +90,6 @@ namespace SS3D.Systems.StructuralDamage
             projector.endAngleFade = 180f;
             projector.renderingLayerMask = DecalRenderingLayers.WorldFloorProjectorMask;
             return go;
-        }
-
-        private static Quaternion DecalRotationOntoSurface(Vector3 normal, float spinDegrees)
-        {
-            Vector3 intoSurface = -normal.normalized;
-            Vector3 reference = Mathf.Abs(Vector3.Dot(intoSurface, Vector3.up)) > 0.99f
-                ? Vector3.forward
-                : Vector3.up;
-            Vector3 tangent = Vector3.Cross(intoSurface, reference).normalized;
-            Quaternion align = Quaternion.LookRotation(intoSurface, tangent);
-            return align * Quaternion.Euler(0f, 0f, spinDegrees);
         }
 
         private static void TrimOldDecals(BlastVfxCatalog catalog)

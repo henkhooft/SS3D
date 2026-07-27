@@ -5,6 +5,7 @@ using SS3D.Systems.Comms.UI;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Inputs;
+using SS3D.UI.Shell;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,19 +14,14 @@ using UnityEngine.UIElements;
 namespace SS3D.Systems.Comms
 {
     /// <summary>
-    /// Drives the local speech subtitle overlay: subscribes to CommsSubSystem's speech events,
-    /// stacks up to a few lines per speaker with fade + upward drift, and applies mode-specific
-    /// visual treatments. Owns its own UIDocument, following RadialInteractionSubSystem's
-    /// convention of a dedicated overlay per feature rather than a shared HUD document.
-    /// Also owns local-speech compose (T → draft chip at the head anchor → Enter commits).
+    /// Drives the local speech subtitle overlay and T-compose draft on the UiShell Overlay layer
+    /// (same attachment pattern as radial / armed — never share MachineInterfaceHost's hub UIDocument).
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
     public sealed class LocalSpeechBubbleController : Actor
     {
         private const float BubbleWorldHeightOffset = 0.15f;
         private const float FadeOutTailSeconds = 1f;
 
-        [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _bubbleStyleSheet;
         [SerializeField] private LocalSpeechConfig _config;
 
@@ -45,7 +41,7 @@ namespace SS3D.Systems.Comms
         private readonly InputTextEntryScope _composeEntry = new(InputContext.TextEntry);
 
         private LocalSpeechBubbleView _view;
-        private VisualElement _attachedRoot;
+        private VisualElement _layerHost;
         private LocalSpeechListener _listener;
         private CrowdCapRanker _ranker;
         private Entity _localViewer;
@@ -56,15 +52,14 @@ namespace SS3D.Systems.Comms
         private bool _overlayReady;
         private bool _isComposing;
         private SpeechMode _composeMode = SpeechMode.Speak;
+        private int _composeChannelIndex;
+        private int _lastTabCycleFrame = -1;
+        private bool _tabHeld;
+        private readonly List<CommsChannel> _composeRadioChannels = new();
 
         protected override void OnAwake()
         {
             base.OnAwake();
-
-            if (_document == null)
-            {
-                _document = GetComponent<UIDocument>();
-            }
 
 #if UNITY_EDITOR
             EnsureEditorAssets();
@@ -72,13 +67,6 @@ namespace SS3D.Systems.Comms
 
             _listener = new LocalSpeechListener(_config);
             _ranker = new CrowdCapRanker();
-
-            // Subtitles never pick (see LocalSpeechBubbleView - the whole overlay is
-            // PickingMode.Ignore), so this never changes IsPointerOverInterface's answer, but
-            // every runtime UIDocument owner registers per the input-arbitration convention -
-            // see Documents/architecture/2026-07_input-arbitration.md. The draft TextField does
-            // pick, so RegisterDocument also keeps world clicks clear while composing.
-            InputInterface.RegisterDocument(_document);
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
         }
@@ -117,16 +105,11 @@ namespace SS3D.Systems.Comms
             }
 
             EndCompose(clearText: true);
-
-            // UIDocument destroys/rebuilds its visual tree across disable/enable. Drop the
-            // cached view so EnsureOverlay re-attaches to the live root instead of driving
-            // orphaned VisualElements (panel=null, NaN layout, invisible bubbles).
             TearDownOverlay();
         }
 
         protected override void OnDestroyed()
         {
-            InputInterface.UnregisterDocument(_document);
             EndCompose(clearText: true);
             TearDownOverlay();
             base.OnDestroyed();
@@ -165,13 +148,110 @@ namespace SS3D.Systems.Comms
 
             _isComposing = true;
             _composeMode = SpeechMode.Speak;
+            _composeChannelIndex = 0;
+            _tabHeld = false;
+            RebuildComposeChannelList();
             _composeEntry.Enter();
             _view.SetRetainDraftFocus(true);
             _view.DraftField.value = string.Empty;
-            // TrickleDown so Enter is caught before multiline TextField treats it as a newline
-            // (that was eating the first Enter and requiring a second press to commit).
+            // Enter/Escape via UITK; Tab is polled from Keyboard in LateUpdate because UITK
+            // focus navigation swallows Tab before InputActions / field KeyDown see it.
             _view.DraftField.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+            _view.DraftField.RegisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
+            if (_layerHost != null)
+            {
+                _layerHost.RegisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _layerHost.RegisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
+            }
+
             _view.FocusDraft();
+        }
+
+        private void RebuildComposeChannelList()
+        {
+            _composeRadioChannels.Clear();
+            CommsSubSystem comms = _commsSubSystem;
+            if (comms == null)
+            {
+                comms = SubSystems.Get<CommsSubSystem>();
+            }
+
+            if (comms == null)
+            {
+                return;
+            }
+
+            _composeRadioChannels.AddRange(comms.GetWritableRadioChannels());
+        }
+
+        private bool IsComposeOnRadio => _composeChannelIndex > 0
+            && _composeChannelIndex <= _composeRadioChannels.Count;
+
+        private CommsChannel CurrentComposeRadioChannel =>
+            IsComposeOnRadio ? _composeRadioChannels[_composeChannelIndex - 1] : null;
+
+        /// <summary>
+        /// Prefix overrides Tab selection for draft chrome (and commit).
+        /// </summary>
+        private void ResolveComposeDraftChrome(out SpeechMode mode, out string channelHeader, out bool isAnnouncement)
+        {
+            mode = _composeMode;
+            channelHeader = null;
+            isAnnouncement = false;
+
+            string draftText = _view?.DraftField?.value;
+            CommsSubSystem comms = _commsSubSystem != null ? _commsSubSystem : SubSystems.Get<CommsSubSystem>();
+            if (CommsComposePrefix.TrySplit(draftText, out string token, out _)
+                && comms != null
+                && comms.TryResolveComposePrefix(token, out CommsChannel prefixChannel))
+            {
+                if (prefixChannel.Kind == CommsChannelKind.Announcement)
+                {
+                    isAnnouncement = true;
+                    mode = SpeechMode.Announcement;
+                    channelHeader = prefixChannel.ResolveAnnouncementTitle();
+                    return;
+                }
+
+                mode = SpeechMode.Speak;
+                channelHeader = prefixChannel.ResolveRadioHeader();
+                return;
+            }
+
+            CommsChannel radio = CurrentComposeRadioChannel;
+            if (radio != null)
+            {
+                mode = SpeechMode.Speak;
+                channelHeader = radio.ResolveRadioHeader();
+            }
+        }
+
+        private void CycleComposeChannel(int delta)
+        {
+            // Rebuild in case channel settings recovered after compose opened with an empty list.
+            if (_composeRadioChannels.Count == 0)
+            {
+                RebuildComposeChannelList();
+            }
+
+            int count = 1 + _composeRadioChannels.Count;
+            if (count <= 1)
+            {
+                return;
+            }
+
+            // Debounce: Keyboard poll + UITK NavigationMove can both fire in one frame.
+            if (_lastTabCycleFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            _lastTabCycleFrame = Time.frameCount;
+            _composeChannelIndex = (_composeChannelIndex + delta) % count;
+            if (_composeChannelIndex < 0)
+            {
+                _composeChannelIndex += count;
+            }
         }
 
         private void CommitCompose()
@@ -183,7 +263,6 @@ namespace SS3D.Systems.Comms
 
             string text = _view.DraftField.value?.Replace("\r", string.Empty).Replace("\n", " ").Trim()
                 ?? string.Empty;
-            SpeechMode mode = ResolveComposeModeFromModifiers();
 
             if (string.IsNullOrEmpty(text))
             {
@@ -191,8 +270,45 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
-            if (_localViewer != null && _localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
+            if (_localViewer == null || !_localViewer.TryGetComponent(out LocalSpeechEmitter emitter))
             {
+                EndCompose(clearText: true);
+                return;
+            }
+
+            CommsSubSystem comms = _commsSubSystem != null ? _commsSubSystem : SubSystems.Get<CommsSubSystem>();
+            if (CommsComposePrefix.TrySplit(text, out string token, out string body)
+                && comms != null
+                && comms.TryResolveComposePrefix(token, out CommsChannel prefixChannel))
+            {
+                body = body.Trim();
+                if (string.IsNullOrEmpty(body))
+                {
+                    EndCompose(clearText: true);
+                    return;
+                }
+
+                if (prefixChannel.Kind == CommsChannelKind.Announcement)
+                {
+                    emitter.CmdSendAnnouncement(body);
+                }
+                else
+                {
+                    emitter.CmdSendRadio(prefixChannel.name, body);
+                }
+
+                EndCompose(clearText: true);
+                return;
+            }
+
+            CommsChannel radioChannel = CurrentComposeRadioChannel;
+            if (radioChannel != null)
+            {
+                emitter.CmdSendRadio(radioChannel.name, text);
+            }
+            else
+            {
+                SpeechMode mode = ResolveComposeModeFromModifiers();
                 emitter.CmdSpeak(text, mode);
             }
 
@@ -209,16 +325,47 @@ namespace SS3D.Systems.Comms
             if (_view?.DraftField != null)
             {
                 _view.DraftField.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _view.DraftField.UnregisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
                 if (clearText)
                 {
                     _view.DraftField.value = string.Empty;
                 }
             }
 
+            if (_layerHost != null)
+            {
+                _layerHost.UnregisterCallback<KeyDownEvent>(HandleDraftKeyDown, TrickleDown.TrickleDown);
+                _layerHost.UnregisterCallback<NavigationMoveEvent>(HandleDraftNavigationMove, TrickleDown.TrickleDown);
+            }
+
             _view?.HideDraft();
             _composeEntry.Exit();
             _isComposing = false;
             _composeMode = SpeechMode.Speak;
+            _composeChannelIndex = 0;
+            _tabHeld = false;
+        }
+
+        private void HandleDraftNavigationMove(NavigationMoveEvent evt)
+        {
+            if (!_isComposing)
+            {
+                return;
+            }
+
+            // UITK routes Tab / Shift+Tab as focus navigation, not always as KeyDownEvent.
+            if (evt.direction == NavigationMoveEvent.Direction.Next)
+            {
+                SuppressUiToolkitDefault(evt);
+                CycleComposeChannel(1);
+                return;
+            }
+
+            if (evt.direction == NavigationMoveEvent.Direction.Previous)
+            {
+                SuppressUiToolkitDefault(evt);
+                CycleComposeChannel(-1);
+            }
         }
 
         private void HandleDraftKeyDown(KeyDownEvent evt)
@@ -228,21 +375,43 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
+            if (evt.keyCode == KeyCode.Tab || evt.character == '\t')
+            {
+                SuppressUiToolkitDefault(evt);
+                bool reverse = evt.shiftKey
+                    || (Keyboard.current != null
+                        && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed));
+                CycleComposeChannel(reverse ? -1 : 1);
+                return;
+            }
+
             bool isSubmit = evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter
                 || evt.character is '\n' or '\r';
             if (isSubmit)
             {
-                evt.StopImmediatePropagation();
-                evt.PreventDefault();
+                SuppressUiToolkitDefault(evt);
                 CommitCompose();
                 return;
             }
 
             if (evt.keyCode == KeyCode.Escape)
             {
-                evt.StopImmediatePropagation();
-                evt.PreventDefault();
+                SuppressUiToolkitDefault(evt);
                 EndCompose(clearText: true);
+            }
+        }
+
+        private static void SuppressUiToolkitDefault(EventBase evt)
+        {
+            evt.StopImmediatePropagation();
+            evt.PreventDefault();
+            if (evt.currentTarget is VisualElement element)
+            {
+                element.focusController?.IgnoreEvent(evt);
+            }
+            else if (evt.target is VisualElement target)
+            {
+                target.focusController?.IgnoreEvent(evt);
             }
         }
 
@@ -323,6 +492,35 @@ namespace SS3D.Systems.Comms
             }
 
             RenderFrame();
+        }
+
+        /// <summary>
+        /// Tab must be read from the Keyboard device after UITK has processed the frame.
+        /// Focused TextFields swallow Tab as focus navigation; InputActions stay silent too.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (!_isComposing)
+            {
+                _tabHeld = false;
+                return;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                _tabHeld = false;
+                return;
+            }
+
+            bool tabDown = keyboard.tabKey.isPressed;
+            if (tabDown && !_tabHeld)
+            {
+                bool reverse = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
+                CycleComposeChannel(reverse ? -1 : 1);
+            }
+
+            _tabHeld = tabDown;
         }
 
         private static SpeechMode PeekComposeModeFromModifiers()
@@ -487,8 +685,14 @@ namespace SS3D.Systems.Comms
 
             if (_isComposing && localDraftScreen.HasValue)
             {
-                string draftName = ResolveSpeakerName(_localViewer);
-                _view.ShowDraft(localDraftScreen.Value.x, localDraftScreen.Value.y, draftName, _composeMode);
+                ResolveComposeDraftChrome(out SpeechMode draftMode, out string channelHeader, out bool isAnnouncement);
+                _view.ShowDraft(
+                    localDraftScreen.Value.x,
+                    localDraftScreen.Value.y,
+                    speakerName: null,
+                    draftMode,
+                    channelHeader,
+                    isAnnouncement);
             }
             else if (!_isComposing)
             {
@@ -518,7 +722,7 @@ namespace SS3D.Systems.Comms
             return speakerName;
         }
 
-        private static string FormatDisplayText(ActiveSpeech entry, AudibilityTier tier, string speakerName, bool isNewest)
+        private static string FormatDisplayText(ActiveSpeech entry, AudibilityTier tier, string speakerName, bool _)
         {
             string body = tier == AudibilityTier.Clear
                 ? entry.Text
@@ -530,17 +734,10 @@ namespace SS3D.Systems.Comms
                 SpeechMode.Emote => $"{speakerName} {body}",
                 SpeechMode.Radio => body,
                 SpeechMode.Announcement => body,
-                // Whisper never quotes; speak/shout quote only the newest line.
                 SpeechMode.Whisper => body,
-                SpeechMode.Shout => FormatShoutLine(body, isNewest),
-                _ => isNewest ? $"\"{body}\"" : body,
+                SpeechMode.Shout => body.ToUpperInvariant(),
+                _ => body,
             };
-        }
-
-        private static string FormatShoutLine(string body, bool isNewest)
-        {
-            string upper = body.ToUpperInvariant();
-            return isNewest ? $"\"{upper}\"" : upper;
         }
 
         private static float StackOpacity(int fromNewest)
@@ -577,30 +774,35 @@ namespace SS3D.Systems.Comms
 
         private bool EnsureOverlay()
         {
-            if (_document == null)
-            {
-                return false;
-            }
-
-            VisualElement root = _document.rootVisualElement;
-
-            // rootVisualElement can exist before the runtime panel is ready, and UIDocument
-            // replaces the root across disable/enable. Only treat the overlay as ready when we
-            // are attached to the *current* rooted panel.
-            if (root == null || root.panel == null)
-            {
-                return false;
-            }
-
-            if (_overlayReady && _view != null && _attachedRoot == root)
+            if (_overlayReady && _view != null && _layerHost != null && _layerHost.panel != null)
             {
                 return true;
             }
 
-            _view?.Detach();
+            if (!SubSystems.TryGet(out UiShellSubSystem uiShell)
+                || !uiShell.TryGetLayer(UiLayer.Overlay, out VisualElement layerRoot)
+                || layerRoot.panel == null)
+            {
+                return false;
+            }
+
+            // Shared shell document — register is idempotent; do not unregister on teardown
+            // (same rule as RadialInteractionSubSystem).
+            InputInterface.RegisterDocument(uiShell.Document);
+
+            TearDownOverlay();
+
+            _layerHost = new VisualElement { name = "local-speech-overlay" };
+            _layerHost.pickingMode = PickingMode.Ignore;
+            _layerHost.style.position = UnityEngine.UIElements.Position.Absolute;
+            _layerHost.style.left = 0;
+            _layerHost.style.top = 0;
+            _layerHost.style.right = 0;
+            _layerHost.style.bottom = 0;
+            layerRoot.Add(_layerHost);
+
             _view = new LocalSpeechBubbleView(_bubbleStyleSheet);
-            _view.Attach(root);
-            _attachedRoot = root;
+            _view.Attach(_layerHost);
             _overlayReady = true;
             return true;
         }
@@ -609,7 +811,8 @@ namespace SS3D.Systems.Comms
         {
             _view?.Detach();
             _view = null;
-            _attachedRoot = null;
+            _layerHost?.RemoveFromHierarchy();
+            _layerHost = null;
             _overlayReady = false;
         }
 
@@ -626,12 +829,6 @@ namespace SS3D.Systems.Comms
             {
                 _config = UnityEditor.AssetDatabase.LoadAssetAtPath<LocalSpeechConfig>(
                     "Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/LocalSpeechConfig.asset");
-            }
-
-            if (_document != null && _document.panelSettings == null)
-            {
-                _document.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>(
-                    "Assets/Content/Systems/UI/Comms/LocalSpeechBubbles/CommsOverlayPanelSettings.asset");
             }
         }
 #endif

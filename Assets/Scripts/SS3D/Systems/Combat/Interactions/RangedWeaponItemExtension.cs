@@ -1,7 +1,11 @@
+using FishNet.Object;
+using SS3D.Core;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Audio;
 using System.Collections.Generic;
 using UnityEngine;
+using AudioType = SS3D.Systems.Audio.AudioType;
 
 namespace SS3D.Systems.Combat.Interactions
 {
@@ -12,6 +16,8 @@ namespace SS3D.Systems.Combat.Interactions
     public class RangedWeaponItemExtension : MonoBehaviour, IInteractionSourceExtension
     {
         [SerializeField] private RangedWeaponProfile _profile = RangedWeaponProfile.M4;
+        [Tooltip("Barrel tip — muzzle flash and future aim alignment. Wired by RangedPrefabSetup.")]
+        [SerializeField] private Transform _muzzle;
 
         private int _rounds;
         private float _recoilStacks;
@@ -19,8 +25,12 @@ namespace SS3D.Systems.Combat.Interactions
         private float _reloadUntil;
         private float _lastRecoilDecayTime;
         private bool _initialized;
+        private NetworkObject _networkObject;
 
         public RangedWeaponProfile Profile => _profile;
+
+        /// <summary>Barrel tip transform when the prefab recipe has wired one; otherwise null.</summary>
+        public Transform Muzzle => _muzzle != null ? _muzzle : transform.Find("Muzzle");
 
         public int RoundsRemaining => _rounds;
 
@@ -56,7 +66,14 @@ namespace SS3D.Systems.Combat.Interactions
 
         private void Awake()
         {
+            _networkObject = GetComponent<NetworkObject>();
             EnsureInitialized();
+        }
+
+        private void Update()
+        {
+            // Ensure reload completion (and mag-in cue) fires even if nothing else polls this frame.
+            TryCompleteReloadIfDue();
         }
 
         public void GetSourceInteractions(IInteractionTarget[] targets, List<InteractionEntry> interactions, InteractionEvent context)
@@ -74,14 +91,14 @@ namespace SS3D.Systems.Combat.Interactions
         {
             EnsureInitialized();
             DecayRecoil();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             return !IsBusy && _rounds > 0;
         }
 
         public bool CanStartReload()
         {
             EnsureInitialized();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             return !IsReloading && _rounds < MagazineSize;
         }
 
@@ -111,7 +128,7 @@ namespace SS3D.Systems.Combat.Interactions
         {
             EnsureInitialized();
             DecayRecoil();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             if (IsBusy || _rounds <= 0)
             {
                 return false;
@@ -127,7 +144,7 @@ namespace SS3D.Systems.Combat.Interactions
         public bool ServerTryBeginReload()
         {
             EnsureInitialized();
-            ServerCompleteReloadIfDue();
+            TryCompleteReloadIfDue();
             if (!CanStartReload())
             {
                 return false;
@@ -137,27 +154,73 @@ namespace SS3D.Systems.Combat.Interactions
             return true;
         }
 
-        public void ServerCompleteReloadIfDue()
+        /// <summary>Completes a due reload. On server, plays mag-in (+ cock) once when the timer elapses.</summary>
+        public bool TryCompleteReloadIfDue()
         {
             if (_reloadUntil <= 0f)
             {
-                return;
+                return false;
             }
 
             if (Time.time < _reloadUntil)
             {
-                return;
+                return false;
             }
 
             _rounds = MagazineSize;
             _reloadUntil = 0f;
+            if (IsServerAuthority())
+            {
+                PlayReloadCompleteSounds();
+            }
+
+            return true;
         }
+
+        /// <summary>Legacy name — prefer <see cref="TryCompleteReloadIfDue"/> when the return value matters.</summary>
+        public void ServerCompleteReloadIfDue() => TryCompleteReloadIfDue();
 
         public float CurrentSpreadDegrees(float horizontalSpeed, float aimDistanceMeters, float exertionPenalty = 0f)
         {
             EnsureInitialized();
             DecayRecoil();
             return AccuracyCone.ComputeSpreadDegrees(_profile, _recoilStacks, horizontalSpeed, aimDistanceMeters, exertionPenalty);
+        }
+
+        /// <summary>
+        /// World pose for muzzle flash / presentation. Uses the wired socket when present;
+        /// otherwise a short offset along the item forward so flash still reads without a recipe re-run.
+        /// </summary>
+        public void GetMuzzleWorldPose(out Vector3 position, out Vector3 forward)
+        {
+            Transform muzzle = Muzzle;
+            if (muzzle != null && muzzle != transform)
+            {
+                position = muzzle.position;
+                forward = muzzle.forward.sqrMagnitude > 0.0001f ? muzzle.forward.normalized : transform.forward;
+                return;
+            }
+
+            forward = transform.forward.sqrMagnitude > 0.0001f ? transform.forward.normalized : Vector3.forward;
+            position = transform.position + (forward * 0.35f);
+        }
+
+        private bool IsServerAuthority()
+        {
+            return _networkObject != null && _networkObject.IsServer;
+        }
+
+        private void PlayReloadCompleteSounds()
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                return;
+            }
+
+            Vector3 position = transform.position;
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineIn, position, null, false, 1f, 1f, 8f, 40f);
+            audio.PlayAudioSource(AudioType.Sfx, CombatAudioTrackIds.ReloadCock, position, null, false, 0.95f, 1f, 8f, 40f);
         }
 
         private void EnsureInitialized()

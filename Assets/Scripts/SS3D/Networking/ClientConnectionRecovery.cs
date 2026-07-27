@@ -21,6 +21,8 @@ namespace SS3D.Networking
         private bool _reachedOnline;
         private bool _recoveryVisible;
         private string _status = "Disconnected from server.";
+        private GUIStyle _labelStyle;
+        private GUIStyle _buttonStyle;
 
         public SessionState State { get; private set; } = SessionState.Cold;
 
@@ -261,6 +263,8 @@ namespace SS3D.Networking
                 return;
             }
 
+            EnsureGuiStyles();
+
             const float width = 420f;
             const float height = 140f;
             Rect area = new(
@@ -270,15 +274,15 @@ namespace SS3D.Networking
                 height);
 
             GUILayout.BeginArea(area, GUI.skin.box);
-            GUILayout.Label(_status);
+            GUILayout.Label(_status, _labelStyle);
             GUILayout.Space(12f);
 
-            if (GUILayout.Button("Retry connection", GUILayout.Height(32f)))
+            if (GUILayout.Button("Retry connection", _buttonStyle, GUILayout.Height(32f)))
             {
                 Retry();
             }
 
-            if (GUILayout.Button("Quit", GUILayout.Height(28f)))
+            if (GUILayout.Button("Quit", _buttonStyle, GUILayout.Height(28f)))
             {
                 UnityEngine.Application.Quit();
 #if UNITY_EDITOR
@@ -287,6 +291,47 @@ namespace SS3D.Networking
             }
 
             GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// Player IMGUI default (LegacyRuntime) is missing under Wine and some stripped
+        /// players — empty Retry/Quit labels plus per-frame font warnings. Prefer OS fonts.
+        /// </summary>
+        private void EnsureGuiStyles()
+        {
+            if (_labelStyle != null)
+            {
+                return;
+            }
+
+            Font font = ResolveImguiFont();
+            _labelStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = font,
+                fontSize = 14,
+                wordWrap = true,
+            };
+            _labelStyle.normal.textColor = Color.white;
+            _buttonStyle = new GUIStyle(GUI.skin.button)
+            {
+                font = font,
+                fontSize = 14,
+            };
+        }
+
+        private static Font ResolveImguiFont()
+        {
+            // Builtin LegacyRuntime often exists as an asset but fails to resolve a face in
+            // Wine / some players ("Unable to load font face for [LegacyRuntime]").
+            Font osFont = Font.CreateDynamicFontFromOSFont(
+                new[] { "Segoe UI", "Arial", "DejaVu Sans", "Liberation Sans", "FreeSans" },
+                14);
+            if (osFont != null)
+            {
+                return osFont;
+            }
+
+            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
         private void Retry()
@@ -309,10 +354,13 @@ namespace SS3D.Networking
             {
                 // Boot was unloaded (offline Empty). Start from NetworkSettings directly.
                 NetworkSettings settings = ScriptableSettings.GetOrFind<NetworkSettings>();
+                string address = string.IsNullOrWhiteSpace(settings.ServerAddress)
+                    ? "127.0.0.1"
+                    : settings.ServerAddress;
                 LocalPlayer.UpdateCkey(settings.Ckey);
                 NotifySessionStartAttempted();
                 bool started = networkManager.ClientManager.StartConnection(
-                    settings.ServerAddress,
+                    address,
                     settings.ServerPort);
                 if (!started)
                 {

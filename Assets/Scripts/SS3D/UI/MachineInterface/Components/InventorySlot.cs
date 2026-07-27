@@ -12,7 +12,9 @@ namespace SS3D.UI.MachineInterface.Components
         private readonly Label _unknownGlyph;
         private readonly Image _icon;
         private readonly VisualElement _takeProgress;
+        private readonly VisualElement _reservedBadge;
         private bool _unknown = true;
+        private bool _reserved;
         private float _size = 48f;
         private Sprite _emptyIcon;
         private Sprite _itemIcon;
@@ -40,6 +42,19 @@ namespace SS3D.UI.MachineInterface.Components
             _takeProgress.style.display = DisplayStyle.None;
             _well.Add(_takeProgress);
 
+            _reservedBadge = new VisualElement();
+            _reservedBadge.AddToClassList("inventory-slot__reserved-badge");
+            _reservedBadge.pickingMode = PickingMode.Ignore;
+            VisualElement reservedRing = new();
+            reservedRing.AddToClassList("inventory-slot__reserved-ring");
+            reservedRing.pickingMode = PickingMode.Ignore;
+            VisualElement reservedSlash = new();
+            reservedSlash.AddToClassList("inventory-slot__reserved-slash");
+            reservedSlash.pickingMode = PickingMode.Ignore;
+            _reservedBadge.Add(reservedRing);
+            _reservedBadge.Add(reservedSlash);
+            _well.Add(_reservedBadge);
+
             // Host sizes to the slot and centers the chip; avoids UITK translate:-50% sticking to the
             // previous text width when SlotLabel changes (e.g. Head → Trucker Cap).
             _labelHost = new VisualElement();
@@ -57,6 +72,7 @@ namespace SS3D.UI.MachineInterface.Components
 
             ApplySize(_size);
             ApplyUnknown(_unknown);
+            ApplyReserved(_reserved);
             ApplyIcon();
         }
 
@@ -142,6 +158,24 @@ namespace SS3D.UI.MachineInterface.Components
             EnableInClassList("inventory-slot--taking", false);
         }
 
+        /// <summary>
+        /// Off-hand reserved by a two-hand firearm — dims the well and shows a ban badge.
+        /// </summary>
+        public bool Reserved
+        {
+            get => _reserved;
+            set
+            {
+                if (_reserved == value)
+                {
+                    return;
+                }
+
+                _reserved = value;
+                ApplyReserved(value);
+            }
+        }
+
         private void ApplySize(float size)
         {
             _well.style.width = size;
@@ -154,6 +188,12 @@ namespace SS3D.UI.MachineInterface.Components
         {
             EnableInClassList("inventory-slot--unknown", unknown);
             _unknownGlyph.style.display = unknown ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private void ApplyReserved(bool reserved)
+        {
+            EnableInClassList("inventory-slot--reserved", reserved);
+            _reservedBadge.style.display = reserved ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void ApplyIcon()

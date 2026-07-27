@@ -15,6 +15,14 @@ namespace SS3D.Systems.Atmospherics.ECS
         public const float MaxVentFraction = 0.5f;
         public const float PressureEpsilon = 1.0f;
 
+        // Equal-pressure composition mixing: when total pressures match within PressureEpsilon,
+        // still exchange moles along partial-pressure gradients so breath / scrubber pockets
+        // dilute into the room. Slower than bulk SimSpeed so stable rooms do not thrash.
+        public const float DiffusionSpeed = 0.15f;
+
+        // Ignore tiny partial-pressure gaps so a nearly-uniform room can sleep.
+        public const float PartialPressureEpsilon = 0.05f;
+
         // A nearly-evacuated cell that can still drain (touches vacuum, or a neighbour that is
         // itself this empty) dumps its last traces and sleeps once it falls below this pressure.
         // Venting is proportional to the pressure gap, so the approach to true vacuum is otherwise

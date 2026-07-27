@@ -4,6 +4,7 @@ using SS3D.Core;
 using System.Collections.Generic;
 using System;
 using UnityEngine;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inventory.Items;
 using FishNet.Object.Synchronizing;
 using System.Linq;
@@ -768,7 +769,39 @@ namespace SS3D.Systems.Inventory.Containers
                     && CanHoldItem(item)
                     && item.SizeClass <= _maxSizeClass // Flat size-class fit check (Documents/design/inventory-storage.md §4)
                     && !item.GetComponentsInChildren<AttachedContainer>().AsEnumerable().Contains(this) // Can't put an item in its own container
-                    && !(bool)GetComponents<IStorageCondition>()?.Any(x => !x.CanStore(this, item));
+                    && !(bool)GetComponents<IStorageCondition>()?.Any(x => !x.CanStore(this, item))
+                    && CanAcceptInHandSlot(item);
+        }
+
+        /// <summary>
+        /// Two-hand firearms (M4): right-hand only + reserve the off-hand while wielded.
+        /// Non-hand containers always pass.
+        /// </summary>
+        private bool CanAcceptInHandSlot(Item item)
+        {
+            if (_type != ContainerType.Hand)
+            {
+                return true;
+            }
+
+            Hand hand = GetComponent<Hand>();
+            if (hand == null)
+            {
+                hand = GetComponentInParent<Hand>();
+            }
+
+            if (hand == null)
+            {
+                return true;
+            }
+
+            Hands hands = hand.HandsController;
+            if (hands == null)
+            {
+                hands = GetComponentInParent<Hands>();
+            }
+
+            return TwoHandedWeaponRules.CanPlaceInHand(item, hand, hands);
         }
 
         /// <summary>

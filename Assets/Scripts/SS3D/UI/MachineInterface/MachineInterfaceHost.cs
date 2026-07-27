@@ -22,7 +22,7 @@ namespace SS3D.UI.MachineInterface
     /// <item><description>Define snapshot, FishNet serializer, view model, and mapper types.</description></item>
     /// <item><description>Create UXML/USS under Content/Systems/UI/MachineInterface and a binder implementing <see cref="IMachineInterfaceBinder"/>.</description></item>
     /// <item><description>Add a networked controller on the machine prefab (inherit <see cref="MachineInterfaceBehaviour"/>; use concrete TargetRpc snapshot types—FishNet does not support generic RPC parameters).</description></item>
-    /// <item><description>Add paths to <see cref="MachineUiAssetPaths"/> and an entry in <see cref="MachineUiCatalog.RegisterAll"/>; run <c>SS3D → Machine Interface → Rebuild Asset Catalog</c>.</description></item>
+    /// <item><description>Add paths to <see cref="MachineUiAssetPaths"/> and an entry in <see cref="MachineUiCatalog.RegisterAll"/>; run <c>SS3D → Data → Rebuild All UI Catalogs</c>.</description></item>
     /// <item><description>Register the snapshot type in <see cref="MachineInterfaceNetworkRegistry"/>.</description></item>
     /// <item><description>Register an <see cref="IMachineOptimisticControlHandler"/> for client optimistic controls when adding interactive controls.</description></item>
     /// <item><description>Optional: add control IDs to <see cref="MachineInterfaceControlIds"/> and a dev scenario in <see cref="MachineInterfaceDevHarness"/>.</description></item>
@@ -229,7 +229,7 @@ namespace SS3D.UI.MachineInterface
             {
                 Debug.LogError(
                     $"MachineInterfaceHost could not load Resources/{MachineUiAssetPaths.ResourcesCatalogName}. "
-                    + "Run SS3D → Machine Interface → Rebuild Asset Catalog and commit the asset.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs and commit the asset.",
                     this);
                 return false;
             }
@@ -238,7 +238,7 @@ namespace SS3D.UI.MachineInterface
             {
                 Debug.LogError(
                     $"MachineUiAssetCatalog is missing required assets ({missingField}). "
-                    + "Run SS3D → Machine Interface → Rebuild Asset Catalog.",
+                    + "Run SS3D → Data → Rebuild All UI Catalogs.",
                     this);
                 return false;
             }

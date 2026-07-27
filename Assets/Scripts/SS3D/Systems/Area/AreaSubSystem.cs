@@ -256,6 +256,21 @@ namespace SS3D.Systems.Area
             return FloorVisualCache.TryGetTint(areaId.Value, out tint);
         }
 
+        /// <summary>
+        /// Ambience track id (audio.md §2) from live registry (host) or floor-cache snapshot
+        /// (clients). Empty/missing means the area has no authored ambience track.
+        /// </summary>
+        public bool TryGetAmbienceTrackId(AreaId areaId, out string trackId)
+        {
+            if (_registry.TryGet(areaId, out AreaRecord record) && !string.IsNullOrEmpty(record.AmbienceTrackId))
+            {
+                trackId = record.AmbienceTrackId;
+                return true;
+            }
+
+            return FloorVisualCache.TryGetAmbienceTrackId(areaId.Value, out trackId);
+        }
+
         public bool TryGetAreaApc(AreaId areaId, out IApcChannelSource apc)
         {
             apc = null;
@@ -558,6 +573,20 @@ namespace SS3D.Systems.Area
             NotifyAreaVisualsChanged();
         }
 
+        /// <summary>
+        /// Authors the per-area ambience track id (audio.md §2). Thin setter — no Map Editor UI
+        /// yet; content/dev-console driven until an authoring surface lands.
+        /// </summary>
+        [Server]
+        public void SetAreaAmbienceTrackId(AreaId areaId, string trackId)
+        {
+            if (!_registry.TryGet(areaId, out AreaRecord record))
+                return;
+
+            record.AmbienceTrackId = trackId ?? string.Empty;
+            NotifyAreaVisualsChanged();
+        }
+
         [Server]
         public void SetDefaultRequiredAccess(AreaId areaId, IdAccess.AccessMask requiredAccess)
         {
@@ -579,6 +608,32 @@ namespace SS3D.Systems.Area
 
             TileCoord coord = _query.WorldToTile(worldPosition);
             return TryGetAreaForTile(coord, out record);
+        }
+
+        /// <summary>
+        /// Resolves an area id for a world position on host (live registry via
+        /// <see cref="TryGetAreaForWorldPosition"/>) or a pure client (<see cref="FloorVisualCache"/>
+        /// snapshot, same world-grid math <see cref="ITileQueryService.WorldToTile"/> uses since it
+        /// has no registry). Used for client-local presentation that tracks a moving world position
+        /// (e.g. ambience crossfade, audio.md §2) rather than a fixed device tile.
+        /// </summary>
+        public bool TryResolveAreaIdForWorldPosition(Vector3 worldPosition, out AreaId areaId)
+        {
+            if (TryGetAreaForWorldPosition(worldPosition, out AreaRecord record))
+            {
+                areaId = record.Id;
+                return true;
+            }
+
+            Vector2Int worldGrid = new(Mathf.RoundToInt(worldPosition.x), Mathf.RoundToInt(worldPosition.z));
+            if (FloorVisualCache.TryGetAreaIdForWorldGrid(worldGrid, out ushort raw) && raw != AreaId.None)
+            {
+                areaId = new AreaId(raw);
+                return true;
+            }
+
+            areaId = default;
+            return false;
         }
 
         public void ClearDepartmentalLightTint(AreaId areaId)
@@ -1096,6 +1151,38 @@ namespace SS3D.Systems.Area
             }
 
             RpcSyncAreaFloorVisuals(rpcTints, rpcChunks.ToArray());
+
+            // Separate broadcast channel (audio.md §2) from tint/chunk data above — ambience
+            // authoring shouldn't need to touch the floor-stripe snapshot format.
+            var trackList = new List<(ushort areaId, string trackId)>();
+            var rpcAmbience = new List<SyncedAreaAmbience>();
+            foreach (AreaRecord record in _registry.GetAllAreas())
+            {
+                if (string.IsNullOrEmpty(record.AmbienceTrackId))
+                    continue;
+
+                trackList.Add((record.Id.Value, record.AmbienceTrackId));
+                rpcAmbience.Add(new SyncedAreaAmbience { areaId = record.Id.Value, trackId = record.AmbienceTrackId });
+            }
+
+            FloorVisualCache.ReplaceAmbienceTrackIds(trackList);
+            RpcSyncAreaAmbience(rpcAmbience.ToArray());
+        }
+
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncAreaAmbience(SyncedAreaAmbience[] tracks)
+        {
+            if (IsServer)
+                return;
+
+            var trackList = new List<(ushort areaId, string trackId)>();
+            if (tracks != null)
+            {
+                foreach (SyncedAreaAmbience track in tracks)
+                    trackList.Add((track.areaId, track.trackId));
+            }
+
+            FloorVisualCache.ReplaceAmbienceTrackIds(trackList);
         }
 
         [ObserversRpc(BufferLast = true)]
@@ -1148,6 +1235,13 @@ namespace SS3D.Systems.Area
             public ushort areaId;
             public AreaLightingState state;
             public bool lightingSwitchOn;
+        }
+
+        [Serializable]
+        private struct SyncedAreaAmbience
+        {
+            public ushort areaId;
+            public string trackId;
         }
     }
 }

@@ -70,7 +70,8 @@ namespace SS3D.Systems.Health
                 return Severity.Critical;
             }
 
-            if (snapshot.Pools.OxyDebt > 0f)
+            // Ignore micro-debt from float/local-mix noise — only warn once hypoxia is meaningful.
+            if (snapshot.Pools.OxyDebt >= HealthConstants.LowOxygenAlertSoftStart)
             {
                 return Severity.Warning;
             }

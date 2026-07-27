@@ -13,14 +13,8 @@ namespace SS3D.Systems.Combat.Editor
     {
         private const string M4 = "Assets/Content/WorldObjects/Items/Weapons/M4.prefab";
 
-        [MenuItem("SS3D/Combat/Setup Ranged Prefabs (M4)")]
-        public static void SetupMenu()
-        {
-            int updated = SetupAll();
-            EditorUtility.DisplayDialog("Ranged Prefabs", $"Updated {updated} prefabs.", "OK");
-        }
-
-        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.RangedPrefabSetup.SetupBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Combat.Editor.RangedPrefabSetup.SetupBatch</c>
+        /// Prefer <see cref="CombatContentPrefabRecipes.RunAllBatch"/> for domain re-runs.</summary>
         public static void SetupBatch()
         {
             int updated = SetupAll();
@@ -60,6 +54,8 @@ namespace SS3D.Systems.Combat.Editor
                     extension = root.AddComponent<RangedWeaponItemExtension>();
                 }
 
+                Transform muzzle = EnsureMuzzle(root);
+
                 SerializedObject so = new(extension);
                 so.FindProperty("_profile.BruteDamage").floatValue = profile.BruteDamage;
                 so.FindProperty("_profile.BurnDamage").floatValue = profile.BurnDamage;
@@ -79,6 +75,9 @@ namespace SS3D.Systems.Combat.Editor
                 so.FindProperty("_profile.StructuralForce").floatValue = profile.StructuralForce;
                 so.FindProperty("_profile.StaminaCost").floatValue = profile.StaminaCost;
                 so.FindProperty("_profile.ExhaustionSpreadDegrees").floatValue = profile.ExhaustionSpreadDegrees;
+                so.FindProperty("_profile.RequiresBothHands").boolValue = profile.RequiresBothHands;
+                so.FindProperty("_profile.RequiredHand").enumValueIndex = (int)profile.RequiredHand;
+                so.FindProperty("_muzzle").objectReferenceValue = muzzle;
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -89,6 +88,71 @@ namespace SS3D.Systems.Combat.Editor
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+        }
+
+        /// <summary>
+        /// Empty child at the barrel tip. Uses mesh AABB longest axis when a MeshFilter is present
+        /// so flash origin sits past the muzzle rather than at the grip.
+        /// </summary>
+        private static Transform EnsureMuzzle(GameObject root)
+        {
+            Transform existing = root.transform.Find("Muzzle");
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            GameObject muzzleGo = new("Muzzle");
+            Transform muzzle = muzzleGo.transform;
+            muzzle.SetParent(root.transform, false);
+
+            if (root.TryGetComponent(out MeshFilter meshFilter) && meshFilter.sharedMesh != null)
+            {
+                Bounds bounds = meshFilter.sharedMesh.bounds;
+                Vector3 extents = bounds.extents;
+                Vector3 axis = Vector3.forward;
+                float max = extents.z;
+                if (extents.x > max)
+                {
+                    max = extents.x;
+                    axis = Vector3.right;
+                }
+
+                if (extents.y > max)
+                {
+                    max = extents.y;
+                    axis = Vector3.up;
+                }
+
+                // Prefer the end farther from Attachment (grip) when that child exists.
+                Vector3 positiveTip = bounds.center + (axis * max);
+                Vector3 negativeTip = bounds.center - (axis * max);
+                Transform attachment = root.transform.Find("Attachment");
+                if (attachment != null)
+                {
+                    float posDist = (positiveTip - attachment.localPosition).sqrMagnitude;
+                    float negDist = (negativeTip - attachment.localPosition).sqrMagnitude;
+                    Vector3 tip = posDist >= negDist ? positiveTip : negativeTip;
+                    Vector3 outward = tip - bounds.center;
+                    muzzle.localPosition = tip;
+                    if (outward.sqrMagnitude > 0.0001f)
+                    {
+                        muzzle.localRotation = Quaternion.LookRotation(outward.normalized);
+                    }
+                }
+                else
+                {
+                    muzzle.localPosition = positiveTip;
+                    muzzle.localRotation = Quaternion.LookRotation(axis);
+                }
+            }
+            else
+            {
+                muzzle.localPosition = new Vector3(0f, 0f, 0.45f);
+                muzzle.localRotation = Quaternion.identity;
+            }
+
+            return muzzle;
         }
     }
 }

@@ -225,11 +225,19 @@ namespace SS3D.Systems.Entities.Humanoid.Body
 
         public void SetFloating(bool floating)
         {
-            _snapshot.IsFloating = floating;
-            if (floating)
+            LocomotionMode nextLocomotion = floating
+                ? LocomotionMode.Floating
+                : (_snapshot.Locomotion == LocomotionMode.Floating
+                    ? LocomotionMode.Idle
+                    : _snapshot.Locomotion);
+
+            if (_snapshot.IsFloating == floating && _snapshot.Locomotion == nextLocomotion)
             {
-                _snapshot.Locomotion = LocomotionMode.Floating;
+                return;
             }
+
+            _snapshot.IsFloating = floating;
+            _snapshot.Locomotion = nextLocomotion;
             PublishSnapshot();
         }
 
@@ -267,8 +275,11 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         {
             _snapshot.ActiveTrigger = trigger;
             _snapshot.AttackVariant = (byte)(attackVariant & 0x3);
-            _triggerSequence++;
+            // Pack ActiveTrigger BEFORE bumping sequence — SyncVar OnChange rebuilds from
+            // _packedSnapshot synchronously; sequence++ first wiped the trigger and remotes
+            // never ConsumeTrigger (fire/reload invisible on host).
             ApplyLocalSnapshot();
+            _triggerSequence++;
         }
 
         [ServerRpc]
@@ -310,10 +321,23 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public void ApplyStagger(float duration = -1f)
         {
             _staggerTimer = duration > 0f ? duration : _staggerDuration;
-            SetBodyState(BodyState.Staggered);
+            // Pack Flinch (+ Staggered) before sequence bump — SyncTriggerSequence OnChange
+            // rebuilds from packed snapshot and would wipe ActiveTrigger if sequence came first.
             _snapshot.ActiveTrigger = AnimationTriggerId.Flinch;
-            _triggerSequence++;
-            ApplyLocalSnapshot();
+            if (_snapshot.State != BodyState.Staggered)
+            {
+                _previousBodyState = _snapshot.State;
+                _snapshot.State = BodyState.Staggered;
+                ApplyLocalSnapshot();
+                _triggerSequence++;
+                OnBodyStateChanged?.Invoke(_previousBodyState, BodyState.Staggered);
+                OnCapabilitiesChanged?.Invoke(Capabilities);
+            }
+            else
+            {
+                ApplyLocalSnapshot();
+                _triggerSequence++;
+            }
         }
 
         [Server]
@@ -403,6 +427,14 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsServer)
             {
                 ApplyLocalSnapshot();
+                return;
+            }
+
+            // Owner prediction: apply locally so Floating / gait bools hit the Animator
+            // before the server SyncVar round-trip (PublishSnapshot used to no-op on clients).
+            if (IsOwner)
+            {
+                ApplyOwnerSnapshot();
             }
         }
 

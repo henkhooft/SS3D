@@ -1,5 +1,4 @@
 using FishNet.Object;
-using SS3D.Engine.Chat;
 using SS3D.Networking;
 using SS3D.Permissions;
 using SS3D.Substances;
@@ -40,8 +39,6 @@ namespace SS3D.Editor.Bootstrap
         private const string HubResourcesPath = "Assets/Resources/NetworkSystemsHub.prefab";
         private const string BootScenePath = "Assets/Content/Scenes/Boot.unity";
         private const string GameScenePath = "Assets/Content/Scenes/Game.unity";
-        private const string HumanPrefabPath =
-            "Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab";
 
         private static readonly string[] BootPersistentSystemNames =
         {
@@ -101,9 +98,9 @@ namespace SS3D.Editor.Bootstrap
             typeof(RoleSubSystem),
             typeof(GamemodeSubSystem),
             typeof(ItemSubSystem),
-            typeof(ChatSubSystem),
             typeof(CommsSubSystem),
             typeof(LocalSpeechBubbleController),
+            typeof(CommsFeedController),
             typeof(ExamineSubSystem),
             typeof(SelectionSubSystem),
             typeof(CameraSubSystem),
@@ -115,7 +112,7 @@ namespace SS3D.Editor.Bootstrap
             typeof(MachineInterfaceHost),
         };
 
-        /// <summary>Batch entry for headless Unity: rebuild hub + strip Boot + strip Game.</summary>
+        /// <summary>Batch entry for headless Unity: rebuild hub + strip Boot + strip Game (tier C — no MenuItem).</summary>
         public static void RunPhase3hMigration()
         {
             RebuildNetworkSystemsHubPrefab();
@@ -124,9 +121,6 @@ namespace SS3D.Editor.Bootstrap
             AssetDatabase.SaveAssets();
             Debug.Log("Phase 3h migration complete (hub rebuild + Boot/Game strip).");
         }
-
-        [MenuItem("SS3D/Bootstrap/Phase 3h — Rebuild Hub + Strip Boot & Game")]
-        public static void MenuRunPhase3hMigration() => RunPhase3hMigration();
 
         [MenuItem("SS3D/Bootstrap/Rebuild NetworkSystemsHub Prefab")]
         public static void RebuildNetworkSystemsHubPrefab()
@@ -190,7 +184,6 @@ namespace SS3D.Editor.Bootstrap
             }
         }
 
-        [MenuItem("SS3D/Bootstrap/Strip Boot Persistent Systems")]
         public static void StripBootPersistentSystems()
         {
             Scene scene = EditorSceneManager.OpenScene(BootScenePath, OpenSceneMode.Single);
@@ -203,7 +196,6 @@ namespace SS3D.Editor.Bootstrap
             Debug.Log($"Boot strip: removed {removed} Persistent Systems GameObject(s).");
         }
 
-        [MenuItem("SS3D/Bootstrap/Strip Game Systems onto Hub")]
         public static void StripGameSystems()
         {
             Scene scene = EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
@@ -214,37 +206,6 @@ namespace SS3D.Editor.Bootstrap
             }
 
             Debug.Log($"Game strip: removed {removed} Systems GameObject(s). EventSystem left in place.");
-        }
-
-        [MenuItem("SS3D/Bootstrap/Ensure LocalSpeechEmitter on Human Prefab")]
-        public static void EnsureLocalSpeechEmitterOnHuman()
-        {
-            GameObject human = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
-            if (human == null)
-            {
-                Debug.LogError($"Human prefab not found at {HumanPrefabPath}");
-                return;
-            }
-
-            string path = AssetDatabase.GetAssetPath(human);
-            GameObject root = PrefabUtility.LoadPrefabContents(path);
-            try
-            {
-                if (root.GetComponent<LocalSpeechEmitter>() == null)
-                {
-                    root.AddComponent<LocalSpeechEmitter>();
-                    PrefabUtility.SaveAsPrefabAsset(root, path);
-                    Debug.Log($"Added LocalSpeechEmitter to {HumanPrefabPath}");
-                }
-                else
-                {
-                    Debug.Log("LocalSpeechEmitter already present on Human prefab.");
-                }
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
         }
 
         private static void CopyOrAdd(GameObject root, Type type)

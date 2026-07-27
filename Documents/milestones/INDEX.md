@@ -7,21 +7,28 @@ vs built) stays in [architecture/INDEX.md](../architecture/INDEX.md); structural
 
 ## Current focus
 
-Two tracks run in parallel — an **operational** one that makes the game testable by others, and the **gameplay** gate:
+Two tracks run in parallel — an **operational** one that makes multiplayer playtests trustworthy, and the **gameplay** gate:
 
-**Near-term operational push** — the hop-on/off test server ([test-server.md](test-server.md)), so a link + download is all a playtester needs:
+**Near-term operational push** — [test-server.md](test-server.md):
 
-- **T1** — Loadable Windows build: it runs but is missing critical files/permissions (likely unpacked Addressables content) — diagnose against a real build
-- **T2** — Zero-setup remote join: launch bats hardcode `127.0.0.1`; a public build must default to the hosted server
+- **T1** — Loadable Windows build (Config/Tilemaps packaging OK on `059e3dd`; re-cut after host loopback fix)
+- **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
+- **T3** — Session stability: round/connect lifecycle, doors under MP, admin wedge tools, Nuke Ops happy-path smoke, test-station perf floor
+- **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
 
-**Active gameplay gate** — deepest unfinished critical leaves on [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 now shipped: ranged hitscan + per-zone armor absorption/integrity; environmental seal deferred):
+**Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 
-- **M2** — Station structural damage model — scoped to route-opening (no live area/atmos recompute)
-- **M5** — Round-resolution spine: death→spectator + round-end summary/reveal (death detach already wired via the ghost body; the summary/reveal is net-new). **Shared with the test server's T4 round-end loop** — the same spine unlocks both.
+- **M0** — Test station; vault/disk/nuke; loadouts (ammo, ID/access, defuse tools, internals); assignment; ops/crew identity
+- **M1p** — Combat feel **partial:** muzzle/holes/SS14 audio/anims/two-hand/`rangeddebug` shipped; still blood, knockdown clarity, sprint, strip debug chrome (aim IK deferred)
+- **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
+- **M4** — Objectives + win/lose
+- **M5** — End-game screen + restart; spectators still see the outcome
+- **M7** — Drag body/carrier remainder (crit ragdoll, screen FX, feel SFX shipped)
+- **M8** — Armor seal + internals + air alarms that alarm + thin fire response (turf→health exposure + equal-P turf mixing shipped)
+- **M9** — Test-map APC lights matter + wall damage readable at range
+Not focus: Area-id merge on breach, re-wiring client atmos VFX (already shipped), shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, full radio, server browser / accounts.
 
-The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) is now implementation-ready per the owner (UI direction settled) — a parallel track to commission when capacity allows; a minimal join/spawn path is the only hard dependency the test server has on it.
-
-Not focus: shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, breach-driven atmos/area consequences, server browser / accounts.
+The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) remains a parallel capacity track; test server only needs a minimal join/spawn path.
 
 ## Gates
 

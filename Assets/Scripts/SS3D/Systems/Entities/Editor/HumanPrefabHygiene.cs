@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FishNet.Object;
 using SS3D.Hacks;
+using SS3D.Systems.Comms;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace SS3D.Systems.Entities.Editor
     /// Removes dev-only test components from <c>Human.prefab</c> via <see cref="PrefabUtility"/> instead of
     /// hand-edited YAML. First recipe tool for the follow-on (d) "Entity prefab setup / recipes" convention
     /// named in 2026-07_agent-first-composition.md / 2026-07_human-prefab-decomposition.md.
+    /// Individual MenuItems removed — run via <see cref="HumanPrefabRecipes"/> (tier B).
     /// </summary>
     /// <remarks>
     /// <c>Human.prefab</c>'s root <see cref="NetworkObject"/> flattens NetworkBehaviours across nested
@@ -26,19 +28,8 @@ namespace SS3D.Systems.Entities.Editor
     {
         private const string HumanPrefabPath = "Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab";
 
-        [MenuItem("SS3D/Entities/Remove Dev-Only Hacks From Human Prefab")]
-        public static void RemoveDevHacksMenu()
-        {
-            int removed = RemoveDevHacks();
-            EditorUtility.DisplayDialog(
-                "Human Prefab Hygiene",
-                removed > 0
-                    ? $"Removed {removed} dev-only component(s) from Human.prefab."
-                    : "No dev-only components found on Human.prefab.",
-                "OK");
-        }
-
-        /// <summary>BatchMode entry: <c>-executeMethod SS3D.Systems.Entities.Editor.HumanPrefabHygiene.RemoveDevHacksBatch</c></summary>
+        /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Entities.Editor.HumanPrefabHygiene.RemoveDevHacksBatch</c>
+        /// Prefer <see cref="HumanPrefabRecipes.RunAllBatch"/>.</summary>
         public static void RemoveDevHacksBatch()
         {
             int removed = RemoveDevHacks();
@@ -86,16 +77,6 @@ namespace SS3D.Systems.Entities.Editor
             }
         }
 
-        [MenuItem("SS3D/Entities/Resync Human Prefab Against Body Parts")]
-        public static void ResyncMenu()
-        {
-            ResyncNestedPrefabInstances();
-            EditorUtility.DisplayDialog(
-                "Human Prefab Hygiene",
-                "Human.prefab reloaded and resaved against the current state of its nested body-part prefabs.",
-                "OK");
-        }
-
         /// <summary>
         /// Reloads <c>Human.prefab</c> against the current on-disk state of its nested body-part prefabs
         /// and rewrites the root <see cref="NetworkObject"/>'s behaviour list to match, then resaves.
@@ -104,7 +85,7 @@ namespace SS3D.Systems.Entities.Editor
         /// on their own) does not retroactively update <c>Human.prefab</c>'s own stripped mirror of that
         /// instance — that mirror only refreshes the next time <c>Human.prefab</c> itself is reloaded and
         /// resaved. Always run this after any recipe that removes a component from a body-part prefab. See
-        /// entities.md § Pitfalls.
+        /// entities.md § Pitfalls. Invoked by <see cref="HumanPrefabRecipes"/> (no standalone MenuItem).
         /// </summary>
         public static void ResyncNestedPrefabInstances()
         {
@@ -125,6 +106,43 @@ namespace SS3D.Systems.Entities.Editor
 
                 RebuildNetworkBehaviours(rootNetworkObject);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        /// <summary>
+        /// Ensures <see cref="LocalSpeechEmitter"/> on <c>Human.prefab</c>. Returns true if added.
+        /// </summary>
+        public static bool EnsureLocalSpeechEmitter()
+        {
+            GameObject prefabRoot = PrefabUtility.LoadPrefabContents(HumanPrefabPath);
+            if (prefabRoot == null)
+            {
+                UnityEngine.Debug.LogError($"[HumanPrefabHygiene] Missing prefab: {HumanPrefabPath}");
+                return false;
+            }
+
+            try
+            {
+                if (prefabRoot.GetComponent<LocalSpeechEmitter>() != null)
+                {
+                    return false;
+                }
+
+                if (!prefabRoot.TryGetComponent(out NetworkObject rootNetworkObject))
+                {
+                    UnityEngine.Debug.LogError($"[HumanPrefabHygiene] No root NetworkObject on {HumanPrefabPath}");
+                    return false;
+                }
+
+                prefabRoot.AddComponent<LocalSpeechEmitter>();
+                RebuildNetworkBehaviours(rootNetworkObject);
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
+                UnityEngine.Debug.Log($"[HumanPrefabHygiene] Added LocalSpeechEmitter to {HumanPrefabPath}");
+                return true;
             }
             finally
             {

@@ -56,7 +56,13 @@ namespace SS3D.Systems.Health
             float bloodDelta = -SumBleedingRates(zones) * HealthConstants.BleedingBloodDrainScale;
             float lungIntake = LungIntake(organs, atmosphereO2, pools.BloodVolumeRatio);
             float heartDelivery = HeartDelivery(organs, pools.BloodVolumeRatio);
-            float oxyDelta = lungIntake - heartDelivery - HealthConstants.BaseOxygenDemand;
+            // Vacuum / destroyed lungs: no O₂ enters the blood — always accumulate unmet demand
+            // (the Min(intake,delivery) shortfall form made vacuum correct but made hemorrhagic
+            // hypoxia outrun blood critical). Breathable air keeps the bleed-tuned formula so
+            // oxy critical still lands after blood critical (LowBloodOxyDebtGainScale).
+            float oxyDelta = lungIntake <= 0f
+                ? HealthConstants.BaseOxygenDemand
+                : lungIntake - heartDelivery - HealthConstants.BaseOxygenDemand;
 
             // Hemorrhagic hypoxia scales continuously with blood lost — shock before empty.
             oxyDelta += (1f - pools.BloodVolumeRatio) * HealthConstants.LowBloodOxyDebtGainScale;
@@ -288,6 +294,7 @@ namespace SS3D.Systems.Health
                 CanUseArms = OrganSimulation.CanUseArms(zones),
                 CriticalFlags = BuildCriticalFlags(pools, brainEffective),
                 CanDefibrillate = IsCardiacArrest(heartStored) && brainStored > 0f,
+                Environment = HealthEnvironmentState.SafeDefault,
             };
         }
 

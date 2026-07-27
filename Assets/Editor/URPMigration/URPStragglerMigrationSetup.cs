@@ -31,7 +31,6 @@ namespace SS3D.Editor.URPMigration
             };
         }
 
-        [MenuItem("SS3D/URP Migration/Migrate Straggler Materials")]
         public static void MigrateFromMenu()
         {
             if (Run(silent: false))

@@ -17,7 +17,6 @@ namespace SS3D.Editor
         private const string HumanClipsFolder = "Assets/Content/WorldObjects/Entities/Humanoids/Human";
         private const float MotionEpsilon = 0.0001f;
 
-        [MenuItem("SS3D/Animation/Fix Human Clip Names")]
         public static void FixHumanClipNamesMenu()
         {
             int fixedCount = FixHumanClipNames(saveAssets: true);
@@ -66,7 +65,6 @@ namespace SS3D.Editor
             return fixedCount;
         }
 
-        [MenuItem("SS3D/Animation/Bake Human Clips To Humanoid")]
         public static void BakeHumanClips()
         {
             if (!EditorUtility.DisplayDialog(
@@ -200,7 +198,6 @@ namespace SS3D.Editor
             }
         }
 
-        [MenuItem("SS3D/Animation/Copy Baked Locomotion To Placeholders")]
         public static void CopyBakedLocomotionToPlaceholders()
         {
             string folder = HumanClipsFolder;
@@ -276,7 +273,6 @@ namespace SS3D.Editor
             return copiedCount;
         }
 
-        [MenuItem("SS3D/Animation/Assign Humanoid Avatar On Human Prefab")]
         public static void AssignHumanoidAvatar()
         {
             Avatar avatar = LoadHumanAvatar();
@@ -312,7 +308,6 @@ namespace SS3D.Editor
             }
         }
 
-        [MenuItem("SS3D/Animation/Clear Humanoid Avatar On Human Prefab")]
         public static void ClearHumanoidAvatar()
         {
             GameObject prefabRoot = PrefabUtility.LoadPrefabContents(HumanPrefabPath);

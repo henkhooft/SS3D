@@ -10,8 +10,10 @@ using UnityEngine.Rendering.Universal;
 namespace SS3D.Systems.Health
 {
     /// <summary>
-    /// Per-zone bleeding VFX: particle streams, body wound decals, and floor blood accumulation.
-    /// Intensity and floor drip cadence scale with synced <see cref="HealthSnapshot"/> bleed rates.
+    /// Per-zone bleeding VFX: continuous trickle streams, on-hit impact spray,
+    /// body wound decals, and floor blood accumulation.
+    /// Trickle intensity scales with synced <see cref="HealthSnapshot"/> bleed rates;
+    /// impact spray is driven by damage Rpc (not bleed-onset alone).
     /// </summary>
     public class WoundVfx : MonoBehaviour
     {
@@ -19,17 +21,26 @@ namespace SS3D.Systems.Health
         private const float ReferenceBleedRate = 2f;
         private const float FloorDecalIntervalMinSeconds = 0.22f;
         private const float FloorDecalIntervalMaxSeconds = 1.2f;
-        private const float BodyDecalSizeMin = 0.1f;
-        private const float BodyDecalSizeMax = 0.22f;
+        private const float BodyDecalSizeMin = 0.14f;
+        private const float BodyDecalSizeMax = 0.28f;
+        private const float BodyDecalOutwardOffset = 0.07f;
+        private const float BodyDecalProjectionDepth = 0.55f;
         private const float ImpactBurstCountMin = 12f;
-        private const float ImpactBurstCountMax = 40f;
-
-        private static readonly Color BloodColor = new(200f / 255f, 18f / 255f, 28f / 255f, 1f);
+        private const float ImpactBurstCountMax = 36f;
+        private const float ImpactSpeedMin = 2.4f;
+        private const float ImpactSpeedMax = 6.5f;
+        private const float ImpactLifetimeMin = 0.15f;
+        private const float ImpactLifetimeMax = 0.4f;
+        private const float ImpactSizeMin = 0.015f;
+        private const float ImpactSizeMax = 0.04f;
+        // Color-over-lifetime is normalized 0..1; ~0.05 ≈ 40–80 ms for drip lifetimes,
+        // so droplets clear the mesh before becoming visible.
+        private const float DripSpawnInvisibleLifetimeFraction = 0.05f;
 
         private readonly Dictionary<BodyZone, GameObject> _activeParticles = new();
         private readonly Dictionary<BodyZone, DecalProjector> _bodyDecals = new();
+        private readonly Dictionary<BodyZone, float> _bodyDecalSpin = new();
         private readonly Dictionary<BodyZone, Transform> _anchors = new();
-        private readonly HashSet<BodyZone> _impactBurstPlayed = new();
         private readonly HashSet<BodyZone> _particlesInitialized = new();
 
         private GameObject _particlePrefab;
@@ -61,8 +72,44 @@ namespace SS3D.Systems.Health
             if (!snapshot.IsBleeding)
             {
                 _floorDecalTimer = 0f;
-                _impactBurstPlayed.Clear();
-                _particlesInitialized.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Immediate directional blood spray for a hit. Safe to call on every meaningful
+        /// brute hit — independent of whether the zone has started continuous bleeding.
+        /// </summary>
+        public void PlayImpactBurst(BodyZone zone, float intensity)
+        {
+            intensity = Mathf.Clamp01(intensity);
+            if (intensity <= 0f)
+            {
+                return;
+            }
+
+            EnsureAnchors();
+            if (!_anchors.TryGetValue(zone, out Transform anchor) || anchor == null)
+            {
+                return;
+            }
+
+            ParticleSystem particleSystem = GetOrCreateParticleSystem(zone, anchor);
+            if (particleSystem == null)
+            {
+                return;
+            }
+
+            if (!_particlesInitialized.Contains(zone))
+            {
+                InitializeParticle(particleSystem, _snapshot.GetZoneBleedingRate(zone));
+                _particlesInitialized.Add(zone);
+            }
+
+            EmitImpactSpray(particleSystem, anchor, intensity);
+
+            if (!particleSystem.isPlaying)
+            {
+                particleSystem.Play();
             }
         }
 
@@ -74,7 +121,6 @@ namespace SS3D.Systems.Health
             }
 
             _floorDecalTimer = 0f;
-            _impactBurstPlayed.Clear();
             _particlesInitialized.Clear();
         }
 
@@ -84,6 +130,10 @@ namespace SS3D.Systems.Health
             {
                 return;
             }
+
+            // Keep wound projectors aimed into the mesh as bones animate — identity
+            // local rotation on the bone rarely intersects skin/clothing.
+            RefreshActiveBodyDecals();
 
             _floorDecalTimer -= Time.deltaTime;
             if (_floorDecalTimer > 0f)
@@ -214,12 +264,23 @@ namespace SS3D.Systems.Health
             return depth;
         }
 
+        private Vector3 ComputeOutward(Transform anchor)
+        {
+            Vector3 outward = anchor.position - transform.position;
+            outward.y *= 0.35f;
+            if (outward.sqrMagnitude < 0.0001f)
+            {
+                outward = transform.forward;
+            }
+
+            return outward.normalized;
+        }
+
         private void SetZoneBleeding(BodyZone zone, float bleedRate)
         {
             if (bleedRate <= 0f)
             {
                 DisableZoneEffects(zone);
-                _impactBurstPlayed.Remove(zone);
                 return;
             }
 
@@ -228,8 +289,7 @@ namespace SS3D.Systems.Health
                 return;
             }
 
-            bool playImpactBurst = _impactBurstPlayed.Add(zone);
-            EnableParticle(zone, anchor, bleedRate, playImpactBurst);
+            EnableParticle(zone, anchor, bleedRate);
             EnableBodyDecal(zone, anchor, bleedRate);
         }
 
@@ -246,52 +306,103 @@ namespace SS3D.Systems.Health
             {
                 bodyDecal.gameObject.SetActive(false);
             }
+
+            _bodyDecalSpin.Remove(zone);
         }
 
-        private void EnableParticle(BodyZone zone, Transform anchor, float bleedRate, bool playImpactBurst)
+        private void RefreshActiveBodyDecals()
+        {
+            foreach (KeyValuePair<BodyZone, DecalProjector> pair in _bodyDecals)
+            {
+                DecalProjector decal = pair.Value;
+                if (decal == null || !decal.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (!_anchors.TryGetValue(pair.Key, out Transform anchor) || anchor == null)
+                {
+                    continue;
+                }
+
+                OrientBodyDecal(decal, anchor, pair.Key);
+            }
+        }
+
+        private void OrientBodyDecal(DecalProjector decal, Transform anchor, BodyZone zone)
+        {
+            Vector3 outward = ComputeOutward(anchor);
+            if (!_bodyDecalSpin.TryGetValue(zone, out float spin))
+            {
+                spin = Random.Range(0f, 360f);
+                _bodyDecalSpin[zone] = spin;
+            }
+
+            // Same into-surface convention as floor stamps: project along -normal.
+            Quaternion rotation = BloodDecalSpawner.RotationOntoSurface(outward, spin);
+            decal.transform.SetPositionAndRotation(
+                anchor.position + outward * BodyDecalOutwardOffset,
+                rotation);
+        }
+
+        private void EnableParticle(BodyZone zone, Transform anchor, float bleedRate)
+        {
+            ParticleSystem particleSystem = GetOrCreateParticleSystem(zone, anchor);
+            if (particleSystem == null)
+            {
+                return;
+            }
+
+            GameObject particle = _activeParticles[zone];
+            bool needsFullSetup = !_particlesInitialized.Contains(zone);
+            if (needsFullSetup)
+            {
+                InitializeParticle(particleSystem, bleedRate);
+                _particlesInitialized.Add(zone);
+            }
+            else
+            {
+                UpdateParticleIntensity(particleSystem, anchor, bleedRate);
+            }
+
+            particle.SetActive(true);
+
+            if (!particleSystem.isPlaying)
+            {
+                particleSystem.Play();
+            }
+        }
+
+        private ParticleSystem GetOrCreateParticleSystem(BodyZone zone, Transform anchor)
         {
             bool isNew = !_activeParticles.TryGetValue(zone, out GameObject particle) || particle == null;
-            bool wasInactive = !isNew && !particle.activeSelf;
-
             if (isNew)
             {
                 GameObject prefab = GetParticlePrefab();
                 if (prefab == null)
                 {
-                    return;
+                    return null;
                 }
 
                 particle = Instantiate(prefab, anchor.position, anchor.rotation, anchor);
                 _activeParticles[zone] = particle;
+
+                // Prefab may playOnAwake — stop before any duration/loop writes.
+                ParticleSystem spawned = particle.GetComponentInChildren<ParticleSystem>();
+                if (spawned != null)
+                {
+                    ParticleSystem.MainModule spawnedMain = spawned.main;
+                    spawnedMain.playOnAwake = false;
+                    spawned.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
             }
 
             particle.transform.SetParent(anchor, false);
             particle.transform.localPosition = Vector3.zero;
             particle.transform.localRotation = Quaternion.identity;
-
-            ParticleSystem particleSystem = particle.GetComponentInChildren<ParticleSystem>();
-            bool needsFullSetup = isNew || wasInactive || !_particlesInitialized.Contains(zone);
-            if (needsFullSetup)
-            {
-                if (particleSystem != null && particleSystem.isPlaying)
-                {
-                    particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                }
-
-                InitializeParticle(particleSystem, bleedRate, playImpactBurst);
-                _particlesInitialized.Add(zone);
-            }
-            else
-            {
-                UpdateParticleIntensity(particleSystem, bleedRate);
-            }
-
             particle.SetActive(true);
 
-            if (particleSystem != null && !particleSystem.isPlaying)
-            {
-                particleSystem.Play();
-            }
+            return particle.GetComponentInChildren<ParticleSystem>();
         }
 
         private void EnableBodyDecal(BodyZone zone, Transform anchor, float bleedRate)
@@ -304,15 +415,15 @@ namespace SS3D.Systems.Health
             if (!_bodyDecals.TryGetValue(zone, out DecalProjector decal) || decal == null)
             {
                 var decalObject = new GameObject($"BloodWoundDecal_{zone}");
-                decalObject.transform.SetParent(anchor, false);
-                decalObject.transform.localPosition = Vector3.zero;
-                decalObject.transform.localRotation = Quaternion.identity;
+                decalObject.transform.SetParent(anchor, true);
 
                 decal = decalObject.AddComponent<DecalProjector>();
                 decal.scaleMode = DecalScaleMode.ScaleInvariant;
                 decal.drawDistance = 24f;
                 decal.startAngleFade = 180f;
                 decal.endAngleFade = 180f;
+                decal.pivot = new Vector3(0f, 0f, BodyDecalProjectionDepth * 0.35f);
+                // Mask first, then material — same DecalEntityManager refresh order as floor.
                 decal.renderingLayerMask = DecalRenderingLayers.CharacterProjectorMask;
                 decal.material = BloodDecalSpawner.CreateBodyDecalMaterial();
                 _bodyDecals[zone] = decal;
@@ -330,58 +441,74 @@ namespace SS3D.Systems.Health
 
             float t = NormalizeBleedRate(bleedRate);
             float size = Mathf.Lerp(BodyDecalSizeMin, BodyDecalSizeMax, t);
-            decal.size = new Vector3(size, size, 0.35f);
+            decal.size = new Vector3(size, size, BodyDecalProjectionDepth);
             decal.fadeFactor = Mathf.Lerp(0.75f, 1f, t);
+            OrientBodyDecal(decal, anchor, zone);
             decal.gameObject.SetActive(true);
         }
 
-        private static void InitializeParticle(ParticleSystem particleSystem, float bleedRate, bool playImpactBurst)
+        private void InitializeParticle(ParticleSystem particleSystem, float bleedRate)
         {
             if (particleSystem == null)
             {
                 return;
             }
 
+            // Duration/loop cannot change while playing — impact spray hits this path
+            // when the prefab auto-starts or a prior emit left the system running.
+            if (particleSystem.isPlaying || particleSystem.particleCount > 0)
+            {
+                particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
             float t = NormalizeBleedRate(bleedRate);
 
             ParticleSystem.MainModule main = particleSystem.main;
+            main.playOnAwake = false;
             main.duration = 5f;
             main.loop = true;
             main.startLifetime = new ParticleSystem.MinMaxCurve(
                 Mathf.Lerp(0.7f, 1.1f, t),
                 Mathf.Lerp(1.2f, 1.8f, t));
             main.startSpeed = new ParticleSystem.MinMaxCurve(
-                Mathf.Lerp(0.2f, 0.55f, t),
-                Mathf.Lerp(0.55f, 1.35f, t));
+                Mathf.Lerp(0.25f, 0.5f, t),
+                Mathf.Lerp(0.55f, 1.1f, t));
             main.startSize = new ParticleSystem.MinMaxCurve(
-                Mathf.Lerp(0.045f, 0.07f, t),
-                Mathf.Lerp(0.08f, 0.14f, t));
+                Mathf.Lerp(0.016f, 0.026f, t),
+                Mathf.Lerp(0.03f, 0.045f, t));
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            main.startColor = BloodColor;
+            main.startColor = BleedingVfxCatalog.BloodColor;
             main.gravityModifier = Mathf.Lerp(2.2f, 3.2f, t);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(48f, 120f, t));
+            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(32f, 72f, t));
             main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-
-            UpdateParticleIntensity(particleSystem, bleedRate);
 
             ParticleSystem.ColorOverLifetimeModule colorOverLifetime = particleSystem.colorOverLifetime;
             colorOverLifetime.enabled = true;
             Gradient gradient = new();
             gradient.SetKeys(
-                new[] { new GradientColorKey(BloodColor, 0f), new GradientColorKey(BloodColor, 1f) },
                 new[]
                 {
-                    new GradientAlphaKey(1f, 0f),
+                    new GradientColorKey(BleedingVfxCatalog.BloodColor, 0f),
+                    new GradientColorKey(BleedingVfxCatalog.BloodColor, 1f),
+                },
+                new[]
+                {
+                    // Start invisible so continuous drips aren't seen popping on the skinned mesh.
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, DripSpawnInvisibleLifetimeFraction),
                     new GradientAlphaKey(1f, 0.45f),
                     new GradientAlphaKey(0.35f, 0.75f),
                     new GradientAlphaKey(0f, 1f),
                 });
             colorOverLifetime.color = gradient;
 
+            // Soft droplet shrink — texture is a round falloff, not a splat mask.
             ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particleSystem.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
-            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.75f));
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
+                1f,
+                AnimationCurve.EaseInOut(0f, 1f, 1f, 0.55f));
 
             ParticleSystemRenderer renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
             Material particleMaterial = BleedingVfxCatalog.Instance != null
@@ -392,17 +519,21 @@ namespace SS3D.Systems.Health
                 renderer.material = particleMaterial;
             }
 
+            // Mild stretch — enough for droplet motion, not huge streaks.
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.velocityScale = 0.06f;
+            renderer.lengthScale = 1.05f;
+            renderer.cameraVelocityScale = 0f;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            if (playImpactBurst)
-            {
-                int burst = Mathf.RoundToInt(Mathf.Lerp(ImpactBurstCountMin, ImpactBurstCountMax, t));
-                particleSystem.Emit(burst);
-            }
+            Transform anchor = particleSystem.transform.parent != null
+                ? particleSystem.transform.parent
+                : transform;
+            UpdateParticleIntensity(particleSystem, anchor, bleedRate);
         }
 
-        private static void UpdateParticleIntensity(ParticleSystem particleSystem, float bleedRate)
+        private void UpdateParticleIntensity(ParticleSystem particleSystem, Transform anchor, float bleedRate)
         {
             if (particleSystem == null)
             {
@@ -410,26 +541,81 @@ namespace SS3D.Systems.Health
             }
 
             float t = NormalizeBleedRate(bleedRate);
+            Vector3 outward = ComputeOutward(anchor);
 
+            // Moderate drip volume — smaller droplets, wider cone.
             ParticleSystem.EmissionModule emission = particleSystem.emission;
-            emission.rateOverTime = Mathf.Lerp(10f, 42f, t);
+            emission.rateOverTime = bleedRate > 0f
+                ? Mathf.Lerp(5f, 16f, t)
+                : 0f;
 
             ParticleSystem.ShapeModule shape = particleSystem.shape;
             shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = Mathf.Lerp(0.025f, 0.055f, t);
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = Mathf.Lerp(28f, 42f, t);
+            shape.radius = Mathf.Lerp(0.03f, 0.06f, t);
+            shape.length = 0.1f;
             shape.radiusThickness = 1f;
-            shape.rotation = Vector3.zero;
+            shape.arc = 360f;
+            // Cone emits along +Z; aim slightly out from the body and down.
+            Vector3 localEmit = particleSystem.transform.InverseTransformDirection(
+                (outward + Vector3.down * 0.45f).normalized);
+            if (localEmit.sqrMagnitude < 0.0001f)
+            {
+                localEmit = Vector3.down;
+            }
+
+            shape.rotation = Quaternion.LookRotation(localEmit).eulerAngles;
             shape.scale = Vector3.one;
 
             ParticleSystem.MainModule main = particleSystem.main;
             main.startSpeed = new ParticleSystem.MinMaxCurve(
-                Mathf.Lerp(0.2f, 0.55f, t),
-                Mathf.Lerp(0.55f, 1.35f, t));
+                Mathf.Lerp(0.25f, 0.5f, t),
+                Mathf.Lerp(0.55f, 1.1f, t));
             main.startSize = new ParticleSystem.MinMaxCurve(
-                Mathf.Lerp(0.045f, 0.07f, t),
-                Mathf.Lerp(0.08f, 0.14f, t));
-            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(48f, 120f, t));
+                Mathf.Lerp(0.016f, 0.026f, t),
+                Mathf.Lerp(0.03f, 0.045f, t));
+            main.gravityModifier = Mathf.Lerp(2.2f, 3.2f, t);
+            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(32f, 72f, t));
+
+            // Soft lateral push so drips leave the mesh instead of swimming inside it.
+            ParticleSystem.ForceOverLifetimeModule force = particleSystem.forceOverLifetime;
+            force.enabled = true;
+            force.space = ParticleSystemSimulationSpace.World;
+            Vector3 push = outward * Mathf.Lerp(0.55f, 1.6f, t);
+            force.x = push.x;
+            force.y = push.y * 0.2f;
+            force.z = push.z;
+        }
+
+        private void EmitImpactSpray(ParticleSystem particleSystem, Transform anchor, float intensity)
+        {
+            int count = Mathf.RoundToInt(Mathf.Lerp(ImpactBurstCountMin, ImpactBurstCountMax, intensity));
+            Vector3 outward = ComputeOutward(anchor);
+            Vector3 origin = anchor.position + outward * 0.04f;
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 jitter = Random.insideUnitSphere;
+                Vector3 dir = (outward * 0.85f + Vector3.up * 0.25f + jitter * 1.05f).normalized;
+                float speed = Mathf.Lerp(ImpactSpeedMin, ImpactSpeedMax, intensity)
+                    * Random.Range(0.65f, 1.2f);
+
+                var emit = new ParticleSystem.EmitParams
+                {
+                    position = origin + jitter * 0.03f,
+                    velocity = dir * speed,
+                    startLifetime = Mathf.Lerp(ImpactLifetimeMin, ImpactLifetimeMax, intensity)
+                        * Random.Range(0.75f, 1.15f),
+                    startSize = Random.Range(
+                        ImpactSizeMin,
+                        Mathf.Lerp(ImpactSizeMin * 1.4f, ImpactSizeMax, intensity)),
+                    startColor = BleedingVfxCatalog.BloodColor,
+                    applyShapeToPosition = false,
+                };
+
+                particleSystem.Emit(emit, 1);
+            }
         }
 
         private GameObject GetParticlePrefab()

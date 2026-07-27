@@ -20,7 +20,6 @@ namespace SS3D.Editor.URPMigration
             EditorApplication.Exit(Run() ? 0 : 1);
         }
 
-        [MenuItem("SS3D/URP Migration/Run Foundation Setup")]
         public static void SetupFromMenu()
         {
             if (Run())

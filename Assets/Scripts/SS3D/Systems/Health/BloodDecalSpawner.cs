@@ -121,16 +121,28 @@ namespace SS3D.Systems.Health
         /// <summary>
         /// Align projector local +Z into the surface, then spin the splat in the surface plane.
         /// </summary>
-        private static Quaternion DecalRotationOntoSurface(Vector3 normal, float spinDegrees)
+        /// <remarks>
+        /// URP DecalProjector projects along local +Z (after its internal -90°X remap).
+        /// <see cref="Quaternion.LookRotation(Vector3, Vector3)"/>'s second argument is
+        /// <b>upwards</b>, not a surface tangent — passing <c>Cross(into, up)</c> rolled wall
+        /// projectors 90° so the volume grazed the face and stamped nothing. Floors need a
+        /// non-up hint because into-surface is parallel to world up.
+        /// </remarks>
+        public static Quaternion RotationOntoSurface(Vector3 surfaceNormal, float spinDegrees)
         {
-            Vector3 intoSurface = -normal.normalized;
-            // When projecting straight down/up, pick a stable tangent so LookRotation is well-defined.
-            Vector3 reference = Mathf.Abs(Vector3.Dot(intoSurface, Vector3.up)) > 0.99f
+            Vector3 intoSurface = -surfaceNormal.normalized;
+            // Projecting vertically: world up is parallel to into-surface — use forward as the up hint.
+            // Projecting onto walls: world up keeps the stamp upright on the face.
+            Vector3 upwards = Mathf.Abs(Vector3.Dot(intoSurface, Vector3.up)) > 0.99f
                 ? Vector3.forward
                 : Vector3.up;
-            Vector3 tangent = Vector3.Cross(intoSurface, reference).normalized;
-            Quaternion align = Quaternion.LookRotation(intoSurface, tangent);
+            Quaternion align = Quaternion.LookRotation(intoSurface, upwards);
             return align * Quaternion.Euler(0f, 0f, spinDegrees);
+        }
+
+        private static Quaternion DecalRotationOntoSurface(Vector3 normal, float spinDegrees)
+        {
+            return RotationOntoSurface(normal, spinDegrees);
         }
 
         private static GameObject CreateDecalInstance()

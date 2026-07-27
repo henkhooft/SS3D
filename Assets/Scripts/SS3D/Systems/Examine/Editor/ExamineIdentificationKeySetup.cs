@@ -8,7 +8,7 @@ namespace SS3D.Systems.Examine.Editor
 {
     public static class ExamineIdentificationKeySetup
     {
-        [MenuItem("SS3D/Localization/Examine/Add Identification Card Template Keys")]
+        /// <summary>Tier C seed — no MenuItem. Call from batch if Examine keys drift.</summary>
         public static void AddIdentificationCardTemplateKeys()
         {
             StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(ExamineCanonicalKeyGenerator.ExamineTableName);
@@ -37,7 +37,7 @@ namespace SS3D.Systems.Examine.Editor
             Debug.Log("Added identification card + structural integrity template keys to the Examine English table.");
         }
 
-        [MenuItem("SS3D/Localization/Examine/Add Structural Integrity Template Keys")]
+        /// <summary>Tier C seed — no MenuItem. Prefer <see cref="AddIdentificationCardTemplateKeys"/> which also upserts integrity keys.</summary>
         public static void AddStructuralIntegrityTemplateKeys()
         {
             StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(ExamineCanonicalKeyGenerator.ExamineTableName);

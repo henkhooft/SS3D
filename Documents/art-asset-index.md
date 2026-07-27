@@ -6,7 +6,7 @@ Use this index when implementing a feature that needs art. Most game-ready asset
 live in [RE-SS3D/SS3D-Art](https://github.com/RE-SS3D/SS3D-Art) but are not yet
 imported into Unity.
 
-**Generated:** 2026-07-10T23:04:40.973774+00:00
+**Generated:** 2026-07-26T08:41:55.303236+00:00
 
 ## When to use
 
@@ -41,14 +41,14 @@ grep -i "airlock" Documents/art-available-for-import.json
 
 ## Available for import
 
-**1618** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
+**2045** game-ready assets in SS3D-Art not yet in `Assets/Art/`:
 
 | Category | Available |
 |----------|----------:|
+| Graphics | 672 |
 | Models | 672 |
-| Textures | 537 |
-| Graphics | 204 |
-| Sound | 177 |
+| Textures | 513 |
+| Sound | 160 |
 | Animations | 18 |
 | Fonts | 10 |
 
@@ -58,9 +58,9 @@ Full list: [`art-available-for-import.json`](art-available-for-import.json)
 
 | Metric | Count |
 |--------|------:|
-| Already imported (in-game + SS3D-Art) | 637 |
-| In-game only | 90 |
-| Available for import | 1618 |
+| Already imported (in-game + SS3D-Art) | 210 |
+| In-game only | 4996 |
+| Available for import | 2045 |
 | Promotional artwork (not game-ready) | 215 |
 
 Complete data with import status: [`art-asset-index.json`](art-asset-index.json)
@@ -94,5 +94,4 @@ Use `--refresh-cache` to force a new fetch from GitHub.
 ## Related
 
 - [SS3D art guide](https://ss3d.gitbook.io/art-guide/) — contribution workflow
-- [icon-index.md](icon-index.md) — external game-icons SVGs for UI work
 - [AGENTS.md](../../AGENTS.md) — agent navigation

@@ -16,6 +16,7 @@
         "SS3D.Interactions",
         "SS3D.Tests.Common",
         "SS3D.UI.MachineInterface",
+        "SS3D.UI.MainHud",
         "SS3D.Localization",
         "Unity.Localization",
         "Unity.InputSystem",

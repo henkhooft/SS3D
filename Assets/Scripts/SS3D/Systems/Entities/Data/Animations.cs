@@ -31,6 +31,8 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int Throw = Animator.StringToHash("Throw");
             public static readonly int Emote = Animator.StringToHash("Emote");
             public static readonly int Flinch = Animator.StringToHash("Flinch");
+            public static readonly int FireRifle = Animator.StringToHash("FireRifle");
+            public static readonly int Reload = Animator.StringToHash("Reload");
             public static readonly int Jump = Animator.StringToHash("Jump");
             public static readonly int TurnLeft90 = Animator.StringToHash("TurnLeft90");
             public static readonly int TurnRight90 = Animator.StringToHash("TurnRight90");
@@ -44,6 +46,8 @@ namespace SS3D.Systems.Entities.Data
                     AnimationTriggerId.Throw => Throw,
                     AnimationTriggerId.Emote => Emote,
                     AnimationTriggerId.Flinch => Flinch,
+                    AnimationTriggerId.FireRifle => FireRifle,
+                    AnimationTriggerId.Reload => Reload,
                     _ => 0,
                 };
             }

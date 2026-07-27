@@ -126,9 +126,17 @@ namespace SS3D.Networking
 
                     break;
                 case NetworkType.Host:
-                    Log.Information(this, "Hosting a new server on port {port}", Logs.Important, Port);
+                    // Built -host bats historically omit -ip=; ResetOnBuiltApplication clears
+                    // ServerAddress. Empty → LiteNetLib DNS (IPv6-first) → link-local fe80::…
+                    // instead of loopback; host client then flaps and CCR shows Retry/Quit.
+                    string hostClientAddress = string.IsNullOrWhiteSpace(ServerAddress)
+                        ? "127.0.0.1"
+                        : ServerAddress;
+                    ServerAddress = hostClientAddress;
+                    networkSettings.ServerAddress = hostClientAddress;
+                    Log.Information(this, "Hosting a new server on port {port} (local client {address})", Logs.Important, Port, hostClientAddress);
                     bool serverOk = networkManager.ServerManager.StartConnection(Port);
-                    bool clientOk = networkManager.ClientManager.StartConnection(ServerAddress, Port);
+                    bool clientOk = networkManager.ClientManager.StartConnection(hostClientAddress, Port);
                     if (!serverOk)
                     {
                         LogIfConnectionFailedToStart("server", false);

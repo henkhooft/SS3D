@@ -2,6 +2,7 @@ using SS3D.Application;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.SceneManagement;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.ScreenEffects;
 using SS3D.Systems.Testing;
@@ -43,6 +44,8 @@ namespace SS3D.Systems.Bootstrap
             EnsureSubSystem<InputSubSystem>();
             EnsureSubSystem<WorldReadinessSubSystem>();
             EnsureSubSystem<ScreenEffectsSubSystem>();
+            EnsureSubSystem<AmbienceSubSystem>();
+            EnsureSubSystem<PersonalAudioSubSystem>();
             EnsureSubSystem<AutomationSubSystem>();
             EnsureSubSystem<VisionSubSystem>();
             EnsureSubSystem<ApplicationInitializerSubSystem>();

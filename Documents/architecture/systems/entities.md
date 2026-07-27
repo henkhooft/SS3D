@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 818aaab59 — 2026-07-23
+> Verified: f7990ea18 — 2026-07-26
 
 # Entities
 
@@ -18,52 +18,78 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateMachine.cs` — authoritative body/combat snapshot
-- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee Upper Body weight; `SetPosingSuppressed` for collapse
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidPredictedMovement.cs` — FishNet predicted move + space float (when enabled)
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/HumanoidLivingController.cs` — **live** loco path (`Human.prefab` has PredictedMovement disabled); owns space float coast + `SetFloating`
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidSpaceSupport.cs` — `GetSupportAt` / `HumanoidSupportState` (Unknown / Supported / Unsupported)
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/AnimationOrchestrator.cs` — snapshot → Animator; Melee/Ranged Upper Body weight; Ranged CrossFade to Rifle Aim Idle; `SetPosingSuppressed` for collapse
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/BodyPresentationState.cs` — locomotion / collapsed / dead enum
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Ragdoll.cs` — presentation authority (`ServerSetPresentation` / `ApplyPresentation`)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidIkController.cs` — combat look-at; torso IK off during Attack Swing
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateBridge.cs` — holds, stance, limp + `InjuredLeg` / arms, rare hurt Emote, `MirrorUpperBody`; suppresses while `Presentation != Locomotion`
-- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots
+- `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidCombatController.cs` — Harm intent toggle; `OnHitReceived` → stagger/`Flinch` (called from health `ApplyDamage`)
+- `Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanCharacterAnimator.controller` — Peaceful/Melee/Ranged/Injured blends + limp oneshots; Floating → `Mix_Floating`; stance-aware **Flinch**; Ranged Upper Body **Rifle Aim Idle** + **FireRifle** / **Reload** (`Mix_AimingIdle` / `Mix_FiringRifle` / `Mix_Reloading`)
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
-- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single entry point for every `Human.prefab`-targeting recipe tool (dev-hack removal, ContainerInteractive strip, hands wiring); add new Human-prefab recipes here rather than leaving them as undiscoverable one-off menu items
+- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
+- Clip bake helpers (`HumanoidClipBakeUtility`) are demoted statics (no menu) — rare Mixamo/placeholder path; call from batch/code if needed.
 
 ## Extension points
 
-- Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips.
-- Shelved clips (not wired): `Assets/Art/Animations/Misc/`, `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag content.
+- Stance packs: Peaceful (Locomotion), Melee (Pro Melee Axe), Ranged (Basic Shooter), Injured (Male Injured Pack). Rebuild after reimporting Mix_* clips (`SS3D → Animation → Rebuild Combat Stance Blend Trees`).
+- Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
+- Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch` (one packed publish). Base selects by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), gut (Melee), `Mix_HitReaction` (Ranged). Additive layer also takes `Flinch` → gut with a **lerped** weight (~0.75) while Staggered. `Mix_ShoulderHitAndFall` / get-ups deferred.
+- Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. Upper Body stays weighted for the whole Ranged stance on **Rifle Aim Idle** (`Mix_AimingIdle`); Fire/Reload oneshot and return there. Orchestrator CrossFades to Aim Idle on Ranged enter (Hold Weapon had no path otherwise). Base Ranged FreeformCartesian keeps foot phase — do not pulse Upper Body weight per shot.
 - `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
+- **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; skip gravity only while no physical floor collider is underfoot (raycast), then resume normal loco so spawn is not soft-locked when the map is visible but occupancy is still Unknown. Keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.
 
 ## Pitfalls
 
+- **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
+- **Remote fire/reload never plays:** `CmdFireTrigger` / stagger must `ApplyLocalSnapshot()` (pack `ActiveTrigger`) **before** `_triggerSequence++`. SyncVar OnChange rebuilds from the old pack synchronously and otherwise wipes the trigger — owner still sees local prediction.
+- **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
+- **`SetMind(null)` must `RemoveOwnership()`:** death `SwapMinds` assigns the ghost's empty mind to the corpse. Leaving FishNet Owner on the corpse delivers corpse TargetRpcs (hit flash) to the ghost — see [health](health.md). Server still `AlignToHips` on death ragdolls; do not write `IsFacingDown` (ServerRpc setter) without ownership — use a local facing bool.
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.
 - **Walk cycle while “collapsed”:** Coimbra `UpdateEvent` keeps firing after `enabled=false`; limp bridge can still publish snapshots. Applier must `SetPosingSuppressed`; readers early-out on `Presentation != Locomotion` — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
+- **Remote ragdoll twitches:** observers must stay kinematic while bone NetworkTransforms receive. Only owner (living knockdown) or server (death corpse) runs non-kinematic physics + AlignToHips. Do not `CharacterController.Move` while presentation ≠ Locomotion.
+- **Remote CharacterController must stay disabled:** client-authoritative NetworkTransform cannot move the server transform while CC is enabled (teleports are ignored). Keep CC on only for `IsOwner`; otherwise server-side proximity (airlocks) never sees remotes. Hit 2026-07-26.
+- **Reclaim must fire `LocalPlayerObjectChanged`:** `TryReclaimEntity` restores ownership without Mind SyncVar change. `Entity.OnOwnershipClient` invokes the event so HUD/lobby leave the menu — see [player-control](player-control.md). Hit 2026-07-26.
 - **`Ragdoll.OnDisable` must not `Recover()`:** ownership/network teardown would stand a corpse back into locomotion.
 - **Timed knockdown from server:** call `ServerRecover`, not `Recover()` (ServerRpc is a no-op from server).
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2: horizontal / downward / backhand).
-- **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* use `MirrorUpperBody` (`Hand.Side`). Do not mirror Base Layer FreeformCartesian — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight`, not mega `Human.prefab`.
+- **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* use `MirrorUpperBody` (`Hand.Side`). Do not mirror Base Layer FreeformCartesian — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight`, not mega `Human.prefab`. Two-hand rifles (`RequiresBothHands`) force `MirrorUpperBody=false` via `TwoHandedWeaponRules` even when the left hand is selected.
 - **Every body part is its own nested `NetworkObject`, not a flat component list:** `HumanTorso`/`HumanHead`/each limb prefab under `HumanBodyParts/` carries its own `NetworkObject` with `IsNested = true`. The root `NetworkObject`'s `_networkBehaviours` flattens across those nested boundaries (it lists behaviours living inside body-part prefabs directly). A recipe tool that reuses `StorageContainerPrefabSetup`-style behaviour collection (which stops descending at any child with a `NetworkObject`) will silently drop every nested body-part behaviour from the rebuilt list — only stop at a child Nob when `!IsNested`. See `HumanPrefabHygiene.CollectNetworkBehaviours` ([2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md)).
 - **Stale `m_Script` on stripped nested-prefab mirrors is cosmetic, not a broken reference:** a `stripped` MonoBehaviour placeholder's authoritative type comes from `m_CorrespondingSourceObject` in the source prefab, not its own cached `m_Script` GUID — the cache can go stale (and even reference a since-deleted class) after the source prefab's component type changes without Human.prefab being resaved in the Editor. Fix by updating the cached GUID to match the source's current type; do not delete the stripped block — it is a live entry in the root `NetworkObject`'s `_networkBehaviours` array and deleting it (versus correcting it) shifts every subsequent behaviour's index.
 - **Editing a nested body-part prefab asset directly leaves `Human.prefab`'s own mirror of it stale:** running a recipe that destroys a component on `HumanHead.prefab`/`HumanTorso.prefab` (e.g. `BodyPartContainerInteractiveStrip`) does not retroactively update `Human.prefab`'s stripped mirror of that instance — that only refreshes the next time `Human.prefab` itself is reloaded and resaved. `HumanPrefabRecipes.RunAllMenu` always calls `HumanPrefabHygiene.ResyncNestedPrefabInstances()` last, regardless of what the other recipes changed, specifically to converge this. Any new recipe that removes a component from a nested body-part prefab must trigger the same resync.
 - **Injured oneshots:** Jump / Turn90 / Emote while limping → Injured Jump / Turn / Wave (Base Layer); healthy oneshots require `LimpSide == 0`. **Jump/Turn90 are not bound in `Controls.inputed`** and nothing calls `PlayLocomotionTrigger` yet — presentation only.
 - **Combat walk→run surge:** predicted movement must ease world speed and anim `VelZ` together (`GetAnimSpeedForScale`). Do not let `ProcessPlayerInput` publish snapped Speed while predicted movement owns loco.
 - **Batch rebuild while Editor open:** run the rebuild menu, or drop a **user-writable** `artifacts/force-rebuild-animator.flag` (root-owned flags fail to delete and skip rebuild). Batchmode cannot open a held project.
+- **Do not flinch when collapsed/dead:** `TryApplyHitFlinch` requires `Ragdoll.Presentation == Locomotion` — never invent a parallel fall path from `Mix_ShoulderHitAndFall` here.
+- **Stagger Additive is soft + Flinch, not Empty Additive:** `Empty Additive` is remapped to `Mix_InjuredHurtingIdle`. Slamming Additive weight to 1 on stagger shows hurting idle (looks like a flinch) then snaps off. Drive Additive via unmuted `Flinch` → gut and **lerp** weight (see `StaggerAdditiveWeight` / `TickAdditiveWeight`). Do not half-weight Full Body Override on stagger.
 - **Never assign injury SyncVars on pure clients:** `HumanoidBodyStateBridge` runs `Update` everywhere and calls `SetInjuredArms`/`SetInjuredLeg`. Those SyncVars are server-only — writing them on a client spam-logs FishNet `Cannot complete operation as server when server is not active` (thousands/sec after embark). Guard with `IsServer` before assigning; clients apply via SyncVar OnChange.
+- **`SetLocomotionMode(Idle|Walk|Run)` clears `IsFloating`:** while space-coasting, call `SetFloating(true)` only — never write gait modes. `SetFloating(false)` restores Idle when leaving Floating locomotion.
+- **Client spawn stuck in Mix_Floating:** pure-client maps start empty and AOI often delivers non-plenum layers first. `GetSupportAt` must return `Unknown` for client occupancy-miss **and** client `!HasPlenum` — never local Unsupported. Server occupancy-miss is Unsupported only after `TileMapLoaded` (empty UnnamedMap must not pack Floating). Deep-space float on clients is SyncVar-driven (`ServerReconcileSpaceSupport`); Unknown keep-coast only while that SyncVar is already true. Structural register: [TECH_DEBT.md](../TECH_DEBT.md) §1.17.
+- **Early Embark fall-through floor:** `Unknown` used to make `TryProcessSpaceFloat` return false → living path applied `CharacterController.Move(Physics.gravity)` with no tile colliders yet. Skip gravity on Unknown only while a downward raycast finds no floor; once colliders exist (or allow planar walk with no gravity), resume loco — a hard hold soft-locked movement after the map was visible but client `!HasPlenum` stayed Unknown. Same guard in `HumanoidPredictedMovement` when enabled. Hit 2026-07-26.
+- **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
+- **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar; dedicated server still reconciles Floating via `ServerReconcileSpaceSupport`.
+- **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
 
 ## Depends on / Used by
 
-- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md)
+- **Depends on:** [tile](tile.md) (plenum occupancy for living space float)
+- **Used by:** [rounds-lobby](rounds-lobby.md), [player-control](player-control.md), [health](health.md), [combat](combat.md), [audio](audio.md) (`LocalPlayerObjectChanged` — `ListenerPosition`, `AmbienceSubSystem`; footsteps skip while `IsFloating`)
 
 ## Related docs
 
 - [2026-07_animation-polish](../2026-07_animation-polish.md) — **shipped** melee/limp/mirror/severity polish
 - [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** collapse/death presentation
+- [2026-07_health-env-feel](../2026-07_health-env-feel.md) — **shipped** hit flinch / critical feel (adjacent)
 - [2026-07_player-body-animation](../2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
+- [2026-07_editor-tooling-tiers](../2026-07_editor-tooling-tiers.md) — Editor MenuItem A/B/C policy
 - [2026-07_human-prefab-decomposition](../2026-07_human-prefab-decomposition.md) — **planned** Human.prefab paydown
 - [animation_system_design plan](../../plans/animation_system_design_250de599.plan.md)
 - [INDEX.md](../INDEX.md)

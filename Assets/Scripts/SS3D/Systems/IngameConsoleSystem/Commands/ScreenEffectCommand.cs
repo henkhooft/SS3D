@@ -13,26 +13,45 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
     public class ScreenEffectCommand : Command
     {
         public override string ShortDescription => "Set a screen-space effect's intensity";
-        public override string Usage => "(effect name) (intensity 0-1)\n"
+        public override string Usage => "(effect name) (intensity 0-1) | release\n"
             + "effects: hotroom, onfire, coldroom, freezing, lowoxygen, dyingcritical, bloodlosstunnelvision, concussion, unconscious\n"
-            + "example: screeneffect onfire 0.8";
+            + "example: screeneffect onfire 0.8\n"
+            + "screeneffect release — return control to health/atmos mappers";
         public override ServerRoleTypes AccessLevel => ServerRoleTypes.User;
         public override CommandType Type => CommandType.Client;
 
-        private record CalculatedValues(ScreenEffectType Type, float Intensity) : ICalculatedValues;
+        private record CalculatedValues(bool Release, ScreenEffectType Type, float Intensity) : ICalculatedValues;
 
         public override string Perform(string[] args, NetworkConnection conn = null)
         {
             if (!ReceiveCheckResponse(args, out CheckArgsResponse response, out CalculatedValues values)) return response.InvalidArgs;
 
-            SubSystems.Get<ScreenEffectsSubSystem>()?.SetEffect(values.Type, values.Intensity);
+            ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            if (effects == null)
+            {
+                return "ScreenEffectsSubSystem unavailable";
+            }
 
-            return $"{values.Type} set to {values.Intensity:0.00}";
+            if (values.Release)
+            {
+                effects.SetDebugOverrideActive(false);
+                return "Screen-effect debug override released";
+            }
+
+            effects.SetDebugOverrideActive(true);
+            effects.SetEffect(values.Type, values.Intensity);
+
+            return $"{values.Type} set to {values.Intensity:0.00} (debug override on)";
         }
 
         protected override CheckArgsResponse CheckArgs(string[] args)
         {
             CheckArgsResponse response = new();
+
+            if (args.Length == 1 && args[0].Equals("release", StringComparison.OrdinalIgnoreCase))
+            {
+                return response.MakeValid(new CalculatedValues(true, default, 0f));
+            }
 
             if (args.Length != 2) return response.MakeInvalid(WrongArgsText);
 
@@ -40,7 +59,7 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
 
             if (!float.TryParse(args[1], out float intensity)) return response.MakeInvalid("Invalid intensity");
 
-            return response.MakeValid(new CalculatedValues(type, intensity));
+            return response.MakeValid(new CalculatedValues(false, type, intensity));
         }
     }
 }

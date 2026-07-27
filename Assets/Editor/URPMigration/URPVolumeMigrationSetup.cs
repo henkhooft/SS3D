@@ -42,7 +42,6 @@ namespace SS3D.Editor.URPMigration
             };
         }
 
-        [MenuItem("SS3D/URP Migration/Migrate Post Processing To URP Volumes")]
         public static void MigrateFromMenu()
         {
             if (Run(silent: false))

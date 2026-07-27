@@ -381,7 +381,7 @@ MonoBehaviour:
   _animator: {fileID: 0}
   _smoothFloats: 1
   _interpolation: 2
-  _clientAuthoritative: 1
+  _clientAuthoritative: 0
   _sendToOwner: 0
 --- !u!114 &-4222084348795127515
 MonoBehaviour:

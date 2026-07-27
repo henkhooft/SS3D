@@ -5,12 +5,19 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Atmospherics.ECS;
+using SS3D.Systems.Atmospherics.Pipes;
+using SS3D.Systems.Audio;
+using AudioType = SS3D.Systems.Audio.AudioType;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.ScreenEffects;
+using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -32,10 +39,15 @@ namespace SS3D.Systems.Health
         private WoundVfx _woundVfx;
         private HumanAnatomyController _anatomy;
         private Ragdoll _ragdoll;
+        private HumanoidCombatController _combatController;
         private HumanInventory _inventory;
         private bool _deathTriggered;
         private bool _healthCollapseActive;
-        private bool _drivingLocalScreenEffects;
+        private bool _drivingLocalPresentation;
+        private HealthEnvironmentState _environment = HealthEnvironmentState.SafeDefault;
+        private HealthState _previousAudioHealthState = HealthState.Healthy;
+        private bool _previousAudioVacuum;
+        private float _nextScreamTime;
 
         [SyncVar(OnChange = nameof(SyncSnapshot))]
         private HealthSnapshot _snapshot = HealthSnapshot.Default;
@@ -214,10 +226,56 @@ namespace SS3D.Systems.Health
 
             PublishSnapshot();
 
-            if (brute + burn > 0f && Owner.IsValid)
+            // Dead / unminded corpses must not flash the ghost's screen — Owner may still be valid
+            // briefly if SetMind(null) has not run yet; never TargetRpc after death latch.
+            if (brute + burn > 0f
+                && Owner.IsValid
+                && !_deathTriggered
+                && _snapshot.State != HealthState.Dead)
             {
                 RpcHitFlash(Owner);
             }
+
+            if (brute >= HealthConstants.BloodSprayMinBrute)
+            {
+                float intensity = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
+                RpcBloodImpactBurst(zone, intensity);
+                TryApplyHitFlinch(brute);
+                PlayHitImpactSounds(intensity);
+                TryPlayPainScream(brute);
+            }
+        }
+
+        /// <summary>
+        /// Standing flinch via <see cref="HumanoidCombatController.OnHitReceived"/> — only while locomotion.
+        /// </summary>
+        [Server]
+        private void TryApplyHitFlinch(float brute)
+        {
+            if (_ragdoll == null)
+            {
+                _ragdoll = GetComponent<Ragdoll>();
+            }
+
+            if (_ragdoll != null && _ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
+            if (_combatController == null)
+            {
+                _combatController = GetComponent<HumanoidCombatController>();
+            }
+
+            if (_combatController == null)
+            {
+                return;
+            }
+
+            float t = Mathf.Clamp01(brute / HealthConstants.BloodSprayFullBrute);
+            // Keep stagger through most of the flinch clip so Additive Flinch weight can lerp out softly.
+            float staggerSeconds = Mathf.Lerp(0.55f, 0.85f, t);
+            _combatController.OnHitReceived(Vector3.zero, knockbackForce: 0f, staggerSeconds);
         }
 
         /// <summary>
@@ -396,6 +454,7 @@ namespace SS3D.Systems.Health
 
             _anatomy.ExecuteServerSeverance(zone);
             RpcApplySeveranceVisuals(zone);
+            RpcBloodImpactBurst(zone, 1f);
             PublishSnapshot();
             return true;
         }
@@ -406,11 +465,125 @@ namespace SS3D.Systems.Health
             _anatomy?.ApplyVisualSeverance(zone);
         }
 
+        [ObserversRpc(RunLocally = true)]
+        private void RpcBloodImpactBurst(BodyZone zone, float intensity)
+        {
+            _woundVfx?.PlayImpactBurst(zone, intensity);
+        }
+
+        /// <summary>
+        /// Positional flesh + blood SFX at the body (audio.md §3). Server-triggered so the pool
+        /// fans out via ObserversRpc; parent null so StopAudioSource on the body cannot kill it.
+        /// </summary>
         [Server]
-        public void TickHealth(float atmosphereO2 = 1f)
+        private void PlayHitImpactSounds(float intensity)
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                return;
+            }
+
+            Vector3 position = Transform.position;
+            string[] flesh = CombatAudioTrackIds.FleshHit;
+            string fleshId = flesh[UnityEngine.Random.Range(0, flesh.Length)];
+            float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
+            audio.PlayAudioSource(AudioType.Sfx, fleshId, position, null, false, 0.75f, pitch);
+
+            string bloodId = intensity >= 0.65f ? HealthAudioTrackIds.Splat : HealthAudioTrackIds.Blood1;
+            audio.PlayAudioSource(AudioType.Sfx, bloodId, position, null, false, 0.55f + 0.35f * intensity, pitch);
+        }
+
+        [Server]
+        private void TryPlayPainScream(float brute)
+        {
+            if (brute < HealthConstants.ScreamMinBrute || Time.time < _nextScreamTime)
+            {
+                return;
+            }
+
+            // Dead / unconscious / collapsed bodies do not vocalize — flesh impact SFX still play.
+            if (_deathTriggered
+                || _snapshot.State == HealthState.Dead
+                || !_snapshot.IsConscious)
+            {
+                return;
+            }
+
+            if (_ragdoll == null)
+            {
+                _ragdoll = GetComponent<Ragdoll>();
+            }
+
+            if (_ragdoll != null && _ragdoll.Presentation != BodyPresentationState.Locomotion)
+            {
+                return;
+            }
+
+            _nextScreamTime = Time.time + HealthConstants.ScreamCooldownSeconds;
+            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
+                AudioType.Sfx,
+                HealthAudioTrackIds.MaleScream,
+                Transform.position,
+                null,
+                false,
+                0.85f,
+                UnityEngine.Random.Range(0.95f, 1.05f));
+        }
+
+        /// <summary>
+        /// Gasp/choke on entering critical or vacuum — positional so nearby players hear it.
+        /// </summary>
+        [Server]
+        private void TryPlayHealthStateAudio(HealthSnapshot snapshot)
+        {
+            AudioSubSystem audio = SubSystems.Get<AudioSubSystem>();
+            if (audio == null)
+            {
+                _previousAudioHealthState = snapshot.State;
+                _previousAudioVacuum = snapshot.Environment.IsVacuum;
+                return;
+            }
+
+            bool enteredCritical = snapshot.State == HealthState.Critical
+                && _previousAudioHealthState != HealthState.Critical
+                && snapshot.IsConscious
+                && !snapshot.IsCardiacArrest;
+
+            bool enteredVacuum = snapshot.Environment.IsVacuum && !_previousAudioVacuum;
+
+            if (enteredCritical || enteredVacuum)
+            {
+                string clipId;
+                if (enteredVacuum)
+                {
+                    string[] choke = HealthAudioTrackIds.Choke;
+                    clipId = choke[UnityEngine.Random.Range(0, choke.Length)];
+                }
+                else
+                {
+                    clipId = HealthAudioTrackIds.MaleGasp;
+                }
+
+                audio.PlayAudioSource(
+                    AudioType.Sfx,
+                    clipId,
+                    Transform.position,
+                    null,
+                    false,
+                    0.8f,
+                    UnityEngine.Random.Range(0.95f, 1.05f));
+            }
+
+            _previousAudioHealthState = snapshot.State;
+            _previousAudioVacuum = snapshot.Environment.IsVacuum;
+        }
+
+        [Server]
+        public void TickHealth(float atmosphereO2 = 1f, float toxinIntake = HealthConstants.BaseToxinIntake)
         {
             OrganSimulation.TickOrganFunction(_pools, _organs);
-            _pools = HealthSimulation.TickPools(_pools, _zones, _organs, atmosphereO2);
+            _pools = HealthSimulation.TickPools(_pools, _zones, _organs, atmosphereO2, toxinIntake);
 
             for (int i = 0; i < _modifiers.Count; i++)
             {
@@ -440,7 +613,179 @@ namespace SS3D.Systems.Health
             }
 
             _tickTimer = 0f;
-            TickHealth();
+            TickHealthFromEnvironment();
+        }
+
+        [Server]
+        private void TickHealthFromEnvironment()
+        {
+            if (HealthEnvironmentSettings.AtmosphericDamageDisabled)
+            {
+                _environment = HealthEnvironmentState.SafeDefault;
+                TickHealth(atmosphereO2: 1f, toxinIntake: HealthConstants.BaseToxinIntake);
+                return;
+            }
+
+            _environment = SampleEnvironmentAtBody();
+            ApplyEnvironmentalExposure(_environment);
+            ApplyBreathExchange(_environment);
+
+            float toxinIntake = HealthEnvironmentExposure.ToxinIntakeFromPlasma(
+                _environment.PlasmaMoleFraction);
+            TickHealth(_environment.AtmosphereBreathability, toxinIntake);
+        }
+
+        [Server]
+        private HealthEnvironmentState SampleEnvironmentAtBody()
+        {
+            if (!SubSystems.TryGet(out TileSubSystem tiles)
+                || tiles.CurrentMap == null
+                || !SubSystems.TryGet(out AtmosSubSystem atmos)
+                || atmos.Simulation == null)
+            {
+                return HealthEnvironmentState.SafeDefault;
+            }
+
+            TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
+            AtmosSimulation simulation = atmos.Simulation;
+
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(Transform.position);
+            if (support == HumanoidSupportState.Unknown)
+            {
+                // Map/AOI not ready — same spirit as missing Tile/Atmos above.
+                return HealthEnvironmentState.SafeDefault;
+            }
+
+            // Off the atmos grid (past chunk extents) or no plenum: open space stays vacuum.
+            if (support == HumanoidSupportState.Unsupported)
+            {
+                if (simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo vacuumInfo))
+                {
+                    return HealthEnvironmentExposure.FromVacuumCell(
+                        vacuumInfo.Temperature,
+                        vacuumInfo.BurnIntensity);
+                }
+
+                return HealthEnvironmentExposure.FromVacuumCell(
+                    AtmosConstants.SpaceTemperature,
+                    burnIntensity: 0f);
+            }
+
+            if (!simulation.TryGetCellDebugInfo(coord, out AtmosCellDebugInfo info))
+            {
+                // Floor present but atmos cell missing (init gap) — do not treat as space.
+                return HealthEnvironmentState.SafeDefault;
+            }
+
+            if (info.State == AtmosCellState.Vacuum)
+            {
+                return HealthEnvironmentExposure.FromVacuumCell(info.Temperature, info.BurnIntensity);
+            }
+
+            if (AtmosAreaSampler.TrySampleTile(coord, simulation, out AtmosAreaSample sample))
+            {
+                return HealthEnvironmentExposure.FromTileSample(sample, isVacuum: false, info.BurnIntensity);
+            }
+
+            // Empty / zero-mole cell that isn't flagged vacuum yet — treat as unbreathable.
+            return HealthEnvironmentExposure.FromVacuumCell(info.Temperature, info.BurnIntensity);
+        }
+
+        [Server]
+        private void ApplyEnvironmentalExposure(HealthEnvironmentState env)
+        {
+            // Heat / cold / fire: surface burn across the whole body (slow per zone).
+            float burn = HealthEnvironmentExposure.EnvironmentalBurnDamage(
+                env.TemperatureKelvin,
+                env.BurnIntensity);
+            if (burn > 0f)
+            {
+                for (int zone = 0; zone < _zones.Length; zone++)
+                {
+                    ApplyEnvironmentalZoneBurn((BodyZone)zone, burn);
+                }
+            }
+
+            // Pressure extremes: lung barotrauma — not chest burn.
+            float lungDamage = HealthEnvironmentExposure.PressureLungDamage(
+                env.PressureKpa,
+                env.IsVacuum);
+            if (lungDamage > 0f)
+            {
+                OrganSimulation.ApplyLungDamage(_organs, lungDamage);
+            }
+        }
+
+        [Server]
+        private void ApplyEnvironmentalZoneBurn(BodyZone zone, float burn)
+        {
+            int index = (int)zone;
+            if (index < 0 || index >= _zones.Length || burn <= 0f)
+            {
+                return;
+            }
+
+            ZoneDamageState state = _zones[index];
+            if (state.IsSevered)
+            {
+                return;
+            }
+
+            state.Burn += burn;
+            HealthSimulation.RefreshZoneDerivedState(ref state);
+            state.BleedingRate = HealthSimulation.BleedingRateForSeverity(state.Severity);
+
+            _zones[index] = state;
+            // Temp/fire burn is dermal — do not cascade chest burn into heart/lung organ
+            // damage here; pressure owns lung trauma via ApplyLungDamage.
+        }
+
+        [Server]
+        private void ApplyBreathExchange(HealthEnvironmentState env)
+        {
+            if (!env.HasSample || env.IsVacuum || env.AtmosphereBreathability <= 0f)
+            {
+                return;
+            }
+
+            if (!SubSystems.TryGet(out TileSubSystem tiles)
+                || tiles.CurrentMap == null
+                || !SubSystems.TryGet(out AtmosSubSystem atmos)
+                || atmos.Simulation == null)
+            {
+                return;
+            }
+
+            float lungFunction =
+                (HealthSimulation.GetOrganFunction(_organs, OrganType.LeftLung, _pools.BloodVolumeRatio)
+                 + HealthSimulation.GetOrganFunction(_organs, OrganType.RightLung, _pools.BloodVolumeRatio))
+                * 0.005f;
+            float request = HealthEnvironmentExposure.BreathOxygenMoles(
+                env.AtmosphereBreathability,
+                lungFunction);
+            if (request <= 0f)
+            {
+                return;
+            }
+
+            TileCoord coord = tiles.QueryService.WorldToTile(Transform.position, tiles.CurrentMap.MapId);
+            AtmosSimulation simulation = atmos.Simulation;
+            if (!simulation.TryRemoveMoles(
+                    coord,
+                    AtmosConstants.Oxygen,
+                    request,
+                    out float removed,
+                    out float sourceTemperature)
+                || removed <= 0f)
+            {
+                return;
+            }
+
+            simulation.TryAddMolesAtTemperature(
+                coord,
+                AtmosConstants.CarbonDioxide,
+                removed,
+                sourceTemperature);
         }
 
         [Server]
@@ -463,6 +808,7 @@ namespace SS3D.Systems.Health
         private void PublishSnapshot()
         {
             HealthSnapshot snapshot = HealthSimulation.BuildSnapshot(_pools, _zones, _organs);
+            snapshot.Environment = _environment;
             _snapshot = snapshot;
             _debugDetail = HealthDebugDetail.FromStates(_zones, _organs);
 
@@ -471,6 +817,7 @@ namespace SS3D.Systems.Health
             ApplyBodyPresentationIntent(snapshot);
             // Same host gap for local screen overlays and HUD alert consumers.
             ApplyScreenEffectsFromSnapshot(snapshot);
+            TryPlayHealthStateAudio(snapshot);
             SnapshotChanged?.Invoke(snapshot);
         }
 
@@ -485,6 +832,12 @@ namespace SS3D.Systems.Health
         [TargetRpc(RunLocally = true)]
         private void RpcHitFlash(NetworkConnection target)
         {
+            // Belt-and-suspenders: only flash while this body still has a local living mind.
+            if (!IsLocalOwnerMind() || _deathTriggered || _snapshot.State == HealthState.Dead)
+            {
+                return;
+            }
+
             SubSystems.Get<ScreenEffectsSubSystem>()?.TriggerHitFlash();
         }
 
@@ -495,26 +848,34 @@ namespace SS3D.Systems.Health
                 return;
             }
 
-            _drivingLocalScreenEffects = true;
+            _drivingLocalPresentation = true;
             ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            PersonalAudioSubSystem personalAudio = SubSystems.Get<PersonalAudioSubSystem>();
             if (snapshot.State == HealthState.Dead)
             {
                 HealthScreenEffectMapper.Clear(effects);
+                AtmosScreenEffectMapper.Clear(effects);
+                HealthPersonalAudioMapper.Clear(personalAudio);
                 return;
             }
 
             HealthScreenEffectMapper.Apply(snapshot, effects);
+            AtmosScreenEffectMapper.Apply(snapshot.Environment, effects);
+            HealthPersonalAudioMapper.Apply(snapshot, personalAudio);
         }
 
         private void ClearScreenEffectsIfDriving()
         {
-            if (!_drivingLocalScreenEffects)
+            if (!_drivingLocalPresentation)
             {
                 return;
             }
 
-            _drivingLocalScreenEffects = false;
-            HealthScreenEffectMapper.Clear(SubSystems.Get<ScreenEffectsSubSystem>());
+            _drivingLocalPresentation = false;
+            ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            HealthScreenEffectMapper.Clear(effects);
+            AtmosScreenEffectMapper.Clear(effects);
+            HealthPersonalAudioMapper.Clear(SubSystems.Get<PersonalAudioSubSystem>());
         }
 
         private bool IsLocalOwnerMind()

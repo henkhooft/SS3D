@@ -62,7 +62,12 @@ namespace SS3D.Systems.Furniture
 
         public bool TryAuthorizeCollider(Collider other, out HumanInventory inventory, out AccessCheckResult result)
         {
-            inventory = null;
+            inventory = other != null ? other.GetComponentInParent<HumanInventory>() : null;
+            return TryAuthorizeInventory(inventory, out result);
+        }
+
+        public bool TryAuthorizeInventory(HumanInventory inventory, out AccessCheckResult result)
+        {
             result = AccessCheckResult.Fail(AccessCheckFailureReason.NoCredential);
 
             if (!_requireAccess)
@@ -71,7 +76,6 @@ namespace SS3D.Systems.Furniture
                 return true;
             }
 
-            inventory = other.GetComponentInParent<HumanInventory>();
             if (inventory == null)
             {
                 return false;

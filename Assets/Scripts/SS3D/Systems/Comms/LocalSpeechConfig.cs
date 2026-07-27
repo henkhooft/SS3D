@@ -5,7 +5,7 @@ namespace SS3D.Systems.Comms
     /// <summary>
     /// Tunables for local speech subtitles: distance/occlusion tiers, crowd cap, stacking, drift,
     /// and fade timing. A plain feature-local ScriptableObject (referenced directly by serialized
-    /// fields), not a ScriptableSettings singleton like ChatChannels - this config only matters to
+    /// fields), not a ScriptableSettings singleton like CommsChannels - this config only matters to
     /// this one controller, so there's no need for the global project-settings lookup.
     /// </summary>
     [CreateAssetMenu(fileName = "New Local Speech Config", menuName = "SS3D/UI/Comms/Local Speech Config")]
