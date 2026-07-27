@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SS3D.Systems.Examine;
+using SS3D.Systems.Inputs;
 using SS3D.UI.Examine.Components;
 using SS3D.UI.MachineInterface.Components;
 using SS3D.UI.Shell;
@@ -23,6 +24,8 @@ namespace SS3D.UI.Examine
     public sealed class CharacterExamineWindowView : IUiSurface
     {
         private const float SlotSize = 64f;
+        private const float OpenOffsetX = 24f;
+        private const float OpenOffsetY = 24f;
 
         public event Action CloseRequested;
         public event Action<CharacterExamineSlot> TakeHoldStarted;
@@ -101,7 +104,15 @@ namespace SS3D.UI.Examine
             _root = null;
         }
 
-        public void Show(string title, IReadOnlyList<CharacterExamineSlotContent> slots, bool takeAllowed)
+        /// <param name="screenPosition">
+        /// Bottom-left screen pixels (mouse). Window opens near the cursor via
+        /// <see cref="InputInterface.ScreenToPanel"/> — same panel-space rule as hover examine.
+        /// </param>
+        public void Show(
+            string title,
+            IReadOnlyList<CharacterExamineSlotContent> slots,
+            bool takeAllowed,
+            Vector2 screenPosition)
         {
             if (_window == null)
             {
@@ -114,7 +125,30 @@ namespace SS3D.UI.Examine
             ClearTakeProgress();
             IsOpen = true;
             SetVisible(true);
+            PositionNearCursor(screenPosition);
             UpdateHoldHintIdle();
+        }
+
+        private void PositionNearCursor(Vector2 screenPositionBottomLeft)
+        {
+            if (_window == null)
+            {
+                return;
+            }
+
+            Vector2 panelPos = screenPositionBottomLeft;
+            IPanel panel = _window.panel;
+            if (panel != null)
+            {
+                panelPos = InputInterface.ScreenToPanel(panel, screenPositionBottomLeft);
+            }
+
+            // Pixel left/top (clear any percent/translate defaults) so drag ConvertToPixelPosition works.
+            _window.style.translate = new Translate(0, 0);
+            _window.style.left = panelPos.x + OpenOffsetX;
+            _window.style.top = panelPos.y + OpenOffsetY;
+            _window.style.right = StyleKeyword.Auto;
+            _window.style.bottom = StyleKeyword.Auto;
         }
 
         public void RefreshSlots(string title, IReadOnlyList<CharacterExamineSlotContent> slots)

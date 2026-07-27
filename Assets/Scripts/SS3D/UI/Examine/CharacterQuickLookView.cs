@@ -19,7 +19,10 @@ namespace SS3D.UI.Examine
     public sealed class CharacterQuickLookView : IUiSurface
     {
         private const float OffsetX = 24f;
-        /// <summary>Negative = above cursor in top-left panel space (was +16 with style.bottom).</summary>
+        /// <summary>
+        /// Gap above the cursor before the panel's bottom edge. Combined with a -100% Y translate
+        /// so the paperdoll sits above the pointer (same visual as the old style.bottom anchor).
+        /// </summary>
         private const float OffsetY = -16f;
         private const float SlotSize = 40f;
 
@@ -117,9 +120,13 @@ namespace SS3D.UI.Examine
                 panelPos = InputInterface.ScreenToPanel(panel, screenPosition);
             }
 
+            // Top-left panel coords + -100% Y translate: bottom of the paperdoll sits near the
+            // cursor (old style.bottom + mouse.y placed the panel above the pointer).
             _panel.style.left = panelPos.x + OffsetX;
             _panel.style.top = panelPos.y + OffsetY;
+            _panel.style.right = StyleKeyword.Auto;
             _panel.style.bottom = StyleKeyword.Auto;
+            _panel.style.translate = new Translate(0, new Length(-100, LengthUnit.Percent));
         }
 
         private void BuildTree()

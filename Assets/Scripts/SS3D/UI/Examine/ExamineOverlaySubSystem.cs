@@ -267,7 +267,10 @@ namespace SS3D.UI.Examine
             _genericView.Hide();
             IReadOnlyList<CharacterExamineSlotContent> slots = CharacterExamineContentBuilder.BuildSlots(inventory);
             bool takeAllowed = CharacterLootUtility.IsLootable(inventory);
-            _windowView.Show(ResolveDisplayName(inventory), slots, takeAllowed);
+            Vector2 screenPosition = Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : Vector2.zero;
+            _windowView.Show(ResolveDisplayName(inventory), slots, takeAllowed, screenPosition);
         }
 
         private void HandleCloseRequested()
