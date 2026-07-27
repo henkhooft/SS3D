@@ -89,6 +89,7 @@ Runtime documents register in setup: `RadialInteractionSubSystem`, `ArmedInterac
 - `MachineInterfaceSubSystem` no longer polls `Input.GetKeyDown(KeyCode.Escape)`; it subscribes to the
   arbitrated `UiCancel` action while the `MachineUI` context is active.
 - `ExamineUI` no longer polls `Input.GetKey(Shift)`; it reads the arbitrated `DetailedExamine` action.
+Sprint is Caps Lock ([2026-07_default-input-scheme.md](2026-07_default-input-scheme.md)); Shift is examine-only.
 
 ## Deviation from plan
 

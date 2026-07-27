@@ -203,21 +203,23 @@ under [ui-shell.md](systems/ui-shell.md). Current map (not exhaustive — more w
 | F2 | `ScreenEffectsDebugMenuView` | Condemned uGUI canvas; Keyboard-polled |
 | F3 | `LocalSpeechDebugTrigger` | Cycles local chat test lines; Keyboard-polled; must respect `InputInterface.IsCapturingText` |
 | F4 | `AlertStackDebugMenuView` | UITK + arbitrated `ToggleAlertStackDebug`; moved off F3 after colliding with speech |
+| F6 | Selection pick shader debug | `Other/Toggle Selection Debug` (moved off **E**, which is Use) |
 | P | Atmos debug overlay | `Other/Toggle Atmos Debug` (+ Keyboard fallback) |
-| (other) | Selection debug, health H, etc. | Same pattern: domain-owned bootstrap + ad-hoc chord |
+| (other) | health H, etc. | Same pattern: domain-owned bootstrap + ad-hoc chord |
 
-Problems this creates: **key collisions** (alert stack and speech both wanted F3 until one moved),
+Problems this creates: **key collisions** (alert stack and speech both wanted F3 until one moved; selection debug sat on E until the default scheme moved it),
 **inconsistent input paths** (raw `Keyboard.current` vs code-defined `InputSubSystem` actions vs
 `Controls.inputactions`), **no inventory of what's bound** so the next feature guesses another F-key,
 and **no shared PanelSettings/theme/bootstrap** (blank UITK `PanelSettings` already caused invisible
 labels on the alert menu). Console commands (`screeneffect`, `alertstack`, …) are the durable debug
 API; the hotkey panels are convenience debt until UiShell owns a debug layer.
 
-**Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md)
+**Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md) +
+[2026-07_default-input-scheme.md](2026-07_default-input-scheme.md)
 and (b) preferring an in-game console command first. Target: one arbitrated debug overlay host under
 UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when that lands.
 
-- Related: [inputs.md](systems/inputs.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
+- Related: [inputs.md](systems/inputs.md), [2026-07_default-input-scheme.md](2026-07_default-input-scheme.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
 
 ### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
 

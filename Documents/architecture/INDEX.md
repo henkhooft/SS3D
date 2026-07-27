@@ -101,7 +101,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines (prune destroyed MeshRenderers after structural destroy); Harm melee + intent↔stance; `C` double-bound with Cancel |
+| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines (prune destroyed MeshRenderers after structural destroy); Harm melee + intent↔stance (**F**); Backspace cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine on UITK (`ExamineOverlaySubSystem`, uGUI deleted); character paperdoll + interruptible hold-to-take (`TakeFromCharacterInteraction`, dead/unconscious) |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
@@ -126,7 +126,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Machine interface UI | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending; path catalog; Dual Kawase blur + dim; DOTween bring-up/dismiss |
 | Screen-space effects | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays; health drives dying/blood/oxy/concussion/unconscious + hit flash; turf temp/fire via `AtmosScreenEffectMapper`; `SetUiBackdropBlur` for machine UI; F2 debug Canvas condemned |
 | ID / access | [id-access](systems/id-access.md) | partial | Crew records, credential checks, doors, machine UI gates, dev console helpers |
-| Inputs | [inputs](systems/inputs.md) | partial | Arbitration + `InputInterface` UITK/uGUI pointer authority (Main HUD / MI / radial register documents) |
+| Inputs | [inputs](systems/inputs.md) | partial | Arbitration + default scheme ([2026-07_default-input-scheme](2026-07_default-input-scheme.md): Caps sprint, Shift examine, F intent, Backspace cancel); `InputInterface` UITK/uGUI pointer authority |
 | In-game console | [ingame-console](systems/ingame-console.md) | partial | Command dispatch; console panel uGUI condemned pending UITK debug layer |
 
 ## Architecture efforts (dated)
@@ -164,6 +164,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_disposal-item-network](2026-07_disposal-item-network.md) | shipped (item network; pipe craft, Cargo, player transit deferred) |
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned (dedicated camera manager / contexts; same ownership smell as pre-arbiter input) |
 | [2026-07_input-arbitration](2026-07_input-arbitration.md) | shipped |
+| [2026-07_default-input-scheme](2026-07_default-input-scheme.md) | shipped (Caps sprint, Shift examine, F intent, Backspace cancel; no Shift intent-override) |
 | [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
 | [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4 + blast detonation VFX) |

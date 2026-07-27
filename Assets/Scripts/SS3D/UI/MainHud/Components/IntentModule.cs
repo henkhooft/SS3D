@@ -5,9 +5,9 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
-    /// Bottom-right help/harm segmented toggle plus the fading modifier-hint row (Shift/swap, Ctrl/disarm,
-    /// Alt/grab). The hints are display-only here - chorded modifier click resolution (§7 of the design doc)
-    /// is a separate, not-yet-built interaction-layer feature.
+    /// Bottom-right help/harm segmented toggle plus the fading modifier-hint row (Ctrl/disarm,
+    /// Alt/grab). Tap <c>F</c> (or this module) to flip Help/Harm — no Shift momentary override.
+    /// Chorded Ctrl/Alt click resolution (§7 of the design doc) is not yet built; hints are display-only.
     /// </summary>
     [UxmlElement]
     public partial class IntentModule : VisualElement
@@ -23,7 +23,7 @@ namespace SS3D.UI.MainHud.Components
 
             VisualElement hints = new();
             hints.AddToClassList("intent-module__hints");
-            hints.Add(BuildHint("Shift", "swap"));
+            hints.Add(BuildHint("F", "toggle"));
             hints.Add(BuildHint("Ctrl", "disarm"));
             hints.Add(BuildHint("Alt", "grab"));
 
