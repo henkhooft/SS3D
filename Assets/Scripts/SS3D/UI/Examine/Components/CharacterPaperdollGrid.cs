@@ -40,20 +40,20 @@ namespace SS3D.UI.Examine.Components
         {
             AddToClassList("character-paperdoll-grid");
 
-            InventorySlot head = CreateSlot(CharacterExamineSlot.Head, "Head", icons.Head, slotSize);
-            InventorySlot eyes = CreateSlot(CharacterExamineSlot.Eyes, "Eyes", icons.Eyes, slotSize);
-            InventorySlot face = CreateSlot(CharacterExamineSlot.Face, "Face Cover", icons.Face, slotSize);
-            InventorySlot ears = CreateSlot(CharacterExamineSlot.Ears, "Ears", icons.Ears, slotSize);
-            InventorySlot suit = CreateSlot(CharacterExamineSlot.Suit, "Suit", icons.Suit, slotSize);
-            InventorySlot shirt = CreateSlot(CharacterExamineSlot.Shirt, "Shirt", icons.Shirt, slotSize);
-            InventorySlot gloves = CreateSlot(CharacterExamineSlot.Gloves, "Gloves", icons.Gloves, slotSize);
-            InventorySlot back = CreateSlot(CharacterExamineSlot.Back, "Back", icons.Back, slotSize);
-            InventorySlot feet = CreateSlot(CharacterExamineSlot.Feet, "Feet", icons.Feet, slotSize);
-            InventorySlot belt = CreateSlot(CharacterExamineSlot.Belt, "Belt", icons.Belt, slotSize);
-            InventorySlot idCard = CreateSlot(CharacterExamineSlot.IdCard, "ID Card", icons.IdCard, slotSize);
-            InventorySlot pocket = CreateSlot(CharacterExamineSlot.Pocket, "Pocket", icons.Pocket, slotSize);
-            InventorySlot handLeft = CreateSlot(CharacterExamineSlot.HandLeft, "Left Hand", icons.HandLeft, slotSize);
-            InventorySlot handRight = CreateSlot(CharacterExamineSlot.HandRight, "Right Hand", icons.HandRight, slotSize);
+            InventorySlot head = CreateSlot(CharacterExamineSlot.Head, icons.Head, slotSize);
+            InventorySlot eyes = CreateSlot(CharacterExamineSlot.Eyes, icons.Eyes, slotSize);
+            InventorySlot face = CreateSlot(CharacterExamineSlot.Face, icons.Face, slotSize);
+            InventorySlot ears = CreateSlot(CharacterExamineSlot.Ears, icons.Ears, slotSize);
+            InventorySlot suit = CreateSlot(CharacterExamineSlot.Suit, icons.Suit, slotSize);
+            InventorySlot shirt = CreateSlot(CharacterExamineSlot.Shirt, icons.Shirt, slotSize);
+            InventorySlot gloves = CreateSlot(CharacterExamineSlot.Gloves, icons.Gloves, slotSize);
+            InventorySlot back = CreateSlot(CharacterExamineSlot.Back, icons.Back, slotSize);
+            InventorySlot feet = CreateSlot(CharacterExamineSlot.Feet, icons.Feet, slotSize);
+            InventorySlot belt = CreateSlot(CharacterExamineSlot.Belt, icons.Belt, slotSize);
+            InventorySlot idCard = CreateSlot(CharacterExamineSlot.IdCard, icons.IdCard, slotSize);
+            InventorySlot pocket = CreateSlot(CharacterExamineSlot.Pocket, icons.Pocket, slotSize);
+            InventorySlot handLeft = CreateSlot(CharacterExamineSlot.HandLeft, icons.HandLeft, slotSize);
+            InventorySlot handRight = CreateSlot(CharacterExamineSlot.HandRight, icons.HandRight, slotSize);
 
             // Two hand wells span the same outer width as a 3-slot row (each slot has SlotMargin trailing).
             float handWidth = (slotSize * 3f + SlotMargin) / 2f;
@@ -82,20 +82,42 @@ namespace SS3D.UI.Examine.Components
             }
 
             slot.ItemIcon = content.ItemIcon;
+            slot.SlotLabel = string.IsNullOrEmpty(content.ItemName)
+                ? DefaultSlotLabel(content.Slot)
+                : content.ItemName;
         }
 
-        private InventorySlot CreateSlot(CharacterExamineSlot slot, string label, Sprite emptyIcon, float size)
+        private InventorySlot CreateSlot(CharacterExamineSlot slot, Sprite emptyIcon, float size)
         {
             InventorySlot inventorySlot = new()
             {
                 Unknown = false,
                 EmptyIcon = emptyIcon,
                 Size = size,
-                SlotLabel = label,
+                SlotLabel = DefaultSlotLabel(slot),
             };
             _slots[(int)slot] = inventorySlot;
             return inventorySlot;
         }
+
+        private static string DefaultSlotLabel(CharacterExamineSlot slot) => slot switch
+        {
+            CharacterExamineSlot.Head => "Head",
+            CharacterExamineSlot.Eyes => "Eyes",
+            CharacterExamineSlot.Face => "Face Cover",
+            CharacterExamineSlot.Ears => "Ears",
+            CharacterExamineSlot.Suit => "Suit",
+            CharacterExamineSlot.Shirt => "Shirt",
+            CharacterExamineSlot.Gloves => "Gloves",
+            CharacterExamineSlot.Back => "Back",
+            CharacterExamineSlot.Feet => "Feet",
+            CharacterExamineSlot.Belt => "Belt",
+            CharacterExamineSlot.IdCard => "ID Card",
+            CharacterExamineSlot.Pocket => "Pocket",
+            CharacterExamineSlot.HandLeft => "Left Hand",
+            CharacterExamineSlot.HandRight => "Right Hand",
+            _ => string.Empty,
+        };
 
         private static VisualElement BuildRow(params VisualElement[] children)
         {
