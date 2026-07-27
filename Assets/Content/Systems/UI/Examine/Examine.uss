@@ -60,9 +60,27 @@
 }
 
 /* Full examine window — beat .machine-window { width: 380px } so the chrome hugs the 3-slot grid
-   (3×64 + margins + content padding), not empty horizontal space. */
+   (3×64 + margins + content padding), not empty horizontal space.
+   Semi-transparent panel chrome only — do not use opacity (would fade slot wells too). */
 .machine-window.character-examine-window {
     width: 244px;
+    background-color: rgba(23, 26, 30, 0.75);
+}
+
+.character-examine-window .machine-window__header {
+    background-color: rgba(35, 38, 43, 0.75);
+}
+
+.character-examine-window .machine-window__content {
+    align-items: center;
+}
+
+.character-examine-window .character-paperdoll-grid {
+    align-items: center;
+}
+
+.character-examine-window .character-paperdoll-grid__row {
+    justify-content: center;
 }
 
 .character-examine-window__hint {
@@ -75,7 +93,7 @@
 
 .character-examine-window .machine-window__title {
     letter-spacing: 1px;
-    font-size: 11px;
+    font-size: 15px;
     white-space: normal;
 }
 
