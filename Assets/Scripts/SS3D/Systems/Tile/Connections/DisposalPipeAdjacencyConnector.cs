@@ -41,7 +41,14 @@ namespace SS3D.Systems.Tile.Connections
 
         public int HorizontalConnectionCount => _adjacencyMap?.CardinalConnectionCount ?? 0;
 
-        public IConnectionRule ConnectionRule => _connectionRule ??= new DisposalPipeConnectionRule(this);
+        public IConnectionRule ConnectionRule
+        {
+            get
+            {
+                Setup();
+                return _connectionRule ??= new DisposalPipeConnectionRule(this);
+            }
+        }
 
         private void Setup()
         {

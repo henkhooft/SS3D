@@ -19,9 +19,14 @@ namespace SS3D.Systems.Tile.Connections
 
         public bool IsConnected(PlacedTileObject self, PlacedTileObject neighbour)
         {
+            if (self == null || _connector == null)
+                return false;
+
+            // Prefer the passed-in self — connector.PlacedObject is null until Setup()
+            // (bulk map import rebuilds topology before OnStartClient/Setup runs).
             Direction selfFacing = _connector.VerticalConnection
                 ? _connector.FacingDirection
-                : _connector.PlacedObject.Direction;
+                : self.Direction;
 
             return Evaluate(
                 self,

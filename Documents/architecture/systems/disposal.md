@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/Disposal/, Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs, DisposalOutlet.cs, Assets/Scripts/SS3D/Systems/Tile/Connections/Disposal*
 > Entry points: DisposalSubSystem, DisposalBin, DisposalOutlet, DisposalPipeConnectivity
 > Status: partial
-> Verified: 80f5b995d — 2026-07-28
+> Verified: 6daa63fe8 — 2026-07-28 (DMM import disposal NRE + deferred rebuild)
 
 # Disposal
 
@@ -38,6 +38,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 - **Items visible mid-pipe:** design wants visible transit later (glass sections). Until then capsules hide via `Item.SetVisibility` (ObserversRpc); enable `DisposalSubSystem._debugShowTransitItems` to watch routes. Reveal on spit / pipe-cut spill.
 - **`Object.Destroy` on items:** Coimbra forbids it — use FishNet `Despawn` when `ServerManager` exists, else `gameObject.Dispose(true)` (`using Coimbra`).
 - **Pipe place/cut in play:** no player recipes yet; clearing a disposal tile (map editor / `TryClearTile`) is what triggers sabotage spill.
+- **DMM import NRE on disposal pipes:** `DisposalPipeConnectionRule.IsConnected` used `_connector.PlacedObject` before `Setup()` (null during bulk place). Use `self.Direction`; `ConnectionRule` getter calls `Setup()`. Map import defers topology via `BeginDeferredNetworkRebuild` / `EndDeferredNetworkRebuild` and rebuilds once after adjacency. Hit 2026-07-28.
 
 ## Depends on / Used by
 

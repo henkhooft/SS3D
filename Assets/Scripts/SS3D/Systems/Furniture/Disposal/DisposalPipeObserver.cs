@@ -19,6 +19,12 @@ namespace SS3D.Systems.Furniture.Disposal
         private readonly Action<PlacedTileObject> _onSegmentCut;
         private readonly HashSet<TileCoord> _pendingRebuild = new();
 
+        /// <summary>
+        /// When true, place/clear only queues coords; call <see cref="FlushPendingRebuilds"/> or
+        /// <see cref="ClearPendingRebuilds"/> + registry RebuildAll after bulk edits (map import).
+        /// </summary>
+        public bool SuspendRebuilds { get; set; }
+
         public DisposalPipeObserver(TileMap map, DisposalNetworkRegistry registry, Action<PlacedTileObject> onSegmentCut)
         {
             _map = map;
@@ -40,6 +46,12 @@ namespace SS3D.Systems.Furniture.Disposal
             if (DisposalPipeConnectivity.ParticipatesInDisposalNetwork(placed)
                 || placed.GetComponent<IDisposalElement>() != null)
             {
+                if (SuspendRebuilds)
+                {
+                    _pendingRebuild.Add(coord);
+                    return;
+                }
+
                 _registry.RebuildAround(_map, coord);
             }
         }
@@ -49,7 +61,8 @@ namespace SS3D.Systems.Furniture.Disposal
             if (occupant is PlacedTileObject placed
                 && DisposalPipeConnectivity.ParticipatesInDisposalNetwork(placed))
             {
-                _onSegmentCut?.Invoke(placed);
+                if (!SuspendRebuilds)
+                    _onSegmentCut?.Invoke(placed);
                 _pendingRebuild.Add(coord);
                 return;
             }
@@ -67,9 +80,11 @@ namespace SS3D.Systems.Furniture.Disposal
         {
         }
 
+        public void ClearPendingRebuilds() => _pendingRebuild.Clear();
+
         public void FlushPendingRebuilds()
         {
-            if (_pendingRebuild.Count == 0)
+            if (SuspendRebuilds || _pendingRebuild.Count == 0)
                 return;
 
             foreach (TileCoord coord in _pendingRebuild)

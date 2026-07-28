@@ -10,6 +10,7 @@ using SS3D.Logging;
 using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Electricity;
+using SS3D.Systems.Furniture.Disposal;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.MapImport
@@ -47,8 +48,10 @@ namespace SS3D.Systems.Tile.MapImport
             bool hasElectricity = SubSystems.TryGet(out ElectricitySubSystem electricity);
             bool hasAtmos = SubSystems.TryGet(out AtmosSubSystem atmos);
             bool hasArea = SubSystems.TryGet(out AreaSubSystem area);
+            bool hasDisposal = SubSystems.TryGet(out DisposalSubSystem disposal);
             bool priorAtmosPaused = false;
             bool deferredAreaFlood = false;
+            bool deferredDisposal = false;
 
             if (hasElectricity)
                 electricity.SuspendCircuitUpdates(true);
@@ -62,6 +65,12 @@ namespace SS3D.Systems.Tile.MapImport
             {
                 area.BeginDeferredAreaFlood();
                 deferredAreaFlood = true;
+            }
+
+            if (hasDisposal)
+            {
+                disposal.BeginDeferredNetworkRebuild();
+                deferredDisposal = true;
             }
 
             try
@@ -114,6 +123,9 @@ namespace SS3D.Systems.Tile.MapImport
                 // Flood after all turfs/APCs exist so seeds see complete walls.
                 if (deferredAreaFlood)
                     area.EndDeferredAreaFlood();
+                // Rebuild disposal topology once after adjacency refresh (avoids mid-place NRE / thrash).
+                if (deferredDisposal)
+                    disposal.EndDeferredNetworkRebuild();
                 if (hasElectricity)
                     electricity.SuspendCircuitUpdates(false);
                 if (hasAtmos)

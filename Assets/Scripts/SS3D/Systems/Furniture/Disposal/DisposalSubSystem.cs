@@ -43,6 +43,31 @@ namespace SS3D.Systems.Furniture.Disposal
         /// <summary>When true, in-transit capsules do not advance (Map Editor authoring).</summary>
         public bool CapsulesPaused { get; set; }
 
+        /// <summary>
+        /// Queue disposal topology mutations without rebuilding (bulk map import).
+        /// Pair with <see cref="EndDeferredNetworkRebuild"/>.
+        /// </summary>
+        public void BeginDeferredNetworkRebuild()
+        {
+            if (_observer != null)
+                _observer.SuspendRebuilds = true;
+        }
+
+        /// <summary>
+        /// Drop queued per-tile rebuilds and rebuild the whole disposal topology once.
+        /// </summary>
+        public void EndDeferredNetworkRebuild()
+        {
+            if (_observer != null)
+            {
+                _observer.SuspendRebuilds = false;
+                _observer.ClearPendingRebuilds();
+            }
+
+            if (_registry != null && _map != null)
+                _registry.RebuildAll(_map);
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();
