@@ -376,7 +376,11 @@ namespace SS3D.Systems.Electricity
         [Server]
         public void RemoveElectricalElement(IElectricDevice device)
         {
-            if (_electricityGraph == null || device?.TileObject == null)
+            // Must unregister even when TileObject is already null — BasicElectricDevice.OnDestroyed
+            // runs after Unity considers the GO destroyed, so TileObject returns null. Requiring a
+            // live tile left zombies in _registeredDevices → NRE on RebuildElectricGraph (map Clear /
+            // DMM import). Hit 2026-07-28.
+            if (_electricityGraph == null || device == null)
             {
                 return;
             }
@@ -403,8 +407,17 @@ namespace SS3D.Systems.Electricity
         private void RebuildElectricGraph()
         {
             _electricityGraph.Clear();
-            foreach (IElectricDevice device in _registeredDevices)
+            for (int i = _registeredDevices.Count - 1; i >= 0; i--)
             {
+                IElectricDevice device = _registeredDevices[i];
+                if (device?.TileObject == null)
+                {
+                    _registeredDevices.RemoveAt(i);
+                    if (device is IPowerConsumer consumer)
+                        _registeredConsumers.Remove(consumer);
+                    continue;
+                }
+
                 AddDeviceEdgesToGraph(device);
             }
         }
@@ -413,6 +426,9 @@ namespace SS3D.Systems.Electricity
         private void AddDeviceEdgesToGraph(IElectricDevice device)
         {
             PlacedTileObject tileObject = device.TileObject;
+            if (tileObject == null)
+                return;
+
             VerticeCoordinates deviceCoordinates = ToCoordinates(tileObject);
 
             if (!_electricityGraph.ContainsVertex(deviceCoordinates))
