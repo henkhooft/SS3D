@@ -65,7 +65,8 @@ Update as part of `update-system-docs`.
 | player-accounts | [player-accounts.md](../design/player-accounts.md) — active | none yet | none yet |
 
 [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) /
-[2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) (shipped) and the infrastructure systems below (core
+[2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) /
+[2026-07_interaction-controller-decomposition](2026-07_interaction-controller-decomposition.md) (shipped) and the infrastructure systems below (core
 subsystems, rendering pipeline internals, data/codegen, etc.) aren't gameplay domains with
 their own design docs — they support the domains above rather than being one themselves,
 so they stay out of this table and live only in the Infrastructure section below.
@@ -101,7 +102,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines (prune destroyed MeshRenderers after structural destroy); Harm melee + intent↔stance (**F**); Backspace cancel |
+| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | Thin `InteractionController` router + discovery/dispatch/outline helpers; Harm via sibling `CombatInteractionNetwork`; radial/armed/outlines; intent↔stance (**F**); Backspace cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine on UITK; Search paperdoll + take; health Tier 0/1 lines + Shift→self fallback |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
@@ -113,7 +114,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat swing/fire drains + exertion feedback (accuracy cone, windup/recovery) shipped; block drain deferred |
 | Entities | [entities](systems/entities.md) | partial | Humanoids, minds, spawning; body-state animation + combat stances (`RangedWeaponItemExtension` preferred for Ranged) + Ranged Upper Body Rifle Aim Idle + Fire/Reload oneshots + injured limp/severity/mirror; living space float via `HumanoidSupportState` (client AOI Unknown ≠ float; server SyncVar for deep space) + `Mix_Floating`; Harm intent → combat stance; shelved Misc/Probably Not clips; `Human.prefab` composition debt; body presentation via `Ragdoll`/`BodyPresentationState` ([body-presentation-authority](2026-07_body-presentation-authority.md) shipped) |
 | Health | [health](systems/health.md) | partial | Phases 1–5b + env-feel shipped; examine Tier 0/1 shipped; vitals UITK Phase 6 remainder; collapse via `BodyPresentationIntent` → `Ragdoll`; limp/`InjuredLeg`/arm injury → body anim |
-| Combat | [combat](systems/combat.md) | partial | Phase 0–1 melee + Phase 3 ranged hitscan (M4, accuracy cone, shared LOS, mag/reload) + Phase 4 stamina drains/exertion feedback (swing+fire; block deferred) + Phase 5 per-zone armor absorption/integrity; M1p feel subset shipped (muzzle flash, SS14 gun+surface SFX, Upper Body Aim Idle + Fire/Reload, two-hand M4, bullet-hole shreds, `rangeddebug`); aim IK / blood / knockdown / sprint / strip debug chrome still open; disarm/blocking/projectile/environmental seal deferred |
+| Combat | [combat](systems/combat.md) | partial | Harm primary on `CombatInteractionNetwork` (sibling of `InteractionController`); Phase 0–1 melee + Phase 3 ranged hitscan (M4, accuracy cone, shared LOS, mag/reload) + Phase 4 stamina drains/exertion feedback (swing+fire; block deferred) + Phase 5 per-zone armor absorption/integrity; M1p feel subset shipped; aim IK / blood / knockdown / sprint / strip debug chrome still open; disarm/blocking/projectile/environmental seal deferred |
 | Crafting | [crafting](systems/crafting.md) | stub | Obsolete runtime purged (TECH_DEBT 1.6); awaiting redesign per design doc |
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks (proximity + Open/Close + access-denied), lockers, vendors, jukebox; disposal → [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee + ranged StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine; epicenter blast VFX (fireball/light/scorch/shake/flash); `hurtstructure` / `blast` |
@@ -141,6 +142,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_diegetic-screen-ui-framework](2026-07_diegetic-screen-ui-framework.md) | shipped |
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
 | [2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) | shipped |
+| [2026-07_interaction-controller-decomposition](2026-07_interaction-controller-decomposition.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase; equal-P composition diffusion follow-on shipped; client VFX is a separate effort — Phase 1 shipped) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |

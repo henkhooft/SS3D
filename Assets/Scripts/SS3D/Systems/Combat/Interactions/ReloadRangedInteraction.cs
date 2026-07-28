@@ -3,7 +3,7 @@ using SS3D.Data.Generated;
 using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
-using SS3D.Systems.Interactions;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 
@@ -53,10 +53,10 @@ namespace SS3D.Systems.Combat.Interactions
             }
 
             Hand hand = ResolveHand(interactionEvent.Source);
-            InteractionController controller = hand != null
-                ? hand.GetComponentInParent<InteractionController>()
+            CombatInteractionNetwork combat = hand != null
+                ? hand.GetComponentInParent<CombatInteractionNetwork>()
                 : null;
-            controller?.ServerNotifyRangedReloadStarted(_weapon);
+            combat?.ServerNotifyRangedReloadStarted(_weapon);
             return false;
         }
 

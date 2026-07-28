@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
-using Coimbra.Services.Events;
-using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Interactions;
@@ -13,39 +11,30 @@ using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Inputs;
-using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Entities.Humanoid.Body;
-using SS3D.Systems.Audio;
-using AudioType = SS3D.Systems.Audio.AudioType;
 using SS3D.Systems.Combat;
-using SS3D.Systems.Combat.Interactions;
-using SS3D.Systems.Health;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Inventory.Interactions;
-using SS3D.Systems.Stamina;
-using SS3D.Systems.StructuralDamage;
-using SS3D.Systems.Tile;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using Unity.Profiling;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 
 namespace SS3D.Systems.Interactions
 {
     /// <summary>
-    /// Attached to the player, initiates interactions.
+    /// Player-owned interaction router: input policy (Shift Search → armed → Harm combat → Help primary),
+    /// intent SyncVar, world/inventory/examine RPCs, and delayed-interaction tracking.
+    /// Combat Harm primary lives on sibling <see cref="CombatInteractionNetwork"/>.
+    /// Discovery/dispatch/outline helpers: <see cref="InteractionDiscovery"/>,
+    /// <see cref="InteractionDispatch"/>, <see cref="InteractionOutlineDriver"/>.
     /// </summary>
     public sealed class InteractionController : NetworkActor, IIntentProvider
     {
-        private const string ExamineInteractionName = "Examine";
-
         private Controls.InteractionsActions _controls;
         private Controls.HotkeysActions _hotkeysControls;
         private InputAction _cancelInteractionAction;
@@ -61,26 +50,10 @@ namespace SS3D.Systems.Interactions
 
         private IntentType _ownerIntent = IntentType.Help;
 
-        private int _clientActiveReferenceId = -1;
-        private IInteractionSource _clientActiveSource;
-        private InteractionReference _serverActiveReference;
-        private IInteractionSource _serverActiveSource;
+        private CombatInteractionNetwork _combatNetwork;
 
-        private Vector3 _meleeAimRayOrigin;
-        private Vector3 _meleeAimPoint;
-        private bool _hasMeleeAimRay;
-
-        /// <summary>Server-scheduled Harm primary connect (bypasses DelayedInteraction.Update).</summary>
-        private float _pendingMeleeConnectAt = -1f;
-        private Hand _pendingMeleeHand;
-        private MeleeWeaponProfile _pendingMeleeProfile;
-        private int _meleeSwingSerial;
-
-        private Selectable _activeOutlineSelectable;
-        private InteractionOutlineView _activeOutlineView;
-        private readonly List<IInteractionTarget> _outlineTargets = new(8);
-
-        private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
+        private readonly InteractionOutlineDriver _outlineDriver = new();
+        private readonly DelayedInteractionTracker _delayedTracker = new();
 
         public IntentType CurrentIntent => IsOwner ? _ownerIntent : _currentIntent;
 
@@ -97,14 +70,7 @@ namespace SS3D.Systems.Interactions
         /// <summary>
         /// True while the owning client is tracking an active delayed interaction (including take-from-character).
         /// </summary>
-        public bool HasActiveDelayedInteraction => IsClient && _clientActiveReferenceId >= 0;
-
-        public override void OnStartServer()
-        {
-            base.OnStartServer();
-            // Owner-only Update() never runs on a dedicated server — schedule melee connect here.
-            AddHandle(UpdateEvent.AddListener(HandleServerMeleeConnectUpdate));
-        }
+        public bool HasActiveDelayedInteraction => IsClient && _delayedTracker.HasClientActive;
 
         public override void OnOwnershipClient(NetworkConnection prevOwner)
         {
@@ -153,6 +119,8 @@ namespace SS3D.Systems.Interactions
             {
                 Log.Error(this, "No gameplay camera resolved for InteractionController", Logs.Important);
             }
+
+            _combatNetwork = GetComponent<CombatInteractionNetwork>();
         }
 
         private void Update()
@@ -170,7 +138,6 @@ namespace SS3D.Systems.Interactions
             // Client-side tracking for interactions that registered a ClientInteract instance.
             // Take-from-character (CreateClient => null) waits for TargetNotify / Cancel instead.
             RefreshClientDelayedInteractionTracking();
-            TrySyncMeleeAimDuringSwing();
         }
 
         private void LateUpdate()
@@ -180,7 +147,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            RefreshInteractionOutline();
+            _outlineDriver.Refresh(_selectionSystem, _camera, CurrentIntent, GetActiveInteractionSource());
         }
 
         protected override void OnEnabled()
@@ -200,7 +167,7 @@ namespace SS3D.Systems.Interactions
             if (IsOwner)
             {
                 UnsubscribeFromInput();
-                ClearInteractionOutline();
+                _outlineDriver.Clear();
                 _armedSystem.EvaluateTarget -= EvaluateArmedTarget;
             }
         }
@@ -233,12 +200,12 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void HandleCancelInteraction(InputAction.CallbackContext callbackContext)
         {
-            if (_clientActiveReferenceId < 0)
+            if (!_delayedTracker.HasClientActive)
             {
                 return;
             }
 
-            int referenceId = _clientActiveReferenceId;
+            int referenceId = _delayedTracker.ClientActiveReferenceId;
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
@@ -274,12 +241,13 @@ namespace SS3D.Systems.Interactions
             // Never fall through to Drop/Open/MI.
             if (CurrentIntent == IntentType.Harm)
             {
-                if (TryRunRangedFirePrimary())
+                CombatInteractionNetwork combat = GetCombatNetwork();
+                if (combat != null && combat.TryRunRangedFirePrimary())
                 {
                     return;
                 }
 
-                TryRunMeleeSwingPrimary();
+                combat?.TryRunMeleeSwingPrimary();
                 return;
             }
 
@@ -402,12 +370,12 @@ namespace SS3D.Systems.Interactions
         [Client]
         public void CancelActiveDelayedInteraction()
         {
-            if (_clientActiveReferenceId < 0)
+            if (!_delayedTracker.HasClientActive)
             {
                 return;
             }
 
-            int referenceId = _clientActiveReferenceId;
+            int referenceId = _delayedTracker.ClientActiveReferenceId;
             ClearClientActiveInteractionTracking();
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
@@ -484,8 +452,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            _clientActiveSource = hand;
-            _clientActiveReferenceId = referenceId;
+            _delayedTracker.SetClientActive(hand, referenceId);
             TakeFromCharacterStarted?.Invoke((CharacterExamineSlot)slotByte, delaySeconds);
         }
 
@@ -494,593 +461,6 @@ namespace SS3D.Systems.Interactions
         {
             ClearClientActiveInteractionTracking();
             TakeFromCharacterEnded?.Invoke();
-        }
-
-        /// <summary>
-        /// Starts windup/swing/recovery for Harm primary regardless of hover target.
-        /// Damage (if any) is applied at connect from synced aim.
-        /// </summary>
-        [Client]
-        private bool TryRunMeleeSwingPrimary()
-        {
-            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand))
-            {
-                return false;
-            }
-
-            if (!hit.CanStartSwing(hand))
-            {
-                return false;
-            }
-
-            // Optimistic busy lock is for pure clients (Cmd latency). On host/listen-server the same
-            // Hand tracker is shared: locking before Cmd makes server CanStartSwing fail immediately
-            // (cooldown UI, no connect / hitmarker). ServerBeginSwing + recovery TargetRpc lock instead.
-            if (!IsServer)
-            {
-                BeginLocalSwingCycle(hand, hit.Profile);
-            }
-
-            TryPlayMeleeSwingTelegraph(hit);
-            // No world-space LoadingBar — windup is swing telegraph; recovery is reticle lock-on recharge.
-            TrySyncMeleeAimToServer();
-            CmdRunMeleeSwing();
-            return true;
-        }
-
-        /// <summary>
-        /// Harm primary fire when the selected hand holds a <see cref="RangedWeaponItemExtension"/>.
-        /// Instant hitscan — no windup; reload/cooldown pace the gun.
-        /// </summary>
-        [Client]
-        private bool TryRunRangedFirePrimary()
-        {
-            if (!TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon))
-            {
-                return false;
-            }
-
-            weapon.ServerCompleteReloadIfDue();
-
-            // Empty mag → server dry-fire (+ reload if possible); do not fall through to melee.
-            if (weapon.RoundsRemaining <= 0)
-            {
-                bool startingReload = weapon.CanStartReload();
-                if (!IsServer && startingReload)
-                {
-                    // Optimistic reload lock when a reload can start; dry-fire audio is server-side.
-                    weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
-                }
-
-                if (startingReload)
-                {
-                    TryPlayRangedReloadTelegraph();
-                }
-
-                TrySyncMeleeAimToServer();
-                CmdRunRangedFire();
-                return true;
-            }
-
-            if (!weapon.CanStartFire())
-            {
-                return true;
-            }
-
-            if (!IsServer)
-            {
-                weapon.BeginLocalFireCooldown();
-            }
-
-            TryPlayRangedFireTelegraph();
-            TrySyncMeleeAimToServer();
-            CmdRunRangedFire();
-            return true;
-        }
-
-        [Client]
-        private bool TryRunRangedReloadPrimary()
-        {
-            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                return false;
-            }
-
-            if (!weapon.CanStartReload())
-            {
-                return false;
-            }
-
-            if (!IsServer)
-            {
-                weapon.BeginLocalReload(weapon.Profile.ReloadSeconds);
-            }
-
-            TryPlayRangedReloadTelegraph();
-            CmdRunRangedReload();
-            return true;
-        }
-
-        [ServerOrClient]
-        private bool TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon)
-        {
-            Hands hands = GetComponent<Hands>();
-            return TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out hand, out weapon);
-        }
-
-        [ServerRpc]
-        private void CmdRunRangedFire()
-        {
-            if (_currentIntent != IntentType.Harm)
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            weapon.ServerCompleteReloadIfDue();
-
-            if (weapon.RoundsRemaining <= 0)
-            {
-                PlayGunEmptySound(weapon);
-                if (weapon.ServerTryBeginReload())
-                {
-                    ServerNotifyRangedReloadStarted(weapon);
-                }
-
-                return;
-            }
-
-            if (!weapon.CanStartFire() || !weapon.ServerTryConsumeRound())
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            StaminaController stamina = GetComponent<StaminaController>();
-            if (weapon.Profile.StaminaCost > 0f)
-            {
-                stamina?.ServerDepleteStamina(weapon.Profile.StaminaCost);
-            }
-
-            if (!TryGetMeleeAimRay(out Ray aimRay))
-            {
-                // Fall back to entity facing if aim never synced.
-                Entity entity = GetComponent<Entity>();
-                Vector3 origin = entity != null
-                    ? entity.transform.position + Vector3.up * 1.5f
-                    : transform.position + Vector3.up * 1.5f;
-                Vector3 direction = entity != null ? entity.transform.forward : transform.forward;
-                aimRay = new Ray(origin, direction);
-            }
-
-            PlayGunfireSound(aimRay.origin);
-
-            float maxRange = Mathf.Max(1f, weapon.Profile.MaxRangeMeters);
-            float aimDistance = maxRange;
-            if (Physics.Raycast(aimRay, out RaycastHit aimHit, maxRange, ~0, QueryTriggerInteraction.Ignore))
-            {
-                aimDistance = aimHit.distance;
-            }
-
-            float horizontalSpeed = GetHorizontalMoveSpeed();
-            float exertionPenalty = stamina?.ExertionPenalty ?? 0f;
-            float spread = weapon.CurrentSpreadDegrees(horizontalSpeed, aimDistance, exertionPenalty);
-            var rng = new System.Random(unchecked(Environment.TickCount ^ GetInstanceID() ^ weapon.RoundsRemaining));
-
-            HumanHealthController selfHealth = GetComponentInChildren<HumanHealthController>();
-            bool resolved = RangedHitscanResolver.TryResolveShot(
-                aimRay,
-                weapon.Profile,
-                spread,
-                rng,
-                selfHealth,
-                out HumanHealthController health,
-                out BodyZone zone,
-                out TileCoord structuralCoord,
-                out bool hitLiving,
-                out bool hitStructural,
-                out Vector3 impactPoint,
-                out Vector3 impactNormal,
-                out bool hasImpact,
-                out Vector3 shotDirection);
-
-            bool landed = false;
-            if (resolved && hitLiving && health != null)
-            {
-                health.ApplyDamage(zone, weapon.Profile.ToDamagePacket());
-                landed = true;
-            }
-            else if (resolved && hitStructural)
-            {
-                float force = weapon.Profile.ResolveStructuralForce();
-                if (force > 0f
-                    && SubSystems.TryGet(out StructuralDamageSubSystem structural)
-                    && structural.TryApplyStructuralDamage(structuralCoord, force, StructuralDamageSource.Ranged))
-                {
-                    landed = true;
-                }
-            }
-
-            if (hasImpact && !hitLiving)
-            {
-                PlaySurfaceHitSound(impactPoint);
-                ObserversNotifyBulletHole(impactPoint, impactNormal);
-            }
-
-            ClearMeleeAimPoint();
-            ServerNotifyRangedFireState(weapon, landed, hasImpact, impactPoint, shotDirection);
-        }
-
-        [ServerRpc]
-        private void CmdRunRangedReload()
-        {
-            if (!TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            if (!weapon.ServerTryBeginReload())
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            ServerNotifyRangedReloadStarted(weapon);
-        }
-
-        /// <summary>
-        /// Positional gunshot report (audio.md §3) — a side effect of the existing fire event, not a
-        /// new trigger. Occlusion/falloff come free from the pool's <c>AudioSourceOcclusion</c>.
-        /// </summary>
-        [Server]
-        private void PlayGunfireSound(Vector3 position)
-        {
-            string[] clips = CombatAudioTrackIds.GunFire;
-            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
-            float pitch = UnityEngine.Random.Range(0.95f, 1.05f);
-            // Full volume + generous minDistance so third-person / personal-breathing mix
-            // still reads the report as louder than internal cues.
-            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, clipId, position, null, false, 1f, pitch, 14f, 90f);
-        }
-
-        [Server]
-        private void PlayGunEmptySound(RangedWeaponItemExtension weapon)
-        {
-            Vector3 position = transform.position;
-            if (weapon != null)
-            {
-                weapon.GetMuzzleWorldPose(out position, out _);
-            }
-
-            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, CombatAudioTrackIds.GunEmpty, position, null, false, 1f, 1f, 8f, 40f);
-        }
-
-        [Server]
-        private static void PlaySurfaceHitSound(Vector3 impactPoint)
-        {
-            string[] clips = CombatAudioTrackIds.SurfaceHit;
-            string clipId = clips[UnityEngine.Random.Range(0, clips.Length)];
-            float pitch = UnityEngine.Random.Range(0.92f, 1.08f);
-            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, clipId, impactPoint, null, false, 0.95f, pitch, 6f, 50f);
-        }
-
-        [Server]
-        public void ServerNotifyRangedReloadStarted(RangedWeaponItemExtension weapon)
-        {
-            if (Owner == null || weapon == null)
-            {
-                return;
-            }
-
-            SubSystems.Get<AudioSubSystem>()?.PlayAudioSource(
-                AudioType.Sfx, CombatAudioTrackIds.ReloadMagazineOut, transform.position, null, false, 1f, 1f, 8f, 40f);
-
-            TargetNotifyRangedReload(
-                Owner,
-                weapon.Profile.ReloadSeconds,
-                weapon.RoundsRemaining,
-                weapon.RecoilStacks);
-        }
-
-        [Server]
-        private void ServerNotifyRangedFireState(
-            RangedWeaponItemExtension weapon,
-            bool landed,
-            bool hasImpact,
-            Vector3 impactPoint,
-            Vector3 shotDirection)
-        {
-            if (Owner == null || weapon == null)
-            {
-                return;
-            }
-
-            weapon.GetMuzzleWorldPose(out Vector3 muzzlePosition, out Vector3 muzzleForward);
-            ObserversNotifyMuzzleFlash(muzzlePosition, muzzleForward);
-
-            TargetNotifyRangedFireState(
-                Owner,
-                weapon.Profile.FireCooldownSeconds,
-                weapon.RoundsRemaining,
-                weapon.RecoilStacks,
-                landed,
-                hasImpact,
-                impactPoint,
-                shotDirection);
-        }
-
-        /// <summary>
-        /// Diegetic muzzle flash for all observers. Each client resolves the local held muzzle
-        /// so the light parents to the visual barrel tip (fallback: server-sampled world pose).
-        /// </summary>
-        [ObserversRpc(RunLocally = true)]
-        private void ObserversNotifyMuzzleFlash(Vector3 fallbackPosition, Vector3 fallbackForward)
-        {
-            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                Transform muzzle = weapon.Muzzle;
-                if (muzzle != null)
-                {
-                    MuzzleFlashVfx.Play(muzzle);
-                    return;
-                }
-
-                weapon.GetMuzzleWorldPose(out fallbackPosition, out fallbackForward);
-            }
-
-            MuzzleFlashVfx.Play(fallbackPosition, fallbackForward);
-        }
-
-        /// <summary>Bullet-hole decal on non-living impacts — visible to all observers.</summary>
-        [ObserversRpc(RunLocally = true)]
-        private void ObserversNotifyBulletHole(Vector3 impactPoint, Vector3 impactNormal)
-        {
-            BulletHoleDecalSpawner.Spawn(impactPoint, impactNormal);
-        }
-
-        [TargetRpc]
-        private void TargetNotifyRangedFireState(
-            NetworkConnection connection,
-            float cooldownSeconds,
-            int rounds,
-            float recoilStacks,
-            bool landed,
-            bool hasImpact,
-            Vector3 impactPoint,
-            Vector3 shotDirection)
-        {
-            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                weapon.BeginLocalFireCooldown();
-                weapon.ClientSetRounds(rounds);
-                weapon.ClientSetRecoil(recoilStacks);
-            }
-
-            if (hasImpact)
-            {
-                RangedShotFeedback.NotifyLocalShotImpact(impactPoint, landed, shotDirection);
-            }
-            else if (landed)
-            {
-                MeleeConnectFeedback.NotifyLocalConnectHitLanded();
-            }
-        }
-
-        [TargetRpc]
-        private void TargetNotifyRangedReload(
-            NetworkConnection connection,
-            float reloadSeconds,
-            int rounds,
-            float recoilStacks)
-        {
-            if (TryGetHeldRangedWeapon(out _, out RangedWeaponItemExtension weapon))
-            {
-                weapon.BeginLocalReload(reloadSeconds);
-                weapon.ClientSetRounds(rounds);
-                weapon.ClientSetRecoil(recoilStacks);
-            }
-        }
-
-        [ServerOrClient]
-        private float GetHorizontalMoveSpeed()
-        {
-            if (TryGetComponent(out CharacterController character) && character != null)
-            {
-                Vector3 v = character.velocity;
-                v.y = 0f;
-                return v.magnitude;
-            }
-
-            return 0f;
-        }
-
-        [Client]
-        private static void BeginLocalSwingCycle(Hand hand, MeleeWeaponProfile profile)
-        {
-            if (hand == null)
-            {
-                return;
-            }
-
-            if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
-            {
-                tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
-            }
-
-            tracker.BeginSwingCycle(profile.WindupSeconds, profile.RecoverySeconds);
-        }
-
-        [ServerRpc]
-        private void CmdRunMeleeSwing()
-        {
-            // Harm whitelist uses the server SyncVar — unrestricted verbs are Help-default;
-            // MeleeHitInteraction opts in via IIntentRestrictedInteraction.
-            if (!TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand))
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            if (!InteractionPipeline.MatchesIntent(hit, _currentIntent))
-            {
-                Log.Warning(this, "Rejected melee swing — intent {intent} is not Harm-whitelisted",
-                    Logs.Generic, _currentIntent);
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            if (!hit.CanStartSwing(hand))
-            {
-                TargetRejectInteraction(Owner);
-                return;
-            }
-
-            // Do not use InteractionSource.Interact / DelayedInteraction for Harm primary.
-            // Connect is scheduled on this controller so it cannot be skipped when Hand/Item
-            // Update fails to tick through StartDelayed.
-            float effectiveWindupSeconds = hit.ServerBeginSwing(hand);
-            ServerScheduleMeleeConnect(hand, hit.Profile, effectiveWindupSeconds);
-
-            _meleeSwingSerial++;
-            RpcExecuteMeleeSwing(_meleeSwingSerial);
-        }
-
-        [ObserversRpc(RunLocally = true)]
-        private void RpcExecuteMeleeSwing(int swingId)
-        {
-            if (!IsOwner)
-            {
-                return;
-            }
-
-            // No client DelayedInteraction (CreateClient is null) — keep an id so cancel/aim
-            // paths have a handle; aim sync itself keys off MeleeRecoveryTracker.IsBusy.
-            if (!TryCreateMeleeHitInteraction(out _, out Hand hand))
-            {
-                return;
-            }
-
-            _clientActiveSource = hand;
-            _clientActiveReferenceId = swingId;
-            TrySyncMeleeAimToServer();
-        }
-
-        [Server]
-        private void ServerScheduleMeleeConnect(Hand hand, MeleeWeaponProfile profile, float windupSeconds)
-        {
-            _pendingMeleeHand = hand;
-            _pendingMeleeProfile = profile;
-            _pendingMeleeConnectAt = Time.time + Mathf.Max(0.01f, windupSeconds);
-        }
-
-        [Server]
-        private void ClearPendingMeleeConnect()
-        {
-            _pendingMeleeConnectAt = -1f;
-            _pendingMeleeHand = null;
-            _pendingMeleeProfile = default;
-        }
-
-        private void HandleServerMeleeConnectUpdate(ref EventContext context, in UpdateEvent updateEvent)
-        {
-            if (!IsServer || _pendingMeleeConnectAt < 0f || Time.time < _pendingMeleeConnectAt)
-            {
-                return;
-            }
-
-            Hand hand = _pendingMeleeHand;
-            MeleeWeaponProfile profile = _pendingMeleeProfile;
-            ClearPendingMeleeConnect();
-
-            // Re-check Harm whitelist at connect — Help mid-windup should not apply damage.
-            if (_currentIntent != IntentType.Harm)
-            {
-                ClearMeleeAimPoint();
-                return;
-            }
-
-            if (hand == null)
-            {
-                return;
-            }
-
-            var hit = new MeleeHitInteraction(profile);
-            hit.ServerApplyConnect(hand, this);
-        }
-
-        /// <summary>
-        /// Builds a melee hit from the active tool profile, but always returns the Hand that must
-        /// host the delayed interaction (never the held Item).
-        /// </summary>
-        [ServerOrClient]
-        private bool TryCreateMeleeHitInteraction(out MeleeHitInteraction hit, out Hand hand)
-        {
-            hit = null;
-            hand = null;
-
-            IInteractionSource source = GetActiveInteractionSource();
-            if (source == null)
-            {
-                return false;
-            }
-
-            hand = ResolveSwingHand(source);
-            if (hand == null)
-            {
-                return false;
-            }
-
-            // Keep tool→hand Source wired for any ResolveHand walks that still expect it.
-            if (source is Item item)
-            {
-                item.Source = hand;
-            }
-
-            MeleeWeaponProfile profile = ResolveMeleeProfile(source);
-            hit = new MeleeHitInteraction(profile);
-            return true;
-        }
-
-        [ServerOrClient]
-        private static Hand ResolveSwingHand(IInteractionSource source)
-        {
-            if (source == null)
-            {
-                return null;
-            }
-
-            if (source.GetRootSource() is Hand rootHand)
-            {
-                return rootHand;
-            }
-
-            return source.GetComponentInTree<Hand>();
-        }
-
-        [ServerOrClient]
-        private static MeleeWeaponProfile ResolveMeleeProfile(IInteractionSource source)
-        {
-            if (source is Item item)
-            {
-                if (item.TryGetComponent(out MeleeWeaponItemExtension dedicated))
-                {
-                    return dedicated.Profile;
-                }
-
-                return MeleeWeaponProfile.Improvised;
-            }
-
-            return MeleeWeaponProfile.Fists;
         }
 
         [Client]
@@ -1146,45 +526,6 @@ namespace SS3D.Systems.Interactions
             }
         }
 
-        /// <summary>
-        /// Plays melee swing telegraph on the owning client when Run Primary dispatches a Hit.
-        /// Windup timing on the interaction matches <see cref="Combat.MeleeWeaponProfile.WindupSeconds"/>.
-        /// </summary>
-        private void TryPlayMeleeSwingTelegraph(IInteraction interaction)
-        {
-            if (interaction is not MeleeHitInteraction)
-            {
-                return;
-            }
-
-            if (!TryGetComponent(out HumanoidCombatController combat))
-            {
-                return;
-            }
-
-            combat.RequestAttack(AnimationTriggerId.AttackSwing);
-        }
-
-        private void TryPlayRangedFireTelegraph()
-        {
-            if (!TryGetComponent(out HumanoidCombatController combat))
-            {
-                return;
-            }
-
-            combat.RequestAttack(AnimationTriggerId.FireRifle);
-        }
-
-        private void TryPlayRangedReloadTelegraph()
-        {
-            if (!TryGetComponent(out HumanoidCombatController combat))
-            {
-                return;
-            }
-
-            combat.RequestAttack(AnimationTriggerId.Reload);
-        }
-
         [Client]
         private void HandleView(InputAction.CallbackContext callbackContext)
         {
@@ -1209,20 +550,13 @@ namespace SS3D.Systems.Interactions
         {
             // Activate item in selected hand — reload takes priority for firearms
             // (including two-hand rifles still wielded while the off-hand is selected).
+            if (GetCombatNetwork()?.TryRunRangedReloadPrimary() == true)
+            {
+                return;
+            }
+
             Hands hands = GetComponent<Hands>();
-            if (hands == null)
-            {
-                return;
-            }
-
-            if (TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out _, out RangedWeaponItemExtension ranged)
-                && ranged.CanStartReload())
-            {
-                TryRunRangedReloadPrimary();
-                return;
-            }
-
-            Item item = hands.SelectedHand?.ItemInHand;
+            Item item = hands?.SelectedHand?.ItemInHand;
             if (item != null)
             {
                 InteractInHand(item.gameObject, gameObject);
@@ -1537,8 +871,7 @@ namespace SS3D.Systems.Interactions
 
                 interactionEvent.Target = interaction.Target;
                 interactionEvent.Source.ClientInteract(interactionEvent, interaction.Interaction, new InteractionReference(referenceId));
-                _clientActiveSource = interactionEvent.Source;
-                _clientActiveReferenceId = referenceId;
+                _delayedTracker.SetClientActive(interactionEvent.Source, referenceId);
             }
             finally
             {
@@ -1552,23 +885,12 @@ namespace SS3D.Systems.Interactions
         [Client]
         private List<InteractionEntry> GetViableInteractionsFromSelection(out InteractionEvent interactionEvent)
         {
-            IInteractionSource source = GetActiveInteractionSource();
-
-            if (source == null)
-            {
-                interactionEvent = null;
-                return new List<InteractionEntry>();
-            }
-
-            Selectable current = _selectionSystem.GetCurrentSelectable();
-            if (current == null)
-            {
-                interactionEvent = null;
-                return new List<InteractionEntry>();
-            }
-
-            bool hasPoint = SelectionTargetUtility.TryResolveInteractionPoint(_camera, current, out Vector3 point, out Vector3 normal);
-            return GetViableInteractionsFromTarget(current.gameObject, hasPoint, point, normal, out interactionEvent);
+            return InteractionDiscovery.GetViableInteractionsFromSelection(
+                GetActiveInteractionSource(),
+                _selectionSystem.GetCurrentSelectable(),
+                _camera,
+                CurrentIntent,
+                out interactionEvent);
         }
 
         /// <summary>
@@ -1582,20 +904,14 @@ namespace SS3D.Systems.Interactions
             Vector3 normal,
             out InteractionEvent interactionEvent)
         {
-            IInteractionSource source = GetActiveInteractionSource();
-
-            if (source == null)
-            {
-                interactionEvent = null;
-                return new List<InteractionEntry>();
-            }
-
-            List<IInteractionTarget> targets = GetTargetsFromGameObject(source, targetGameObject);
-            interactionEvent = hasPoint
-                ? new InteractionEvent(source, targets[0], point, normal)
-                : new InteractionEvent(source, targets[0]);
-
-            return InteractionPipeline.GetViableInteractions(source, targets, interactionEvent, CurrentIntent);
+            return InteractionDiscovery.GetViableInteractionsFromTarget(
+                GetActiveInteractionSource(),
+                targetGameObject,
+                hasPoint,
+                point,
+                normal,
+                CurrentIntent,
+                out interactionEvent);
         }
 
         /// <summary>
@@ -1608,22 +924,7 @@ namespace SS3D.Systems.Interactions
             InteractionIdentifier id,
             out InteractionEntry interaction)
         {
-            if (InteractionEntry.TryResolve(viableInteractions, id, out interaction))
-            {
-                return true;
-            }
-
-            for (int i = 0; i < viableInteractions.Count; i++)
-            {
-                if (string.Equals(viableInteractions[i].Id.GenericName, id.GenericName, System.StringComparison.Ordinal))
-                {
-                    interaction = viableInteractions[i];
-                    return true;
-                }
-            }
-
-            interaction = default;
-            return false;
+            return InteractionDispatch.TryResolveDispatchedInteraction(viableInteractions, id, out interaction);
         }
 
         /// <summary>
@@ -1632,20 +933,18 @@ namespace SS3D.Systems.Interactions
         [ServerOrClient]
         private List<InteractionEntry> GetViableInteractionsFromTarget(GameObject targetGameObject, Vector3 point, out InteractionEvent interactionEvent)
         {
-            return GetViableInteractionsFromTarget(targetGameObject, hasPoint: true, point, Vector3.zero, out interactionEvent);
+            return InteractionDiscovery.GetViableInteractionsFromTarget(
+                GetActiveInteractionSource(),
+                targetGameObject,
+                point,
+                CurrentIntent,
+                out interactionEvent);
         }
 
         [Client]
         private static bool TryGetNetworkTarget(InteractionEvent interactionEvent, out NetworkObject networkObject)
         {
-            networkObject = null;
-
-            if (interactionEvent?.Target == null)
-            {
-                return false;
-            }
-
-            return TryGetNetworkObject(interactionEvent.Target, out networkObject);
+            return InteractionDispatch.TryGetNetworkTarget(interactionEvent, out networkObject);
         }
 
         [Client]
@@ -1654,280 +953,59 @@ namespace SS3D.Systems.Interactions
             InteractionEvent interactionEvent,
             out NetworkObject networkObject)
         {
-            if (TryGetNetworkTarget(interactionEvent, out networkObject))
-            {
-                return true;
-            }
-
-            if (entry.Target != null)
-            {
-                return false;
-            }
-
-            Selectable current = _selectionSystem.GetCurrentSelectable();
-            if (current == null)
-            {
-                return false;
-            }
-
-            networkObject = current.GetComponent<NetworkObject>();
-            if (networkObject == null)
-            {
-                networkObject = current.GetComponentInParent<NetworkObject>();
-            }
-
-            return networkObject != null;
+            return InteractionDispatch.TryGetNetworkTargetForDispatch(
+                entry,
+                interactionEvent,
+                _selectionSystem.GetCurrentSelectable(),
+                out networkObject);
         }
 
         [Client]
         private static bool TryGetNetworkObject(IInteractionTarget target, out NetworkObject networkObject)
         {
-            networkObject = null;
-
-            GameObject targetGameObject = null;
-            if (target is IGameObjectProvider targetProvider)
-            {
-                targetGameObject = targetProvider.GameObject;
-            }
-            else if (target is Component targetComponent)
-            {
-                targetGameObject = targetComponent.gameObject;
-            }
-
-            if (targetGameObject == null)
-            {
-                return false;
-            }
-
-            networkObject = targetGameObject.GetComponent<NetworkObject>();
-            if (networkObject == null)
-            {
-                networkObject = targetGameObject.GetComponentInParent<NetworkObject>();
-            }
-
-            return networkObject != null;
+            return InteractionDispatch.TryGetNetworkObject(target, out networkObject);
         }
 
         [Client]
         private IInteractionTarget ResolveFallbackTarget(InteractionEvent interactionEvent, InteractionEntry entry)
         {
-            if (entry.Target != null)
-            {
-                return entry.Target;
-            }
-
-            if (interactionEvent?.Target != null)
-            {
-                return interactionEvent.Target;
-            }
-
-            Selectable current = _selectionSystem.GetCurrentSelectable();
-            if (current == null)
-            {
-                return null;
-            }
-
-            IInteractionSource source = GetActiveInteractionSource();
-            if (source == null)
-            {
-                return null;
-            }
-
-            List<IInteractionTarget> targets = GetTargetsFromGameObject(source, current.gameObject);
-            return targets.Count > 0 ? targets[0] : null;
+            return InteractionDispatch.ResolveFallbackTarget(
+                interactionEvent,
+                entry,
+                _selectionSystem.GetCurrentSelectable(),
+                GetActiveInteractionSource());
         }
 
         [Client]
         private static List<InteractionEntry> FilterRadialInteractions(List<InteractionEntry> interactions)
         {
-            return interactions
-                .Where(entry => entry.Interaction.GetGenericName() != ExamineInteractionName)
-                .ToList();
+            return InteractionDispatch.FilterRadialInteractions(interactions);
         }
 
         [ServerOrClient]
         private static bool TryValidateInteractionTarget(NetworkObject target, out GameObject targetGameObject)
         {
-            targetGameObject = null;
-
-            if (target == null || !target.IsSpawned)
-            {
-                return false;
-            }
-
-            targetGameObject = target.gameObject;
-
-            if (targetGameObject.GetComponent<Selectable>() == null && targetGameObject.GetComponentInChildren<Selectable>() == null)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        [Client]
-        private void RefreshInteractionOutline()
-        {
-            using (OutlinePerformanceMarker.Auto())
-            {
-                RefreshInteractionOutlineUnguarded();
-            }
-        }
-
-        [Client]
-        private void RefreshInteractionOutlineUnguarded()
-        {
-            Selectable current = _selectionSystem.GetCurrentSelectable();
-            InteractionOutlineView.ClearPendingExcept(current);
-
-            if (current == null || IsEntityOutlineExcluded(current))
-            {
-                ClearInteractionOutline();
-                return;
-            }
-
-            if (InteractionOutlineView.IsPending(current))
-            {
-                if (current != _activeOutlineSelectable)
-                {
-                    ClearInteractionOutline();
-                    _activeOutlineSelectable = current;
-                    _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
-                }
-
-                if (_activeOutlineView)
-                {
-                    _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Pending);
-                }
-
-                return;
-            }
-
-            if (current != _activeOutlineSelectable)
-            {
-                ClearInteractionOutline();
-                _activeOutlineSelectable = current;
-                _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
-            }
-
-            if (!_activeOutlineView)
-            {
-                return;
-            }
-
-            if (!TryEvaluateInteractability(current, out bool hasViableInteractions))
-            {
-                _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Hidden);
-                return;
-            }
-
-            InteractionOutlineView.OutlineState state = hasViableInteractions
-                ? InteractionOutlineView.OutlineState.Available
-                : InteractionOutlineView.OutlineState.Unavailable;
-
-            _activeOutlineView.SetState(state);
-        }
-
-        /// <summary>
-        /// Player-controlled entities use dedicated UIs (e.g. medical) instead of world interaction outlines.
-        /// </summary>
-        private static bool IsEntityOutlineExcluded(Selectable selectable)
-        {
-            return selectable.GetComponentInParent<Entity>() != null;
-        }
-
-        [Client]
-        private bool TryEvaluateInteractability(Selectable selectable, out bool hasViableInteractions)
-        {
-            hasViableInteractions = false;
-
-            IInteractionSource source = GetActiveInteractionSource();
-            if (source == null)
-            {
-                return false;
-            }
-
-            bool hasPoint = SelectionTargetUtility.TryResolveInteractionPoint(_camera, selectable, out Vector3 point, out Vector3 normal);
-            CollectTargetsInto(source, selectable.gameObject, _outlineTargets);
-
-            InteractionEvent outlineEvent = hasPoint
-                ? new InteractionEvent(source, null, point, normal)
-                : new InteractionEvent(source, null);
-
-            // Outline LateUpdate must not run full Discover (source-only Drop, ToArray, Filter lists).
-            return InteractionPipeline.TryEvaluateOutlineInteractability(
-                source,
-                _outlineTargets,
-                outlineEvent,
-                CurrentIntent,
-                out hasViableInteractions);
+            return InteractionDispatch.TryValidateInteractionTarget(target, out targetGameObject);
         }
 
         private void ClearInteractionOutline()
         {
-            // Unity fake-null: destroyed views compare unequal to null via ==.
-            if (_activeOutlineView)
-            {
-                _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Hidden);
-            }
-
-            _activeOutlineView = null;
-            _activeOutlineSelectable = null;
+            _outlineDriver.Clear();
         }
 
         /// <summary>
         /// Gets all valid interaction targets from a game object
         /// </summary>
-        /// <param name="source">The source of the interaction</param>
-        /// <param name="targetGameObject">The game objects the interaction targets are on</param>
-        /// <returns>A list of all valid interaction targets</returns>
         [ServerOrClient]
         private List<IInteractionTarget> GetTargetsFromGameObject(IInteractionSource source, GameObject targetGameObject)
         {
-            List<IInteractionTarget> targets = new();
-            CollectTargetsInto(source, targetGameObject, targets);
-            return targets;
-        }
-
-        [ServerOrClient]
-        private static void CollectTargetsInto(
-            IInteractionSource source,
-            GameObject targetGameObject,
-            List<IInteractionTarget> targets)
-        {
-            targets.Clear();
-
-            // Interface GetComponents still allocates an array; avoid LINQ Where/ToList on top.
-            IInteractionTarget[] components = targetGameObject.GetComponents<IInteractionTarget>();
-            for (int i = 0; i < components.Length; i++)
-            {
-                IInteractionTarget target = components[i];
-                if ((target as MonoBehaviour)?.enabled == false)
-                {
-                    continue;
-                }
-
-                if (!source.CanInteractWithTarget(target))
-                {
-                    continue;
-                }
-
-                targets.Add(target);
-            }
-
-            if (targets.Count < 1)
-            {
-                targets.Add(new InteractionTargetGameObject(targetGameObject));
-            }
+            return InteractionDiscovery.GetTargetsFromGameObject(source, targetGameObject);
         }
 
         [ServerOrClient]
         private IInteractionSource GetActiveInteractionSource()
         {
-            IHandsController handsController = GetComponent<IHandsController>();
-            var interactionSource = handsController.GetActiveInteractionSource();
-
-            return interactionSource;
+            return InteractionDiscovery.GetActiveInteractionSource(this);
         }
 
         [ServerRpc]
@@ -2007,8 +1085,7 @@ namespace SS3D.Systems.Interactions
 
                 interactionEvent.Target = chosenInteraction.Target;
                 interactionEvent.Source.ClientInteract(interactionEvent, chosenInteraction.Interaction, new InteractionReference(referenceId));
-                _clientActiveSource = source;
-                _clientActiveReferenceId = referenceId;
+                _delayedTracker.SetClientActive(source, referenceId);
             }
             finally
             {
@@ -2019,65 +1096,47 @@ namespace SS3D.Systems.Interactions
         [ServerRpc]
         private void CmdCancelInteraction(int referenceId)
         {
-            // Harm primary connect is controller-scheduled (not InteractionSource.Interact).
-            ClearPendingMeleeConnect();
+            GetCombatNetwork()?.ClearPendingMeleeConnect();
 
-            if (_serverActiveReference == null || _serverActiveReference.Id != referenceId || _serverActiveSource == null)
-            {
-                return;
-            }
-
-            if (!_serverActiveSource.HasInteraction(_serverActiveReference))
+            if (_delayedTracker.TryCancelServer(referenceId))
             {
                 ClearActiveInteractionTracking();
-                return;
             }
-
-            _serverActiveSource.CancelInteraction(_serverActiveReference);
-            ClearActiveInteractionTracking();
         }
 
         [Server]
         private void TrackActiveInteraction(IInteractionSource source, InteractionReference reference, IInteraction interaction)
         {
-            if (interaction is not IDelayedInteraction)
-            {
-                return;
-            }
-
-            _serverActiveReference = reference;
-            _serverActiveSource = source;
+            _delayedTracker.TrackServer(source, reference, interaction);
         }
 
         [Server]
         private void ClearActiveInteractionTracking()
         {
-            _serverActiveReference = null;
-            _serverActiveSource = null;
-            ClearPendingMeleeConnect();
-            ClearMeleeAimPoint();
+            _delayedTracker.ClearServer();
+            CombatInteractionNetwork combat = GetCombatNetwork();
+            combat?.ClearPendingMeleeConnect();
+            combat?.ClearMeleeAimPoint();
         }
 
         private void ClearClientActiveInteractionTracking()
         {
-            _clientActiveReferenceId = -1;
-            _clientActiveSource = null;
+            _delayedTracker.ClearClient();
         }
 
         [Server]
         private void RefreshServerDelayedInteractionTracking()
         {
-            if (_serverActiveReference == null || _serverActiveSource == null)
+            if (!_delayedTracker.TryRefreshServerEnded())
             {
                 return;
             }
 
-            if (_serverActiveSource.HasInteraction(_serverActiveReference))
-            {
-                return;
-            }
+            // Combat connect may still be pending when a DelayedInteraction ends.
+            CombatInteractionNetwork combat = GetCombatNetwork();
+            combat?.ClearPendingMeleeConnect();
+            combat?.ClearMeleeAimPoint();
 
-            ClearActiveInteractionTracking();
             if (Owner != null)
             {
                 TargetNotifyDelayedInteractionEnded(Owner);
@@ -2087,19 +1146,7 @@ namespace SS3D.Systems.Interactions
         [Client]
         private void RefreshClientDelayedInteractionTracking()
         {
-            if (_clientActiveReferenceId < 0 || _clientActiveSource == null)
-            {
-                return;
-            }
-
-            var reference = new InteractionReference(_clientActiveReferenceId);
-            if (_clientActiveSource.HasInteraction(reference))
-            {
-                return;
-            }
-
-            // Host: RefreshServerDelayedInteractionTracking already TargetNotify'd this frame.
-            // Pure client with no client interaction instance: wait for TargetNotify / Cancel.
+            _delayedTracker.RefreshClient();
         }
 
         [TargetRpc]
@@ -2109,83 +1156,30 @@ namespace SS3D.Systems.Interactions
             TakeFromCharacterEnded?.Invoke();
         }
 
-        /// <summary>
-        /// Client-synced camera aim ray for the active melee swing (matches zone reticle; not hand bone).
-        /// </summary>
+        /// <summary>Clears optimistic UI when the server rejects an interaction for the owner.</summary>
         [Server]
-        public bool TryGetMeleeAimRay(out Ray aimRay)
+        public void RejectInteractionForOwner()
         {
-            aimRay = default;
-            if (!_hasMeleeAimRay)
+            if (Owner != null)
             {
-                return false;
+                TargetRejectInteraction(Owner);
             }
-
-            Vector3 direction = _meleeAimPoint - _meleeAimRayOrigin;
-            if (direction.sqrMagnitude < 0.0001f)
-            {
-                return false;
-            }
-
-            aimRay = new Ray(_meleeAimRayOrigin, direction.normalized);
-            return true;
         }
 
-        [Server]
-        public void ClearMeleeAimPoint()
+        /// <summary>Melee swing Rpc — no client DelayedInteraction; track id for cancel/aim paths.</summary>
+        public void SetClientActiveDelayed(IInteractionSource source, int referenceId)
         {
-            _hasMeleeAimRay = false;
-            _meleeAimRayOrigin = default;
-            _meleeAimPoint = default;
+            _delayedTracker.SetClientActive(source, referenceId);
         }
 
-        private void TrySyncMeleeAimDuringSwing()
+        private CombatInteractionNetwork GetCombatNetwork()
         {
-            if (CurrentIntent != IntentType.Harm)
+            if (_combatNetwork == null)
             {
-                return;
+                _combatNetwork = GetComponent<CombatInteractionNetwork>();
             }
 
-            // Melee CreateClient returns null — there is no client delayed interaction to keep
-            // _clientActiveReferenceId alive. Sync while the hand recovery tracker is busy instead.
-            Hands hands = GetComponent<Hands>();
-            Hand hand = hands != null ? hands.SelectedHand : null;
-            if (hand == null
-                || !hand.TryGetComponent(out MeleeRecoveryTracker tracker)
-                || !tracker.IsBusy)
-            {
-                return;
-            }
-
-            TrySyncMeleeAimToServer();
-        }
-
-        private void TrySyncMeleeAimToServer()
-        {
-            if (!IsOwner)
-            {
-                return;
-            }
-
-            if (!TryGetComponent(out HumanoidController humanoid))
-            {
-                return;
-            }
-
-            if (!humanoid.TryGetCombatAimRay(out Ray aimRay, out Vector3 aimPoint))
-            {
-                return;
-            }
-
-            CmdSyncMeleeAim(aimRay.origin, aimPoint);
-        }
-
-        [ServerRpc(RequireOwnership = true)]
-        private void CmdSyncMeleeAim(Vector3 rayOrigin, Vector3 aimPoint)
-        {
-            _meleeAimRayOrigin = rayOrigin;
-            _meleeAimPoint = aimPoint;
-            _hasMeleeAimRay = true;
+            return _combatNetwork;
         }
 
         [TargetRpc]
@@ -2195,81 +1189,6 @@ namespace SS3D.Systems.Interactions
             InteractionOptimisticFeedback.Clear(transform);
             InteractionOutlineView.ClearPending();
             TakeFromCharacterEnded?.Invoke();
-        }
-
-        /// <summary>
-        /// Server → owning client: melee swing cycle lock started (windup+recovery). Mirrors the
-        /// server tracker onto the client Hand so CanStartSwing / HUD bracket recharge work off-host.
-        /// </summary>
-        [Server]
-        public void ServerNotifyMeleeRecovery(Hand hand, float cycleSeconds)
-        {
-            if (Owner == null || cycleSeconds <= 0f)
-            {
-                return;
-            }
-
-            int handIndex = -1;
-            if (hand != null && hand.HandsController is Hands hands)
-            {
-                handIndex = hands.PlayerHands.IndexOf(hand);
-            }
-
-            TargetNotifyMeleeRecovery(Owner, handIndex, cycleSeconds);
-        }
-
-        [TargetRpc]
-        private void TargetNotifyMeleeRecovery(NetworkConnection connection, int handIndex, float cycleSeconds)
-        {
-            Hand hand = ResolveLocalHand(handIndex);
-            if (hand != null)
-            {
-                if (!hand.TryGetComponent(out MeleeRecoveryTracker tracker))
-                {
-                    tracker = hand.gameObject.AddComponent<MeleeRecoveryTracker>();
-                }
-
-                // Full cycle already summed on the server (windup + recovery).
-                tracker.BeginSwingCycle(0f, cycleSeconds);
-            }
-
-            MeleeRecoveryFeedback.NotifyLocalRecoveryStarted(cycleSeconds);
-        }
-
-        /// <summary>
-        /// Server → owning client: melee connect applied damage. HUD cross-flash; whiffs stay silent.
-        /// </summary>
-        [Server]
-        public void ServerNotifyMeleeConnectHit()
-        {
-            if (Owner == null)
-            {
-                return;
-            }
-
-            TargetNotifyMeleeConnectHit(Owner);
-        }
-
-        [TargetRpc]
-        private void TargetNotifyMeleeConnectHit(NetworkConnection connection)
-        {
-            MeleeConnectFeedback.NotifyLocalConnectHitLanded();
-        }
-
-        private Hand ResolveLocalHand(int handIndex)
-        {
-            Hands hands = GetComponentInChildren<Hands>();
-            if (hands == null)
-            {
-                return null;
-            }
-
-            if (handIndex >= 0 && handIndex < hands.PlayerHands.Count)
-            {
-                return hands.PlayerHands[handIndex];
-            }
-
-            return hands.SelectedHand;
         }
 
         private bool TryValidateGameplayGates(IInteraction interaction, InteractionEvent interactionEvent)
