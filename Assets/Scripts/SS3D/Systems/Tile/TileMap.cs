@@ -750,6 +750,22 @@ namespace SS3D.Systems.Tile
             _adjacencyEngine.ProcessQueue();
         }
 
+        /// <summary>
+        /// Re-apply host MeshRenderer visibility for every placed tile (Map Editor open → all
+        /// visible; closed → HashGrid AOI). See <see cref="PlacedTileObject.RefreshHostVisibility"/>.
+        /// </summary>
+        public void RefreshAllHostVisibility()
+        {
+            foreach (TileChunk chunk in _chunks.Values)
+            {
+                foreach (PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
+                {
+                    if (obj != null)
+                        obj.RefreshHostVisibility();
+                }
+            }
+        }
+
         private void UpdateAdjacenciesFor(PlacedTileObject placedObject)
         {
             if (placedObject.TryGetComponent<IEngineDrivenAdjacency>(out _))

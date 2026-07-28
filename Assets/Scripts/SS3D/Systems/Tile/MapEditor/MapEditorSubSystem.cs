@@ -298,6 +298,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 SetMouseOverUI(false);
                 _gameplayHud.SetVisible(false);
                 SpawnPointEditorView.EnsureExists().SetEditorOpen(true);
+                RefreshTileHostVisibility();
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
             }
@@ -314,8 +315,21 @@ namespace SS3D.Systems.Tile.MapEditor
                 _mapEditorHandle?.Dispose();
                 _mapEditorHandle = null;
                 ShutdownDocument();
+                // IsActive is already false — re-apply HashGrid AOI host visibility.
+                RefreshTileHostVisibility();
                 EditorClosed?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Map Editor free-fly bypasses HashGrid AOI for host MeshRenderers; leaving restores AOI.
+        /// </summary>
+        private void RefreshTileHostVisibility()
+        {
+            if (_tileSystem?.CurrentMap == null)
+                return;
+
+            _tileSystem.CurrentMap.RefreshAllHostVisibility();
         }
 
         /// <summary>

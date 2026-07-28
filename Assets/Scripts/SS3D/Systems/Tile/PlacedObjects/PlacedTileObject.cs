@@ -11,6 +11,7 @@ using SS3D.Logging;
 using SS3D.Rendering.URP;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.Connections;
+using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections;
@@ -218,18 +219,27 @@ namespace SS3D.Systems.Tile
             RefreshHostVisibility();
         }
 
-        private void RefreshHostVisibility()
+        /// <summary>
+        /// HashGrid AOI drives host MeshRenderer visibility in play; Map Editor authoring
+        /// bypasses AOI so the free-fly camera can see the whole station.
+        /// </summary>
+        public void RefreshHostVisibility()
         {
-            if (!IsClient)
+            if (!IsClient || NetworkObject == null)
                 return;
 
             NetworkConnection localConnection = NetworkManager.ClientManager.Connection;
             if (!localConnection.IsValid)
                 return;
 
-            NetworkObject.SetRenderersVisible(NetworkObject.Observers.Contains(localConnection), force: true);
+            bool visible = IsMapEditorAuthoring()
+                || NetworkObject.Observers.Contains(localConnection);
+            NetworkObject.SetRenderersVisible(visible, force: true);
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
         }
+
+        private static bool IsMapEditorAuthoring() =>
+            SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive;
 
         private void PublishIdentityToNetwork()
         {

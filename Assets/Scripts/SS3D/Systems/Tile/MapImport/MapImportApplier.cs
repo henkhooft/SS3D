@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using FishNet;
+using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Logging;
 using SS3D.Systems.Electricity;
@@ -77,6 +79,9 @@ namespace SS3D.Systems.Tile.MapImport
                 }
 
                 map.RefreshAllAdjacencies();
+                RebuildHostObservers(map);
+                // Host MeshRenderers follow HashGrid AOI unless Map Editor is open (free-fly authoring).
+                map.RefreshAllHostVisibility();
 
                 if (!string.IsNullOrEmpty(unmappedReportPath))
                 {
@@ -90,6 +95,18 @@ namespace SS3D.Systems.Tile.MapImport
             {
                 if (hasElectricity)
                     electricity.SuspendCircuitUpdates(false);
+            }
+        }
+
+        private static void RebuildHostObservers(TileMap map)
+        {
+            if (InstanceFinder.ServerManager != null
+                && InstanceFinder.IsClient
+                && InstanceFinder.ClientManager != null)
+            {
+                NetworkConnection conn = InstanceFinder.ClientManager.Connection;
+                if (conn != null && conn.IsValid)
+                    InstanceFinder.ServerManager.Objects.RebuildObservers(conn, timedOnly: false);
             }
         }
 
