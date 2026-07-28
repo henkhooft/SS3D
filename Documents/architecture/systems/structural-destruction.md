@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/ (integrity stage + occupancy + blast VFX Rpc)
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: db818b59f — 2026-07-28 (Intact clears MPB)
 
 # Structural destruction
 
 ## Overview
 
-Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1–3: accumulate force → stages → Destroyed clear; melee StructuralForce; hop blast BFS + crew brute. Phase 4: wall stage MPB tint + Cracked hiss + examine. Blast detonation VFX: epicenter fireball wash (atmos-fire palette), point light, boom SFX, scorch decals, distance-scaled shake + blast screen flash — via `TileSubSystem` ObserversRpc. Explosive items and repair remaining: [station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md).
+Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1–3: accumulate force → stages → Destroyed clear; melee StructuralForce; hop blast BFS + crew brute. Phase 4: wall stage MPB tint (Damaged/Cracked only — **Intact clears** the MPB for SRP Batcher) + Cracked hiss + examine. Blast detonation VFX: epicenter fireball wash (atmos-fire palette), point light, boom SFX, scorch decals, distance-scaled shake + blast screen flash — via `TileSubSystem` ObserversRpc. Explosive items and repair remaining: [station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md).
 
 ## Start here
 
@@ -49,6 +49,7 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - **Open blast hops require `HasPlenum`:** empty chunk cells still return occupancy with `BlockedEdges=0`; without a plenum gate the BFS floods the void and flanks doors/walls from the side (EditMode: door took 30+10, thin wall 65+35→Destroyed).
 - **Never assign integrity SyncVars without a spawned NetworkObject:** FishNet `SyncBase.IsNetworkInitialized` NREs when `_networkObjectCache` is null (common for door/floor prefabs that get `PlacedTileObject` via `AddComponent` at place time). `ServerSetIntegrity` falls back to local fields when the NB cache is missing or not spawned (same guard pattern as `SetDirection`). Server damage/clear still works; clients will not see stage SyncVars on those tiles until prefabs bake `PlacedTileObject`.
 - **Host SyncVar OnChange may skip:** `ServerSetIntegrity` always calls `StructuralIntegrityPresenter.Apply` so host tint/hiss updates without relying on FishNet OnChange.
+- **Intact must clear MaterialPropertyBlocks:** writing a white tint on Intact breaks SRP Batcher on every undamaged wall. `Apply(Intact)` uses `SetPropertyBlock(null)`. Hit 2026-07-28.
 - **Blast VFX Rpc must RunLocally and must not BufferLast:** one-shot boom; host needs `RunLocally = true`. Scorch decal materials stay **Opaque** (same URP Decal pitfall as blood).
 
 ## Depends on / Used by
@@ -60,5 +61,6 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 
 - Design: [Documents/design/explosives-destruction.md](../../design/explosives-destruction.md)
 - Effort: [2026-07_structural-destruction.md](../2026-07_structural-destruction.md)
+- Related: [2026-07_srp-batcher-gpu-instancing.md](../2026-07_srp-batcher-gpu-instancing.md) (Intact MPB clear)
 - Plan: [station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md)
 - [INDEX.md](../INDEX.md)

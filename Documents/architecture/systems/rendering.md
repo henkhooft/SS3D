@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 84192af6d — 2026-07-26 (UI icons via IconPreviewGenerator / ObjectIcon)
+> Verified: db818b59f — 2026-07-28 (SRP Batcher / GPU Instancing hygiene)
 
 # Rendering
 
@@ -9,7 +9,7 @@
 
 URP rendering extensions for this fork. The selection pick pass ([selection](selection.md)) is gameplay-critical for interaction targeting. The atmospherics pass ([atmospherics](atmospherics.md)) composites gas scatter, plasma glow, and heat distortion from sim GPU textures via `AtmosRenderContext`. **Decal Renderer** is enabled on the forward renderer (Use Rendering Layers on) for health blood decals and future surface marks — see `DecalRenderingLayers`. **Atmos snapshot is server-built only** — clients render when a snapshot is present; multiplayer client sync is not implemented yet.
 
-Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles, and ForwardLit samples DBuffer (`ApplyDecalToBaseColor`) so health blood / surface `DecalProjector`s tint skin and worn clothing.
+Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). ST already has `UnityPerMaterial` + `#pragma multi_compile_instancing` — Metastation wins come from enabling material instancing and keeping MeshRenderers free of permanent MaterialPropertyBlocks (see [srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md)). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles, and ForwardLit samples DBuffer (`ApplyDecalToBaseColor`) so health blood / surface `DecalProjector`s tint skin and worn clothing.
 
 Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts from `Entity.ViewPoint` (`VisionSubSystem` → `_VisionMap`) and composited by `VisionRendererFeature`. Unseen areas are fully opaque black, not soft fog. Rays advance in `RaycastCommand` waves, skipping furniture/props until the nearest wall/door (non-window); a capped multi-hit buffer previously filled with props and leaked vision through walls. Triggers and inventory preview cameras are ignored.
 
@@ -38,7 +38,9 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 
 ## Pitfalls
 
-- **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API.
+- **Permanent MaterialPropertyBlocks break SRP Batcher:** any MPB on a MeshRenderer (e.g. old Selectable `_SelectionColor`, Intact white integrity tint) drops that draw out of the SRP Batcher path. Selection pick uses transient MPB on `DrawMesh` via `SelectionPickContext`; intact integrity clears MPBs. Hit 2026-07-28 (Metastation).
+- **GPU Instancing needs the material flag:** ST shaders compile instancing variants, but assets need `enableInstancing` / `m_EnableInstancingVariants: 1`. Floor ST mats were flipped in [srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md).
+- **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API. Do not confuse with classic GPU Instancing / SRP Batcher (still on).
 - **ST meshes ignore blood/floor DecalProjectors:** Automatic Decal technique is DBuffer on desktop. `STDefault` ForwardLit must keep `#pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3` and `ApplyDecalToBaseColor` under `#ifdef _DBUFFER` — calling it without the keyword samples an unbound buffer (weight 0 → black mesh). DepthNormals alone only fixes Decal Layers filtering, not albedo tint.
 - **Decal Layers must stay enabled:** `SS3D_ForwardPlusRenderer` Decal feature `decalLayers: 1`. Floor/bullet projectors target `ReceiveWorldDecals` only; characters stay Default. Turning layers off makes Lit tiles look fine while masking breaks for the intended filter path — do not disable during lighting/SSAO retunes.
 - **Item/tile icons dark or black under half-toon / fixture-only lighting:** do not render icons with live ST half-toon mats or bare scene lights. Use `IconPreviewGenerator` (`Unlit/ObjectIcon` overrides). `RuntimePreviewGenerator` still spawns temporary preview lights as a fallback path — do not rely on scene lighting. Keep `ObjectIcon` in Always Included Shaders (same pattern as InteractionOutline).
@@ -56,4 +58,5 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - [FORK_STATUS.md](../../FORK_STATUS.md) § URP migration
 - Plan: [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md)
 - Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
+- Effort (shipped): [2026-07_srp-batcher-gpu-instancing.md](../2026-07_srp-batcher-gpu-instancing.md)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)

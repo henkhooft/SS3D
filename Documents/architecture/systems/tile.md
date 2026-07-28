@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 08ff75dfc — 2026-07-28
+> Verified: db818b59f — 2026-07-28 (adjacency sharedMesh + underfloor occlusion)
 
 # Tile / construction
 
@@ -59,6 +59,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **Adjacency must assign `sharedMesh`, not `.mesh`:** `_filter.mesh =` unique-copies the FBX and blocks GPU Instancing on walls/plenum/pipes/carpet. Use `sharedMesh`. Hit 2026-07-28 (Metastation).
 - **Underfloor hide must compose after AOI show:** `RefreshHostVisibility` enables children for FishNet only when the cell is uncovered; covered Plenum/Wire/Disposal/PipeLeft|Middle|Right disable MeshRenderers + `Selectable` (keep NetworkObject/`BoxCollider` active — do **not** `SetActive(false)` the root). Early exits (`!IsSpawned` / `!IsClient`) still apply presentation-only hide — bulk load used to skip hide and leave MeshRenderers on. FishNet spawn/observer paths call `SetRenderersVisible(true)` directly — subscribe `OnHostVisibilityUpdated` and re-apply hide. Template `Load` must `RefreshAllHostVisibility` after all turfs exist. Map Editor authoring skips hide. `PipeSurface` stays visible. Hit 2026-07-28 (Metastation `Render.Mesh`).
 - **Map Editor leaves world sims running:** full-station MeshRenderer bypass is intentional for authoring, but atmos/electricity/airlock/disposal ticks used to keep burning CPU. `MapEditorSubSystem` now sets `SimulationPaused` / `SuspendCircuitUpdates` / `CapsulesPaused` while open. Hit 2026-07-28 (Metastation).
 - **Map import SO names are prefab names, not `.asset` file names:** `GenericObjectSo.NameString` is `PrefabAsset.name`. Type-map `so:` values must match (e.g. `FancyCarpetRed`, `CivillianAirlock`), or apply logs missing-asset skips.
@@ -121,7 +122,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 ## Related docs
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
-- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../2026-07_ss13-map-import.md), [2026-07_metastation-scale-perf](../2026-07_metastation-scale-perf.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
+- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../2026-07_ss13-map-import.md), [2026-07_metastation-scale-perf](../2026-07_metastation-scale-perf.md), [2026-07_srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
 - System map: [area](area.md), [structural-destruction](structural-destruction.md); hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)

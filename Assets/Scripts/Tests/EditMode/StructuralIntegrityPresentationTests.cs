@@ -51,6 +51,24 @@ namespace EditorTests
         }
 
         [Test]
+        public void Presenter_ApplyIntact_ClearsMaterialPropertyBlock()
+        {
+            var go = new GameObject("WallPresenterMpb");
+            _instantiated.Add(go);
+            MeshRenderer renderer = go.AddComponent<MeshRenderer>();
+            StructuralIntegrityPresenter presenter = go.AddComponent<StructuralIntegrityPresenter>();
+
+            presenter.Apply(StructuralIntegrityStage.Damaged);
+            var block = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            Assert.IsFalse(block.isEmpty, "Damaged stage should write a tint MPB");
+
+            presenter.Apply(StructuralIntegrityStage.Intact);
+            renderer.GetPropertyBlock(block);
+            Assert.IsTrue(block.isEmpty, "Intact should clear MPB for SRP Batcher / GPU Instancing");
+        }
+
+        [Test]
         public void ExamineProvider_AppendsCrackedLine()
         {
             TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);

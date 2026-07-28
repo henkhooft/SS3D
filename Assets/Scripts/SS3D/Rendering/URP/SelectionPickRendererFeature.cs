@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -11,9 +10,13 @@ namespace SS3D.Rendering.URP
     /// <summary>
     /// Renders selectable objects with the Custom/Selection shader into an offscreen target
     /// for CPU colour readback by <see cref="Systems.Selection.SelectionCamera"/>.
+    /// Draws registered <see cref="SelectionPickContext.ISelectionPickSource"/> meshes with a
+    /// transient MaterialPropertyBlock so world MeshRenderers stay MPB-free for SRP Batcher.
     /// </summary>
     public sealed class SelectionPickRendererFeature : ScriptableRendererFeature
     {
+        static readonly int SelectionColorId = Shader.PropertyToID("_SelectionColor");
+
         [SerializeField] private Shader _selectionShader;
 
         SelectionPickRenderPass _pickPass;
@@ -74,24 +77,16 @@ namespace SS3D.Rendering.URP
 
         sealed class SelectionPickRenderPass : ScriptableRenderPass
         {
-            readonly Material _overrideMaterial;
-            readonly List<ShaderTagId> _shaderTags = new()
-            {
-                new ShaderTagId("ForwardBase"),
-                new ShaderTagId("ForwardAdd"),
-                new ShaderTagId("Always"),
-                new ShaderTagId(string.Empty),
-                new ShaderTagId("UniversalForward"),
-                new ShaderTagId("UniversalForwardOnly"),
-                new ShaderTagId("SRPDefaultUnlit"),
-            };
+            readonly Material _selectionMaterial;
+            readonly List<SelectionPickContext.PickDraw> _draws = new();
+            readonly MaterialPropertyBlock _propertyBlock = new();
 
             SelectionPickContext.Request _request;
             RTHandle _importedTarget;
 
-            public SelectionPickRenderPass(Material overrideMaterial)
+            public SelectionPickRenderPass(Material selectionMaterial)
             {
-                _overrideMaterial = overrideMaterial;
+                _selectionMaterial = selectionMaterial;
                 profilingSampler = new ProfilingSampler("SS3D Selection Pick");
             }
 
@@ -117,14 +112,12 @@ namespace SS3D.Rendering.URP
 
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
-                if (_overrideMaterial == null || _request.Target == null)
+                if (_selectionMaterial == null || _request.Target == null)
                 {
                     return;
                 }
 
-                UniversalRenderingData renderingData = frameData.Get<UniversalRenderingData>();
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
-                UniversalLightData lightData = frameData.Get<UniversalLightData>();
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
 
                 EnsureImportedTarget();
@@ -132,103 +125,79 @@ namespace SS3D.Rendering.URP
                 bool useSceneDepth = cameraData.cameraTargetDescriptor.msaaSamples <= 1
                     && resourceData.activeDepthTexture.IsValid();
 
-                RecordQueuePass(
+                SelectionPickContext.CollectPickDraws(_draws);
+
+                RecordDrawPass(
                     renderGraph,
                     resourceData,
-                    renderingData,
-                    cameraData,
-                    lightData,
                     pickTarget,
                     useSceneDepth,
-                    RenderQueueRange.opaque,
-                    cameraData.defaultOpaqueSortFlags,
+                    transparent: false,
                     materialPassIndex: 0,
                     clearTarget: true,
                     "SS3D Selection Pick Opaque");
 
-                RecordQueuePass(
+                RecordDrawPass(
                     renderGraph,
                     resourceData,
-                    renderingData,
-                    cameraData,
-                    lightData,
                     pickTarget,
                     useSceneDepth,
-                    RenderQueueRange.transparent,
-                    SortingCriteria.CommonTransparent,
+                    transparent: true,
                     materialPassIndex: 1,
                     clearTarget: false,
                     "SS3D Selection Pick Transparent");
             }
 
-            void RecordQueuePass(
+            void RecordDrawPass(
                 RenderGraph renderGraph,
                 UniversalResourceData resourceData,
-                UniversalRenderingData renderingData,
-                UniversalCameraData cameraData,
-                UniversalLightData lightData,
                 TextureHandle pickColor,
                 bool useSceneDepth,
-                RenderQueueRange queueRange,
-                SortingCriteria sortFlags,
+                bool transparent,
                 int materialPassIndex,
                 bool clearTarget,
                 string passName)
             {
-                DrawingSettings drawingSettings = RenderingUtils.CreateDrawingSettings(
-                    _shaderTags,
-                    renderingData,
-                    cameraData,
-                    lightData,
-                    sortFlags);
-                drawingSettings.overrideMaterial = _overrideMaterial;
-                drawingSettings.overrideMaterialPassIndex = materialPassIndex;
-
-                FilteringSettings filteringSettings = new FilteringSettings(queueRange, cameraData.camera.cullingMask)
+                // Snapshot matching draws for this pass (list is filled once per frame in RecordRenderGraph).
+                List<SelectionPickContext.PickDraw> passDraws = null;
+                for (int i = 0; i < _draws.Count; i++)
                 {
-                    renderingLayerMask = SelectionRenderingLayers.PickPassMask
-                };
+                    if (_draws[i].Transparent != transparent)
+                        continue;
 
-                RendererListHandle rendererList;
-                if (useSceneDepth)
-                {
-                    var rendererListParams = new RendererListParams(
-                        renderingData.cullResults,
-                        drawingSettings,
-                        filteringSettings);
-                    rendererList = renderGraph.CreateRendererList(rendererListParams);
+                    passDraws ??= new List<SelectionPickContext.PickDraw>();
+                    passDraws.Add(_draws[i]);
                 }
-                else
+
+                if (passDraws == null || passDraws.Count == 0)
                 {
-                    var renderStateBlock = new RenderStateBlock(RenderStateMask.Depth);
-                    renderStateBlock.depthState = new DepthState(false, CompareFunction.Always);
+                    if (!clearTarget)
+                        return;
 
-                    var tagValues = new NativeArray<ShaderTagId>(1, Allocator.Temp);
-                    var stateBlocks = new NativeArray<RenderStateBlock>(1, Allocator.Temp);
-                    tagValues[0] = ShaderTagId.none;
-                    stateBlocks[0] = renderStateBlock;
-
-                    var rendererListParams = new RendererListParams(
-                        renderingData.cullResults,
-                        drawingSettings,
-                        filteringSettings)
+                    // Still clear the pick target when there are no opaque selectables.
+                    using var clearBuilder = renderGraph.AddRasterRenderPass<ClearPassData>(
+                        passName + " Clear",
+                        out ClearPassData clearData,
+                        profilingSampler);
+                    clearData.ClearTarget = true;
+                    clearBuilder.SetRenderAttachment(pickColor, 0, AccessFlags.Write);
+                    if (useSceneDepth)
+                        clearBuilder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+                    clearBuilder.SetRenderFunc((ClearPassData data, RasterGraphContext context) =>
                     {
-                        tagValues = tagValues,
-                        stateBlocks = stateBlocks,
-                        isPassTagName = false
-                    };
-                    rendererList = renderGraph.CreateRendererList(rendererListParams);
-                }
-
-                if (!rendererList.IsValid())
-                {
+                        context.cmd.ClearRenderTarget(RTClearFlags.Color, Color.black, 1, 0);
+                    });
                     return;
                 }
 
                 using var builder = renderGraph.AddRasterRenderPass<PassData>(passName, out PassData passData, profilingSampler);
-                passData.RendererList = rendererList;
+                passData.Draws = passDraws;
+                passData.Material = _selectionMaterial;
+                passData.MaterialPassIndex = materialPassIndex;
+                passData.PropertyBlock = _propertyBlock;
+                passData.ClearTarget = clearTarget;
+                passData.SelectionColorId = SelectionColorId;
 
-                builder.UseRendererList(passData.RendererList);
                 builder.SetRenderAttachment(pickColor, 0, AccessFlags.Write);
 
                 if (useSceneDepth)
@@ -239,18 +208,56 @@ namespace SS3D.Rendering.URP
                 builder.AllowGlobalStateModification(true);
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    if (clearTarget)
+                    if (data.ClearTarget)
                     {
                         context.cmd.ClearRenderTarget(RTClearFlags.Color, Color.black, 1, 0);
                     }
 
-                    context.cmd.DrawRendererList(data.RendererList);
+                    MaterialPropertyBlock block = data.PropertyBlock;
+                    List<SelectionPickContext.PickDraw> draws = data.Draws;
+                    for (int i = 0; i < draws.Count; i++)
+                    {
+                        SelectionPickContext.PickDraw draw = draws[i];
+
+                        if (draw.SkinnedRenderer != null)
+                        {
+                            // Skinned meshes keep a permanent selection MPB set at register time;
+                            // DrawRenderer applies it. Do not SetPropertyBlock here (render thread).
+                            context.cmd.DrawRenderer(
+                                draw.SkinnedRenderer,
+                                data.Material,
+                                draw.SubmeshIndex,
+                                data.MaterialPassIndex);
+                        }
+                        else if (draw.Mesh != null)
+                        {
+                            block.Clear();
+                            block.SetColor(data.SelectionColorId, draw.Color);
+                            context.cmd.DrawMesh(
+                                draw.Mesh,
+                                draw.Matrix,
+                                data.Material,
+                                draw.SubmeshIndex,
+                                data.MaterialPassIndex,
+                                block);
+                        }
+                    }
                 });
             }
 
             class PassData
             {
-                public RendererListHandle RendererList;
+                public List<SelectionPickContext.PickDraw> Draws;
+                public Material Material;
+                public int MaterialPassIndex;
+                public MaterialPropertyBlock PropertyBlock;
+                public bool ClearTarget;
+                public int SelectionColorId;
+            }
+
+            class ClearPassData
+            {
+                public bool ClearTarget;
             }
         }
 

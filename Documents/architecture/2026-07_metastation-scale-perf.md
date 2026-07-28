@@ -59,4 +59,5 @@ Make SS13-sized maps (e.g. Metastation import) playable in host Play Mode, and k
 - System maps: [tile](systems/tile.md), [atmospherics](systems/atmospherics.md), [furniture](systems/furniture.md), [disposal](systems/disposal.md), [area](systems/area.md)
 - [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md)
 - [2026-07_unity-perf-ai-tooling.md](2026-07_unity-perf-ai-tooling.md)
+- Follow-up (shipped): [2026-07_srp-batcher-gpu-instancing.md](2026-07_srp-batcher-gpu-instancing.md) — ST floor instancing + selection MPB off MeshRenderers
 - Milestone: [test-server.md](../milestones/test-server.md) T3 perf floor

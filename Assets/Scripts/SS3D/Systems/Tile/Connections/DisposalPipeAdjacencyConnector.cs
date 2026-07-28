@@ -233,7 +233,7 @@ namespace SS3D.Systems.Tile.Connections
             Vector3 pos = transform.position;
             Quaternion localRotation = _filter.transform.localRotation;
             Vector3 eulerRotation = localRotation.eulerAngles;
-            _filter.mesh = info.Item1;
+            _filter.sharedMesh = info.Item1;
 
             if (info.Item3 == AdjacencyShape.Vertical)
             {
