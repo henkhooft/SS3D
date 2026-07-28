@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using FishNet.Connection;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -317,10 +318,15 @@ namespace SS3D.Systems.Atmospherics
         /// Sends each visually-dirty chunk to observing clients so pure clients (which have no
         /// local <see cref="AtmosSimulation"/>) can build a matching atlas. See
         /// Documents/architecture/2026-07_atmos-client-visualization-sync.md.
+        /// Host GPU visuals use <see cref="AtmosVisualizationBridge.PublishSnapshot"/> — skip
+        /// patch build/serialize when there are no remote clients.
         /// </summary>
         private void BroadcastDirtyChunks()
         {
             if (_dirtyChunkTracker == null || _patchBuilder == null)
+                return;
+
+            if (!HasRemoteAtmosClients())
                 return;
 
             _dirtyChunkTracker.Update(_simulation);
@@ -336,6 +342,23 @@ namespace SS3D.Systems.Atmospherics
                 AtmosChunkPatch patch = _patchBuilder.Build(_simulation, chunkIndex, chunkKey);
                 RpcApplyChunkPatch(patch);
             }
+        }
+
+        /// <summary>
+        /// Pure clients need chunk patches; host-only Play Mode does not (atlas is local).
+        /// </summary>
+        private bool HasRemoteAtmosClients()
+        {
+            if (ServerManager == null || ServerManager.Clients.Count == 0)
+                return false;
+
+            foreach (NetworkConnection conn in ServerManager.Clients.Values)
+            {
+                if (conn != null && conn.IsActive && !conn.IsLocalClient)
+                    return true;
+            }
+
+            return false;
         }
 
         [ObserversRpc]

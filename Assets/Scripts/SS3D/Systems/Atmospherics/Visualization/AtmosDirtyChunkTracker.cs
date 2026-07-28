@@ -2,6 +2,7 @@ using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics.Visualization
@@ -10,6 +11,8 @@ namespace SS3D.Systems.Atmospherics.Visualization
     /// Tracks which atmos chunks changed enough visually (pressure, temperature, composition,
     /// fire, or state) to be worth re-sending to clients. Reused per tick so only chunks with a
     /// meaningful delta get a network patch, instead of broadcasting the whole map. Server-only.
+    /// Scans <see cref="AtmosSimulation.ActiveCells"/> only — stagnant Inactive/Vacuum/Blocked
+    /// tiles do not wake the dirty set.
     /// </summary>
     public sealed class AtmosDirtyChunkTracker
     {
@@ -34,6 +37,29 @@ namespace SS3D.Systems.Atmospherics.Visualization
 
             EnsureCapacity(simulation.CellCount);
 
+            NativeArray<int> activeCells = simulation.ActiveCells;
+            // Tick rebuilds the active list; EditMode tests may call Update without Tick.
+            if (!activeCells.IsCreated || activeCells.Length == 0)
+            {
+                UpdateAllChunkCells(simulation);
+                return;
+            }
+
+            IReadOnlyList<TileChunkRef> chunks = simulation.Chunks;
+            for (int i = 0; i < activeCells.Length; i++)
+            {
+                int cellIndex = activeCells[i];
+                if (!UpdateCell(simulation, cellIndex))
+                    continue;
+
+                int chunkIndex = cellIndex / AtmosConstants.CellsPerChunk;
+                if (chunkIndex >= 0 && chunkIndex < chunks.Count)
+                    _dirtyChunks.Add(chunks[chunkIndex].ChunkKey);
+            }
+        }
+
+        private void UpdateAllChunkCells(AtmosSimulation simulation)
+        {
             IReadOnlyList<TileChunkRef> chunks = simulation.Chunks;
             for (int chunkIndex = 0; chunkIndex < chunks.Count; chunkIndex++)
             {
@@ -55,7 +81,8 @@ namespace SS3D.Systems.Atmospherics.Visualization
         public void ConsumeDirtyChunks(List<Vector2Int> results)
         {
             results.Clear();
-            results.AddRange(_dirtyChunks);
+            foreach (Vector2Int chunk in _dirtyChunks)
+                results.Add(chunk);
             _dirtyChunks.Clear();
         }
 

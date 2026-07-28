@@ -41,6 +41,10 @@ namespace SS3D.Systems.Atmospherics
         public int MapId => _mapId;
         public IReadOnlyList<TileChunkRef> Chunks => _chunks;
 
+        /// <summary>Indices of Active/Semiactive cells after the latest tick. Empty when disposed.</summary>
+        public NativeArray<int> ActiveCells =>
+            _activeCells.IsCreated ? _activeCells.AsArray() : default;
+
         public NativeArray<float>.ReadOnly MolesRead =>
             _molesRead.IsCreated ? _molesRead.AsReadOnly() : default;
 

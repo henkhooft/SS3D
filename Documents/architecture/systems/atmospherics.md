@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: 80f5b995d — 2026-07-28
+> Verified: 250882a96 — 2026-07-28
 
 # Atmospherics
 
@@ -47,6 +47,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 ## Pitfalls
 
 - **Host `SS3D.Atmos.Upload` on large maps:** full-chunk AABB + `ForEachCell` + six `Texture2D.Apply` every tick dominated Metastation (~10 ms/tick). Host upload now fills only local HashGrid AOI tile bounds (+1 chunk pad). Dedicated server skips GPU publish. Network dirty-chunk Phase 2 AOI still open. Hit 2026-07-28.
+- **`SS3D.Atmos.NetworkSync` GC on host-only Metastation:** ObserversRpc patch build/serialize ran every tick even with no remote clients (host atlas is `PublishSnapshot`). Skip broadcast when no non-local server clients; dirty scan walks `ActiveCells` only; `AtmosChunkPatchBuilder` reuses array buffers. Hit 2026-07-28 (~1.6 MB / 101 ticks with ~83 active tiles).
 - **`GasRegistry` runtime caches:** `Initialize` must treat `_sortedDefinitions` + `_byId` as one unit. An array-only early-return (Play Mode without domain reload, or leftover SO state across hub unload) makes `GetSlotCount` succeed then `TryGetDefinition` NRE during `AtmosVisualizationBridge.PublishSnapshot`.
 - **Do not poll `CurrentMap != null` for init.** Await `WorldReadyPhase.TileMapLoaded` via `WorldReadinessSubSystem`, then notify `AtmosReady`. Epoch reset (`Phase == None`) re-runs init.
 - **~1 MB GC attributed to `AtmosSubSystem.Update` on GPU upload:** `EncodeComposition` used `new float[4]` per cell and lambdas captured locals — use stack locals / cached method-group delegates; sample flow gradients from atlas scratch, not `TryGetCellIndex`.
