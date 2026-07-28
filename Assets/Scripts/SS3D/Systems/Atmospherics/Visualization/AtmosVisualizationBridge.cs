@@ -1,5 +1,7 @@
+using FishNet;
 using SS3D.Core.Behaviours;
 using SS3D.Rendering.URP;
+using SS3D.Systems.Tile;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics.Visualization
@@ -32,13 +34,21 @@ namespace SS3D.Systems.Atmospherics.Visualization
             if (AtmosRenderContext.IsDebugSnapshotOverrideEnabled())
                 return;
 
+            // Dedicated server has no local atmos VFX consumer.
+            if (!InstanceFinder.IsClient)
+                return;
+
             if (_uploader == null || _atmos?.Simulation == null)
             {
                 AtmosRenderContext.ClearSnapshot();
                 return;
             }
 
-            _uploader.Refresh(_atmos.Simulation);
+            if (TileAoiVisibility.TryGetLocalAoiTileBounds(out int minX, out int minZ, out int maxX, out int maxZ))
+                _uploader.Refresh(_atmos.Simulation, minX, minZ, maxX, maxZ);
+            else
+                _uploader.Refresh(_atmos.Simulation);
+
             if (!_uploader.IsValid)
             {
                 AtmosRenderContext.ClearSnapshot();

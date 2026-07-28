@@ -51,14 +51,38 @@ namespace SS3D.Systems.Atmospherics.Visualization
 
         public bool IsValid => _valid;
 
-        public void Refresh(AtmosSimulation simulation)
+        /// <summary>
+        /// Rebuild atlas from simulation. When <paramref name="aoiMinX"/> is set, only that inclusive
+        /// tile window is filled (host play AOI); otherwise bounds cover all sim chunks.
+        /// </summary>
+        public void Refresh(
+            AtmosSimulation simulation,
+            int? aoiMinX = null,
+            int? aoiMinZ = null,
+            int? aoiMaxX = null,
+            int? aoiMaxZ = null)
         {
             _valid = false;
             if (simulation == null || simulation.CellCount == 0)
                 return;
 
-            if (!TryComputeBounds(simulation, out int minX, out int minZ, out int maxX, out int maxZ))
+            int minX;
+            int minZ;
+            int maxX;
+            int maxZ;
+            if (aoiMinX.HasValue && aoiMinZ.HasValue && aoiMaxX.HasValue && aoiMaxZ.HasValue)
+            {
+                minX = aoiMinX.Value;
+                minZ = aoiMinZ.Value;
+                maxX = aoiMaxX.Value;
+                maxZ = aoiMaxZ.Value;
+                if (maxX < minX || maxZ < minZ)
+                    return;
+            }
+            else if (!TryComputeBounds(simulation, out minX, out minZ, out maxX, out maxZ))
+            {
                 return;
+            }
 
             int dataWidth = maxX - minX + 1;
             int dataHeight = maxZ - minZ + 1;
@@ -75,12 +99,34 @@ namespace SS3D.Systems.Atmospherics.Visualization
             _mapId = simulation.MapId;
             _activeSimulation = simulation;
 
-            simulation.ForEachCell(_fillCellTexel);
-            simulation.ForEachCell(_writeFlowTexel);
+            if (aoiMinX.HasValue)
+                FillWindow(simulation, minX, minZ, maxX, maxZ);
+            else
+            {
+                simulation.ForEachCell(_fillCellTexel);
+                simulation.ForEachCell(_writeFlowTexel);
+            }
 
             _activeSimulation = null;
             UploadTextures();
             _valid = true;
+        }
+
+        private void FillWindow(AtmosSimulation simulation, int minX, int minZ, int maxX, int maxZ)
+        {
+            int mapId = simulation.MapId;
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    TileCoord coord = new TileCoord(mapId, new Vector2Int(x, z));
+                    if (!simulation.TryGetCellIndex(coord, out int cellIndex))
+                        continue;
+
+                    _fillCellTexel(coord, cellIndex);
+                    _writeFlowTexel(coord, cellIndex);
+                }
+            }
         }
 
         public AtmosRenderContext.Snapshot BuildSnapshot(GasVisualProfileBuilder.GpuSet gasProfiles)

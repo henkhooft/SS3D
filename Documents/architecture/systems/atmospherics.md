@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: b9e6ad390 — 2026-07-25
+> Verified: 80f5b995d — 2026-07-28
 
 # Atmospherics
 
@@ -18,8 +18,8 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ConductHeatJob.cs` — specific-heat heat exchange
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ReactAtmosJob.cs` — plasma combustion and burn intensity
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Data/GasRegistry.cs` — core gas slot lookup (`CoreGasRegistry.asset`)
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosVisualizationBridge.cs` — post-tick GPU upload (server/host) + dirty-chunk broadcast
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosGpuUploader.cs` — atlas scratch → Texture2D upload (no per-cell managed allocs)
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosVisualizationBridge.cs` — post-tick GPU upload (host client); AOI-window atlas via `TileAoiVisibility`
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosGpuUploader.cs` — atlas scratch → Texture2D upload (no per-cell managed allocs; optional AOI tile bounds)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosClientVisualizationBridge.cs` / `AtmosClientAtlas.cs` — pure-client patch → atlas
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosChunkPatch.cs` — ObserversRpc payload
 - `Assets/Scripts/SS3D/Rendering/URP/AtmosRendererFeature.cs` — URP scatter, glow, distortion passes
@@ -46,6 +46,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 ## Pitfalls
 
+- **Host `SS3D.Atmos.Upload` on large maps:** full-chunk AABB + `ForEachCell` + six `Texture2D.Apply` every tick dominated Metastation (~10 ms/tick). Host upload now fills only local HashGrid AOI tile bounds (+1 chunk pad). Dedicated server skips GPU publish. Network dirty-chunk Phase 2 AOI still open. Hit 2026-07-28.
 - **`GasRegistry` runtime caches:** `Initialize` must treat `_sortedDefinitions` + `_byId` as one unit. An array-only early-return (Play Mode without domain reload, or leftover SO state across hub unload) makes `GetSlotCount` succeed then `TryGetDefinition` NRE during `AtmosVisualizationBridge.PublishSnapshot`.
 - **Do not poll `CurrentMap != null` for init.** Await `WorldReadyPhase.TileMapLoaded` via `WorldReadinessSubSystem`, then notify `AtmosReady`. Epoch reset (`Phase == None`) re-runs init.
 - **~1 MB GC attributed to `AtmosSubSystem.Update` on GPU upload:** `EncodeComposition` used `new float[4]` per cell and lambdas captured locals — use stack locals / cached method-group delegates; sample flow gradients from atlas scratch, not `TryGetCellIndex`.
@@ -62,7 +63,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 
 - Design (read-only): [Documents/design/atmospherics.md](../../design/atmospherics.md)
 - Effort: [2026-07_atmos-ecs-foundation.md](../2026-07_atmos-ecs-foundation.md)
-- Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open
+- Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../2026-07_metastation-scale-perf.md)
 - Effort: [2026-07_session-world-lifecycle.md](../2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring

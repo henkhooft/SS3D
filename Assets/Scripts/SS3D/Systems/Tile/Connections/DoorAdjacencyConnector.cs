@@ -1,9 +1,7 @@
 ﻿
+using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.Connections.AdjacencyTypes;
 using UnityEngine;
-#if UNITY_SERVER
-using SS3D.Systems.Tile;
-#endif
 
 namespace SS3D.Systems.Tile.Connections
 {
@@ -104,6 +102,16 @@ namespace SS3D.Systems.Tile.Connections
 
             wallCap.transform.localRotation = Quaternion.Euler(0, rotation, 0);
             wallCap.transform.localPosition = new Vector3(cardinal.Item1 * WALL_CAP_DISTANCE_FROM_CENTRE, 0, cardinal.Item2 * WALL_CAP_DISTANCE_FROM_CENTRE);
+
+            // Caps are Instantiated after FishNet may have cached renderers; refresh host AOI visibility
+            // so newly added MeshRenderers hide with the parent door when out of observers.
+            if (TryGetComponent(out PlacedTileObject placed))
+                placed.RefreshHostVisibility();
+            else if (TryGetComponent(out FishNet.Object.NetworkObject nob) && nob.IsSpawned)
+            {
+                nob.UpdateRenderers(false);
+            }
+
             return wallCap;
         }
 

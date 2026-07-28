@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using FishNet.Component.Animating;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Core;
@@ -12,6 +13,7 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
 using AudioType = SS3D.Systems.Audio.AudioType;
 
@@ -82,6 +84,7 @@ namespace SS3D.Systems.Furniture
         private readonly HashSet<HumanInventory> _proximityScratch = new();
 
         private AirLockAccessGate _accessGate;
+        private NetworkAnimator _networkAnimator;
         private Coroutine _closeTimer;
         private Coroutine _denyBlinkTimer;
 
@@ -92,6 +95,10 @@ namespace SS3D.Systems.Furniture
         public bool IsOpen => _isOpen;
 
         public bool IsPowered => PowerGate.IsPowered(_powerConsumer, NullConsumerPolicy.Allow);
+
+        /// <summary>True when this door still needs a proximity pass after players leave its HashGrid neighborhood.</summary>
+        internal bool NeedsEmptyProximityPass =>
+            _authorizedOccupants.Count > 0 || _deniedOccupants.Count > 0;
 
         private void Awake()
         {
@@ -107,6 +114,8 @@ namespace SS3D.Systems.Furniture
                     }
                 }
             }
+
+            TryGetComponent(out _networkAnimator);
         }
 
         public override void OnStartServer()
@@ -125,15 +134,24 @@ namespace SS3D.Systems.Furniture
                 _powerConsumer.OnPowerStatusUpdated += HandlePowerStatusUpdated;
             }
 
+            AirLockProximityService.Instance.Register(this);
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive += HandleObserversActive;
+
             UpdateAnimator();
             NotifyTileStateChanged();
+            RefreshAnimatorCulling();
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive += HandleObserversActive;
+
             UpdateAnimator();
             NotifyTileStateChanged();
+            RefreshAnimatorCulling();
         }
 
         public override void OnStopServer()
@@ -143,7 +161,19 @@ namespace SS3D.Systems.Furniture
                 _powerConsumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
             }
 
+            AirLockProximityService.Instance.Unregister(this);
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive -= HandleObserversActive;
+
             base.OnStopServer();
+        }
+
+        public override void OnStopClient()
+        {
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive -= HandleObserversActive;
+
+            base.OnStopClient();
         }
 
         public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
@@ -255,14 +285,29 @@ namespace SS3D.Systems.Furniture
             SetOpen(false);
         }
 
-        private void FixedUpdate()
+        /// <summary>Called by <see cref="AirLockProximityService"/> for doors near players (or needing an empty pass).</summary>
+        [Server]
+        internal void ServerUpdateProximityFromService()
         {
-            if (!IsServer)
-            {
+            if (SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive)
                 return;
-            }
 
             ServerUpdateProximity();
+        }
+
+        private void HandleObserversActive(NetworkObject _) => RefreshAnimatorCulling();
+
+        private void RefreshAnimatorCulling()
+        {
+            bool observed = NetworkObject == null
+                || !NetworkObject.IsSpawned
+                || NetworkObject.Observers.Count > 0;
+
+            if (_animator != null)
+                _animator.enabled = observed;
+
+            if (_networkAnimator != null)
+                _networkAnimator.enabled = observed;
         }
 
         [Server]
@@ -294,7 +339,7 @@ namespace SS3D.Systems.Furniture
             _authorizedOccupants.Clear();
             _proximityScratch.Clear();
 
-            List<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
+            IReadOnlyList<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
             for (int i = 0; i < spawnedPlayers.Count; i++)
             {
                 Entity entity = spawnedPlayers[i];
@@ -314,8 +359,7 @@ namespace SS3D.Systems.Furniture
                     continue;
                 }
 
-                HumanInventory inventory = entity.GetComponent<HumanInventory>();
-                if (inventory == null)
+                if (!entity.TryGetHumanInventory(out HumanInventory inventory))
                 {
                     continue;
                 }

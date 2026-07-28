@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 73eafa881 — 2026-07-28
+> Verified: 80f5b995d — 2026-07-28
 
 # Tile / construction
 
@@ -15,6 +15,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Start here
 
+- `Assets/Scripts/SS3D/Systems/Tile/TileAoiVisibility.cs` — shared HashGrid AOI helpers (Map Editor bypass, overlay/atmos windows)
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
 - `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
@@ -57,6 +58,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **Map Editor leaves world sims running:** full-station MeshRenderer bypass is intentional for authoring, but atmos/electricity/airlock/disposal ticks used to keep burning CPU. `MapEditorSubSystem` now sets `SimulationPaused` / `SuspendCircuitUpdates` / `CapsulesPaused` while open. Hit 2026-07-28 (Metastation).
 - **Map import SO names are prefab names, not `.asset` file names:** `GenericObjectSo.NameString` is `PrefabAsset.name`. Type-map `so:` values must match (e.g. `FancyCarpetRed`, `CivillianAirlock`), or apply logs missing-asset skips.
 - **DMM import left MeshRenderers off (only wall caps visible):** `PlacedTileObject.RefreshHostVisibility` gates host MeshRenderers on HashGrid observers. Map Editor free-fly bypasses that gate while `MapEditorSubSystem.IsActive` (open/close refreshes all tiles). Wall caps are non-networked Instantiates so they stayed on. Hit 2026-07-28.
 - **`RefreshHostVisibility` must not read `IsClient` first:** FishNet `IsClient` dereferences `_networkObjectCache` with no null check. Opening Map Editor walks every placed tile — some lack a spawned NetworkObject. Guard `NetworkObject != null && NetworkObject.IsSpawned && IsClient`. Hit 2026-07-28.
@@ -117,7 +119,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 ## Related docs
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
-- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../2026-07_ss13-map-import.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
+- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../2026-07_ss13-map-import.md), [2026-07_metastation-scale-perf](../2026-07_metastation-scale-perf.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
 - System map: [area](area.md), [structural-destruction](structural-destruction.md); hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)

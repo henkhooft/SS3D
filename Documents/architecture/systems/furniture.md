@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
-> Entry points: (various world object behaviours)
+> Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: ee090d4f3 — 2026-07-26
+> Verified: 80f5b995d — 2026-07-28
 
 # Furniture / world objects
 
@@ -12,6 +12,7 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Furniture/Locker.cs` — door + ID lock; implements `IStorageAccessGate` so view/store only while open; closing door closes storage panels
+- `Assets/Scripts/SS3D/Systems/Furniture/AirLockProximityService.cs` — server HashGrid index; player-centric proximity tick (not per-door FixedUpdate)
 - `Assets/Scripts/SS3D/Systems/Furniture/AirLockOpener.cs` — padded proximity auto-open; click Open/Close (`AirLockDoorInteraction`); access-denied SFX + door-light blink; SyncVar→animator; power-gated; `IDynamicTileOccupant` notifies [atmospherics](atmospherics.md)
 - `Assets/Scripts/SS3D/Systems/Furniture/AirLockDoorInteraction.cs` — Open requires ID; Close does not; manual open still auto-closes
 - `Assets/Scripts/SS3D/Systems/Furniture/AirlockAudioTrackIds.cs` — `AirlockDeny` clip id ([audio](audio.md))
@@ -30,6 +31,7 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 
 ## Pitfalls
 
+- **SS13-scale airlock FixedUpdate:** hundreds of doors each calling `SpawnedPlayers.ToList()` + `GetComponent` every physics tick (~814× on Metastation). Proximity is owned by `AirLockProximityService` (HashGrid neighborhood of players only). Do not re-add per-door `FixedUpdate`. Hit 2026-07-28 (perf capture).
 - **Client airlocks never open:** remotes are NetworkTransformed on the server — `CharacterController.Move` never runs for them, so Unity triggers / CC Overlap miss. Disable CC when `!IsOwner` so NT can drive the server transform. Probe `EntitySubSystem.SpawnedPlayers` with `Collider.ClosestPoint` + padding (~0.85m): closed door solids stop characters just outside the trigger OBB, so a strict contains check never fires. Drive `Animator.Open` from the `_isOpen` SyncVar OnChange. Hit 2026-07-26.
 - **Access-denied spam at a locked door:** unauthorized players in the padded proximity volume must only trigger deny once per approach (`_deniedOccupants` edge). Calling `ServerPlayAccessDenied` every FixedUpdate floods SFX/blinks. Clear the denied set when they leave or on power loss. Hit 2026-07-26 (design).
 - **Security cannot open civilian airlocks:** Security role preset omitted `AccessLevel.Civilian` (bit 128). Civilian doors require that bit; host and client both fail access. SecurityOfficer preset + `Security.asset` include Civilian. Hit 2026-07-26.
@@ -44,5 +46,6 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 
 - [disposal](disposal.md) — disposal item network
 - [machine-interface](machine-interface.md) — vending UI and diegetic shell
+- Effort: [2026-07_metastation-scale-perf.md](../2026-07_metastation-scale-perf.md) — airlock proximity invert + Map Editor sim suspend
 - Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
 - [INDEX.md](../INDEX.md)

@@ -77,7 +77,7 @@ namespace SS3D.Systems.Gamemodes
             PlayerSubSystem playerSystem = SubSystems.Get<PlayerSubSystem>();
 
             // Get list of players ready to spawn (by Ckey).
-            List<Entity> playersToAssign = entitySystem.SpawnedPlayers;
+            IReadOnlyList<Entity> playersToAssign = entitySystem.SpawnedPlayers;
             List<string> playerCkeys = new List<string>();
             for (int i = 0; i < playersToAssign.Count; i++)
             {

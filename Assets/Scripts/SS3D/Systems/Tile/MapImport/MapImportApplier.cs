@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Logging;
+using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Electricity;
 using UnityEngine;
 
@@ -43,8 +44,15 @@ namespace SS3D.Systems.Tile.MapImport
                 throw new ArgumentNullException(nameof(tileSystem));
 
             bool hasElectricity = SubSystems.TryGet(out ElectricitySubSystem electricity);
+            bool hasAtmos = SubSystems.TryGet(out AtmosSubSystem atmos);
+            bool priorAtmosPaused = false;
             if (hasElectricity)
                 electricity.SuspendCircuitUpdates(true);
+            if (hasAtmos)
+            {
+                priorAtmosPaused = atmos.SimulationPaused;
+                atmos.SimulationPaused = true;
+            }
 
             try
             {
@@ -95,6 +103,8 @@ namespace SS3D.Systems.Tile.MapImport
             {
                 if (hasElectricity)
                     electricity.SuspendCircuitUpdates(false);
+                if (hasAtmos)
+                    atmos.SimulationPaused = priorAtmosPaused;
             }
         }
 

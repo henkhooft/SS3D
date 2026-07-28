@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: a2de58b87 — 2026-07-23
+> Verified: 80f5b995d — 2026-07-28
 
 # Area
 
@@ -25,7 +25,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - `Assets/Scripts/SS3D/Systems/Area/IAreaLightingStateSource.cs` — lighting state query contract
 - `Assets/Scripts/SS3D/Systems/Area/AreaLightFixturePolicy.cs` — fixture emit policy (Normal/Emergency/Dark)
 - `Assets/Scripts/SS3D/Systems/Area/LightFixtureCapability.cs` — `NormalOnly` / `EmergencyCapable` fixture tag
-- `Assets/Scripts/SS3D/Systems/Area/AreaFloorStripeView.cs` — client mesh floor corners from departmental tint
+- `Assets/Scripts/SS3D/Systems/Area/AreaFloorStripeView.cs` — client mesh floor corners from departmental tint (HashGrid AOI chunk cull via `TileAoiVisibility`)
 - `Assets/Scripts/SS3D/Systems/Area/AreaFloorVisualCache.cs` — host/client cache of areaIds + tints; `TryGetAreaIdForWorldGrid`
 - `Assets/Scripts/SS3D/Systems/Area/AreaDeviceTileResolver.cs` — wall-mount front-tile + floor-cache area resolve
 - `Assets/Scripts/SS3D/Systems/Area/AreaDevSettings.cs` — dev toggle (`SS3D → Dev → Areas → Show Area Gizmos`)
@@ -59,6 +59,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 ## Pitfalls
 
+- **Floor stripes/decals drew the whole station:** `AreaFloorStripeView` / `FloorDecalView` used to spawn quads for every chunk. They now cull via `TileAoiVisibility` (Map Editor still shows all). Hit 2026-07-28 (Metastation).
 - **APC area only fills front/right at game start, left empty until remove/re-add:** `ApcController.OnStartServer` → `RegisterApc` → flood runs during `TileMap.Load` while later chunks are still unplaced. Missing plenums look unwalkable, so BFS never claims that side; live mutation rebuild is deferred. Fix: `PersistenceSubSystem` / legacy `TileSubSystem.Load` wrap load in `BeginDeferredAreaFlood` / `EndDeferredAreaFlood` (refloods after the full map exists, preserving AreaRecord metadata). Do not flood from `RegisterApc` while deferred. Tests: `DeferredFlood_*`, `FloodWithoutDefer_OnIncompleteMap_MissesUnplacedWestTiles`.
 - **Live structural clear must not reflood inside `OnTileCleared`:** `TileMap` notifies before occupant removal. `AreaSubSystem` sets `_pendingLiveBoundaryRecompute` and flushes on next `UpdateEvent` ([structural-destruction](structural-destruction.md)).
 - **Light switch usable from across the room:** prefab had no collider, selection never resolved a point, and `RangeCheck` treated zero point as unlimited — see [interactions-framework](interactions-framework.md) Pitfalls. LightSwitch now has a BoxCollider; RangeCheck falls back to target transform.

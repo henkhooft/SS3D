@@ -17,6 +17,7 @@ namespace SS3D.Systems.Area
         private readonly List<GameObject> _spawned = new();
         private readonly Dictionary<Color, Material> _materialsByTint = new();
         private bool _subscribed;
+        private Vector2Int? _lastAoiCell;
 
         private void OnEnable()
         {
@@ -27,6 +28,12 @@ namespace SS3D.Systems.Area
         {
             if (!_subscribed)
                 TryBind();
+            else if (TileAoiVisibility.TryGetLocalHashGridCell(out Vector2Int cell)
+                     && (!_lastAoiCell.HasValue || _lastAoiCell.Value != cell))
+            {
+                _lastAoiCell = cell;
+                Rebuild();
+            }
         }
 
         private void OnDisable()
@@ -84,6 +91,9 @@ namespace SS3D.Systems.Area
             foreach (KeyValuePair<Vector2Int, ushort[]> pair in cache.EnumerateChunks())
             {
                 Vector2Int chunkKey = pair.Key;
+                if (!TileAoiVisibility.IsChunkInLocalAoi(chunkKey, TileAoiVisibility.OverlayChunkPad))
+                    continue;
+
                 ushort[] ids = pair.Value;
                 Vector3 origin = new Vector3(chunkKey.x * TileConstants.ChunkSize, 0f, chunkKey.y * TileConstants.ChunkSize);
 

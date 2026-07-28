@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/Disposal/, Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs, DisposalOutlet.cs, Assets/Scripts/SS3D/Systems/Tile/Connections/Disposal*
 > Entry points: DisposalSubSystem, DisposalBin, DisposalOutlet, DisposalPipeConnectivity
 > Status: partial
-> Verified: 84401b2fe — 2026-07-23
+> Verified: 80f5b995d — 2026-07-28
 
 # Disposal
 
@@ -11,7 +11,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalSubSystem.cs` — registry owner; `IWorldReady`; awaits `TileMapLoaded` then rebuilds + notifies `DisposalReady`; capsule tick; spill-on-cut
+- `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalSubSystem.cs` — registry owner; `IWorldReady`; awaits `TileMapLoaded` then rebuilds + notifies `DisposalReady`; capsule tick (`CapsulesPaused` for Map Editor); spill-on-cut
 - `Assets/Scripts/SS3D/Systems/Furniture/Disposal/DisposalPipeConnectivity.cs` — BFS walk + `TryFindRoute`
 - `Assets/Scripts/SS3D/Systems/Furniture/DisposalBin.cs` — chute; `AcceptsSize` / `MaxSizeClass`; drop-in + tagger interactions
 - `Assets/Scripts/SS3D/Systems/Furniture/DisposalOutlet.cs` — arrival hold / main-outlet grace (eject only if `_spaceEjectionPoint` or `IDisposalSweepable` is wired)
