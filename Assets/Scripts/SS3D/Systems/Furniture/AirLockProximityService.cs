@@ -101,7 +101,7 @@ namespace SS3D.Systems.Furniture
 
         private void FixedUpdate()
         {
-            if (!InstanceFinder.IsServerStarted || _openerCells.Count == 0)
+            if (!InstanceFinder.IsServer || _openerCells.Count == 0)
                 return;
 
             if (SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive)
