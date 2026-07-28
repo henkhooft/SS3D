@@ -65,7 +65,8 @@ Update as part of `update-system-docs`.
 | player-accounts | [player-accounts.md](../design/player-accounts.md) — active | none yet | none yet |
 
 [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) /
-[2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) (shipped) and the infrastructure systems below (core
+[2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) /
+[2026-07_interaction-controller-decomposition](2026-07_interaction-controller-decomposition.md) (shipped) and the infrastructure systems below (core
 subsystems, rendering pipeline internals, data/codegen, etc.) aren't gameplay domains with
 their own design docs — they support the domains above rather than being one themselves,
 so they stay out of this table and live only in the Infrastructure section below.
@@ -101,7 +102,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 
 | System | Map | Status | Summary |
 |--------|-----|--------|---------|
-| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | `InteractionController`, radial (`BindMenuViewHandlers` each open), armed, outlines (prune destroyed MeshRenderers after structural destroy); Harm melee + intent↔stance (**F**); Backspace cancel |
+| Interactions (runtime) | [interactions-runtime](systems/interactions-runtime.md) | shipped | Thin `InteractionController` router + discovery/dispatch/outline helpers; Harm via sibling `CombatInteractionNetwork`; radial/armed/outlines; intent↔stance (**F**); Backspace cancel |
 | Selection | [selection](systems/selection.md) | shipped | Shader-ID mesh picking; outline shells excluded from pick pass |
 | Examine | [examine](systems/examine.md) | partial | Hover/detailed examine on UITK; Search paperdoll + take; health Tier 0/1 lines + Shift→self fallback |
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor; end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
@@ -141,6 +142,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_diegetic-screen-ui-framework](2026-07_diegetic-screen-ui-framework.md) | shipped |
 | [2026-07_interaction-system-hardening](2026-07_interaction-system-hardening.md) | shipped |
 | [2026-07_interaction-discover-contract](2026-07_interaction-discover-contract.md) | shipped |
+| [2026-07_interaction-controller-decomposition](2026-07_interaction-controller-decomposition.md) | shipped |
 | [2026-07_area-foundation](2026-07_area-foundation.md) | shipped (deferred: live mutation recompute, editor merge/split) |
 | [2026-07_atmos-ecs-foundation](2026-07_atmos-ecs-foundation.md) | shipped (deferred: liquid/solid phase; equal-P composition diffusion follow-on shipped; client VFX is a separate effort — Phase 1 shipped) |
 | [2026-07_map-editor-replacement](2026-07_map-editor-replacement.md) | shipped |

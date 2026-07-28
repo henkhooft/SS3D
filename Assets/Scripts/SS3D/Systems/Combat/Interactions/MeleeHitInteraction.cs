@@ -8,7 +8,6 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
-using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Stamina;
 using SS3D.Systems.StructuralDamage;
@@ -127,8 +126,8 @@ namespace SS3D.Systems.Combat.Interactions
             float recoverySeconds = _profile.RecoverySeconds * multiplier;
             float cycleSeconds = windupSeconds + recoverySeconds;
             GetOrCreateRecoveryTracker(hand).BeginSwingCycle(windupSeconds, recoverySeconds);
-            InteractionController controller = hand.GetComponentInParent<InteractionController>();
-            controller?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
+            CombatInteractionNetwork combat = hand.GetComponentInParent<CombatInteractionNetwork>();
+            combat?.ServerNotifyMeleeRecovery(hand, cycleSeconds);
             return windupSeconds;
         }
 
@@ -143,7 +142,7 @@ namespace SS3D.Systems.Combat.Interactions
         /// (controller-scheduled) and by DelayedInteraction StartDelayed for discovered Hits.
         /// </summary>
         [Server]
-        public void ServerApplyConnect(Hand hand, InteractionController controller)
+        public void ServerApplyConnect(Hand hand, CombatInteractionNetwork combat)
         {
             if (hand == null)
             {
@@ -167,20 +166,20 @@ namespace SS3D.Systems.Combat.Interactions
                 }
             }
 
-            controller?.ClearMeleeAimPoint();
+            combat?.ClearMeleeAimPoint();
             if (landed)
             {
-                controller?.ServerNotifyMeleeConnectHit();
+                combat?.ServerNotifyMeleeConnectHit();
             }
         }
 
         protected override void StartDelayed(InteractionEvent interactionEvent, InteractionReference reference)
         {
             Hand hand = ResolveHand(interactionEvent.Source);
-            InteractionController controller = hand != null
-                ? hand.GetComponentInParent<InteractionController>()
+            CombatInteractionNetwork combat = hand != null
+                ? hand.GetComponentInParent<CombatInteractionNetwork>()
                 : null;
-            ServerApplyConnect(hand, controller);
+            ServerApplyConnect(hand, combat);
         }
 
         public override void Cancel(InteractionEvent interactionEvent, InteractionReference reference)
@@ -277,8 +276,8 @@ namespace SS3D.Systems.Combat.Interactions
             aimRay = default;
 
             // Match zone reticle: camera mouse ray synced during windup — not hand→aim (swing anim skews that).
-            InteractionController controller = hand.GetComponentInParent<InteractionController>();
-            if (controller != null && controller.TryGetMeleeAimRay(out aimRay))
+            CombatInteractionNetwork combat = hand.GetComponentInParent<CombatInteractionNetwork>();
+            if (combat != null && combat.TryGetMeleeAimRay(out aimRay))
             {
                 return true;
             }

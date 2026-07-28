@@ -81,5 +81,19 @@ namespace EditorTests
             Assert.AreEqual(HandSide.Left, hands.PlayerHands[0].Side, "Hands.PlayerHands[0] must be the Left hand (initial active hand).");
             Assert.AreEqual(HandSide.Right, hands.PlayerHands[1].Side, "Hands.PlayerHands[1] must be the Right hand.");
         }
+
+        [Test]
+        public void HumanPrefab_HasCombatInteractionNetworkBesideController()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
+            Assert.IsNotNull(prefab, $"Could not load prefab at {HumanPrefabPath}");
+
+            Assert.IsTrue(
+                prefab.TryGetComponent(out SS3D.Systems.Interactions.InteractionController _),
+                "Human.prefab must keep InteractionController.");
+            Assert.IsTrue(
+                prefab.TryGetComponent(out SS3D.Systems.Combat.CombatInteractionNetwork _),
+                "Human.prefab must have CombatInteractionNetwork (Harm primary RPCs).");
+        }
     }
 }

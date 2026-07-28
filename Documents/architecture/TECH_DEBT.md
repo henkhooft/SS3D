@@ -134,18 +134,18 @@ arbitration, click-through, and pointer-over-UI code all still have to account f
 
 ### 1.9 God-classes forming in hot UI/interaction code
 
-**Blast radius: medium — trend: getting worse**
+**Blast radius: medium — trend: interactions paid down; MainHud still open**
 
-`InteractionController.cs` (1,471 lines) owns primary-click routing, radial menu dispatch, Help/Harm
-intent sync, combat-stance switching, Harm melee swing dispatch, armed-mode resolution, *and* hover
-outline feedback — seven distinct responsibilities in one `NetworkBehaviour`. `MainHudSubSystem.cs`
-(1,136 lines) similarly composes equip/unequip, gear, hands, intent chip polling, zone-reticle input,
-and HUD/MI visibility suppression in one class. Both are the busiest, most-edited files in their
-respective systems (combat and inventory both landed features here in the same week per
-[FORK_STATUS.md](../FORK_STATUS.md)), which is exactly the profile that produces merge conflicts and
-regressions when two features touch the same god-class at once. Neither has a decomposition plan.
+`InteractionController` decomposed (TECH_DEBT paydown): discovery/dispatch helpers, outline driver,
+delayed tracker, and sibling `CombatInteractionNetwork` for Harm melee/ranged RPCs — see
+[2026-07_interaction-controller-decomposition.md](2026-07_interaction-controller-decomposition.md)
+(**shipped**). World/inventory/examine RPCs remain on the controller by design (follow-on optional).
+`MainHudSubSystem.cs` (~1.1k lines) still composes equip/unequip, gear, hands, intent chip, zone-reticle,
+and HUD/MI visibility in one class with **no** decomposition plan — remains open under this item.
 
 - Related: [interactions-runtime.md](systems/interactions-runtime.md), [inventory.md](systems/inventory.md)
+- Effort (interactions): [2026-07_interaction-controller-decomposition.md](2026-07_interaction-controller-decomposition.md) — shipped
+- Effort (MainHud): none yet
 
 ### 1.10 Play Mode / multiplayer verification is optional in practice
 
@@ -356,7 +356,7 @@ receives hit `context`. Pickable≠rangeable (missing wall-mount colliders) rema
 framework map.
 
 - **Closed by:** `0499ab7cd` on `cursor/interaction-discover-contract` ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
-- **Not in this close:** forcing one extension gate style; `InteractionController` decomposition (1.9).
+- **Not in this close:** forcing one extension gate style; wall-mount colliders (pickable≠rangeable).
 - Related: [interactions-framework.md](systems/interactions-framework.md), [interactions-runtime.md](systems/interactions-runtime.md)
 
 ### 1.6 Crafting dead-code purge — 2026-07-23

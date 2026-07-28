@@ -152,11 +152,11 @@ namespace SS3D.Systems.Entities.Editor
 
         /// <summary>
         /// Rewrites the root <see cref="NetworkObject"/>'s <c>_networkBehaviours</c> list and each
-        /// behaviour's <c>_componentIndexCache</c> after removing a component, mirroring FishNet's own
+        /// behaviour's <c>_componentIndexCache</c> after adding/removing a component, mirroring FishNet's
         /// prefab-processing step. Unlike <c>StorageContainerPrefabSetup.RebuildNetworkBehaviours</c>, this
         /// walk does not stop at a nested body-part's own <see cref="NetworkObject"/> — see class remarks.
         /// </summary>
-        private static void RebuildNetworkBehaviours(NetworkObject rootNetworkObject)
+        public static void RebuildNetworkBehaviours(NetworkObject rootNetworkObject)
         {
             List<NetworkBehaviour> behaviours = new();
             CollectNetworkBehaviours(rootNetworkObject.transform, behaviours);

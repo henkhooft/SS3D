@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
-> Entry points: Harm primary → `TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
+> Entry points: Harm primary → `CombatInteractionNetwork.TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 8833371a1 — 2026-07-26
+> Verified: 2295b72ef — 2026-07-28 (CombatInteractionNetwork extract)
 
 # Combat
 
@@ -9,7 +9,7 @@
 
 Phase 0–1 melee + Phase 3 ranged + Phase 5 armor slice per [combat_implementation_plan.md](../../plans/combat_implementation_plan.md).
 
-**Melee (unchanged):** Harm primary always swings (windup → connect → recovery) via `CmdRunMeleeSwing`. Connect resolves from synced camera aim (exclude self); living zone or structural Turf. Fists / improvised / crowbar·hatchet·knife.
+**Melee (unchanged):** Harm primary always swings (windup → connect → recovery) via `CombatInteractionNetwork.CmdRunMeleeSwing`. Connect resolves from synced camera aim (exclude self); living zone or structural Turf. Fists / improvised / crowbar·hatchet·knife.
 
 **Ranged (Phase 3 + M1p feel subset):** Holding `RangedWeaponItemExtension` (M4) — Harm LMB **fires** hitscan inside a weapon accuracy cone (base + recoil + movement bloom + range falloff). Server samples cone, resolves a living zone first, then checks shared `LineOfSight` (Default + Walls) only to that limb; otherwise structural turf / soft surface. Mag + fire cooldown + timed reload (E / Use, or empty-mag fire). Reticle bloom tracks current spread at aim distance; damaging hits flash the cross. **Diegetic impact:** muzzle flash + bullet holes; gold/grey debug spheres are **off by default** (`rangeddebug on|off`). **Muzzle flash:** procedural point light + particle burst at the weapon `Muzzle` socket (`MuzzleFlashVfx`), broadcast via `ObserversNotifyMuzzleFlash` so all observers see it. **Bullet holes:** non-living impacts spawn a capped URP `DecalProjector` (`BulletHoleDecalSpawner`, shreds under `Assets/Art/Textures/World/VFX/BulletHoles/`) via `ObserversNotifyBulletHole`; living hits skip holes. **Fire/reload anim:** `RequestAttack(FireRifle|Reload)` on **Upper Body** over **Rifle Aim Idle** (`Mix_AimingIdle` / `Mix_FiringRifle` / `Mix_Reloading`) — Base Ranged loco keeps feet; do not pulse Upper Body weight per shot. **Two-hand M4:** `RequiresBothHands` + `RequiredHand=Right` — may only occupy the right hand; left is reserved while wielded (`TwoHandedWeaponRules` via hand `CanContainItem`). **Pickup UX:** active left + empty right still offers Pick up / HUD drop — auto-routes into right and selects that hand; left well shows a reserved ban badge while the rifle is held, and hand-swap / HUD select cannot move onto that reserved hand. Fire/reload/stance/bloom resolve from the right-held rifle; `MirrorUpperBody` stays false. **Aim IK (gun→aim) deferred** — cancelled for this feel pass. No projectile travel or loose ammo this pass.
 
@@ -31,10 +31,11 @@ stamina drain), projectile/thrown.
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — Harm branch: ranged fire / reload Cmds; melee swing; aim + TargetRpcs
+- `Assets/Scripts/SS3D/Systems/Combat/CombatInteractionNetwork.cs` — Harm primary: ranged fire/reload Cmds; melee swing; aim + Target/Observers Rpcs (sibling of `InteractionController` on Human)
+- `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — routes Harm primary to `CombatInteractionNetwork`; owns intent SyncVar
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/RangedWeaponItemExtension.cs` — profile, mag, recoil, cooldown, reload
 - `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs` / `MuzzleFlashVfx.cs` / `TwoHandedWeaponRules.cs` / `BulletHoleDecalSpawner.cs` / `BulletHoleVfxCatalog.cs`
-- `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (SS14 rifle fire/empty/mag/cock + surface ricochet set) registered under `Assets/Art/Sound/Items/Weapons/Firearms/SS14/`; `InteractionController` plays fire/empty/surface via `AudioSubSystem.PlayAudioSource`, reload-complete mag-in/cock from `RangedWeaponItemExtension.TryCompleteReloadIfDue` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
+- `Assets/Scripts/SS3D/Systems/Combat/CombatAudioTrackIds.cs` — `AssetDatabases.Sounds` clip ids (SS14 rifle fire/empty/mag/cock + surface ricochet set) registered under `Assets/Art/Sound/Items/Weapons/Firearms/SS14/`; `CombatInteractionNetwork` plays fire/empty/surface via `AudioSubSystem.PlayAudioSource`, reload-complete mag-in/cock from `RangedWeaponItemExtension.TryCompleteReloadIfDue` (Sfx — gains occlusion via [audio](audio.md) `AudioSourceOcclusion` for free)
 - `Assets/Scripts/SS3D/Utils/LineOfSight.cs` — shared occlusion (Drop, LocalSpeech, combat)
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeHitInteraction.cs` — melee swing + connect
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/MeleeWeaponItemExtension.cs` / `HandMeleeExtension.cs`
@@ -74,7 +75,7 @@ stamina drain), projectile/thrown.
 - **Zone ray default is 8 m** — ranged passes `profile.MaxRangeMeters` into `TryResolveHoverZone`; do not hardcode melee default for hitscan.
 - **Reload via E bypasses intent** — `ReloadRangedInteraction` is Help-default in discovery; Harm reload uses `CmdRunRangedReload` from Use / empty fire.
 - **Reticle bloom is single-composer** — set via `ZoneReticleDriver.SetBloomInput` only; no parallel writers. Bloom uses live aim-ray distance (not a fake mid-range), so close targets stay tight.
-- **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `InteractionController.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
+- **Melee windup lengthening has two call sites that must stay in sync** — `MeleeHitInteraction.ServerBeginSwing` returns the exertion-scaled windup seconds; `CombatInteractionNetwork.CmdRunMeleeSwing` must pass that return value (not raw `profile.WindupSeconds`) into `ServerScheduleMeleeConnect`, or the recovery-lock UI and the actual connect timer drift apart under exhaustion.
 - **Ranged impact marker is debug-only** — `RangedShotFeedback` after `TargetNotifyRangedFireState`; gold = damaging connect (also cross-flash), grey = surface whiff. Spheres default **off**; `rangeddebug on|off|status` (client). Living hits pull the marker toward the shooter so it isn't buried inside BodyParts colliders. Normal play uses bullet holes + muzzle flash — do not re-enable spheres as diegetic feedback.
 - **Muzzle flash is ObserversRpc** — `ObserversNotifyMuzzleFlash` → each client parents `MuzzleFlashVfx` to the local held `Muzzle` socket (light + particles at that transform); server-sampled world pose is fallback only. Do not spawn the flash only from a baked server world point or remotes/owner visuals can drift.
 - **Bullet holes are ObserversRpc + world-floor decal layers** — `ObserversNotifyBulletHole` → `BulletHoleDecalSpawner` (cap 96). Living hits skip holes. Keep URP Decal material **Opaque**; projectors use `DecalRenderingLayers.WorldFloorProjectorMask` and `BloodDecalSpawner.RotationOntoSurface` (same floor-paint pitfalls as health blood). Catalog uses **Shreds only** (not `BulletHole.png`); white masks are charcoal-tinted at runtime via `Hidden/SS3D/MultiplyTint` like blood. Structural hits pass the wall collider normal (not a second probe).
@@ -97,6 +98,7 @@ stamina drain), projectile/thrown.
 
 ## Related docs
 
+- Effort: [2026-07_interaction-controller-decomposition](../2026-07_interaction-controller-decomposition.md) — Harm RPCs moved to `CombatInteractionNetwork`
 - Design: [Documents/design/combat.md](../../design/combat.md), [Documents/design/armor.md](../../design/armor.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md) (Phase 3, Phase 5 shipped)
 - Feel pass (M1p subset): Cursor plan `ranged_combat_feel` — muzzle/audio/anims/two-hand/holes/`rangeddebug` shipped; aim IK cancelled

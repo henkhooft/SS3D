@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 0e6278889 — 2026-07-27
+> Verified: 2295b72ef — 2026-07-28
 
 # Entities
 
@@ -31,7 +31,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
-- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
+- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, `CombatInteractionNetwork` ensure, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/CombatInteractionNetworkPrefabSetup.cs` — ensures `CombatInteractionNetwork` beside `InteractionController` and rebuilds FishNet `_networkBehaviours`
 - Clip bake helpers (`HumanoidClipBakeUtility`) are demoted statics (no menu) — rare Mixamo/placeholder path; call from batch/code if needed.
 
 ## Extension points

@@ -7242,6 +7242,7 @@ GameObject:
   - component: {fileID: 9100001006}
   - component: {fileID: 9100001007}
   - component: {fileID: 6291981120501433297}
+  - component: {fileID: 9100002001}
   m_Layer: 11
   m_Name: Human
   m_TagString: Player
@@ -7342,6 +7343,7 @@ MonoBehaviour:
   - {fileID: 8371257896879233468}
   - {fileID: 7141798988881879058}
   - {fileID: 8780544557873616261}
+  - {fileID: 9100002001}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField:
   - {fileID: 4138789318277530234}
@@ -8006,6 +8008,22 @@ MonoBehaviour:
   _componentIndexCache: 16
   _addedNetworkObject: {fileID: 2930813178971533500}
   _networkObjectCache: {fileID: 2930813178971533500}
+--- !u!114 &9100002001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6415765038646171405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fb714544b2446d69d7a4a922649447e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Combat.CombatInteractionNetwork
+  _componentIndexCache: 49
+  _addedNetworkObject: {fileID: 2930813178971533500}
+  _networkObjectCache: {fileID: 2930813178971533500}
+  _interactionController: {fileID: 5293420320943344825}
 --- !u!1 &6418095482179841189
 GameObject:
   m_ObjectHideFlags: 0

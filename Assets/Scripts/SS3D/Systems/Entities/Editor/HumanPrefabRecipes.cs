@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using SS3D.Systems.Combat.Editor;
 using SS3D.Systems.Inventory.Containers.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -27,6 +28,7 @@ namespace SS3D.Systems.Entities.Editor
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
             bool handsRewired = HandsPrefabSetup.Wire();
             bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
+            bool combatNetworkWired = CombatInteractionNetworkPrefabSetup.Wire();
 
             // Recipes that remove a component directly on a nested body-part prefab (e.g. the strip
             // above) don't retroactively refresh Human.prefab's own stripped mirror of that instance —
@@ -40,6 +42,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"Stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s).\n" +
                 $"Hands wiring: {(handsRewired ? "rewired" : "already correct")}.\n" +
                 $"LocalSpeechEmitter: {(speechEmitterAdded ? "added" : "already present")}.\n" +
+                $"CombatInteractionNetwork: {(combatNetworkWired ? "added/wired" : "already present")}.\n" +
                 "Resynced Human.prefab against its body-part prefabs.",
                 "OK");
         }
@@ -51,6 +54,7 @@ namespace SS3D.Systems.Entities.Editor
             int containerInteractiveStripped = BodyPartContainerInteractiveStrip.StripAll();
             bool handsRewired = HandsPrefabSetup.Wire();
             bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
+            bool combatNetworkWired = CombatInteractionNetworkPrefabSetup.Wire();
             HumanPrefabHygiene.ResyncNestedPrefabInstances();
 
             UnityEngine.Debug.Log(
@@ -58,6 +62,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"stripped root ContainerInteractive from {containerInteractiveStripped} prefab(s); " +
                 $"hands wiring {(handsRewired ? "rewired" : "already correct")}; " +
                 $"LocalSpeechEmitter {(speechEmitterAdded ? "added" : "already present")}; " +
+                $"CombatInteractionNetwork {(combatNetworkWired ? "added/wired" : "already present")}; " +
                 "resynced Human.prefab against its body-part prefabs.");
 
             if (UnityEngine.Application.isBatchMode)
