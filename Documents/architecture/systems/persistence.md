@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: f1c9476af — 2026-07-25
+> Verified: 290aa4e1c — 2026-07-28 (chunked station template restore)
 
 # Persistence
 
@@ -14,7 +14,7 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/SS3D/Data/Persistence/PersistenceEnvelope.cs` — envelope wrapper and schema version
 - `Assets/Scripts/SS3D/Data/Persistence/EnvelopePersistenceStore.cs` — JSON file I/O via `LocalStorage`
 - `Assets/Scripts/SS3D/Data/Persistence/PersistencePaths.cs` — `StationTemplates/`, `ServerMeta/`, legacy `Tilemaps/`
-- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood
+- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood; large templates use `LoadStationTemplateAsync` (time-sliced place + bulk mutation mute)
 - `Assets/Scripts/SS3D/Systems/Persistence/TileMapPersistenceContributor.cs` — tilemap + items chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/AreaPersistenceContributor.cs` — area metadata chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/SpawnPointPersistenceContributor.cs` — spawn markers chunk (`spawn-points`, load order 110)
@@ -38,6 +38,7 @@ Layered contributor-based disk persistence for station templates and server meta
 
 ## Pitfalls
 
+- **Station template restore blocks FishNet if sync:** MetaStation-scale `TileMap.Load` without yields freezes Host. Play Mode / Map Editor use `LoadStationTemplateAsync` → `LoadRoutine` + `BeginBulkMutation`. Sync `LoadStationTemplate` remains for EditMode tests only. Hit 2026-07-28.
 - **Empty `Data/Tilemaps` (and no StationTemplates) logs `No station templates found to load`.** Fresh Unity player builds have neither tree; loadable releases must ship legacy fixtures from `Builds/Game/Data/Tilemaps/` next to the binary (see [data-codegen](data-codegen.md) Paths pitfall / [CI develop-release](../2026-07_ci-develop-release-pipeline.md)). Smoke seeds the same path when staging.
 - **Contributor registration vs LoadServerMeta:** register built-in contributors in `OnAwake`, not `OnStart`. Hub spawn can run other systems' `OnStartServer` before Unity `Start`; LoadServerMeta itself runs from Persistence `OnStart` after all Awakes, so `PermissionSubSystem` is already registered for restore. Do not call `LoadServerMeta` from Tile or other domains.
 - **Missing spawn chunk leaves stale markers:** tilemap restore calls `TileMap.Clear`, which clears `TileSubSystem.SpawnPoints`. Do not remove that clear — templates without `spawn-points` must start empty.

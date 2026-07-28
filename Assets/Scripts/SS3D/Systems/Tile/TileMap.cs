@@ -26,6 +26,10 @@ namespace SS3D.Systems.Tile
         private readonly List<SavedAreaRecord> _loadedAreaRecords = new();
         private AdjacencyEngine _adjacencyEngine;
         private string _mapName;
+        private int _bulkMutationDepth;
+
+        /// <summary>Placements between yields during time-sliced <see cref="LoadRoutine"/> / DMM apply.</summary>
+        public const int BulkLoadYieldEveryPlacements = 64;
 
         public int MapId { get; private set; }
 
@@ -145,6 +149,21 @@ namespace SS3D.Systems.Tile
         {
             _mutationObservers.Remove(observer);
         }
+
+        /// <summary>
+        /// Suppress place/clear mutation notifies (atmos UpdateCell, cable graph refresh, etc.)
+        /// during bulk place. Nestable. Chunk-created notifies still fire so late observers can
+        /// track structure; prefer <see cref="GetChunkRefs"/> seeding after restore.
+        /// </summary>
+        public void BeginBulkMutation() => _bulkMutationDepth++;
+
+        public void EndBulkMutation()
+        {
+            if (_bulkMutationDepth > 0)
+                _bulkMutationDepth--;
+        }
+
+        public bool IsBulkMutationActive => _bulkMutationDepth > 0;
 
         /// <summary>
         /// Returns the chunk key to be used based on a world position.
@@ -688,24 +707,46 @@ namespace SS3D.Systems.Tile
 
         public void Load([CanBeNull] SavedTileMap saveObject, bool invokeMapLoadedEvent = true)
         {
+            IEnumerator routine = LoadRoutine(saveObject, invokeMapLoadedEvent, yieldFrames: false);
+            while (routine.MoveNext())
+            {
+            }
+        }
+
+        /// <summary>
+        /// Time-sliced station template restore. Yield every
+        /// <see cref="BulkLoadYieldEveryPlacements"/> so FishNet heartbeats keep ticking on MetaStation.
+        /// Pair with <see cref="BeginBulkMutation"/> and deferred area/disposal rebuilds.
+        /// </summary>
+        public IEnumerator LoadRoutine(
+            [CanBeNull] SavedTileMap saveObject,
+            bool invokeMapLoadedEvent = true,
+            bool yieldFrames = true)
+        {
             if (saveObject == null)
             {
                 Log.Warning(this, "The intended save object is null");
-                return;
+                yield break;
             }
 
             // Clear TileMap data first (this clears the _items list)
             Clear();
             _loadedAreaRecords.Clear();
-            
+
             // Then clear all items in the scene, not just those tracked by TileMap
             ClearUntrackedItems();
+            if (yieldFrames)
+                yield return null;
 
             SubSystems.TryGet(out TileSubSystem tileSystem);
 
             SavedTileChunk[] savedChunks = saveObject.savedChunkList ?? Array.Empty<SavedTileChunk>();
+            int sinceYield = 0;
+            int chunkIndex = 0;
+
             foreach (SavedTileChunk savedChunk in savedChunks)
             {
+                chunkIndex++;
                 TileChunk chunk = GetOrCreateChunk(savedChunk.originPosition);
                 if (savedChunk.areaIds != null)
                     chunk.SetAreaIds(savedChunk.areaIds);
@@ -735,6 +776,13 @@ namespace SS3D.Systems.Tile
 
                         // Skipping build check here to allow loading tile objects in a non-valid order
                         PlaceTileObject(toBePlaced, placePosition, savedObject.dir, true, false, true, out GameObject placedObject);
+                        sinceYield++;
+
+                        if (yieldFrames && sinceYield >= BulkLoadYieldEveryPlacements)
+                        {
+                            sinceYield = 0;
+                            yield return null;
+                        }
                     }
                 }
             }
@@ -749,7 +797,7 @@ namespace SS3D.Systems.Tile
                     OnMapLoaded?.Invoke(this, EventArgs.Empty);
                 }
 
-                return;
+                yield break;
             }
 
             SavedPlacedItemObject[] savedItems = saveObject.savedItemList ?? Array.Empty<SavedPlacedItemObject>();
@@ -757,6 +805,12 @@ namespace SS3D.Systems.Tile
             {
                 ItemObjectSo toBePlaced = (ItemObjectSo)tileSystem.GetAsset(savedItem.itemName);
                 PlaceItemObject(savedItem.worldPosition, savedItem.rotation, toBePlaced);
+                sinceYield++;
+                if (yieldFrames && sinceYield >= BulkLoadYieldEveryPlacements)
+                {
+                    sinceYield = 0;
+                    yield return null;
+                }
             }
 
             if (invokeMapLoadedEvent)
@@ -764,7 +818,12 @@ namespace SS3D.Systems.Tile
                 OnMapLoaded?.Invoke(this, EventArgs.Empty);
             }
 
+            if (yieldFrames)
+                yield return null;
             RefreshAllAdjacencies();
+
+            if (yieldFrames)
+                yield return null;
             // Template load skips per-tile observer churn; re-apply AOI + underfloor occlusion now
             // that every covering turf is present.
             RefreshAllHostVisibility();
@@ -847,6 +906,9 @@ namespace SS3D.Systems.Tile
 
         private void NotifyTilePlaced(PlacedTileObject placedObject, Vector3 worldPosition)
         {
+            if (_bulkMutationDepth > 0)
+                return;
+
             TileCoord coord = new TileCoord(MapId, Mathf.RoundToInt(worldPosition.x), Mathf.RoundToInt(worldPosition.z));
 
             foreach (ITileMutationObserver observer in _mutationObservers)
@@ -855,6 +917,9 @@ namespace SS3D.Systems.Tile
 
         private void NotifyTileCleared(PlacedTileObject placedObject, Vector3 worldPosition, TileLayer layer)
         {
+            if (_bulkMutationDepth > 0)
+                return;
+
             TileCoord coord = new TileCoord(MapId, Mathf.RoundToInt(worldPosition.x), Mathf.RoundToInt(worldPosition.z));
 
             foreach (ITileMutationObserver observer in _mutationObservers)

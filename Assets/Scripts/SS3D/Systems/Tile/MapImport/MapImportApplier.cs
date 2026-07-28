@@ -35,7 +35,7 @@ namespace SS3D.Systems.Tile.MapImport
     public static class MapImportApplier
     {
         /// <summary>Placements between <c>yield return null</c> so transport / Editor can tick.</summary>
-        public const int YieldEveryPlacements = 64;
+        public const int YieldEveryPlacements = TileMap.BulkLoadYieldEveryPlacements;
 
         public static MapImportApplyResult Apply(
             MapImportPlan plan,
@@ -110,6 +110,8 @@ namespace SS3D.Systems.Tile.MapImport
                 deferredDisposal = true;
             }
 
+            map.BeginBulkMutation();
+
             MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
 
             try
@@ -151,7 +153,7 @@ namespace SS3D.Systems.Tile.MapImport
                         result.PlacedObjects++;
                         sinceYield++;
 
-                        if (yieldFrames && sinceYield >= YieldEveryPlacements)
+                        if (yieldFrames && sinceYield >= TileMap.BulkLoadYieldEveryPlacements)
                         {
                             sinceYield = 0;
                             onProgress?.Invoke($"Placing {cellIndex}/{cellTotal} cells ({result.PlacedObjects} objects)…");
@@ -183,6 +185,8 @@ namespace SS3D.Systems.Tile.MapImport
             }
             finally
             {
+                map.EndBulkMutation();
+
                 // Flood after all turfs/APCs exist so seeds see complete walls.
                 if (deferredAreaFlood)
                     area.EndDeferredAreaFlood();
