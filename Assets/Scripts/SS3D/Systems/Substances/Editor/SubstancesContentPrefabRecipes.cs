@@ -34,7 +34,7 @@ namespace SS3D.Systems.Substances.Editor
             Debug.Log(
                 $"[SubstancesContentPrefabRecipes] content={content}; hub={hub}; humanStrip={humanStripped}");
 
-            if (Application.isBatchMode)
+            if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
             }

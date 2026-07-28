@@ -55,8 +55,12 @@ namespace SS3D.Systems.Substances.Editor
             GameObject root = PrefabUtility.LoadPrefabContents(target.PrefabPath);
             try
             {
-                SubstanceContainer container = root.GetComponent<SubstanceContainer>()
-                    ?? root.GetComponentInChildren<SubstanceContainer>(true);
+                SubstanceContainer container = root.GetComponent<SubstanceContainer>();
+                if (container == null)
+                {
+                    container = root.GetComponentInChildren<SubstanceContainer>(true);
+                }
+
                 if (container == null)
                 {
                     container = root.AddComponent<SubstanceContainer>();
