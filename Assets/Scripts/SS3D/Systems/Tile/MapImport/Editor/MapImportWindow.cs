@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using SS3D.Core;
 using SS3D.Logging;
@@ -161,7 +162,7 @@ namespace SS3D.Systems.Tile.MapImport.Editor
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             int n = 0;
-            foreach (var pair in System.Linq.Enumerable.OrderByDescending(plan.UnmappedCounts, p => p.Value))
+            foreach (KeyValuePair<string, int> pair in System.Linq.Enumerable.OrderByDescending(plan.UnmappedCounts, p => p.Value))
             {
                 sb.Append(pair.Value).Append('\t').AppendLine(pair.Key);
                 if (++n >= take)
