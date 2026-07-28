@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: ab6f2f56c — 2026-07-28
+> Verified: efe1c029e — 2026-07-28
 
 # Electricity
 
@@ -67,6 +67,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 ## Pitfalls
 
 - **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick. Hit 2026-07-28 (`SS3D.Electricity.CircuitsTick`).
+- **`SS3D.Electricity.FixedUpdate` GC with few lights:** `OnTick` fans out to every `ConsumerPowerVisual` (airlock panels, etc.). `Renderer.materials` allocates each call — cache material refs in `CacheVisuals`, never on the tick. Hit 2026-07-28 (capture after CircuitsTick fix; ~814 airlocks, ~2 lights).
+- **Lighting bypass ignores manually placed fixtures:** `LightPower.ShouldBeLit` returned false when `!_hasArea` before applying `LightingDevBypass`. No-APC / Map-Editor place stays dark with **SS3D/Dev/Lighting/Always Power Light Fixtures** on. Bypass still respects area Dark + channel policy when an area exists. Hit 2026-07-28.
 - **`RemoveElectricalElement` must not require a live `TileObject`.** `BasicElectricDevice.TileObject` is null during `OnDestroyed` (Unity fake-null). Bailing on null left zombies in `_registeredDevices` → NRE in `RebuildElectricGraph`/`ToCoordinates` after `TileMap.Clear` (Map Editor load, DMM import with Clear). Unregister by device reference; prune null-`TileObject` entries on rebuild. Hit 2026-07-28.
 - **`TileMap.Clear` vs FishNet despawn:** Clear empties `_chunks` before despawn finishes. Orphan cables still report `TileObject` but `GetChunk` is null → NRE in `ElectricNeighbourLookup.GetElectricDevicesOnSameTile`. Neighbour lookup must null-check map/chunk; rebuild prunes chunkless devices. Hit on MetaStation DMM import 2026-07-28.
 - **Interface-typed destroyed devices throw, not null.** `IElectricDevice device?.TileObject` does **not** Unity-null-check — a destroyed `ApcController` still invokes `get_TileObject` → `MissingReferenceException`. Use `device is Object u && u` before `TileObject`, and keep `ApcController.TileObject` as `this ? GetComponent… : null` (same as `BasicElectricDevice`). Full DMM import suspends circuit ticks + clears the registry around Clear/place. Hit 2026-07-28.

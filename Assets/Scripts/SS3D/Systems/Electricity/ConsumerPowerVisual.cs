@@ -29,6 +29,9 @@ namespace SS3D.Systems.Electricity
             public Renderer Renderer;
             public int MaterialIndex;
             public Color PoweredColor;
+            /// <summary>Cached from <see cref="Renderer.materials"/> once — never re-fetch on tick.</summary>
+            [NonSerialized]
+            public Material Material;
         }
 
         [SerializeField]
@@ -153,13 +156,15 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
+                // .materials allocates a new array every call — cache once for the tick path.
                 Material[] materials = slot.Renderer.materials;
                 if (slot.MaterialIndex >= materials.Length)
                 {
                     continue;
                 }
 
-                slot.PoweredColor = materials[slot.MaterialIndex].color;
+                slot.Material = materials[slot.MaterialIndex];
+                slot.PoweredColor = slot.Material.color;
                 _panelIndicators[i] = slot;
             }
         }
@@ -265,25 +270,20 @@ namespace SS3D.Systems.Electricity
 
         private void SetPanelIndicators(bool powered)
         {
-            if (_panelIndicators == null || powered)
+            if (_panelIndicators == null)
             {
                 return;
             }
 
-            foreach (PanelIndicatorSlot slot in _panelIndicators)
+            for (int i = 0; i < _panelIndicators.Length; i++)
             {
-                if (slot.Renderer == null || slot.MaterialIndex < 0)
+                PanelIndicatorSlot slot = _panelIndicators[i];
+                if (slot.Material == null)
                 {
                     continue;
                 }
 
-                Material[] materials = slot.Renderer.materials;
-                if (slot.MaterialIndex >= materials.Length)
-                {
-                    continue;
-                }
-
-                materials[slot.MaterialIndex].color = Color.black;
+                slot.Material.color = powered ? slot.PoweredColor : Color.black;
             }
         }
     }

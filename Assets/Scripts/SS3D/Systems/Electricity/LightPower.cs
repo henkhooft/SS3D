@@ -397,6 +397,12 @@ namespace SS3D.Systems.Electricity
                 // Server registry path before first derive: treat as powered-area Normal.
                 areaState = AreaLightingState.Normal;
             }
+            else if (_respectDevBypass && LightingDevBypass.IsActive)
+            {
+                // Manual place / no APC flood: bypass still lights fixtures (grid-free glow).
+                useEmergencyVisuals = false;
+                return true;
+            }
             else
             {
                 return false;
