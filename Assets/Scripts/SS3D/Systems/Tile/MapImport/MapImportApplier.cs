@@ -1,0 +1,103 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using SS3D.Logging;
+using UnityEngine;
+
+namespace SS3D.Systems.Tile.MapImport
+{
+    public sealed class MapImportApplyResult
+    {
+        public int PlacedObjects { get; set; }
+
+        public int MissingAssets { get; set; }
+
+        public int CellCount { get; set; }
+
+        public string ReportPath { get; set; }
+    }
+
+    /// <summary>
+    /// Applies a <see cref="MapImportPlan"/> to the live tilemap (Play Mode / server).
+    /// </summary>
+    public static class MapImportApplier
+    {
+        public static MapImportApplyResult Apply(
+            MapImportPlan plan,
+            TileMap map,
+            TileSubSystem tileSystem,
+            bool clearMap,
+            string unmappedReportPath = null)
+        {
+            if (plan == null)
+                throw new ArgumentNullException(nameof(plan));
+            if (map == null)
+                throw new ArgumentNullException(nameof(map));
+            if (tileSystem == null)
+                throw new ArgumentNullException(nameof(tileSystem));
+
+            if (clearMap)
+                map.Clear();
+
+            MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
+
+            foreach (MapImportCellPlan cell in plan.Cells)
+            {
+                Vector3 world = new Vector3(cell.WorldX, 0f, cell.WorldZ);
+                foreach (MapImportPlacement placement in cell.Placements)
+                {
+                    if (tileSystem.GetAsset(placement.SoName) is not TileObjectSo so)
+                    {
+                        result.MissingAssets++;
+                        Log.Warning(typeof(MapImportApplier),
+                            "Map import skipping missing tile asset '{asset}'",
+                            Logs.Generic,
+                            placement.SoName);
+                        continue;
+                    }
+
+                    map.PlaceTileObject(so, world, placement.Direction,
+                        skipBuildCheck: true, replaceExisting: true, skipAdjacency: true, out _);
+                    result.PlacedObjects++;
+                }
+            }
+
+            map.RefreshAllAdjacencies();
+
+            if (!string.IsNullOrEmpty(unmappedReportPath))
+            {
+                WriteUnmappedReport(unmappedReportPath, plan);
+                result.ReportPath = unmappedReportPath;
+            }
+
+            return result;
+        }
+
+        public static string WriteUnmappedReport(string path, MapImportPlan plan)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("path,count");
+            foreach (KeyValuePair<string, int> pair in plan.UnmappedCounts.OrderByDescending(p => p.Value))
+                sb.Append(pair.Key).Append(',').Append(pair.Value).AppendLine();
+            File.WriteAllText(path, sb.ToString());
+            return path;
+        }
+
+        public static string FormatSummary(MapImportPlan plan, MapImportApplyResult apply)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("Map import: cells=").Append(plan.Cells.Count)
+                .Append(" floors=").Append(plan.FloorCells)
+                .Append(" walls=").Append(plan.WallCells)
+                .Append(" windows=").Append(plan.WindowCells)
+                .Append(" doors=").Append(plan.DoorCells)
+                .Append(" skipped=").Append(plan.SkippedCells)
+                .Append(" placed=").Append(apply?.PlacedObjects ?? 0)
+                .Append(" missingAssets=").Append(apply?.MissingAssets ?? 0)
+                .Append(" unmappedTypes=").Append(plan.UnmappedCounts.Count);
+            return sb.ToString();
+        }
+    }
+}

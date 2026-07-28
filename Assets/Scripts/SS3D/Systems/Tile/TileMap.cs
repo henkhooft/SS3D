@@ -729,17 +729,18 @@ namespace SS3D.Systems.Tile
                 OnMapLoaded?.Invoke(this, EventArgs.Empty);
             }
 
-            UpdateAllAdjacencies();
+            RefreshAllAdjacencies();
         }
 
         /// <summary>
-        /// Update every adjacency of each placed tile object when the map is loaded.
+        /// Recompute adjacency for every placed tile that has a connector.
+        /// Used after bulk load/import that skipped per-tile adjacency.
         /// </summary>
-        private void UpdateAllAdjacencies()
+        public void RefreshAllAdjacencies()
         {
-            foreach(TileChunk chunk in _chunks.Values)
+            foreach (TileChunk chunk in _chunks.Values)
             {
-                foreach(PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
+                foreach (PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
                 {
                     if (obj.HasAdjacencyConnector)
                         UpdateAdjacenciesFor(obj);

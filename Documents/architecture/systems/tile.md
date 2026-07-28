@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
-> Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem
+> Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 63b0e32fc — 2026-07-26
+> Verified: 2e8670127 — 2026-07-28
 
 # Tile / construction
 
@@ -40,6 +40,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSpawnCatalog.cs` — `spawn:job:` / `spawn:antag:` keys
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandService.cs` — server undo/redo command layer
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandFactory.cs` — DTO → invertible command (snapshots previous state)
+- `Assets/Scripts/SS3D/Systems/Tile/MapImport/` — SS13 `.dmm` structural import (parser, type map, planner, Play Mode applier)
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/ConstructionHologramManager.cs` — placement preview and drag batches
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity); **Scripts** toggles spawn-marker pins
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
@@ -52,9 +53,12 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - HV cables (`CablesAdjacencyConnector`): underfloor Wire-layer runs link grid backbone devices only; see [electricity](electricity.md) `ElectricCableConnectivity`.
 - Map Editor: `MapEditorSubSystem` (admin-gated via `MapEditorPermissions` / `IMapEditorAuthorizer`). Tools: Select, Edit, Move, Delete, Dropper; toolbar hotkeys **1–4** = Construct / Select / Dropper / Delete (gated while `InputInterface.IsCapturingText`). **Ctrl/Cmd+Shift+O** opens Map Selection (plain Ctrl+O is Unity File/Open Scene); **Ctrl/Cmd+Shift+S** quicksaves (else opens Save Map). Camera pan ignores Ctrl/Cmd/Alt so modifier+S does not also move. Place/delete/decals/spawns go through `SubmitCommands` → `MapEditorCommandFactory` → `ExecuteCompound` (one undo step per drag). Ctrl+Z/Y gated while typing. **Phase 2 (deferred):** per-builder stacks + concurrent-edit validity ([creative-mode.md](../../design/creative-mode.md) §6). Placement hard-blocked by `BuildChecker` (`BuildFailReason` toasts). Delete/eraser scopes to library subcategory (`MapEditorDeleteTargeting`; wall-mount face = hologram direction). Layer visibility via `MapEditorLayerVisibility` → `TileLayerVisibilityService` (client-only). **Overlays** subcategory places/clears sparse `floorDecalIds` via undoable `SetFloorDecal` commands. **Spawn Placements** (Scripting) places job/antag markers via `PlaceSpawnPoint` / `ClearSpawnPoint` (plenum required); RandomSpawners/Triggers/Atmospherics Scripting remain stubs. Creative-mode hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md). UI prefab: `Assets/Content/Systems/UI/MapEditor/MapEditorCanvas.prefab`. Regenerate catalog: `SS3D → Map Editor → Regenerate Catalog`.
 - Station templates: `TileSubSystem.Save` / `Load` / `Load(string)` → `PersistenceSubSystem` (`StationTemplates/`, legacy `Tilemaps/`). Unknown/removed tile SO names are skipped on load. End-of-restore notifies world readiness `TileMapLoaded` (via Persistence) — **not** `OnMapCreated`. Server-meta boot is owned by Persistence, not Tile.
+- **SS13 DMM import (structural):** Play Mode menu `SS3D/Map Import/Import DMM…` parses a `.dmm`, maps floors/walls/windows/doors via `Tools/map_import/ss13_type_map.yaml` (longest prefix), places `Plenum` + turf SO with `skipBuildCheck`/`skipAdjacency`, then `TileMap.RefreshAllAdjacencies`. Writes `*.unmapped.csv` beside the source file. Optional bbox + Z filter for large maps. Does not vendor tgstation maps — extend the YAML from gap reports. CLI: `Tools/map_import/dmm_gap_report.py`. Effort: [2026-07_ss13-map-import](../2026-07_ss13-map-import.md).
 
 ## Pitfalls
 
+- **Map import SO names are prefab names, not `.asset` file names:** `GenericObjectSo.NameString` is `PrefabAsset.name`. Type-map `so:` values must match (e.g. `FancyCarpetRed`, `CivillianAirlock`), or apply logs missing-asset skips.
+- **DMM import without Play Mode / TileSubSystem no-ops:** the Tier-A window requires a live `CurrentMap`; EditMode only covers parse/plan. Hit 2026-07-28.
 - **Adjacency SyncVar writes on pure clients hard-fail smoke:** connectors that assign `_synced*` /
   `_syncedEngineConnections` / `_syncedAdjacencyPayload` without `IsServer` log FishNet
   `Cannot complete operation as server when server is not active` (harness denylist). Publish only
@@ -110,7 +114,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 ## Related docs
 
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
-- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
+- Architecture effort: [2026-07_map-editor-replacement](../2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../2026-07_ss13-map-import.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
 - System map: [area](area.md), [structural-destruction](structural-destruction.md); hooks: [map-editor-creative-hooks](map-editor-creative-hooks.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../plans/spawn_point_authoring.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
