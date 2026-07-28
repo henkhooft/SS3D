@@ -32,6 +32,7 @@ namespace SS3D.Systems.Electricity
         private static readonly ProfilerMarker FixedUpdatePerformanceMarker = new("SS3D.Electricity.FixedUpdate");
         private static readonly ProfilerMarker CircuitsTickPerformanceMarker = new("SS3D.Electricity.CircuitsTick");
         private static readonly ProfilerMarker AreaPowerPerformanceMarker = new("SS3D.Electricity.AreaPower");
+        private static readonly ProfilerMarker OnTickPerformanceMarker = new("SS3D.Electricity.OnTick");
 
         public event Action WhenReady;
 
@@ -245,7 +246,11 @@ namespace SS3D.Systems.Electricity
                 if (_timeElapsed > _tickRate)
                 {
                     HandleCircuitsUpdate();
-                    RpcInvokeOnTick();
+                    using (OnTickPerformanceMarker.Auto())
+                    {
+                        RpcInvokeOnTick();
+                    }
+
                     _timeElapsed = 0;
                 }
             }

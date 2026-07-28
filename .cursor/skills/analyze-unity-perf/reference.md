@@ -32,7 +32,7 @@ Matched into **SS3D / marker hits**:
 | `SS3D.Interactions.Outline` | `InteractionController` hover LateUpdate |
 | `SS3D.Interactions.Discover` | `InteractionPipeline.Discover` (click/radial/RPC) |
 | `SS3D.Atmos.Sim` / `SS3D.Atmos.Upload` | `AtmosSubSystem.SimTick` |
-| `SS3D.Electricity.FixedUpdate` / `.CircuitsTick` / `.AreaPower` | `ElectricitySubSystem` Coimbra FixedUpdate path |
+| `SS3D.Electricity.FixedUpdate` / `.CircuitsTick` / `.AreaPower` / `.OnTick` | `ElectricitySubSystem` Coimbra FixedUpdate path (`OnTick` = visual subscriber fan-out after CircuitsTick) |
 | `SS3D.Airlock.NearbyTick` / `.EmptyPassSweep` | `AirLockProximityService` |
 
 ## Noise allowlist (usually not root cause)

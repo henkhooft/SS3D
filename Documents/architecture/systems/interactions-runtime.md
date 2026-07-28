@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, InteractionDiscovery, InteractionDispatch, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: ac35e3e8e — 2026-07-28 (InteractionController decomposition)
+> Verified: f58c3b9fa — 2026-07-28 (outline LateUpdate GC)
 
 # Interactions (runtime)
 
@@ -58,7 +58,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - **Spawn NRE in `OnAwake` / `SubscribeToInput`:** if `CameraSubSystem.PlayerCamera` is null (hub before Game camera — see [chat-audio-screens](chat-audio-screens.md)), wiring `_controls` after the camera line leaves SubscribeToInput cascading. Resolve inputs first; tolerate a late camera.
 - **`ArmedInteractionSubSystem` must not `Get<SelectionSubSystem>` in Awake.** Selection is a sibling on `NetworkSystemsHub`; Awake order can leave it unregistered, and FishNet also briefly enables scene copies before the hub exists. Lazy `TryGet` + null-safe enable/disable.
 - **Outline on every hover while holding an item:** `Item` discovers Drop via `InteractionEntry.SourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (no source discovery) or `FilterForOutline` — never treat full Discover as hover-available.
-- **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
+- **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers; `CollectTargetsInto` must use `GetComponents(List)` (not the array overload); mutate `InteractionEvent.Target` / hit fields instead of `WithTarget`; throttle same-selectable re-eval (~10 Hz). Cache `CreateTargetInteractions` instances on hot targets (e.g. airlocks). Marker: `SS3D.Interactions.Outline`. Hit 2026-07-28 (~784 KB / 507 frames on Metastation).
 - **Unresolved selection point:** when `TryResolveInteractionPoint` fails, build `InteractionEvent` without a point (`HasPoint = false`) — do not pass `Vector3.zero` into the four-arg ctor.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `InteractionDispatch.TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`F` toggles Help/Harm** via arbitrated `InputSubSystem.ToggleIntent` (was hardcoded `C`, which

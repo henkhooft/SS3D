@@ -17,9 +17,19 @@ namespace SS3D.Systems.Interactions
     {
         private static readonly ProfilerMarker OutlinePerformanceMarker = new("SS3D.Interactions.Outline");
 
+        /// <summary>Range / viability refresh rate while hovering the same selectable.</summary>
+        private const float OutlineEvalIntervalSeconds = 0.1f;
+
         private Selectable _activeOutlineSelectable;
         private InteractionOutlineView _activeOutlineView;
         private readonly List<IInteractionTarget> _outlineTargets = new(8);
+        private InteractionEvent _outlineEvent;
+        private IInteractionSource _outlineEventSource;
+        private Selectable _entityCheckSelectable;
+        private bool _entityCheckExcluded;
+        private float _nextOutlineEvalTime = -1f;
+        private InteractionOutlineView.OutlineState _cachedOutlineState = InteractionOutlineView.OutlineState.Hidden;
+        private bool _hasCachedOutlineState;
 
         public void Refresh(
             SelectionSubSystem selectionSystem,
@@ -43,6 +53,8 @@ namespace SS3D.Systems.Interactions
 
             _activeOutlineView = null;
             _activeOutlineSelectable = null;
+            _hasCachedOutlineState = false;
+            _nextOutlineEvalTime = -1f;
         }
 
         private void RefreshUnguarded(
@@ -54,7 +66,7 @@ namespace SS3D.Systems.Interactions
             Selectable current = selectionSystem != null ? selectionSystem.GetCurrentSelectable() : null;
             InteractionOutlineView.ClearPendingExcept(current);
 
-            if (current == null || IsEntityOutlineExcluded(current))
+            if (current == null || IsEntityOutlineExcludedCached(current))
             {
                 Clear();
                 return;
@@ -74,6 +86,7 @@ namespace SS3D.Systems.Interactions
                     _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Pending);
                 }
 
+                _hasCachedOutlineState = false;
                 return;
             }
 
@@ -82,6 +95,8 @@ namespace SS3D.Systems.Interactions
                 Clear();
                 _activeOutlineSelectable = current;
                 _activeOutlineView = InteractionOutlineView.GetOrCreate(current);
+                _nextOutlineEvalTime = -1f;
+                _hasCachedOutlineState = false;
             }
 
             if (!_activeOutlineView)
@@ -89,25 +104,40 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
+            float now = Time.unscaledTime;
+            bool selectableChanged = !_hasCachedOutlineState;
+            if (!selectableChanged && now < _nextOutlineEvalTime)
+            {
+                _activeOutlineView.SetState(_cachedOutlineState);
+                return;
+            }
+
+            _nextOutlineEvalTime = now + OutlineEvalIntervalSeconds;
+
             if (!TryEvaluateInteractability(current, camera, intent, source, out bool hasViableInteractions))
             {
+                _cachedOutlineState = InteractionOutlineView.OutlineState.Hidden;
+                _hasCachedOutlineState = true;
                 _activeOutlineView.SetState(InteractionOutlineView.OutlineState.Hidden);
                 return;
             }
 
-            InteractionOutlineView.OutlineState state = hasViableInteractions
+            _cachedOutlineState = hasViableInteractions
                 ? InteractionOutlineView.OutlineState.Available
                 : InteractionOutlineView.OutlineState.Unavailable;
-
-            _activeOutlineView.SetState(state);
+            _hasCachedOutlineState = true;
+            _activeOutlineView.SetState(_cachedOutlineState);
         }
 
-        /// <summary>
-        /// Player-controlled entities use dedicated UIs (e.g. medical) instead of world interaction outlines.
-        /// </summary>
-        private static bool IsEntityOutlineExcluded(Selectable selectable)
+        private bool IsEntityOutlineExcludedCached(Selectable selectable)
         {
-            return selectable.GetComponentInParent<Entity>() != null;
+            if (selectable != _entityCheckSelectable)
+            {
+                _entityCheckSelectable = selectable;
+                _entityCheckExcluded = selectable != null && selectable.GetComponentInParent<Entity>() != null;
+            }
+
+            return _entityCheckExcluded;
         }
 
         private bool TryEvaluateInteractability(
@@ -127,9 +157,17 @@ namespace SS3D.Systems.Interactions
             bool hasPoint = SelectionTargetUtility.TryResolveInteractionPoint(camera, selectable, out Vector3 point, out Vector3 normal);
             InteractionDiscovery.CollectTargetsInto(source, selectable.gameObject, _outlineTargets);
 
-            InteractionEvent outlineEvent = hasPoint
-                ? new InteractionEvent(source, null, point, normal)
-                : new InteractionEvent(source, null);
+            InteractionEvent outlineEvent = GetOrCreateOutlineEvent(source);
+            if (hasPoint)
+            {
+                outlineEvent.SetResolvedHit(point, normal);
+            }
+            else
+            {
+                outlineEvent.ClearResolvedHit();
+            }
+
+            outlineEvent.Target = null;
 
             // Outline LateUpdate must not run full Discover (source-only Drop, ToArray, Filter lists).
             return InteractionPipeline.TryEvaluateOutlineInteractability(
@@ -138,6 +176,17 @@ namespace SS3D.Systems.Interactions
                 outlineEvent,
                 intent,
                 out hasViableInteractions);
+        }
+
+        private InteractionEvent GetOrCreateOutlineEvent(IInteractionSource source)
+        {
+            if (_outlineEvent == null || !ReferenceEquals(_outlineEventSource, source))
+            {
+                _outlineEvent = new InteractionEvent(source, null);
+                _outlineEventSource = source;
+            }
+
+            return _outlineEvent;
         }
     }
 }

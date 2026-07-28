@@ -17,16 +17,16 @@ namespace SS3D.Interactions
         /// True when <see cref="Point"/> and <see cref="Normal"/> come from a resolved hit.
         /// False when no point was resolved — do not treat <see cref="Point"/> as a world location.
         /// </summary>
-        public bool HasPoint { get; }
+        public bool HasPoint { get; private set; }
         /// <summary>
         /// The point at which the interaction took place. Meaningful only when <see cref="HasPoint"/> is true
         /// (including a real hit at world origin).
         /// </summary>
-        public Vector3 Point { get; }
+        public Vector3 Point { get; private set; }
         /// <summary>
         /// The normal angle at which the interacted surface is facing. Meaningful only when <see cref="HasPoint"/> is true.
         /// </summary>
-        public Vector3 Normal { get; }
+        public Vector3 Normal { get; private set; }
 
         /// <summary>
         /// Creates an event with no resolved interaction point.
@@ -50,6 +50,26 @@ namespace SS3D.Interactions
             HasPoint = true;
             Point = point;
             Normal = normal;
+        }
+
+        /// <summary>
+        /// Hot-path reuse: update hit data without allocating a new event (outline LateUpdate).
+        /// </summary>
+        public void SetResolvedHit(Vector3 point, Vector3 normal)
+        {
+            HasPoint = true;
+            Point = point;
+            Normal = normal;
+        }
+
+        /// <summary>
+        /// Hot-path reuse: clear hit data without allocating a new event (outline LateUpdate).
+        /// </summary>
+        public void ClearResolvedHit()
+        {
+            HasPoint = false;
+            Point = default;
+            Normal = default;
         }
 
         /// <summary>

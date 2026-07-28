@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: ab6f2f56c — 2026-07-28
+> Verified: f58c3b9fa — 2026-07-28
 
 # Furniture / world objects
 
@@ -32,6 +32,7 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 ## Pitfalls
 
 - **SS13-scale airlock FixedUpdate:** hundreds of doors each calling `SpawnedPlayers.ToList()` + `GetComponent` every physics tick (~814× on Metastation). Proximity is owned by `AirLockProximityService` (HashGrid neighborhood of players only). Empty close passes use `_pendingEmptyPass` (doors with occupants), not a walk of all `_openerCells` — `EmptyPassSweep` must stay O(pending). Do not re-add per-door `FixedUpdate`. Hit 2026-07-28 (perf capture).
+- **Airlock `CreateTargetInteractions` alloc on hover:** returning `new IInteraction[] { new AirLockDoorInteraction(...) }` every outline probe GC-spikes when looking at doors. Cache the interaction instance + array on the opener; only refresh `Name`. Hit 2026-07-28.
 - **Client airlocks never open:** remotes are NetworkTransformed on the server — `CharacterController.Move` never runs for them, so Unity triggers / CC Overlap miss. Disable CC when `!IsOwner` so NT can drive the server transform. Probe `EntitySubSystem.SpawnedPlayers` with `Collider.ClosestPoint` + padding (~0.85m): closed door solids stop characters just outside the trigger OBB, so a strict contains check never fires. Drive `Animator.Open` from the `_isOpen` SyncVar OnChange. Hit 2026-07-26.
 - **Access-denied spam at a locked door:** unauthorized players in the padded proximity volume must only trigger deny once per approach (`_deniedOccupants` edge). Calling `ServerPlayAccessDenied` every FixedUpdate floods SFX/blinks. Clear the denied set when they leave or on power loss. Hit 2026-07-26 (design).
 - **Security cannot open civilian airlocks:** Security role preset omitted `AccessLevel.Civilian` (bit 128). Civilian doors require that bit; host and client both fail access. SecurityOfficer preset + `Security.asset` include Civilian. Hit 2026-07-26.

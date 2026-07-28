@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using SS3D.Core;
-using SS3D.Systems.Area;
-using SS3D.Systems.Tile.Connections;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
 {
     /// <summary>
     /// Dims emissive materials and optional panel indicators when a power consumer is inactive.
+    /// Driven by <see cref="IPowerConsumer"/> status changes (and a one-shot refresh when electricity
+    /// becomes ready) — not per-tick <see cref="ElectricitySubSystem.OnTick"/>, which is too expensive
+    /// at SS13 door counts when power is steady.
     /// </summary>
     public class ConsumerPowerVisual : MonoBehaviour
     {
@@ -43,7 +44,9 @@ namespace SS3D.Systems.Electricity
 
         private IPowerConsumer _consumer;
         private readonly List<EmissiveSlot> _emissiveSlots = new();
-        private bool _electricityTickSubscribed;
+        private bool _waitingForElectricityReady;
+        private bool _hasAppliedPowered;
+        private bool _lastShownPowered;
 
         private void Awake()
         {
@@ -67,7 +70,7 @@ namespace SS3D.Systems.Electricity
             }
 
             CacheVisuals();
-            TrySubscribeElectricityTick();
+            TryBindElectricityReady();
             RefreshVisuals();
         }
 
@@ -82,7 +85,7 @@ namespace SS3D.Systems.Electricity
                 machineConsumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
             }
 
-            UnsubscribeElectricityTick();
+            UnbindElectricityReady();
         }
 
         private IPowerConsumer ResolveConsumer()
@@ -174,21 +177,20 @@ namespace SS3D.Systems.Electricity
             RefreshVisuals();
         }
 
-        private void TrySubscribeElectricityTick()
+        private void TryBindElectricityReady()
         {
-            if (_electricityTickSubscribed || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (_waitingForElectricityReady || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
             if (electricitySubSystem.IsReady)
             {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
                 return;
             }
 
             electricitySubSystem.WhenReady += HandleElectricitySystemSetup;
+            _waitingForElectricityReady = true;
         }
 
         private void HandleElectricitySystemSetup()
@@ -199,38 +201,33 @@ namespace SS3D.Systems.Electricity
             }
 
             electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
-            if (!_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-            }
-
+            _waitingForElectricityReady = false;
             RefreshVisuals();
         }
 
-        private void UnsubscribeElectricityTick()
+        private void UnbindElectricityReady()
         {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (!_waitingForElectricityReady || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
             electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
-            if (_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick -= HandleElectricityTick;
-                _electricityTickSubscribed = false;
-            }
-        }
-
-        private void HandleElectricityTick()
-        {
-            RefreshVisuals();
+            _waitingForElectricityReady = false;
         }
 
         public void RefreshVisuals()
         {
-            if (ShouldShowPowered())
+            bool powered = ShouldShowPowered();
+            if (_hasAppliedPowered && _lastShownPowered == powered)
+            {
+                return;
+            }
+
+            _hasAppliedPowered = true;
+            _lastShownPowered = powered;
+
+            if (powered)
             {
                 SetEmissiveState(true);
                 SetPanelIndicators(true);
@@ -244,7 +241,9 @@ namespace SS3D.Systems.Electricity
 
         private bool ShouldShowPowered()
         {
-            return PowerGate.IsEffectivelyPowered(_consumer, NullConsumerPolicy.Deny);
+            // Prefer simulation PowerStatus: area ticks already apply channel gating before
+            // assigning Powered/Inactive. Avoids per-tick APC lookups on hundreds of airlocks.
+            return PowerGate.IsPowered(_consumer, NullConsumerPolicy.Deny);
         }
 
         private void SetEmissiveState(bool powered)

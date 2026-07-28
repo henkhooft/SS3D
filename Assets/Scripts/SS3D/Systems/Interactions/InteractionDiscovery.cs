@@ -12,6 +12,9 @@ namespace SS3D.Systems.Interactions
     /// </summary>
     public static class InteractionDiscovery
     {
+        /// <summary>Reused by <see cref="CollectTargetsInto"/> — main-thread only, not re-entrant.</summary>
+        private static readonly List<IInteractionTarget> ComponentsScratch = new(8);
+
         public static IInteractionSource GetActiveInteractionSource(Component host)
         {
             if (host == null)
@@ -37,11 +40,12 @@ namespace SS3D.Systems.Interactions
         {
             targets.Clear();
 
-            // Interface GetComponents still allocates an array; avoid LINQ Where/ToList on top.
-            IInteractionTarget[] components = targetGameObject.GetComponents<IInteractionTarget>();
-            for (int i = 0; i < components.Length; i++)
+            // List overload avoids allocating a new array each GetComponents call.
+            ComponentsScratch.Clear();
+            targetGameObject.GetComponents(ComponentsScratch);
+            for (int i = 0; i < ComponentsScratch.Count; i++)
             {
-                IInteractionTarget target = components[i];
+                IInteractionTarget target = ComponentsScratch[i];
                 if ((target as MonoBehaviour)?.enabled == false)
                 {
                     continue;
@@ -57,6 +61,8 @@ namespace SS3D.Systems.Interactions
 
             if (targets.Count < 1)
             {
+                // Rare (no IInteractionTarget on selectable). New instance — do not reuse a
+                // static fallback; InteractionEntry may hold Target across frames.
                 targets.Add(new InteractionTargetGameObject(targetGameObject));
             }
         }

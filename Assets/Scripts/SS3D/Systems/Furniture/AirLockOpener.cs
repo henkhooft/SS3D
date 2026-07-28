@@ -57,6 +57,9 @@ namespace SS3D.Systems.Furniture
         public static readonly Color DoorLightClosingColor = new Color(1f, 0.18f, 0.2f);
         public static readonly Color DoorLightIdleColor = Color.black;
 
+        private AirLockDoorInteraction _cachedDoorInteraction;
+        private IInteraction[] _cachedDoorInteractions;
+
         [SerializeField]
         private Animator _animator;
 
@@ -178,13 +181,10 @@ namespace SS3D.Systems.Furniture
 
         public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
         {
-            return new IInteraction[]
-            {
-                new AirLockDoorInteraction(this)
-                {
-                    Name = IsOpen ? "Close" : "Open",
-                },
-            };
+            _cachedDoorInteraction ??= new AirLockDoorInteraction(this);
+            _cachedDoorInteraction.Name = IsOpen ? "Close" : "Open";
+            _cachedDoorInteractions ??= new IInteraction[] { _cachedDoorInteraction };
+            return _cachedDoorInteractions;
         }
 
         /// <summary>
