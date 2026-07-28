@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -17,6 +18,10 @@ namespace SS3D.Tests.EditMode.MapImport
         private static string InfraFixturePath =>
             Path.GetFullPath(Path.Combine(Application.dataPath,
                 "Scripts/Tests/EditMode/MapImport/Fixtures/tiny_infra.dmm"));
+
+        private static string DoorRunFixturePath =>
+            Path.GetFullPath(Path.Combine(Application.dataPath,
+                "Scripts/Tests/EditMode/MapImport/Fixtures/tiny_door_run.dmm"));
 
         private static string TypeMapPath =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "../Tools/map_import/ss13_type_map.yaml"));
@@ -100,6 +105,49 @@ namespace SS3D.Tests.EditMode.MapImport
         }
 
         [Test]
+        public void Direction_InferDoor_ScansThroughDoorRun()
+        {
+            // Horizontal ###AAA### — walls at E/W ends → South (N–S passage).
+            var horizontal = new Dictionary<(int, int), MapImportKind>
+            {
+                [(0, 0)] = MapImportKind.Wall,
+                [(1, 0)] = MapImportKind.Door,
+                [(2, 0)] = MapImportKind.Door,
+                [(3, 0)] = MapImportKind.Door,
+                [(4, 0)] = MapImportKind.Wall,
+            };
+            Assert.AreEqual(Direction.South, MapImportDirection.InferDoorDirection(2, 0, horizontal));
+            Assert.AreEqual(Direction.South, MapImportDirection.InferDoorDirection(1, 0, horizontal));
+
+            // Vertical stack with walls at N/S ends → East (E–W passage).
+            var vertical = new Dictionary<(int, int), MapImportKind>
+            {
+                [(0, 4)] = MapImportKind.Wall,
+                [(0, 3)] = MapImportKind.Door,
+                [(0, 2)] = MapImportKind.Door,
+                [(0, 1)] = MapImportKind.Door,
+                [(0, 0)] = MapImportKind.Wall,
+            };
+            Assert.AreEqual(Direction.East, MapImportDirection.InferDoorDirection(0, 2, vertical));
+        }
+
+        [Test]
+        public void Planner_DoorRun_MiddleDoorsMatchEndOrientation()
+        {
+            DmmMap map = DmmParser.ParseFile(DoorRunFixturePath);
+            Ss13TypeMapper mapper = new Ss13TypeMapper(Ss13TypeMapYaml.ParseFile(TypeMapPath));
+            MapImportPlan plan = MapImportPlanner.Build(map, mapper);
+
+            List<MapImportCellPlan> doors = plan.Cells
+                .Where(c => c.Placements.Count >= 2 && c.Placements[1].SoName == "CivillianAirlock")
+                .OrderBy(c => c.WorldX)
+                .ToList();
+            Assert.AreEqual(3, doors.Count);
+            foreach (MapImportCellPlan door in doors)
+                Assert.AreEqual(Direction.South, door.Placements[1].Direction);
+        }
+
+        [Test]
         public void Direction_FromDirectionalPathSuffix()
         {
             Assert.IsTrue(MapImportDirection.TryFromPath(
@@ -159,11 +207,11 @@ namespace SS3D.Tests.EditMode.MapImport
             Assert.AreEqual(wallMountFloor.WorldX - 1, light.WorldX);
             Assert.AreEqual(Direction.East, light.Direction);
 
-            // Door between N/S walls, no dir → inferred East.
+            // Door between E/W walls on the same row, no dir → inferred South (N–S passage).
             MapImportCellPlan doorCell = plan.Cells.Find(c =>
                 c.Placements.Count >= 2 && c.Placements[1].SoName == "CivillianAirlock");
             Assert.IsNotNull(doorCell);
-            Assert.AreEqual(Direction.East, doorCell.Placements[1].Direction);
+            Assert.AreEqual(Direction.South, doorCell.Placements[1].Direction);
 
             MapImportCellPlan layer4Cell = plan.Cells.Find(c =>
                 c.Placements.Any(p => p.SoName == MapImportPipeResolver.AtmosPipesL4));

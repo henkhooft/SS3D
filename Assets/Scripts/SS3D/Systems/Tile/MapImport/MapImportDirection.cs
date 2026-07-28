@@ -112,28 +112,79 @@ namespace SS3D.Systems.Tile.MapImport
         }
 
         /// <summary>
-        /// When airlocks omit dir, infer facing from neighbouring walls:
-        /// N/S walls → East (E–W corridor); otherwise South (BYOND default / N–S corridor).
+        /// When airlocks omit dir, infer facing from walls along the cardinal axes.
+        /// Skips neighbouring doors so middle tiles in a 3–5 door airlock run still see the
+        /// walls at the ends of the run (e.g. <c>###AAA###</c> → South; vertical stacks → East).
         /// </summary>
         public static Direction InferDoorDirection(
             int sourceX,
             int sourceY,
             System.Collections.Generic.IReadOnlyDictionary<(int X, int Y), MapImportKind> structuralKinds)
         {
-            bool WallAt(int dx, int dy)
-            {
-                if (structuralKinds == null ||
-                    !structuralKinds.TryGetValue((sourceX + dx, sourceY + dy), out MapImportKind kind))
-                    return false;
-                return kind is MapImportKind.Wall or MapImportKind.Window;
-            }
+            if (structuralKinds == null)
+                return ByondDefault;
 
-            bool nsWalls = WallAt(0, 1) || WallAt(0, -1);
-            bool ewWalls = WallAt(1, 0) || WallAt(-1, 0);
+            const int maxScan = 8;
+            bool nsWalls = FindWallAlongAxis(sourceX, sourceY, 0, 1, maxScan, structuralKinds)
+                          || FindWallAlongAxis(sourceX, sourceY, 0, -1, maxScan, structuralKinds);
+            bool ewWalls = FindWallAlongAxis(sourceX, sourceY, 1, 0, maxScan, structuralKinds)
+                          || FindWallAlongAxis(sourceX, sourceY, -1, 0, maxScan, structuralKinds);
+
             if (nsWalls && !ewWalls)
                 return Direction.East;
+            if (ewWalls && !nsWalls)
+                return Direction.South;
+
+            if (nsWalls && ewWalls)
+            {
+                // Ambiguous pocket: prefer the axis of an adjacent door run.
+                bool doorRunEW = IsDoor(sourceX + 1, sourceY, structuralKinds)
+                                 || IsDoor(sourceX - 1, sourceY, structuralKinds);
+                bool doorRunNS = IsDoor(sourceX, sourceY + 1, structuralKinds)
+                                 || IsDoor(sourceX, sourceY - 1, structuralKinds);
+                if (doorRunEW && !doorRunNS)
+                    return Direction.South;
+                if (doorRunNS && !doorRunEW)
+                    return Direction.East;
+            }
 
             return ByondDefault;
+        }
+
+        private static bool IsDoor(
+            int x,
+            int y,
+            System.Collections.Generic.IReadOnlyDictionary<(int X, int Y), MapImportKind> structuralKinds) =>
+            structuralKinds.TryGetValue((x, y), out MapImportKind kind) && kind == MapImportKind.Door;
+
+        private static bool IsWallOrWindow(
+            int x,
+            int y,
+            System.Collections.Generic.IReadOnlyDictionary<(int X, int Y), MapImportKind> structuralKinds) =>
+            structuralKinds.TryGetValue((x, y), out MapImportKind kind)
+            && kind is MapImportKind.Wall or MapImportKind.Window;
+
+        /// <summary>Walk <paramref name="dx"/>/<paramref name="dy"/>, skipping doors, until a wall/window or a stop.</summary>
+        private static bool FindWallAlongAxis(
+            int sourceX,
+            int sourceY,
+            int dx,
+            int dy,
+            int maxScan,
+            System.Collections.Generic.IReadOnlyDictionary<(int X, int Y), MapImportKind> structuralKinds)
+        {
+            for (int step = 1; step <= maxScan; step++)
+            {
+                int x = sourceX + dx * step;
+                int y = sourceY + dy * step;
+                if (IsWallOrWindow(x, y, structuralKinds))
+                    return true;
+                if (IsDoor(x, y, structuralKinds))
+                    continue;
+                return false;
+            }
+
+            return false;
         }
     }
 }

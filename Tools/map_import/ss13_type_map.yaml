@@ -7,7 +7,8 @@
 #
 # Wall mounts (APC/lights): MetaStation uses /directional/north|south|east|west path
 # suffixes. MapImportDirection parses those; mounts are offset onto the wall tile and
-# face into the room. Airlocks without dir infer facing from neighbouring walls.
+# face into the room. Airlocks without dir infer facing from walls along cardinals
+# (scanning through neighbouring doors so multi-door runs orient correctly).
 
 defaults:
   floor: TileGrey
