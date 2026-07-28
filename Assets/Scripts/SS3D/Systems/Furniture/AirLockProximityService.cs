@@ -22,8 +22,10 @@ namespace SS3D.Systems.Furniture
 
         private readonly Dictionary<Vector2Int, List<AirLockOpener>> _byCell = new();
         private readonly Dictionary<AirLockOpener, Vector2Int> _openerCells = new();
+        private readonly HashSet<AirLockOpener> _pendingEmptyPass = new();
         private readonly HashSet<AirLockOpener> _visitedScratch = new();
         private readonly List<AirLockOpener> _nearbyScratch = new();
+        private readonly List<AirLockOpener> _emptyPassScratch = new();
 
         public static AirLockProximityService Instance
         {
@@ -61,6 +63,7 @@ namespace SS3D.Systems.Furniture
             }
 
             list.Add(opener);
+            RefreshEmptyPassMembership(opener);
         }
 
         public void Unregister(AirLockOpener opener)
@@ -69,6 +72,7 @@ namespace SS3D.Systems.Furniture
                 return;
 
             _openerCells.Remove(opener);
+            _pendingEmptyPass.Remove(opener);
             if (_byCell.TryGetValue(cell, out List<AirLockOpener> list))
             {
                 list.Remove(opener);
@@ -79,6 +83,9 @@ namespace SS3D.Systems.Furniture
 
         /// <summary>EditMode / tests: doors currently indexed.</summary>
         public int RegisteredCount => _openerCells.Count;
+
+        /// <summary>EditMode / tests: doors queued for an empty proximity pass.</summary>
+        public int PendingEmptyPassCount => _pendingEmptyPass.Count;
 
         /// <summary>EditMode / tests: collect openers in the 3×3 HashGrid neighborhood of <paramref name="worldPosition"/>.</summary>
         public void CollectNearby(Vector3 worldPosition, List<AirLockOpener> results)
@@ -115,50 +122,67 @@ namespace SS3D.Systems.Furniture
                 return;
 
             IReadOnlyList<Entity> players = entities.SpawnedPlayers;
-            if (players.Count == 0)
-            {
-                // Still need powered/empty close logic for doors that were occupied — tick all
-                // only when no players is rare; skip (doors stay as last state until a player exists).
-                return;
-            }
-
             _visitedScratch.Clear();
 
-            using (NearbyTickPerformanceMarker.Auto())
+            if (players.Count > 0)
             {
-                for (int p = 0; p < players.Count; p++)
+                using (NearbyTickPerformanceMarker.Auto())
                 {
-                    Entity entity = players[p];
-                    if (entity == null)
-                        continue;
-
-                    CollectNearby(entity.transform.position, _nearbyScratch);
-                    for (int i = 0; i < _nearbyScratch.Count; i++)
+                    for (int p = 0; p < players.Count; p++)
                     {
-                        AirLockOpener opener = _nearbyScratch[i];
-                        if (opener == null || !_visitedScratch.Add(opener))
+                        Entity entity = players[p];
+                        if (entity == null)
                             continue;
 
-                        opener.ServerUpdateProximityFromService();
+                        CollectNearby(entity.transform.position, _nearbyScratch);
+                        for (int i = 0; i < _nearbyScratch.Count; i++)
+                        {
+                            AirLockOpener opener = _nearbyScratch[i];
+                            if (opener == null || !_visitedScratch.Add(opener))
+                                continue;
+
+                            opener.ServerUpdateProximityFromService();
+                            RefreshEmptyPassMembership(opener);
+                        }
                     }
                 }
             }
 
-            // Doors that had occupants but no longer have nearby players still need an empty tick
-            // so close timers schedule. Walk openers that were not visited this frame only if they
-            // report needing an empty pass.
+            if (_pendingEmptyPass.Count == 0)
+                return;
+
+            // Copy before mutate: proximity updates clear occupants and drop membership.
+            _emptyPassScratch.Clear();
+            foreach (AirLockOpener opener in _pendingEmptyPass)
+                _emptyPassScratch.Add(opener);
+
             using (EmptyPassPerformanceMarker.Auto())
             {
-                foreach (KeyValuePair<AirLockOpener, Vector2Int> pair in _openerCells)
+                for (int i = 0; i < _emptyPassScratch.Count; i++)
                 {
-                    AirLockOpener opener = pair.Key;
+                    AirLockOpener opener = _emptyPassScratch[i];
                     if (opener == null || _visitedScratch.Contains(opener))
                         continue;
 
-                    if (opener.NeedsEmptyProximityPass)
-                        opener.ServerUpdateProximityFromService();
+                    opener.ServerUpdateProximityFromService();
+                    RefreshEmptyPassMembership(opener);
                 }
             }
+        }
+
+        private void RefreshEmptyPassMembership(AirLockOpener opener)
+        {
+            if (opener == null || !_openerCells.ContainsKey(opener))
+            {
+                if (opener != null)
+                    _pendingEmptyPass.Remove(opener);
+                return;
+            }
+
+            if (opener.NeedsEmptyProximityPass)
+                _pendingEmptyPass.Add(opener);
+            else
+                _pendingEmptyPass.Remove(opener);
         }
     }
 }

@@ -54,6 +54,9 @@ namespace SS3D.Systems.Electricity
         private readonly Dictionary<IApcChannelSource, List<IPowerConsumer>> _consumersByApc = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridInputKw = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridAvailableKw = new();
+        private readonly List<IPowerConsumer> _areaActiveConsumersScratch = new();
+        private readonly List<IPowerConsumer> _areaPoweredConsumersScratch = new();
+        private readonly HashSet<IPowerConsumer> _areaPoweredSetScratch = new();
         private UndirectedGraph<VerticeCoordinates, Edge<VerticeCoordinates>> _electricityGraph;
         private CancellationTokenSource _readinessCts;
 
@@ -297,14 +300,22 @@ namespace SS3D.Systems.Electricity
                     }
 
                     IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
-                    List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
-                    float demandKw = AreaApcPowerDistribution.SumPowerNeeded(activeConsumers);
+                    AreaApcPowerDistribution.FillActiveConsumers(areaConsumers, apc.Channels, _areaActiveConsumersScratch);
+                    float demandKw = AreaApcPowerDistribution.SumPowerNeeded(_areaActiveConsumersScratch);
                     float gridAvailableKw = GetAvailableGridSupplyForApc(apcDevice);
                     float gridDrawKw = Math.Min(demandKw, gridAvailableKw);
                     _lastApcGridAvailableKw[apc] = gridAvailableKw;
                     _lastApcGridInputKw[apc] = gridDrawKw;
                     TryGetCircuitForDevice(apcDevice)?.DrawGridPowerForArea(gridDrawKw, _tickRate);
-                    AreaApcPowerDistribution.PowerAreaConsumers(apc, apcStorage, gridDrawKw, areaConsumers, activeConsumers, _tickRate);
+                    AreaApcPowerDistribution.PowerAreaConsumers(
+                        apc,
+                        apcStorage,
+                        gridDrawKw,
+                        areaConsumers,
+                        _areaActiveConsumersScratch,
+                        _tickRate,
+                        _areaPoweredConsumersScratch,
+                        _areaPoweredSetScratch);
                 }
             }
         }

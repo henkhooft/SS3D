@@ -33,10 +33,17 @@ Make SS13-sized maps (e.g. Metastation import) playable in host Play Mode, and k
 - Door wall caps call `PlacedTileObject.RefreshHostVisibility` after Instantiate so FishNet renderer cache includes caps.
 - Import path already runs `RebuildObservers` + `RefreshAllHostVisibility` (verified).
 
+### E — CircuitsTick GC + empty-pass set (follow-up)
+
+- Electricity hot path reuses scratch lists/sets (`Circuit`, `AreaApcPowerDistribution.FillActiveConsumers`, `PowerConsumerAllocation.AllocateUnderBudget` fill overload, `ElectricitySubSystem.UpdateAreaScopedPower`).
+- Airlock empty close: `_pendingEmptyPass` HashSet (doors with occupants) instead of walking all `_openerCells`; still runs when `SpawnedPlayers` is empty.
+- Markers: `SS3D.Electricity.CircuitsTick` / `SS3D.Airlock.EmptyPassSweep` — expect GC and empty-sweep CPU down on next `Logs/perf/` export.
+
 ## Verification
 
 - Re-export Profiler: `metastation-play` / `metastation-mapedit` under `Logs/perf/`.
 - Expect `SS3D.Atmos.Upload` and `AirLockOpener.FixedUpdate` out of top self-time; Map Editor open → atmos/electricity/airlock markers near-idle with full visibility.
+- After E: `SS3D.Electricity.CircuitsTick` GC near-floor; `EmptyPassSweep` self-time scales with occupied doors, not station door count.
 
 ## Related docs
 
