@@ -765,6 +765,9 @@ namespace SS3D.Systems.Tile
             }
 
             RefreshAllAdjacencies();
+            // Template load skips per-tile observer churn; re-apply AOI + underfloor occlusion now
+            // that every covering turf is present.
+            RefreshAllHostVisibility();
         }
 
         /// <summary>

@@ -170,6 +170,9 @@ namespace SS3D.Systems.Tile
             StampWorldDecalReceivers(gameObject);
             ApplySyncedIdentity();
             NotifyIntegrityPresentation(IntegrityStage);
+            // Pure clients never hit OnStartServer; apply cover hide once identity/map are ready.
+            if (!IsServer)
+                RefreshHostVisibility();
         }
 
         /// <summary>
@@ -204,19 +207,35 @@ namespace SS3D.Systems.Tile
             base.OnStartServer();
             PublishIdentityToNetwork();
             NetworkObject.OnObserversActive += HandleObserversActive;
+            NetworkObject.OnHostVisibilityUpdated += HandleHostVisibilityUpdated;
             RefreshHostVisibility();
             NotifyIntegrityPresentation(IntegrityStage);
         }
 
         public override void OnStopServer()
         {
-            NetworkObject.OnObserversActive -= HandleObserversActive;
+            if (NetworkObject != null)
+            {
+                NetworkObject.OnObserversActive -= HandleObserversActive;
+                NetworkObject.OnHostVisibilityUpdated -= HandleHostVisibilityUpdated;
+            }
+
             base.OnStopServer();
         }
 
         private void HandleObserversActive(NetworkObject _)
         {
             RefreshHostVisibility();
+        }
+
+        /// <summary>
+        /// FishNet's spawn/observer paths call <see cref="NetworkObject.SetRenderersVisible"/> directly
+        /// (bypassing this method) and can re-enable MeshRenderers after underfloor hide.
+        /// </summary>
+        private void HandleHostVisibilityUpdated(bool _, bool nextVisible)
+        {
+            if (nextVisible)
+                ApplyUnderfloorOcclusion();
         }
 
         /// <summary>
@@ -230,7 +249,11 @@ namespace SS3D.Systems.Tile
             if (NetworkObject == null || !NetworkObject.IsSpawned)
             {
                 if (IsMapEditorAuthoring())
+                {
                     EnableAllChildRenderers();
+                    SetSelectableEnabled(true);
+                }
+
                 return;
             }
 
@@ -241,36 +264,57 @@ namespace SS3D.Systems.Tile
             if (!localConnection.IsValid)
                 return;
 
-            bool visible = IsMapEditorAuthoring()
-                || NetworkObject.Observers.Contains(localConnection);
+            bool inAoi = IsMapEditorAuthoring();
+            if (!inAoi)
+            {
+                // Client-host: FishNet Observers gate MeshRenderers. Pure client: spawn itself is AOI.
+                inAoi = !IsServer || NetworkObject.Observers.Contains(localConnection);
+            }
 
-            if (visible)
+            bool hideUnderfloor = inAoi && ShouldHideUnderfloorMeshes();
+
+            if (inAoi && !hideUnderfloor)
             {
                 // FishNet SetRenderersVisible only toggles renderers that were enabled when its
                 // cache was first built. After AOI disables them, UpdateRenderers can shrink the
                 // cache to empty — walls often recover via adjacency churn; floors/plenums stay off.
                 // Re-enable children and rebuild the cache before asking FishNet to show them.
                 EnableAllChildRenderers();
+                SetSelectableEnabled(true);
                 NetworkObject.UpdateRenderers(false);
+                NetworkObject.SetRenderersVisible(true, force: true);
             }
-
-            NetworkObject.SetRenderersVisible(visible, force: true);
-
-            // Logical underfloor occlusion: covered plenums/pipes/wires must not draw even when
-            // AOI says the NetworkObject is visible. Re-disable after SetRenderersVisible, then
-            // rebuild FishNet's renderer cache so it does not keep stale enabled entries.
-            if (visible && ShouldHideUnderfloorMeshes())
+            else if (inAoi && hideUnderfloor)
             {
-                TileUnderfloorVisibility.DisableChildRenderers(gameObject);
-                NetworkObject.UpdateRenderers(false);
+                // Keep NetworkObject / colliders active — only skip draw + selection.
+                // Do not EnableAll first: FishNet spawn also calls SetRenderersVisible(true) and
+                // would otherwise fight an empty renderer cache.
+                ApplyUnderfloorOcclusion();
+                NetworkObject.SetRenderersVisible(true, force: true);
+                ApplyUnderfloorOcclusion();
+            }
+            else
+            {
+                NetworkObject.SetRenderersVisible(false, force: true);
             }
 
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
         }
 
+        private void ApplyUnderfloorOcclusion()
+        {
+            if (!ShouldHideUnderfloorMeshes())
+                return;
+
+            TileUnderfloorVisibility.DisableChildRenderers(gameObject);
+            SetSelectableEnabled(false);
+            if (NetworkObject != null && NetworkObject.IsSpawned)
+                NetworkObject.UpdateRenderers(false);
+        }
+
         private bool ShouldHideUnderfloorMeshes()
         {
-            if (!TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
+            if (_tileObjectSo == null || !TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
                 return false;
 
             if (IsMapEditorAuthoring())
@@ -279,8 +323,20 @@ namespace SS3D.Systems.Tile
             if (!SubSystems.TryGet(out TileSubSystem tiles) || tiles.CurrentMap == null)
                 return false;
 
-            Vector3 world = new Vector3(WorldOrigin.x, 0f, WorldOrigin.y);
-            return TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, world, mapEditorAuthoring: false);
+            // Prefer live transform; WorldOrigin can lag SyncVar apply on pure clients.
+            Vector3 world = transform.position;
+            world.y = 0f;
+            if (TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, world, mapEditorAuthoring: false))
+                return true;
+
+            Vector3 synced = new Vector3(WorldOrigin.x, 0f, WorldOrigin.y);
+            return TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, synced, mapEditorAuthoring: false);
+        }
+
+        private void SetSelectableEnabled(bool enabled)
+        {
+            if (TryGetComponent(out SS3D.Systems.Selection.Selectable selectable) && selectable != null)
+                selectable.enabled = enabled;
         }
 
         private static void EnableAllChildRenderers(GameObject root)

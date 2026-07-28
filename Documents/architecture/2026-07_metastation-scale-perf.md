@@ -42,7 +42,8 @@ Make SS13-sized maps (e.g. Metastation import) playable in host Play Mode, and k
 ### F — Underfloor MeshRenderer occlusion (follow-up)
 
 - [`TileUnderfloorVisibility`](../../Assets/Scripts/SS3D/Systems/Tile/TileUnderfloorVisibility.cs): play-mode disables MeshRenderers on Plenum/Wire/Disposal/PipeLeft|Middle|Right when the cell’s Turf is Floor/Wall/Door.
-- Composed in [`PlacedTileObject.RefreshHostVisibility`](../../Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs) after AOI show + FishNet `UpdateRenderers`; turf place/clear refreshes same-cell underfloor.
+- Composed in [`PlacedTileObject.RefreshHostVisibility`](../../Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs) after AOI show; also re-applies on FishNet `OnHostVisibilityUpdated` (spawn paths call `SetRenderersVisible` directly). Disables `Selectable` too; keeps NetworkObject + colliders active (no root `SetActive(false)`).
+- Turf place/clear refreshes same-cell underfloor; template `Load` ends with `RefreshAllHostVisibility`.
 - Map Editor authoring skips hide (full-station visibility + layer dim toggles unchanged). `PipeSurface` stays drawn.
 - EditMode: `TileUnderfloorVisibilityTests`.
 
