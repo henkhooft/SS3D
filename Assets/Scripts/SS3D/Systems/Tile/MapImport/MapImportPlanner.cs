@@ -14,11 +14,13 @@ namespace SS3D.Systems.Tile.MapImport
     {
         public const string PlenumSoName = "Plenum";
 
-        // FurnitureBase is single-occupant: Vent > Scrubber > DisposalBin > DisposalOutlet.
+        // FurnitureBase is single-occupant: SMES > Vent > Scrubber > DisposalBin > DisposalOutlet > Table.
+        private const int FurniturePrioritySmes = 5;
         private const int FurniturePriorityVent = 4;
         private const int FurniturePriorityScrubber = 3;
         private const int FurniturePriorityDisposalBin = 2;
         private const int FurniturePriorityDisposalOutlet = 1;
+        private const int FurniturePriorityTable = 0;
 
         public static MapImportPlan Build(
             DmmMap map,
@@ -107,6 +109,9 @@ namespace SS3D.Systems.Tile.MapImport
                 plan.ScrubberPlacements += overlays.Scrubber;
                 plan.ApcPlacements += overlays.Apc;
                 plan.LightPlacements += overlays.Light;
+                plan.LatticePlacements += overlays.Lattice;
+                plan.TablePlacements += overlays.Table;
+                plan.SmesPlacements += overlays.Smes;
             }
 
             foreach (KeyValuePair<string, int> pair in mapper.UnmappedCounts)
@@ -125,6 +130,9 @@ namespace SS3D.Systems.Tile.MapImport
             public int Scrubber;
             public int Apc;
             public int Light;
+            public int Lattice;
+            public int Table;
+            public int Smes;
         }
 
         private static bool TryBuildCell(
@@ -141,23 +149,20 @@ namespace SS3D.Systems.Tile.MapImport
             placements = new List<MapImportPlacement>();
             overlays = default;
 
-            if (!TryClassifyStructural(cell, mapper, recordUnmapped: false, out structuralKind, out string structuralSo,
-                    out Direction structuralDir, out bool doorDirExplicit))
-                return false;
-
-            if (structuralKind == MapImportKind.Door && !doorDirExplicit)
-                structuralDir = MapImportDirection.InferDoorDirection(cell.X, cell.Y, structuralKinds);
+            bool hasStructural = TryClassifyStructural(cell, mapper, recordUnmapped: false, out structuralKind,
+                out string structuralSo, out Direction structuralDir, out bool doorDirExplicit);
 
             Ss13TypeMatch? cable = null;
             Ss13TypeMatch? disposal = null;
             Ss13TypeMatch? apc = null;
             Ss13TypeMatch? light = null;
+            Ss13TypeMatch? lattice = null;
             Direction apcTowardWall = MapImportDirection.ByondDefault;
             Direction lightTowardWall = MapImportDirection.ByondDefault;
 
             Dictionary<string, Ss13TypeMatch> pipesBySo = new Dictionary<string, Ss13TypeMatch>(StringComparer.Ordinal);
 
-            int furniturePriority = 0;
+            int furniturePriority = -1;
             string furnitureSo = null;
             Direction furnitureDir = Direction.North;
             MapImportKind furnitureKind = MapImportKind.Skip;
@@ -192,6 +197,9 @@ namespace SS3D.Systems.Tile.MapImport
                     case MapImportKind.Disposal:
                         disposal = Prefer(disposal, match);
                         break;
+                    case MapImportKind.Lattice:
+                        lattice = Prefer(lattice, match);
+                        break;
                     case MapImportKind.Vent:
                         ConsiderFurniture(FurniturePriorityVent, match.SoName, MapImportDirection.Resolve(atom),
                             MapImportKind.Vent, ref furniturePriority, ref furnitureSo, ref furnitureDir, ref furnitureKind);
@@ -210,6 +218,14 @@ namespace SS3D.Systems.Tile.MapImport
                             ref furnitureKind);
                         break;
                     }
+                    case MapImportKind.Smes:
+                        ConsiderFurniture(FurniturePrioritySmes, match.SoName, MapImportDirection.Resolve(atom),
+                            MapImportKind.Smes, ref furniturePriority, ref furnitureSo, ref furnitureDir, ref furnitureKind);
+                        break;
+                    case MapImportKind.Table:
+                        ConsiderFurniture(FurniturePriorityTable, match.SoName, MapImportDirection.Resolve(atom),
+                            MapImportKind.Table, ref furniturePriority, ref furnitureSo, ref furnitureDir, ref furnitureKind);
+                        break;
                     case MapImportKind.Apc:
                         if (TakeIfBetter(ref apc, match))
                         {
@@ -229,8 +245,20 @@ namespace SS3D.Systems.Tile.MapImport
                 }
             }
 
-            placements.Add(new MapImportPlacement { SoName = PlenumSoName, Direction = Direction.North });
-            placements.Add(new MapImportPlacement { SoName = structuralSo, Direction = structuralDir });
+            // Space + lattice (no turf) is a valid cell; lattice replaces Plenum.
+            if (!hasStructural && !lattice.HasValue)
+                return false;
+
+            if (hasStructural && structuralKind == MapImportKind.Door && !doorDirExplicit)
+                structuralDir = MapImportDirection.InferDoorDirection(cell.X, cell.Y, structuralKinds);
+
+            string plenumSo = lattice.HasValue ? lattice.Value.SoName : PlenumSoName;
+            placements.Add(new MapImportPlacement { SoName = plenumSo, Direction = Direction.North });
+            if (lattice.HasValue)
+                overlays.Lattice = 1;
+
+            if (hasStructural)
+                placements.Add(new MapImportPlacement { SoName = structuralSo, Direction = structuralDir });
 
             if (cable.HasValue)
             {
@@ -263,6 +291,12 @@ namespace SS3D.Systems.Tile.MapImport
                         break;
                     case MapImportKind.DisposalTerminal:
                         overlays.DisposalTerminal = 1;
+                        break;
+                    case MapImportKind.Smes:
+                        overlays.Smes = 1;
+                        break;
+                    case MapImportKind.Table:
+                        overlays.Table = 1;
                         break;
                 }
             }

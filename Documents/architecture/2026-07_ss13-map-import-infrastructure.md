@@ -18,11 +18,16 @@ Extend the structural DMM importer so cables, heuristically-layered gas pipes, d
 - `MapImportApplier` defers area flood (`BeginDeferredAreaFlood` / `EndDeferredAreaFlood`) around bulk place so APC seeds see complete walls
 - EditMode fixture `tiny_infra.dmm` + planner/pipe resolver tests
 
+## Follow-on (lattices / tables / SMES)
+
+Shipped in-tree after this effort: `MapImportKind` Lattice/Table/Smes; lattice/catwalk replace Plenum (space+lattice cells import); wood→`TableWood`, other tables→`TableSteel`; SMES as FurnitureBase (priority above Vent). Fixture `tiny_furniture.dmm`. See [tile](systems/tile.md) Extension points / Pitfalls.
+
 ## Explicit non-goals
 
-- Furniture / machines / items / door access
-- Air alarms, SMES, solar, full atmos component set (binary pumps, etc.)
+- Remaining furniture / machines / items / door access (chairs, racks, closets, etc.)
+- Air alarms, solar, full atmos component set (binary pumps, etc.)
 - Perfect SS13 `piping_layer` fidelity (network-type collapse)
+- Distinct glass/poker/reinforced table SOs (non-wood tables collapse to `TableSteel`)
 - Vendoring tgstation maps or committing converted Meta templates
 
 ## Key files

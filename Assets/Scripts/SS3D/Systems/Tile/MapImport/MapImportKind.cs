@@ -15,5 +15,8 @@ namespace SS3D.Systems.Tile.MapImport
         Scrubber = 10,
         Apc = 11,
         Light = 12,
+        Lattice = 13,
+        Table = 14,
+        Smes = 15,
     }
 }

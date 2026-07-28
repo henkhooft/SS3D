@@ -23,6 +23,10 @@ namespace SS3D.Tests.EditMode.MapImport
             Path.GetFullPath(Path.Combine(Application.dataPath,
                 "Scripts/Tests/EditMode/MapImport/Fixtures/tiny_door_run.dmm"));
 
+        private static string FurnitureFixturePath =>
+            Path.GetFullPath(Path.Combine(Application.dataPath,
+                "Scripts/Tests/EditMode/MapImport/Fixtures/tiny_furniture.dmm"));
+
         private static string TypeMapPath =>
             Path.GetFullPath(Path.Combine(Application.dataPath, "../Tools/map_import/ss13_type_map.yaml"));
 
@@ -36,6 +40,9 @@ namespace SS3D.Tests.EditMode.MapImport
             Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Cable));
             Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Pipe));
             Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Apc));
+            Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Lattice));
+            Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Table));
+            Assert.IsTrue(config.Prefixes.Any(p => p.Kind == MapImportKind.Smes));
         }
 
         [Test]
@@ -63,6 +70,24 @@ namespace SS3D.Tests.EditMode.MapImport
 
             Assert.IsTrue(mapper.TryMatch("/obj/machinery/light", out Ss13TypeMatch tube));
             Assert.AreEqual("LightTubeFixture", tube.SoName);
+
+            Assert.IsTrue(mapper.TryMatch("/obj/structure/lattice/catwalk", out Ss13TypeMatch catwalk));
+            Assert.AreEqual(MapImportKind.Lattice, catwalk.Kind);
+            Assert.AreEqual("Catwalk", catwalk.SoName);
+
+            Assert.IsTrue(mapper.TryMatch("/obj/structure/lattice", out Ss13TypeMatch lattice));
+            Assert.AreEqual("Lattice", lattice.SoName);
+
+            Assert.IsTrue(mapper.TryMatch("/obj/structure/table/wood", out Ss13TypeMatch wood));
+            Assert.AreEqual(MapImportKind.Table, wood.Kind);
+            Assert.AreEqual("TableWood", wood.SoName);
+
+            Assert.IsTrue(mapper.TryMatch("/obj/structure/table", out Ss13TypeMatch steel));
+            Assert.AreEqual("TableSteel", steel.SoName);
+
+            Assert.IsTrue(mapper.TryMatch("/obj/machinery/power/smes", out Ss13TypeMatch smes));
+            Assert.AreEqual(MapImportKind.Smes, smes.Kind);
+            Assert.AreEqual("SMES", smes.SoName);
         }
 
         [Test]
@@ -91,7 +116,8 @@ namespace SS3D.Tests.EditMode.MapImport
             Assert.Greater(plan.WallCells, 0);
             Assert.Greater(plan.DoorCells, 0);
             Assert.Greater(plan.WindowCells, 0);
-            Assert.IsTrue(plan.UnmappedCounts.ContainsKey("/obj/structure/table"));
+            Assert.AreEqual(1, plan.TablePlacements);
+            Assert.IsFalse(plan.UnmappedCounts.ContainsKey("/obj/structure/table"));
 
             foreach (MapImportCellPlan cell in plan.Cells)
             {
@@ -102,6 +128,10 @@ namespace SS3D.Tests.EditMode.MapImport
             MapImportCellPlan doorCell = plan.Cells.Find(c => c.Placements[1].SoName == "CivillianAirlock");
             Assert.IsNotNull(doorCell);
             Assert.AreEqual(Direction.East, doorCell.Placements[1].Direction);
+
+            MapImportCellPlan tableCell = plan.Cells.Find(c =>
+                c.Placements.Any(p => p.SoName == "TableSteel"));
+            Assert.IsNotNull(tableCell);
         }
 
         [Test]
@@ -216,6 +246,77 @@ namespace SS3D.Tests.EditMode.MapImport
             MapImportCellPlan layer4Cell = plan.Cells.Find(c =>
                 c.Placements.Any(p => p.SoName == MapImportPipeResolver.AtmosPipesL4));
             Assert.IsNotNull(layer4Cell);
+        }
+
+        [Test]
+        public void Planner_TinyFurniture_LatticeAsPlenumAndTablesSmes()
+        {
+            DmmMap map = DmmParser.ParseFile(FurnitureFixturePath);
+            Ss13TypeMapper mapper = new Ss13TypeMapper(Ss13TypeMapYaml.ParseFile(TypeMapPath));
+            MapImportPlan plan = MapImportPlanner.Build(map, mapper);
+
+            Assert.AreEqual(2, plan.LatticePlacements);
+            Assert.AreEqual(2, plan.TablePlacements);
+            Assert.AreEqual(1, plan.SmesPlacements);
+
+            MapImportCellPlan latticeCell = plan.Cells.Find(c =>
+                c.Placements.Count == 1 && c.Placements[0].SoName == "Lattice");
+            Assert.IsNotNull(latticeCell, "space+lattice should import with Lattice as Plenum only");
+
+            MapImportCellPlan catwalkCell = plan.Cells.Find(c =>
+                c.Placements.Count == 1 && c.Placements[0].SoName == "Catwalk");
+            Assert.IsNotNull(catwalkCell);
+
+            Assert.IsFalse(plan.Cells.Any(c =>
+                c.Placements.Any(p => p.SoName == "Lattice") &&
+                c.Placements.Any(p => p.SoName == MapImportPlanner.PlenumSoName)),
+                "Lattice must replace Plenum, not stack with it");
+
+            Assert.IsFalse(plan.Cells.Any(c =>
+                c.Placements.Any(p => p.SoName == "Lattice") &&
+                c.Placements.Any(p => p.SoName == "Catwalk")),
+                "Lattice and Catwalk are mutually exclusive Plenum replacements");
+
+            MapImportCellPlan woodCell = plan.Cells.Find(c =>
+                c.Placements.Any(p => p.SoName == "TableWood"));
+            Assert.IsNotNull(woodCell);
+            Assert.AreEqual(MapImportPlanner.PlenumSoName, woodCell.Placements[0].SoName);
+            Assert.AreEqual("TileGrey", woodCell.Placements[1].SoName);
+
+            MapImportCellPlan steelCell = plan.Cells.Find(c =>
+                c.Placements.Any(p => p.SoName == "TableSteel"));
+            Assert.IsNotNull(steelCell);
+
+            MapImportCellPlan smesCell = plan.Cells.Find(c =>
+                c.Placements.Any(p => p.SoName == "SMES"));
+            Assert.IsNotNull(smesCell);
+            Assert.AreEqual(Direction.East,
+                smesCell.Placements.Find(p => p.SoName == "SMES").Direction);
+        }
+
+        [Test]
+        public void Planner_LatticeAndCatwalkOnSameCell_PrefersCatwalkOnly()
+        {
+            // Rare/malformed DMM: both atoms listed — still one Plenum SO (longer prefix wins).
+            const string dmm = @"
+""aaa"" = (
+/obj/structure/lattice,
+/obj/structure/lattice/catwalk,
+/turf/open/space/basic,
+/area/space)
+
+(1,1,1) = {""
+aaa
+""}
+";
+            DmmMap map = DmmParser.Parse(dmm);
+            Ss13TypeMapper mapper = new Ss13TypeMapper(Ss13TypeMapYaml.ParseFile(TypeMapPath));
+            MapImportPlan plan = MapImportPlanner.Build(map, mapper);
+
+            Assert.AreEqual(1, plan.Cells.Count);
+            Assert.AreEqual(1, plan.LatticePlacements);
+            Assert.AreEqual(1, plan.Cells[0].Placements.Count);
+            Assert.AreEqual("Catwalk", plan.Cells[0].Placements[0].SoName);
         }
 
         [Test]

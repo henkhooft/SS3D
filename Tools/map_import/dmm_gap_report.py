@@ -20,6 +20,9 @@ INFRA_KIND_DEFAULTS = {
     "scrubber": "Scrubber",
     "apc": "APC",
     "light": "LightTubeFixture",
+    "lattice": "Lattice",
+    "table": "TableSteel",
+    "smes": "SMES",
 }
 
 
@@ -109,6 +112,16 @@ def match_path(path: str, prefixes: list[tuple[str, str, str]], defaults: dict[s
         return "LightBulbFixture"
     if path.startswith("/obj/machinery/light"):
         return defaults["light"]
+    if path.startswith("/obj/structure/lattice/catwalk"):
+        return "Catwalk"
+    if path.startswith("/obj/structure/lattice"):
+        return defaults["lattice"]
+    if path.startswith("/obj/structure/table/wood"):
+        return "TableWood"
+    if path.startswith("/obj/structure/table"):
+        return defaults["table"]
+    if path.startswith("/obj/machinery/power/smes"):
+        return defaults["smes"]
     return ""
 
 

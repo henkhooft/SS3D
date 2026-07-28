@@ -148,6 +148,36 @@ namespace SS3D.Systems.Tile.MapImport
                 return true;
             }
 
+            if (path.StartsWith("/obj/structure/lattice/catwalk", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Lattice, "Catwalk", "(default catwalk)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/lattice", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Lattice, "Lattice", "(default lattice)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/table/wood", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Table, "TableWood", "(default table wood)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/table", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Table, "TableSteel", "(default table)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/power/smes", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Smes, "SMES", "(default smes)");
+                return true;
+            }
+
             if (recordUnmapped)
                 RecordUnmapped(path);
             return false;

@@ -63,6 +63,12 @@ namespace SS3D.Systems.Tile.MapImport
 
         public int LightPlacements { get; set; }
 
+        public int LatticePlacements { get; set; }
+
+        public int TablePlacements { get; set; }
+
+        public int SmesPlacements { get; set; }
+
         public int SkippedCells { get; set; }
 
         public Dictionary<string, int> UnmappedCounts { get; set; } =
