@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using SS3D.Core;
 using SS3D.Logging;
+using SS3D.Systems.Electricity;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.MapImport
@@ -38,41 +40,57 @@ namespace SS3D.Systems.Tile.MapImport
             if (tileSystem == null)
                 throw new ArgumentNullException(nameof(tileSystem));
 
-            if (clearMap)
-                map.Clear();
+            bool hasElectricity = SubSystems.TryGet(out ElectricitySubSystem electricity);
+            if (hasElectricity)
+                electricity.SuspendCircuitUpdates(true);
 
-            MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
-
-            foreach (MapImportCellPlan cell in plan.Cells)
+            try
             {
-                Vector3 world = new Vector3(cell.WorldX, 0f, cell.WorldZ);
-                foreach (MapImportPlacement placement in cell.Placements)
+                if (clearMap)
                 {
-                    if (tileSystem.GetAsset(placement.SoName) is not TileObjectSo so)
-                    {
-                        result.MissingAssets++;
-                        Log.Warning(typeof(MapImportApplier),
-                            "Map import skipping missing tile asset '{asset}'",
-                            Logs.Generic,
-                            placement.SoName);
-                        continue;
-                    }
-
-                    map.PlaceTileObject(so, world, placement.Direction,
-                        skipBuildCheck: true, replaceExisting: true, skipAdjacency: true, out _);
-                    result.PlacedObjects++;
+                    map.Clear();
+                    if (hasElectricity)
+                        electricity.ClearRegisteredDevices();
                 }
+
+                MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
+
+                foreach (MapImportCellPlan cell in plan.Cells)
+                {
+                    Vector3 world = new Vector3(cell.WorldX, 0f, cell.WorldZ);
+                    foreach (MapImportPlacement placement in cell.Placements)
+                    {
+                        if (tileSystem.GetAsset(placement.SoName) is not TileObjectSo so)
+                        {
+                            result.MissingAssets++;
+                            Log.Warning(typeof(MapImportApplier),
+                                "Map import skipping missing tile asset '{asset}'",
+                                Logs.Generic,
+                                placement.SoName);
+                            continue;
+                        }
+
+                        map.PlaceTileObject(so, world, placement.Direction,
+                            skipBuildCheck: true, replaceExisting: true, skipAdjacency: true, out _);
+                        result.PlacedObjects++;
+                    }
+                }
+
+                map.RefreshAllAdjacencies();
+
+                if (!string.IsNullOrEmpty(unmappedReportPath))
+                {
+                    WriteUnmappedReport(unmappedReportPath, plan);
+                    result.ReportPath = unmappedReportPath;
+                }
+
+                return result;
             }
-
-            map.RefreshAllAdjacencies();
-
-            if (!string.IsNullOrEmpty(unmappedReportPath))
+            finally
             {
-                WriteUnmappedReport(unmappedReportPath, plan);
-                result.ReportPath = unmappedReportPath;
+                if (hasElectricity)
+                    electricity.SuspendCircuitUpdates(false);
             }
-
-            return result;
         }
 
         public static string WriteUnmappedReport(string path, MapImportPlan plan)

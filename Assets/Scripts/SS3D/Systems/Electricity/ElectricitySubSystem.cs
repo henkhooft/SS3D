@@ -42,6 +42,7 @@ namespace SS3D.Systems.Electricity
 
         private bool _graphIsDirty;
         private bool _apcConsumerIndexDirty = true;
+        private bool _circuitUpdatesSuspended;
         private List<Circuit> _circuits;
         private readonly List<IPowerConsumer> _registeredConsumers = new();
         private readonly List<IElectricDevice> _registeredDevices = new();
@@ -187,6 +188,34 @@ namespace SS3D.Systems.Electricity
         }
 
         /// <summary>
+        /// Pause circuit ticks (bulk map Clear / DMM import). Prevents FixedUpdate from walking
+        /// destroyed devices while FishNet despawn is still draining.
+        /// </summary>
+        public void SuspendCircuitUpdates(bool suspend)
+        {
+            _circuitUpdatesSuspended = suspend;
+            if (!suspend)
+                _graphIsDirty = true;
+        }
+
+        /// <summary>
+        /// Drop all registered devices/circuits. Call after <see cref="TileMap.Clear"/> when despawn
+        /// may lag behind the emptied chunk dictionary.
+        /// </summary>
+        public void ClearRegisteredDevices()
+        {
+            _registeredDevices.Clear();
+            _registeredConsumers.Clear();
+            _lastApcGridInputKw.Clear();
+            _lastApcGridAvailableKw.Clear();
+            _consumersByApc.Clear();
+            _circuits.Clear();
+            _electricityGraph?.Clear();
+            _graphIsDirty = true;
+            _apcConsumerIndexDirty = true;
+        }
+
+        /// <summary>
         /// Marks the APC→consumer index dirty after area membership changes.
         /// Call from Area APC register/unregister/rebuild paths.
         /// </summary>
@@ -198,6 +227,9 @@ namespace SS3D.Systems.Electricity
         [Server]
         private void HandleFixedUpdate(ref EventContext context, in FixedUpdateEvent updateEvent)
         {
+            if (_circuitUpdatesSuspended)
+                return;
+
             _timeElapsed += Time.deltaTime;
 
             if (_timeElapsed > _tickRate)
@@ -245,7 +277,8 @@ namespace SS3D.Systems.Electricity
             {
                 if (record.Apc is not IApcChannelSource apc
                     || record.Apc is not IPowerStorage apcStorage
-                    || record.Apc is not IElectricDevice apcDevice)
+                    || record.Apc is not IElectricDevice apcDevice
+                    || !TryGetLiveTileObject(apcDevice, out _))
                 {
                     continue;
                 }
@@ -354,7 +387,7 @@ namespace SS3D.Systems.Electricity
         [Server]
         public void AddElectricalElement(IElectricDevice device)
         {
-            if (_electricityGraph == null || device?.TileObject == null)
+            if (_electricityGraph == null || !TryGetLiveTileObject(device, out _))
             {
                 return;
             }
@@ -412,8 +445,8 @@ namespace SS3D.Systems.Electricity
             for (int i = _registeredDevices.Count - 1; i >= 0; i--)
             {
                 IElectricDevice device = _registeredDevices[i];
-                PlacedTileObject tileObject = device?.TileObject;
-                if (tileObject == null || IsOrphanedAfterMapClear(map, tileObject))
+                if (!TryGetLiveTileObject(device, out PlacedTileObject tileObject)
+                    || IsOrphanedAfterMapClear(map, tileObject))
                 {
                     _registeredDevices.RemoveAt(i);
                     if (device is IPowerConsumer consumer)
@@ -421,8 +454,26 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                AddDeviceEdgesToGraph(device);
+                AddDeviceEdgesToGraph(device, tileObject);
             }
+        }
+
+        /// <summary>
+        /// Interface-typed <see cref="IElectricDevice"/> skips Unity fake-null on <c>?.</c>.
+        /// Accessing <see cref="IElectricDevice.TileObject"/> on a destroyed <see cref="ApcController"/>
+        /// throws MissingReferenceException — check UnityEngine.Object first.
+        /// </summary>
+        private static bool TryGetLiveTileObject(IElectricDevice device, out PlacedTileObject tileObject)
+        {
+            tileObject = null;
+            if (device == null)
+                return false;
+
+            if (device is Object unityObject && !unityObject)
+                return false;
+
+            tileObject = device.TileObject;
+            return tileObject != null;
         }
 
         /// <summary>
@@ -431,7 +482,7 @@ namespace SS3D.Systems.Electricity
         /// </summary>
         private static bool IsOrphanedAfterMapClear(TileMap map, PlacedTileObject tileObject)
         {
-            if (map == null)
+            if (map == null || tileObject == null)
                 return true;
 
             Vector3 world = new(tileObject.WorldOrigin.x, 0f, tileObject.WorldOrigin.y);
@@ -439,9 +490,8 @@ namespace SS3D.Systems.Electricity
         }
 
         [Server]
-        private void AddDeviceEdgesToGraph(IElectricDevice device)
+        private void AddDeviceEdgesToGraph(IElectricDevice device, PlacedTileObject tileObject)
         {
-            PlacedTileObject tileObject = device.TileObject;
             if (tileObject == null)
                 return;
 

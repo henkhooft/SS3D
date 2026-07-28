@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: 2fa57beae — 2026-07-28
+> Verified: d0a33b7c7 — 2026-07-28
 
 # Electricity
 
@@ -68,6 +68,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 - **`RemoveElectricalElement` must not require a live `TileObject`.** `BasicElectricDevice.TileObject` is null during `OnDestroyed` (Unity fake-null). Bailing on null left zombies in `_registeredDevices` → NRE in `RebuildElectricGraph`/`ToCoordinates` after `TileMap.Clear` (Map Editor load, DMM import with Clear). Unregister by device reference; prune null-`TileObject` entries on rebuild. Hit 2026-07-28.
 - **`TileMap.Clear` vs FishNet despawn:** Clear empties `_chunks` before despawn finishes. Orphan cables still report `TileObject` but `GetChunk` is null → NRE in `ElectricNeighbourLookup.GetElectricDevicesOnSameTile`. Neighbour lookup must null-check map/chunk; rebuild prunes chunkless devices. Hit on MetaStation DMM import 2026-07-28.
+- **Interface-typed destroyed devices throw, not null.** `IElectricDevice device?.TileObject` does **not** Unity-null-check — a destroyed `ApcController` still invokes `get_TileObject` → `MissingReferenceException`. Use `device is Object u && u` before `TileObject`, and keep `ApcController.TileObject` as `this ? GetComponent… : null` (same as `BasicElectricDevice`). Full DMM import suspends circuit ticks + clears the registry around Clear/place. Hit 2026-07-28.
+- **Walls invisible until adjacency refresh finishes:** DMM import places with `skipAdjacency`, then `RefreshAllAdjacencies`. Airlocks are full meshes so they appear first; walls/windows need the adjacency pass. Mid-import electricity spam can make a full MetaStation import look “doors only” until the apply finishes cleanly.
 - **Never assign `Inactive` then `Powered` in the same tick.** `PowerStatus` is a SyncVar; OnChange fires on every real transition. Furniture (notably [furniture](furniture.md) airlocks) treats `Inactive` as a power-loss edge. Clear-then-set every ~0.2s tick restarts close timers forever. `PowerAreaConsumers` must write the final status once (and skip no-ops). Cable path in `Circuit` already does single-assignment — keep area path aligned. Test: `PowerAreaConsumers_AssignsFinalStatusOnceWithoutFlicker`.
 - **`PowerStatus` setter must allow EditMode/offline.** Guard pure clients with `NetworkObject != null && NetworkObject.IsSpawned && !IsServer` (not bare `!IsServer`). Bare `IsServer` NREs when `_networkObjectCache` is null, and treating all non-server as skip leaves Circuit EditMode tests stuck at `Inactive`. Same pattern as [tile](tile.md) adjacency SyncVar publishes / `PlacedTileObject.CanWriteIntegritySyncVars`.
 - **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/obsolete `IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.
