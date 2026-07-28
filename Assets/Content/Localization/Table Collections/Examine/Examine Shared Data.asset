@@ -1287,6 +1287,70 @@ MonoBehaviour:
     m_Key: examine.health.other.missing_hurt
     m_Metadata:
       m_Items: []
+  - m_Id: 257391100000000023
+    m_Key: examine.health.self.hurt_and_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000024
+    m_Key: examine.health.self.bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000025
+    m_Key: examine.health.self.hurt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000026
+    m_Key: examine.health.self.missing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000027
+    m_Key: examine.health.self.missing_hurt_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000028
+    m_Key: examine.health.self.missing_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000029
+    m_Key: examine.health.self.missing_hurt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000030
+    m_Key: examine.health.feel.dizzy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000031
+    m_Key: examine.health.feel.fading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000032
+    m_Key: examine.health.feel.weak
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000033
+    m_Key: examine.health.feel.breathless
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000034
+    m_Key: examine.health.feel.nauseous
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000035
+    m_Key: examine.health.feel.heart_tight
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000036
+    m_Key: examine.health.feel.breath_hurts
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000037
+    m_Key: examine.health.feel.side_aches
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000038
+    m_Key: examine.health.feel.limb_useless
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

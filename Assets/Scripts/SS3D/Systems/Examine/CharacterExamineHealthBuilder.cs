@@ -8,40 +8,103 @@ namespace SS3D.Systems.Examine
 {
     /// <summary>
     /// Builds qualitative health examine lines from a character's synced health state.
-    /// Tier 0 (others): at most a state line + one consolidated appearance sentence.
-    /// Tier 1 (self): per-zone / organ lines. Quiet when healthy.
+    /// Tier 0 (self and others): state + one consolidated appearance sentence (I vs he).
+    /// Tier 1 (self only): short first-person feel lines. Quiet when healthy.
     /// </summary>
     public static class CharacterExamineHealthBuilder
     {
-        public const int MaxSections = 10;
+        public const int MaxFeelLines = 4;
 
-        /// <summary>Organ function at or above this % is omitted from Tier 1 lines.</summary>
-        public const float OrganHealthyPercent = 80f;
+        /// <summary>Soft thresholds for first-person feel lines (below organ "healthy" readout).</summary>
+        public const float FeelBrainDizzyPercent = 80f;
+        public const float FeelBrainFadingPercent = 40f;
+        public const float FeelBloodWeakRatio = 0.85f;
+        public const float FeelOxyBreathless = 0.25f;
+        public const float FeelToxinNauseous = 0.25f;
+        public const float FeelOrganHurtPercent = 80f;
+        public const float FeelOrganSeverePercent = 50f;
 
-        public const float OrganStrainedPercent = 50f;
-        public const float OrganFailingPercent = 20f;
-
-        private enum LinePriority
+        private readonly struct AppearanceKeys
         {
-            State = 1,
-            Severed = 2,
-            Bleeding = 3,
-            ZoneSeverity = 4,
-            Organ = 5,
-        }
+            public string HurtAndBleeding { get; }
+            public string Bleeding { get; }
+            public string Hurt { get; }
+            public string Missing { get; }
+            public string MissingHurtBleeding { get; }
+            public string MissingBleeding { get; }
+            public string MissingHurt { get; }
 
-        private readonly struct Candidate
-        {
-            public LinePriority Priority { get; }
-            public int Order { get; }
-            public string Text { get; }
+            public string HurtAndBleedingFallback { get; }
+            public string BleedingFallback { get; }
+            public string HurtFallback { get; }
+            public string MissingFallback { get; }
+            public string MissingHurtBleedingFallback { get; }
+            public string MissingBleedingFallback { get; }
+            public string MissingHurtFallback { get; }
 
-            public Candidate(LinePriority priority, int order, string text)
+            public AppearanceKeys(
+                string hurtAndBleeding,
+                string bleeding,
+                string hurt,
+                string missing,
+                string missingHurtBleeding,
+                string missingBleeding,
+                string missingHurt,
+                string hurtAndBleedingFallback,
+                string bleedingFallback,
+                string hurtFallback,
+                string missingFallback,
+                string missingHurtBleedingFallback,
+                string missingBleedingFallback,
+                string missingHurtFallback)
             {
-                Priority = priority;
-                Order = order;
-                Text = text;
+                HurtAndBleeding = hurtAndBleeding;
+                Bleeding = bleeding;
+                Hurt = hurt;
+                Missing = missing;
+                MissingHurtBleeding = missingHurtBleeding;
+                MissingBleeding = missingBleeding;
+                MissingHurt = missingHurt;
+                HurtAndBleedingFallback = hurtAndBleedingFallback;
+                BleedingFallback = bleedingFallback;
+                HurtFallback = hurtFallback;
+                MissingFallback = missingFallback;
+                MissingHurtBleedingFallback = missingHurtBleedingFallback;
+                MissingBleedingFallback = missingBleedingFallback;
+                MissingHurtFallback = missingHurtFallback;
             }
+
+            public static AppearanceKeys Self { get; } = new(
+                ExamineHealthKeys.SelfHurtAndBleeding,
+                ExamineHealthKeys.SelfBleeding,
+                ExamineHealthKeys.SelfHurt,
+                ExamineHealthKeys.SelfMissing,
+                ExamineHealthKeys.SelfMissingAndHurtAndBleeding,
+                ExamineHealthKeys.SelfMissingAndBleeding,
+                ExamineHealthKeys.SelfMissingAndHurt,
+                ExamineHealthKeys.SelfHurtAndBleedingFallback,
+                ExamineHealthKeys.SelfBleedingFallback,
+                ExamineHealthKeys.SelfHurtFallback,
+                ExamineHealthKeys.SelfMissingFallback,
+                ExamineHealthKeys.SelfMissingAndHurtAndBleedingFallback,
+                ExamineHealthKeys.SelfMissingAndBleedingFallback,
+                ExamineHealthKeys.SelfMissingAndHurtFallback);
+
+            public static AppearanceKeys Other { get; } = new(
+                ExamineHealthKeys.OtherHurtAndBleeding,
+                ExamineHealthKeys.OtherBleeding,
+                ExamineHealthKeys.OtherHurt,
+                ExamineHealthKeys.OtherMissing,
+                ExamineHealthKeys.OtherMissingAndHurtAndBleeding,
+                ExamineHealthKeys.OtherMissingAndBleeding,
+                ExamineHealthKeys.OtherMissingAndHurt,
+                ExamineHealthKeys.OtherHurtAndBleedingFallback,
+                ExamineHealthKeys.OtherBleedingFallback,
+                ExamineHealthKeys.OtherHurtFallback,
+                ExamineHealthKeys.OtherMissingFallback,
+                ExamineHealthKeys.OtherMissingAndHurtAndBleedingFallback,
+                ExamineHealthKeys.OtherMissingAndBleedingFallback,
+                ExamineHealthKeys.OtherMissingAndHurtFallback);
         }
 
         public static void AppendSections(
@@ -68,41 +131,73 @@ namespace SS3D.Systems.Examine
                 return;
             }
 
-            if (includeSelfDetail)
-            {
-                AppendSelfSections(snapshot, detail, sections);
-            }
-            else
-            {
-                AppendOtherSections(snapshot, detail, sections);
-            }
-        }
-
-        private static void AppendOtherSections(
-            HealthSnapshot snapshot,
-            HealthDebugDetail detail,
-            List<ExamineSection> sections)
-        {
-            // Dead: state only — no wound laundry list on a corpse glance.
             if (snapshot.State == HealthState.Dead)
             {
                 sections.Add(new ExamineSection(Localized(
-                    ExamineHealthKeys.DeadOther,
+                    includeSelfDetail ? ExamineHealthKeys.DeadSelf : ExamineHealthKeys.DeadOther,
                     null,
-                    ExamineHealthKeys.DeadOtherFallback)));
+                    includeSelfDetail
+                        ? ExamineHealthKeys.DeadSelfFallback
+                        : ExamineHealthKeys.DeadOtherFallback)));
                 return;
             }
 
-            AppendStateLine(snapshot, isSelf: false, sections);
+            AppendStateLine(snapshot, includeSelfDetail, sections);
 
-            string appearance = BuildOtherAppearanceLine(snapshot, detail);
+            string appearance = BuildAppearanceLine(
+                snapshot,
+                detail,
+                includeSelfDetail ? AppearanceKeys.Self : AppearanceKeys.Other);
             if (!string.IsNullOrEmpty(appearance))
             {
                 sections.Add(new ExamineSection(appearance));
             }
+
+            if (includeSelfDetail)
+            {
+                AppendFeelLines(snapshot, detail, sections);
+            }
         }
 
-        private static string BuildOtherAppearanceLine(HealthSnapshot snapshot, HealthDebugDetail detail)
+        private static void AppendStateLine(HealthSnapshot snapshot, bool isSelf, List<ExamineSection> sections)
+        {
+            if (snapshot.State == HealthState.CardiacArrest || snapshot.IsCardiacArrest)
+            {
+                sections.Add(new ExamineSection(Localized(
+                    isSelf ? ExamineHealthKeys.CardiacArrestSelf : ExamineHealthKeys.CardiacArrestOther,
+                    null,
+                    isSelf
+                        ? ExamineHealthKeys.CardiacArrestSelfFallback
+                        : ExamineHealthKeys.CardiacArrestOtherFallback)));
+                return;
+            }
+
+            if (snapshot.State == HealthState.Critical)
+            {
+                sections.Add(new ExamineSection(Localized(
+                    isSelf ? ExamineHealthKeys.CriticalSelf : ExamineHealthKeys.CriticalOther,
+                    null,
+                    isSelf
+                        ? ExamineHealthKeys.CriticalSelfFallback
+                        : ExamineHealthKeys.CriticalOtherFallback)));
+                return;
+            }
+
+            if (!snapshot.IsConscious)
+            {
+                sections.Add(new ExamineSection(Localized(
+                    isSelf ? ExamineHealthKeys.UnconsciousSelf : ExamineHealthKeys.UnconsciousOther,
+                    null,
+                    isSelf
+                        ? ExamineHealthKeys.UnconsciousSelfFallback
+                        : ExamineHealthKeys.UnconsciousOtherFallback)));
+            }
+        }
+
+        private static string BuildAppearanceLine(
+            HealthSnapshot snapshot,
+            HealthDebugDetail detail,
+            AppearanceKeys keys)
         {
             List<string> bleedingZones = new(HealthConstants.ZoneCount);
             List<string> missingZones = new(HealthConstants.ZoneCount);
@@ -122,8 +217,7 @@ namespace SS3D.Systems.Examine
                     bleedingZones.Add(ZoneNameLower(zone));
                 }
 
-                ZoneDamageState state = detail.GetZone(zone);
-                if (state.Severity >= WoundSeverity.Wound)
+                if (detail.GetZone(zone).Severity >= WoundSeverity.Wound)
                 {
                     hurt = true;
                 }
@@ -142,61 +236,142 @@ namespace SS3D.Systems.Examine
             if (missing && hurt && bleeding)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherMissingAndHurtAndBleeding,
+                    keys.MissingHurtBleeding,
                     new object[] { missingList, bleedingList },
-                    string.Format(
-                        ExamineHealthKeys.OtherMissingAndHurtAndBleedingFallback,
-                        missingList,
-                        bleedingList));
+                    string.Format(keys.MissingHurtBleedingFallback, missingList, bleedingList));
             }
 
             if (missing && bleeding)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherMissingAndBleeding,
+                    keys.MissingBleeding,
                     new object[] { missingList, bleedingList },
-                    string.Format(
-                        ExamineHealthKeys.OtherMissingAndBleedingFallback,
-                        missingList,
-                        bleedingList));
+                    string.Format(keys.MissingBleedingFallback, missingList, bleedingList));
             }
 
             if (missing && hurt)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherMissingAndHurt,
+                    keys.MissingHurt,
                     new object[] { missingList },
-                    string.Format(ExamineHealthKeys.OtherMissingAndHurtFallback, missingList));
+                    string.Format(keys.MissingHurtFallback, missingList));
             }
 
             if (missing)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherMissing,
+                    keys.Missing,
                     new object[] { missingList },
-                    string.Format(ExamineHealthKeys.OtherMissingFallback, missingList));
+                    string.Format(keys.MissingFallback, missingList));
             }
 
             if (hurt && bleeding)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherHurtAndBleeding,
+                    keys.HurtAndBleeding,
                     new object[] { bleedingList },
-                    string.Format(ExamineHealthKeys.OtherHurtAndBleedingFallback, bleedingList));
+                    string.Format(keys.HurtAndBleedingFallback, bleedingList));
             }
 
             if (bleeding)
             {
                 return Localized(
-                    ExamineHealthKeys.OtherBleeding,
+                    keys.Bleeding,
                     new object[] { bleedingList },
-                    string.Format(ExamineHealthKeys.OtherBleedingFallback, bleedingList));
+                    string.Format(keys.BleedingFallback, bleedingList));
             }
 
-            return Localized(
-                ExamineHealthKeys.OtherHurt,
-                null,
-                ExamineHealthKeys.OtherHurtFallback);
+            return Localized(keys.Hurt, null, keys.HurtFallback);
+        }
+
+        private static void AppendFeelLines(
+            HealthSnapshot snapshot,
+            HealthDebugDetail detail,
+            List<ExamineSection> sections)
+        {
+            List<string> feel = new(MaxFeelLines);
+
+            float brain = snapshot.BrainFunctionPercent;
+            if (brain < FeelBrainFadingPercent)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelFading, ExamineHealthKeys.FeelFadingFallback);
+            }
+            else if (brain < FeelBrainDizzyPercent)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelDizzy, ExamineHealthKeys.FeelDizzyFallback);
+            }
+
+            if (snapshot.Pools.BloodVolumeRatio < FeelBloodWeakRatio)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelWeak, ExamineHealthKeys.FeelWeakFallback);
+            }
+
+            float lungs = Math.Min(
+                detail.GetOrgan(OrganType.LeftLung).FunctionPercent,
+                detail.GetOrgan(OrganType.RightLung).FunctionPercent);
+            if (snapshot.Pools.OxyDebt >= FeelOxyBreathless || lungs < FeelOrganSeverePercent)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelBreathless, ExamineHealthKeys.FeelBreathlessFallback);
+            }
+            else if (lungs < FeelOrganHurtPercent)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelBreathHurts, ExamineHealthKeys.FeelBreathHurtsFallback);
+            }
+
+            if (snapshot.Pools.ToxinConcentration >= FeelToxinNauseous
+                || detail.GetOrgan(OrganType.Liver).FunctionPercent < FeelOrganHurtPercent)
+            {
+                if (snapshot.Pools.ToxinConcentration >= FeelToxinNauseous)
+                {
+                    TryAddFeel(feel, ExamineHealthKeys.FeelNauseous, ExamineHealthKeys.FeelNauseousFallback);
+                }
+                else
+                {
+                    TryAddFeel(feel, ExamineHealthKeys.FeelSideAches, ExamineHealthKeys.FeelSideAchesFallback);
+                }
+            }
+
+            if (snapshot.HeartFunctionPercent < FeelOrganHurtPercent)
+            {
+                TryAddFeel(feel, ExamineHealthKeys.FeelHeartTight, ExamineHealthKeys.FeelHeartTightFallback);
+            }
+
+            for (int i = 0; i < HealthConstants.ZoneCount && feel.Count < MaxFeelLines; i++)
+            {
+                BodyZone zone = (BodyZone)i;
+                ZoneDamageState state = detail.GetZone(zone);
+                if (state.IsSevered || !state.IsDisabled)
+                {
+                    continue;
+                }
+
+                if (zone is not (BodyZone.LeftArm or BodyZone.RightArm or BodyZone.LeftLeg or BodyZone.RightLeg))
+                {
+                    continue;
+                }
+
+                string zoneName = ZoneNameLower(zone);
+                TryAddFeel(
+                    feel,
+                    ExamineHealthKeys.FeelLimbUseless,
+                    string.Format(ExamineHealthKeys.FeelLimbUselessFallback, zoneName),
+                    new object[] { zoneName });
+            }
+
+            foreach (string line in feel)
+            {
+                sections.Add(new ExamineSection(line));
+            }
+        }
+
+        private static void TryAddFeel(List<string> feel, string key, string fallback, object[] args = null)
+        {
+            if (feel.Count >= MaxFeelLines)
+            {
+                return;
+            }
+
+            feel.Add(Localized(key, args, fallback));
         }
 
         private static string FormatZoneList(List<string> zones)
@@ -230,233 +405,6 @@ namespace SS3D.Systems.Examine
             return builder.ToString();
         }
 
-        private static void AppendSelfSections(
-            HealthSnapshot snapshot,
-            HealthDebugDetail detail,
-            List<ExamineSection> sections)
-        {
-            List<Candidate> candidates = new(MaxSections * 2);
-            CollectState(snapshot, isSelf: true, candidates);
-            CollectSevered(snapshot, candidates);
-            CollectBleeding(snapshot, candidates);
-            CollectZoneSeverity(detail, includeSelfDetail: true, candidates);
-            CollectOrgans(detail, candidates);
-
-            if (candidates.Count == 0)
-            {
-                return;
-            }
-
-            candidates.Sort(CompareCandidates);
-            int count = Math.Min(candidates.Count, MaxSections);
-            for (int i = 0; i < count; i++)
-            {
-                sections.Add(new ExamineSection(candidates[i].Text));
-            }
-        }
-
-        private static void AppendStateLine(HealthSnapshot snapshot, bool isSelf, List<ExamineSection> sections)
-        {
-            List<Candidate> candidates = new(1);
-            CollectState(snapshot, isSelf, candidates);
-            if (candidates.Count > 0)
-            {
-                sections.Add(new ExamineSection(candidates[0].Text));
-            }
-        }
-
-        private static int CompareCandidates(Candidate a, Candidate b)
-        {
-            int byPriority = ((int)a.Priority).CompareTo((int)b.Priority);
-            return byPriority != 0 ? byPriority : a.Order.CompareTo(b.Order);
-        }
-
-        private static void CollectState(HealthSnapshot snapshot, bool isSelf, List<Candidate> candidates)
-        {
-            if (snapshot.State == HealthState.Dead)
-            {
-                candidates.Add(new Candidate(
-                    LinePriority.State,
-                    0,
-                    Localized(isSelf ? ExamineHealthKeys.DeadSelf : ExamineHealthKeys.DeadOther,
-                        null,
-                        isSelf ? ExamineHealthKeys.DeadSelfFallback : ExamineHealthKeys.DeadOtherFallback)));
-                return;
-            }
-
-            if (snapshot.State == HealthState.CardiacArrest || snapshot.IsCardiacArrest)
-            {
-                candidates.Add(new Candidate(
-                    LinePriority.State,
-                    0,
-                    Localized(
-                        isSelf ? ExamineHealthKeys.CardiacArrestSelf : ExamineHealthKeys.CardiacArrestOther,
-                        null,
-                        isSelf
-                            ? ExamineHealthKeys.CardiacArrestSelfFallback
-                            : ExamineHealthKeys.CardiacArrestOtherFallback)));
-                return;
-            }
-
-            if (snapshot.State == HealthState.Critical)
-            {
-                candidates.Add(new Candidate(
-                    LinePriority.State,
-                    0,
-                    Localized(
-                        isSelf ? ExamineHealthKeys.CriticalSelf : ExamineHealthKeys.CriticalOther,
-                        null,
-                        isSelf ? ExamineHealthKeys.CriticalSelfFallback : ExamineHealthKeys.CriticalOtherFallback)));
-                return;
-            }
-
-            if (!snapshot.IsConscious)
-            {
-                candidates.Add(new Candidate(
-                    LinePriority.State,
-                    0,
-                    Localized(
-                        isSelf ? ExamineHealthKeys.UnconsciousSelf : ExamineHealthKeys.UnconsciousOther,
-                        null,
-                        isSelf
-                            ? ExamineHealthKeys.UnconsciousSelfFallback
-                            : ExamineHealthKeys.UnconsciousOtherFallback)));
-            }
-        }
-
-        private static void CollectSevered(HealthSnapshot snapshot, List<Candidate> candidates)
-        {
-            for (int i = 0; i < HealthConstants.ZoneCount; i++)
-            {
-                BodyZone zone = (BodyZone)i;
-                if (!snapshot.IsZoneSevered(zone))
-                {
-                    continue;
-                }
-
-                string zoneName = ZoneNameLower(zone);
-                candidates.Add(new Candidate(
-                    LinePriority.Severed,
-                    i,
-                    Localized(
-                        ExamineHealthKeys.Severed,
-                        new object[] { zoneName },
-                        string.Format(ExamineHealthKeys.SeveredFallback, zoneName))));
-            }
-        }
-
-        private static void CollectBleeding(HealthSnapshot snapshot, List<Candidate> candidates)
-        {
-            for (int i = 0; i < HealthConstants.ZoneCount; i++)
-            {
-                BodyZone zone = (BodyZone)i;
-                if (!snapshot.IsZoneBleeding(zone))
-                {
-                    continue;
-                }
-
-                string zoneName = ZoneNameLower(zone);
-                candidates.Add(new Candidate(
-                    LinePriority.Bleeding,
-                    i,
-                    Localized(
-                        ExamineHealthKeys.Bleeding,
-                        new object[] { zoneName },
-                        string.Format(ExamineHealthKeys.BleedingFallback, zoneName))));
-            }
-        }
-
-        private static void CollectZoneSeverity(
-            HealthDebugDetail detail,
-            bool includeSelfDetail,
-            List<Candidate> candidates)
-        {
-            WoundSeverity minSeverity = includeSelfDetail ? WoundSeverity.Bruised : WoundSeverity.Wound;
-
-            for (int i = 0; i < HealthConstants.ZoneCount; i++)
-            {
-                BodyZone zone = (BodyZone)i;
-                ZoneDamageState state = detail.GetZone(zone);
-                if (state.IsSevered)
-                {
-                    continue;
-                }
-
-                if (state.Severity < minSeverity)
-                {
-                    continue;
-                }
-
-                string zoneName = ZoneNameTitle(zone);
-                string severityWord = SeverityWord(state.Severity);
-                candidates.Add(new Candidate(
-                    LinePriority.ZoneSeverity,
-                    i,
-                    Localized(
-                        ExamineHealthKeys.ZoneSeverity,
-                        new object[] { zoneName, severityWord },
-                        string.Format(ExamineHealthKeys.ZoneSeverityFallback, zoneName, severityWord))));
-            }
-        }
-
-        private static void CollectOrgans(HealthDebugDetail detail, List<Candidate> candidates)
-        {
-            TryAddOrgan(detail.GetOrgan(OrganType.Brain), "Brain", 0, candidates);
-            TryAddOrgan(detail.GetOrgan(OrganType.Heart), "Heart", 1, candidates);
-
-            float leftLung = detail.GetOrgan(OrganType.LeftLung).FunctionPercent;
-            float rightLung = detail.GetOrgan(OrganType.RightLung).FunctionPercent;
-            float lungs = Math.Min(leftLung, rightLung);
-            TryAddOrganPercent(lungs, "Lungs", 2, candidates);
-
-            TryAddOrgan(detail.GetOrgan(OrganType.Liver), "Liver", 3, candidates);
-        }
-
-        private static void TryAddOrgan(OrganState organ, string displayName, int order, List<Candidate> candidates)
-        {
-            TryAddOrganPercent(organ.FunctionPercent, displayName, order, candidates);
-        }
-
-        private static void TryAddOrganPercent(
-            float functionPercent,
-            string displayName,
-            int order,
-            List<Candidate> candidates)
-        {
-            if (functionPercent >= OrganHealthyPercent)
-            {
-                return;
-            }
-
-            string key;
-            string fallback;
-            if (functionPercent <= 0f)
-            {
-                key = ExamineHealthKeys.OrganDestroyed;
-                fallback = string.Format(ExamineHealthKeys.OrganDestroyedFallback, displayName);
-            }
-            else if (functionPercent < OrganFailingPercent)
-            {
-                key = ExamineHealthKeys.OrganCritical;
-                fallback = string.Format(ExamineHealthKeys.OrganCriticalFallback, displayName);
-            }
-            else if (functionPercent < OrganStrainedPercent)
-            {
-                key = ExamineHealthKeys.OrganFailing;
-                fallback = string.Format(ExamineHealthKeys.OrganFailingFallback, displayName);
-            }
-            else
-            {
-                key = ExamineHealthKeys.OrganStrained;
-                fallback = string.Format(ExamineHealthKeys.OrganStrainedFallback, displayName);
-            }
-
-            candidates.Add(new Candidate(
-                LinePriority.Organ,
-                order,
-                Localized(key, new object[] { displayName }, fallback)));
-        }
-
         private static string Localized(string key, object[] args, string fallback)
         {
             string result = LocalizedTextService.GetFormattedString(
@@ -465,7 +413,6 @@ namespace SS3D.Systems.Examine
                 args,
                 fallback);
 
-            // Editor FormatMissing ignores englishFallback; keep examine readable in tests / before keys load.
             if (!string.IsNullOrEmpty(result)
                 && result.StartsWith("[MISSING:", StringComparison.Ordinal)
                 && !string.IsNullOrEmpty(fallback))
@@ -488,34 +435,6 @@ namespace SS3D.Systems.Examine
                 BodyZone.RightLeg => "right leg",
                 BodyZone.Groin => "groin",
                 _ => "body",
-            };
-        }
-
-        private static string ZoneNameTitle(BodyZone zone)
-        {
-            return zone switch
-            {
-                BodyZone.Head => "Head",
-                BodyZone.Chest => "Chest",
-                BodyZone.LeftArm => "Left arm",
-                BodyZone.RightArm => "Right arm",
-                BodyZone.LeftLeg => "Left leg",
-                BodyZone.RightLeg => "Right leg",
-                BodyZone.Groin => "Groin",
-                _ => "Body",
-            };
-        }
-
-        private static string SeverityWord(WoundSeverity severity)
-        {
-            return severity switch
-            {
-                WoundSeverity.Bruised => "bruised",
-                WoundSeverity.Wound => "wounded",
-                WoundSeverity.Severe => "badly damaged",
-                WoundSeverity.Disabled => "useless",
-                WoundSeverity.Severed => "missing",
-                _ => "hurt",
             };
         }
     }

@@ -18,7 +18,7 @@ Examine is **not** an `IInteraction` — `ExaminableBase` is read by `ExamineSub
 **Character examine** (design §7): no new `Human.prefab` component — `Human.asset` is `Type: CHARACTER`; overlay reads sibling `HumanInventory` / `HumanHealthController`. Do **not** reintroduce `CharacterExaminable` ([TECH_DEBT.md](../TECH_DEBT.md) §1.1).
 
 - **Hover** → name tooltip only (identity from ID when visible). Works on self and others.
-- **Shift (hold)** → name + `ExamineData` details + health lines (Tier 0 anyone: state + one consolidated appearance sentence; Tier 1 self: per-zone/organ). Quiet when healthy. Health rebuilds each frame while held. Does not open the paperdoll.
+- **Shift (hold)** → name + `ExamineData` details + health lines. Tier 0 (self + others): state + one consolidated appearance sentence (`I` vs `he`). Tier 1 (self only): short feel lines (`I feel dizzy`). Quiet when healthy. Health rebuilds each frame while held. Does not open the paperdoll.
 - **Shift, no target** → self detailed examine (design §2 fallback).
 - **Shift+Click** → persistent paperdoll on **other** characters only. Routed via `ExamineSubSystem.OnCharacterWindowRequested`.
 - **Click-to-take** — ~1.5s `TakeFromCharacterInteraction`; gated by `CharacterLootUtility.IsLootable` (dead/unconscious; restrained deferred).

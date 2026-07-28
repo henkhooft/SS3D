@@ -1213,7 +1213,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000001
-    m_Localized: You are dead.
+    m_Localized: I am dead.
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000002
@@ -1221,7 +1221,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000003
-    m_Localized: You are in cardiac arrest.
+    m_Localized: My heart has stopped.
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000004
@@ -1229,7 +1229,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000005
-    m_Localized: You are in critical condition.
+    m_Localized: I feel myself slipping away.
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000006
@@ -1237,7 +1237,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000007
-    m_Localized: You are unconscious.
+    m_Localized: Everything goes dark.
     m_Metadata:
       m_Items: []
   - m_Id: 257391100000000008
@@ -1298,6 +1298,70 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 257391100000000022
     m_Localized: He is missing his {0} and seems to be hurt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000023
+    m_Localized: I am hurt and bleeding from the {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000024
+    m_Localized: I am bleeding from the {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000025
+    m_Localized: I am hurt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000026
+    m_Localized: I am missing my {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000027
+    m_Localized: I am missing my {0} and am hurt and bleeding from the {1}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000028
+    m_Localized: I am missing my {0} and am bleeding from the {1}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000029
+    m_Localized: I am missing my {0} and am hurt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000030
+    m_Localized: I feel dizzy.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000031
+    m_Localized: I can barely stay conscious.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000032
+    m_Localized: I feel weak and lightheaded.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000033
+    m_Localized: I can't catch my breath.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000034
+    m_Localized: I feel nauseous.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000035
+    m_Localized: My chest feels tight.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000036
+    m_Localized: Every breath hurts.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000037
+    m_Localized: My side aches.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000038
+    m_Localized: I can't move my {0}.
     m_Metadata:
       m_Items: []
   references:

@@ -35,7 +35,7 @@ namespace EditorTests
         }
 
         [Test]
-        public void PublicTierUsesSingleConsolidatedAppearanceLine()
+        public void OtherUsesSingleConsolidatedAppearanceLine()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;
             snapshot.IsBleeding = true;
@@ -53,28 +53,21 @@ namespace EditorTests
                 Severity = WoundSeverity.Wound,
                 Brute = 20f,
             };
-            detail.RightArm = new ZoneDamageState
-            {
-                Severity = WoundSeverity.Bruised,
-                Brute = 5f,
-            };
 
             List<ExamineSection> sections = new();
             CharacterExamineHealthBuilder.AppendSections(snapshot, detail, includeSelfDetail: false, sections);
 
             Assert.AreEqual(1, sections.Count);
             string line = sections[0].Text;
+            Assert.IsTrue(line.StartsWith("He "), line);
             Assert.IsTrue(line.Contains("missing his left leg"), line);
             Assert.IsTrue(line.Contains("hurt"), line);
             Assert.IsTrue(line.Contains("bleeding from the"), line);
-            Assert.IsTrue(line.Contains("head") && line.Contains("chest"), line);
-            Assert.IsFalse(line.Contains("Left arm"), line);
-            Assert.IsFalse(line.Contains("wounded"), line);
-            Assert.IsFalse(sections.Any(s => s.Text.Contains("Brain") || s.Text.Contains("Heart")));
+            Assert.IsFalse(line.Contains("dizzy"), line);
         }
 
         [Test]
-        public void PublicTierHurtAndBleedingWithoutMissing()
+        public void SelfUsesSameAppearanceShapeWithI()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;
             snapshot.IsBleeding = true;
@@ -84,39 +77,63 @@ namespace EditorTests
             detail.Chest = new ZoneDamageState { Severity = WoundSeverity.Wound };
 
             List<ExamineSection> sections = new();
-            CharacterExamineHealthBuilder.AppendSections(snapshot, detail, includeSelfDetail: false, sections);
+            CharacterExamineHealthBuilder.AppendSections(snapshot, detail, includeSelfDetail: true, sections);
 
             Assert.AreEqual(1, sections.Count);
             Assert.AreEqual(
-                "He seems to be hurt and bleeding from the head and chest.",
+                "I am hurt and bleeding from the head and chest.",
                 sections[0].Text);
         }
 
         [Test]
-        public void SelfTierAddsBruiseAndOrganBands()
+        public void SelfAddsFeelLinesForInternalState()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;
-            HealthDebugDetail detail = HealthyDetail();
-            detail.RightArm = new ZoneDamageState
+            snapshot.BrainFunctionPercent = 70f;
+            snapshot.Pools = new SystemicPools
             {
-                Severity = WoundSeverity.Bruised,
-                Brute = 5f,
-            };
-            detail.Heart = new OrganState
-            {
-                Type = OrganType.Heart,
-                FunctionPercent = 60f,
+                BloodVolumeRatio = 0.7f,
+                OxyDebt = 0f,
+                ToxinConcentration = 0f,
             };
 
             List<ExamineSection> sections = new();
-            CharacterExamineHealthBuilder.AppendSections(snapshot, detail, includeSelfDetail: true, sections);
+            CharacterExamineHealthBuilder.AppendSections(
+                snapshot,
+                HealthyDetail(),
+                includeSelfDetail: true,
+                sections);
 
-            Assert.IsTrue(sections.Any(s => s.Text.Contains("Right arm") && s.Text.Contains("bruised")));
-            Assert.IsTrue(sections.Any(s => s.Text.Contains("Heart") && s.Text.Contains("strained")));
+            Assert.IsTrue(sections.Any(s => s.Text == "I feel dizzy."));
+            Assert.IsTrue(sections.Any(s => s.Text == "I feel weak and lightheaded."));
+            Assert.IsFalse(sections.Any(s => s.Text.Contains("Brain")));
+            Assert.IsFalse(sections.Any(s => s.Text.StartsWith("He ")));
         }
 
         [Test]
-        public void DeadUsesSelfPronounWhenSelf()
+        public void OtherDoesNotGetFeelLines()
+        {
+            HealthSnapshot snapshot = HealthSnapshot.Default;
+            snapshot.BrainFunctionPercent = 70f;
+            snapshot.Pools = new SystemicPools
+            {
+                BloodVolumeRatio = 0.7f,
+                OxyDebt = 0.5f,
+                ToxinConcentration = 0.5f,
+            };
+
+            List<ExamineSection> sections = new();
+            CharacterExamineHealthBuilder.AppendSections(
+                snapshot,
+                HealthyDetail(),
+                includeSelfDetail: false,
+                sections);
+
+            Assert.IsEmpty(sections);
+        }
+
+        [Test]
+        public void DeadUsesIVersusHe()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;
             snapshot.State = HealthState.Dead;
@@ -137,39 +154,37 @@ namespace EditorTests
                 otherSections);
 
             Assert.AreEqual(1, selfSections.Count);
-            Assert.AreEqual("You are dead.", selfSections[0].Text);
+            Assert.AreEqual("I am dead.", selfSections[0].Text);
             Assert.AreEqual(1, otherSections.Count);
             Assert.AreEqual("He is dead.", otherSections[0].Text);
         }
 
         [Test]
-        public void CapTruncatesLowestPriorityLines()
+        public void FeelLinesAreCapped()
         {
             HealthSnapshot snapshot = HealthSnapshot.Default;
-            snapshot.State = HealthState.Critical;
-            snapshot.IsBleeding = true;
-            snapshot.BleedingZoneMask = (1 << HealthConstants.ZoneCount) - 1;
-            snapshot.SeveredZoneMask = (1 << (int)BodyZone.LeftArm)
-                | (1 << (int)BodyZone.RightArm)
-                | (1 << (int)BodyZone.LeftLeg)
-                | (1 << (int)BodyZone.RightLeg);
+            snapshot.BrainFunctionPercent = 20f;
+            snapshot.HeartFunctionPercent = 40f;
+            snapshot.Pools = new SystemicPools
+            {
+                BloodVolumeRatio = 0.5f,
+                OxyDebt = 0.6f,
+                ToxinConcentration = 0.6f,
+            };
 
             HealthDebugDetail detail = HealthyDetail();
-            detail.Head = new ZoneDamageState { Severity = WoundSeverity.Severe };
-            detail.Chest = new ZoneDamageState { Severity = WoundSeverity.Wound };
-            detail.Groin = new ZoneDamageState { Severity = WoundSeverity.Wound };
-            detail.Heart = new OrganState { Type = OrganType.Heart, FunctionPercent = 10f };
-            detail.Brain = new OrganState { Type = OrganType.Brain, FunctionPercent = 40f };
-            detail.Liver = new OrganState { Type = OrganType.Liver, FunctionPercent = 55f };
-            detail.LeftLung = new OrganState { Type = OrganType.LeftLung, FunctionPercent = 30f };
-            detail.RightLung = new OrganState { Type = OrganType.RightLung, FunctionPercent = 30f };
+            detail.LeftLung = new OrganState { Type = OrganType.LeftLung, FunctionPercent = 40f };
+            detail.RightLung = new OrganState { Type = OrganType.RightLung, FunctionPercent = 40f };
+            detail.Heart = new OrganState { Type = OrganType.Heart, FunctionPercent = 40f };
+            detail.Liver = new OrganState { Type = OrganType.Liver, FunctionPercent = 40f };
+            detail.LeftArm = new ZoneDamageState { IsDisabled = true, Severity = WoundSeverity.Disabled };
 
             List<ExamineSection> sections = new();
             CharacterExamineHealthBuilder.AppendSections(snapshot, detail, includeSelfDetail: true, sections);
 
-            Assert.AreEqual(CharacterExamineHealthBuilder.MaxSections, sections.Count);
-            Assert.IsTrue(sections[0].Text.Contains("critical"));
-            Assert.IsFalse(sections.Any(s => s.Text.Contains("Liver")));
+            // Appearance ("I am hurt.") plus at most MaxFeelLines.
+            Assert.LessOrEqual(sections.Count, 1 + CharacterExamineHealthBuilder.MaxFeelLines);
+            Assert.IsTrue(sections.Any(s => s.Text.Contains("barely stay conscious") || s.Text.Contains("dizzy")));
         }
 
         [Test]
