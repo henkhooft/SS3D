@@ -95,6 +95,9 @@ namespace SS3D.Systems.Tile
             }
 
             NotifyTilePlaced(placed, origin);
+
+            if (placed.Layer == TileLayer.Turf)
+                TileUnderfloorVisibility.RefreshUnderfloorForTurf(this, placed);
         }
 
         /// <summary>
@@ -105,9 +108,13 @@ namespace SS3D.Systems.Tile
             if (placed == null || placed.tileObjectSO == null)
                 return;
 
-            Vector3 origin = new Vector3(placed.WorldOrigin.x, 0, placed.WorldOrigin.y);
+            TileLayer layer = placed.Layer;
+            Vector2Int worldOrigin = placed.WorldOrigin;
+            // Capture before TryClearPlacedObject destroys the NetworkBehaviour.
+            List<Vector2Int> gridOffsets = placed.GridOffsetList;
+            Vector3 origin = new Vector3(worldOrigin.x, 0, worldOrigin.y);
 
-            foreach (Vector2Int gridOffset in placed.GridOffsetList)
+            foreach (Vector2Int gridOffset in gridOffsets)
             {
                 Vector3 cell = origin + new Vector3(gridOffset.x, 0, gridOffset.y);
                 if (!TryGetTileLocation(placed.Layer, cell, out ITileLocation location))
@@ -116,7 +123,16 @@ namespace SS3D.Systems.Tile
                 location.TryClearPlacedObject(placed.Direction);
             }
 
-            NotifyTileCleared(placed, origin, placed.Layer);
+            NotifyTileCleared(placed, origin, layer);
+
+            if (layer == TileLayer.Turf)
+            {
+                foreach (Vector2Int gridOffset in gridOffsets)
+                {
+                    Vector3 cell = origin + new Vector3(gridOffset.x, 0, gridOffset.y);
+                    TileUnderfloorVisibility.RefreshUnderfloorAt(this, cell);
+                }
+            }
         }
 
         public void RegisterMutationObserver(ITileMutationObserver observer)
@@ -456,6 +472,9 @@ namespace SS3D.Systems.Tile
 
                 placedObjectGo = placedObject.gameObject;
                 NotifyTilePlaced(placedObject, placePosition);
+
+                if (tileObjectSo.layer == TileLayer.Turf)
+                    TileUnderfloorVisibility.RefreshUnderfloorForTurf(this, placedObject);
             }
 
             return canBuild;
@@ -466,6 +485,16 @@ namespace SS3D.Systems.Tile
             TryGetTileLocations(placePosition, out ITileLocation[] tileLocations);
             ITileLocation tileLocation = tileLocations[(int)layer];
             tileLocation.TryGetPlacedObject(out PlacedTileObject placed, dir);
+
+            // Capture turf footprint before DestroySelf so underfloor can reappear after clear.
+            List<Vector3> underfloorRefreshCells = null;
+            if (layer == TileLayer.Turf && placed != null)
+            {
+                underfloorRefreshCells = new List<Vector3>();
+                Vector3 turfOrigin = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
+                foreach (Vector2Int gridOffset in placed.GridOffsetList)
+                    underfloorRefreshCells.Add(turfOrigin + new Vector3(gridOffset.x, 0f, gridOffset.y));
+            }
 
             if (placed != null)
             {
@@ -499,6 +528,12 @@ namespace SS3D.Systems.Tile
                 }
 
                 clearLocation.ClearAllPlacedObject();
+            }
+
+            if (underfloorRefreshCells != null)
+            {
+                for (int i = 0; i < underfloorRefreshCells.Count; i++)
+                    TileUnderfloorVisibility.RefreshUnderfloorAt(this, underfloorRefreshCells[i]);
             }
         }
 

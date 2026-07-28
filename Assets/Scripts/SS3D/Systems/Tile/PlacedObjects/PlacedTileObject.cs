@@ -255,7 +255,32 @@ namespace SS3D.Systems.Tile
             }
 
             NetworkObject.SetRenderersVisible(visible, force: true);
+
+            // Logical underfloor occlusion: covered plenums/pipes/wires must not draw even when
+            // AOI says the NetworkObject is visible. Re-disable after SetRenderersVisible, then
+            // rebuild FishNet's renderer cache so it does not keep stale enabled entries.
+            if (visible && ShouldHideUnderfloorMeshes())
+            {
+                TileUnderfloorVisibility.DisableChildRenderers(gameObject);
+                NetworkObject.UpdateRenderers(false);
+            }
+
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+        }
+
+        private bool ShouldHideUnderfloorMeshes()
+        {
+            if (!TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
+                return false;
+
+            if (IsMapEditorAuthoring())
+                return false;
+
+            if (!SubSystems.TryGet(out TileSubSystem tiles) || tiles.CurrentMap == null)
+                return false;
+
+            Vector3 world = new Vector3(WorldOrigin.x, 0f, WorldOrigin.y);
+            return TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, world, mapEditorAuthoring: false);
         }
 
         private static void EnableAllChildRenderers(GameObject root)

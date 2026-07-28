@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 80f5b995d — 2026-07-28
+> Verified: 08ff75dfc — 2026-07-28
 
 # Tile / construction
 
 ## Overview
 
-Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. Job/antag **spawn markers** live in `TileSubSystem.SpawnPoints` (not NetworkObjects) and ride station templates via the `spawn-points` contributor. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters.
+Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. Job/antag **spawn markers** live in `TileSubSystem.SpawnPoints` (not NetworkObjects) and ride station templates via the `spawn-points` contributor. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters. Play-mode **underfloor occlusion** disables MeshRenderers on Plenum/Wire/Disposal/underfloor pipes when a covering Turf (Floor/Wall/Door) is present — Map Editor keeps them visible.
 
 **Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed) live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
 
@@ -16,6 +16,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Tile/TileAoiVisibility.cs` — shared HashGrid AOI helpers (Map Editor bypass, overlay/atmos windows)
+- `Assets/Scripts/SS3D/Systems/Tile/TileUnderfloorVisibility.cs` — play-mode cover hide for underfloor layers (compose with AOI in `RefreshHostVisibility`)
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
 - `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
@@ -58,6 +59,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **Underfloor hide must compose after AOI show:** `RefreshHostVisibility` enables children for FishNet, then `TileUnderfloorVisibility` may disable Plenum/Wire/Disposal/PipeLeft|Middle|Right when Turf is Floor/Wall/Door. Call `UpdateRenderers(false)` after that disable or FishNet keeps stale enabled cache entries. Map Editor authoring skips hide. Turf place/clear refreshes same-cell underfloor (`ClearTileObject` notifies before destroy — refresh must run **after** clear). `PipeSurface` stays visible. Hit 2026-07-28 (Metastation `Render.Mesh`).
 - **Map Editor leaves world sims running:** full-station MeshRenderer bypass is intentional for authoring, but atmos/electricity/airlock/disposal ticks used to keep burning CPU. `MapEditorSubSystem` now sets `SimulationPaused` / `SuspendCircuitUpdates` / `CapsulesPaused` while open. Hit 2026-07-28 (Metastation).
 - **Map import SO names are prefab names, not `.asset` file names:** `GenericObjectSo.NameString` is `PrefabAsset.name`. Type-map `so:` values must match (e.g. `FancyCarpetRed`, `CivillianAirlock`), or apply logs missing-asset skips.
 - **DMM import left MeshRenderers off (only wall caps visible):** `PlacedTileObject.RefreshHostVisibility` gates host MeshRenderers on HashGrid observers. Map Editor free-fly bypasses that gate while `MapEditorSubSystem.IsActive` (open/close refreshes all tiles). Wall caps are non-networked Instantiates so they stayed on. Hit 2026-07-28.

@@ -39,11 +39,19 @@ Make SS13-sized maps (e.g. Metastation import) playable in host Play Mode, and k
 - Airlock empty close: `_pendingEmptyPass` HashSet (doors with occupants) instead of walking all `_openerCells`; still runs when `SpawnedPlayers` is empty.
 - Markers: `SS3D.Electricity.CircuitsTick` / `SS3D.Airlock.EmptyPassSweep` — expect GC and empty-sweep CPU down on next `Logs/perf/` export.
 
+### F — Underfloor MeshRenderer occlusion (follow-up)
+
+- [`TileUnderfloorVisibility`](../../Assets/Scripts/SS3D/Systems/Tile/TileUnderfloorVisibility.cs): play-mode disables MeshRenderers on Plenum/Wire/Disposal/PipeLeft|Middle|Right when the cell’s Turf is Floor/Wall/Door.
+- Composed in [`PlacedTileObject.RefreshHostVisibility`](../../Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs) after AOI show + FishNet `UpdateRenderers`; turf place/clear refreshes same-cell underfloor.
+- Map Editor authoring skips hide (full-station visibility + layer dim toggles unchanged). `PipeSurface` stays drawn.
+- EditMode: `TileUnderfloorVisibilityTests`.
+
 ## Verification
 
 - Re-export Profiler: `metastation-play` / `metastation-mapedit` under `Logs/perf/`.
 - Expect `SS3D.Atmos.Upload` and `AirLockOpener.FixedUpdate` out of top self-time; Map Editor open → atmos/electricity/airlock markers near-idle with full visibility.
 - After E: `SS3D.Electricity.CircuitsTick` GC near-floor; `EmptyPassSweep` self-time scales with occupied doors, not station door count.
+- After F: `Render.Mesh` / `ApplyShader` / `Batch.DrawInstanced` down vs `capture-20260728-164634`; Map Editor still shows underfloor; clearing a floor in play restores pipes/plenum.
 
 ## Related docs
 
