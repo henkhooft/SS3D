@@ -469,7 +469,7 @@ namespace SS3D.Systems.Electricity
             if (device == null)
                 return false;
 
-            if (device is Object unityObject && !unityObject)
+            if (device is UnityEngine.Object unityObject && !unityObject)
                 return false;
 
             tileObject = device.TileObject;
