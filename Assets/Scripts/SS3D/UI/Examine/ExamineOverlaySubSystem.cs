@@ -153,51 +153,6 @@ namespace SS3D.UI.Examine
             {
                 _quickLookView?.UpdateAnchor(mousePosition);
             }
-
-            TryOpenCharacterWindowOnShiftClick();
-        }
-
-        /// <summary>
-        /// Backup for InteractionController Shift+Click — opens when a character (or worn gear on one)
-        /// is under the cursor.
-        /// </summary>
-        private void TryOpenCharacterWindowOnShiftClick()
-        {
-            if (_windowView != null && _windowView.IsOpen)
-            {
-                return;
-            }
-
-            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                return;
-            }
-
-            Keyboard keyboard = Keyboard.current;
-            bool shiftHeld = keyboard != null
-                && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
-            if (!shiftHeld && (_inputSystem == null || !_inputSystem.DetailedExamine.IsPressed()))
-            {
-                return;
-            }
-
-            IExaminable target = _currentExaminable;
-            if (_hoveredCharacterInventory == null
-                || target == null
-                || ResolveCharacterInventory(target) == null)
-            {
-                // Re-resolve from live selection in case hover state lagged clothing picks.
-                if (!SubSystems.TryGet(out SelectionSubSystem selection)
-                    || !CharacterExamineTargetUtility.TryResolveFromSelectable(
-                        selection.GetCurrentSelectable(),
-                        out target,
-                        out _))
-                {
-                    return;
-                }
-            }
-
-            HandleWindowRequested(target);
         }
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)

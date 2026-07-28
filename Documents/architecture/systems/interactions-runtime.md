@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 0e6278889 — 2026-07-27 (input scheme: F intent, Backspace cancel)
+> Verified: 1f4d12833 — 2026-07-28 (Search Shift+Click shortcut)
 
 # Interactions (runtime)
 
@@ -29,7 +29,7 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 
 1. `SelectionSubSystem` resolves hovered `Selectable`.
 2. `InteractionController` builds viable list via `InteractionPipeline` + active hand/tool source.
-3. Primary click: Harm → `TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
+3. Primary click: **Shift+Click** on another character → `TryRunSearchOnCharacterSelection` (Search petal path). Else Harm → `TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
 4. Targeted radial choices arm the cursor via `TryRouteRadialInteraction`; second click resolves the matching `InteractionEntry` by `GetGenericName()` and dispatches RPC.
 5. Server re-validates gates (intent, stamina, ownership, permissions) then `InteractionSource.Interact`.
 6. Observers run client FX; rejections use `TargetRejectInteraction` to roll back optimistic UI.
@@ -76,6 +76,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
 - Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
 - Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
+- Character paperdoll open: `SearchInteraction` via `HandSearchExtension` (Discover/`CmdRunInteraction`); Shift+Click is only a shortcut — do not re-add overlay click bypasses.
 - UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
 
 ## Depends on / Used by

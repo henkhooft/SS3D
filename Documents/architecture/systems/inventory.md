@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 15e433928 — 2026-07-26
+> Verified: 1f4d12833 — 2026-07-28
 
 # Inventory
 
@@ -23,7 +23,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
 
-**Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is recipe-managed via **SS3D → Entities → Run All Human Prefab Recipes** (`HandsPrefabSetup` + peers, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. Currently correctly wired; the aggregator is the safety net. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — same **Run All Human Prefab Recipes** strip if it regresses (fixed and verified as of Phase 0).
+**Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is recipe-managed via **SS3D → Entities → Run All Human Prefab Recipes** (`HandsPrefabSetup` + peers, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. `HandsPrefabSetup` also ensures `HandSearchExtension` on `HumanHandLeft`/`HumanHandRight` (Search → character paperdoll). Currently correctly wired; the aggregator is the safety net. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — same **Run All Human Prefab Recipes** strip if it regresses (fixed and verified as of Phase 0).
 
 **Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Art/Icons/Alerts/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). Atmos / hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist. **F4** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged. **Audio cue ([audio-foundation](../2026-07_audio-foundation.md) Phase 4, [audio](audio.md) §6):** every `AlertStackState` push (health-driven, debug override, or clear) funnels through `MainHudSubSystem.PushAlertState`, which diffs against the previous state via `AlertStackAudioMapper.HasNewAlert` and fires `PersonalAudioSubSystem.PlayAlertCue()` only when a hazard newly appears (None → any severity) — an escalation already showing does not re-trigger it.
 
@@ -39,7 +39,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/InventoryContentPrefabRecipes.cs` — **SS3D → Inventory → Run Content Prefab Recipes** (clothing + storage)
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/ClothingPrefabSetup.cs` — clothing world presentation statics (tier B)
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/BodyPartContainerInteractiveStrip.cs` — strip head/torso world CI (via Human recipes)
-- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandsPrefabSetup.cs` — (re)wires `Hands.PlayerHands` (via Human recipes)
+- `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandsPrefabSetup.cs` — (re)wires `Hands.PlayerHands` + ensures `HandSearchExtension` (via Human recipes)
+- `Assets/Scripts/SS3D/Systems/Inventory/Interactions/SearchInteraction.cs` — Search → character examine paperdoll
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerViewer.cs` — server-authoritative open/close
 - `Assets/Scripts/SS3D/UI/MainHud/MainHudSubSystem.cs` — HUD bind + equip/gear/hands + intent poll + zone reticle + health alert bind + `StoragePanelHost` viewer bind
 - `Assets/Scripts/SS3D/UI/MainHud/Components/ZoneReticleDriver.cs` — composes `ZoneReticleFrame` (aim + recovery + flash + bloom)
@@ -55,6 +56,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 ## Extension points
 
 - **New container-opening entry point:** `ContainerViewer.ShowContainerUI(container)` only — do not invent a second open path.
+- **Open another character's paperdoll:** `SearchInteraction` via `HandSearchExtension` on hand prefabs (Discover/`CmdRunInteraction`); Shift+Click is a shortcut in `InteractionController`. UI opens client-side through `ExamineSubSystem.RequestCharacterWindow`.
 - **Take from another character (examine paperdoll):** `InteractionController.RequestTakeFromCharacter` → `TakeFromCharacterInteraction` (`Hand.Pickup`); loot gate `CharacterLootUtility.IsLootable` (dead/unconscious). Do not use `CmdTransferItem` for foreign worn gear without opening the container in the viewer.
 - **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Data → Rebuild All UI Catalogs**.

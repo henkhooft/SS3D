@@ -254,7 +254,7 @@ namespace SS3D.Systems.Interactions
         {
             // Caps Lock is sprint; Shift is examine-only (2026-07 input scheme).
             // Read Shift from Keyboard — DetailedExamine.IsPressed can lag behind the device.
-            if (IsShiftModifierHeld() && TryRequestCharacterExamineWindow())
+            if (IsShiftModifierHeld() && TryRunSearchOnCharacterSelection())
             {
                 return;
             }
@@ -306,29 +306,24 @@ namespace SS3D.Systems.Interactions
         }
 
         /// <summary>
-        /// Requests the character-examine window if the hovered examinable's data is tagged
-        /// <see cref="ExamineType.CHARACTER"/> (e.g. <c>Human.prefab</c>'s existing <c>SimpleExaminable</c>
-        /// — no dedicated marker component needed). Routed through <see cref="ExamineSubSystem"/> rather
-        /// than a direct reference so the interactions layer never needs to depend on the UI-layer window.
+        /// Shift+Click shortcut for <see cref="SearchInteraction"/> — same Discover/RPC path as the radial petal.
         /// </summary>
         [Client]
-        private bool TryRequestCharacterExamineWindow()
+        private bool TryRunSearchOnCharacterSelection()
         {
             if (_selectionSystem == null)
             {
                 SubSystems.TryGet(out _selectionSystem);
             }
 
-            // Deepest pick is often worn clothing (SIMPLE_TEXT IExaminable). Walk to CHARACTER.
             if (!CharacterExamineTargetUtility.TryResolveFromSelectable(
                     _selectionSystem?.GetCurrentSelectable(),
-                    out IExaminable characterExaminable,
+                    out _,
                     out HumanInventory victimInventory))
             {
                 return false;
             }
 
-            // Own worn gear is already shown on Main HUD — do not open a second paperdoll on self.
             HumanInventory selfInventory = GetComponent<HumanInventory>();
             if (selfInventory == null)
             {
@@ -340,12 +335,35 @@ namespace SS3D.Systems.Interactions
                 return false;
             }
 
-            if (!SubSystems.TryGet(out ExamineSubSystem examineSystem) || examineSystem == null)
+            List<InteractionEntry> viableInteractions = FilterRadialInteractions(
+                GetViableInteractionsFromSelection(out InteractionEvent interactionEvent));
+
+            InteractionEntry searchEntry = default;
+            bool found = false;
+            for (int i = 0; i < viableInteractions.Count; i++)
+            {
+                if (viableInteractions[i].Interaction?.GetGenericName() == SearchInteraction.GenericName)
+                {
+                    searchEntry = viableInteractions[i];
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
             {
                 return false;
             }
 
-            examineSystem.RequestCharacterWindow(characterExaminable);
+            interactionEvent.Target = searchEntry.Target ?? ResolveFallbackTarget(interactionEvent, searchEntry);
+            if (!TryGetNetworkTargetForDispatch(searchEntry, interactionEvent, out NetworkObject networkTarget))
+            {
+                return false;
+            }
+
+            InteractionOptimisticFeedback.TryBeginDelayed(searchEntry.Interaction, interactionEvent);
+            InteractionOutlineView.TryBeginPending(searchEntry.Interaction, interactionEvent);
+            CmdRunInteraction(networkTarget, interactionEvent.Point, searchEntry.Id.GenericName, searchEntry.Id.TargetComponentIndex);
             return true;
         }
 
