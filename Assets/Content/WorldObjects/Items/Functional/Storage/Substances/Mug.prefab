@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 7958861831329766982}
   - component: {fileID: 8471215545886824119}
   - component: {fileID: 5783006074201076845}
-  - component: {fileID: 874141704920938506}
   - component: {fileID: 6104096848888808967}
   - component: {fileID: 504346258757062986}
   - component: {fileID: 3483542684610536844}
@@ -188,15 +187,14 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 8471215545886824119}
-  - {fileID: 874141704920938506}
   - {fileID: 6104096848888808967}
   - {fileID: 3278785340214204199}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    LocalScale: {x: 0, y: 0, z: 0}
+    Rotation: {x: 0, y: 0, z: 0, w: 1}
+    LocalScale: {x: 1, y: 1, z: 1}
   _isNetworked: 1
   _isGlobal: 0
   _initializeOrder: 0
@@ -268,100 +266,6 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -7219886339314900476, guid: f2e09c49a35ed014b911729c7e30ec61, type: 3}
---- !u!114 &874141704920938506
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5261116577612792016}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fd3c3145c2fb1ef458f6b2d77c499b44, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _componentIndexCache: 1
-  _addedNetworkObject: {fileID: 7958861831329766982}
-  _networkObjectCache: {fileID: 7958861831329766982}
-  Container: {fileID: 6104096848888808967}
-  DisplayObject: {fileID: 6067700979317892856}
-  EmptyPosition: {x: 0, y: 0, z: 0}
-  FullPosition: {x: 0, y: 0, z: 0}
-  ScaleX:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  ScaleY:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  ScaleZ:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  MaxWobble: 0.76
-  WobbleSpeed: 0.61
-  Recovery: 1
 --- !u!114 &6104096848888808967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -374,7 +278,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a85f26fb7523bc4fadefb445dc09f8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 2
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 7958861831329766982}
   _networkObjectCache: {fileID: 7958861831329766982}
   _initialMixture: []
@@ -396,6 +300,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe0cfc84237a41ed880792eefddebdc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  key: {fileID: 0}
   _container: {fileID: 6104096848888808967}
 --- !u!54 &3483542684610536844
 Rigidbody:
@@ -436,12 +341,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf76e303c1b57ae4ebbf08dab5bbddc2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 3
+  _componentIndexCache: 2
   _addedNetworkObject: {fileID: 7958861831329766982}
   _networkObjectCache: {fileID: 7958861831329766982}
   _asset: {fileID: 11400000, guid: 162ccd1fc7d534046874df3d9dcf2315, type: 2}
   _name: 
   _weight: 0
+  _sizeClass: 2
+  _maxStackSize: 1
+  _stackCount: 1
   _startingTraits: []
   _rigidbody: {fileID: 3483542684610536844}
   AttachmentPoint: {fileID: 7760506997891073340}

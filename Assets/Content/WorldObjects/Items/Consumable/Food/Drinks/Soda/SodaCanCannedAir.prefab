@@ -21,12 +21,12 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
-      propertyPath: _initialMixture.Array.data[0].ReagentId
-      value: oxygen
-      objectReference: {fileID: 0}
-    - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
       propertyPath: _initialMixture.Array.data[0].VolumeMl
       value: 330
+      objectReference: {fileID: 0}
+    - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
+      propertyPath: _initialMixture.Array.data[0].ReagentId
+      value: oxygen
       objectReference: {fileID: 0}
     - target: {fileID: 1335663030982295525, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
       propertyPath: key

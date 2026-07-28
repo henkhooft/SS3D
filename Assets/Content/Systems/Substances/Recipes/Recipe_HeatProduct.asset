@@ -23,6 +23,6 @@ MonoBehaviour:
     RelativeAmount: 1
   _catalystReagentId: 
   _minimumTemperatureKelvin: 350
-  _maximumTemperatureKelvin: 1e+37
+  _maximumTemperatureKelvin: Infinity
   _thermalDeltaKelvin: 40
   _nearMissHazard: 2

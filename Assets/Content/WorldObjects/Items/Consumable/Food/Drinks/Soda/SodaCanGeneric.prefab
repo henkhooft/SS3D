@@ -297,6 +297,9 @@ MonoBehaviour:
   _asset: {fileID: 0}
   _name: Soda Can
   _weight: 1
+  _sizeClass: 2
+  _maxStackSize: 1
+  _stackCount: 1
   _startingTraits: []
   _rigidbody: {fileID: 751568336328987408}
   AttachmentPoint: {fileID: 6123520057549092640}
@@ -338,6 +341,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe0cfc84237a41ed880792eefddebdc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  key: {fileID: 0}
   _container: {fileID: -1409642175327164469}
 --- !u!114 &844800983004635204
 MonoBehaviour:

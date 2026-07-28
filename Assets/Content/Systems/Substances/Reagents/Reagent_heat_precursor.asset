@@ -20,6 +20,6 @@ MonoBehaviour:
   _millilitersPerMole: 20
   _boilingPointKelvin: 400
   _freezingPointKelvin: 250
-  _flashPointKelvin: 1e+37
+  _flashPointKelvin: Infinity
   _metabolismRate: 1
   _overdoseThresholdMl: 50
