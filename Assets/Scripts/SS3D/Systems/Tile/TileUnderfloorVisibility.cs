@@ -40,7 +40,7 @@ namespace SS3D.Systems.Tile
             if (!map.TryGetTileLocation(TileLayer.Turf, worldPosition, out ITileLocation location))
                 return false;
 
-            if (!location.TryGetPlacedObject(out PlacedTileObject turf))
+            if (!location.TryGetPlacedObject(out PlacedTileObject turf) || turf == null)
                 return false;
 
             return IsCoveringTurfGenericType(turf.GenericType);

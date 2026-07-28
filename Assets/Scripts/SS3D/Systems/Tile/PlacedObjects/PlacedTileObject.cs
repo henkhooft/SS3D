@@ -248,30 +248,34 @@ namespace SS3D.Systems.Tile
             // with no null check (same pitfall as bare IsServer). Hit opening Map Editor 2026-07-28.
             if (NetworkObject == null || !NetworkObject.IsSpawned)
             {
-                if (IsMapEditorAuthoring())
-                {
-                    EnableAllChildRenderers();
-                    SetSelectableEnabled(true);
-                }
-
+                // Cover hide does not need FishNet — apply presentation even before spawn/observers.
+                ApplyUnderfloorPresentationOnly();
                 return;
             }
 
             if (!IsClient || NetworkManager?.ClientManager == null)
+            {
+                ApplyUnderfloorPresentationOnly();
                 return;
+            }
 
             NetworkConnection localConnection = NetworkManager.ClientManager.Connection;
             if (!localConnection.IsValid)
+            {
+                ApplyUnderfloorPresentationOnly();
                 return;
+            }
 
-            bool inAoi = IsMapEditorAuthoring();
+            bool mapEditor = IsMapEditorAuthoring();
+            bool inAoi = mapEditor;
             if (!inAoi)
             {
                 // Client-host: FishNet Observers gate MeshRenderers. Pure client: spawn itself is AOI.
                 inAoi = !IsServer || NetworkObject.Observers.Contains(localConnection);
             }
 
-            bool hideUnderfloor = inAoi && ShouldHideUnderfloorMeshes();
+            bool shouldHide = ShouldHideUnderfloorMeshes();
+            bool hideUnderfloor = inAoi && shouldHide;
 
             if (inAoi && !hideUnderfloor)
             {
@@ -296,9 +300,30 @@ namespace SS3D.Systems.Tile
             else
             {
                 NetworkObject.SetRenderersVisible(false, force: true);
+                if (shouldHide)
+                    ApplyUnderfloorOcclusion();
             }
 
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+        }
+
+        /// <summary>
+        /// MeshRenderer/Selectable only — safe before NetworkObject is spawned or client is ready.
+        /// </summary>
+        private void ApplyUnderfloorPresentationOnly()
+        {
+            if (IsMapEditorAuthoring())
+            {
+                EnableAllChildRenderers();
+                SetSelectableEnabled(true);
+                return;
+            }
+
+            if (!ShouldHideUnderfloorMeshes())
+                return;
+
+            TileUnderfloorVisibility.DisableChildRenderers(gameObject);
+            SetSelectableEnabled(false);
         }
 
         private void ApplyUnderfloorOcclusion()
