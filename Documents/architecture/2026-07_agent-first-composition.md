@@ -52,13 +52,13 @@ Do not extend or restyle. Replace per design + Phase 0 purge.
 
 | Surface | Replaced by |
 |---|---|
-| Inventory / hands / intent uGUI | [main-hud.md](../design/main-hud.md), [inventory-storage.md](../design/inventory-storage.md) |
+| Inventory / hands / intent uGUI | **Phase 0 purged** — [inventory.md](systems/inventory.md) confirms uGUI fully removed, not just disabled |
 | Chat window (always-on box) | **Phase 0 purged** — `ChatSubSystem` also purged; feed/PDA via [comms.md](../design/comms.md) + [2026-07_comms-non-diegetic-feed.md](2026-07_comms-non-diegetic-feed.md) |
 | Lobby job-select UI | [lobby.md](../design/lobby.md) |
 | Crafting menu uGUI | **Phase 0 purged** (TECH_DEBT 1.6) — redesign per [crafting.md](../design/crafting.md) |
 | TileMap creator uGUI | creative-mode / construction redesign (editor) |
 | ScreenEffects debug Canvas | delete with health rewrite |
-| Examine uGUI views | when HUD / examine redesign lands |
+| Examine uGUI views | **Phase 0 purged** (2026-07-26) — `ExamineOverlaySubSystem` on UITK per [examine.md](systems/examine.md) |
 | In-game console uGUI | when debug layer moves to UITK |
 
 ## Prefab composition debt

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 965d40550 — 2026-07-26 (outline prune destroyed MeshRenderers on wall destroy)
+> Verified: 1f4d12833 — 2026-07-28 (Search Shift+Click shortcut)
 
 # Interactions (runtime)
 
@@ -29,7 +29,7 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 
 1. `SelectionSubSystem` resolves hovered `Selectable`.
 2. `InteractionController` builds viable list via `InteractionPipeline` + active hand/tool source.
-3. Primary click: Harm → `TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
+3. Primary click: **Shift+Click** on another character → `TryRunSearchOnCharacterSelection` (Search petal path). Else Harm → `TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
 4. Targeted radial choices arm the cursor via `TryRouteRadialInteraction`; second click resolves the matching `InteractionEntry` by `GetGenericName()` and dispatches RPC.
 5. Server re-validates gates (intent, stamina, ownership, permissions) then `InteractionSource.Interact`.
 6. Observers run client FX; rejections use `TargetRejectInteraction` to roll back optimistic UI.
@@ -59,14 +59,16 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
 - **Unresolved selection point:** when `TryResolveInteractionPoint` fails, build `InteractionEvent` without a point (`HasPoint = false`) — do not pass `Vector3.zero` into the four-arg ctor.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
-- **`C` is double-bound:** Input System **Cancel Interaction** is still `<Keyboard>/c`; combat hardcodes `cKey` for Help/Harm toggle. Both fire on `C`. Rebind cancel (or route cancel through a different key) when cleaning inputs — do not assume Cancel owns `C` alone.
+- **`F` toggles Help/Harm** via arbitrated `InputSubSystem.ToggleIntent` (was hardcoded `C`, which
+  also fired Cancel). Cancel delayed/armed interactions with **Backspace**. Defaults:
+  [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
 - **Radial shows icons but petal clicks no-op after first close:** `Disappear` unsubscribes `InteractionSelected`/`CloseRequested` (avoids double-fire during hide). The UiShell-backed menu view is reused, so `ShowInteractionsMenu` must call `BindMenuViewHandlers` every open — otherwise the second hold-RMB session looks fine (icons populate) but petals never route. Not Addressables-related.
 
 ## Cancellation
 
-- **Cancel Interaction** (still bound to **C** in `Controls.inputed`) — `CmdCancelInteraction` for in-progress delayed interactions.
-- **Combat also uses C** for intent toggle — see pitfall above and [combat](combat.md).
+- **Cancel Interaction** (`<Keyboard>/backspace`) — `CmdCancelInteraction` for in-progress delayed interactions.
+- **Intent toggle** is **F**, not Cancel — see [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
 - Movement — `DelayedInteraction` auto-cancel via `CharacterMoveCheck` (melee uses entity root).
 
 ## Extension points
@@ -74,6 +76,8 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
 - Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
 - Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
+- Character paperdoll open: `SearchInteraction` via `HandSearchExtension` (Discover/`CmdRunInteraction`); Shift+Click is only a shortcut — do not re-add overlay click bypasses.
+- UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
 
 ## Depends on / Used by
 
@@ -84,6 +88,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 
 - Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
 - Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
+- Defaults: [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)
 - Plan: [interaction_system_improvements_9e14ae22.plan.md](../../plans/interaction_system_improvements_9e14ae22.plan.md)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)

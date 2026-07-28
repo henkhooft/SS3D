@@ -118,20 +118,19 @@ follow-on **(b)**, not this item.
 Confirmed still condemned-but-present on `develop`: console panel
 ([ingame-console.md](systems/ingame-console.md)), lobby job-select/ready UI
 ([rounds-lobby.md](systems/rounds-lobby.md)), the ScreenEffects F2 debug canvas
-([screen-effects.md](systems/screen-effects.md)), TileMap Creator
-([tile.md](systems/tile.md)), and examine's hover/detailed uGUI panels
-([examine.md](systems/examine.md)). Each is "do not extend, replace when the owning redesign lands,"
-which is the right call individually, but there is no single burndown tracking how many of these
-are left or in what order they should go — five live legacy UI stacks is real maintenance surface
-(input arbitration, click-through, and pointer-over-UI code all still have to account for them).
+([screen-effects.md](systems/screen-effects.md)), and TileMap Creator
+([tile.md](systems/tile.md)). Each is "do not extend, replace when the owning redesign lands," which
+is the right call individually, but there is no single burndown tracking how many of these are left
+or in what order they should go — four live legacy UI stacks is real maintenance surface (input
+arbitration, click-through, and pointer-over-UI code all still have to account for them).
 
 - Crafting menu uGUI was purged with §1.6 (2026-07-23).
-
-- **Doc-hygiene note:** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
-  Condemned UI table still lists "Inventory / hands / intent uGUI" as condemned-pending-replacement,
-  but [inventory.md](systems/inventory.md) confirms that surface's "old UI purge" already shipped
-  (uGUI fully removed, not just disabled) as part of PR #16. That row is stale and should be removed
-  next time that doc is touched.
+- Examine's hover/detailed uGUI panels (`ExamineUI`/`ExamineDetailedView`/`ExamineImageDetailedView`)
+  were deleted (not ported) and replaced by `ExamineOverlaySubSystem` on UI Toolkit, alongside the new
+  character-examine paperdoll (2026-07-26) — see [examine.md](systems/examine.md).
+- **Doc-hygiene fixed (2026-07-26):** [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)'s
+  Condemned UI table's stale "Inventory / hands / intent uGUI" row (already purged per
+  [inventory.md](systems/inventory.md) / PR #16) is corrected.
 
 ### 1.9 God-classes forming in hot UI/interaction code
 
@@ -204,21 +203,23 @@ under [ui-shell.md](systems/ui-shell.md). Current map (not exhaustive — more w
 | F2 | `ScreenEffectsDebugMenuView` | Condemned uGUI canvas; Keyboard-polled |
 | F3 | `LocalSpeechDebugTrigger` | Cycles local chat test lines; Keyboard-polled; must respect `InputInterface.IsCapturingText` |
 | F4 | `AlertStackDebugMenuView` | UITK + arbitrated `ToggleAlertStackDebug`; moved off F3 after colliding with speech |
+| F6 | Selection pick shader debug | `Other/Toggle Selection Debug` (moved off **E**, which is Use) |
 | P | Atmos debug overlay | `Other/Toggle Atmos Debug` (+ Keyboard fallback) |
-| (other) | Selection debug, health H, etc. | Same pattern: domain-owned bootstrap + ad-hoc chord |
+| (other) | health H, etc. | Same pattern: domain-owned bootstrap + ad-hoc chord |
 
-Problems this creates: **key collisions** (alert stack and speech both wanted F3 until one moved),
+Problems this creates: **key collisions** (alert stack and speech both wanted F3 until one moved; selection debug sat on E until the default scheme moved it),
 **inconsistent input paths** (raw `Keyboard.current` vs code-defined `InputSubSystem` actions vs
 `Controls.inputactions`), **no inventory of what's bound** so the next feature guesses another F-key,
 and **no shared PanelSettings/theme/bootstrap** (blank UITK `PanelSettings` already caused invisible
 labels on the alert menu). Console commands (`screeneffect`, `alertstack`, …) are the durable debug
 API; the hotkey panels are convenience debt until UiShell owns a debug layer.
 
-**Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md)
+**Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md) +
+[2026-07_default-input-scheme.md](2026-07_default-input-scheme.md)
 and (b) preferring an in-game console command first. Target: one arbitrated debug overlay host under
 UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when that lands.
 
-- Related: [inputs.md](systems/inputs.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
+- Related: [inputs.md](systems/inputs.md), [2026-07_default-input-scheme.md](2026-07_default-input-scheme.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
 
 ### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
 

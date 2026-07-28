@@ -5,6 +5,7 @@
 }
 
 .inventory-slot__well {
+    position: relative;
     background-color: var(--ss3d-diegetic-inset);
     border-radius: 10px;
     border-width: 1px;
@@ -57,4 +58,23 @@
 .inventory-slot--invalid-drop .inventory-slot__well {
     border-color: var(--ss3d-feedback-danger);
     background-color: var(--ss3d-feedback-danger-bg);
+}
+
+.inventory-slot__take-progress {
+    position: absolute;
+    left: 12%;
+    top: 12%;
+    right: 12%;
+    bottom: 12%;
+    border-radius: 50%;
+    border-width: 3px;
+    border-color: rgba(0, 0, 0, 0);
+    border-top-color: var(--ss3d-accent-rust);
+    border-right-color: var(--ss3d-accent-rust);
+    display: none;
+}
+
+.inventory-slot--taking .inventory-slot__well {
+    border-color: var(--ss3d-feedback-info);
+    background-color: var(--ss3d-feedback-info-bg);
 }

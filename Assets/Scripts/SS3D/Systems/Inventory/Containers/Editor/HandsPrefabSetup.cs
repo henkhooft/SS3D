@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Linq;
+using SS3D.Systems.Inventory.Interactions;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,6 +13,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
     /// recipe for the "Human hands wiring remains prefab composition debt" note in this map and
     /// 2026-07_human-prefab-decomposition.md Phase 3 — the wiring is currently correct, this tool is the
     /// safety net for reproducing/verifying it, not a bug fix.
+    /// Also ensures <see cref="HandSearchExtension"/> on the hand body-part prefabs.
     /// </summary>
     /// <remarks>
     /// Order matters: <c>Hands.OnStartServer</c> sets the initially-selected hand to
@@ -22,13 +24,17 @@ namespace SS3D.Systems.Inventory.Containers.Editor
     public static class HandsPrefabSetup
     {
         private const string HumanPrefabPath = "Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab";
+        private const string HandLeftPrefabPath =
+            "Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanHandLeft.prefab";
+        private const string HandRightPrefabPath =
+            "Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanHandRight.prefab";
 
         /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Inventory.Containers.Editor.HandsPrefabSetup.WireBatch</c>
         /// Prefer <see cref="SS3D.Systems.Entities.Editor.HumanPrefabRecipes.RunAllBatch"/> for Human re-runs.</summary>
         public static void WireBatch()
         {
             bool changed = Wire();
-            Debug.Log($"[HandsPrefabSetup] {(changed ? "Rewired" : "Already correct — no change to")} Human.prefab's Hands.PlayerHands.");
+            Debug.Log($"[HandsPrefabSetup] {(changed ? "Rewired" : "Already correct — no change to")} Human.prefab hands / Search extension.");
             if (Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
@@ -36,6 +42,19 @@ namespace SS3D.Systems.Inventory.Containers.Editor
         }
 
         public static bool Wire()
+        {
+            bool changed = WirePlayerHandsList();
+            changed |= EnsureHandSearchExtension(HandLeftPrefabPath);
+            changed |= EnsureHandSearchExtension(HandRightPrefabPath);
+            if (changed)
+            {
+                AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static bool WirePlayerHandsList()
         {
             GameObject prefabRoot = PrefabUtility.LoadPrefabContents(HumanPrefabPath);
             if (prefabRoot == null)
@@ -88,6 +107,33 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        private static bool EnsureHandSearchExtension(string path)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            if (root == null)
+            {
+                Debug.LogError($"[HandsPrefabSetup] Missing {path}");
+                return false;
+            }
+
+            try
+            {
+                if (root.TryGetComponent(out HandSearchExtension _))
+                {
+                    return false;
+                }
+
+                root.AddComponent<HandSearchExtension>();
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                Debug.Log($"[HandsPrefabSetup] HandSearchExtension on {path}");
+                return true;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
     }

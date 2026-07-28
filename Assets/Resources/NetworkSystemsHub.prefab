@@ -33,7 +33,6 @@ GameObject:
   - component: {fileID: 6009669659697083544}
   - component: {fileID: 242730867129844347}
   - component: {fileID: 7841343881523922060}
-  - component: {fileID: 2396080331397820885}
   - component: {fileID: 3607219604979337015}
   - component: {fileID: 5208912867368033442}
   - component: {fileID: 7813750346173923788}
@@ -471,22 +470,6 @@ MonoBehaviour:
   _componentIndexCache: 15
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
---- !u!114 &2396080331397820885
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d3038db747c2f84449947b0c478b6d20, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.ExamineUI
-  HoverName: {fileID: 0}
-  DetailedViewPrefab: {fileID: 8100000000000000003, guid: 8e5b3d0f9c2a4176b0f1d3e9c8a7b6d5, type: 3}
-  ImageDetailedViewPrefab: {fileID: 8100000000000000003, guid: 8d1314d83876a798eb8cce6643397bcf, type: 3}
-  DetailedTextOffset: {x: 16, y: -16}
 --- !u!114 &3607219604979337015
 MonoBehaviour:
   m_ObjectHideFlags: 0

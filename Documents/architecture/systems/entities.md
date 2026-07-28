@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: f7990ea18 — 2026-07-26
+> Verified: 0e6278889 — 2026-07-27
 
 # Entities
 
@@ -40,7 +40,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - Shelved clips (not wired): most of `Assets/Art/Animations/Misc/` and `Assets/Art/Animations/Probably Not/` — future collapse / cough / crawl / drag / fall; **exceptions:** `Mix_Floating` (space float + ghosts); `Mix_GettingHit` (Peaceful/limp Flinch).
 - Hit flinch: `HumanHealthController.ApplyDamage` (brute ≥ `BloodSprayMinBrute`, presentation Locomotion) → `HumanoidCombatController.OnHitReceived` → `ApplyStagger` + `Flinch` (one packed publish). Base selects by `LimpSide` / `CombatStance` — GettingHit (limp or Peaceful), gut (Melee), `Mix_HitReaction` (Ranged). Additive layer also takes `Flinch` → gut with a **lerped** weight (~0.75) while Staggered. `Mix_ShoulderHitAndFall` / get-ups deferred.
 - Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. Upper Body stays weighted for the whole Ranged stance on **Rifle Aim Idle** (`Mix_AimingIdle`); Fire/Reload oneshot and return there. Orchestrator CrossFades to Aim Idle on Ranged enter (Hold Weapon had no path otherwise). Base Ranged FreeformCartesian keeps foot phase — do not pulse Upper Body weight per shot.
-- `HumanoidCombatMode` is 2 bits; **`C` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
+- `HumanoidCombatMode` is 2 bits; **`F` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController` / `InputSubSystem.ToggleIntent`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
 - **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; skip gravity only while no physical floor collider is underfoot (raycast), then resume normal loco so spawn is not soft-locked when the map is visible but occupancy is still Unknown. Keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.

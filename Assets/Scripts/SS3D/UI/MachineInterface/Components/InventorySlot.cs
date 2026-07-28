@@ -11,6 +11,7 @@ namespace SS3D.UI.MachineInterface.Components
         private readonly Label _label;
         private readonly Label _unknownGlyph;
         private readonly Image _icon;
+        private readonly VisualElement _takeProgress;
         private readonly VisualElement _reservedBadge;
         private bool _unknown = true;
         private bool _reserved;
@@ -34,6 +35,12 @@ namespace SS3D.UI.MachineInterface.Components
             _icon.AddToClassList("inventory-slot__icon");
             _icon.pickingMode = PickingMode.Ignore;
             _well.Add(_icon);
+
+            _takeProgress = new VisualElement();
+            _takeProgress.AddToClassList("inventory-slot__take-progress");
+            _takeProgress.pickingMode = PickingMode.Ignore;
+            _takeProgress.style.display = DisplayStyle.None;
+            _well.Add(_takeProgress);
 
             _reservedBadge = new VisualElement();
             _reservedBadge.AddToClassList("inventory-slot__reserved-badge");
@@ -128,6 +135,30 @@ namespace SS3D.UI.MachineInterface.Components
         }
 
         /// <summary>
+        /// 0–1 take windup progress drawn as a spinner overlay on the well. Values ≤ 0 hide it.
+        /// </summary>
+        public void SetTakeProgress(float progress01)
+        {
+            if (progress01 <= 0f)
+            {
+                ClearTakeProgress();
+                return;
+            }
+
+            float clamped = Mathf.Clamp01(progress01);
+            _takeProgress.style.display = DisplayStyle.Flex;
+            _takeProgress.style.rotate = new Rotate(Angle.Degrees(clamped * 360f));
+            EnableInClassList("inventory-slot--taking", true);
+        }
+
+        public void ClearTakeProgress()
+        {
+            _takeProgress.style.display = DisplayStyle.None;
+            _takeProgress.style.rotate = new Rotate(Angle.Degrees(0f));
+            EnableInClassList("inventory-slot--taking", false);
+        }
+
+        /// <summary>
         /// Off-hand reserved by a two-hand firearm — dims the well and shows a ban badge.
         /// </summary>
         public bool Reserved
@@ -147,10 +178,19 @@ namespace SS3D.UI.MachineInterface.Components
 
         private void ApplySize(float size)
         {
-            _well.style.width = size;
-            _well.style.height = size;
-            _well.style.minWidth = size;
-            _well.style.minHeight = size;
+            SetWellSize(size, size);
+        }
+
+        /// <summary>
+        /// Sets the well to a non-square size (e.g. paperdoll hand slots spanning half of a 3-slot row).
+        /// </summary>
+        public void SetWellSize(float width, float height)
+        {
+            _size = Mathf.Max(width, height);
+            _well.style.width = width;
+            _well.style.height = height;
+            _well.style.minWidth = width;
+            _well.style.minHeight = height;
         }
 
         private void ApplyUnknown(bool unknown)

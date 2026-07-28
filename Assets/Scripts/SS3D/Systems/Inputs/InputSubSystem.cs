@@ -27,6 +27,9 @@ namespace SS3D.Systems.Inputs
         /// <summary>Held while inspecting (Shift). Bound in code, arbitrated by the Gameplay context.</summary>
         public InputAction DetailedExamine => _detailedExamine;
 
+        /// <summary>Toggles Help/Harm intent (F). Bound in code, arbitrated by the Gameplay context.</summary>
+        public InputAction ToggleIntent => _toggleIntent;
+
         /// <summary>Opens local-speech compose (T). Bound in code, arbitrated by the Gameplay context.</summary>
         public InputAction OpenLocalSpeechCompose => _openLocalSpeechCompose;
 
@@ -40,6 +43,7 @@ namespace SS3D.Systems.Inputs
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
+        private InputAction _toggleIntent;
         private InputAction _openLocalSpeechCompose;
         private InputAction _toggleAlertStackDebug;
 
@@ -63,6 +67,9 @@ namespace SS3D.Systems.Inputs
             // generated Controls asset. Erase those bindings — Tab is compose-only now.
             EraseAllBindings(Inputs.Other.Fade);
             EraseAllBindings(Inputs.Other.SpawnCans);
+            // Unused Other/Attack and Other/Show Owner both sat on F; F is ToggleIntent now.
+            EraseAllBindings(Inputs.Other.Attack);
+            EraseAllBindings(Inputs.Other.ShowOwner);
 
             BuildSystemActions();
 
@@ -109,9 +116,11 @@ namespace SS3D.Systems.Inputs
         {
             _systemMap = new InputActionMap("System");
             _uiCancel = _systemMap.AddAction("Cancel", InputActionType.Button, "<Keyboard>/escape");
+            // Shift is examine-only (sprint is Caps Lock on Movement/Toggle Run).
             _detailedExamine = _systemMap.AddAction("DetailedExamine", InputActionType.Button);
             _detailedExamine.AddBinding("<Keyboard>/leftShift");
             _detailedExamine.AddBinding("<Keyboard>/rightShift");
+            _toggleIntent = _systemMap.AddAction("ToggleIntent", InputActionType.Button, "<Keyboard>/f");
             _openLocalSpeechCompose = _systemMap.AddAction(
                 "OpenLocalSpeechCompose", InputActionType.Button, "<Keyboard>/t");
             // F3 = LocalSpeechDebugTrigger; F2 = screen-effects debug (condemned uGUI).
@@ -158,7 +167,11 @@ namespace SS3D.Systems.Inputs
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
-                    new[] { consoleOpen, tileToggle, _detailedExamine, _openLocalSpeechCompose, _toggleAlertStackDebug }),
+                    new[]
+                    {
+                        consoleOpen, tileToggle, _detailedExamine, _toggleIntent,
+                        _openLocalSpeechCompose, _toggleAlertStackDebug,
+                    }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(

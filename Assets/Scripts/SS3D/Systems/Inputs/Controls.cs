@@ -443,7 +443,7 @@ namespace SS3D.Systems.Inputs
                 {
                     ""name"": """",
                     ""id"": ""9c8bfe7e-1820-4fca-9e38-9ba5b12451e2"",
-                    ""path"": ""<Keyboard>/leftShift"",
+                    ""path"": ""<Keyboard>/capsLock"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -918,7 +918,7 @@ namespace SS3D.Systems.Inputs
                 {
                     ""name"": """",
                     ""id"": ""d1b14569-1522-4899-863f-d0e2b2844e71"",
-                    ""path"": ""<Keyboard>/e"",
+                    ""path"": ""<Keyboard>/f6"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -1158,7 +1158,7 @@ namespace SS3D.Systems.Inputs
                 {
                     ""name"": """",
                     ""id"": ""a1b2c3d4-e5f6-7890-abcd-ef1234567890"",
-                    ""path"": ""<Keyboard>/c"",
+                    ""path"": ""<Keyboard>/backspace"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",

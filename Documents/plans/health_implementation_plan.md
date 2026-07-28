@@ -33,7 +33,7 @@ todos:
     content: "Phase 5b: Limb severing — AnatomyNode detach, zone Severed state, world drops, head mind-swap"
     status: completed
   - id: phase6-hud
-    content: "Phase 6: Vitals cluster + examine-self organ readout remaining; screen-space feedback + blood decals shipped"
+    content: "Phase 6: Vitals cluster UITK remaining; examine Tier 0/1 + screen-space feedback + blood decals shipped"
     status: pending
   - id: phase7-cross-system
     content: "Phase 7: Stamina↔oxy bridge, armor, surgery direct-repair slice, death/cloning, chemistry stubs"
@@ -392,7 +392,7 @@ Ships between Phase 5 and Phase 6. Design authority: health.md §5 (Severed tier
 
 1. Vitals cluster — worst-limb brute/burn + systemic toxin/oxy (health.md §7). **Follow existing custom vitals-cluster designs** — wire bars/alerts to `HealthSnapshot`, do not redesign layout.
 2. ~~**Screen-space condition feedback**~~ — **shipped:** `HealthScreenEffectMapper` + local-owner `HumanHealthController` drive dying/blood-loss/oxy/concussion/unconscious; hit flash on `ApplyDamage`.
-3. Examine-self hold → per-zone + organ function readout. Reserve a slot for diagnosed infections (virology.md §8) — listed once scanned, not a standalone infection bar.
+3. ~~Examine-self hold → per-zone + organ function readout~~ — **shipped** as examine Tier 0/1 via `CharacterExamineHealthBuilder` (public qualitative lines + self organ bands; scanner still Phase 9). Reserve a slot for diagnosed infections (virology.md §8) — listed once scanned, not a standalone infection bar.
 4. **Wound visuals on character model** — replace Phase 1 interim particle bleed with purpose-built assets:
    - **New bleeding VFX** — per-zone particle/stream prefabs tuned for Human anatomy anchors (not the legacy bleed particle reused in `WoundVfx`). *(Partial: emission/lifetime tuned in code; dedicated stream prefab still TODO.)*
    - **Blood decals** — pooled blood marks on floors/walls and optional body-surface splatter, driven by wound severity and active bleeding; prefer **URP Decal Renderer** (`DecalProjector` + decal materials) over mesh quads. *(Shipped: `BloodDecalSpawner`, body + floor decals via `WoundVfx`.)*
@@ -594,7 +594,8 @@ health.md §8 + death-cloning §9 example A, end-to-end:
 
 - **Screen-space feedback shipped:** `HealthScreenEffectMapper` maps local-owner `HealthSnapshot` to dying/blood-loss/oxy/concussion/unconscious; `ApplyDamage` TargetRpc fires hit flash. EditMode: `HealthScreenEffectMapperTests`.
 - **Alert stack health-wired:** `HealthAlertStackMapper` + `HumanHealthController.SnapshotChanged` → `MainHudSubSystem` (Bleeding / Dying / CardiacArrest / LowOxygen). uGUI `HealthAlertsView` / PlayerCanvas chips purged. F4/`alertstack` remain full-stack debug override. EditMode: `HealthAlertStackMapperTests`.
-- Vitals cluster UITK and examine-self organ readout still open.
+- **Examine Tier 0/1 shipped:** `CharacterExamineHealthBuilder` — public bleed/severed/wound+/state lines on any character; self adds bruise + organ bands; Shift-with-no-target → self. EditMode: `CharacterExamineHealthBuilderTests`. Medical scanner remains Phase 9 / virology.
+- Vitals cluster UITK still open.
 - Blood decals / bleed VFX tuning already landed earlier in Phase 6 wound-visuals work.
 
 ### Body presentation (shipped 2026-07)

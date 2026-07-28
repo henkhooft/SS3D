@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
-> Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; vitals HUD Phase 6 remainder; armor seal deferred)
-> Verified: b376eaa02 — 2026-07-26
+> Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; examine Tier 0/1 shipped; vitals UITK Phase 6 remainder; armor seal deferred)
+> Verified: 540fcbdc3 — 2026-07-28
 
 # Health
 
@@ -9,7 +9,7 @@
 
 Greenfield rewrite per [health_implementation_plan.md](../../plans/health_implementation_plan.md). Phase 1 shipped bleeding, bandage, and VFX. Phase 2 wires asset-backed organs into pool math, cardiac arrest, and movement debuffs (`Snapshot.MovementSpeedMultiplier` — consumed by humanoid gait/limp presentation after the develop integration). Phase 3 adds multi-threshold critical state, cardiac arrest → defib window, and chest defibrillation. Phase 4 adds BodyParts raycast zone resolution for melee combat. Phase 5 adds field treatments (burn dressing, splint, O2, CPR, transfusion, antitoxin). Phase 5b adds limb severing (zone `IsSevered`, anatomy hide, world drops, head mind-swap). Bleeding visuals now use tuned particle streams plus URP Decal blood marks (body + floor). Bleed drain uses `BleedingBloodDrainScale = 0.010` with oxy gain / arrest brain drain synced so hypoxia tracks bleed (see plan hemorrhage tuning).
 
-Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`, and turf temp/fire via `AtmosScreenEffectMapper` from `HealthSnapshot.Environment`. Main HUD alert icons merge `HealthAlertStackMapper` + `AtmosAlertStackMapper` (Hot/Cold/pressure/Fire + LowOxygen from debt or turf). Personal [audio](audio.md): heartbeat + labored breathing (`HealthPersonalAudioMapper`, max-merged with stamina); alert ding; positional flesh/blood/gasp/scream on damage and critical/vacuum edges. Server `TickHealthFromEnvironment` samples the occupant tile each 1 Hz tick: O₂ partial-pressure breathability, O₂→CO₂ breath exchange, plasma toxin intake, hot/cold/fire burn on **all zones**, and low/high/vacuum pressure → **lung** barotrauma (not chest burn). `atmosdamage off` / Health Debug checkbox skips turf coupling (`HealthEnvironmentSettings.AtmosphericDamageDisabled`). Vitals cluster UITK and examine-self readout remain Phase 6.
+Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot` via `HealthScreenEffectMapper` (dying/critical, blood-loss tunnel vision, oxy debt, concussion, unconscious) plus hit flash on `ApplyDamage`, and turf temp/fire via `AtmosScreenEffectMapper` from `HealthSnapshot.Environment`. Main HUD alert icons merge `HealthAlertStackMapper` + `AtmosAlertStackMapper` (Hot/Cold/pressure/Fire + LowOxygen from debt or turf). Personal [audio](audio.md): heartbeat + labored breathing (`HealthPersonalAudioMapper`, max-merged with stamina); alert ding; positional flesh/blood/gasp/scream on damage and critical/vacuum edges. Server `TickHealthFromEnvironment` samples the occupant tile each 1 Hz tick: O₂ partial-pressure breathability, O₂→CO₂ breath exchange, plasma toxin intake, hot/cold/fire burn on **all zones**, and low/high/vacuum pressure → **lung** barotrauma (not chest burn). `atmosdamage off` / Health Debug checkbox skips turf coupling (`HealthEnvironmentSettings.AtmosphericDamageDisabled`). Examine Tier 0/1 health lines shipped via `CharacterExamineHealthBuilder` (see [examine](examine.md)); vitals cluster UITK remains Phase 6 remainder.
 
 **Stamina Phase 7a core shipped:** see [stamina](stamina.md) — push-past-empty calls `ApplyOxyDebt`; obsolete `StaminaBar` purged from PlayerCanvas. Combat stamina costs still deferred.
 
@@ -19,6 +19,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 
 ## Start here
 
+- `Assets/Scripts/SS3D/Systems/Examine/CharacterExamineHealthBuilder.cs` — Tier 0/1 examine lines (reads `Snapshot` + `DebugDetail`; owned by examine UI, not a Human prefab component)
 - `Assets/Scripts/SS3D/Systems/Health/HumanHealthController.cs` — server tick, damage/treatment, organ registration, snapshot SyncVar + `SnapshotChanged`
 - `Assets/Scripts/SS3D/Systems/Health/BodyPresentationIntent.cs` — snapshot → `BodyPresentationState` (Collapsed / Locomotion / Dead mapping)
 - `Assets/Scripts/SS3D/Systems/Health/HealthScreenEffectMapper.cs` — local-owner snapshot → `ScreenEffectsSubSystem` intensities

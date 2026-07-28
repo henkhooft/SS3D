@@ -96,7 +96,7 @@ Hidden blockers this sketch makes explicit (each its own future pass):
 
 ## Explicitly deferred
 
-- AI / cyborgs, virology, chemistry depth, full crafting rewrite (S3 cloning stays thin/deferred until crafting is redesigned)
+- AI / cyborgs, virology, chemistry depth (player-facing analyzer/metabolism/machines), full crafting rewrite (S3 cloning stays thin/deferred until crafting is redesigned). Substances **foundation** (networked containers + reactions) may ship earlier as infrastructure — [2026-07_substances-foundation.md](../architecture/2026-07_substances-foundation.md) — without counting as chemistry depth.
 - Shuttles beyond ops polish + evac (evac itself is blocked on the unbuilt shuttle framework — S6)
 - Full observer/ghost experience beyond the thin MVP1 death→spectator spine ([observer.md](../design/observer.md))
 - Persistence of station damage across rounds

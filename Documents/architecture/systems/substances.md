@@ -7,7 +7,7 @@
 
 ## Overview
 
-Chemical substances, containers, and transfer interactions. `TransferSubstanceInteraction` is the Tier 2 (armed targeted) proof-of-concept for the [interactions-runtime](interactions-runtime.md) radial menu. Circulatory bleed / other health paths call `SubstanceContainer` on the server each pulse — keep container hot paths allocation-free.
+Chemical substances, containers, and transfer interactions. Current tree is **legacy** (contents not fully synced; recipes dead) pending clean-slate [substances-foundation](../2026-07_substances-foundation.md). `TransferSubstanceInteraction` remains the Tier 2 armed proof-of-concept for [interactions-runtime](interactions-runtime.md). Keep container hot paths allocation-free (`AsReadOnly` pitfall below).
 
 ## Start here
 
@@ -28,9 +28,10 @@ Chemical substances, containers, and transfer interactions. `TransferSubstanceIn
 ## Depends on / Used by
 
 - **Depends on:** [interactions-framework](interactions-framework.md), [inventory](inventory.md)
-- **Used by:** [health](health.md) (circulatory blood container), chemistry gameplay (partial)
+- **Used by:** gas/drink tank prefabs (temporary); chemistry gameplay (deferred MVP2). Health blood is `SystemicPools`, not this container.
 
 ## Related docs
 
+- Effort (planned): [2026-07_substances-foundation.md](../2026-07_substances-foundation.md) — clean-slate Phases 0–2; chemistry gameplay deferred to MVP2
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md) § Phase 3
 - Design (read-only): [Documents/design/chemistry.md](../../design/chemistry.md)
