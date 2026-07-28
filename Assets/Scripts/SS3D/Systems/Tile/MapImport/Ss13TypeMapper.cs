@@ -34,7 +34,7 @@ namespace SS3D.Systems.Tile.MapImport
 
         public IReadOnlyDictionary<string, int> UnmappedCounts => _unmapped;
 
-        public bool TryMatch(string path, out Ss13TypeMatch match)
+        public bool TryMatch(string path, out Ss13TypeMatch match, bool recordUnmapped = true)
         {
             match = default;
             if (string.IsNullOrEmpty(path))
@@ -42,6 +42,14 @@ namespace SS3D.Systems.Tile.MapImport
 
             if (IsAlwaysIgnored(path))
                 return false;
+
+            // Floor lights are not wall mounts — leave for a later mapping pass.
+            if (path.StartsWith("/obj/machinery/light/floor", StringComparison.Ordinal))
+            {
+                if (recordUnmapped)
+                    RecordUnmapped(path);
+                return false;
+            }
 
             foreach (Ss13TypeMapEntry entry in _config.Prefixes)
             {
@@ -140,7 +148,8 @@ namespace SS3D.Systems.Tile.MapImport
                 return true;
             }
 
-            RecordUnmapped(path);
+            if (recordUnmapped)
+                RecordUnmapped(path);
             return false;
         }
 

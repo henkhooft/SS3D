@@ -7,6 +7,16 @@ namespace SS3D.Systems.Tile.MapImport
         public string SoName { get; set; } = string.Empty;
 
         public Direction Direction { get; set; } = Direction.North;
+
+        /// <summary>
+        /// When true, place at <see cref="WorldX"/>/<see cref="WorldZ"/> instead of the cell origin
+        /// (SS13 wall mounts sit on the floor tile but SS3D mounts live on the wall tile).
+        /// </summary>
+        public bool HasWorldOverride { get; set; }
+
+        public int WorldX { get; set; }
+
+        public int WorldZ { get; set; }
     }
 
     /// <summary>

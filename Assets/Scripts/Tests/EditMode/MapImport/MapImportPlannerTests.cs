@@ -100,6 +100,18 @@ namespace SS3D.Tests.EditMode.MapImport
         }
 
         [Test]
+        public void Direction_FromDirectionalPathSuffix()
+        {
+            Assert.IsTrue(MapImportDirection.TryFromPath(
+                "/obj/machinery/power/apc/auto_name/directional/east", out Direction dir));
+            Assert.AreEqual(Direction.East, dir);
+
+            var atom = new DmmAtom { Path = "/obj/machinery/light/directional/west" };
+            Assert.IsTrue(MapImportDirection.TryResolveExplicit(atom, out Direction lightDir));
+            Assert.AreEqual(Direction.West, lightDir);
+        }
+
+        [Test]
         public void Planner_TinyInfra_PlacesOverlaysAndResolvesPipes()
         {
             DmmMap map = DmmParser.ParseFile(InfraFixturePath);
@@ -113,6 +125,7 @@ namespace SS3D.Tests.EditMode.MapImport
             Assert.AreEqual(1, plan.VentPlacements);
             Assert.AreEqual(1, plan.ApcPlacements);
             Assert.AreEqual(1, plan.LightPlacements);
+            Assert.GreaterOrEqual(plan.DoorCells, 1);
 
             MapImportCellPlan cableCell = plan.Cells.Find(c =>
                 c.Placements.Any(p => p.SoName == "Cables"));
@@ -131,13 +144,26 @@ namespace SS3D.Tests.EditMode.MapImport
             Assert.AreEqual(Direction.South,
                 ventCell.Placements.Find(p => p.SoName == "Vent").Direction);
 
-            MapImportCellPlan wallMountCell = plan.Cells.Find(c =>
+            // Floor cell with APC/light — mounts offset onto neighbouring wall tiles, facing into room.
+            MapImportCellPlan wallMountFloor = plan.Cells.Find(c =>
                 c.Placements.Any(p => p.SoName == "APC"));
-            Assert.IsNotNull(wallMountCell);
-            Assert.AreEqual(Direction.East,
-                wallMountCell.Placements.Find(p => p.SoName == "APC").Direction);
-            Assert.AreEqual(Direction.West,
-                wallMountCell.Placements.Find(p => p.SoName == "LightTubeFixture").Direction);
+            Assert.IsNotNull(wallMountFloor);
+            MapImportPlacement apc = wallMountFloor.Placements.Find(p => p.SoName == "APC");
+            Assert.IsTrue(apc.HasWorldOverride);
+            Assert.AreEqual(wallMountFloor.WorldX + 1, apc.WorldX);
+            Assert.AreEqual(wallMountFloor.WorldZ, apc.WorldZ);
+            Assert.AreEqual(Direction.West, apc.Direction);
+
+            MapImportPlacement light = wallMountFloor.Placements.Find(p => p.SoName == "LightTubeFixture");
+            Assert.IsTrue(light.HasWorldOverride);
+            Assert.AreEqual(wallMountFloor.WorldX - 1, light.WorldX);
+            Assert.AreEqual(Direction.East, light.Direction);
+
+            // Door between N/S walls, no dir → inferred East.
+            MapImportCellPlan doorCell = plan.Cells.Find(c =>
+                c.Placements.Count >= 2 && c.Placements[1].SoName == "CivillianAirlock");
+            Assert.IsNotNull(doorCell);
+            Assert.AreEqual(Direction.East, doorCell.Placements[1].Direction);
 
             MapImportCellPlan layer4Cell = plan.Cells.Find(c =>
                 c.Placements.Any(p => p.SoName == MapImportPipeResolver.AtmosPipesL4));

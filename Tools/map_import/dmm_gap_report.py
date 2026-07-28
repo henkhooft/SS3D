@@ -74,6 +74,8 @@ def load_type_map(path: Path) -> tuple[dict[str, str], list[tuple[str, str, str]
 def match_path(path: str, prefixes: list[tuple[str, str, str]], defaults: dict[str, str]) -> str | None:
     if path.startswith(("/area/", "/turf/open/space", "/turf/template_noop", "/turf/open/openspace")):
         return None
+    if path.startswith("/obj/machinery/light/floor"):
+        return ""
     for match, kind, so in prefixes:
         if path.startswith(match):
             return so or defaults.get(kind, "")
@@ -101,6 +103,8 @@ def match_path(path: str, prefixes: list[tuple[str, str, str]], defaults: dict[s
         return defaults["pipe"]
     if path.startswith("/obj/machinery/power/apc"):
         return defaults["apc"]
+    if path.startswith("/obj/machinery/light/floor"):
+        return ""
     if path.startswith("/obj/machinery/light/small"):
         return "LightBulbFixture"
     if path.startswith("/obj/machinery/light"):

@@ -12,6 +12,7 @@ Extend the structural DMM importer so cables, heuristically-layered gas pipes, d
 
 - New `MapImportKind` values: Cable, Pipe, Disposal, DisposalTerminal, Vent, Scrubber, Apc, Light
 - `MapImportPipeResolver` — supply→`AtmosPipesL1`, scrubbers→`AtmosPipesL2`, waste/general/yellow→`AtmosPipesL3`, else `piping_layer` 1–4 → L1–L4
+- `MapImportDirection` — `/directional/…` path suffixes, `dir`/pixel vars; wall mounts offset onto wall tile facing into room; doors without dir inferred from neighbour walls
 - Planner multi-placement per cell (Plenum + structural + overlays); FurnitureBase priority Vent > Scrubber > DisposalBin > DisposalOutlet
 - Type-map prefixes in `Tools/map_import/ss13_type_map.yaml`; CLI gap report mirrors kinds
 - `MapImportApplier` defers area flood (`BeginDeferredAreaFlood` / `EndDeferredAreaFlood`) around bulk place so APC seeds see complete walls

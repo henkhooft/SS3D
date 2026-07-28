@@ -86,7 +86,6 @@ namespace SS3D.Systems.Tile.MapImport
 
                 foreach (MapImportCellPlan cell in plan.Cells)
                 {
-                    Vector3 world = new Vector3(cell.WorldX, 0f, cell.WorldZ);
                     foreach (MapImportPlacement placement in cell.Placements)
                     {
                         if (tileSystem.GetAsset(placement.SoName) is not TileObjectSo so)
@@ -99,6 +98,9 @@ namespace SS3D.Systems.Tile.MapImport
                             continue;
                         }
 
+                        float wx = placement.HasWorldOverride ? placement.WorldX : cell.WorldX;
+                        float wz = placement.HasWorldOverride ? placement.WorldZ : cell.WorldZ;
+                        Vector3 world = new Vector3(wx, 0f, wz);
                         map.PlaceTileObject(so, world, placement.Direction,
                             skipBuildCheck: true, replaceExisting: true, skipAdjacency: true, out _);
                         result.PlacedObjects++;

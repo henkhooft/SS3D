@@ -23,12 +23,8 @@
 /turf/open/floor/iron,
 /area/hallway)
 "aae" = (
-/obj/machinery/power/apc{
-	dir = 4
-	},
-/obj/machinery/light{
-	dir = 8
-	},
+/obj/machinery/power/apc/auto_name/directional/east,
+/obj/machinery/light/directional/west,
 /turf/open/floor/iron,
 /area/hallway)
 "aaf" = (
@@ -40,6 +36,10 @@
 "aag" = (
 /turf/closed/wall,
 /area/hallway)
+"aah" = (
+/obj/machinery/door/airlock,
+/turf/open/floor/iron,
+/area/hallway)
 
 (1,1,1) = {"
 aagaabaag
@@ -47,4 +47,5 @@ aagaacaag
 aagaadaag
 aagaaeaag
 aagaafaag
+aagaahaag
 "}
