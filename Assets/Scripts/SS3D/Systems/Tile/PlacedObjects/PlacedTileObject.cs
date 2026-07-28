@@ -225,7 +225,12 @@ namespace SS3D.Systems.Tile
         /// </summary>
         public void RefreshHostVisibility()
         {
-            if (!IsClient || NetworkObject == null)
+            // Guard NetworkObject before IsClient — FishNet's IsClient reads _networkObjectCache
+            // with no null check (same pitfall as bare IsServer). Hit opening Map Editor 2026-07-28.
+            if (NetworkObject == null || !NetworkObject.IsSpawned || !IsClient)
+                return;
+
+            if (NetworkManager?.ClientManager == null)
                 return;
 
             NetworkConnection localConnection = NetworkManager.ClientManager.Connection;

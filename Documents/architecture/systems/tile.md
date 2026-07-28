@@ -59,6 +59,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 - **Map import SO names are prefab names, not `.asset` file names:** `GenericObjectSo.NameString` is `PrefabAsset.name`. Type-map `so:` values must match (e.g. `FancyCarpetRed`, `CivillianAirlock`), or apply logs missing-asset skips.
 - **DMM import left MeshRenderers off (only wall caps visible):** `PlacedTileObject.RefreshHostVisibility` gates host MeshRenderers on HashGrid observers. Map Editor free-fly bypasses that gate while `MapEditorSubSystem.IsActive` (open/close refreshes all tiles). Wall caps are non-networked Instantiates so they stayed on. Hit 2026-07-28.
+- **`RefreshHostVisibility` must not read `IsClient` first:** FishNet `IsClient` dereferences `_networkObjectCache` with no null check. Opening Map Editor walks every placed tile — some lack a spawned NetworkObject. Guard `NetworkObject != null && NetworkObject.IsSpawned && IsClient`. Hit 2026-07-28.
 - **DMM import without Play Mode / TileSubSystem no-ops:** the Tier-A window requires a live `CurrentMap`; EditMode only covers parse/plan. Hit 2026-07-28.
 - **Adjacency SyncVar writes on pure clients hard-fail smoke:** connectors that assign `_synced*` /
   `_syncedEngineConnections` / `_syncedAdjacencyPayload` without `IsServer` log FishNet
