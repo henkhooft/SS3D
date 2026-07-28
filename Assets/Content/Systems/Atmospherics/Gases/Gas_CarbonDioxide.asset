@@ -16,7 +16,7 @@ MonoBehaviour:
   _displayName: Carbon Dioxide
   _molarMass: 44
   _specificHeat: 3
-  _linkedSubstance: {fileID: 0}
+  _linkedReagent: {fileID: 0}
   _visualProfile:
     ScatterColor: {r: 0.18, g: 0.16, b: 0.14, a: 1}
     ScatterStrength: 4

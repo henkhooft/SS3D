@@ -1,7 +1,7 @@
 using FishNet.Object;
 using SS3D.Networking;
 using SS3D.Permissions;
-using SS3D.Substances;
+using SS3D.Systems.Substances;
 using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Audio;

@@ -16,7 +16,7 @@ MonoBehaviour:
   _displayName: Plasma
   _molarMass: 78
   _specificHeat: 10
-  _linkedSubstance: {fileID: 0}
+  _linkedReagent: {fileID: 0}
   _visualProfile:
     ScatterColor: {r: 0, g: 0, b: 0, a: 0}
     ScatterStrength: 0

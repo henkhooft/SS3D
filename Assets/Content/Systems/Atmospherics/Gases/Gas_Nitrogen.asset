@@ -16,7 +16,7 @@ MonoBehaviour:
   _displayName: Nitrogen
   _molarMass: 28
   _specificHeat: 20
-  _linkedSubstance: {fileID: 0}
+  _linkedReagent: {fileID: 0}
   _visualProfile:
     ScatterColor: {r: 0, g: 0, b: 0, a: 0}
     ScatterStrength: 0

@@ -62,8 +62,8 @@ MonoBehaviour:
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    LocalScale: {x: 0, y: 0, z: 0}
+    Rotation: {x: 0, y: 0, z: 0, w: 1}
+    LocalScale: {x: 1, y: 1, z: 1}
   _isNetworked: 1
   _isGlobal: 0
   _initializeOrder: 0
@@ -211,7 +211,6 @@ GameObject:
   - component: {fileID: 3587616607673926389}
   - component: {fileID: 5947817776542571981}
   - component: {fileID: 5323246766978482323}
-  - component: {fileID: 4379932917193560450}
   - component: {fileID: 9000000000000000003}
   m_Layer: 0
   m_Name: Body
@@ -315,22 +314,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.51017773, y: 0.80267596, z: 0.6324222}
   m_Center: {x: 0.03177064, y: 1.1490806, z: 0.020124212}
---- !u!114 &4379932917193560450
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4379219507269237858}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b7539a4a1fe19c4db044a7af56dcdd6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  InteractionName: 
-  substances: 03000000
-  amount: 250
-  useMillilitres: 1
 --- !u!114 &9000000000000000003
 MonoBehaviour:
   m_ObjectHideFlags: 0

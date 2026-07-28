@@ -63,7 +63,7 @@ MonoBehaviour:
     _level: 0
   - _name: SS3D.Rendering
     _level: 0
-  - _name: SS3D.Substances
+  - _name: SS3D.Systems.Substances
     _level: 0
   - _name: SS3D.Systems
     _level: 0

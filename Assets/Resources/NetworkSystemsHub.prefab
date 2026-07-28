@@ -559,12 +559,11 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 16647fb19ee14c44e979af85557daf59, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SS3D.Systems::SS3D.Substances.SubstancesSubSystem
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Substances.SubstancesSubSystem
   _componentIndexCache: 19
   _addedNetworkObject: {fileID: 100004}
   _networkObjectCache: {fileID: 100004}
-  substancesList: []
-  recipes: []
+  _registry: {fileID: 11400000, guid: 90298e5c25b841b1aefd96a97290f4b5, type: 2}
 --- !u!114 &3796406931252978182
 MonoBehaviour:
   m_ObjectHideFlags: 0

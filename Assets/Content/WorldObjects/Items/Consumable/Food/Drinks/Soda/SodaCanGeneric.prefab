@@ -49,6 +49,7 @@ GameObject:
   - component: {fileID: 6588399484719437217}
   - component: {fileID: -6509701768596653782}
   - component: {fileID: -1409642175327164469}
+  - component: {fileID: 26888054055148692}
   - component: {fileID: 844800983004635204}
   - component: {fileID: 2460252798676826451}
   - component: {fileID: 1335663030982295525}
@@ -296,6 +297,9 @@ MonoBehaviour:
   _asset: {fileID: 0}
   _name: Soda Can
   _weight: 1
+  _sizeClass: 2
+  _maxStackSize: 1
+  _stackCount: 1
   _startingTraits: []
   _rigidbody: {fileID: 751568336328987408}
   AttachmentPoint: {fileID: 6123520057549092640}
@@ -316,13 +320,29 @@ MonoBehaviour:
   _componentIndexCache: 3
   _addedNetworkObject: {fileID: 5958074810027370513}
   _networkObjectCache: {fileID: 5958074810027370513}
-  InitialSubstances:
-  - Substance: {fileID: 11400000, guid: 4d7f77f3af8ddb64a943ac9d824f7718, type: 2}
-    MilliMoles: 0
-  _currentVolume: 0
-  _volume: 1000
+  _initialMixture:
+  - ReagentId: soda
+    VolumeMl: 330
+  _defaultVolumeMl: 330
+  _capacityMl: 330
+  _currentVolumeMl: 0
+  _temperatureKelvin: 293.15
   _locked: 0
   _initialised: 0
+--- !u!114 &26888054055148692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8423412686940963211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe0cfc84237a41ed880792eefddebdc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: {fileID: 0}
+  _container: {fileID: -1409642175327164469}
 --- !u!114 &844800983004635204
 MonoBehaviour:
   m_ObjectHideFlags: 0
