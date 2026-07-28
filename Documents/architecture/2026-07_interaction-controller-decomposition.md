@@ -26,6 +26,8 @@ Closes TECH_DEBT §1.9 for **interactions only** (`MainHudSubSystem` remains ope
 
 Approximate sizes after ship: `InteractionController` ~1.2k lines; `CombatInteractionNetwork` ~820 lines.
 
+Follow-up fix: `CombatEditorAssembly.asmdef` must reference `SS3D.Core` (`ac35e3e8e`) so recipes can `AddComponent` NetworkActor-derived types.
+
 ## Locked decisions (retained)
 
 - Sibling `NetworkBehaviour` for combat on the Human `NetworkObject`.

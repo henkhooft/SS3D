@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 2295b72ef — 2026-07-28
+> Verified: ac35e3e8e — 2026-07-28
 
 # Entities
 

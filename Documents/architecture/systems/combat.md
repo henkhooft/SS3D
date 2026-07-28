@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `CombatInteractionNetwork.TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: 2295b72ef — 2026-07-28 (CombatInteractionNetwork extract)
+> Verified: ac35e3e8e — 2026-07-28 (CombatInteractionNetwork extract)
 
 # Combat
 
@@ -32,6 +32,7 @@ stamina drain), projectile/thrown.
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Combat/CombatInteractionNetwork.cs` — Harm primary: ranged fire/reload Cmds; melee swing; aim + Target/Observers Rpcs (sibling of `InteractionController` on Human)
+- `Assets/Scripts/SS3D/Systems/Combat/Editor/CombatInteractionNetworkPrefabSetup.cs` — ensure component on Human via **SS3D → Entities → Run All Human Prefab Recipes** (not a standalone MenuItem)
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — routes Harm primary to `CombatInteractionNetwork`; owns intent SyncVar
 - `Assets/Scripts/SS3D/Systems/Combat/Interactions/RangedWeaponItemExtension.cs` — profile, mag, recoil, cooldown, reload
 - `Assets/Scripts/SS3D/Systems/Combat/RangedWeaponProfile.cs` / `AccuracyCone.cs` / `RangedHitscanResolver.cs` / `RangedShotFeedback.cs` / `MuzzleFlashVfx.cs` / `TwoHandedWeaponRules.cs` / `BulletHoleDecalSpawner.cs` / `BulletHoleVfxCatalog.cs`
@@ -52,6 +53,7 @@ stamina drain), projectile/thrown.
 
 - New firearm: add `RangedWeaponItemExtension` + profile via `RangedPrefabSetup` / **SS3D → Combat → Run Content Prefab Recipes** — do not hand-edit `Human.prefab`.
 - New armor piece: add `ArmorItemExtension` + profile via `ArmorPrefabSetup` / same aggregator on a clothing item prefab — do not hand-edit `Human.prefab`; coverage is `BodyZoneMask`, independent of which clothing slot the item occupies.
+- Harm primary / aim / muzzle / recovery RPCs: extend `CombatInteractionNetwork` — do not grow `InteractionController` for combat.
 - Stance: `HumanoidBodyStateBridge.ResolveCombatStance` prefers the extension component.
 - Shared LOS: call `LineOfSight.HasLineOfSight` / `TryGetFirstHit` — do not fork parallel raycasts.
 
@@ -70,6 +72,7 @@ stamina drain), projectile/thrown.
 
 ## Pitfalls
 
+- **`CombatEditorAssembly` needs `SS3D.Core`:** editor recipes that `AddComponent<CombatInteractionNetwork>()` (extends `NetworkActor`) fail CS0012/UNT0014 unless `CombatEditorAssembly.asmdef` references `SS3D.Core` — referencing `SS3D.Systems` alone is not enough to see the base type.
 - **Held gun never melee-swings** — `TryRunRangedFirePrimary` returns true whenever a ranged extension is held (including empty/cooldown); do not fall through to `CmdRunMeleeSwing`.
 - **Host optimistic fire lock** — same as melee: only optimistic-cooldown on pure clients (`!IsServer`); host uses server consume + TargetRpc.
 - **Zone ray default is 8 m** — ranged passes `profile.MaxRangeMeters` into `TryResolveHoverZone`; do not hardcode melee default for hitscan.

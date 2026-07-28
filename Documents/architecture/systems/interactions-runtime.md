@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, InteractionDiscovery, InteractionDispatch, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: 2295b72ef — 2026-07-28 (InteractionController decomposition)
+> Verified: ac35e3e8e — 2026-07-28 (InteractionController decomposition)
 
 # Interactions (runtime)
 
@@ -60,7 +60,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - **Outline on every hover while holding an item:** `Item` discovers Drop via `InteractionEntry.SourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (no source discovery) or `FilterForOutline` — never treat full Discover as hover-available.
 - **Outline LateUpdate GC:** do not call full `Discover`/`FilterAndSort` every frame for hover feedback. That path allocates lists, `targets.ToArray()`, and source-only entries (Drop) that outlines discard. Use `TryEvaluateOutlineInteractability` + reused target buffers. Marker: `SS3D.Interactions.Outline`.
 - **Unresolved selection point:** when `TryResolveInteractionPoint` fails, build `InteractionEvent` without a point (`HasPoint = false`) — do not pass `Vector3.zero` into the four-arg ctor.
-- **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
+- **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `InteractionDispatch.TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`F` toggles Help/Harm** via arbitrated `InputSubSystem.ToggleIntent` (was hardcoded `C`, which
   also fired Cancel). Cancel delayed/armed interactions with **Backspace**. Defaults:
   [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
@@ -76,10 +76,12 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 ## Extension points
 
 - New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
+- Shared discover/resolve logic: extend `InteractionDiscovery` / `InteractionDispatch` — do not grow `InteractionController` for list building or RPC match helpers.
 - Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
 - Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
 - Character paperdoll open: `SearchInteraction` via `HandSearchExtension` (Discover/`CmdRunInteraction`); Shift+Click is only a shortcut — do not re-add overlay click bypasses.
 - UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
+- Harm primary combat: `CombatInteractionNetwork` on Human — see [combat](combat.md).
 
 ## Depends on / Used by
 
@@ -88,7 +90,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 
 ## Related docs
 
-- Effort: [2026-07_interaction-controller-decomposition](../2026-07_interaction-controller-decomposition.md) — in-progress (TECH_DEBT 1.9)
+- Effort: [2026-07_interaction-controller-decomposition](../2026-07_interaction-controller-decomposition.md) — shipped (TECH_DEBT 1.9 interactions)
 - Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
 - Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
 - Defaults: [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)
