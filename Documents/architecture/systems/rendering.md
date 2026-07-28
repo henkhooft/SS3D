@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: db818b59f — 2026-07-28 (SRP Batcher / GPU Instancing hygiene)
+> Verified: 34d47668a — 2026-07-28 (selection pick frustum cull)
 
 # Rendering
 
@@ -39,6 +39,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 ## Pitfalls
 
 - **Permanent MaterialPropertyBlocks break SRP Batcher:** any MPB on a MeshRenderer (e.g. old Selectable `_SelectionColor`, Intact white integrity tint) drops that draw out of the SRP Batcher path. Selection pick uses transient MPB on `DrawMesh` via `SelectionPickContext`; intact integrity clears MPBs. Hit 2026-07-28 (Metastation).
+- **Selection `DrawMesh` needs explicit frustum cull:** HashGrid AOI ≠ camera frustum. Pick collect must `TestPlanesAABB` against the request camera (`IsInPickFrustum`) or Metastation pays full-AOI pick draws. See [selection](selection.md). Hit 2026-07-28.
 - **GPU Instancing needs the material flag:** ST shaders compile instancing variants, but assets need `enableInstancing` / `m_EnableInstancingVariants: 1`. Floor ST mats were flipped in [srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md).
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API. Do not confuse with classic GPU Instancing / SRP Batcher (still on).
 - **ST meshes ignore blood/floor DecalProjectors:** Automatic Decal technique is DBuffer on desktop. `STDefault` ForwardLit must keep `#pragma multi_compile_fragment _ _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3` and `ApplyDecalToBaseColor` under `#ifdef _DBUFFER` — calling it without the keyword samples an unbound buffer (weight 0 → black mesh). DepthNormals alone only fixes Decal Layers filtering, not albedo tint.

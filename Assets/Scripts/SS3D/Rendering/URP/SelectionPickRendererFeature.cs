@@ -79,6 +79,8 @@ namespace SS3D.Rendering.URP
         {
             readonly Material _selectionMaterial;
             readonly List<SelectionPickContext.PickDraw> _draws = new();
+            readonly List<SelectionPickContext.PickDraw> _opaqueDraws = new();
+            readonly List<SelectionPickContext.PickDraw> _transparentDraws = new();
             readonly MaterialPropertyBlock _propertyBlock = new();
 
             SelectionPickContext.Request _request;
@@ -159,17 +161,18 @@ namespace SS3D.Rendering.URP
                 string passName)
             {
                 // Snapshot matching draws for this pass (list is filled once per frame in RecordRenderGraph).
-                List<SelectionPickContext.PickDraw> passDraws = null;
+                // Reuse scratch lists — Render Graph holds the reference until execute.
+                List<SelectionPickContext.PickDraw> passDraws = transparent ? _transparentDraws : _opaqueDraws;
+                passDraws.Clear();
                 for (int i = 0; i < _draws.Count; i++)
                 {
                     if (_draws[i].Transparent != transparent)
                         continue;
 
-                    passDraws ??= new List<SelectionPickContext.PickDraw>();
                     passDraws.Add(_draws[i]);
                 }
 
-                if (passDraws == null || passDraws.Count == 0)
+                if (passDraws.Count == 0)
                 {
                     if (!clearTarget)
                         return;

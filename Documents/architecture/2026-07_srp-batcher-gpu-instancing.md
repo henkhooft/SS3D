@@ -23,6 +23,7 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 
 - [`Selectable`](../../Assets/Scripts/SS3D/Systems/Selection/Selectable.cs) registers as [`SelectionPickContext.ISelectionPickSource`](../../Assets/Scripts/SS3D/Rendering/URP/SelectionPickContext.cs); MeshRenderers stay MPB-free.
 - [`SelectionPickRendererFeature`](../../Assets/Scripts/SS3D/Rendering/URP/SelectionPickRendererFeature.cs) draws registered meshes with `DrawMesh` + transient `MaterialPropertyBlock` (skinned still use permanent MPB + `DrawRenderer` — few characters).
+- Pick collect frustum-culls with the request camera (`IsInPickFrustum`) — AOI alone is not enough after leaving MeshRenderer draws.
 - Permanent `_SelectionColor` MPBs were the main SRP Batcher breaker on every floor/wall tile.
 
 ### Structural integrity Intact clear
@@ -39,6 +40,7 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 - Frame Debugger on Metastation (Map Editor closed): identical TileGrey floors should GPU-instance / SRP-batch; damaged walls may still split.
 - Re-export Profiler under `Logs/perf/` (`metastation-play`) — expect `Render.Mesh` / `ApplyShader` down vs `capture-20260728-164634` / post-underfloor baseline.
 - Hover/examine/interaction pick still resolves on floors and doors.
+- After frustum cull: `SS3D Selection Pick` should drop vs `capture-20260728-181845` when zoomed in (AOI still large).
 
 ## Explicitly deferred
 

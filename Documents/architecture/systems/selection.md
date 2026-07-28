@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Selection/, Assets/Scripts/SS3D/Rendering/URP/
 > Entry points: SelectionSubSystem, SelectionController, SelectionPickRendererFeature
 > Status: shipped
-> Verified: db818b59f — 2026-07-28 (pick pass DrawMesh + transient MPB)
+> Verified: 34d47668a — 2026-07-28 (pick frustum cull + DrawMesh MPB)
 
 # Selection
 
 ## Overview
 
-Shader-ID mesh picking replaces screen raycasts for interaction targeting. Each `Selectable` gets a unique render color and registers as a `SelectionPickContext.ISelectionPickSource`; the URP pick pass draws ID colours with `DrawMesh` + a **transient** MaterialPropertyBlock (MeshRenderers stay MPB-free for SRP Batcher). Skinned meshes keep a permanent selection MPB (few characters). `SelectionCamera` readback identifies the hover target. `InteractionController` routes client interaction targeting through this system and drives `InteractionOutlineView` from the current hover; the server validates using `NetworkObject` and interaction point.
+Shader-ID mesh picking replaces screen raycasts for interaction targeting. Each `Selectable` gets a unique render color and registers as a `SelectionPickContext.ISelectionPickSource`; the URP pick pass draws ID colours with `DrawMesh` + a **transient** MaterialPropertyBlock (MeshRenderers stay MPB-free for SRP Batcher). Skinned meshes keep a permanent selection MPB (few characters). Collect skips HashGrid-AOI-disabled renderers **and** bounds outside the pick-camera frustum (`GeometryUtility.TestPlanesAABB`) — `DrawMesh` does not get Unity's MeshRenderer cull. `SelectionCamera` readback identifies the hover target. `InteractionController` routes client interaction targeting through this system and drives `InteractionOutlineView` from the current hover; the server validates using `NetworkObject` and interaction point.
 
 Outline shells and other auxiliary meshes use `SelectionRenderingLayers.ExcludeFromSelectionPick` so they stay out of the ID pass (avoids hover flicker / z-fight and outline bleed into item icons). Clear outlines on inventory pickup so the green shell does not stick after Take.
 
@@ -34,6 +34,7 @@ Outline shells and other auxiliary meshes use `SelectionRenderingLayers.ExcludeF
 ## Pitfalls
 
 - **Do not write `_SelectionColor` onto MeshRenderer MPBs:** permanent selection MPBs break SRP Batcher / GPU Instancing on every tile. Register via `SelectionPickContext` and let the pick pass supply colour per `DrawMesh`. SkinnedMeshRenderer is the exception (DrawRenderer needs the block). Hit 2026-07-28 (Metastation).
+- **`DrawMesh` pick is not frustum-culled by Unity:** AOI/underfloor only disables off-observer `Selectable`/MeshRenderers. Without `SelectionPickContext.IsInPickFrustum` in `CollectPickDraws`, every AOI-visible tile is `DrawMesh`'d (Metastation ~5 ms/frame). Keep the pick-camera plane test; do not confuse it with HashGrid AOI. Hit 2026-07-28.
 - **Outline bleed into item icons:** `Item.GenerateIcon` clones the live item (including hover shells). Strip with `DestroyImmediate` before bake — deferred `Destroy` leaves enabled outline meshes in the same-frame preview pass. Hit 2026-07-26.
 - **`SelectionCamera` must not `Get` Selection in Start.** It lives on `PlayerCamera` in Game, which loads before `NetworkSystemsHub` Online. Use `TryGet` and resolve lazily in the pick readback.
 - **`ClosestPoint` spam on hover:** ray-miss fallback must not call `Collider.ClosestPoint` on non-convex `MeshCollider` (or TerrainCollider). Unity warns every `LateUpdate`. Use `ClosestPointOnBounds` for unsupported shapes (`SelectionTargetUtility.GetClosestPoint`; same rule in [examine](examine.md) `ExamineRangeUtility`).

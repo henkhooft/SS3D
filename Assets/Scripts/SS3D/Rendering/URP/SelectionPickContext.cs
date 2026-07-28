@@ -38,6 +38,8 @@ namespace SS3D.Rendering.URP
 
         static Request? s_Request;
         static readonly List<ISelectionPickSource> s_Sources = new();
+        static readonly Plane[] s_FrustumPlanes = new Plane[6];
+        static bool s_HasFrustum;
 
         public static void SetRequest(Request request)
         {
@@ -47,6 +49,7 @@ namespace SS3D.Rendering.URP
         public static void ClearRequest()
         {
             s_Request = null;
+            s_HasFrustum = false;
         }
 
         public static bool TryGetRequest(out Request request)
@@ -77,8 +80,18 @@ namespace SS3D.Rendering.URP
             s_Sources.Remove(source);
         }
 
+        /// <summary>
+        /// True when <paramref name="bounds"/> intersects the current pick-camera frustum
+        /// (or when no frustum was refreshed — fail open so EditMode/tests still collect).
+        /// </summary>
+        public static bool IsInPickFrustum(Bounds bounds)
+        {
+            return !s_HasFrustum || GeometryUtility.TestPlanesAABB(s_FrustumPlanes, bounds);
+        }
+
         public static void CollectPickDraws(List<PickDraw> buffer)
         {
+            RefreshFrustumFromRequest();
             buffer.Clear();
             for (int i = 0; i < s_Sources.Count; i++)
             {
@@ -88,6 +101,18 @@ namespace SS3D.Rendering.URP
 
                 source.CollectPickDraws(buffer);
             }
+        }
+
+        static void RefreshFrustumFromRequest()
+        {
+            if (!TryGetRequest(out Request request) || request.SourceCamera == null)
+            {
+                s_HasFrustum = false;
+                return;
+            }
+
+            GeometryUtility.CalculateFrustumPlanes(request.SourceCamera, s_FrustumPlanes);
+            s_HasFrustum = true;
         }
     }
 }
