@@ -1199,6 +1199,94 @@ MonoBehaviour:
     m_Key: character_examine.unidentified_crew_member
     m_Metadata:
       m_Items: []
+  - m_Id: 257391100000000001
+    m_Key: examine.health.dead.self
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000002
+    m_Key: examine.health.dead.other
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000003
+    m_Key: examine.health.cardiac_arrest.self
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000004
+    m_Key: examine.health.cardiac_arrest.other
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000005
+    m_Key: examine.health.critical.self
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000006
+    m_Key: examine.health.critical.other
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000007
+    m_Key: examine.health.unconscious.self
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000008
+    m_Key: examine.health.unconscious.other
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000009
+    m_Key: examine.health.severed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000010
+    m_Key: examine.health.bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000011
+    m_Key: examine.health.zone_severity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000012
+    m_Key: examine.health.organ_strained
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000013
+    m_Key: examine.health.organ_failing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000014
+    m_Key: examine.health.organ_critical
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000015
+    m_Key: examine.health.organ_destroyed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000016
+    m_Key: examine.health.other.hurt_and_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000017
+    m_Key: examine.health.other.bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000018
+    m_Key: examine.health.other.hurt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000019
+    m_Key: examine.health.other.missing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000020
+    m_Key: examine.health.other.missing_hurt_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000021
+    m_Key: examine.health.other.missing_bleeding
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000022
+    m_Key: examine.health.other.missing_hurt
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

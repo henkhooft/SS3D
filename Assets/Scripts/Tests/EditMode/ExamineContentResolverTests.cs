@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using SS3D.Localization;
 using SS3D.Systems.Examine;
 using SS3D.Tests;
+using UnityEngine;
 using UnityEngine.Localization;
 
 namespace EditorTests
@@ -43,7 +45,7 @@ namespace EditorTests
         public void ResolveUsesLocalizedStringReferences()
         {
             ExamineContentResolver resolver = new();
-            ExamineData data = UnityEngine.ScriptableObject.CreateInstance<ExamineData>();
+            ExamineData data = ScriptableObject.CreateInstance<ExamineData>();
             // Use keys that are never in the Examine table. Real keys like
             // items.tools.engineering.wrench.name resolve to "Wrench" whenever
             // another EditMode test (or AssetAudit) has already loaded the table.
@@ -70,7 +72,42 @@ namespace EditorTests
             Assert.IsFalse(content.Description.Contains("*[to be localized]*"));
             Assert.IsTrue(content.HasDescription);
 
-            UnityEngine.Object.DestroyImmediate(data);
+            Object.DestroyImmediate(data);
+        }
+
+        [Test]
+        public void ResolveCollectsAllProvidersOnSameGameObject()
+        {
+            ExamineContentResolver resolver = new();
+            ExamineData data = ScriptableObject.CreateInstance<ExamineData>();
+            data.Name = new LocalizedString(
+                ExamineCanonicalKeyGenerator.ExamineTableName,
+                "test.examine_multi_provider.name");
+            data.Description = new LocalizedString(
+                ExamineCanonicalKeyGenerator.ExamineTableName,
+                "test.examine_multi_provider.desc");
+
+            GameObject host = new("ExamineMultiProviderHost");
+            try
+            {
+                StubExaminableWithProvider primary = host.AddComponent<StubExaminableWithProvider>();
+                primary.Data = data;
+                primary.SectionText = "Primary section";
+
+                StubExtraProvider secondary = host.AddComponent<StubExtraProvider>();
+                secondary.SectionText = "Secondary section";
+
+                ExamineContent content = resolver.Resolve(primary);
+
+                Assert.AreEqual(2, content.Sections.Count);
+                Assert.AreEqual("Primary section", content.Sections[0].Text);
+                Assert.AreEqual("Secondary section", content.Sections[1].Text);
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(data);
+            }
         }
 
         private sealed class StubExaminable : IExaminable
@@ -85,6 +122,32 @@ namespace EditorTests
             public ExamineData GetData()
             {
                 return _data;
+            }
+        }
+
+        private sealed class StubExaminableWithProvider : MonoBehaviour, IExaminable, IExamineContentProvider
+        {
+            public ExamineData Data;
+            public string SectionText;
+
+            public ExamineData GetData()
+            {
+                return Data;
+            }
+
+            public void AppendSections(IExaminable examinable, List<ExamineSection> sections)
+            {
+                sections.Add(new ExamineSection(SectionText));
+            }
+        }
+
+        private sealed class StubExtraProvider : MonoBehaviour, IExamineContentProvider
+        {
+            public string SectionText;
+
+            public void AppendSections(IExaminable examinable, List<ExamineSection> sections)
+            {
+                sections.Add(new ExamineSection(SectionText));
             }
         }
     }

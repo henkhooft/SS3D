@@ -7,6 +7,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Localization;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Examine;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
@@ -511,6 +512,97 @@ namespace SS3D.UI.Examine
                 UnidentifiedFallback);
         }
 
+        private bool TryResolveLocalCharacter(out IExaminable examinable, out HumanInventory inventory)
+        {
+            examinable = null;
+            inventory = null;
+            return _localPlayer != null
+                && CharacterExamineTargetUtility.TryResolveFromTransform(
+                    _localPlayer.transform,
+                    out examinable,
+                    out inventory);
+        }
+
+        private void ShowCharacterExamineDisplay(IExaminable examinable, HumanInventory inventory, bool isSelf)
+        {
+            string displayName = ResolveDisplayName(inventory);
+            ExamineContent content = GetCachedContent(examinable);
+
+            if (IsDetailedExamineHeld())
+            {
+                // Health sections rebuild every frame while Shift is held so bleed/crit updates live.
+                string detailed = BuildCharacterDetailedText(content, inventory, isSelf);
+                if (!string.IsNullOrWhiteSpace(detailed))
+                {
+                    _genericView.ShowDetailedText(displayName, detailed);
+                    if (Mouse.current != null)
+                    {
+                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+                    }
+
+                    return;
+                }
+            }
+
+            _genericView.ShowHoverName(displayName);
+            if (Mouse.current != null)
+            {
+                _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
+            }
+        }
+
+        private static string BuildCharacterDetailedText(
+            ExamineContent content,
+            HumanInventory inventory,
+            bool isSelf)
+        {
+            StringBuilder builder = new();
+            string baseText = BuildDetailedText(content);
+            if (!string.IsNullOrEmpty(baseText))
+            {
+                builder.Append(baseText);
+            }
+
+            List<ExamineSection> healthSections = new();
+            CharacterExamineHealthBuilder.AppendSections(
+                ResolveHealthController(inventory),
+                isSelf,
+                healthSections);
+
+            foreach (ExamineSection section in healthSections)
+            {
+                if (string.IsNullOrWhiteSpace(section.Text))
+                {
+                    continue;
+                }
+
+                if (builder.Length > 0)
+                {
+                    builder.Append("\n\n");
+                }
+
+                builder.Append(section.Text);
+            }
+
+            return builder.ToString();
+        }
+
+        private static HumanHealthController ResolveHealthController(HumanInventory inventory)
+        {
+            if (inventory == null)
+            {
+                return null;
+            }
+
+            if (inventory.TryGetComponent(out HumanHealthController health))
+            {
+                return health;
+            }
+
+            health = inventory.GetComponentInParent<HumanHealthController>();
+            return health != null ? health : inventory.GetComponentInChildren<HumanHealthController>();
+        }
+
         private void RefreshGenericDisplay()
         {
             if (_genericView == null)
@@ -527,37 +619,27 @@ namespace SS3D.UI.Examine
                 return;
             }
 
+            // No-target Shift → self (examine.md §2 / health Tier 0+1).
             if (_currentExaminable?.GetData() == null)
             {
+                if (IsDetailedExamineHeld()
+                    && TryResolveLocalCharacter(out IExaminable selfExaminable, out HumanInventory selfInventory))
+                {
+                    ShowCharacterExamineDisplay(selfExaminable, selfInventory, isSelf: true);
+                    return;
+                }
+
                 _genericView.Hide();
                 InvalidateContentCache();
                 return;
             }
 
             // Prefer visible identity for characters (ID card) over the static ExamineData name.
-            // Hover = name; Shift = title + ExamineData details; Shift+Click paperdoll is others-only.
+            // Hover = name; Shift = details + health lines; Shift+Click paperdoll is others-only.
             if (_hoveredCharacterInventory != null)
             {
-                string displayName = ResolveDisplayName(_hoveredCharacterInventory);
-                ExamineContent content = GetCachedContent(_currentExaminable);
-
-                if (IsDetailedExamineHeld() && (content.HasDescription || content.Sections.Count > 0))
-                {
-                    _genericView.ShowDetailedText(displayName, BuildDetailedText(content));
-                    if (Mouse.current != null)
-                    {
-                        _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
-                    }
-
-                    return;
-                }
-
-                _genericView.ShowHoverName(displayName);
-                if (Mouse.current != null)
-                {
-                    _genericView.UpdateAnchor(Mouse.current.position.ReadValue());
-                }
-
+                bool isSelf = IsLocalPlayerInventory(_hoveredCharacterInventory);
+                ShowCharacterExamineDisplay(_currentExaminable, _hoveredCharacterInventory, isSelf);
                 return;
             }
 

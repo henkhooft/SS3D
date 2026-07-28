@@ -1212,6 +1212,94 @@ MonoBehaviour:
     m_Localized: Unidentified Crew Member
     m_Metadata:
       m_Items: []
+  - m_Id: 257391100000000001
+    m_Localized: You are dead.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000002
+    m_Localized: He is dead.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000003
+    m_Localized: You are in cardiac arrest.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000004
+    m_Localized: He is in cardiac arrest.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000005
+    m_Localized: You are in critical condition.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000006
+    m_Localized: He is in critical condition.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000007
+    m_Localized: You are unconscious.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000008
+    m_Localized: He is unconscious.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000009
+    m_Localized: Missing {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000010
+    m_Localized: Bleeding from the {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000011
+    m_Localized: '{0} is {1}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000012
+    m_Localized: '{0} is strained.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000013
+    m_Localized: '{0} is failing.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000014
+    m_Localized: '{0} is critically damaged.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000015
+    m_Localized: '{0} has failed.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000016
+    m_Localized: He seems to be hurt and bleeding from the {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000017
+    m_Localized: He seems to be bleeding from the {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000018
+    m_Localized: He seems to be hurt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000019
+    m_Localized: He is missing his {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000020
+    m_Localized: He is missing his {0} and seems to be hurt and bleeding from the {1}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000021
+    m_Localized: He is missing his {0} and seems to be bleeding from the {1}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 257391100000000022
+    m_Localized: He is missing his {0} and seems to be hurt.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
