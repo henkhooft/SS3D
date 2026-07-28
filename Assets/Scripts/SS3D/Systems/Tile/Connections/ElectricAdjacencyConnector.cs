@@ -3,6 +3,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Systems.Electricity;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace SS3D.Systems.Tile.Connections
 {
@@ -28,6 +29,7 @@ namespace SS3D.Systems.Tile.Connections
 
         public List<PlacedTileObject> GetNeighbours()
         {
+            Setup();
             return ElectricNeighbourLookup.GetNeighbours(PlacedObject);
         }
 
@@ -51,7 +53,7 @@ namespace SS3D.Systems.Tile.Connections
             if (placedObject == null)
                 return new List<PlacedTileObject>();
 
-            var neighbours = new HashSet<PlacedTileObject>();
+            HashSet<PlacedTileObject> neighbours = new HashSet<PlacedTileObject>();
             foreach (PlacedTileObject neighbour in GetElectricDevicesOnSameTile(placedObject))
             {
                 neighbours.Add(neighbour);
@@ -74,19 +76,28 @@ namespace SS3D.Systems.Tile.Connections
 
         private static List<PlacedTileObject> GetElectricDevicesOnSameTile(PlacedTileObject placedObject)
         {
-            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-            TileMap map = tileSystem.CurrentMap;
-
             List<PlacedTileObject> devicesOnSameTile = new();
+            if (placedObject == null || !SubSystems.TryGet(out TileSubSystem tileSystem))
+                return devicesOnSameTile;
 
-            TileChunk currentChunk = map.GetChunk(placedObject.gameObject.transform.position);
+            TileMap map = tileSystem.CurrentMap;
+            if (map == null)
+                return devicesOnSameTile;
+
+            // Prefer WorldOrigin — transform can lag; after TileMap.Clear the chunk dict is empty while
+            // FishNet despawn is still pending, so GetChunk may return null (MetaStation import). Hit 2026-07-28.
+            Vector3 worldPosition = new(placedObject.WorldOrigin.x, 0f, placedObject.WorldOrigin.y);
+            TileChunk currentChunk = map.GetChunk(worldPosition);
+            if (currentChunk == null)
+                return devicesOnSameTile;
+
             List<ITileLocation> deviceLocations = currentChunk.GetTileLocations(placedObject.Origin.x, placedObject.Origin.y);
 
             foreach (ITileLocation location in deviceLocations)
             {
                 foreach (PlacedTileObject tileObject in location.GetAllPlacedObject())
                 {
-                    if (tileObject.gameObject.TryGetComponent(out IElectricDevice device))
+                    if (tileObject != null && tileObject.gameObject.TryGetComponent(out IElectricDevice _))
                         devicesOnSameTile.Add(tileObject);
                 }
             }
@@ -98,10 +109,17 @@ namespace SS3D.Systems.Tile.Connections
 
         private static List<PlacedTileObject> GetNeighbourElectricDevicesOnSameLayer(PlacedTileObject placedObject)
         {
-            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            if (placedObject == null || !SubSystems.TryGet(out TileSubSystem tileSystem))
+                return new List<PlacedTileObject>();
+
             TileMap map = tileSystem.CurrentMap;
-            IEnumerable<PlacedTileObject> electricNeighbours = map.GetCardinalNeighbourPlacedObjects(placedObject.Layer,
-                placedObject.gameObject.transform.position).Where(x => x != null && x.gameObject.TryGetComponent(out IElectricDevice device));
+            if (map == null)
+                return new List<PlacedTileObject>();
+
+            Vector3 worldPosition = new(placedObject.WorldOrigin.x, 0f, placedObject.WorldOrigin.y);
+            IEnumerable<PlacedTileObject> electricNeighbours = map.GetCardinalNeighbourPlacedObjects(
+                    placedObject.Layer, worldPosition)
+                .Where(x => x != null && x.gameObject.TryGetComponent(out IElectricDevice _));
 
             return electricNeighbours.ToList();
         }

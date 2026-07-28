@@ -407,10 +407,13 @@ namespace SS3D.Systems.Electricity
         private void RebuildElectricGraph()
         {
             _electricityGraph.Clear();
+            TileMap map = SubSystems.TryGet(out TileSubSystem tileSystem) ? tileSystem.CurrentMap : null;
+
             for (int i = _registeredDevices.Count - 1; i >= 0; i--)
             {
                 IElectricDevice device = _registeredDevices[i];
-                if (device?.TileObject == null)
+                PlacedTileObject tileObject = device?.TileObject;
+                if (tileObject == null || IsOrphanedAfterMapClear(map, tileObject))
                 {
                     _registeredDevices.RemoveAt(i);
                     if (device is IPowerConsumer consumer)
@@ -420,6 +423,19 @@ namespace SS3D.Systems.Electricity
 
                 AddDeviceEdgesToGraph(device);
             }
+        }
+
+        /// <summary>
+        /// TileMap.Clear empties the chunk dictionary before FishNet finishes despawning devices.
+        /// Those zombies still report a non-null TileObject but have no chunk — prune them.
+        /// </summary>
+        private static bool IsOrphanedAfterMapClear(TileMap map, PlacedTileObject tileObject)
+        {
+            if (map == null)
+                return true;
+
+            Vector3 world = new(tileObject.WorldOrigin.x, 0f, tileObject.WorldOrigin.y);
+            return map.GetChunk(world) == null;
         }
 
         [Server]
@@ -444,6 +460,9 @@ namespace SS3D.Systems.Electricity
 
             foreach (PlacedTileObject neighbour in neighbours)
             {
+                if (neighbour == null)
+                    continue;
+
                 VerticeCoordinates neighbourCoordinates = ToCoordinates(neighbour);
                 if (!_electricityGraph.ContainsVertex(neighbourCoordinates))
                 {
