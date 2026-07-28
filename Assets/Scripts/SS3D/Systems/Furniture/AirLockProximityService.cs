@@ -4,6 +4,7 @@ using SS3D.Core;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Networking;
 using SS3D.Systems.Tile.MapEditor;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Systems.Furniture
@@ -14,6 +15,9 @@ namespace SS3D.Systems.Furniture
     /// </summary>
     public sealed class AirLockProximityService : MonoBehaviour
     {
+        private static readonly ProfilerMarker NearbyTickPerformanceMarker = new("SS3D.Airlock.NearbyTick");
+        private static readonly ProfilerMarker EmptyPassPerformanceMarker = new("SS3D.Airlock.EmptyPassSweep");
+
         private static AirLockProximityService _instance;
 
         private readonly Dictionary<Vector2Int, List<AirLockOpener>> _byCell = new();
@@ -120,34 +124,40 @@ namespace SS3D.Systems.Furniture
 
             _visitedScratch.Clear();
 
-            for (int p = 0; p < players.Count; p++)
+            using (NearbyTickPerformanceMarker.Auto())
             {
-                Entity entity = players[p];
-                if (entity == null)
-                    continue;
-
-                CollectNearby(entity.transform.position, _nearbyScratch);
-                for (int i = 0; i < _nearbyScratch.Count; i++)
+                for (int p = 0; p < players.Count; p++)
                 {
-                    AirLockOpener opener = _nearbyScratch[i];
-                    if (opener == null || !_visitedScratch.Add(opener))
+                    Entity entity = players[p];
+                    if (entity == null)
                         continue;
 
-                    opener.ServerUpdateProximityFromService();
+                    CollectNearby(entity.transform.position, _nearbyScratch);
+                    for (int i = 0; i < _nearbyScratch.Count; i++)
+                    {
+                        AirLockOpener opener = _nearbyScratch[i];
+                        if (opener == null || !_visitedScratch.Add(opener))
+                            continue;
+
+                        opener.ServerUpdateProximityFromService();
+                    }
                 }
             }
 
             // Doors that had occupants but no longer have nearby players still need an empty tick
             // so close timers schedule. Walk openers that were not visited this frame only if they
             // report needing an empty pass.
-            foreach (KeyValuePair<AirLockOpener, Vector2Int> pair in _openerCells)
+            using (EmptyPassPerformanceMarker.Auto())
             {
-                AirLockOpener opener = pair.Key;
-                if (opener == null || _visitedScratch.Contains(opener))
-                    continue;
+                foreach (KeyValuePair<AirLockOpener, Vector2Int> pair in _openerCells)
+                {
+                    AirLockOpener opener = pair.Key;
+                    if (opener == null || _visitedScratch.Contains(opener))
+                        continue;
 
-                if (opener.NeedsEmptyProximityPass)
-                    opener.ServerUpdateProximityFromService();
+                    if (opener.NeedsEmptyProximityPass)
+                        opener.ServerUpdateProximityFromService();
+                }
             }
         }
     }

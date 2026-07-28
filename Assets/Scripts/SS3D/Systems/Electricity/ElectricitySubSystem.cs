@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
@@ -28,6 +29,10 @@ namespace SS3D.Systems.Electricity
     /// </remarks>
     public partial class ElectricitySubSystem : NetworkSubSystem, ITileMutationObserver, IWorldReady
     {
+        private static readonly ProfilerMarker FixedUpdatePerformanceMarker = new("SS3D.Electricity.FixedUpdate");
+        private static readonly ProfilerMarker CircuitsTickPerformanceMarker = new("SS3D.Electricity.CircuitsTick");
+        private static readonly ProfilerMarker AreaPowerPerformanceMarker = new("SS3D.Electricity.AreaPower");
+
         public event Action WhenReady;
 
         /// <summary>
@@ -227,71 +232,80 @@ namespace SS3D.Systems.Electricity
         [Server]
         private void HandleFixedUpdate(ref EventContext context, in FixedUpdateEvent updateEvent)
         {
-            if (_circuitUpdatesSuspended)
-                return;
-
-            _timeElapsed += Time.deltaTime;
-
-            if (_timeElapsed > _tickRate)
+            using (FixedUpdatePerformanceMarker.Auto())
             {
-                HandleCircuitsUpdate();
-                RpcInvokeOnTick();
-                _timeElapsed = 0;
+                if (_circuitUpdatesSuspended)
+                    return;
+
+                _timeElapsed += Time.deltaTime;
+
+                if (_timeElapsed > _tickRate)
+                {
+                    HandleCircuitsUpdate();
+                    RpcInvokeOnTick();
+                    _timeElapsed = 0;
+                }
             }
         }
 
         [Server]
         public void HandleCircuitsUpdate()
         {
-            if (_graphIsDirty)
+            using (CircuitsTickPerformanceMarker.Auto())
             {
-                RebuildElectricGraph();
-                UpdateAllCircuitsTopology();
-                _graphIsDirty = false;
-            }
+                if (_graphIsDirty)
+                {
+                    RebuildElectricGraph();
+                    UpdateAllCircuitsTopology();
+                    _graphIsDirty = false;
+                }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                circuit.UpdateCableDistributionOnly(_tickRate);
-            }
+                foreach (Circuit circuit in _circuits)
+                {
+                    circuit.UpdateCableDistributionOnly(_tickRate);
+                }
 
-            UpdateAreaScopedPower();
+                UpdateAreaScopedPower();
 
-            foreach (Circuit circuit in _circuits)
-            {
-                circuit.ChargePendingProducerSurplus(_tickRate);
+                foreach (Circuit circuit in _circuits)
+                {
+                    circuit.ChargePendingProducerSurplus(_tickRate);
+                }
             }
         }
 
         [Server]
         private void UpdateAreaScopedPower()
         {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            using (AreaPowerPerformanceMarker.Auto())
             {
-                return;
-            }
-
-            EnsureApcConsumerIndex();
-
-            foreach (AreaRecord record in areaSubSystem.GetAllAreas())
-            {
-                if (record.Apc is not IApcChannelSource apc
-                    || record.Apc is not IPowerStorage apcStorage
-                    || record.Apc is not IElectricDevice apcDevice
-                    || !TryGetLiveTileObject(apcDevice, out _))
+                if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
                 {
-                    continue;
+                    return;
                 }
 
-                IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
-                List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
-                float demandKw = AreaApcPowerDistribution.SumPowerNeeded(activeConsumers);
-                float gridAvailableKw = GetAvailableGridSupplyForApc(apcDevice);
-                float gridDrawKw = Math.Min(demandKw, gridAvailableKw);
-                _lastApcGridAvailableKw[apc] = gridAvailableKw;
-                _lastApcGridInputKw[apc] = gridDrawKw;
-                TryGetCircuitForDevice(apcDevice)?.DrawGridPowerForArea(gridDrawKw, _tickRate);
-                AreaApcPowerDistribution.PowerAreaConsumers(apc, apcStorage, gridDrawKw, areaConsumers, activeConsumers, _tickRate);
+                EnsureApcConsumerIndex();
+
+                foreach (AreaRecord record in areaSubSystem.GetAllAreas())
+                {
+                    if (record.Apc is not IApcChannelSource apc
+                        || record.Apc is not IPowerStorage apcStorage
+                        || record.Apc is not IElectricDevice apcDevice
+                        || !TryGetLiveTileObject(apcDevice, out _))
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
+                    List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
+                    float demandKw = AreaApcPowerDistribution.SumPowerNeeded(activeConsumers);
+                    float gridAvailableKw = GetAvailableGridSupplyForApc(apcDevice);
+                    float gridDrawKw = Math.Min(demandKw, gridAvailableKw);
+                    _lastApcGridAvailableKw[apc] = gridAvailableKw;
+                    _lastApcGridInputKw[apc] = gridDrawKw;
+                    TryGetCircuitForDevice(apcDevice)?.DrawGridPowerForArea(gridDrawKw, _tickRate);
+                    AreaApcPowerDistribution.PowerAreaConsumers(apc, apcStorage, gridDrawKw, areaConsumers, activeConsumers, _tickRate);
+                }
             }
         }
 
