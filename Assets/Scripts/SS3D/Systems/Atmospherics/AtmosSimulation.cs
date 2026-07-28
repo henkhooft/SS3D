@@ -21,6 +21,8 @@ namespace SS3D.Systems.Atmospherics
         private readonly Dictionary<TileCoord, int> _coordToIndex = new();
         private readonly Dictionary<Vector2Int, int> _chunkKeyToIndex = new();
         private readonly HashSet<TileCoord> _pendingRefresh = new();
+        private readonly HashSet<int> _pendingActivate = new();
+        private readonly HashSet<int> _setScratch = new();
 
         private NativeArray<float> _molesRead;
         private NativeArray<float> _molesWrite;
@@ -32,6 +34,7 @@ namespace SS3D.Systems.Atmospherics
         private NativeArray<float> _energyScratch;
         private NativeArray<float> _burnIntensity;
         private NativeList<int> _activeCells;
+        private NativeList<int> _workingSet;
 
         private int _cellCount;
 
@@ -63,6 +66,7 @@ namespace SS3D.Systems.Atmospherics
             _mapId = mapId;
             _gasTypeCount = Mathf.Clamp(gasTypeCount, 1, AtmosConstants.MaxGasTypes);
             _activeCells = new NativeList<int>(Allocator.Persistent);
+            _workingSet = new NativeList<int>(Allocator.Persistent);
             _specificHeats = BuildSpecificHeats(specificHeats);
             _molarMasses = BuildMolarMasses(molarMasses);
         }
@@ -291,6 +295,8 @@ namespace SS3D.Systems.Atmospherics
 
                     meta.State = AtmosCellState.Active;
                     _cellMeta[cellIndex] = meta;
+                    _cellMetaWrite[cellIndex] = meta;
+                    QueueActivate(cellIndex);
                 }
             }
         }
@@ -316,7 +322,8 @@ namespace SS3D.Systems.Atmospherics
             if (_activeCells.Length == 0)
                 return;
 
-            ClearBurnIntensity();
+            BuildWorkingSet();
+            ClearBurnIntensityActiveOnly();
 
             int substeps = GetBreachSubsteps();
             float subDelta = deltaTime / substeps;
@@ -327,6 +334,8 @@ namespace SS3D.Systems.Atmospherics
                 RunReactJob(subDelta);
                 RunConductHeatJob(subDelta);
             }
+
+            RefreshActiveListFromWorkingSet();
         }
 
         public bool TryGetCellDebugInfo(TileCoord coord, out AtmosCellDebugInfo info)
@@ -452,6 +461,9 @@ namespace SS3D.Systems.Atmospherics
             if (_specificHeats.IsCreated) _specificHeats.Dispose();
             if (_molarMasses.IsCreated) _molarMasses.Dispose();
             if (_activeCells.IsCreated) _activeCells.Dispose();
+            if (_workingSet.IsCreated) _workingSet.Dispose();
+            _pendingActivate.Clear();
+            _setScratch.Clear();
         }
 
         private void InitCell(int cellIndex, TileCoord coord)
@@ -473,6 +485,7 @@ namespace SS3D.Systems.Atmospherics
             {
                 meta.State = AtmosCellState.Blocked;
                 _cellMeta[cellIndex] = meta;
+                _cellMetaWrite[cellIndex] = meta;
                 return;
             }
 
@@ -481,6 +494,7 @@ namespace SS3D.Systems.Atmospherics
                 meta.Temperature = AtmosConstants.SpaceTemperature;
                 meta.State = AtmosCellState.Vacuum;
                 _cellMeta[cellIndex] = meta;
+                _cellMetaWrite[cellIndex] = meta;
                 return;
             }
 
@@ -489,6 +503,8 @@ namespace SS3D.Systems.Atmospherics
             meta.State = AtmosCellState.Active;
 
             _cellMeta[cellIndex] = meta;
+            _cellMetaWrite[cellIndex] = meta;
+            QueueActivate(cellIndex);
         }
 
         private void RebuildChunkNeighbours(int baseIndex)
@@ -543,12 +559,71 @@ namespace SS3D.Systems.Atmospherics
 
         private void RebuildActiveList()
         {
+            _setScratch.Clear();
+            for (int i = 0; i < _activeCells.Length; i++)
+                _setScratch.Add(_activeCells[i]);
+
+            foreach (int cellIndex in _pendingActivate)
+                _setScratch.Add(cellIndex);
+
+            _pendingActivate.Clear();
             _activeCells.Clear();
-            for (int i = 0; i < _cellCount; i++)
+
+            foreach (int cellIndex in _setScratch)
             {
-                if (_cellMeta[i].IsSimulated)
-                    _activeCells.Add(i);
+                if (cellIndex < 0 || cellIndex >= _cellCount)
+                    continue;
+
+                if (_cellMeta[cellIndex].IsSimulated)
+                    _activeCells.Add(cellIndex);
             }
+        }
+
+        private void BuildWorkingSet()
+        {
+            _setScratch.Clear();
+            _workingSet.Clear();
+
+            for (int i = 0; i < _activeCells.Length; i++)
+            {
+                int cellIndex = _activeCells[i];
+                if (_setScratch.Add(cellIndex))
+                    _workingSet.Add(cellIndex);
+
+                for (int direction = 0; direction < 4; direction++)
+                {
+                    int neighbourIndex = _neighbours[cellIndex].Get(direction);
+                    if (neighbourIndex < 0 || neighbourIndex >= _cellCount)
+                        continue;
+
+                    if (_setScratch.Add(neighbourIndex))
+                        _workingSet.Add(neighbourIndex);
+                }
+            }
+        }
+
+        private void RefreshActiveListFromWorkingSet()
+        {
+            _activeCells.Clear();
+            for (int i = 0; i < _workingSet.Length; i++)
+            {
+                int cellIndex = _workingSet[i];
+                if (cellIndex < 0 || cellIndex >= _cellCount)
+                    continue;
+
+                if (_cellMeta[cellIndex].IsSimulated)
+                    _activeCells.Add(cellIndex);
+                else if (_burnIntensity.IsCreated)
+                    _burnIntensity[cellIndex] = 0f;
+            }
+        }
+
+        private void QueueActivate(int cellIndex)
+        {
+            if (cellIndex < 0 || cellIndex >= _cellCount)
+                return;
+
+            _pendingActivate.Add(cellIndex);
         }
 
         private int GetBreachSubsteps()
@@ -585,6 +660,7 @@ namespace SS3D.Systems.Atmospherics
             var job = new ShareGasJob
             {
                 ActiveCells = _activeCells.AsArray(),
+                WorkingSet = _workingSet.AsArray(),
                 MolesRead = _molesRead,
                 MolesWrite = _molesWrite,
                 CellMeta = _cellMeta,
@@ -592,6 +668,7 @@ namespace SS3D.Systems.Atmospherics
                 Neighbours = _neighbours,
                 SpecificHeat = _specificHeats,
                 EnergyScratch = _energyScratch,
+                BurnIntensity = _burnIntensity,
                 MaxGasTypes = AtmosConstants.MaxGasTypes,
                 GasTypeCount = _gasTypeCount,
                 DeltaTime = deltaTime,
@@ -599,7 +676,6 @@ namespace SS3D.Systems.Atmospherics
             };
 
             job.Schedule().Complete();
-            SwapSimulationBuffers();
         }
 
         private void RunReactJob(float deltaTime)
@@ -628,6 +704,7 @@ namespace SS3D.Systems.Atmospherics
             var job = new ConductHeatJob
             {
                 ActiveCells = _activeCells.AsArray(),
+                WorkingSet = _workingSet.AsArray(),
                 Moles = _molesRead,
                 CellMeta = _cellMeta,
                 Neighbours = _neighbours,
@@ -641,18 +718,19 @@ namespace SS3D.Systems.Atmospherics
             };
 
             job.Schedule().Complete();
-            SwapMetaBuffers();
         }
 
-        private void SwapSimulationBuffers()
+        private void ClearBurnIntensityActiveOnly()
         {
-            (_molesRead, _molesWrite) = (_molesWrite, _molesRead);
-            (_cellMeta, _cellMetaWrite) = (_cellMetaWrite, _cellMeta);
-        }
+            if (!_burnIntensity.IsCreated)
+                return;
 
-        private void SwapMetaBuffers()
-        {
-            (_cellMeta, _cellMetaWrite) = (_cellMetaWrite, _cellMeta);
+            for (int i = 0; i < _activeCells.Length; i++)
+            {
+                int cellIndex = _activeCells[i];
+                if (cellIndex >= 0 && cellIndex < _burnIntensity.Length)
+                    _burnIntensity[cellIndex] = 0f;
+            }
         }
 
         private void ResizeBuffers(int cellCount)
@@ -665,15 +743,6 @@ namespace SS3D.Systems.Atmospherics
             ResizeNativeArray(ref _neighbours, cellCount);
             ResizeNativeArray(ref _energyScratch, cellCount);
             ResizeNativeArray(ref _burnIntensity, cellCount);
-        }
-
-        private void ClearBurnIntensity()
-        {
-            if (!_burnIntensity.IsCreated)
-                return;
-
-            for (int i = 0; i < _burnIntensity.Length; i++)
-                _burnIntensity[i] = 0f;
         }
 
         private static void ResizeNativeArray<T>(ref NativeArray<T> array, int length) where T : struct

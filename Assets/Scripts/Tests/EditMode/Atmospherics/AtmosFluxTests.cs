@@ -271,6 +271,74 @@ namespace EditorTests.Atmospherics
             }
         }
 
+        [Test]
+        public void FullyAsleepSimulation_PreservesMolesAcrossIdleTicks()
+        {
+            const int size = 2;
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            InitializeSealedRoomSimulation(context, size, out AtmosSimulation simulation);
+            using (simulation)
+            {
+                for (int tick = 0; tick < 40; tick++)
+                    simulation.Tick(AtmosConstants.TickInterval);
+
+                Assert.AreEqual(0, simulation.ActiveCellCount, "Sealed equalized room should sleep");
+                float moles = simulation.GetTotalMoles();
+                Assert.Greater(moles, 0f);
+
+                for (int tick = 0; tick < 20; tick++)
+                    simulation.Tick(AtmosConstants.TickInterval);
+
+                Assert.AreEqual(0, simulation.ActiveCellCount);
+                Assert.AreEqual(moles, simulation.GetTotalMoles(), 0.01f);
+            }
+        }
+
+        [Test]
+        public void DistantInactiveCell_UnchangedWhenLocalCellForcedActive()
+        {
+            // Bare plenums vent to vacuum and empty — use two sealed rooms so sleep keeps gas.
+            const int interiorSize = 1;
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            TileMapTestUtilities.BuildWalledRoom(context, 0, 0, interiorSize);
+            TileMapTestUtilities.BuildWalledRoom(context, 8, 0, interiorSize);
+
+            using var simulation = new AtmosSimulation(context.Query, context.Map.MapId, AtmosConstants.DefaultGasCount);
+            simulation.CreateChunk(new TileChunkRef
+            {
+                MapId = context.Map.MapId,
+                ChunkKey = Vector2Int.zero,
+                Origin = Vector3.zero,
+            });
+
+            int outer = interiorSize + 2;
+            for (int x = 0; x < outer; x++)
+            {
+                for (int z = 0; z < outer; z++)
+                {
+                    simulation.UpdateCell(new TileCoord(context.Map.MapId, x, z));
+                    simulation.UpdateCell(new TileCoord(context.Map.MapId, 8 + x, z));
+                }
+            }
+
+            var near = new TileCoord(context.Map.MapId, 1, 1);
+            var far = new TileCoord(context.Map.MapId, 9, 1);
+
+            for (int tick = 0; tick < 40; tick++)
+                simulation.Tick(AtmosConstants.TickInterval);
+
+            float farOxygen = simulation.DebugGetMoles(far, AtmosConstants.Oxygen);
+            float farNitrogen = simulation.DebugGetMoles(far, AtmosConstants.Nitrogen);
+            Assert.Greater(farOxygen, 0f, "Far sealed room should retain station air after sleep");
+
+            simulation.DebugAddMoles(near, AtmosConstants.Oxygen, 5f);
+            for (int tick = 0; tick < 5; tick++)
+                simulation.Tick(AtmosConstants.TickInterval);
+
+            Assert.AreEqual(farOxygen, simulation.DebugGetMoles(far, AtmosConstants.Oxygen), 0.001f);
+            Assert.AreEqual(farNitrogen, simulation.DebugGetMoles(far, AtmosConstants.Nitrogen), 0.001f);
+        }
+
         private static void EvacuateInterior(int mapId, int interiorSize, AtmosSimulation simulation)
         {
             for (int x = 0; x < interiorSize; x++)
