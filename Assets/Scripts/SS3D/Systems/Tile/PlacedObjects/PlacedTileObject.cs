@@ -227,10 +227,14 @@ namespace SS3D.Systems.Tile
         {
             // Guard NetworkObject before IsClient — FishNet's IsClient reads _networkObjectCache
             // with no null check (same pitfall as bare IsServer). Hit opening Map Editor 2026-07-28.
-            if (NetworkObject == null || !NetworkObject.IsSpawned || !IsClient)
+            if (NetworkObject == null || !NetworkObject.IsSpawned)
+            {
+                if (IsMapEditorAuthoring())
+                    EnableAllChildRenderers();
                 return;
+            }
 
-            if (NetworkManager?.ClientManager == null)
+            if (!IsClient || NetworkManager?.ClientManager == null)
                 return;
 
             NetworkConnection localConnection = NetworkManager.ClientManager.Connection;
@@ -239,9 +243,35 @@ namespace SS3D.Systems.Tile
 
             bool visible = IsMapEditorAuthoring()
                 || NetworkObject.Observers.Contains(localConnection);
+
+            if (visible)
+            {
+                // FishNet SetRenderersVisible only toggles renderers that were enabled when its
+                // cache was first built. After AOI disables them, UpdateRenderers can shrink the
+                // cache to empty — walls often recover via adjacency churn; floors/plenums stay off.
+                // Re-enable children and rebuild the cache before asking FishNet to show them.
+                EnableAllChildRenderers();
+                NetworkObject.UpdateRenderers(false);
+            }
+
             NetworkObject.SetRenderersVisible(visible, force: true);
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
         }
+
+        private static void EnableAllChildRenderers(GameObject root)
+        {
+            if (root == null)
+                return;
+
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    renderers[i].enabled = true;
+            }
+        }
+
+        private void EnableAllChildRenderers() => EnableAllChildRenderers(gameObject);
 
         private static bool IsMapEditorAuthoring() =>
             SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive;
