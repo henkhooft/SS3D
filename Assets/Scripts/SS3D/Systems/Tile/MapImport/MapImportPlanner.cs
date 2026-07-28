@@ -6,12 +6,18 @@ using SS3D.Systems.Tile.MapImport.Dmm;
 namespace SS3D.Systems.Tile.MapImport
 {
     /// <summary>
-    /// Builds a placement plan (Plenum + structural SO) from parsed DMM cells.
+    /// Builds a placement plan (Plenum + structural + infrastructure overlays) from parsed DMM cells.
     /// Does not touch the live tilemap — safe for EditMode tests.
     /// </summary>
     public static class MapImportPlanner
     {
         public const string PlenumSoName = "Plenum";
+
+        // FurnitureBase is single-occupant: Vent > Scrubber > DisposalBin > DisposalOutlet.
+        private const int FurniturePriorityVent = 4;
+        private const int FurniturePriorityScrubber = 3;
+        private const int FurniturePriorityDisposalBin = 2;
+        private const int FurniturePriorityDisposalOutlet = 1;
 
         public static MapImportPlan Build(
             DmmMap map,
@@ -49,7 +55,8 @@ namespace SS3D.Systems.Tile.MapImport
                     continue;
                 }
 
-                if (!TryClassify(cell, mapper, out MapImportKind kind, out string soName, out Direction dir))
+                if (!TryBuildCell(cell, mapper, out MapImportKind structuralKind, out List<MapImportPlacement> placements,
+                        out OverlayCounts overlays))
                 {
                     plan.SkippedCells++;
                     continue;
@@ -62,17 +69,25 @@ namespace SS3D.Systems.Tile.MapImport
                     WorldX = cell.X - originX,
                     WorldZ = cell.Y - originY,
                 };
-                cellPlan.Placements.Add(new MapImportPlacement { SoName = PlenumSoName, Direction = Direction.North });
-                cellPlan.Placements.Add(new MapImportPlacement { SoName = soName, Direction = dir });
+                cellPlan.Placements.AddRange(placements);
                 plan.Cells.Add(cellPlan);
 
-                switch (kind)
+                switch (structuralKind)
                 {
                     case MapImportKind.Floor: plan.FloorCells++; break;
                     case MapImportKind.Wall: plan.WallCells++; break;
                     case MapImportKind.Window: plan.WindowCells++; break;
                     case MapImportKind.Door: plan.DoorCells++; break;
                 }
+
+                plan.CablePlacements += overlays.Cable;
+                plan.PipePlacements += overlays.Pipe;
+                plan.DisposalPlacements += overlays.Disposal;
+                plan.DisposalTerminalPlacements += overlays.DisposalTerminal;
+                plan.VentPlacements += overlays.Vent;
+                plan.ScrubberPlacements += overlays.Scrubber;
+                plan.ApcPlacements += overlays.Apc;
+                plan.LightPlacements += overlays.Light;
             }
 
             foreach (KeyValuePair<string, int> pair in mapper.UnmappedCounts)
@@ -81,22 +96,49 @@ namespace SS3D.Systems.Tile.MapImport
             return plan;
         }
 
-        private static bool TryClassify(
+        private struct OverlayCounts
+        {
+            public int Cable;
+            public int Pipe;
+            public int Disposal;
+            public int DisposalTerminal;
+            public int Vent;
+            public int Scrubber;
+            public int Apc;
+            public int Light;
+        }
+
+        private static bool TryBuildCell(
             DmmCell cell,
             Ss13TypeMapper mapper,
-            out MapImportKind kind,
-            out string soName,
-            out Direction dir)
+            out MapImportKind structuralKind,
+            out List<MapImportPlacement> placements,
+            out OverlayCounts overlays)
         {
-            kind = MapImportKind.Skip;
-            soName = string.Empty;
-            dir = Direction.North;
+            structuralKind = MapImportKind.Skip;
+            placements = new List<MapImportPlacement>();
+            overlays = default;
 
             Ss13TypeMatch? wall = null;
             Ss13TypeMatch? window = null;
             Ss13TypeMatch? door = null;
             Ss13TypeMatch? floor = null;
             Direction doorDir = Direction.North;
+
+            Ss13TypeMatch? cable = null;
+            Ss13TypeMatch? disposal = null;
+            Ss13TypeMatch? apc = null;
+            Ss13TypeMatch? light = null;
+            Direction apcDir = Direction.North;
+            Direction lightDir = Direction.North;
+
+            // Pipe SO name → best match (multi-layer OK when SO differs).
+            Dictionary<string, Ss13TypeMatch> pipesBySo = new Dictionary<string, Ss13TypeMatch>(StringComparer.Ordinal);
+
+            int furniturePriority = 0;
+            string furnitureSo = null;
+            Direction furnitureDir = Direction.North;
+            MapImportKind furnitureKind = MapImportKind.Skip;
 
             foreach (DmmAtom atom in cell.Atoms)
             {
@@ -112,46 +154,157 @@ namespace SS3D.Systems.Tile.MapImport
                         window = Prefer(window, match);
                         break;
                     case MapImportKind.Door:
-                        door = Prefer(door, match);
-                        doorDir = ResolveDirection(atom);
+                        if (TakeIfBetter(ref door, match))
+                            doorDir = ResolveDirection(atom);
                         break;
                     case MapImportKind.Floor:
                         floor = Prefer(floor, match);
+                        break;
+                    case MapImportKind.Cable:
+                        cable = Prefer(cable, match);
+                        break;
+                    case MapImportKind.Pipe:
+                    {
+                        string pipeSo = MapImportPipeResolver.Resolve(atom.Path, atom);
+                        var resolved = new Ss13TypeMatch(MapImportKind.Pipe, pipeSo, match.MatchedPrefix);
+                        if (!pipesBySo.TryGetValue(pipeSo, out Ss13TypeMatch existing) ||
+                            resolved.MatchedPrefix.Length > existing.MatchedPrefix.Length)
+                        {
+                            pipesBySo[pipeSo] = resolved;
+                        }
+
+                        break;
+                    }
+                    case MapImportKind.Disposal:
+                        disposal = Prefer(disposal, match);
+                        break;
+                    case MapImportKind.Vent:
+                        ConsiderFurniture(FurniturePriorityVent, match.SoName, ResolveDirection(atom),
+                            MapImportKind.Vent, ref furniturePriority, ref furnitureSo, ref furnitureDir, ref furnitureKind);
+                        break;
+                    case MapImportKind.Scrubber:
+                        ConsiderFurniture(FurniturePriorityScrubber, match.SoName, ResolveDirection(atom),
+                            MapImportKind.Scrubber, ref furniturePriority, ref furnitureSo, ref furnitureDir, ref furnitureKind);
+                        break;
+                    case MapImportKind.DisposalTerminal:
+                    {
+                        int priority = string.Equals(match.SoName, "DisposalBin", StringComparison.Ordinal)
+                            ? FurniturePriorityDisposalBin
+                            : FurniturePriorityDisposalOutlet;
+                        ConsiderFurniture(priority, match.SoName, ResolveDirection(atom),
+                            MapImportKind.DisposalTerminal, ref furniturePriority, ref furnitureSo, ref furnitureDir,
+                            ref furnitureKind);
+                        break;
+                    }
+                    case MapImportKind.Apc:
+                        if (TakeIfBetter(ref apc, match))
+                            apcDir = ResolveDirection(atom);
+                        break;
+                    case MapImportKind.Light:
+                        if (TakeIfBetter(ref light, match))
+                            lightDir = ResolveDirection(atom);
                         break;
                 }
             }
 
             // Turf layer is single-occupant: wall > window > door > floor.
+            string structuralSo;
+            Direction structuralDir = Direction.North;
             if (wall.HasValue)
             {
-                kind = MapImportKind.Wall;
-                soName = wall.Value.SoName;
-                return true;
+                structuralKind = MapImportKind.Wall;
+                structuralSo = wall.Value.SoName;
             }
-
-            if (window.HasValue)
+            else if (window.HasValue)
             {
-                kind = MapImportKind.Window;
-                soName = window.Value.SoName;
-                return true;
+                structuralKind = MapImportKind.Window;
+                structuralSo = window.Value.SoName;
             }
-
-            if (door.HasValue)
+            else if (door.HasValue)
             {
-                kind = MapImportKind.Door;
-                soName = door.Value.SoName;
-                dir = doorDir;
-                return true;
+                structuralKind = MapImportKind.Door;
+                structuralSo = door.Value.SoName;
+                structuralDir = doorDir;
             }
-
-            if (floor.HasValue)
+            else if (floor.HasValue)
             {
-                kind = MapImportKind.Floor;
-                soName = floor.Value.SoName;
-                return true;
+                structuralKind = MapImportKind.Floor;
+                structuralSo = floor.Value.SoName;
+            }
+            else
+            {
+                return false;
             }
 
-            return false;
+            placements.Add(new MapImportPlacement { SoName = PlenumSoName, Direction = Direction.North });
+            placements.Add(new MapImportPlacement { SoName = structuralSo, Direction = structuralDir });
+
+            if (cable.HasValue)
+            {
+                placements.Add(new MapImportPlacement { SoName = cable.Value.SoName, Direction = Direction.North });
+                overlays.Cable = 1;
+            }
+
+            foreach (KeyValuePair<string, Ss13TypeMatch> pipe in pipesBySo)
+            {
+                placements.Add(new MapImportPlacement { SoName = pipe.Key, Direction = Direction.North });
+                overlays.Pipe++;
+            }
+
+            if (disposal.HasValue)
+            {
+                placements.Add(new MapImportPlacement { SoName = disposal.Value.SoName, Direction = Direction.North });
+                overlays.Disposal = 1;
+            }
+
+            if (furnitureSo != null)
+            {
+                placements.Add(new MapImportPlacement { SoName = furnitureSo, Direction = furnitureDir });
+                switch (furnitureKind)
+                {
+                    case MapImportKind.Vent:
+                        overlays.Vent = 1;
+                        break;
+                    case MapImportKind.Scrubber:
+                        overlays.Scrubber = 1;
+                        break;
+                    case MapImportKind.DisposalTerminal:
+                        overlays.DisposalTerminal = 1;
+                        break;
+                }
+            }
+
+            if (apc.HasValue)
+            {
+                placements.Add(new MapImportPlacement { SoName = apc.Value.SoName, Direction = apcDir });
+                overlays.Apc = 1;
+            }
+
+            if (light.HasValue)
+            {
+                placements.Add(new MapImportPlacement { SoName = light.Value.SoName, Direction = lightDir });
+                overlays.Light = 1;
+            }
+
+            return true;
+        }
+
+        private static void ConsiderFurniture(
+            int priority,
+            string soName,
+            Direction dir,
+            MapImportKind kind,
+            ref int currentPriority,
+            ref string currentSo,
+            ref Direction currentDir,
+            ref MapImportKind currentKind)
+        {
+            if (priority <= currentPriority)
+                return;
+            currentPriority = priority;
+            currentSo = soName;
+            currentDir = dir;
+            currentKind = kind;
         }
 
         private static Ss13TypeMatch? Prefer(Ss13TypeMatch? current, Ss13TypeMatch next)
@@ -159,6 +312,18 @@ namespace SS3D.Systems.Tile.MapImport
             if (!current.HasValue)
                 return next;
             return next.MatchedPrefix.Length > current.Value.MatchedPrefix.Length ? next : current;
+        }
+
+        /// <summary>Updates <paramref name="current"/> when <paramref name="next"/> has a longer match. Returns whether it won.</summary>
+        private static bool TakeIfBetter(ref Ss13TypeMatch? current, Ss13TypeMatch next)
+        {
+            if (!current.HasValue || next.MatchedPrefix.Length > current.Value.MatchedPrefix.Length)
+            {
+                current = next;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -186,7 +351,6 @@ namespace SS3D.Systems.Tile.MapImport
 
         public static Direction FromByondDir(int byondDir)
         {
-            // Single-bit or legacy numeric.
             switch (byondDir)
             {
                 case 1: return Direction.North;

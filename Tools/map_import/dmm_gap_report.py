@@ -11,9 +11,26 @@ from pathlib import Path
 PREFAB_RE = re.compile(r'^"([^"]+)"\s*=\s*\(', re.M)
 PATH_RE = re.compile(r"(/[a-zA-Z0-9_/\-]+)")
 
+INFRA_KIND_DEFAULTS = {
+    "cable": "Cables",
+    "pipe": "AtmosPipesL3",
+    "disposal": "DisposalPipes",
+    "disposalterminal": "DisposalBin",
+    "vent": "Vent",
+    "scrubber": "Scrubber",
+    "apc": "APC",
+    "light": "LightTubeFixture",
+}
+
 
 def load_type_map(path: Path) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
-    defaults = {"floor": "TileGrey", "wall": "SteelWall", "window": "SteelWindow", "door": "CivillianAirlock"}
+    defaults = {
+        "floor": "TileGrey",
+        "wall": "SteelWall",
+        "window": "SteelWindow",
+        "door": "CivillianAirlock",
+        **INFRA_KIND_DEFAULTS,
+    }
     prefixes: list[tuple[str, str, str]] = []
     text = path.read_text(encoding="utf-8")
     current = None
@@ -43,7 +60,7 @@ def load_type_map(path: Path) -> tuple[dict[str, str], list[tuple[str, str, str]
             continue
         km = re.match(r"kind:\s*(\S+)", s)
         if km:
-            current = (current[0], km.group(1), current[2])
+            current = (current[0], km.group(1).lower(), current[2])
             continue
         sm = re.match(r"so:\s*(\S+)", s)
         if sm:
@@ -68,6 +85,26 @@ def match_path(path: str, prefixes: list[tuple[str, str, str]], defaults: dict[s
         return defaults["door"]
     if "/window" in path:
         return defaults["window"]
+    if path.startswith("/obj/structure/cable"):
+        return defaults["cable"]
+    if path.startswith("/obj/structure/disposalpipe"):
+        return defaults["disposal"]
+    if path.startswith("/obj/structure/disposaloutlet"):
+        return "DisposalOutlet"
+    if path.startswith("/obj/machinery/disposal"):
+        return defaults["disposalterminal"]
+    if path.startswith("/obj/machinery/atmospherics/components/unary/vent_scrubber"):
+        return defaults["scrubber"]
+    if path.startswith("/obj/machinery/atmospherics/components/unary/vent_pump"):
+        return defaults["vent"]
+    if path.startswith("/obj/machinery/atmospherics/pipe"):
+        return defaults["pipe"]
+    if path.startswith("/obj/machinery/power/apc"):
+        return defaults["apc"]
+    if path.startswith("/obj/machinery/light/small"):
+        return "LightBulbFixture"
+    if path.startswith("/obj/machinery/light"):
+        return defaults["light"]
     return ""
 
 

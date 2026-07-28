@@ -1,5 +1,9 @@
 # SS13 type path -> SS3D TileObjectSo name. Longest match wins.
 # Extend this file as gap reports show frequent unmapped paths.
+#
+# Pipe kind: so: is a fallback; MapImportPipeResolver overrides from path
+# network type (supply→AtmosPipesL1, scrubbers→L2, waste/general/yellow→L3)
+# or piping_layer 1–4 → L1–L4, else L3.
 
 defaults:
   floor: TileGrey
@@ -62,3 +66,35 @@ prefixes:
   - match: /obj/machinery/door
     kind: door
     so: CivillianAirlock
+
+  # --- Infrastructure (cables / pipes / disposals / fixtures) ---
+  - match: /obj/structure/cable
+    kind: cable
+    so: Cables
+  - match: /obj/structure/disposalpipe
+    kind: disposal
+    so: DisposalPipes
+  - match: /obj/structure/disposaloutlet
+    kind: disposalterminal
+    so: DisposalOutlet
+  - match: /obj/machinery/disposal
+    kind: disposalterminal
+    so: DisposalBin
+  - match: /obj/machinery/atmospherics/components/unary/vent_scrubber
+    kind: scrubber
+    so: Scrubber
+  - match: /obj/machinery/atmospherics/components/unary/vent_pump
+    kind: vent
+    so: Vent
+  - match: /obj/machinery/atmospherics/pipe
+    kind: pipe
+    so: AtmosPipesL3
+  - match: /obj/machinery/power/apc
+    kind: apc
+    so: APC
+  - match: /obj/machinery/light/small
+    kind: light
+    so: LightBulbFixture
+  - match: /obj/machinery/light
+    kind: light
+    so: LightTubeFixture

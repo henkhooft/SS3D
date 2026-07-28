@@ -7,5 +7,13 @@ namespace SS3D.Systems.Tile.MapImport
         Wall = 2,
         Window = 3,
         Door = 4,
+        Cable = 5,
+        Pipe = 6,
+        Disposal = 7,
+        DisposalTerminal = 8,
+        Vent = 9,
+        Scrubber = 10,
+        Apc = 11,
+        Light = 12,
     }
 }

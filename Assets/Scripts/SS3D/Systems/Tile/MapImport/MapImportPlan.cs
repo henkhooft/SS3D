@@ -37,6 +37,22 @@ namespace SS3D.Systems.Tile.MapImport
 
         public int DoorCells { get; set; }
 
+        public int CablePlacements { get; set; }
+
+        public int PipePlacements { get; set; }
+
+        public int DisposalPlacements { get; set; }
+
+        public int DisposalTerminalPlacements { get; set; }
+
+        public int VentPlacements { get; set; }
+
+        public int ScrubberPlacements { get; set; }
+
+        public int ApcPlacements { get; set; }
+
+        public int LightPlacements { get; set; }
+
         public int SkippedCells { get; set; }
 
         public Dictionary<string, int> UnmappedCounts { get; set; } =

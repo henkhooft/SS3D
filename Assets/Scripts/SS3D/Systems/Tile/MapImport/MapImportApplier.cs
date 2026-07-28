@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Logging;
+using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Electricity;
 using UnityEngine;
@@ -45,13 +46,22 @@ namespace SS3D.Systems.Tile.MapImport
 
             bool hasElectricity = SubSystems.TryGet(out ElectricitySubSystem electricity);
             bool hasAtmos = SubSystems.TryGet(out AtmosSubSystem atmos);
+            bool hasArea = SubSystems.TryGet(out AreaSubSystem area);
             bool priorAtmosPaused = false;
+            bool deferredAreaFlood = false;
+
             if (hasElectricity)
                 electricity.SuspendCircuitUpdates(true);
             if (hasAtmos)
             {
                 priorAtmosPaused = atmos.SimulationPaused;
                 atmos.SimulationPaused = true;
+            }
+
+            if (hasArea)
+            {
+                area.BeginDeferredAreaFlood();
+                deferredAreaFlood = true;
             }
 
             try
@@ -101,6 +111,9 @@ namespace SS3D.Systems.Tile.MapImport
             }
             finally
             {
+                // Flood after all turfs/APCs exist so seeds see complete walls.
+                if (deferredAreaFlood)
+                    area.EndDeferredAreaFlood();
                 if (hasElectricity)
                     electricity.SuspendCircuitUpdates(false);
                 if (hasAtmos)
@@ -138,6 +151,14 @@ namespace SS3D.Systems.Tile.MapImport
                 .Append(" walls=").Append(plan.WallCells)
                 .Append(" windows=").Append(plan.WindowCells)
                 .Append(" doors=").Append(plan.DoorCells)
+                .Append(" cables=").Append(plan.CablePlacements)
+                .Append(" pipes=").Append(plan.PipePlacements)
+                .Append(" disposals=").Append(plan.DisposalPlacements)
+                .Append(" disposalTerminals=").Append(plan.DisposalTerminalPlacements)
+                .Append(" vents=").Append(plan.VentPlacements)
+                .Append(" scrubbers=").Append(plan.ScrubberPlacements)
+                .Append(" apcs=").Append(plan.ApcPlacements)
+                .Append(" lights=").Append(plan.LightPlacements)
                 .Append(" skipped=").Append(plan.SkippedCells)
                 .Append(" placed=").Append(apply?.PlacedObjects ?? 0)
                 .Append(" missingAssets=").Append(apply?.MissingAssets ?? 0)

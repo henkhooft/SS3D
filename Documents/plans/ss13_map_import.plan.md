@@ -34,3 +34,4 @@ Implements floors/walls/windows/doors import from SS13 `.dmm` into the live tile
 - Type-map `so:` values must be `GenericObjectSo.NameString` (prefab name), e.g. `FancyCarpetRed` not `TileCarpet`.
 - Play Mode entry is `SS3D/Map Import/Import DMM…` (`MapImportWindow`).
 - EditMode: `DmmParserTests`, `MapImportPlannerTests` + `Fixtures/tiny_box.dmm`.
+- Infrastructure follow-on: [ss13_map_import_infrastructure.plan.md](ss13_map_import_infrastructure.plan.md) / [2026-07_ss13-map-import-infrastructure.md](../architecture/2026-07_ss13-map-import-infrastructure.md).

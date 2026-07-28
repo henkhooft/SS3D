@@ -53,7 +53,7 @@ namespace SS3D.Systems.Tile.MapImport
                 }
             }
 
-            // Heuristic fallbacks so a thin table still yields a shell.
+            // Heuristic fallbacks so a thin table still yields a shell + common infrastructure.
             if (path.StartsWith("/turf/closed/wall", StringComparison.Ordinal) ||
                 path.StartsWith("/turf/closed/r_wall", StringComparison.Ordinal))
             {
@@ -77,6 +77,66 @@ namespace SS3D.Systems.Tile.MapImport
             if (path.Contains("/window", StringComparison.Ordinal))
             {
                 match = new Ss13TypeMatch(MapImportKind.Window, _config.DefaultWindow, "(default window)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/cable", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Cable, "Cables", "(default cable)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/disposalpipe", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Disposal, "DisposalPipes", "(default disposal pipe)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/structure/disposaloutlet", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.DisposalTerminal, "DisposalOutlet", "(default disposal outlet)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/disposal", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.DisposalTerminal, "DisposalBin", "(default disposal bin)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/atmospherics/components/unary/vent_scrubber", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Scrubber, "Scrubber", "(default scrubber)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/atmospherics/components/unary/vent_pump", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Vent, "Vent", "(default vent)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/atmospherics/pipe", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Pipe, MapImportPipeResolver.AtmosPipesL3, "(default pipe)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/power/apc", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Apc, "APC", "(default apc)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/light/small", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Light, "LightBulbFixture", "(default light small)");
+                return true;
+            }
+
+            if (path.StartsWith("/obj/machinery/light", StringComparison.Ordinal))
+            {
+                match = new Ss13TypeMatch(MapImportKind.Light, "LightTubeFixture", "(default light)");
                 return true;
             }
 
