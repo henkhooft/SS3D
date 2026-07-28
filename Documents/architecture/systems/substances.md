@@ -1,37 +1,45 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Substances/
-> Entry points: SubstancesSubSystem, SubstanceContainer, TransferSubstanceInteraction
+> Entry points: SubstancesSubSystem, SubstanceContainer, ReactionResolver, TransferSubstanceInteraction, PourSubstanceInteraction
 > Status: partial
-> Verified: 3db3babca — 2026-07-24
+> Verified: 3a8a57f65 — 2026-07-28
 
 # Substances
 
 ## Overview
 
-Chemical substances, containers, and transfer interactions. Current tree is **legacy** (contents not fully synced; recipes dead) pending clean-slate [substances-foundation](../2026-07_substances-foundation.md). `TransferSubstanceInteraction` remains the Tier 2 armed proof-of-concept for [interactions-runtime](interactions-runtime.md). Keep container hot paths allocation-free (`AsReadOnly` pitfall below).
+Volume-first liquid vessels with networked mixture entries, pour-triggered fixed-ratio reactions, and container temperature. Clean-slate rewrite per [substances-foundation](../2026-07_substances-foundation.md). Chemistry gameplay (analyzer knowledge, bloodstream, machines) is deferred to MVP2.
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Substances/SubstancesSubSystem.cs` — subsystem entry point
-- `Assets/Scripts/SS3D/Systems/Substances/SubstanceContainer.cs` — networked substance storage; caches `AsReadOnly()` view once
-- `Assets/Scripts/SS3D/Systems/Substances/Interactions/TransferSubstanceInteraction.cs` — armed transfer (`ITargetedInteraction`, wire ID `TransferSubstance`)
+- `Assets/Scripts/SS3D/Systems/Substances/SubstancesSubSystem.cs` — registry + resolver + temperature tick + hazard stub
+- `Assets/Scripts/SS3D/Systems/Substances/SubstanceContainer.cs` — SyncList mixture; server-only `InitialMixture` seed
+- `Assets/Scripts/SS3D/Systems/Substances/ReagentDefinition.cs` / `ReagentRegistry.cs` — shared reagent record (atmos §3 fields included)
+- `Assets/Scripts/SS3D/Systems/Substances/ReactionResolver.cs` — indexed recipe match / near-miss / incompatible
+- `Assets/Scripts/SS3D/Systems/Substances/Interactions/TransferSubstanceInteraction.cs` — Tier 2 armed transfer
+- `Assets/Scripts/SS3D/Systems/Substances/Interactions/PourSubstanceInteraction.cs` — Tier 3 Combine pour
+- `Assets/Scripts/SS3D/Systems/Substances/SubstanceContainerExaminable.cs` — free properties only (color / approx volume / temp band)
+- `Assets/Content/Systems/Substances/CoreReagentRegistry.asset` — core reagents + vertical-slice recipes
+- Editor: `SS3D/Substances/Run Content Prefab Recipes` (`SubstancesContentPrefabRecipes`)
 
 ## Extension points
 
-- Add substance interactions via `IInteraction` on containers or tools; use `IInteractionTierProvider` when radial tier is not instant.
-- Targeted transfers: implement `ITargetedInteraction.CanTarget` for origin→target validation.
+- Add reagents/recipes via `ReagentRegistryGenerator` / registry asset; assign registry on hub `SubstancesSubSystem`.
+- Wire hazard consumers to `SubstanceContainer.HazardOccurred` (stub logs today).
+- Prefab consumers: register on `SubstancesContentPrefabSetup` / Human strip on `HumanPrefabRecipes`.
 
 ## Pitfalls
 
-- **GC on `SubstanceContainer.Substances`:** `List.AsReadOnly()` allocates a new wrapper every call. Cache the view; internal mutators (`IndexOfSubstance`, `RemoveSubstance`, volume recalcs) must use `_substances` directly. Heart bleed previously spiked GC through this property.
-- **Never seed `InitialSubstances` from Unity `Start` on clients:** `AddSubstance` → `_currentVolume` SyncVar. Pure clients writing it fail the smoke denylist. Use FishNet `OnStartServer` (clients receive contents via SyncVars). Hit: `OxygenTank(Clone)` / `SubstanceContainer` after empty map create.
+- **GC on mixture views:** do not call `List.AsReadOnly()` per hot read — container caches the view; mutators use `_working` / `_entries` directly.
+- **Never seed `InitialMixture` from Unity `Start` on clients:** SyncVar/SyncList writes must be server-only (`OnStartServer`). Pure clients writing fail the smoke denylist.
+- **Namespace is `SS3D.Systems.Substances`** (folder under `Systems/Substances/`). Legacy `SS3D.Substances` enum/SO stack is gone.
 
 ## Depends on / Used by
 
-- **Depends on:** [interactions-framework](interactions-framework.md), [inventory](inventory.md)
-- **Used by:** gas/drink tank prefabs (temporary); chemistry gameplay (deferred MVP2). Health blood is `SystemicPools`, not this container.
+- **Depends on:** [interactions-framework](interactions-framework.md), [inventory](inventory.md), [atmospherics](atmospherics.md) (ambient T sample), [examine](examine.md)
+- **Used by:** mug/soda/tank prefabs; chemistry gameplay (deferred MVP2). Health blood is `SystemicPools`, not this container. `GasDefinition.LinkedReagent` bridges atmos gases.
 
 ## Related docs
 
-- Effort (planned): [2026-07_substances-foundation.md](../2026-07_substances-foundation.md) — clean-slate Phases 0–2; chemistry gameplay deferred to MVP2
-- Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md) § Phase 3
+- Effort: [2026-07_substances-foundation.md](../2026-07_substances-foundation.md) — shipped
+- Plan: [substances_foundation_implementation.plan.md](../../plans/substances_foundation_implementation.plan.md)
 - Design (read-only): [Documents/design/chemistry.md](../../design/chemistry.md)

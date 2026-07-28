@@ -16,7 +16,7 @@ MonoBehaviour:
   _displayName: Oxygen
   _molarMass: 32
   _specificHeat: 2
-  _linkedSubstance: {fileID: 0}
+  _linkedReagent: {fileID: 0}
   _visualProfile:
     ScatterColor: {r: 0, g: 0, b: 0, a: 0}
     ScatterStrength: 0

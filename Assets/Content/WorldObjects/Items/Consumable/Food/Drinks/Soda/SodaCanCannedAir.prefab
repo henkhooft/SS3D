@@ -17,8 +17,16 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: d5ed3684908f1d846815d39a4ae98418, type: 2}
     - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
-      propertyPath: InitialSubstances.Array.size
-      value: 0
+      propertyPath: _initialMixture.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
+      propertyPath: _initialMixture.Array.data[0].ReagentId
+      value: oxygen
+      objectReference: {fileID: 0}
+    - target: {fileID: -1409642175327164469, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
+      propertyPath: _initialMixture.Array.data[0].VolumeMl
+      value: 330
       objectReference: {fileID: 0}
     - target: {fileID: 1335663030982295525, guid: 56ac854f77351fa46b6a17fbb1cf45d9, type: 3}
       propertyPath: key

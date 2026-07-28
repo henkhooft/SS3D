@@ -136,6 +136,7 @@ GameObject:
   - component: {fileID: 5783006074201076845}
   - component: {fileID: 874141704920938506}
   - component: {fileID: 6104096848888808967}
+  - component: {fileID: 504346258757062986}
   - component: {fileID: 3483542684610536844}
   - component: {fileID: 3278785340214204199}
   - component: {fileID: 3379094397588441500}
@@ -376,11 +377,26 @@ MonoBehaviour:
   _componentIndexCache: 2
   _addedNetworkObject: {fileID: 7958861831329766982}
   _networkObjectCache: {fileID: 7958861831329766982}
-  InitialSubstances: []
-  _currentVolume: 0
-  _volume: 0
+  _initialMixture: []
+  _defaultVolumeMl: 100
+  _capacityMl: 100
+  _currentVolumeMl: 0
+  _temperatureKelvin: 293.15
   _locked: 0
   _initialised: 0
+--- !u!114 &504346258757062986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5261116577612792016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe0cfc84237a41ed880792eefddebdc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _container: {fileID: 6104096848888808967}
 --- !u!54 &3483542684610536844
 Rigidbody:
   m_ObjectHideFlags: 0

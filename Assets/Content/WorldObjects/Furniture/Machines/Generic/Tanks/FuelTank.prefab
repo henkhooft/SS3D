@@ -94,6 +94,7 @@ GameObject:
   - component: {fileID: 1698900335226549537}
   - component: {fileID: 5323246766978482323}
   - component: {fileID: 6576855241110462844}
+  - component: {fileID: 808270407970017625}
   - component: {fileID: 9000000000000000002}
   m_Layer: 0
   m_Name: Body
@@ -217,13 +218,28 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: -5414623717715724467}
   _networkObjectCache: {fileID: 0}
-  InitialSubstances:
-  - Substance: {fileID: 11400000, guid: eb64330868659384a8bb211f08e1005f, type: 2}
-    MilliMoles: 1000
-  _currentVolume: 100
-  _volume: 100
+  _initialMixture:
+  - ReagentId: diesel
+    VolumeMl: 5000
+  _defaultVolumeMl: 5000
+  _capacityMl: 5000
+  _currentVolumeMl: 0
+  _temperatureKelvin: 293.15
   _locked: 0
   _initialised: 0
+--- !u!114 &808270407970017625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4379219507269237858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe0cfc84237a41ed880792eefddebdc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _container: {fileID: 6576855241110462844}
 --- !u!114 &9000000000000000002
 MonoBehaviour:
   m_ObjectHideFlags: 0

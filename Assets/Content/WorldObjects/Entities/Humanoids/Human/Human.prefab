@@ -7229,8 +7229,6 @@ GameObject:
   - component: {fileID: 1089183168752255729}
   - component: {fileID: 6258404136566216916}
   - component: {fileID: 5283895024578974260}
-  - component: {fileID: 4073266545982979633}
-  - component: {fileID: 6282983976573159881}
   - component: {fileID: 8358346980019529144}
   - component: {fileID: 8703868999579586524}
   - component: {fileID: -4713880493128437662}
@@ -7305,7 +7303,6 @@ MonoBehaviour:
   - {fileID: 1089183168752255729}
   - {fileID: 6258404136566216916}
   - {fileID: 5283895024578974260}
-  - {fileID: 6282983976573159881}
   - {fileID: 8358346980019529144}
   - {fileID: 9100001001}
   - {fileID: 9100001002}
@@ -7775,40 +7772,6 @@ MonoBehaviour:
   ViewPoint: {fileID: 5083048957016572449}
   _mind: {fileID: 0}
   Ghost: {fileID: 2798955099631966591, guid: 7bbb74a7ffc8cae44baa886de43c586b, type: 3}
---- !u!114 &4073266545982979633
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6415765038646171405}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d17d7c7ed1d434c44b24c5cb1374f848, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _container: {fileID: 6282983976573159881}
-  Substances: []
---- !u!114 &6282983976573159881
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6415765038646171405}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a85f26fb7523bc4fadefb445dc09f8c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _componentIndexCache: 11
-  _addedNetworkObject: {fileID: 2930813178971533500}
-  _networkObjectCache: {fileID: 2930813178971533500}
-  InitialSubstances: []
-  _currentVolume: 0
-  _volume: 0
-  _locked: 0
-  _initialised: 0
 --- !u!114 &8358346980019529144
 MonoBehaviour:
   m_ObjectHideFlags: 0
