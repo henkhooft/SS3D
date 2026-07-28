@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,15 +29,51 @@ namespace SS3D.Systems.Tile.MapImport
 
     /// <summary>
     /// Applies a <see cref="MapImportPlan"/> to the live tilemap (Play Mode / server).
+    /// Prefer <see cref="ApplyRoutine"/> for large maps — a full MetaStation place on the main
+    /// thread without yields starves FishNet heartbeats and drops the Host local client.
     /// </summary>
     public static class MapImportApplier
     {
+        /// <summary>Placements between <c>yield return null</c> so transport / Editor can tick.</summary>
+        public const int YieldEveryPlacements = 64;
+
         public static MapImportApplyResult Apply(
             MapImportPlan plan,
             TileMap map,
             TileSubSystem tileSystem,
             bool clearMap,
             string unmappedReportPath = null)
+        {
+            MapImportApplyResult result = null;
+            IEnumerator routine = ApplyRoutine(plan, map, tileSystem, clearMap, unmappedReportPath,
+                onComplete: r => result = r, onProgress: null, yieldFrames: false);
+            while (routine.MoveNext())
+            {
+            }
+
+            return result;
+        }
+
+        public static IEnumerator ApplyRoutine(
+            MapImportPlan plan,
+            TileMap map,
+            TileSubSystem tileSystem,
+            bool clearMap,
+            string unmappedReportPath = null,
+            Action<MapImportApplyResult> onComplete = null,
+            Action<string> onProgress = null) =>
+            ApplyRoutine(plan, map, tileSystem, clearMap, unmappedReportPath, onComplete, onProgress,
+                yieldFrames: true);
+
+        private static IEnumerator ApplyRoutine(
+            MapImportPlan plan,
+            TileMap map,
+            TileSubSystem tileSystem,
+            bool clearMap,
+            string unmappedReportPath,
+            Action<MapImportApplyResult> onComplete,
+            Action<string> onProgress,
+            bool yieldFrames)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
@@ -73,19 +110,27 @@ namespace SS3D.Systems.Tile.MapImport
                 deferredDisposal = true;
             }
 
+            MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
+
             try
             {
                 if (clearMap)
                 {
+                    onProgress?.Invoke("Clearing map…");
                     map.Clear();
                     if (hasElectricity)
                         electricity.ClearRegisteredDevices();
+                    if (yieldFrames)
+                        yield return null;
                 }
 
-                MapImportApplyResult result = new MapImportApplyResult { CellCount = plan.Cells.Count };
+                int sinceYield = 0;
+                int cellIndex = 0;
+                int cellTotal = plan.Cells.Count;
 
                 foreach (MapImportCellPlan cell in plan.Cells)
                 {
+                    cellIndex++;
                     foreach (MapImportPlacement placement in cell.Placements)
                     {
                         if (tileSystem.GetAsset(placement.SoName) is not TileObjectSo so)
@@ -104,12 +149,26 @@ namespace SS3D.Systems.Tile.MapImport
                         map.PlaceTileObject(so, world, placement.Direction,
                             skipBuildCheck: true, replaceExisting: true, skipAdjacency: true, out _);
                         result.PlacedObjects++;
+                        sinceYield++;
+
+                        if (yieldFrames && sinceYield >= YieldEveryPlacements)
+                        {
+                            sinceYield = 0;
+                            onProgress?.Invoke($"Placing {cellIndex}/{cellTotal} cells ({result.PlacedObjects} objects)…");
+                            yield return null;
+                        }
                     }
                 }
 
+                onProgress?.Invoke("Refreshing adjacencies…");
+                if (yieldFrames)
+                    yield return null;
                 map.RefreshAllAdjacencies();
+
+                onProgress?.Invoke("Rebuilding observers…");
+                if (yieldFrames)
+                    yield return null;
                 RebuildHostObservers(map);
-                // Host MeshRenderers follow HashGrid AOI unless Map Editor is open (free-fly authoring).
                 map.RefreshAllHostVisibility();
 
                 if (!string.IsNullOrEmpty(unmappedReportPath))
@@ -118,7 +177,9 @@ namespace SS3D.Systems.Tile.MapImport
                     result.ReportPath = unmappedReportPath;
                 }
 
-                return result;
+                onProgress?.Invoke("Finalizing area / disposal…");
+                if (yieldFrames)
+                    yield return null;
             }
             finally
             {
@@ -133,6 +194,9 @@ namespace SS3D.Systems.Tile.MapImport
                 if (hasAtmos)
                     atmos.SimulationPaused = priorAtmosPaused;
             }
+
+            onProgress?.Invoke("Done.");
+            onComplete?.Invoke(result);
         }
 
         private static void RebuildHostObservers(TileMap map)
@@ -173,6 +237,9 @@ namespace SS3D.Systems.Tile.MapImport
                 .Append(" scrubbers=").Append(plan.ScrubberPlacements)
                 .Append(" apcs=").Append(plan.ApcPlacements)
                 .Append(" lights=").Append(plan.LightPlacements)
+                .Append(" lattices=").Append(plan.LatticePlacements)
+                .Append(" tables=").Append(plan.TablePlacements)
+                .Append(" smes=").Append(plan.SmesPlacements)
                 .Append(" skipped=").Append(plan.SkippedCells)
                 .Append(" placed=").Append(apply?.PlacedObjects ?? 0)
                 .Append(" missingAssets=").Append(apply?.MissingAssets ?? 0)
