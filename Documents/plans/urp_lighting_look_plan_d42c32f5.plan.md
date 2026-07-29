@@ -4,7 +4,7 @@ overview: Restore SS3D's distinctive half-toon station look on URP 17 Forward+ i
 todos:
   - id: ambient-baseline
     content: "Phase 1a: Zero ambient in Game scene, disable SSAO, tune URP asset for fixture-forward lighting"
-    status: pending
+    status: completed
   - id: half-toon-shader
     content: "Phase 1b: URP half-toon — ramp texture, tinted shadow band, specular tuning in STCore.hlsl"
     status: pending
@@ -261,3 +261,7 @@ Per [AGENTS.md](AGENTS.md), run the `update-system-docs` skill:
 ## Suggested implementation order (todos)
 
 Phase 1 is parallelizable across shader author, environment artist, and volume tuning. After visual validation, proceed directly to Phase 3 (Area lighting states) when Area subsystem is ready. Phase 2 remains on the shelf unless profiling demands it.
+
+## Implementation notes
+
+- **2026-07-29:** `ambient-baseline` marked completed — SSAO disabled on `SS3D_ForwardPlusRenderer` (`m_Active: 0`). Zero ambient / fixture-forward URP baseline was already in place. DepthNormals prepass **kept** for DBuffer + Decal Layers (blood); do not remove with SSAO. See [systems/rendering.md](../architecture/systems/rendering.md) Pitfalls.

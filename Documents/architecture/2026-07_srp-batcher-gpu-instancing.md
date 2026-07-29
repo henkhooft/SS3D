@@ -13,6 +13,7 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 ### Materials
 
 - Enabled `m_EnableInstancingVariants` on ST floor mats: TileGrey, GreyDark, Bar, Kitchen, Wood, Reinforced (TilePlating / Palette already on).
+- `GenericShadeless` (URP Unlit — airlock door-light submesh) instancing On — Frame Debugger Unlit instances rose; door leaf Mesh events dropped (~70→~28).
 - Left URP Lit overlays / TileWhite for a later shader migration.
 
 ### Adjacency `sharedMesh`
@@ -52,15 +53,17 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 ## Verification (Play Mode)
 
 - Frame Debugger on Metastation (Map Editor closed): identical TileGrey floors should GPU-instance / SRP-batch; damaged walls may still split.
-- Re-export Profiler under `Logs/perf/` (`metastation-play`) — expect `Render.Mesh` / `ApplyShader` down vs `capture-20260728-164634` / post-underfloor baseline.
+- After probe Off + GenericShadeless instancing: expect “material doesn't have GPU instancing” gone; remaining named breaks ≈ different meshes + non-instanced props (emissive MPBs). STDefault draw/instance ratio stays high until mesh combine.
+- Re-export Profiler under `Logs/perf/` — expect `Render.Mesh` / `ApplyShader` down vs early Metastation baselines; Vision/Atmos/Electricity markers still dominate CPU when present.
 - Hover/examine/interaction pick still resolves on floors and doors.
-- After frustum cull: `SS3D Selection Pick` should drop vs `capture-20260728-181845` when zoomed in (AOI still large).
+- After frustum cull: `SS3D Selection Pick` should stay tiny in Frame Debugger feature hits (~1).
 
 ## Explicitly deferred
 
-- Chunk-/room-combined floor meshes.
+- Chunk-/room-combined floor meshes (main remaining ST GPU-instancing wall).
 - TileWhite / overlay Lit → STDefault.
 - GPU Resident Drawer (stays off — Linux/OpenGL).
+- Narrowing `ConsumerPowerVisual` / fixture MPBs off shared Palette bodies (incremental only).
 
 ## Related docs
 

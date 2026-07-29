@@ -40,6 +40,8 @@ Treat as secondary unless they dominate **and** the scenario is explicitly rende
 - UI Toolkit overlay draws during condemned-panel work
 - Editor-only Gizmo / Handles events when inspecting Scene view (prefer Game view capture)
 - OpenGL captures with suspiciously low `event_count` (re-run on Vulkan)
+- **DepthNormals prepass** when Decal Layers / DBuffer are on — expected cost for blood; SSAO off does **not** remove it
+- Absent SSAO passes after Forward+ `ScreenSpaceAmbientOcclusion` disabled — intentional
 
 ## Prerequisites
 

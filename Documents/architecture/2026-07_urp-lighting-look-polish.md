@@ -24,7 +24,7 @@ reference screenshots — without breaking dark rooms, emergency cones, or inven
 | Floor normals (derivative TBN) | `STFragment.hlsl`, floor mats |
 | Dual fixture lights (Spot + PointFill) | `LightTubeFixture` / `LightBulbFixture`, `LightPower` |
 | Emergency: dim short-range spot, fill **off** | `LightPower` |
-| Gameplay volume + SSAO | `SS3D_GameplayVolumeProfile`, Forward+ renderer |
+| Gameplay volume + SSAO | `SS3D_GameplayVolumeProfile`, Forward+ renderer — **SSAO `m_Active: 0`** (Jul 2026; DepthNormals kept for Decal Layers) |
 | Icon preview lights | `RuntimePreviewGenerator` |
 
 ## Critical constraint — do not copy Built-in intensities
@@ -66,7 +66,7 @@ Prefer those over the brief 857-literal prefab numbers (wall-hug point + intensi
 - [ ] Spot angle/range for contact shadows without washing walls
 - [ ] MKII grade on URP: bloom ~2.5 / threshold ~0.8; contrast/sat ~10; warm filter;
       Custom tonemapper → nearest is Neutral or carefully used ACES (no Custom in URP)
-- [ ] SSAO intensity/radius vs muddy midtones (design doc deprioritizes AO; reference used it)
+- [x] SSAO intensity/radius vs muddy midtones — **SSAO disabled** Jul 2026 (design deprioritizes AO; little visual change under half-toon; DepthNormals kept for Decal Layers)
 - [ ] Floor specular vs prop `Palette` specular (keep characters `_SpecIntensity: 0`)
 - [ ] Confirm `NormalOnly` fixtures extinguish in Emergency; only `EmergencyCapable` stay on
 - [ ] Optional: full 857-style atten curve in half-toon additional lights
@@ -74,9 +74,9 @@ Prefer those over the brief 857-literal prefab numbers (wall-hug point + intensi
 ## Divergence from design
 
 [Documents/design/rendering-lighting.md](../design/rendering-lighting.md) §8 prefers Neutral
-tonemap and treats AO as mostly moot. This branch chased the **reference screenshot**
-(SSAO on, filmic grade experiments) per owner direction — record plate decisions here /
-in [systems/rendering.md](systems/rendering.md), do not edit the design doc.
+tonemap and treats AO as mostly moot. Earlier plate experiments chased the **reference screenshot**
+(SSAO on, filmic grade). **Jul 2026:** SSAO off on Forward+ again — record in
+[systems/rendering.md](systems/rendering.md); do not edit the design doc.
 
 ## Out of scope for polish pass
 

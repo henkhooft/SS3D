@@ -62,3 +62,4 @@ writes `Logs/framedebug/_contract-fixture.md`.
 - Internal API — field / method names can change across Unity minors; reflection discover errors surface as dialogs.
 - Full export GPU-replays up to 800 draw events (~2 editor frames each); large Metastation frames may truncate.
 - Quick mode cannot report batch-break strings or real shader names.
+- Full mode can report `detail_hits: 0` if GPU replay fails to populate event data — treat Batch breaks / Shader tables as missing and re-export; pass distribution from Quick path is still valid.
