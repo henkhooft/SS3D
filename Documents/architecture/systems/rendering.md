@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 620ac632 — 2026-07-29 (Frame Debugger AI export tooling)
+> Verified: 13d451ee9 — 2026-07-29 (Content probe-off recipe + bulk prefab hygiene)
 
 # Rendering
 
@@ -29,6 +29,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - `Assets/Content/Resources/Simple Toon/Shaders/ObjectIcon.shader` — unlit bright full-toon for UI icon previews
 - `Assets/Scripts/SS3D/Utils/IconPreviewGenerator.cs` — ObjectIcon material swap for UI icon previews
 - `Assets/Settings/URP/` — pipeline asset and Forward+ renderer (includes Decal Renderer feature)
+- **SS3D/Rendering/Run Content Prefab Recipes** — `RendererProbeUsageSetup` (light/reflection probes Off on Content prefabs)
 
 ## Extension points
 
@@ -39,6 +40,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 ## Pitfalls
 
 - **Permanent MaterialPropertyBlocks break SRP Batcher:** any MPB on a MeshRenderer (e.g. old Selectable `_SelectionColor`, Intact white integrity tint) drops that draw out of the SRP Batcher path. Selection pick uses transient MPB on `DrawMesh` via `SelectionPickContext`; intact integrity clears MPBs. Hit 2026-07-28 (Metastation).
+- **Light/reflection probes block GPU instancing:** BlendProbes (and reflection probes) inject per-renderer non-instanced data — Frame Debugger shows "Non-instanced properties set for instanced shader." SS3D does not use probe lighting; keep `LightProbeUsage` / `ReflectionProbeUsage` **Off** on Content renderers via **SS3D/Rendering/Run Content Prefab Recipes** (`RendererProbeUsageSetup`). Hit 2026-07-29.
 - **Selection `DrawMesh` needs explicit frustum cull:** HashGrid AOI ≠ camera frustum. Pick collect must `TestPlanesAABB` against the request camera (`IsInPickFrustum`) or Metastation pays full-AOI pick draws. See [selection](selection.md). Hit 2026-07-28.
 - **GPU Instancing needs the material flag:** ST shaders compile instancing variants, but assets need `enableInstancing` / `m_EnableInstancingVariants: 1`. Floor ST mats were flipped in [srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md).
 - **GPU Resident Drawer on Linux/OpenGL:** `m_GPUResidentDrawerMode` must stay **Disabled** (`0`) on `SS3D_URPAsset`. Instanced Drawing requires `BatchBufferTarget.RawBuffer`; unsupported APIs spam the warning every rebuild. Do not re-enable in `URPFoundationSetup` without checking the active graphics API. Do not confuse with classic GPU Instancing / SRP Batcher (still on).
@@ -61,4 +63,5 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
 - Effort (shipped): [2026-07_srp-batcher-gpu-instancing.md](../2026-07_srp-batcher-gpu-instancing.md)
 - Effort (shipped): [2026-07_unity-framedebug-ai-tooling.md](../2026-07_unity-framedebug-ai-tooling.md) — Frame Debugger → `Logs/framedebug/` markdown
+- Content recipe: **SS3D/Rendering/Run Content Prefab Recipes** (`RendererProbeUsageSetup` — probes Off for GPU instancing)
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)

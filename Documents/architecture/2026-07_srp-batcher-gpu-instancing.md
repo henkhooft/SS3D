@@ -36,9 +36,17 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 - Use `Renderer.SetPropertyBlock` (typically `_Lumin` + `_EmissionColor`, and the shader’s base-color property for indicators) so SRP Batcher can keep draws grouped.
 - Fixed in code: `LightPower`, `LightSwitchController`, `ConsumerPowerVisual`, `AirLockOpener`, `AirAlarmController`.
 
+### Light / reflection probes Off
+
+- SS3D does not use probe lighting. BlendProbes on MeshRenderers showed up as Frame Debugger
+  "Non-instanced properties set for instanced shader" and blocked GPU instancing on ST/Palette.
+- Content recipe: **SS3D/Rendering/Run Content Prefab Recipes** → `RendererProbeUsageSetup`
+  (all `Assets/Content` prefab renderers → `LightProbeUsage` / `ReflectionProbeUsage` Off).
+- Bulk applied Jul 2026 (~188 prefabs); EditMode guard on TileGrey / SteelWall / window / airlock samples.
+
 ### EditMode
 
-- `SrpBatcherInstancingTests` — floor mat instancing flags, adjacency sharedMesh, Selectable no permanent MPB.
+- `SrpBatcherInstancingTests` — floor mat instancing flags, adjacency sharedMesh, Selectable no permanent MPB, station structure probes Off.
 - `StructuralIntegrityPresentationTests.Presenter_ApplyIntact_ClearsMaterialPropertyBlock`.
 
 ## Verification (Play Mode)

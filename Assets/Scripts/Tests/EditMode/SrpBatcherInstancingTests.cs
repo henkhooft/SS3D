@@ -7,6 +7,7 @@ using SS3D.Systems.Tile.Connections.AdjacencyTypes;
 using SS3D.Tests;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace EditorTests
 {
@@ -33,6 +34,39 @@ namespace EditorTests
                 Assert.IsTrue(
                     material.enableInstancing,
                     $"{path} must have GPU Instancing enabled");
+            }
+        }
+
+        [Test]
+        public void StationStructurePrefabs_HaveLightAndReflectionProbesOff()
+        {
+            string[] paths =
+            {
+                "Assets/Content/WorldObjects/Structures/Floors/Tiles/Steel/TileGrey.prefab",
+                "Assets/Content/WorldObjects/Structures/Walls/SteelWall.prefab",
+                "Assets/Content/WorldObjects/Structures/Walls/SteelWindow.prefab",
+                "Assets/Content/WorldObjects/Structures/Doors/CivillianAirlock.prefab",
+            };
+
+            foreach (string path in paths)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Assert.IsNotNull(prefab, path);
+
+                Renderer[] renderers = prefab.GetComponentsInChildren<Renderer>(true);
+                Assert.Greater(renderers.Length, 0, $"{path} should have renderers");
+
+                foreach (Renderer renderer in renderers)
+                {
+                    Assert.AreEqual(
+                        LightProbeUsage.Off,
+                        renderer.lightProbeUsage,
+                        $"{path} / {renderer.name}: light probes must be Off (SS3D/Rendering/Run Content Prefab Recipes)");
+                    Assert.AreEqual(
+                        ReflectionProbeUsage.Off,
+                        renderer.reflectionProbeUsage,
+                        $"{path} / {renderer.name}: reflection probes must be Off");
+                }
             }
         }
 
