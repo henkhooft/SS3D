@@ -234,8 +234,14 @@ namespace SS3D.Systems.Tile
         /// </summary>
         private void HandleHostVisibilityUpdated(bool _, bool nextVisible)
         {
-            if (nextVisible)
+            if (!nextVisible)
+                return;
+
+            // Re-apply cover-hide (forceRenderingOff). FishNet may have set enabled=true for AOI.
+            if (ShouldHideUnderfloorMeshes())
                 ApplyUnderfloorOcclusion();
+            else if (_tileObjectSo != null && TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
+                TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: false);
         }
 
         /// <summary>
@@ -275,9 +281,17 @@ namespace SS3D.Systems.Tile
             }
 
             bool shouldHide = ShouldHideUnderfloorMeshes();
-            bool hideUnderfloor = inAoi && shouldHide;
 
-            if (inAoi && !hideUnderfloor)
+            if (shouldHide)
+            {
+                // Host: UnderfloorCoverCondition fails → FishNet removes host from Observers and
+                // SetRenderersVisible(false). Remotes stay in Observers for occupancy — hide draw
+                // with forceRenderingOff only (never fight FishNet by force-showing).
+                ApplyUnderfloorOcclusion();
+                if (!inAoi)
+                    NetworkObject.SetRenderersVisible(false, force: true);
+            }
+            else if (inAoi)
             {
                 // FishNet SetRenderersVisible only toggles renderers that were enabled when its
                 // cache was first built. After AOI disables them, UpdateRenderers can shrink the
@@ -288,23 +302,14 @@ namespace SS3D.Systems.Tile
                 NetworkObject.UpdateRenderers(false);
                 NetworkObject.SetRenderersVisible(true, force: true);
             }
-            else if (inAoi && hideUnderfloor)
-            {
-                // Keep NetworkObject / colliders active — only skip draw + selection.
-                // Do not EnableAll first: FishNet spawn also calls SetRenderersVisible(true) and
-                // would otherwise fight an empty renderer cache.
-                ApplyUnderfloorOcclusion();
-                NetworkObject.SetRenderersVisible(true, force: true);
-                ApplyUnderfloorOcclusion();
-            }
             else
             {
                 NetworkObject.SetRenderersVisible(false, force: true);
-                if (shouldHide)
-                    ApplyUnderfloorOcclusion();
             }
 
             TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+            if (shouldHide)
+                ApplyUnderfloorOcclusion();
         }
 
         /// <summary>
@@ -322,7 +327,7 @@ namespace SS3D.Systems.Tile
             if (!ShouldHideUnderfloorMeshes())
                 return;
 
-            TileUnderfloorVisibility.DisableChildRenderers(gameObject);
+            TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: true);
             SetSelectableEnabled(false);
         }
 
@@ -331,10 +336,9 @@ namespace SS3D.Systems.Tile
             if (!ShouldHideUnderfloorMeshes())
                 return;
 
-            TileUnderfloorVisibility.DisableChildRenderers(gameObject);
+            // Do not set Renderer.enabled — FishNet AOI owns that. Cover-hide uses forceRenderingOff.
+            TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: true);
             SetSelectableEnabled(false);
-            if (NetworkObject != null && NetworkObject.IsSpawned)
-                NetworkObject.UpdateRenderers(false);
         }
 
         private bool ShouldHideUnderfloorMeshes()
@@ -369,6 +373,8 @@ namespace SS3D.Systems.Tile
             if (root == null)
                 return;
 
+            // Clear cover-hide and ensure FishNet can show meshes again when uncovered / Map Editor.
+            TileUnderfloorVisibility.SetCoverRenderingHidden(root, hidden: false);
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {

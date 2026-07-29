@@ -1,11 +1,13 @@
+using FishNet;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile
 {
     /// <summary>
-    /// Client-side logical occlusion for underfloor tile layers. When a cell has a covering
-    /// turf (floor/wall/door), play-mode skips drawing plenum/wires/disposal/underfloor pipes
-    /// on that cell. Map Editor authoring keeps them visible.
+    /// Underfloor cover visibility: host uses FishNet <c>UnderfloorCoverCondition</c>
+    /// (fail → <c>SetRenderersVisible(false)</c>); remotes keep the NetworkObject for
+    /// occupancy and use <see cref="Renderer.forceRenderingOff"/> presentationally.
+    /// Map Editor authoring keeps underfloor visible.
     /// </summary>
     public static class TileUnderfloorVisibility
     {
@@ -58,8 +60,9 @@ namespace SS3D.Systems.Tile
         }
 
         /// <summary>
-        /// Re-apply host MeshRenderer visibility for every underfloor object on a cell
-        /// (after turf place/clear so cover state stays in sync).
+        /// Re-apply underfloor visibility for every underfloor object on a cell
+        /// (after turf place/clear so cover state stays in sync). Server also rebuilds
+        /// FishNet observers so <c>UnderfloorCoverCondition</c> re-evaluates immediately.
         /// </summary>
         public static void RefreshUnderfloorAt(TileMap map, Vector3 worldPosition)
         {
@@ -73,6 +76,14 @@ namespace SS3D.Systems.Tile
 
                 if (!location.TryGetPlacedObject(out PlacedTileObject placed) || placed == null)
                     continue;
+
+                if (InstanceFinder.IsServer
+                    && placed.NetworkObject != null
+                    && placed.NetworkObject.IsSpawned
+                    && InstanceFinder.ServerManager?.Objects != null)
+                {
+                    InstanceFinder.ServerManager.Objects.RebuildObservers(placed.NetworkObject, timedOnly: false);
+                }
 
                 placed.RefreshHostVisibility();
             }
@@ -94,7 +105,13 @@ namespace SS3D.Systems.Tile
             }
         }
 
-        public static void DisableChildRenderers(GameObject root)
+        /// <summary>
+        /// Hide underfloor draw without touching <see cref="Renderer.enabled"/>.
+        /// FishNet host AOI owns <c>enabled</c> via <c>SetRenderersVisible</c>; fighting that
+        /// flag loses (cover-hide sticks briefly, then AOI re-enables meshes). Use
+        /// <see cref="Renderer.forceRenderingOff"/> instead.
+        /// </summary>
+        public static void SetCoverRenderingHidden(GameObject root, bool hidden)
         {
             if (root == null)
                 return;
@@ -103,8 +120,12 @@ namespace SS3D.Systems.Tile
             for (int i = 0; i < renderers.Length; i++)
             {
                 if (renderers[i] != null)
-                    renderers[i].enabled = false;
+                    renderers[i].forceRenderingOff = hidden;
             }
         }
+
+        /// <summary>Legacy name — prefer <see cref="SetCoverRenderingHidden"/>.</summary>
+        public static void DisableChildRenderers(GameObject root) =>
+            SetCoverRenderingHidden(root, hidden: true);
     }
 }

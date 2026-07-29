@@ -172,6 +172,9 @@ namespace SS3D.Systems.Tile.MapImport
                     yield return null;
                 RebuildHostObservers(map);
                 map.RefreshAllHostVisibility();
+                // Second pass after observers exist so cover-hide composes with AOI show.
+                RebuildHostObservers(map);
+                map.RefreshAllHostVisibility();
 
                 if (!string.IsNullOrEmpty(unmappedReportPath))
                 {

@@ -1,4 +1,5 @@
 using FishNet;
+using FishNet.Connection;
 using FishNet.Object;
 using JetBrains.Annotations;
 using SS3D.Core;
@@ -827,6 +828,22 @@ namespace SS3D.Systems.Tile
             // Template load skips per-tile observer churn; re-apply AOI + underfloor occlusion now
             // that every covering turf is present.
             RefreshAllHostVisibility();
+
+            // Host may have had empty Observers during the first pass (debug: all outOfAoi).
+            // Rebuild then refresh so in-AOI cells take the cover-hide branch after AOI show.
+            if (InstanceFinder.ServerManager != null
+                && InstanceFinder.IsClient
+                && InstanceFinder.ClientManager != null)
+            {
+                NetworkConnection conn = InstanceFinder.ClientManager.Connection;
+                if (conn != null && conn.IsValid)
+                {
+                    InstanceFinder.ServerManager.Objects.RebuildObservers(conn, timedOnly: false);
+                    if (yieldFrames)
+                        yield return null;
+                    RefreshAllHostVisibility();
+                }
+            }
         }
 
         /// <summary>
