@@ -289,7 +289,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NetworkObserver: {fileID: 0}
-  <PrefabId>k__BackingField: 74
+  <PrefabId>k__BackingField: 81
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
@@ -350,6 +350,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   wallCapPrefab: {fileID: 3591147544166670882, guid: 9682b163cae64f74a93b6e84ce84ae5b, type: 3}
   doorType: 0
 --- !u!95 &6205019768642409540
@@ -363,7 +364,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 43b3d57cceffaa5498e91901477ba8c9, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 2
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
@@ -390,45 +391,18 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
   _animator: {fileID: 6205019768642409540}
+  _powerConsumer: {fileID: -8800000000000000011}
   doorTriggerLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  _proximityVolume: {fileID: 0}
   _meshesToColor:
   - {fileID: 7941901518868879156}
   - {fileID: 6060823761219191581}
   _skinnedMeshesToColor:
   - {fileID: 1610574527409645708}
   - {fileID: 1526798170224380914}
-  _powerConsumer: {fileID: -8800000000000000011}
---- !u!114 &8811223344556677883
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7133738675197207439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _deviceId: CivillianAirlock
-  _logCapacity: 32
---- !u!114 &8811223344556677884
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7133738675197207439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b7e8f9a0c1d2e3f4a5b6c7d8e9f0a1b2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _requireAccess: 1
-  _useAreaDefault: 0
-  _overrideRequiredAccessBits: 128
+  _isOpen: 0
 --- !u!65 &3215555771586221794
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -559,6 +533,35 @@ MonoBehaviour:
   - Renderer: {fileID: 6060823761219191581}
     MaterialIndex: 1
     PoweredColor: {r: 0, g: 0, b: 0, a: 1}
+--- !u!114 &8811223344556677883
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133738675197207439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _deviceId: CivillianAirlock
+  _logCapacity: 32
+--- !u!114 &8811223344556677884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133738675197207439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e8f9a0c1d2e3f4a5b6c7d8e9f0a1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _requireAccess: 1
+  _useAreaDefault: 0
+  _overrideRequiredAccessBits: 128
 --- !u!1001 &2157331936072973061
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -570,6 +573,10 @@ PrefabInstance:
     - target: {fileID: 362297111316997015, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_Name
       value: RightPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 840353475596866441, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 840353475596866441, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: 'm_BlendShapeWeights.Array.data[0]'
@@ -645,6 +652,10 @@ PrefabInstance:
     - target: {fileID: 362297111316997015, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_Name
       value: LeftPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 840353475596866441, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7781362268607177237, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_RootOrder
