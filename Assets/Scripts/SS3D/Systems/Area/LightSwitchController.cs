@@ -25,9 +25,14 @@ namespace SS3D.Systems.Area
         [SerializeField]
         private Renderer[] _emissiveRenderers;
 
-        private readonly List<Material> _emissiveMaterials = new();
+        private readonly List<Renderer> _emissiveRenderersToUpdate = new();
+        private MaterialPropertyBlock _emissivePropertyBlock;
+        private bool _hasLumin;
+        private bool _hasEmission;
         private float _poweredLumin;
         private Color _poweredEmission;
+        private float _lastEmissiveLumin = float.NaN;
+        private Color _lastEmissiveEmissionColor = Color.clear;
         private AreaId _areaId;
         private bool _hasArea;
         private bool _lightsOn = true;
@@ -115,7 +120,11 @@ namespace SS3D.Systems.Area
 
         private void CacheEmissiveMaterials()
         {
-            _emissiveMaterials.Clear();
+            _emissiveRenderersToUpdate.Clear();
+            _hasLumin = false;
+            _hasEmission = false;
+            _poweredLumin = 0f;
+            _poweredEmission = Color.black;
 
             Renderer[] renderers = _emissiveRenderers != null && _emissiveRenderers.Length > 0
                 ? _emissiveRenderers
@@ -128,34 +137,50 @@ namespace SS3D.Systems.Area
                     continue;
                 }
 
-                Material[] materials = renderer.materials;
-                for (int i = 0; i < materials.Length; i++)
+                bool hasEmissiveProperty = false;
+
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                for (int i = 0; i < sharedMaterials.Length; i++)
                 {
-                    Material material = materials[i];
-                    if (!material.HasProperty(LuminId) && !material.HasProperty(EmissionColorId))
+                    Material sharedMaterial = sharedMaterials[i];
+                    if (sharedMaterial == null)
                     {
                         continue;
                     }
 
-                    _emissiveMaterials.Add(material);
+                    if (sharedMaterial.HasProperty(LuminId))
+                    {
+                        hasEmissiveProperty = true;
+                        if (!_hasLumin)
+                        {
+                            _poweredLumin = sharedMaterial.GetFloat(LuminId);
+                            _hasLumin = true;
+                        }
+                    }
+
+                    if (sharedMaterial.HasProperty(EmissionColorId))
+                    {
+                        hasEmissiveProperty = true;
+                        if (!_hasEmission)
+                        {
+                            _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
+                            _hasEmission = true;
+                        }
+                    }
+                }
+
+                if (hasEmissiveProperty)
+                {
+                    _emissiveRenderersToUpdate.Add(renderer);
                 }
             }
 
-            if (_emissiveMaterials.Count == 0)
+            if (_emissiveRenderersToUpdate.Count == 0)
             {
                 return;
             }
 
-            Material referenceMaterial = _emissiveMaterials[0];
-            if (referenceMaterial.HasProperty(LuminId))
-            {
-                _poweredLumin = referenceMaterial.GetFloat(LuminId);
-            }
-
-            if (referenceMaterial.HasProperty(EmissionColorId))
-            {
-                _poweredEmission = referenceMaterial.GetColor(EmissionColorId);
-            }
+            // _poweredLumin/_poweredEmission are captured from shared materials above.
         }
 
         private void CacheArea()
@@ -296,22 +321,39 @@ namespace SS3D.Systems.Area
         private void RefreshVisuals()
         {
             bool emit = IsPowered() && _lightsOn;
-            foreach (Material material in _emissiveMaterials)
+            float lumin = emit ? _poweredLumin : 0f;
+            Color emission = emit ? _poweredEmission : Color.black;
+
+            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
+                && _lastEmissiveEmissionColor == emission)
             {
-                if (material == null)
+                return;
+            }
+
+            _lastEmissiveLumin = lumin;
+            _lastEmissiveEmissionColor = emission;
+
+            foreach (Renderer renderer in _emissiveRenderersToUpdate)
+            {
+                if (renderer == null)
                 {
                     continue;
                 }
 
-                if (material.HasProperty(LuminId))
+                _emissivePropertyBlock ??= new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(_emissivePropertyBlock);
+
+                if (_hasLumin)
                 {
-                    material.SetFloat(LuminId, emit ? _poweredLumin : 0f);
+                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
                 }
 
-                if (material.HasProperty(EmissionColorId))
+                if (_hasEmission)
                 {
-                    material.SetColor(EmissionColorId, emit ? _poweredEmission : Color.black);
+                    _emissivePropertyBlock.SetColor(EmissionColorId, emission);
                 }
+
+                renderer.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
 

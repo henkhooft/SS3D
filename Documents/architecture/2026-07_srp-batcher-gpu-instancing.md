@@ -30,6 +30,12 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 
 - [`StructuralIntegrityPresenter.Apply(Intact)`](../../Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityPresenter.cs) calls `SetPropertyBlock(null)` instead of writing a white tint MPB.
 
+### Emissive/power MPB for fixtures
+
+- Runtime emissive / powered visuals for station fixtures should avoid `renderer.material(s)` (material-instance clones).
+- Use `Renderer.SetPropertyBlock` (typically `_Lumin` + `_EmissionColor`, and the shader’s base-color property for indicators) so SRP Batcher can keep draws grouped.
+- Fixed in code: `LightPower`, `LightSwitchController`, `ConsumerPowerVisual`, `AirLockOpener`, `AirAlarmController`.
+
 ### EditMode
 
 - `SrpBatcherInstancingTests` — floor mat instancing flags, adjacency sharedMesh, Selectable no permanent MPB.
@@ -44,7 +50,6 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 
 ## Explicitly deferred
 
-- Fixture `.materials` clones (lights/doors).
 - Chunk-/room-combined floor meshes.
 - TileWhite / overlay Lit → STDefault.
 - GPU Resident Drawer (stays off — Linux/OpenGL).

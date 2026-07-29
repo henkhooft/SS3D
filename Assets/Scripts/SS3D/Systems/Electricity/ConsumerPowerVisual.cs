@@ -15,13 +15,17 @@ namespace SS3D.Systems.Electricity
     {
         static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
         static readonly int LuminId = Shader.PropertyToID("_Lumin");
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [Serializable]
         struct EmissiveSlot
         {
-            public Material Material;
+            public Renderer Renderer;
             public float PoweredLumin;
             public Color PoweredEmission;
+            public bool HasLumin;
+            public bool HasEmission;
         }
 
         [Serializable]
@@ -30,9 +34,9 @@ namespace SS3D.Systems.Electricity
             public Renderer Renderer;
             public int MaterialIndex;
             public Color PoweredColor;
-            /// <summary>Cached from <see cref="Renderer.materials"/> once — never re-fetch on tick.</summary>
+            /// <summary>Determined from the target shared material once — used for MPB updates.</summary>
             [NonSerialized]
-            public Material Material;
+            public int ColorPropertyId;
         }
 
         [SerializeField]
@@ -48,9 +52,16 @@ namespace SS3D.Systems.Electricity
         private bool _hasAppliedPowered;
         private bool _lastShownPowered;
 
+        private MaterialPropertyBlock _emissivePropertyBlock;
+        private MaterialPropertyBlock _panelPropertyBlock;
+
         private void Awake()
         {
             _consumer = ResolveConsumer();
+
+            // Unity disallows `new MaterialPropertyBlock()` in instance field initializers.
+            _emissivePropertyBlock = new MaterialPropertyBlock();
+            _panelPropertyBlock = new MaterialPropertyBlock();
         }
 
         private void Start()
@@ -123,25 +134,51 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                Material[] materials = renderer.materials;
-                for (int i = 0; i < materials.Length; i++)
+                float lumin = 0f;
+                Color emission = Color.black;
+                bool hasLumin = false;
+                bool hasEmission = false;
+                bool hasAnyEmissive = false;
+
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                for (int i = 0; i < sharedMaterials.Length; i++)
                 {
-                    Material material = materials[i];
-                    if (!material.HasProperty(LuminId) && !material.HasProperty(EmissionColorId))
+                    Material sharedMaterial = sharedMaterials[i];
+                    if (sharedMaterial == null)
                     {
                         continue;
                     }
 
-                    float lumin = material.HasProperty(LuminId) ? material.GetFloat(LuminId) : 0f;
-                    Color emission = material.HasProperty(EmissionColorId)
-                        ? material.GetColor(EmissionColorId)
-                        : Color.black;
+                    if (sharedMaterial.HasProperty(LuminId))
+                    {
+                        hasAnyEmissive = true;
+                        if (!hasLumin)
+                        {
+                            lumin = sharedMaterial.GetFloat(LuminId);
+                            hasLumin = true;
+                        }
+                    }
 
+                    if (sharedMaterial.HasProperty(EmissionColorId))
+                    {
+                        hasAnyEmissive = true;
+                        if (!hasEmission)
+                        {
+                            emission = sharedMaterial.GetColor(EmissionColorId);
+                            hasEmission = true;
+                        }
+                    }
+                }
+
+                if (hasAnyEmissive)
+                {
                     _emissiveSlots.Add(new EmissiveSlot
                     {
-                        Material = material,
+                        Renderer = renderer,
                         PoweredLumin = lumin,
                         PoweredEmission = emission,
+                        HasLumin = hasLumin,
+                        HasEmission = hasEmission,
                     });
                 }
             }
@@ -159,15 +196,36 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                // .materials allocates a new array every call — cache once for the tick path.
-                Material[] materials = slot.Renderer.materials;
-                if (slot.MaterialIndex >= materials.Length)
+                Material[] sharedMaterials = slot.Renderer.sharedMaterials;
+                if (slot.MaterialIndex >= sharedMaterials.Length)
                 {
                     continue;
                 }
 
-                slot.Material = materials[slot.MaterialIndex];
-                slot.PoweredColor = slot.Material.color;
+                Material targetMaterial = sharedMaterials[slot.MaterialIndex];
+                if (targetMaterial == null)
+                {
+                    continue;
+                }
+
+                // Material.color is the visible base-color alias for the shader in use.
+                slot.PoweredColor = targetMaterial.color;
+
+                // Pick a color property that exists on the targeted shader; use MPB so we don't instantiate materials.
+                if (targetMaterial.HasProperty(BaseColorId))
+                {
+                    slot.ColorPropertyId = BaseColorId;
+                }
+                else if (targetMaterial.HasProperty(ColorId))
+                {
+                    slot.ColorPropertyId = ColorId;
+                }
+                else
+                {
+                    // No known base-color property; skip updates for this slot.
+                    continue;
+                }
+
                 _panelIndicators[i] = slot;
             }
         }
@@ -250,20 +308,25 @@ namespace SS3D.Systems.Electricity
         {
             foreach (EmissiveSlot slot in _emissiveSlots)
             {
-                if (slot.Material == null)
+                if (slot.Renderer == null)
                 {
                     continue;
                 }
 
-                if (slot.Material.HasProperty(LuminId))
+                Renderer renderer = slot.Renderer;
+                renderer.GetPropertyBlock(_emissivePropertyBlock);
+
+                if (slot.HasLumin)
                 {
-                    slot.Material.SetFloat(LuminId, powered ? slot.PoweredLumin : 0f);
+                    _emissivePropertyBlock.SetFloat(LuminId, powered ? slot.PoweredLumin : 0f);
                 }
 
-                if (slot.Material.HasProperty(EmissionColorId))
+                if (slot.HasEmission)
                 {
-                    slot.Material.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
+                    _emissivePropertyBlock.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
                 }
+
+                renderer.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
 
@@ -277,13 +340,21 @@ namespace SS3D.Systems.Electricity
             for (int i = 0; i < _panelIndicators.Length; i++)
             {
                 PanelIndicatorSlot slot = _panelIndicators[i];
-                if (slot.Material == null)
+                if (slot.Renderer == null)
                 {
                     continue;
                 }
 
-                slot.Material.color = powered ? slot.PoweredColor : Color.black;
+                if (slot.ColorPropertyId == 0)
+                {
+                    continue;
+                }
+
+                slot.Renderer.GetPropertyBlock(_panelPropertyBlock);
+                _panelPropertyBlock.SetColor(slot.ColorPropertyId, powered ? slot.PoweredColor : Color.black);
+                slot.Renderer.SetPropertyBlock(_panelPropertyBlock);
             }
         }
+
     }
 }

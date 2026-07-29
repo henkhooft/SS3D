@@ -57,6 +57,9 @@ namespace SS3D.Systems.Furniture
         public static readonly Color DoorLightClosingColor = new Color(1f, 0.18f, 0.2f);
         public static readonly Color DoorLightIdleColor = Color.black;
 
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+
         private AirLockDoorInteraction _cachedDoorInteraction;
         private IInteraction[] _cachedDoorInteractions;
 
@@ -85,6 +88,8 @@ namespace SS3D.Systems.Furniture
         private readonly HashSet<HumanInventory> _authorizedOccupants = new();
         private readonly HashSet<HumanInventory> _deniedOccupants = new();
         private readonly HashSet<HumanInventory> _proximityScratch = new();
+
+        private MaterialPropertyBlock _doorLightPropertyBlock;
 
         private AirLockAccessGate _accessGate;
         private NetworkAnimator _networkAnimator;
@@ -202,13 +207,36 @@ namespace SS3D.Systems.Furniture
                         continue;
                     }
 
-                    Material[] materials = renderer.materials;
-                    if (DoorLightMaterialIndex >= materials.Length)
+                    Material[] sharedMaterials = renderer.sharedMaterials;
+                    if (DoorLightMaterialIndex >= sharedMaterials.Length)
                     {
                         continue;
                     }
 
-                    materials[DoorLightMaterialIndex].color = color;
+                    Material targetMaterial = sharedMaterials[DoorLightMaterialIndex];
+                    if (targetMaterial == null)
+                    {
+                        continue;
+                    }
+
+                    int colorPropertyId;
+                    if (targetMaterial.HasProperty(BaseColorId))
+                    {
+                        colorPropertyId = BaseColorId;
+                    }
+                    else if (targetMaterial.HasProperty(ColorId))
+                    {
+                        colorPropertyId = ColorId;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    _doorLightPropertyBlock ??= new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(_doorLightPropertyBlock);
+                    _doorLightPropertyBlock.SetColor(colorPropertyId, color);
+                    renderer.SetPropertyBlock(_doorLightPropertyBlock);
                 }
             }
 
