@@ -19,7 +19,7 @@ Make SS13-sized maps (e.g. Metastation import) playable in host Play Mode, and k
 ### B — Airlock proximity invert
 
 - [`AirLockProximityService`](../../Assets/Scripts/SS3D/Systems/Furniture/AirLockProximityService.cs) indexes doors by HashGrid cell; FixedUpdate walks players → nearby doors only.
-- [`AirLockOpener`](../../Assets/Scripts/SS3D/Systems/Furniture/AirLockOpener.cs) no longer per-door FixedUpdate; Unity `Animator` uses `CullCompletely` (do not AOI-toggle `Animator.enabled`); FishNet `NetworkAnimator` is still gated on observers (`RefreshNetworkAnimatorCulling`) because CullCompletely does not stop it.
+- [`AirLockOpener`](../../Assets/Scripts/SS3D/Systems/Furniture/AirLockOpener.cs) no longer per-door FixedUpdate; Unity `Animator` uses `CullCompletely`; airlock prefabs have **no** `NetworkAnimator` (SyncVar drives `SetBool` — stock NA TimeManager poll was ~14% of non-editor game work on Metastation).
 - [`EntitySubSystem.SpawnedPlayers`](../../Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs) returns `IReadOnlyList` (no per-call `ToList`); [`Entity.TryGetHumanInventory`](../../Assets/Scripts/SS3D/Systems/Entities/Entity.cs) caches inventory.
 - EditMode: `AirLockProximityServiceTests`.
 
