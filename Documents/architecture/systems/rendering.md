@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 34d47668a — 2026-07-28 (selection pick frustum cull)
+> Verified: 620ac632 — 2026-07-29 (Frame Debugger AI export tooling)
 
 # Rendering
 
@@ -60,4 +60,5 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - Plan: [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md)
 - Polish handoff: [2026-07_urp-lighting-look-polish.md](../2026-07_urp-lighting-look-polish.md)
 - Effort (shipped): [2026-07_srp-batcher-gpu-instancing.md](../2026-07_srp-batcher-gpu-instancing.md)
+- Effort (shipped): [2026-07_unity-framedebug-ai-tooling.md](../2026-07_unity-framedebug-ai-tooling.md) — Frame Debugger → `Logs/framedebug/` markdown
 - Effort (planned): [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)

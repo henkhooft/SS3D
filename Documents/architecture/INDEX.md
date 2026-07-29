@@ -170,6 +170,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_default-input-scheme](2026-07_default-input-scheme.md) | shipped (Caps sprint, Shift examine, F intent, Backspace cancel; no Shift intent-override) |
 | [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress (Phase 0 hygiene + Phase 2 recipe convention + Phase 3 hands-wiring done and verified in-Editor; Phase 1 organs deprioritized; remaining Phase 3 domains scheduled not forced) |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (Editor Profiler → Logs/perf markdown + analyze-unity-perf skill; player capture / console / budgets deferred) |
+| [2026-07_unity-framedebug-ai-tooling](2026-07_unity-framedebug-ai-tooling.md) | shipped (Editor Frame Debugger → Logs/framedebug markdown + analyze-unity-framedebug skill; Quick default / Full GPU-replay; remote attach deferred) |
 | [2026-07_metastation-scale-perf](2026-07_metastation-scale-perf.md) | shipped (Map Editor sim suspend; airlock proximity invert; host atmos AOI atlas; overlay AOI; underfloor MeshRenderer occlusion) |
 | [2026-07_srp-batcher-gpu-instancing](2026-07_srp-batcher-gpu-instancing.md) | shipped (ST floor instancing; adjacency sharedMesh; selection pick without MeshRenderer MPBs; Intact integrity clears MPB) |
 | [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress (Phase 1–4 + blast detonation VFX) |

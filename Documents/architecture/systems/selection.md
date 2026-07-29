@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Selection/, Assets/Scripts/SS3D/Rendering/URP/
 > Entry points: SelectionSubSystem, SelectionController, SelectionPickRendererFeature
 > Status: shipped
-> Verified: 671460029 — 2026-07-29 (pick spatial index + NetworkAnimator gate follow-up)
+> Verified: 620ac632 — 2026-07-29 (Frame Debugger AI export tooling link)
 
 # Selection
 
@@ -52,3 +52,4 @@ Outline shells and other auxiliary meshes use `SelectionRenderingLayers.ExcludeF
 
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
 - Effort: [2026-07_srp-batcher-gpu-instancing.md](../2026-07_srp-batcher-gpu-instancing.md) (pick without MeshRenderer MPBs)
+- Effort: [2026-07_unity-framedebug-ai-tooling.md](../2026-07_unity-framedebug-ai-tooling.md) — export pick-pass draw spam for agents
