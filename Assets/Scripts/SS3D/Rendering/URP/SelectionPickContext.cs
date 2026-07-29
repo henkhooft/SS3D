@@ -11,11 +11,20 @@ namespace SS3D.Rendering.URP
     /// </summary>
     public static class SelectionPickContext
     {
+        /// <summary>
+        /// Inflate renderer bounds slightly so thin floors / silhouette edges still intersect the
+        /// cursor ray without pulling in the rest of the frustum.
+        /// </summary>
+        public const float DefaultPickBoundsExpand = 0.2f;
+
         public struct Request
         {
             public Camera SourceCamera;
             public RenderTexture Target;
             public bool DebugView;
+            /// <summary>Screen-space mouse position used to build the pick ray (pixels).</summary>
+            public Vector2 ScreenPosition;
+            public bool HasScreenPosition;
         }
 
         /// <summary>One mesh draw for the offscreen pick pass.</summary>
@@ -40,6 +49,11 @@ namespace SS3D.Rendering.URP
         static readonly List<ISelectionPickSource> s_Sources = new();
         static readonly Plane[] s_FrustumPlanes = new Plane[6];
         static bool s_HasFrustum;
+        /// <summary>True when a pick request is active and cursor culling should run (fail closed if ray missing).</summary>
+        static bool s_CursorCullArmed;
+        static bool s_HasPickRay;
+        static Ray s_PickRay;
+        static float s_PickBoundsExpand = DefaultPickBoundsExpand;
 
         public static void SetRequest(Request request)
         {
@@ -50,6 +64,8 @@ namespace SS3D.Rendering.URP
         {
             s_Request = null;
             s_HasFrustum = false;
+            s_CursorCullArmed = false;
+            s_HasPickRay = false;
         }
 
         public static bool TryGetRequest(out Request request)
@@ -89,9 +105,26 @@ namespace SS3D.Rendering.URP
             return !s_HasFrustum || GeometryUtility.TestPlanesAABB(s_FrustumPlanes, bounds);
         }
 
+        /// <summary>
+        /// True when the cursor ray intersects <paramref name="bounds"/> (slightly expanded).
+        /// With no active pick request: fail open (EditMode). With a request but no mouse ray: fail closed.
+        /// </summary>
+        public static bool IsNearPickCursor(Bounds bounds)
+        {
+            if (!s_CursorCullArmed)
+                return true;
+
+            if (!s_HasPickRay)
+                return false;
+
+            Bounds inflated = bounds;
+            inflated.Expand(s_PickBoundsExpand);
+            return inflated.IntersectRay(s_PickRay);
+        }
+
         public static void CollectPickDraws(List<PickDraw> buffer)
         {
-            RefreshFrustumFromRequest();
+            RefreshCullStateFromRequest();
             buffer.Clear();
             for (int i = 0; i < s_Sources.Count; i++)
             {
@@ -103,16 +136,30 @@ namespace SS3D.Rendering.URP
             }
         }
 
-        static void RefreshFrustumFromRequest()
+        static void RefreshCullStateFromRequest()
         {
             if (!TryGetRequest(out Request request) || request.SourceCamera == null)
             {
                 s_HasFrustum = false;
+                s_CursorCullArmed = false;
+                s_HasPickRay = false;
                 return;
             }
 
             GeometryUtility.CalculateFrustumPlanes(request.SourceCamera, s_FrustumPlanes);
             s_HasFrustum = true;
+            // Armed whenever a live pick request exists — missing mouse must not redraw the frustum.
+            s_CursorCullArmed = true;
+            s_PickBoundsExpand = DefaultPickBoundsExpand;
+
+            if (!request.HasScreenPosition)
+            {
+                s_HasPickRay = false;
+                return;
+            }
+
+            s_PickRay = request.SourceCamera.ScreenPointToRay(request.ScreenPosition);
+            s_HasPickRay = true;
         }
     }
 }

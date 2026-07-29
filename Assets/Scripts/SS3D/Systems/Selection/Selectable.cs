@@ -59,8 +59,10 @@ namespace SS3D.Systems.Selection
                     continue;
 
                 // DrawMesh bypasses Unity's MeshRenderer frustum cull — AOI only disables
-                // off-observer tiles; still skip what's outside the pick camera cone.
-                if (!SelectionPickContext.IsInPickFrustum(renderer.bounds))
+                // off-observer tiles. Only draw selectables whose bounds the cursor ray hits.
+                Bounds bounds = renderer.bounds;
+                if (!SelectionPickContext.IsInPickFrustum(bounds)
+                    || !SelectionPickContext.IsNearPickCursor(bounds))
                     continue;
 
                 Mesh mesh = filter.sharedMesh;
@@ -103,7 +105,9 @@ namespace SS3D.Systems.Selection
                 if (IsExcludedFromPick(renderer))
                     continue;
 
-                if (!SelectionPickContext.IsInPickFrustum(renderer.bounds))
+                Bounds bounds = renderer.bounds;
+                if (!SelectionPickContext.IsInPickFrustum(bounds)
+                    || !SelectionPickContext.IsNearPickCursor(bounds))
                     continue;
 
                 bool transparent = IsTransparent(renderer);
