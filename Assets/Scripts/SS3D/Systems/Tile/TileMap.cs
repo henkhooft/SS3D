@@ -28,6 +28,7 @@ namespace SS3D.Systems.Tile
         private AdjacencyEngine _adjacencyEngine;
         private string _mapName;
         private int _bulkMutationDepth;
+        private int _structureVersion;
 
         /// <summary>Placements between yields during time-sliced <see cref="LoadRoutine"/> / DMM apply.</summary>
         public const int BulkLoadYieldEveryPlacements = 64;
@@ -160,11 +161,24 @@ namespace SS3D.Systems.Tile
 
         public void EndBulkMutation()
         {
-            if (_bulkMutationDepth > 0)
-                _bulkMutationDepth--;
+            if (_bulkMutationDepth <= 0)
+                return;
+
+            _bulkMutationDepth--;
+            if (_bulkMutationDepth == 0)
+                BumpStructureVersion();
         }
 
         public bool IsBulkMutationActive => _bulkMutationDepth > 0;
+
+        /// <summary>
+        /// Monotonic counter bumped when place/clear/chunk/clear-map changes occupancy.
+        /// Not bumped for door open/close (<see cref="NotifyTileStateChanged"/>) — area membership
+        /// ignores door state. Consumers cache device→area resolves against this version.
+        /// </summary>
+        public int StructureVersion => _structureVersion;
+
+        public void BumpStructureVersion() => _structureVersion++;
 
         /// <summary>
         /// Returns the chunk key to be used based on a world position.
@@ -649,6 +663,7 @@ namespace SS3D.Systems.Tile
             }
 
             _chunks.Clear();
+            BumpStructureVersion();
 
             // Clear items list safely, checking for null references
             while (_items.Count > 0)
@@ -902,6 +917,8 @@ namespace SS3D.Systems.Tile
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnChunkCreated(chunkRef);
+
+            BumpStructureVersion();
         }
 
         /// <summary>
@@ -930,6 +947,8 @@ namespace SS3D.Systems.Tile
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnTilePlaced(placedObject, coord);
+
+            BumpStructureVersion();
         }
 
         private void NotifyTileCleared(PlacedTileObject placedObject, Vector3 worldPosition, TileLayer layer)
@@ -941,6 +960,8 @@ namespace SS3D.Systems.Tile
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnTileCleared(placedObject, coord, layer);
+
+            BumpStructureVersion();
         }
 
         /// <summary>

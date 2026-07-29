@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 11ab365cd — 2026-07-29 (underfloor FishNet cover condition)
+> Verified: a8624d365 — 2026-07-29 (TileMap.StructureVersion for area cache)
 
 # Tile / construction
 
@@ -60,6 +60,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 
 ## Pitfalls
 
+- **`TileMap.StructureVersion`:** bumped on place/clear/chunk/clear-map and when bulk mutation ends — not on door `NotifyTileStateChanged`. [area](area.md) device→area cache keys off this; do not bump on cosmetic state or every adjacency refresh.
 - **Adjacency must assign `sharedMesh`, not `.mesh`:** `_filter.mesh =` unique-copies the FBX and blocks GPU Instancing on walls/plenum/pipes/carpet. Use `sharedMesh`. Hit 2026-07-28 (Metastation).
 - **Underfloor hide must not fight FishNet `MeshRenderer.enabled`:** host cover uses `UnderfloorCoverCondition` (AND with `GridCondition` on Plenum/Wire/Disposal/PipeLeft|Middle|Right prefabs). Covered host fails the condition → removed from Observers → `SetRenderersVisible(false)`. Remotes always pass the cover condition (keep NO for client occupancy) and use `Renderer.forceRenderingOff` + disable `Selectable` — do **not** `SetActive(false)` the root or set `.enabled` for cover. Never call `SetRenderersVisible(true)` while covered. Turf place/clear must `RebuildObservers` via `RefreshUnderfloorAt` (timed alone is too slow). Template/DMM load: `RebuildObservers` + `RefreshAllHostVisibility` after turfs exist. Map Editor skips hide. `PipeSurface` stays visible. Hit 2026-07-28 / fixed 2026-07-29 (Metastation `Render.Mesh`).
 - **Map Editor leaves world sims running:** full-station MeshRenderer bypass is intentional for authoring, but atmos/electricity/airlock/disposal ticks used to keep burning CPU. `MapEditorSubSystem` now sets `SimulationPaused` / `SuspendCircuitUpdates` / `CapsulesPaused` while open. Hit 2026-07-28 (Metastation).

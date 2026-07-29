@@ -54,6 +54,8 @@ namespace SS3D.Systems.Electricity
         private readonly List<IPowerConsumer> _registeredConsumers = new();
         private readonly List<IElectricDevice> _registeredDevices = new();
         private readonly Dictionary<IApcChannelSource, List<IPowerConsumer>> _consumersByApc = new();
+        private readonly Dictionary<IPowerConsumer, IApcChannelSource> _apcByConsumer = new();
+        private readonly HashSet<IPowerConsumer> _areaScopedConsumers = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridInputKw = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridAvailableKw = new();
         private readonly List<IPowerConsumer> _areaActiveConsumersScratch = new();
@@ -210,6 +212,8 @@ namespace SS3D.Systems.Electricity
             _lastApcGridInputKw.Clear();
             _lastApcGridAvailableKw.Clear();
             _consumersByApc.Clear();
+            _apcByConsumer.Clear();
+            _areaScopedConsumers.Clear();
             _circuits.Clear();
             _circuitByDevice.Clear();
             _electricityGraph?.Clear();
@@ -338,6 +342,9 @@ namespace SS3D.Systems.Electricity
                 entry.Value.Clear();
             }
 
+            _apcByConsumer.Clear();
+            _areaScopedConsumers.Clear();
+
             if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 return;
@@ -358,7 +365,30 @@ namespace SS3D.Systems.Electricity
                 }
 
                 list.Add(consumer);
+                _apcByConsumer[consumer] = apc;
+                _areaScopedConsumers.Add(consumer);
             }
+        }
+
+        /// <summary>
+        /// True when the consumer draws from an area APC (not cable-only). Uses the rebuilt index.
+        /// </summary>
+        internal bool IsIndexedAreaScopedConsumer(IPowerConsumer consumer)
+        {
+            EnsureApcConsumerIndex();
+            return consumer != null && _areaScopedConsumers.Contains(consumer);
+        }
+
+        internal bool TryGetIndexedApcForConsumer(IPowerConsumer consumer, out IApcChannelSource apc)
+        {
+            EnsureApcConsumerIndex();
+            if (consumer != null && _apcByConsumer.TryGetValue(consumer, out apc))
+            {
+                return true;
+            }
+
+            apc = null;
+            return false;
         }
 
         private IReadOnlyList<IPowerConsumer> GetIndexedConsumersForApc(IApcChannelSource apc)
@@ -625,13 +655,18 @@ namespace SS3D.Systems.Electricity
                 }
 
                 circuit.SetConsumerChannelResolver(consumer => ResolveEnabledChannelsForConsumer(circuit, consumer));
-                circuit.SetCableDistributionFilter(consumer => !AreaApcPowerDistribution.IsAreaScopedConsumer(consumer));
+                circuit.SetCableDistributionFilter(consumer => !IsIndexedAreaScopedConsumer(consumer));
                 _circuits.Add(circuit);
             }
         }
 
-        private static ApcControlFlags ResolveEnabledChannelsForConsumer(Circuit circuit, IPowerConsumer consumer)
+        private ApcControlFlags ResolveEnabledChannelsForConsumer(Circuit circuit, IPowerConsumer consumer)
         {
+            if (TryGetIndexedApcForConsumer(consumer, out IApcChannelSource indexedApc))
+            {
+                return indexedApc.Channels;
+            }
+
             if (consumer is IElectricDevice device
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetEffectiveApcForDevice(device, out IApcChannelSource areaApc))

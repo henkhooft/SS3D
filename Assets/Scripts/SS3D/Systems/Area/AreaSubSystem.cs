@@ -8,6 +8,7 @@ using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
 using SS3D.Systems.Electricity;
+using SS3D.Systems.Atmospherics;
 using System.Linq;
 using UnityEngine;
 
@@ -35,6 +36,8 @@ namespace SS3D.Systems.Area
         private readonly HashSet<IAreaApcOrigin> _overlapFlaggedApcs = new();
         private readonly Dictionary<AreaId, AreaLightingState> _lightingStates = new();
         private readonly Dictionary<AreaId, bool> _lightingSwitchOn = new();
+        private readonly Dictionary<PlacedTileObject, AreaId> _deviceAreaIdCache = new();
+        private int _deviceAreaCacheStructureVersion = -1;
         private Dictionary<Vector3, SavedAreaRecord> _pendingSavedByApcPosition;
 
         private TileMap _map;
@@ -200,6 +203,17 @@ namespace SS3D.Systems.Area
             return _registry.TryGet(new AreaId(areaId), out record);
         }
 
+        public bool TryGetArea(AreaId areaId, out AreaRecord record)
+        {
+            record = null;
+            if (areaId.IsNone)
+            {
+                return false;
+            }
+
+            return _registry.TryGet(areaId, out record);
+        }
+
         public bool TryGetAreaForDevice(PlacedTileObject tileObject, out AreaRecord record)
         {
             record = null;
@@ -207,6 +221,47 @@ namespace SS3D.Systems.Area
             {
                 return false;
             }
+
+            EnsureDeviceAreaCacheCurrent();
+            if (_deviceAreaIdCache.TryGetValue(tileObject, out AreaId cachedId))
+            {
+                if (cachedId.IsNone)
+                {
+                    return false;
+                }
+
+                return _registry.TryGet(cachedId, out record);
+            }
+
+            bool found = ResolveAreaForDeviceUncached(tileObject, out record);
+            _deviceAreaIdCache[tileObject] = found && record != null ? record.Id : default;
+            return found;
+        }
+
+        /// <summary>
+        /// Clears cached device→area ids (tile structure change or area reflood).
+        /// </summary>
+        public void InvalidateDeviceAreaCache()
+        {
+            _deviceAreaIdCache.Clear();
+            _deviceAreaCacheStructureVersion = -1;
+        }
+
+        private void EnsureDeviceAreaCacheCurrent()
+        {
+            int version = _map != null ? _map.StructureVersion : -1;
+            if (version == _deviceAreaCacheStructureVersion)
+            {
+                return;
+            }
+
+            _deviceAreaIdCache.Clear();
+            _deviceAreaCacheStructureVersion = version;
+        }
+
+        private bool ResolveAreaForDeviceUncached(PlacedTileObject tileObject, out AreaRecord record)
+        {
+            record = null;
 
             // Wall-mounted devices can share the same wall tile on opposite sides of a wall.
             // In that case the wall tile's stored area (if any) is ambiguous; the correct area is
@@ -229,14 +284,27 @@ namespace SS3D.Systems.Area
 
         /// <summary>
         /// Resolves area id for a device on host (live registry) or pure clients (floor-cache snapshot).
+        /// On server/host with a live map, <see cref="TryGetAreaForDevice"/> is authoritative —
+        /// including sticky None for unassigned tiles. Do not fall through to the floor cache on
+        /// miss; that double-resolves forever for devices outside any area.
         /// </summary>
         public bool TryResolveAreaIdForDevice(PlacedTileObject tileObject, out AreaId areaId)
         {
             areaId = default;
-            if (TryGetAreaForDevice(tileObject, out AreaRecord record))
+            if (tileObject == null)
             {
-                areaId = record.Id;
-                return true;
+                return false;
+            }
+
+            if (_map != null && IsServer)
+            {
+                if (TryGetAreaForDevice(tileObject, out AreaRecord record))
+                {
+                    areaId = record.Id;
+                    return true;
+                }
+
+                return false;
             }
 
             return AreaDeviceTileResolver.TryResolveAreaIdFromFloorCache(FloorVisualCache, tileObject, out areaId);
@@ -374,7 +442,7 @@ namespace SS3D.Systems.Area
             {
                 UpdateOverlapWarnings();
                 TryCompleteTemplateRestore();
-                InvalidateElectricityConsumerIndex();
+                InvalidateAreaMembershipIndexes();
                 NotifyAreaVisualsChanged();
                 return;
             }
@@ -406,7 +474,7 @@ namespace SS3D.Systems.Area
             _floodFill.FloodFromApc(apc, areaId, claimedTiles);
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
-            InvalidateElectricityConsumerIndex();
+            InvalidateAreaMembershipIndexes();
             NotifyAreaVisualsChanged();
         }
 
@@ -426,7 +494,7 @@ namespace SS3D.Systems.Area
             _overlapFlaggedApcs.Remove(apc);
             apc.SetMultipleApcsInArea(false);
             UpdateOverlapWarnings();
-            InvalidateElectricityConsumerIndex();
+            InvalidateAreaMembershipIndexes();
             NotifyAreaVisualsChanged();
         }
 
@@ -463,7 +531,7 @@ namespace SS3D.Systems.Area
 
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
-            InvalidateElectricityConsumerIndex();
+            InvalidateAreaMembershipIndexes();
             NotifyAreaVisualsChanged();
         }
 
@@ -494,7 +562,7 @@ namespace SS3D.Systems.Area
             _floodFill.FloodFromApc(apc, areaId, claimedTiles);
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
-            InvalidateElectricityConsumerIndex();
+            InvalidateAreaMembershipIndexes();
             NotifyAreaVisualsChanged();
         }
 
@@ -541,7 +609,7 @@ namespace SS3D.Systems.Area
 
             _floodFill.AssignDoorTileAreas();
             UpdateOverlapWarnings();
-            InvalidateElectricityConsumerIndex();
+            InvalidateAreaMembershipIndexes();
         }
 
         [Server]
@@ -1094,11 +1162,17 @@ namespace SS3D.Systems.Area
             }
         }
 
-        private static void InvalidateElectricityConsumerIndex()
+        private void InvalidateAreaMembershipIndexes()
         {
+            InvalidateDeviceAreaCache();
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 electricitySubSystem.InvalidateAreaConsumerIndex();
+            }
+
+            if (SubSystems.TryGet(out AtmosSubSystem atmosSubSystem))
+            {
+                atmosSubSystem.InvalidateAreaPortIndex();
             }
         }
 

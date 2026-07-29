@@ -12,6 +12,11 @@ namespace SS3D.Systems.Electricity
     {
         public static bool IsAreaScopedConsumer(IPowerConsumer consumer)
         {
+            if (SubSystems.TryGet(out ElectricitySubSystem electricity))
+            {
+                return electricity.IsIndexedAreaScopedConsumer(consumer);
+            }
+
             return consumer is IElectricDevice device
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetEffectiveApcForDevice(device, out _);

@@ -1,7 +1,6 @@
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Systems.Area;
-using SS3D.Systems.Tile;
 using System;
 using System.Collections.Generic;
 
@@ -53,6 +52,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
     /// <summary>
     /// Discovers vents and scrubbers that belong to an APC flood-filled area.
+    /// Uses <see cref="AtmosSubSystem"/>'s mutation-driven area→port index — does not
+    /// scan the full port registry or re-resolve area membership per query.
     /// </summary>
     public static class AtmosAreaDeviceQuery
     {
@@ -70,33 +71,31 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 return false;
             }
 
-            atmosSubSystem.PortRegistry.ForEachPort(port =>
+            IReadOnlyList<(AtmosPortControllerBase Port, AtmosAreaPortKind Kind)> ports =
+                atmosSubSystem.GetIndexedPortsForArea(areaId);
+
+            string areaDisplayName = null;
+            if (areaSubSystem.TryGetArea(areaId, out AreaRecord areaRecord))
             {
-                if (port is not AtmosPortControllerBase controller)
-                {
-                    return;
-                }
+                areaDisplayName = areaRecord.DisplayName;
+            }
 
-                if (controller is not VentController and not ScrubberController)
-                {
-                    return;
-                }
-
-                if (controller is not NetworkBehaviour networkBehaviour
+            for (int i = 0; i < ports.Count; i++)
+            {
+                (AtmosPortControllerBase controller, AtmosAreaPortKind kind) = ports[i];
+                if (controller == null
+                    || controller is not NetworkBehaviour networkBehaviour
                     || networkBehaviour.NetworkObject == null)
                 {
-                    return;
+                    continue;
                 }
 
-                if (!controller.TryGetComponent(out PlacedTileObject tileObject)
-                    || !areaSubSystem.TryGetAreaForDevice(tileObject, out AreaRecord record)
-                    || record.Id != areaId)
-                {
-                    return;
-                }
-
-                results.Add(BuildRecord(controller, networkBehaviour.NetworkObject.ObjectId, record.DisplayName));
-            });
+                results.Add(BuildRecord(
+                    controller,
+                    kind,
+                    networkBehaviour.NetworkObject.ObjectId,
+                    areaDisplayName));
+            }
 
             results.Sort(CompareRecords);
             return results.Count > 0;
@@ -109,40 +108,22 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 return;
             }
 
-            if (!SubSystems.TryGet(out AtmosSubSystem atmosSubSystem)
-                || !SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            if (!SubSystems.TryGet(out AtmosSubSystem atmosSubSystem))
             {
                 return;
             }
 
-            atmosSubSystem.PortRegistry.ForEachPort(port =>
+            IReadOnlyList<(AtmosPortControllerBase Port, AtmosAreaPortKind Kind)> ports =
+                atmosSubSystem.GetIndexedPortsForArea(areaId);
+
+            for (int i = 0; i < ports.Count; i++)
             {
-                if (port is not AtmosPortControllerBase controller)
+                (AtmosPortControllerBase controller, AtmosAreaPortKind kind) = ports[i];
+                if (controller != null)
                 {
-                    return;
+                    action(controller, kind);
                 }
-
-                AtmosAreaPortKind? kind = controller switch
-                {
-                    VentController => AtmosAreaPortKind.Vent,
-                    ScrubberController => AtmosAreaPortKind.Scrubber,
-                    _ => null,
-                };
-
-                if (kind == null)
-                {
-                    return;
-                }
-
-                if (!controller.TryGetComponent(out PlacedTileObject tileObject)
-                    || !areaSubSystem.TryGetAreaForDevice(tileObject, out AreaRecord record)
-                    || record.Id != areaId)
-                {
-                    return;
-                }
-
-                action(controller, kind.Value);
-            });
+            }
         }
 
         public static bool TryResolvePort(int objectId, out AtmosPortControllerBase controller, out AtmosAreaPortKind kind)
@@ -197,12 +178,13 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         private static AtmosAreaPortRecord BuildRecord(
             AtmosPortControllerBase controller,
+            AtmosAreaPortKind kind,
             int objectId,
             string areaDisplayName)
         {
-            bool isVent = controller is VentController;
+            bool isVent = kind == AtmosAreaPortKind.Vent;
             float targetKpa = 101f;
-            if (controller is VentController vent)
+            if (isVent && controller is VentController vent)
             {
                 targetKpa = vent.TargetPressureKpa;
             }
@@ -224,7 +206,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
             return new AtmosAreaPortRecord(
                 objectId,
-                isVent ? AtmosAreaPortKind.Vent : AtmosAreaPortKind.Scrubber,
+                kind,
                 FormatDeviceName(isVent, areaDisplayName),
                 controller.IsEnabled,
                 targetKpa,
