@@ -141,7 +141,7 @@ namespace SS3D.Systems.Furniture
                             if (opener == null || !_visitedScratch.Add(opener))
                                 continue;
 
-                            opener.ServerUpdateProximityFromService();
+                            opener.ServerUpdateProximityFromService(players);
                             RefreshEmptyPassMembership(opener);
                         }
                     }
@@ -164,7 +164,7 @@ namespace SS3D.Systems.Furniture
                     if (opener == null || _visitedScratch.Contains(opener))
                         continue;
 
-                    opener.ServerUpdateProximityFromService();
+                    opener.ServerUpdateProximityFromService(players);
                     RefreshEmptyPassMembership(opener);
                 }
             }

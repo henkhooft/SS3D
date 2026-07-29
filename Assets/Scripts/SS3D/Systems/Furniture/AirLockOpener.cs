@@ -13,7 +13,6 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Tile;
-using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
 using AudioType = SS3D.Systems.Audio.AudioType;
 
@@ -88,8 +87,13 @@ namespace SS3D.Systems.Furniture
         private readonly HashSet<HumanInventory> _authorizedOccupants = new();
         private readonly HashSet<HumanInventory> _deniedOccupants = new();
         private readonly HashSet<HumanInventory> _proximityScratch = new();
+        private readonly List<HumanInventory> _deniedPruneScratch = new();
 
         private MaterialPropertyBlock _doorLightPropertyBlock;
+        private readonly List<Material> _sharedMaterialsScratch = new(4);
+        private int _doorLightColorPropertyId;
+        private bool _doorLightColorPropertyResolved;
+        private bool _hasDoorLightMaterialSlot;
 
         private AirLockAccessGate _accessGate;
         private NetworkAnimator _networkAnimator;
@@ -199,44 +203,22 @@ namespace SS3D.Systems.Furniture
         {
             if (_meshesToColor != null)
             {
-                for (int i = 0; i < _meshesToColor.Count; i++)
+                EnsureDoorLightColorProperty();
+                if (_hasDoorLightMaterialSlot && _doorLightColorPropertyId != 0)
                 {
-                    MeshRenderer renderer = _meshesToColor[i];
-                    if (renderer == null)
-                    {
-                        continue;
-                    }
-
-                    Material[] sharedMaterials = renderer.sharedMaterials;
-                    if (DoorLightMaterialIndex >= sharedMaterials.Length)
-                    {
-                        continue;
-                    }
-
-                    Material targetMaterial = sharedMaterials[DoorLightMaterialIndex];
-                    if (targetMaterial == null)
-                    {
-                        continue;
-                    }
-
-                    int colorPropertyId;
-                    if (targetMaterial.HasProperty(BaseColorId))
-                    {
-                        colorPropertyId = BaseColorId;
-                    }
-                    else if (targetMaterial.HasProperty(ColorId))
-                    {
-                        colorPropertyId = ColorId;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-
                     _doorLightPropertyBlock ??= new MaterialPropertyBlock();
-                    renderer.GetPropertyBlock(_doorLightPropertyBlock);
-                    _doorLightPropertyBlock.SetColor(colorPropertyId, color);
-                    renderer.SetPropertyBlock(_doorLightPropertyBlock);
+                    for (int i = 0; i < _meshesToColor.Count; i++)
+                    {
+                        MeshRenderer renderer = _meshesToColor[i];
+                        if (renderer == null)
+                        {
+                            continue;
+                        }
+
+                        renderer.GetPropertyBlock(_doorLightPropertyBlock, DoorLightMaterialIndex);
+                        _doorLightPropertyBlock.SetColor(_doorLightColorPropertyId, color);
+                        renderer.SetPropertyBlock(_doorLightPropertyBlock, DoorLightMaterialIndex);
+                    }
                 }
             }
 
@@ -267,6 +249,56 @@ namespace SS3D.Systems.Furniture
                 {
                     skinnedRenderer.SetBlendShapeWeight(1, 0);
                     skinnedRenderer.SetBlendShapeWeight(2, 0);
+                }
+            }
+        }
+
+        private void EnsureDoorLightColorProperty()
+        {
+            if (_doorLightColorPropertyResolved)
+            {
+                return;
+            }
+
+            _doorLightColorPropertyResolved = true;
+            if (_meshesToColor == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _meshesToColor.Count; i++)
+            {
+                MeshRenderer renderer = _meshesToColor[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                _sharedMaterialsScratch.Clear();
+                renderer.GetSharedMaterials(_sharedMaterialsScratch);
+                if (DoorLightMaterialIndex >= _sharedMaterialsScratch.Count)
+                {
+                    continue;
+                }
+
+                Material targetMaterial = _sharedMaterialsScratch[DoorLightMaterialIndex];
+                if (targetMaterial == null)
+                {
+                    continue;
+                }
+
+                if (targetMaterial.HasProperty(BaseColorId))
+                {
+                    _hasDoorLightMaterialSlot = true;
+                    _doorLightColorPropertyId = BaseColorId;
+                    return;
+                }
+
+                if (targetMaterial.HasProperty(ColorId))
+                {
+                    _hasDoorLightMaterialSlot = true;
+                    _doorLightColorPropertyId = ColorId;
+                    return;
                 }
             }
         }
@@ -315,12 +347,9 @@ namespace SS3D.Systems.Furniture
 
         /// <summary>Called by <see cref="AirLockProximityService"/> for doors near players (or needing an empty pass).</summary>
         [Server]
-        internal void ServerUpdateProximityFromService()
+        internal void ServerUpdateProximityFromService(IReadOnlyList<Entity> spawnedPlayers)
         {
-            if (SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive)
-                return;
-
-            ServerUpdateProximity();
+            ServerUpdateProximity(spawnedPlayers);
         }
 
         private void HandleObserversActive(NetworkObject _) => RefreshAnimatorCulling();
@@ -339,7 +368,7 @@ namespace SS3D.Systems.Furniture
         }
 
         [Server]
-        private void ServerUpdateProximity()
+        private void ServerUpdateProximity(IReadOnlyList<Entity> spawnedPlayers)
         {
             if (_proximityVolume == null)
             {
@@ -358,7 +387,7 @@ namespace SS3D.Systems.Furniture
                 return;
             }
 
-            if (!SubSystems.TryGet(out EntitySubSystem entitySubSystem))
+            if (spawnedPlayers == null)
             {
                 return;
             }
@@ -367,7 +396,6 @@ namespace SS3D.Systems.Furniture
             _authorizedOccupants.Clear();
             _proximityScratch.Clear();
 
-            IReadOnlyList<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
             for (int i = 0; i < spawnedPlayers.Count; i++)
             {
                 Entity entity = spawnedPlayers[i];
@@ -409,7 +437,7 @@ namespace SS3D.Systems.Furniture
                 _authorizedOccupants.Add(inventory);
             }
 
-            _deniedOccupants.RemoveWhere(inventory => inventory == null || !_proximityScratch.Contains(inventory));
+            PruneDeniedOccupants();
 
             bool isEmpty = _authorizedOccupants.Count == 0;
             if (!isEmpty)
@@ -424,6 +452,23 @@ namespace SS3D.Systems.Furniture
             else if (!wasEmpty)
             {
                 ScheduleCloseAfterDelay();
+            }
+        }
+
+        private void PruneDeniedOccupants()
+        {
+            _deniedPruneScratch.Clear();
+            foreach (HumanInventory inventory in _deniedOccupants)
+            {
+                if (inventory == null || !_proximityScratch.Contains(inventory))
+                {
+                    _deniedPruneScratch.Add(inventory);
+                }
+            }
+
+            for (int i = 0; i < _deniedPruneScratch.Count; i++)
+            {
+                _deniedOccupants.Remove(_deniedPruneScratch[i]);
             }
         }
 
