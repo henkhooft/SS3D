@@ -46,7 +46,7 @@ namespace SS3D.Systems.Electricity
         }
 
         public static List<IPowerConsumer> GetActiveConsumers(
-            IEnumerable<IPowerConsumer> consumers,
+            IReadOnlyList<IPowerConsumer> consumers,
             ApcControlFlags enabledChannels)
         {
             var activeConsumers = new List<IPowerConsumer>();
@@ -54,9 +54,13 @@ namespace SS3D.Systems.Electricity
             return activeConsumers;
         }
 
-        /// <summary>Hot-path variant: clears and fills <paramref name="results"/> with no new List.</summary>
+        /// <summary>
+        /// Hot-path variant: clears and fills <paramref name="results"/> with no new List.
+        /// Takes <see cref="IReadOnlyList{T}"/> and indexes — foreach over <see cref="IEnumerable{T}"/>
+        /// boxes List's enumerator (~40 B per APC per tick).
+        /// </summary>
         public static void FillActiveConsumers(
-            IEnumerable<IPowerConsumer> consumers,
+            IReadOnlyList<IPowerConsumer> consumers,
             ApcControlFlags enabledChannels,
             List<IPowerConsumer> results)
         {
@@ -66,8 +70,9 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            foreach (IPowerConsumer consumer in consumers)
+            for (int i = 0; i < consumers.Count; i++)
             {
+                IPowerConsumer consumer = consumers[i];
                 if (IsChannelEnabled(consumer.Channel, enabledChannels))
                 {
                     results.Add(consumer);

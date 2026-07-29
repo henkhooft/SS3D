@@ -295,7 +295,13 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (powerKw > storages.Sum(x => x.MaxDeliverableKw(tickSeconds)))
+            float availableKw = 0f;
+            for (int i = 0; i < storages.Count; i++)
+            {
+                availableKw += storages[i].MaxDeliverableKw(tickSeconds);
+            }
+
+            if (powerKw > availableKw)
             {
                 Log.Error(this, "Energy requested for draining batteries is greater than available energy in batteries." +
                     "This will result in creating some free energy.");
@@ -438,13 +444,37 @@ namespace SS3D.Systems.Electricity
 
         private static void SortStoragesByDeliverableAscending(List<IPowerStorage> storages, float tickSeconds)
         {
-            storages.Sort((a, b) =>
-                a.MaxDeliverableKw(tickSeconds).CompareTo(b.MaxDeliverableKw(tickSeconds)));
+            // Insertion sort — storage lists are tiny; avoids Comparison<> alloc from List.Sort lambda.
+            for (int i = 1; i < storages.Count; i++)
+            {
+                IPowerStorage current = storages[i];
+                float currentDeliverable = current.MaxDeliverableKw(tickSeconds);
+                int j = i - 1;
+                while (j >= 0 && storages[j].MaxDeliverableKw(tickSeconds) > currentDeliverable)
+                {
+                    storages[j + 1] = storages[j];
+                    j--;
+                }
+
+                storages[j + 1] = current;
+            }
         }
 
         private static void SortStoragesByRemainingCapacityAscending(List<IPowerStorage> storages)
         {
-            storages.Sort((a, b) => a.RemainingCapacityKwh.CompareTo(b.RemainingCapacityKwh));
+            for (int i = 1; i < storages.Count; i++)
+            {
+                IPowerStorage current = storages[i];
+                float currentCapacity = current.RemainingCapacityKwh;
+                int j = i - 1;
+                while (j >= 0 && storages[j].RemainingCapacityKwh > currentCapacity)
+                {
+                    storages[j + 1] = storages[j];
+                    j--;
+                }
+
+                storages[j + 1] = current;
+            }
         }
 
         private static float SumChannelLoad(IEnumerable<IPowerConsumer> consumers, PowerChannel channel)

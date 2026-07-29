@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: a8624d365 — 2026-07-29 (sticky None resolve; area membership index invalidate)
+> Verified: be79cc8ad — 2026-07-29 (GetAllAreas cache; sticky resolve)
 
 # Area
 
@@ -68,6 +68,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - **Act before flood:** registration ≠ readiness — await `WorldReadyPhase.AreasFlooded` (see [core-subsystems](core-subsystems.md)).
 - **Device→area resolve must not re-walk the map every call:** `TryGetAreaForDevice` builds `TileCoord`s and walks the registry. Electricity used to call it twice per consumer per tick — Metastation deep profiles showed ~12k `TryGetAreaId`/inflated-frame. Prefer mutation-driven indexes (electricity APC→consumers, atmos area→ports) for membership lists; the StructureVersion device cache is a sticky resolve for incidental callers, cleared on reflood / structure bump. Hit 2026-07-29.
 - **`TryResolveAreaIdForDevice` must not fall through to floor-cache on server miss:** live `TryGetAreaForDevice` already sticky-caches None. Falling through made unassigned devices pay registry + floor-cache forever. Server/host with `_map` returns false on miss; pure clients still use `FloorVisualCache`. Hit 2026-07-29.
+- **`GetAllAreas` must not allocate every electricity tick:** returning `new List` each call showed ~688 B under `CircuitsTick`/`AreaPower`. Cache until Register/Unregister/Clear. Hit 2026-07-29.
 
 ## Depends on / Used by
 

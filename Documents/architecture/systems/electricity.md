@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: a8624d365 — 2026-07-29 (O(1) circuit index + APC consumer set for cable filter)
+> Verified: be79cc8ad — 2026-07-29 (CircuitsTick GC: GetAllAreas cache + IReadOnlyList FillActive)
 
 # Electricity
 
@@ -66,7 +66,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
-- **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). Hit 2026-07-28 (`SS3D.Electricity.CircuitsTick`).
+- **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). **Also:** `AreaRegistry.GetAllAreas()` must not allocate a fresh List each tick (cache until Register/Unregister); `FillActiveConsumers` must take `IReadOnlyList` + index — foreach over `IEnumerable` boxes List's enumerator (~40 B/APC). Hit 2026-07-28 / 2026-07-29.
 - **`TryGetCircuitForDevice` must stay O(1):** scanning `_circuits` × `ContainsDevice` was ~507 membership tests per APC lookup × two calls/area/tick on Metastation. Rebuild `_circuitByDevice` in `UpdateAllCircuitsTopology`; do not reintroduce linear scans on the tick or MI stats path. Hit 2026-07-29 (deep profile).
 - **Cable filter must not re-resolve area each consumer:** `FillActiveConsumers` used to call `IsAreaScopedConsumer` + channel resolver (each → `TryGetEffectiveApcForDevice`) per consumer per tick. Rebuild `_areaScopedConsumers` / `_apcByConsumer` in `RebuildApcConsumerIndex` and use those in the circuit lambdas. Hit 2026-07-29.
 - **`SS3D.Electricity.FixedUpdate` / OnTick fan-out:** do not subscribe every `ConsumerPowerVisual` to `ElectricitySubSystem.OnTick` — at Metastation door counts that rewrites emissives (and used to alloc `Renderer.materials`) every 0.2 s. Drive visuals from `OnPowerStatusUpdated` (+ one-shot `WhenReady`); cache material refs in `CacheVisuals`. Hit 2026-07-28.

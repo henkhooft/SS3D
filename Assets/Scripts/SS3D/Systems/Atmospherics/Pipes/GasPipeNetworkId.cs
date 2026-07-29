@@ -1,9 +1,11 @@
+using System;
+
 namespace SS3D.Systems.Atmospherics.Pipes
 {
     /// <summary>
     /// Stable identifier for a connected gas pipe network component.
     /// </summary>
-    public readonly struct GasPipeNetworkId
+    public readonly struct GasPipeNetworkId : IEquatable<GasPipeNetworkId>
     {
         public const ushort NoneValue = 0;
 
@@ -15,10 +17,16 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         public GasPipeNetworkId(ushort value) => Value = value;
 
-        public override string ToString() => IsNone ? "None" : Value.ToString();
+        public bool Equals(GasPipeNetworkId other) => Value == other.Value;
 
-        public override bool Equals(object obj) => obj is GasPipeNetworkId other && Value == other.Value;
+        public override bool Equals(object obj) => obj is GasPipeNetworkId other && Equals(other);
 
         public override int GetHashCode() => Value;
+
+        public override string ToString() => IsNone ? "None" : Value.ToString();
+
+        public static bool operator ==(GasPipeNetworkId left, GasPipeNetworkId right) => left.Equals(right);
+
+        public static bool operator !=(GasPipeNetworkId left, GasPipeNetworkId right) => !left.Equals(right);
     }
 }

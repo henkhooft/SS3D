@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: a8624d365 — 2026-07-29 (area→port index for air-alarm discovery)
+> Verified: be79cc8ad — 2026-07-29 (GasPipeNetworkId IEquatable + scrubber filter unroll)
 
 # Atmospherics
 
@@ -56,6 +56,8 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - **`TileCoord` dictionary lookups box (~24 B) on Mono:** keys must implement `IEquatable<TileCoord>` / `GetHashCode` (see [tile](tile.md)); otherwise `ValueType.DefaultEquals` dominates flow upload and other hot maps.
 - **Port ticks allocating via `GetAllPlacedObject`:** that API always builds a new `List`. Pipe layers are single-occupancy — use `TryGetPlacedObject`. Do not re-resolve pipe networks every tick; cache against `GasPipeNetworkRegistry.TopologyVersion`.
 - **Do not scan all ports to find area vents/scrubbers:** `AtmosAreaDeviceQuery` used to `ForEachPort` + `TryGetAreaForDevice` per port (O(all ports) with full tile resolve). That bites when an air alarm opens. Use `AtmosAreaPortIndex` / `GetIndexedPortsForArea` — rebuild on port register/unregister and area membership invalidate (`AreaSubSystem` → `InvalidateAreaPortIndex`). Hit 2026-07-29.
+- **`GasPipeNetworkId` must implement `IEquatable<>`:** Dictionary lookup without it boxes the key every `TryGetNetwork` (~18 B × ports/tick under `SS3D.Atmos.Sim`). Same class of bug as `TileCoord`. Hit 2026-07-29.
+- **Scrubber filter iteration must not `yield return`:** `GetActiveFilteredGases()` allocated an iterator state machine per scrubber per atmos tick. Unroll filter flags instead. Hit 2026-07-29.
 - **Equal-pressure breath pockets:** a 1:1 O₂→CO₂ swap does not change total pressure, so pressure-only sharing never diluted the tile. `ShareGasJob` must run equal-P partial-pressure diffusion (`DiffusionSpeed`); composition gradients keep cells awake until the room mixes, then sleep again. Vacuum edges stay pressure-vent only.
 
 ## Depends on / Used by
