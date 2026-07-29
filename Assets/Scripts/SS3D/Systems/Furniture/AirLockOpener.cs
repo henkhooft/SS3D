@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using FishNet.Component.Animating;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Core;
@@ -95,6 +96,7 @@ namespace SS3D.Systems.Furniture
         private bool _hasDoorLightMaterialSlot;
 
         private AirLockAccessGate _accessGate;
+        private NetworkAnimator _networkAnimator;
         private Coroutine _closeTimer;
         private Coroutine _denyBlinkTimer;
 
@@ -124,6 +126,8 @@ namespace SS3D.Systems.Furniture
                     }
                 }
             }
+
+            TryGetComponent(out _networkAnimator);
         }
 
         public override void OnStartServer()
@@ -143,17 +147,23 @@ namespace SS3D.Systems.Furniture
             }
 
             AirLockProximityService.Instance.Register(this);
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive += HandleObserversActive;
 
             UpdateAnimator();
             NotifyTileStateChanged();
+            RefreshNetworkAnimatorCulling();
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive += HandleObserversActive;
 
             UpdateAnimator();
             NotifyTileStateChanged();
+            RefreshNetworkAnimatorCulling();
         }
 
         public override void OnStopServer()
@@ -164,8 +174,18 @@ namespace SS3D.Systems.Furniture
             }
 
             AirLockProximityService.Instance.Unregister(this);
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive -= HandleObserversActive;
 
             base.OnStopServer();
+        }
+
+        public override void OnStopClient()
+        {
+            if (NetworkObject != null)
+                NetworkObject.OnObserversActive -= HandleObserversActive;
+
+            base.OnStopClient();
         }
 
         public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
@@ -330,6 +350,23 @@ namespace SS3D.Systems.Furniture
         internal void ServerUpdateProximityFromService(IReadOnlyList<Entity> spawnedPlayers)
         {
             ServerUpdateProximity(spawnedPlayers);
+        }
+
+        private void HandleObserversActive(NetworkObject _) => RefreshNetworkAnimatorCulling();
+
+        /// <summary>
+        /// FishNet <see cref="NetworkAnimator"/> ticks every FixedUpdate regardless of Unity
+        /// <c>Animator.cullingMode</c>. Gate the network component on observers only — do not
+        /// toggle <see cref="_animator"/>.enabled (AOI ≫ frustum; KeepAnimatorStateOnDisable desync).
+        /// </summary>
+        private void RefreshNetworkAnimatorCulling()
+        {
+            bool observed = NetworkObject == null
+                || !NetworkObject.IsSpawned
+                || NetworkObject.Observers.Count > 0;
+
+            if (_networkAnimator != null)
+                _networkAnimator.enabled = observed;
         }
 
         [Server]

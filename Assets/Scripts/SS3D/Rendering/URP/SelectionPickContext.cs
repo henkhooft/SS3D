@@ -17,6 +17,15 @@ namespace SS3D.Rendering.URP
         /// </summary>
         public const float DefaultPickBoundsExpand = 0.2f;
 
+        /// <summary>
+        /// World XZ cell size for the pick spatial index. Finer than FishNet HashGrid (16 m) so a
+        /// cursor-ray DDA yields tens–low hundreds of candidates instead of tens of thousands.
+        /// </summary>
+        public const float PickCellSize = 4f;
+
+        /// <summary>Max ray length for spatial collect (meters).</summary>
+        public const float MaxPickRayDistance = 100f;
+
         public struct Request
         {
             public Camera SourceCamera;
@@ -43,10 +52,24 @@ namespace SS3D.Rendering.URP
         public interface ISelectionPickSource
         {
             void CollectPickDraws(List<PickDraw> buffer);
+
+            /// <summary>World position used to bucket this source in the pick spatial index.</summary>
+            Vector3 PickWorldCenter { get; }
+
+            /// <summary>
+            /// When true, always considered during cursor-culled collect (mobile / skinned sources
+            /// that may leave their registered cell between frames).
+            /// </summary>
+            bool PreferAlwaysScan { get; }
         }
 
         static Request? s_Request;
         static readonly List<ISelectionPickSource> s_Sources = new();
+        static readonly Dictionary<Vector2Int, List<ISelectionPickSource>> s_ByCell = new();
+        static readonly Dictionary<ISelectionPickSource, Vector2Int> s_SourceCells = new();
+        static readonly List<ISelectionPickSource> s_AlwaysScan = new();
+        static readonly HashSet<ISelectionPickSource> s_CollectScratch = new();
+        static readonly List<Vector2Int> s_RayCellsScratch = new();
         static readonly Plane[] s_FrustumPlanes = new Plane[6];
         static bool s_HasFrustum;
         /// <summary>True when a pick request is active and cursor culling should run (fail closed if ray missing).</summary>
@@ -68,6 +91,17 @@ namespace SS3D.Rendering.URP
             s_HasPickRay = false;
         }
 
+        /// <summary>EditMode / tests: drop all registered pick sources.</summary>
+        public static void ClearAllSources()
+        {
+            s_Sources.Clear();
+            s_ByCell.Clear();
+            s_SourceCells.Clear();
+            s_AlwaysScan.Clear();
+            s_CollectScratch.Clear();
+            s_RayCellsScratch.Clear();
+        }
+
         public static bool TryGetRequest(out Request request)
         {
             if (s_Request.HasValue && s_Request.Value.SourceCamera != null)
@@ -80,12 +114,25 @@ namespace SS3D.Rendering.URP
             return false;
         }
 
+        public static Vector2Int GetPickCell(Vector3 worldPosition)
+        {
+            return new Vector2Int(
+                Mathf.FloorToInt(worldPosition.x / PickCellSize),
+                Mathf.FloorToInt(worldPosition.z / PickCellSize));
+        }
+
         public static void RegisterSource(ISelectionPickSource source)
         {
             if (source == null || s_Sources.Contains(source))
                 return;
 
             s_Sources.Add(source);
+            Vector2Int cell = GetPickCell(source.PickWorldCenter);
+            s_SourceCells[source] = cell;
+            AddToCell(cell, source);
+
+            if (source.PreferAlwaysScan && !s_AlwaysScan.Contains(source))
+                s_AlwaysScan.Add(source);
         }
 
         public static void UnregisterSource(ISelectionPickSource source)
@@ -94,6 +141,12 @@ namespace SS3D.Rendering.URP
                 return;
 
             s_Sources.Remove(source);
+            s_AlwaysScan.Remove(source);
+            if (s_SourceCells.TryGetValue(source, out Vector2Int cell))
+            {
+                s_SourceCells.Remove(source);
+                RemoveFromCell(cell, source);
+            }
         }
 
         /// <summary>
@@ -126,14 +179,161 @@ namespace SS3D.Rendering.URP
         {
             RefreshCullStateFromRequest();
             buffer.Clear();
-            for (int i = 0; i < s_Sources.Count; i++)
+
+            if (!s_CursorCullArmed)
             {
-                ISelectionPickSource source = s_Sources[i];
+                // EditMode / no request: walk all sources (fail open).
+                for (int i = 0; i < s_Sources.Count; i++)
+                {
+                    ISelectionPickSource source = s_Sources[i];
+                    if (source == null)
+                        continue;
+
+                    source.CollectPickDraws(buffer);
+                }
+
+                return;
+            }
+
+            // Live pick request without a mouse ray: fail closed (no draws, no source walk).
+            if (!s_HasPickRay)
+                return;
+
+            CollectFromSpatialIndex(buffer);
+        }
+
+        static void CollectFromSpatialIndex(List<PickDraw> buffer)
+        {
+            s_CollectScratch.Clear();
+            FillRayCells(s_PickRay, s_RayCellsScratch);
+
+            for (int c = 0; c < s_RayCellsScratch.Count; c++)
+            {
+                Vector2Int cell = s_RayCellsScratch[c];
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        Vector2Int padded = new Vector2Int(cell.x + dx, cell.y + dz);
+                        if (!s_ByCell.TryGetValue(padded, out List<ISelectionPickSource> list))
+                            continue;
+
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            ISelectionPickSource source = list[i];
+                            if (source != null)
+                                s_CollectScratch.Add(source);
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < s_AlwaysScan.Count; i++)
+            {
+                ISelectionPickSource source = s_AlwaysScan[i];
                 if (source == null)
                     continue;
 
-                source.CollectPickDraws(buffer);
+                ReindexIfMoved(source);
+                s_CollectScratch.Add(source);
             }
+
+            foreach (ISelectionPickSource source in s_CollectScratch)
+                source.CollectPickDraws(buffer);
+        }
+
+        static void ReindexIfMoved(ISelectionPickSource source)
+        {
+            Vector2Int newCell = GetPickCell(source.PickWorldCenter);
+            if (!s_SourceCells.TryGetValue(source, out Vector2Int oldCell) || oldCell == newCell)
+                return;
+
+            RemoveFromCell(oldCell, source);
+            s_SourceCells[source] = newCell;
+            AddToCell(newCell, source);
+        }
+
+        /// <summary>
+        /// 2D Amanatides–Woo style march of XZ pick cells along <paramref name="ray"/>.
+        /// </summary>
+        static void FillRayCells(Ray ray, List<Vector2Int> cells)
+        {
+            cells.Clear();
+
+            float near = 0f;
+            float far = MaxPickRayDistance;
+            if (TryGetRequest(out Request request) && request.SourceCamera != null)
+            {
+                near = Mathf.Max(0f, request.SourceCamera.nearClipPlane);
+                far = Mathf.Min(MaxPickRayDistance, request.SourceCamera.farClipPlane);
+            }
+
+            Vector3 start = ray.origin + ray.direction * near;
+            Vector3 end = ray.origin + ray.direction * far;
+            Vector2Int startCell = GetPickCell(start);
+            Vector2Int endCell = GetPickCell(end);
+
+            cells.Add(startCell);
+            if (startCell == endCell)
+                return;
+
+            float dx = end.x - start.x;
+            float dz = end.z - start.z;
+            int stepX = dx > 0f ? 1 : (dx < 0f ? -1 : 0);
+            int stepZ = dz > 0f ? 1 : (dz < 0f ? -1 : 0);
+
+            float tDeltaX = stepX != 0 ? Mathf.Abs(PickCellSize / dx) : float.PositiveInfinity;
+            float tDeltaZ = stepZ != 0 ? Mathf.Abs(PickCellSize / dz) : float.PositiveInfinity;
+
+            float nextBoundaryX = (stepX > 0 ? startCell.x + 1 : startCell.x) * PickCellSize;
+            float nextBoundaryZ = (stepZ > 0 ? startCell.y + 1 : startCell.y) * PickCellSize;
+            float tMaxX = stepX != 0 ? (nextBoundaryX - start.x) / dx : float.PositiveInfinity;
+            float tMaxZ = stepZ != 0 ? (nextBoundaryZ - start.z) / dz : float.PositiveInfinity;
+
+            // Normalize tMax into [0,1] parameter space along start→end (dx/dz already span that).
+            // tDelta/tMax above are already in that parameter space when dx = end-start.
+
+            Vector2Int cell = startCell;
+            const int maxSteps = 512;
+            for (int step = 0; step < maxSteps; step++)
+            {
+                if (tMaxX < tMaxZ)
+                {
+                    tMaxX += tDeltaX;
+                    cell = new Vector2Int(cell.x + stepX, cell.y);
+                }
+                else
+                {
+                    tMaxZ += tDeltaZ;
+                    cell = new Vector2Int(cell.x, cell.y + stepZ);
+                }
+
+                cells.Add(cell);
+                if (cell == endCell)
+                    break;
+            }
+        }
+
+        static void AddToCell(Vector2Int cell, ISelectionPickSource source)
+        {
+            if (!s_ByCell.TryGetValue(cell, out List<ISelectionPickSource> list))
+            {
+                list = new List<ISelectionPickSource>(4);
+                s_ByCell[cell] = list;
+            }
+
+            if (!list.Contains(source))
+                list.Add(source);
+        }
+
+        static void RemoveFromCell(Vector2Int cell, ISelectionPickSource source)
+        {
+            if (!s_ByCell.TryGetValue(cell, out List<ISelectionPickSource> list))
+                return;
+
+            list.Remove(source);
+            if (list.Count == 0)
+                s_ByCell.Remove(cell);
         }
 
         static void RefreshCullStateFromRequest()

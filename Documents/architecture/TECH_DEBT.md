@@ -295,6 +295,7 @@ recompute, electricity distribution) as needing the same review pass PR #13 did,
 safe because "the pattern was fixed once."
 
 - Full list of pitfalls-with-fixes: [tile.md](systems/tile.md), [atmospherics.md](systems/atmospherics.md), [substances.md](systems/substances.md) § Pitfalls
+- **Coimbra PackageCache GC (Editor):** `ServiceLocator.GetChecked` builds `$"..."` assert messages every call (~724 B); `EventSystem.Invoke` pairs with unconditional `String.Format` in deep profiles. Lives in `com.coimbrastudios.core` — do not patch PackageCache; cache `IEventService` / avoid hot-path `GetChecked`, or vendor later. Area/device tile resolution still recomputed per electricity tick (`TileMap.TryGetAreaId` / `GetTileInFront`) — defer a cache pass after re-profile. See [core-subsystems.md](systems/core-subsystems.md).
 
 ---
 

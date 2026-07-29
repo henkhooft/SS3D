@@ -50,6 +50,7 @@ namespace SS3D.Systems.Electricity
         private bool _apcConsumerIndexDirty = true;
         private bool _circuitUpdatesSuspended;
         private List<Circuit> _circuits;
+        private readonly Dictionary<IElectricDevice, Circuit> _circuitByDevice = new();
         private readonly List<IPowerConsumer> _registeredConsumers = new();
         private readonly List<IElectricDevice> _registeredDevices = new();
         private readonly Dictionary<IApcChannelSource, List<IPowerConsumer>> _consumersByApc = new();
@@ -151,23 +152,14 @@ namespace SS3D.Systems.Electricity
         public bool TryGetCircuitStats(IElectricDevice device, IPowerStorage apcCell, out CircuitStats stats)
         {
             stats = default;
-            if (_circuits == null)
+            Circuit circuit = TryGetCircuitForDevice(device);
+            if (circuit == null)
             {
                 return false;
             }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                if (!circuit.ContainsDevice(device))
-                {
-                    continue;
-                }
-
-                stats = circuit.GetStats(apcCell);
-                return true;
-            }
-
-            return false;
+            stats = circuit.GetStats(apcCell);
+            return true;
         }
 
         [Server]
@@ -181,9 +173,9 @@ namespace SS3D.Systems.Electricity
 
             EnsureApcConsumerIndex();
             IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
-            List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
+            AreaApcPowerDistribution.FillActiveConsumers(areaConsumers, apc.Channels, _areaActiveConsumersScratch);
             float gridInputKw = GetApcGridInputKw(apc);
-            stats = AreaApcPowerDistribution.BuildApcStats(gridInputKw, apcCell, activeConsumers);
+            stats = AreaApcPowerDistribution.BuildApcStats(gridInputKw, apcCell, _areaActiveConsumersScratch);
             if (_lastApcGridAvailableKw.TryGetValue(apc, out float gridAvailableKw))
             {
                 stats.GridAvailableKw = gridAvailableKw;
@@ -219,6 +211,7 @@ namespace SS3D.Systems.Electricity
             _lastApcGridAvailableKw.Clear();
             _consumersByApc.Clear();
             _circuits.Clear();
+            _circuitByDevice.Clear();
             _electricityGraph?.Clear();
             _graphIsDirty = true;
             _apcConsumerIndexDirty = true;
@@ -398,20 +391,12 @@ namespace SS3D.Systems.Electricity
         [Server]
         private Circuit TryGetCircuitForDevice(IElectricDevice device)
         {
-            if (_circuits == null || device == null)
+            if (device == null || !_circuitByDevice.TryGetValue(device, out Circuit circuit))
             {
                 return null;
             }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                if (circuit.ContainsDevice(device))
-                {
-                    return circuit;
-                }
-            }
-
-            return null;
+            return circuit;
         }
 
         [Server]
@@ -607,19 +592,25 @@ namespace SS3D.Systems.Electricity
             Dictionary<VerticeCoordinates, int> components = new();
             _electricityGraph.ConnectedComponents(components);
             _circuits.Clear();
+            _circuitByDevice.Clear();
 
             Dictionary<int, List<VerticeCoordinates>> graphs = components.GroupBy(pair => pair.Value)
                 .ToDictionary(
                     group => group.Key,
                     group => group.Select(item => item.Key).ToList());
 
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            TileMap map = tileSystem?.CurrentMap;
+
             foreach (List<VerticeCoordinates> component in graphs.Values)
             {
                 Circuit circuit = new Circuit();
                 foreach (VerticeCoordinates coord in component)
                 {
-                    TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-                    ITileLocation location = tileSystem.CurrentMap.GetTileLocation(
+                    if (map == null)
+                        continue;
+
+                    ITileLocation location = map.GetTileLocation(
                         (TileLayer)coord.Layer,
                         new(coord.X, 0f, coord.Y));
 
@@ -630,6 +621,7 @@ namespace SS3D.Systems.Electricity
                         continue;
 
                     circuit.AddElectricDevice(device);
+                    _circuitByDevice[device] = circuit;
                 }
 
                 circuit.SetConsumerChannelResolver(consumer => ResolveEnabledChannelsForConsumer(circuit, consumer));

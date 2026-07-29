@@ -27,6 +27,17 @@ namespace SS3D.Systems.Selection
             set => _selectionColor = value;
         }
 
+        public Vector3 PickWorldCenter => transform.position;
+
+        public bool PreferAlwaysScan
+        {
+            get
+            {
+                EnsurePickCache();
+                return _skinnedRenderers.Count > 0;
+            }
+        }
+
         protected override void OnStart()
         {
             base.OnStart();

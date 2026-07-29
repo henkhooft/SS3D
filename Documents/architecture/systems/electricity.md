@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: efe1c029e — 2026-07-28
+> Verified: 671460029 — 2026-07-29 (O(1) circuit-by-device index)
 
 # Electricity
 
@@ -36,7 +36,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerStorageMath.cs` — shared APC/SMES/battery charge/discharge helpers
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerGate.cs` — `IsPowered` / `IsChannelOpen` / `IsEffectivelyPowered`
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerConsumerAllocation.cs` — channel-priority consumer budgeting
-- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; `IWorldReady`; awaits `AreasFlooded` then notifies `ElectricityReady`; per-APC consumer index
+- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; `IWorldReady`; awaits `AreasFlooded` then notifies `ElectricityReady`; per-APC consumer index; `_circuitByDevice` O(1) lookup
 - `Assets/Scripts/SS3D/Systems/Electricity/AreaApcPowerDistribution.cs` — area APC powers local consumers without per-device cables
 - `Assets/Scripts/SS3D/Systems/Electricity/ApcStatusDeriver.cs` — APC power/battery state derivation
 - `Assets/Scripts/SS3D/Systems/Electricity/ElectricCableConnectivity.cs` — HV cable links only grid backbone devices
@@ -66,7 +66,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
-- **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick. Hit 2026-07-28 (`SS3D.Electricity.CircuitsTick`).
+- **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). Hit 2026-07-28 (`SS3D.Electricity.CircuitsTick`).
+- **`TryGetCircuitForDevice` must stay O(1):** scanning `_circuits` × `ContainsDevice` was ~507 membership tests per APC lookup × two calls/area/tick on Metastation. Rebuild `_circuitByDevice` in `UpdateAllCircuitsTopology`; do not reintroduce linear scans on the tick or MI stats path. Hit 2026-07-29 (deep profile).
 - **`SS3D.Electricity.FixedUpdate` / OnTick fan-out:** do not subscribe every `ConsumerPowerVisual` to `ElectricitySubSystem.OnTick` — at Metastation door counts that rewrites emissives (and used to alloc `Renderer.materials`) every 0.2 s. Drive visuals from `OnPowerStatusUpdated` (+ one-shot `WhenReady`); cache material refs in `CacheVisuals`. Hit 2026-07-28.
 - **`FixedUpdate` ≫ `CircuitsTick` self-time:** the FixedUpdate marker wraps CircuitsTick **and** `OnTick` subscriber fan-out. Zoom-out hitches often coincide with a 0.2 s tick: CircuitsTick may be ~6 ms while OnTick was the rest. Marker `SS3D.Electricity.OnTick` splits the bucket. Hit 2026-07-28.
 - **Lighting bypass ignores manually placed fixtures:** `LightPower.ShouldBeLit` returned false when `!_hasArea` before applying `LightingDevBypass`. No-APC / Map-Editor place stays dark with **SS3D/Dev/Lighting/Always Power Light Fixtures** on. Bypass still respects area Dark + channel policy when an area exists. Hit 2026-07-28.

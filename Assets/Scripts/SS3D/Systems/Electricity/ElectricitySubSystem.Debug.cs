@@ -67,16 +67,13 @@ namespace SS3D.Systems.Electricity
                 return false;
             }
 
-            for (int i = 0; i < _circuits.Count; i++)
+            if (!_circuitByDevice.TryGetValue(device, out Circuit circuit))
             {
-                if (_circuits[i].ContainsDevice(device))
-                {
-                    index = i;
-                    return true;
-                }
+                return false;
             }
 
-            return false;
+            index = _circuits.IndexOf(circuit);
+            return index >= 0;
         }
 
         private string BuildDeviceLabel(IElectricDevice device, int circuitIndex)
