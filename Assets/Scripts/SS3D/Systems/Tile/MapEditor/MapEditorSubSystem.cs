@@ -7,6 +7,9 @@ using SS3D.Core.Behaviours;
 using SS3D.Data.AssetDatabases;
 using SS3D.Logging;
 using SS3D.Systems.Area;
+using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Electricity;
+using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Tile.MapEditor.Commands;
@@ -53,6 +56,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private IInputHandle _mapEditorHandle;
         private VisualElement _overlayRoot;
         private bool _active;
+        private bool _hadWorldSimsSuspend;
+        private bool _restoredAtmosPaused;
         private bool _mouseOverUI;
         private bool _documentRegistered;
         private float _toastTimer;
@@ -298,6 +303,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 SetMouseOverUI(false);
                 _gameplayHud.SetVisible(false);
                 SpawnPointEditorView.EnsureExists().SetEditorOpen(true);
+                BeginWorldSimsSuspend();
+                RefreshTileHostVisibility();
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
             }
@@ -314,8 +321,61 @@ namespace SS3D.Systems.Tile.MapEditor
                 _mapEditorHandle?.Dispose();
                 _mapEditorHandle = null;
                 ShutdownDocument();
+                EndWorldSimsSuspend();
+                // IsActive is already false — re-apply HashGrid AOI host visibility.
+                RefreshTileHostVisibility();
                 EditorClosed?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Full-station authoring keeps MeshRenderers on; pause per-tick world sims so Metastation-scale
+        /// maps stay interactive in the editor.
+        /// </summary>
+        private void BeginWorldSimsSuspend()
+        {
+            if (_hadWorldSimsSuspend)
+                return;
+
+            _hadWorldSimsSuspend = true;
+            if (SubSystems.TryGet(out AtmosSubSystem atmos))
+            {
+                _restoredAtmosPaused = atmos.SimulationPaused;
+                atmos.SimulationPaused = true;
+            }
+
+            if (SubSystems.TryGet(out ElectricitySubSystem electricity))
+                electricity.SuspendCircuitUpdates(true);
+
+            if (SubSystems.TryGet(out DisposalSubSystem disposal))
+                disposal.CapsulesPaused = true;
+        }
+
+        private void EndWorldSimsSuspend()
+        {
+            if (!_hadWorldSimsSuspend)
+                return;
+
+            _hadWorldSimsSuspend = false;
+            if (SubSystems.TryGet(out AtmosSubSystem atmos))
+                atmos.SimulationPaused = _restoredAtmosPaused;
+
+            if (SubSystems.TryGet(out ElectricitySubSystem electricity))
+                electricity.SuspendCircuitUpdates(false);
+
+            if (SubSystems.TryGet(out DisposalSubSystem disposal))
+                disposal.CapsulesPaused = false;
+        }
+
+        /// <summary>
+        /// Map Editor free-fly bypasses HashGrid AOI for host MeshRenderers; leaving restores AOI.
+        /// </summary>
+        private void RefreshTileHostVisibility()
+        {
+            if (_tileSystem?.CurrentMap == null)
+                return;
+
+            _tileSystem.CurrentMap.RefreshAllHostVisibility();
         }
 
         /// <summary>

@@ -7,23 +7,27 @@ namespace SS3D.Systems.Atmospherics.ECS
 {
     /// <summary>
     /// Pressure-driven mole sharing plus equal-pressure composition diffusion over the active
-    /// cell list. Reads molesRead, writes molesWrite.
+    /// cell list. Only the <see cref="WorkingSet"/> (actives + their neighbours) is copied,
+    /// seeded, and temperature-resolved — passive cells stay untouched.
+    /// Commits results back into the read buffers for the working set (no full-grid swap).
     /// </summary>
     [BurstCompile]
     public struct ShareGasJob : IJob
     {
         [ReadOnly] public NativeArray<int> ActiveCells;
-        [ReadOnly] public NativeArray<float> MolesRead;
-        [ReadOnly] public NativeArray<AtmosCellMeta> CellMeta;
+        [ReadOnly] public NativeArray<int> WorkingSet;
         [ReadOnly] public NativeArray<AtmosNeighbours> Neighbours;
-
-        public NativeArray<float> MolesWrite;
-        public NativeArray<AtmosCellMeta> CellMetaWrite;
-
         [ReadOnly] public NativeArray<float> SpecificHeat;
+
+        public NativeArray<float> MolesRead;
+        public NativeArray<float> MolesWrite;
+        public NativeArray<AtmosCellMeta> CellMeta;
+        public NativeArray<AtmosCellMeta> CellMetaWrite;
 
         /// <summary>Per-cell thermal energy scratch (heatCapacity·T), seeded each run.</summary>
         public NativeArray<float> EnergyScratch;
+
+        public NativeArray<float> BurnIntensity;
 
         public int MaxGasTypes;
         public int GasTypeCount;
@@ -32,16 +36,18 @@ namespace SS3D.Systems.Atmospherics.ECS
 
         public void Execute()
         {
-            for (int i = 0; i < MolesRead.Length; i++)
-                MolesWrite[i] = MolesRead[i];
-
-            for (int i = 0; i < CellMeta.Length; i++)
-                CellMetaWrite[i] = CellMeta[i];
-
-            // Seed each cell's thermal energy from the read state so advected moles can carry
-            // their enthalpy; temperatures are recomputed from this conserved energy afterwards.
-            for (int c = 0; c < CellMeta.Length; c++)
+            for (int w = 0; w < WorkingSet.Length; w++)
             {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMeta.Length)
+                    continue;
+
+                int baseIndex = c * MaxGasTypes;
+                for (int gasId = 0; gasId < MaxGasTypes; gasId++)
+                    MolesWrite[baseIndex + gasId] = MolesRead[baseIndex + gasId];
+
+                CellMetaWrite[c] = CellMeta[c];
+
                 float heatCapacity = AtmosThermo.HeatCapacity(MolesRead, SpecificHeat, c, MaxGasTypes, GasTypeCount);
                 EnergyScratch[c] = heatCapacity * CellMeta[c].Temperature;
             }
@@ -134,6 +140,7 @@ namespace SS3D.Systems.Atmospherics.ECS
                     AtmosCellMeta settled = CellMetaWrite[cellIndex];
                     settled.State = AtmosCellState.Inactive;
                     CellMetaWrite[cellIndex] = settled;
+                    ClearBurn(cellIndex);
                     continue;
                 }
 
@@ -172,17 +179,20 @@ namespace SS3D.Systems.Atmospherics.ECS
                 {
                     // Still nothing moved after the grace tick: settle and drop out of the sim.
                     selfWrite.State = AtmosCellState.Inactive;
+                    ClearBurn(cellIndex);
                 }
 
                 // Any other state (Inactive / Vacuum / Blocked) is left untouched.
                 CellMetaWrite[cellIndex] = selfWrite;
             }
 
-            // Derive each cell's new temperature from its conserved energy and post-transfer
-            // heat capacity. Cells that gained or lost moles change temperature; unchanged cells
-            // resolve back to the same value (energy = heatCapacity · T).
-            for (int c = 0; c < CellMetaWrite.Length; c++)
+            // Derive temperatures only for the working set — passive cells keep last committed T.
+            for (int w = 0; w < WorkingSet.Length; w++)
             {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMetaWrite.Length)
+                    continue;
+
                 AtmosCellMeta meta = CellMetaWrite[c];
                 if (meta.State == AtmosCellState.Blocked || meta.State == AtmosCellState.Vacuum)
                     continue;
@@ -192,6 +202,26 @@ namespace SS3D.Systems.Atmospherics.ECS
                 meta.Temperature = AtmosThermo.ResolveTemperature(EnergyScratch[c], heatCapacity, totalMoles, SpaceTemperature);
                 CellMetaWrite[c] = meta;
             }
+
+            // Commit working-set results into the authoritative read buffers.
+            for (int w = 0; w < WorkingSet.Length; w++)
+            {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMeta.Length)
+                    continue;
+
+                int baseIndex = c * MaxGasTypes;
+                for (int gasId = 0; gasId < MaxGasTypes; gasId++)
+                    MolesRead[baseIndex + gasId] = MolesWrite[baseIndex + gasId];
+
+                CellMeta[c] = CellMetaWrite[c];
+            }
+        }
+
+        private void ClearBurn(int cellIndex)
+        {
+            if (BurnIntensity.IsCreated && cellIndex >= 0 && cellIndex < BurnIntensity.Length)
+                BurnIntensity[cellIndex] = 0f;
         }
 
         private bool TransferAlongPartialPressures(

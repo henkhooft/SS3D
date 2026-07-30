@@ -58,7 +58,12 @@ namespace SS3D.Systems.Electricity
         private Color _poweredLightColor = Color.white;
         private float _poweredLumin;
         private Color _poweredEmission;
-        private readonly List<Material> _emissiveMaterials = new();
+        private readonly List<Renderer> _emissiveRenderersToUpdate = new();
+        private MaterialPropertyBlock _emissivePropertyBlock;
+        private bool _hasLumin;
+        private bool _hasEmission;
+        private float _lastEmissiveLumin = float.NaN;
+        private Color _lastEmissiveEmissionColor = Color.clear;
         private AreaId _areaId;
         private bool _hasArea;
         private bool _areaLightingSubscribed;
@@ -131,7 +136,11 @@ namespace SS3D.Systems.Electricity
 
         private void CacheEmissiveMaterials()
         {
-            _emissiveMaterials.Clear();
+            _emissiveRenderersToUpdate.Clear();
+            _hasLumin = false;
+            _hasEmission = false;
+            _poweredLumin = 0f;
+            _poweredEmission = Color.black;
 
             if (_emissiveRenderers == null || _emissiveRenderers.Length == 0)
             {
@@ -139,7 +148,10 @@ namespace SS3D.Systems.Electricity
                 {
                     if (renderer.gameObject.name is "LightBulb" or "LightTube")
                     {
-                        _emissiveMaterials.Add(renderer.material);
+                        if (renderer != null)
+                        {
+                            _emissiveRenderersToUpdate.Add(renderer);
+                        }
                     }
                 }
             }
@@ -149,25 +161,55 @@ namespace SS3D.Systems.Electricity
                 {
                     if (renderer != null)
                     {
-                        _emissiveMaterials.Add(renderer.material);
+                        _emissiveRenderersToUpdate.Add(renderer);
                     }
                 }
             }
 
-            if (_emissiveMaterials.Count == 0)
+            if (_emissiveRenderersToUpdate.Count == 0)
             {
                 return;
             }
 
-            Material referenceMaterial = _emissiveMaterials[0];
-            if (referenceMaterial.HasProperty(LuminId))
+            // Read baseline emissive values from shared materials to avoid creating new material instances.
+            foreach (Renderer renderer in _emissiveRenderersToUpdate)
             {
-                _poweredLumin = referenceMaterial.GetFloat(LuminId);
-            }
+                if (renderer == null)
+                {
+                    continue;
+                }
 
-            if (referenceMaterial.HasProperty(EmissionColorId))
-            {
-                _poweredEmission = referenceMaterial.GetColor(EmissionColorId);
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                for (int i = 0; i < sharedMaterials.Length; i++)
+                {
+                    Material sharedMaterial = sharedMaterials[i];
+                    if (sharedMaterial == null)
+                    {
+                        continue;
+                    }
+
+                    if (!_hasLumin && sharedMaterial.HasProperty(LuminId))
+                    {
+                        _poweredLumin = sharedMaterial.GetFloat(LuminId);
+                        _hasLumin = true;
+                    }
+
+                    if (!_hasEmission && sharedMaterial.HasProperty(EmissionColorId))
+                    {
+                        _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
+                        _hasEmission = true;
+                    }
+
+                    if (_hasLumin && _hasEmission)
+                    {
+                        break;
+                    }
+                }
+
+                if (_hasLumin && _hasEmission)
+                {
+                    break;
+                }
             }
         }
 
@@ -397,6 +439,12 @@ namespace SS3D.Systems.Electricity
                 // Server registry path before first derive: treat as powered-area Normal.
                 areaState = AreaLightingState.Normal;
             }
+            else if (_respectDevBypass && LightingDevBypass.IsActive)
+            {
+                // Manual place / no APC flood: bypass still lights fixtures (grid-free glow).
+                useEmergencyVisuals = false;
+                return true;
+            }
             else
             {
                 return false;
@@ -496,17 +544,36 @@ namespace SS3D.Systems.Electricity
 
         private void SetEmissiveState(float lumin, Color emissionColor)
         {
-            foreach (Material material in _emissiveMaterials)
+            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
+                && _lastEmissiveEmissionColor == emissionColor)
             {
-                if (material.HasProperty(LuminId))
+                return;
+            }
+
+            _lastEmissiveLumin = lumin;
+            _lastEmissiveEmissionColor = emissionColor;
+
+            foreach (Renderer renderer in _emissiveRenderersToUpdate)
+            {
+                if (renderer == null)
                 {
-                    material.SetFloat(LuminId, lumin);
+                    continue;
                 }
 
-                if (material.HasProperty(EmissionColorId))
+                _emissivePropertyBlock ??= new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(_emissivePropertyBlock);
+
+                if (_hasLumin)
                 {
-                    material.SetColor(EmissionColorId, emissionColor);
+                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
                 }
+
+                if (_hasEmission)
+                {
+                    _emissivePropertyBlock.SetColor(EmissionColorId, emissionColor);
+                }
+
+                renderer.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
     }

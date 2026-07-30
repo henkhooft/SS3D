@@ -89,6 +89,8 @@ namespace SS3D.Interactions
                 return false;
             }
 
+            IInteractionTarget previousTarget = interactionEvent.Target;
+
             foreach (IInteractionTarget target in targets)
             {
                 if (target == null)
@@ -96,8 +98,9 @@ namespace SS3D.Interactions
                     continue;
                 }
 
-                InteractionEvent discoverEvent = interactionEvent.WithTarget(target);
-                IInteraction[] targetInteractions = target.CreateTargetInteractions(discoverEvent);
+                // Mutate Target in place — WithTarget allocates a new InteractionEvent every call.
+                interactionEvent.Target = target;
+                IInteraction[] targetInteractions = target.CreateTargetInteractions(interactionEvent);
 
                 foreach (IInteraction interaction in targetInteractions)
                 {
@@ -108,7 +111,7 @@ namespace SS3D.Interactions
                         continue;
                     }
 
-                    if (!interaction.CanInteract(discoverEvent))
+                    if (!interaction.CanInteract(interactionEvent))
                     {
                         continue;
                     }
@@ -128,10 +131,12 @@ namespace SS3D.Interactions
 
                 if (hasTargetBound && hasViableInteractions)
                 {
+                    interactionEvent.Target = previousTarget;
                     return true;
                 }
             }
 
+            interactionEvent.Target = previousTarget;
             return hasTargetBound;
         }
 

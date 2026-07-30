@@ -44,6 +44,27 @@ namespace EditorTests.Atmospherics
         }
 
         [Test]
+        public void DirtyChunkTracker_AfterTick_ScansActiveCellsOnly_StaysCleanWhenSettled()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            using var simulation = AtmosTestFixtures.CreateSealedRoomSimulation(context, 2, out _);
+
+            // Populate ActiveCells the same way production does before NetworkSync.
+            simulation.Tick(AtmosConstants.TickInterval);
+            Assert.Greater(simulation.ActiveCellCount, 0);
+
+            var tracker = new AtmosDirtyChunkTracker();
+            var buffer = new List<Vector2Int>();
+            tracker.Update(simulation);
+            tracker.ConsumeDirtyChunks(buffer);
+
+            tracker.Update(simulation);
+            tracker.ConsumeDirtyChunks(buffer);
+
+            Assert.IsEmpty(buffer);
+        }
+
+        [Test]
         public void DirtyChunkTracker_MarksChunkDirtyWhenTemperatureChangesMeaningfully()
         {
             TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);

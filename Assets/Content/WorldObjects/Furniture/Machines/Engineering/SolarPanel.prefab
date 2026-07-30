@@ -216,9 +216,65 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7327266869174552340, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7327266869174552340, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 799f94b87543fdb498490c83108683cb, type: 3}
       propertyPath: m_Name
       value: Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 3946073140703599877, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3946073140703599877, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5297838644154429546, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5297838644154429546, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369894553364170505, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369894553364170505, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7288992270420282231, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7288992270420282231, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8006606959063733921, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8006606959063733921, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9123120859591238709, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9123120859591238709, guid: 799f94b87543fdb498490c83108683cb, type: 3}
+      propertyPath: m_ReflectionProbeUsage
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

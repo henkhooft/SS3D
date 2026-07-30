@@ -3,6 +3,7 @@ using FishNet.Component.Observing;
 using FishNet.Object;
 using FishNet.Observing;
 using SS3D.Data;
+using SS3D.Systems.Tile.Observing;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -10,12 +11,16 @@ using UnityEngine;
 namespace SS3D.Systems.Tile.Editor
 {
     /// <summary>
-    /// Adds FishNet GridCondition observers to tile prefabs referenced by TileObjectSo assets.
+    /// Adds FishNet GridCondition (+ underfloor cover condition) observers to tile prefabs
+    /// referenced by TileObjectSo assets.
     /// </summary>
     public static class TileGridObserverConfigurator
     {
         private const string GridConditionPath =
             "Assets/FishNet/Runtime/Observing/Conditions/GridCondition/GridCondition.asset";
+
+        private const string UnderfloorCoverConditionPath =
+            "Assets/Scripts/SS3D/Systems/Tile/Observing/UnderfloorCoverCondition.asset";
 
         /// <summary>
         /// Applies GridCondition observers to tile prefabs. Tier B — no MenuItem.
@@ -28,6 +33,14 @@ namespace SS3D.Systems.Tile.Editor
             {
                 Debug.LogError($"GridCondition asset not found at {GridConditionPath}");
                 return;
+            }
+
+            UnderfloorCoverCondition coverCondition =
+                AssetDatabase.LoadAssetAtPath<UnderfloorCoverCondition>(UnderfloorCoverConditionPath);
+            if (coverCondition == null)
+            {
+                Debug.LogWarning(
+                    $"UnderfloorCoverCondition asset missing at {UnderfloorCoverConditionPath}; underfloor prefabs get Grid only.");
             }
 
             string[] tileSoGuids = AssetDatabase.FindAssets($"t:{nameof(TileObjectSo)}");
@@ -83,6 +96,13 @@ namespace SS3D.Systems.Tile.Editor
                 conditions.ClearArray();
                 conditions.InsertArrayElementAtIndex(0);
                 conditions.GetArrayElementAtIndex(0).objectReferenceValue = gridCondition;
+
+                if (coverCondition != null && TileUnderfloorVisibility.IsUnderfloorLayer(tileSo.layer))
+                {
+                    conditions.InsertArrayElementAtIndex(1);
+                    conditions.GetArrayElementAtIndex(1).objectReferenceValue = coverCondition;
+                }
+
                 serializedObserver.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);

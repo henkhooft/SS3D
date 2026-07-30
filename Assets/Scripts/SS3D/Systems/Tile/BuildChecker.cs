@@ -143,7 +143,8 @@ namespace SS3D.Systems.Tile
                 return false;
 
             return plenumLocation.PlacedObject.NameString.Contains("Plenum") ||
-                   plenumLocation.PlacedObject.name.Contains("Catwalk");
+                   plenumLocation.PlacedObject.name.Contains("Catwalk") ||
+                   plenumLocation.PlacedObject.name.Contains("Lattice");
         }
 
         /// <summary>

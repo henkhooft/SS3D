@@ -16,6 +16,7 @@ namespace SS3D.Systems.Tile.FloorVisuals
         private TileMap _map;
         private Transform _root;
         private bool _bound;
+        private Vector2Int? _lastAoiCell;
 
         public void ApplyClientChunk(Vector2Int chunkKey, ushort[] decalIds)
         {
@@ -49,6 +50,12 @@ namespace SS3D.Systems.Tile.FloorVisuals
         {
             if (!_bound)
                 TryBind();
+            else if (TileAoiVisibility.TryGetLocalHashGridCell(out Vector2Int cell)
+                     && (!_lastAoiCell.HasValue || _lastAoiCell.Value != cell))
+            {
+                _lastAoiCell = cell;
+                Rebuild();
+            }
         }
 
         private void OnDisable()
@@ -102,18 +109,27 @@ namespace SS3D.Systems.Tile.FloorVisuals
             {
                 foreach (TileChunk chunk in _map.GetAllChunks())
                 {
+                    Vector2Int chunkKey = _map.GetKey(chunk.GetWorldPosition(0, 0));
+                    if (!TileAoiVisibility.IsChunkInLocalAoi(chunkKey, TileAoiVisibility.OverlayChunkPad))
+                        continue;
+
                     ushort[] ids = chunk.CopyFloorDecalIds();
                     if (ids == null)
                         continue;
 
-                    SpawnChunk(catalog, _map.GetKey(chunk.GetWorldPosition(0, 0)), ids);
+                    SpawnChunk(catalog, chunkKey, ids);
                 }
 
                 return;
             }
 
             foreach (KeyValuePair<Vector2Int, ushort[]> pair in _clientChunkCache)
+            {
+                if (!TileAoiVisibility.IsChunkInLocalAoi(pair.Key, TileAoiVisibility.OverlayChunkPad))
+                    continue;
+
                 SpawnChunk(catalog, pair.Key, pair.Value);
+            }
         }
 
         private void SpawnChunk(FloorDecalCatalog catalog, Vector2Int chunkKey, ushort[] ids)

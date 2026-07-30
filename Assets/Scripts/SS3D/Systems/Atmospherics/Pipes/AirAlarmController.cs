@@ -70,9 +70,14 @@ namespace SS3D.Systems.Atmospherics.Pipes
         private PlacedTileObject _tileObject;
         private AreaId _areaId;
         private bool _hasArea;
-        private readonly List<Material> _emissiveMaterials = new();
+        private readonly List<Renderer> _emissiveRenderersToUpdate = new();
+        private MaterialPropertyBlock _emissivePropertyBlock;
+        private bool _hasLumin;
+        private bool _hasEmission;
         private float _poweredLumin;
         private Color _poweredEmission;
+        private float _lastEmissiveLumin = float.NaN;
+        private Color _lastEmissiveEmissionColor = Color.clear;
         private Color _alarmEmission = new(1f, 0.15f, 0.1f, 1f);
         private bool _powerEventsSubscribed;
 
@@ -348,7 +353,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         private void CacheEmissiveMaterials()
         {
-            _emissiveMaterials.Clear();
+            _emissiveRenderersToUpdate.Clear();
+            _hasLumin = false;
+            _hasEmission = false;
+            _poweredLumin = 0f;
+            _poweredEmission = Color.black;
             if (_emissiveRenderers == null)
                 return;
 
@@ -357,19 +366,32 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 if (renderer == null)
                     continue;
 
-                Material[] materials = renderer.materials;
-                for (int i = 0; i < materials.Length; i++)
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                bool hasEmissiveMaterial = false;
+                for (int i = 0; i < sharedMaterials.Length; i++)
                 {
-                    Material material = materials[i];
-                    if (material == null || !material.IsKeywordEnabled("_EMISSION"))
+                    Material sharedMaterial = sharedMaterials[i];
+                    if (sharedMaterial == null || !sharedMaterial.IsKeywordEnabled("_EMISSION"))
                         continue;
 
-                    _emissiveMaterials.Add(material);
-                    if (_poweredLumin <= 0f)
+                    hasEmissiveMaterial = true;
+
+                    if (!_hasLumin && sharedMaterial.HasProperty(LuminId))
                     {
-                        _poweredLumin = material.GetFloat(LuminId);
-                        _poweredEmission = material.GetColor(EmissionColorId);
+                        _poweredLumin = sharedMaterial.GetFloat(LuminId);
+                        _hasLumin = true;
                     }
+
+                    if (!_hasEmission && sharedMaterial.HasProperty(EmissionColorId))
+                    {
+                        _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
+                        _hasEmission = true;
+                    }
+                }
+
+                if (hasEmissiveMaterial)
+                {
+                    _emissiveRenderersToUpdate.Add(renderer);
                 }
             }
         }
@@ -383,10 +405,36 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 ? (alarming ? _alarmEmission : _poweredEmission * 0.35f)
                 : Color.black;
 
-            foreach (Material material in _emissiveMaterials)
+            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
+                && _lastEmissiveEmissionColor == emission)
             {
-                material.SetFloat(LuminId, lumin);
-                material.SetColor(EmissionColorId, emission);
+                return;
+            }
+
+            _lastEmissiveLumin = lumin;
+            _lastEmissiveEmissionColor = emission;
+
+            foreach (Renderer renderer in _emissiveRenderersToUpdate)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                _emissivePropertyBlock ??= new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(_emissivePropertyBlock);
+
+                if (_hasLumin)
+                {
+                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
+                }
+
+                if (_hasEmission)
+                {
+                    _emissivePropertyBlock.SetColor(EmissionColorId, emission);
+                }
+
+                renderer.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
 

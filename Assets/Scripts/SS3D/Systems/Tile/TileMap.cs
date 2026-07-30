@@ -1,4 +1,5 @@
 using FishNet;
+using FishNet.Connection;
 using FishNet.Object;
 using JetBrains.Annotations;
 using SS3D.Core;
@@ -26,6 +27,11 @@ namespace SS3D.Systems.Tile
         private readonly List<SavedAreaRecord> _loadedAreaRecords = new();
         private AdjacencyEngine _adjacencyEngine;
         private string _mapName;
+        private int _bulkMutationDepth;
+        private int _structureVersion;
+
+        /// <summary>Placements between yields during time-sliced <see cref="LoadRoutine"/> / DMM apply.</summary>
+        public const int BulkLoadYieldEveryPlacements = 64;
 
         public int MapId { get; private set; }
 
@@ -95,6 +101,9 @@ namespace SS3D.Systems.Tile
             }
 
             NotifyTilePlaced(placed, origin);
+
+            if (placed.Layer == TileLayer.Turf)
+                TileUnderfloorVisibility.RefreshUnderfloorForTurf(this, placed);
         }
 
         /// <summary>
@@ -105,9 +114,13 @@ namespace SS3D.Systems.Tile
             if (placed == null || placed.tileObjectSO == null)
                 return;
 
-            Vector3 origin = new Vector3(placed.WorldOrigin.x, 0, placed.WorldOrigin.y);
+            TileLayer layer = placed.Layer;
+            Vector2Int worldOrigin = placed.WorldOrigin;
+            // Capture before TryClearPlacedObject destroys the NetworkBehaviour.
+            List<Vector2Int> gridOffsets = placed.GridOffsetList;
+            Vector3 origin = new Vector3(worldOrigin.x, 0, worldOrigin.y);
 
-            foreach (Vector2Int gridOffset in placed.GridOffsetList)
+            foreach (Vector2Int gridOffset in gridOffsets)
             {
                 Vector3 cell = origin + new Vector3(gridOffset.x, 0, gridOffset.y);
                 if (!TryGetTileLocation(placed.Layer, cell, out ITileLocation location))
@@ -116,7 +129,16 @@ namespace SS3D.Systems.Tile
                 location.TryClearPlacedObject(placed.Direction);
             }
 
-            NotifyTileCleared(placed, origin, placed.Layer);
+            NotifyTileCleared(placed, origin, layer);
+
+            if (layer == TileLayer.Turf)
+            {
+                foreach (Vector2Int gridOffset in gridOffsets)
+                {
+                    Vector3 cell = origin + new Vector3(gridOffset.x, 0, gridOffset.y);
+                    TileUnderfloorVisibility.RefreshUnderfloorAt(this, cell);
+                }
+            }
         }
 
         public void RegisterMutationObserver(ITileMutationObserver observer)
@@ -129,6 +151,34 @@ namespace SS3D.Systems.Tile
         {
             _mutationObservers.Remove(observer);
         }
+
+        /// <summary>
+        /// Suppress place/clear mutation notifies (atmos UpdateCell, cable graph refresh, etc.)
+        /// during bulk place. Nestable. Chunk-created notifies still fire so late observers can
+        /// track structure; prefer <see cref="GetChunkRefs"/> seeding after restore.
+        /// </summary>
+        public void BeginBulkMutation() => _bulkMutationDepth++;
+
+        public void EndBulkMutation()
+        {
+            if (_bulkMutationDepth <= 0)
+                return;
+
+            _bulkMutationDepth--;
+            if (_bulkMutationDepth == 0)
+                BumpStructureVersion();
+        }
+
+        public bool IsBulkMutationActive => _bulkMutationDepth > 0;
+
+        /// <summary>
+        /// Monotonic counter bumped when place/clear/chunk/clear-map changes occupancy.
+        /// Not bumped for door open/close (<see cref="NotifyTileStateChanged"/>) — area membership
+        /// ignores door state. Consumers cache device→area resolves against this version.
+        /// </summary>
+        public int StructureVersion => _structureVersion;
+
+        public void BumpStructureVersion() => _structureVersion++;
 
         /// <summary>
         /// Returns the chunk key to be used based on a world position.
@@ -456,6 +506,9 @@ namespace SS3D.Systems.Tile
 
                 placedObjectGo = placedObject.gameObject;
                 NotifyTilePlaced(placedObject, placePosition);
+
+                if (tileObjectSo.layer == TileLayer.Turf)
+                    TileUnderfloorVisibility.RefreshUnderfloorForTurf(this, placedObject);
             }
 
             return canBuild;
@@ -466,6 +519,16 @@ namespace SS3D.Systems.Tile
             TryGetTileLocations(placePosition, out ITileLocation[] tileLocations);
             ITileLocation tileLocation = tileLocations[(int)layer];
             tileLocation.TryGetPlacedObject(out PlacedTileObject placed, dir);
+
+            // Capture turf footprint before DestroySelf so underfloor can reappear after clear.
+            List<Vector3> underfloorRefreshCells = null;
+            if (layer == TileLayer.Turf && placed != null)
+            {
+                underfloorRefreshCells = new List<Vector3>();
+                Vector3 turfOrigin = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
+                foreach (Vector2Int gridOffset in placed.GridOffsetList)
+                    underfloorRefreshCells.Add(turfOrigin + new Vector3(gridOffset.x, 0f, gridOffset.y));
+            }
 
             if (placed != null)
             {
@@ -499,6 +562,12 @@ namespace SS3D.Systems.Tile
                 }
 
                 clearLocation.ClearAllPlacedObject();
+            }
+
+            if (underfloorRefreshCells != null)
+            {
+                for (int i = 0; i < underfloorRefreshCells.Count; i++)
+                    TileUnderfloorVisibility.RefreshUnderfloorAt(this, underfloorRefreshCells[i]);
             }
         }
 
@@ -594,6 +663,7 @@ namespace SS3D.Systems.Tile
             }
 
             _chunks.Clear();
+            BumpStructureVersion();
 
             // Clear items list safely, checking for null references
             while (_items.Count > 0)
@@ -653,24 +723,46 @@ namespace SS3D.Systems.Tile
 
         public void Load([CanBeNull] SavedTileMap saveObject, bool invokeMapLoadedEvent = true)
         {
+            IEnumerator routine = LoadRoutine(saveObject, invokeMapLoadedEvent, yieldFrames: false);
+            while (routine.MoveNext())
+            {
+            }
+        }
+
+        /// <summary>
+        /// Time-sliced station template restore. Yield every
+        /// <see cref="BulkLoadYieldEveryPlacements"/> so FishNet heartbeats keep ticking on MetaStation.
+        /// Pair with <see cref="BeginBulkMutation"/> and deferred area/disposal rebuilds.
+        /// </summary>
+        public IEnumerator LoadRoutine(
+            [CanBeNull] SavedTileMap saveObject,
+            bool invokeMapLoadedEvent = true,
+            bool yieldFrames = true)
+        {
             if (saveObject == null)
             {
                 Log.Warning(this, "The intended save object is null");
-                return;
+                yield break;
             }
 
             // Clear TileMap data first (this clears the _items list)
             Clear();
             _loadedAreaRecords.Clear();
-            
+
             // Then clear all items in the scene, not just those tracked by TileMap
             ClearUntrackedItems();
+            if (yieldFrames)
+                yield return null;
 
             SubSystems.TryGet(out TileSubSystem tileSystem);
 
             SavedTileChunk[] savedChunks = saveObject.savedChunkList ?? Array.Empty<SavedTileChunk>();
+            int sinceYield = 0;
+            int chunkIndex = 0;
+
             foreach (SavedTileChunk savedChunk in savedChunks)
             {
+                chunkIndex++;
                 TileChunk chunk = GetOrCreateChunk(savedChunk.originPosition);
                 if (savedChunk.areaIds != null)
                     chunk.SetAreaIds(savedChunk.areaIds);
@@ -700,6 +792,13 @@ namespace SS3D.Systems.Tile
 
                         // Skipping build check here to allow loading tile objects in a non-valid order
                         PlaceTileObject(toBePlaced, placePosition, savedObject.dir, true, false, true, out GameObject placedObject);
+                        sinceYield++;
+
+                        if (yieldFrames && sinceYield >= BulkLoadYieldEveryPlacements)
+                        {
+                            sinceYield = 0;
+                            yield return null;
+                        }
                     }
                 }
             }
@@ -714,7 +813,7 @@ namespace SS3D.Systems.Tile
                     OnMapLoaded?.Invoke(this, EventArgs.Empty);
                 }
 
-                return;
+                yield break;
             }
 
             SavedPlacedItemObject[] savedItems = saveObject.savedItemList ?? Array.Empty<SavedPlacedItemObject>();
@@ -722,6 +821,12 @@ namespace SS3D.Systems.Tile
             {
                 ItemObjectSo toBePlaced = (ItemObjectSo)tileSystem.GetAsset(savedItem.itemName);
                 PlaceItemObject(savedItem.worldPosition, savedItem.rotation, toBePlaced);
+                sinceYield++;
+                if (yieldFrames && sinceYield >= BulkLoadYieldEveryPlacements)
+                {
+                    sinceYield = 0;
+                    yield return null;
+                }
             }
 
             if (invokeMapLoadedEvent)
@@ -729,17 +834,42 @@ namespace SS3D.Systems.Tile
                 OnMapLoaded?.Invoke(this, EventArgs.Empty);
             }
 
-            UpdateAllAdjacencies();
+            if (yieldFrames)
+                yield return null;
+            RefreshAllAdjacencies();
+
+            if (yieldFrames)
+                yield return null;
+            // Template load skips per-tile observer churn; re-apply AOI + underfloor occlusion now
+            // that every covering turf is present.
+            RefreshAllHostVisibility();
+
+            // Host may have had empty Observers during the first pass (debug: all outOfAoi).
+            // Rebuild then refresh so in-AOI cells take the cover-hide branch after AOI show.
+            if (InstanceFinder.ServerManager != null
+                && InstanceFinder.IsClient
+                && InstanceFinder.ClientManager != null)
+            {
+                NetworkConnection conn = InstanceFinder.ClientManager.Connection;
+                if (conn != null && conn.IsValid)
+                {
+                    InstanceFinder.ServerManager.Objects.RebuildObservers(conn, timedOnly: false);
+                    if (yieldFrames)
+                        yield return null;
+                    RefreshAllHostVisibility();
+                }
+            }
         }
 
         /// <summary>
-        /// Update every adjacency of each placed tile object when the map is loaded.
+        /// Recompute adjacency for every placed tile that has a connector.
+        /// Used after bulk load/import that skipped per-tile adjacency.
         /// </summary>
-        private void UpdateAllAdjacencies()
+        public void RefreshAllAdjacencies()
         {
-            foreach(TileChunk chunk in _chunks.Values)
+            foreach (TileChunk chunk in _chunks.Values)
             {
-                foreach(PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
+                foreach (PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
                 {
                     if (obj.HasAdjacencyConnector)
                         UpdateAdjacenciesFor(obj);
@@ -747,6 +877,22 @@ namespace SS3D.Systems.Tile
             }
 
             _adjacencyEngine.ProcessQueue();
+        }
+
+        /// <summary>
+        /// Re-apply host MeshRenderer visibility for every placed tile (Map Editor open → all
+        /// visible; closed → HashGrid AOI). See <see cref="PlacedTileObject.RefreshHostVisibility"/>.
+        /// </summary>
+        public void RefreshAllHostVisibility()
+        {
+            foreach (TileChunk chunk in _chunks.Values)
+            {
+                foreach (PlacedTileObject obj in chunk.GetAllTilePlacedObjects())
+                {
+                    if (obj != null)
+                        obj.RefreshHostVisibility();
+                }
+            }
         }
 
         private void UpdateAdjacenciesFor(PlacedTileObject placedObject)
@@ -771,6 +917,8 @@ namespace SS3D.Systems.Tile
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnChunkCreated(chunkRef);
+
+            BumpStructureVersion();
         }
 
         /// <summary>
@@ -792,18 +940,28 @@ namespace SS3D.Systems.Tile
 
         private void NotifyTilePlaced(PlacedTileObject placedObject, Vector3 worldPosition)
         {
+            if (_bulkMutationDepth > 0)
+                return;
+
             TileCoord coord = new TileCoord(MapId, Mathf.RoundToInt(worldPosition.x), Mathf.RoundToInt(worldPosition.z));
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnTilePlaced(placedObject, coord);
+
+            BumpStructureVersion();
         }
 
         private void NotifyTileCleared(PlacedTileObject placedObject, Vector3 worldPosition, TileLayer layer)
         {
+            if (_bulkMutationDepth > 0)
+                return;
+
             TileCoord coord = new TileCoord(MapId, Mathf.RoundToInt(worldPosition.x), Mathf.RoundToInt(worldPosition.z));
 
             foreach (ITileMutationObserver observer in _mutationObservers)
                 observer.OnTileCleared(placedObject, coord, layer);
+
+            BumpStructureVersion();
         }
 
         /// <summary>

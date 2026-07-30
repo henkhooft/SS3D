@@ -9,10 +9,18 @@ namespace SS3D.Systems.Atmospherics.Visualization
     /// Builds a single-chunk <see cref="AtmosChunkPatch"/> straight from the authoritative
     /// simulation, mirroring the per-texel encoding <see cref="AtmosGpuUploader"/> uses so a
     /// network client's atlas matches the host's. Server-only.
+    /// Reuses patch buffers across builds — FishNet serializes synchronously in
+    /// <c>RpcApplyChunkPatch</c> before the next build overwrites them.
     /// </summary>
     public sealed class AtmosChunkPatchBuilder
     {
         private float[] _visualFire = Array.Empty<float>();
+        private readonly float[] _pressure = new float[AtmosChunkPatch.CellCount];
+        private readonly float[] _temperature = new float[AtmosChunkPatch.CellCount];
+        private readonly Color32[] _composition = new Color32[AtmosChunkPatch.CellCount];
+        private readonly float[] _flow = new float[AtmosChunkPatch.CellCount * 2];
+        private readonly float[] _fireIntensity = new float[AtmosChunkPatch.CellCount];
+        private readonly byte[] _mask = new byte[AtmosChunkPatch.CellCount];
 
         public AtmosChunkPatch Build(AtmosSimulation simulation, int chunkIndex, Vector2Int chunkKey)
         {
@@ -22,12 +30,12 @@ namespace SS3D.Systems.Atmospherics.Visualization
             {
                 MapId = simulation.MapId,
                 ChunkKey = chunkKey,
-                Pressure = new float[AtmosChunkPatch.CellCount],
-                Temperature = new float[AtmosChunkPatch.CellCount],
-                Composition = new Color32[AtmosChunkPatch.CellCount],
-                Flow = new float[AtmosChunkPatch.CellCount * 2],
-                FireIntensity = new float[AtmosChunkPatch.CellCount],
-                Mask = new byte[AtmosChunkPatch.CellCount],
+                Pressure = _pressure,
+                Temperature = _temperature,
+                Composition = _composition,
+                Flow = _flow,
+                FireIntensity = _fireIntensity,
+                Mask = _mask,
             };
 
             int baseIndex = chunkIndex * AtmosConstants.CellsPerChunk;

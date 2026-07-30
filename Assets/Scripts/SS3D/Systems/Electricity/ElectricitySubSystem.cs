@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
@@ -28,6 +29,11 @@ namespace SS3D.Systems.Electricity
     /// </remarks>
     public partial class ElectricitySubSystem : NetworkSubSystem, ITileMutationObserver, IWorldReady
     {
+        private static readonly ProfilerMarker FixedUpdatePerformanceMarker = new("SS3D.Electricity.FixedUpdate");
+        private static readonly ProfilerMarker CircuitsTickPerformanceMarker = new("SS3D.Electricity.CircuitsTick");
+        private static readonly ProfilerMarker AreaPowerPerformanceMarker = new("SS3D.Electricity.AreaPower");
+        private static readonly ProfilerMarker OnTickPerformanceMarker = new("SS3D.Electricity.OnTick");
+
         public event Action WhenReady;
 
         /// <summary>
@@ -42,12 +48,19 @@ namespace SS3D.Systems.Electricity
 
         private bool _graphIsDirty;
         private bool _apcConsumerIndexDirty = true;
+        private bool _circuitUpdatesSuspended;
         private List<Circuit> _circuits;
+        private readonly Dictionary<IElectricDevice, Circuit> _circuitByDevice = new();
         private readonly List<IPowerConsumer> _registeredConsumers = new();
         private readonly List<IElectricDevice> _registeredDevices = new();
         private readonly Dictionary<IApcChannelSource, List<IPowerConsumer>> _consumersByApc = new();
+        private readonly Dictionary<IPowerConsumer, IApcChannelSource> _apcByConsumer = new();
+        private readonly HashSet<IPowerConsumer> _areaScopedConsumers = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridInputKw = new();
         private readonly Dictionary<IApcChannelSource, float> _lastApcGridAvailableKw = new();
+        private readonly List<IPowerConsumer> _areaActiveConsumersScratch = new();
+        private readonly List<IPowerConsumer> _areaPoweredConsumersScratch = new();
+        private readonly HashSet<IPowerConsumer> _areaPoweredSetScratch = new();
         private UndirectedGraph<VerticeCoordinates, Edge<VerticeCoordinates>> _electricityGraph;
         private CancellationTokenSource _readinessCts;
 
@@ -141,23 +154,14 @@ namespace SS3D.Systems.Electricity
         public bool TryGetCircuitStats(IElectricDevice device, IPowerStorage apcCell, out CircuitStats stats)
         {
             stats = default;
-            if (_circuits == null)
+            Circuit circuit = TryGetCircuitForDevice(device);
+            if (circuit == null)
             {
                 return false;
             }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                if (!circuit.ContainsDevice(device))
-                {
-                    continue;
-                }
-
-                stats = circuit.GetStats(apcCell);
-                return true;
-            }
-
-            return false;
+            stats = circuit.GetStats(apcCell);
+            return true;
         }
 
         [Server]
@@ -171,9 +175,9 @@ namespace SS3D.Systems.Electricity
 
             EnsureApcConsumerIndex();
             IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
-            List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
+            AreaApcPowerDistribution.FillActiveConsumers(areaConsumers, apc.Channels, _areaActiveConsumersScratch);
             float gridInputKw = GetApcGridInputKw(apc);
-            stats = AreaApcPowerDistribution.BuildApcStats(gridInputKw, apcCell, activeConsumers);
+            stats = AreaApcPowerDistribution.BuildApcStats(gridInputKw, apcCell, _areaActiveConsumersScratch);
             if (_lastApcGridAvailableKw.TryGetValue(apc, out float gridAvailableKw))
             {
                 stats.GridAvailableKw = gridAvailableKw;
@@ -184,6 +188,37 @@ namespace SS3D.Systems.Electricity
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Pause circuit ticks (bulk map Clear / DMM import). Prevents FixedUpdate from walking
+        /// destroyed devices while FishNet despawn is still draining.
+        /// </summary>
+        public void SuspendCircuitUpdates(bool suspend)
+        {
+            _circuitUpdatesSuspended = suspend;
+            if (!suspend)
+                _graphIsDirty = true;
+        }
+
+        /// <summary>
+        /// Drop all registered devices/circuits. Call after <see cref="TileMap.Clear"/> when despawn
+        /// may lag behind the emptied chunk dictionary.
+        /// </summary>
+        public void ClearRegisteredDevices()
+        {
+            _registeredDevices.Clear();
+            _registeredConsumers.Clear();
+            _lastApcGridInputKw.Clear();
+            _lastApcGridAvailableKw.Clear();
+            _consumersByApc.Clear();
+            _apcByConsumer.Clear();
+            _areaScopedConsumers.Clear();
+            _circuits.Clear();
+            _circuitByDevice.Clear();
+            _electricityGraph?.Clear();
+            _graphIsDirty = true;
+            _apcConsumerIndexDirty = true;
         }
 
         /// <summary>
@@ -198,67 +233,92 @@ namespace SS3D.Systems.Electricity
         [Server]
         private void HandleFixedUpdate(ref EventContext context, in FixedUpdateEvent updateEvent)
         {
-            _timeElapsed += Time.deltaTime;
-
-            if (_timeElapsed > _tickRate)
+            using (FixedUpdatePerformanceMarker.Auto())
             {
-                HandleCircuitsUpdate();
-                RpcInvokeOnTick();
-                _timeElapsed = 0;
+                if (_circuitUpdatesSuspended)
+                    return;
+
+                _timeElapsed += Time.deltaTime;
+
+                if (_timeElapsed > _tickRate)
+                {
+                    HandleCircuitsUpdate();
+                    using (OnTickPerformanceMarker.Auto())
+                    {
+                        RpcInvokeOnTick();
+                    }
+
+                    _timeElapsed = 0;
+                }
             }
         }
 
         [Server]
         public void HandleCircuitsUpdate()
         {
-            if (_graphIsDirty)
+            using (CircuitsTickPerformanceMarker.Auto())
             {
-                RebuildElectricGraph();
-                UpdateAllCircuitsTopology();
-                _graphIsDirty = false;
-            }
+                if (_graphIsDirty)
+                {
+                    RebuildElectricGraph();
+                    UpdateAllCircuitsTopology();
+                    _graphIsDirty = false;
+                }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                circuit.UpdateCableDistributionOnly(_tickRate);
-            }
+                foreach (Circuit circuit in _circuits)
+                {
+                    circuit.UpdateCableDistributionOnly(_tickRate);
+                }
 
-            UpdateAreaScopedPower();
+                UpdateAreaScopedPower();
 
-            foreach (Circuit circuit in _circuits)
-            {
-                circuit.ChargePendingProducerSurplus(_tickRate);
+                foreach (Circuit circuit in _circuits)
+                {
+                    circuit.ChargePendingProducerSurplus(_tickRate);
+                }
             }
         }
 
         [Server]
         private void UpdateAreaScopedPower()
         {
-            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            using (AreaPowerPerformanceMarker.Auto())
             {
-                return;
-            }
-
-            EnsureApcConsumerIndex();
-
-            foreach (AreaRecord record in areaSubSystem.GetAllAreas())
-            {
-                if (record.Apc is not IApcChannelSource apc
-                    || record.Apc is not IPowerStorage apcStorage
-                    || record.Apc is not IElectricDevice apcDevice)
+                if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
                 {
-                    continue;
+                    return;
                 }
 
-                IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
-                List<IPowerConsumer> activeConsumers = AreaApcPowerDistribution.GetActiveConsumers(areaConsumers, apc.Channels);
-                float demandKw = AreaApcPowerDistribution.SumPowerNeeded(activeConsumers);
-                float gridAvailableKw = GetAvailableGridSupplyForApc(apcDevice);
-                float gridDrawKw = Math.Min(demandKw, gridAvailableKw);
-                _lastApcGridAvailableKw[apc] = gridAvailableKw;
-                _lastApcGridInputKw[apc] = gridDrawKw;
-                TryGetCircuitForDevice(apcDevice)?.DrawGridPowerForArea(gridDrawKw, _tickRate);
-                AreaApcPowerDistribution.PowerAreaConsumers(apc, apcStorage, gridDrawKw, areaConsumers, activeConsumers, _tickRate);
+                EnsureApcConsumerIndex();
+
+                foreach (AreaRecord record in areaSubSystem.GetAllAreas())
+                {
+                    if (record.Apc is not IApcChannelSource apc
+                        || record.Apc is not IPowerStorage apcStorage
+                        || record.Apc is not IElectricDevice apcDevice
+                        || !TryGetLiveTileObject(apcDevice, out _))
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<IPowerConsumer> areaConsumers = GetIndexedConsumersForApc(apc);
+                    AreaApcPowerDistribution.FillActiveConsumers(areaConsumers, apc.Channels, _areaActiveConsumersScratch);
+                    float demandKw = AreaApcPowerDistribution.SumPowerNeeded(_areaActiveConsumersScratch);
+                    float gridAvailableKw = GetAvailableGridSupplyForApc(apcDevice);
+                    float gridDrawKw = Math.Min(demandKw, gridAvailableKw);
+                    _lastApcGridAvailableKw[apc] = gridAvailableKw;
+                    _lastApcGridInputKw[apc] = gridDrawKw;
+                    TryGetCircuitForDevice(apcDevice)?.DrawGridPowerForArea(gridDrawKw, _tickRate);
+                    AreaApcPowerDistribution.PowerAreaConsumers(
+                        apc,
+                        apcStorage,
+                        gridDrawKw,
+                        areaConsumers,
+                        _areaActiveConsumersScratch,
+                        _tickRate,
+                        _areaPoweredConsumersScratch,
+                        _areaPoweredSetScratch);
+                }
             }
         }
 
@@ -282,6 +342,9 @@ namespace SS3D.Systems.Electricity
                 entry.Value.Clear();
             }
 
+            _apcByConsumer.Clear();
+            _areaScopedConsumers.Clear();
+
             if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 return;
@@ -302,7 +365,30 @@ namespace SS3D.Systems.Electricity
                 }
 
                 list.Add(consumer);
+                _apcByConsumer[consumer] = apc;
+                _areaScopedConsumers.Add(consumer);
             }
+        }
+
+        /// <summary>
+        /// True when the consumer draws from an area APC (not cable-only). Uses the rebuilt index.
+        /// </summary>
+        internal bool IsIndexedAreaScopedConsumer(IPowerConsumer consumer)
+        {
+            EnsureApcConsumerIndex();
+            return consumer != null && _areaScopedConsumers.Contains(consumer);
+        }
+
+        internal bool TryGetIndexedApcForConsumer(IPowerConsumer consumer, out IApcChannelSource apc)
+        {
+            EnsureApcConsumerIndex();
+            if (consumer != null && _apcByConsumer.TryGetValue(consumer, out apc))
+            {
+                return true;
+            }
+
+            apc = null;
+            return false;
         }
 
         private IReadOnlyList<IPowerConsumer> GetIndexedConsumersForApc(IApcChannelSource apc)
@@ -335,26 +421,18 @@ namespace SS3D.Systems.Electricity
         [Server]
         private Circuit TryGetCircuitForDevice(IElectricDevice device)
         {
-            if (_circuits == null || device == null)
+            if (device == null || !_circuitByDevice.TryGetValue(device, out Circuit circuit))
             {
                 return null;
             }
 
-            foreach (Circuit circuit in _circuits)
-            {
-                if (circuit.ContainsDevice(device))
-                {
-                    return circuit;
-                }
-            }
-
-            return null;
+            return circuit;
         }
 
         [Server]
         public void AddElectricalElement(IElectricDevice device)
         {
-            if (_electricityGraph == null || device?.TileObject == null)
+            if (_electricityGraph == null || !TryGetLiveTileObject(device, out _))
             {
                 return;
             }
@@ -376,7 +454,11 @@ namespace SS3D.Systems.Electricity
         [Server]
         public void RemoveElectricalElement(IElectricDevice device)
         {
-            if (_electricityGraph == null || device?.TileObject == null)
+            // Must unregister even when TileObject is already null — BasicElectricDevice.OnDestroyed
+            // runs after Unity considers the GO destroyed, so TileObject returns null. Requiring a
+            // live tile left zombies in _registeredDevices → NRE on RebuildElectricGraph (map Clear /
+            // DMM import). Hit 2026-07-28.
+            if (_electricityGraph == null || device == null)
             {
                 return;
             }
@@ -403,16 +485,61 @@ namespace SS3D.Systems.Electricity
         private void RebuildElectricGraph()
         {
             _electricityGraph.Clear();
-            foreach (IElectricDevice device in _registeredDevices)
+            TileMap map = SubSystems.TryGet(out TileSubSystem tileSystem) ? tileSystem.CurrentMap : null;
+
+            for (int i = _registeredDevices.Count - 1; i >= 0; i--)
             {
-                AddDeviceEdgesToGraph(device);
+                IElectricDevice device = _registeredDevices[i];
+                if (!TryGetLiveTileObject(device, out PlacedTileObject tileObject)
+                    || IsOrphanedAfterMapClear(map, tileObject))
+                {
+                    _registeredDevices.RemoveAt(i);
+                    if (device is IPowerConsumer consumer)
+                        _registeredConsumers.Remove(consumer);
+                    continue;
+                }
+
+                AddDeviceEdgesToGraph(device, tileObject);
             }
         }
 
-        [Server]
-        private void AddDeviceEdgesToGraph(IElectricDevice device)
+        /// <summary>
+        /// Interface-typed <see cref="IElectricDevice"/> skips Unity fake-null on <c>?.</c>.
+        /// Accessing <see cref="IElectricDevice.TileObject"/> on a destroyed <see cref="ApcController"/>
+        /// throws MissingReferenceException — check UnityEngine.Object first.
+        /// </summary>
+        private static bool TryGetLiveTileObject(IElectricDevice device, out PlacedTileObject tileObject)
         {
-            PlacedTileObject tileObject = device.TileObject;
+            tileObject = null;
+            if (device == null)
+                return false;
+
+            if (device is UnityEngine.Object unityObject && !unityObject)
+                return false;
+
+            tileObject = device.TileObject;
+            return tileObject != null;
+        }
+
+        /// <summary>
+        /// TileMap.Clear empties the chunk dictionary before FishNet finishes despawning devices.
+        /// Those zombies still report a non-null TileObject but have no chunk — prune them.
+        /// </summary>
+        private static bool IsOrphanedAfterMapClear(TileMap map, PlacedTileObject tileObject)
+        {
+            if (map == null || tileObject == null)
+                return true;
+
+            Vector3 world = new(tileObject.WorldOrigin.x, 0f, tileObject.WorldOrigin.y);
+            return map.GetChunk(world) == null;
+        }
+
+        [Server]
+        private void AddDeviceEdgesToGraph(IElectricDevice device, PlacedTileObject tileObject)
+        {
+            if (tileObject == null)
+                return;
+
             VerticeCoordinates deviceCoordinates = ToCoordinates(tileObject);
 
             if (!_electricityGraph.ContainsVertex(deviceCoordinates))
@@ -428,6 +555,9 @@ namespace SS3D.Systems.Electricity
 
             foreach (PlacedTileObject neighbour in neighbours)
             {
+                if (neighbour == null)
+                    continue;
+
                 VerticeCoordinates neighbourCoordinates = ToCoordinates(neighbour);
                 if (!_electricityGraph.ContainsVertex(neighbourCoordinates))
                 {
@@ -492,19 +622,25 @@ namespace SS3D.Systems.Electricity
             Dictionary<VerticeCoordinates, int> components = new();
             _electricityGraph.ConnectedComponents(components);
             _circuits.Clear();
+            _circuitByDevice.Clear();
 
             Dictionary<int, List<VerticeCoordinates>> graphs = components.GroupBy(pair => pair.Value)
                 .ToDictionary(
                     group => group.Key,
                     group => group.Select(item => item.Key).ToList());
 
+            TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
+            TileMap map = tileSystem?.CurrentMap;
+
             foreach (List<VerticeCoordinates> component in graphs.Values)
             {
                 Circuit circuit = new Circuit();
                 foreach (VerticeCoordinates coord in component)
                 {
-                    TileSubSystem tileSystem = SubSystems.Get<TileSubSystem>();
-                    ITileLocation location = tileSystem.CurrentMap.GetTileLocation(
+                    if (map == null)
+                        continue;
+
+                    ITileLocation location = map.GetTileLocation(
                         (TileLayer)coord.Layer,
                         new(coord.X, 0f, coord.Y));
 
@@ -515,16 +651,22 @@ namespace SS3D.Systems.Electricity
                         continue;
 
                     circuit.AddElectricDevice(device);
+                    _circuitByDevice[device] = circuit;
                 }
 
                 circuit.SetConsumerChannelResolver(consumer => ResolveEnabledChannelsForConsumer(circuit, consumer));
-                circuit.SetCableDistributionFilter(consumer => !AreaApcPowerDistribution.IsAreaScopedConsumer(consumer));
+                circuit.SetCableDistributionFilter(consumer => !IsIndexedAreaScopedConsumer(consumer));
                 _circuits.Add(circuit);
             }
         }
 
-        private static ApcControlFlags ResolveEnabledChannelsForConsumer(Circuit circuit, IPowerConsumer consumer)
+        private ApcControlFlags ResolveEnabledChannelsForConsumer(Circuit circuit, IPowerConsumer consumer)
         {
+            if (TryGetIndexedApcForConsumer(consumer, out IApcChannelSource indexedApc))
+            {
+                return indexedApc.Channels;
+            }
+
             if (consumer is IElectricDevice device
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetEffectiveApcForDevice(device, out IApcChannelSource areaApc))

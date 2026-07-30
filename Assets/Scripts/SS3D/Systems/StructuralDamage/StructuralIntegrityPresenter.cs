@@ -61,6 +61,21 @@ namespace SS3D.Systems.StructuralDamage
                 CacheRenderers();
 
             _applied = stage;
+
+            // Intact: clear MPB so undamaged walls stay SRP Batcher / GPU Instancing friendly.
+            if (stage == StructuralIntegrityStage.Intact)
+            {
+                for (int i = 0; i < _renderers.Length; i++)
+                {
+                    Renderer renderer = _renderers[i];
+                    if (renderer != null)
+                        renderer.SetPropertyBlock(null);
+                }
+
+                StopHiss();
+                return;
+            }
+
             Color tint = ResolveTint(stage);
             for (int i = 0; i < _renderers.Length; i++)
             {

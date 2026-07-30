@@ -11,6 +11,7 @@ using SS3D.Logging;
 using SS3D.Rendering.URP;
 using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.Connections;
+using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections;
@@ -169,6 +170,9 @@ namespace SS3D.Systems.Tile
             StampWorldDecalReceivers(gameObject);
             ApplySyncedIdentity();
             NotifyIntegrityPresentation(IntegrityStage);
+            // Pure clients never hit OnStartServer; apply cover hide once identity/map are ready.
+            if (!IsServer)
+                RefreshHostVisibility();
         }
 
         /// <summary>
@@ -203,13 +207,19 @@ namespace SS3D.Systems.Tile
             base.OnStartServer();
             PublishIdentityToNetwork();
             NetworkObject.OnObserversActive += HandleObserversActive;
+            NetworkObject.OnHostVisibilityUpdated += HandleHostVisibilityUpdated;
             RefreshHostVisibility();
             NotifyIntegrityPresentation(IntegrityStage);
         }
 
         public override void OnStopServer()
         {
-            NetworkObject.OnObserversActive -= HandleObserversActive;
+            if (NetworkObject != null)
+            {
+                NetworkObject.OnObserversActive -= HandleObserversActive;
+                NetworkObject.OnHostVisibilityUpdated -= HandleHostVisibilityUpdated;
+            }
+
             base.OnStopServer();
         }
 
@@ -218,18 +228,165 @@ namespace SS3D.Systems.Tile
             RefreshHostVisibility();
         }
 
-        private void RefreshHostVisibility()
+        /// <summary>
+        /// FishNet's spawn/observer paths call <see cref="NetworkObject.SetRenderersVisible"/> directly
+        /// (bypassing this method) and can re-enable MeshRenderers after underfloor hide.
+        /// </summary>
+        private void HandleHostVisibilityUpdated(bool _, bool nextVisible)
         {
-            if (!IsClient)
+            if (!nextVisible)
                 return;
+
+            // Re-apply cover-hide (forceRenderingOff). FishNet may have set enabled=true for AOI.
+            if (ShouldHideUnderfloorMeshes())
+                ApplyUnderfloorOcclusion();
+            else if (_tileObjectSo != null && TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
+                TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: false);
+        }
+
+        /// <summary>
+        /// HashGrid AOI drives host MeshRenderer visibility in play; Map Editor authoring
+        /// bypasses AOI so the free-fly camera can see the whole station.
+        /// </summary>
+        public void RefreshHostVisibility()
+        {
+            // Guard NetworkObject before IsClient — FishNet's IsClient reads _networkObjectCache
+            // with no null check (same pitfall as bare IsServer). Hit opening Map Editor 2026-07-28.
+            if (NetworkObject == null || !NetworkObject.IsSpawned)
+            {
+                // Cover hide does not need FishNet — apply presentation even before spawn/observers.
+                ApplyUnderfloorPresentationOnly();
+                return;
+            }
+
+            if (!IsClient || NetworkManager?.ClientManager == null)
+            {
+                ApplyUnderfloorPresentationOnly();
+                return;
+            }
 
             NetworkConnection localConnection = NetworkManager.ClientManager.Connection;
             if (!localConnection.IsValid)
+            {
+                ApplyUnderfloorPresentationOnly();
+                return;
+            }
+
+            bool mapEditor = IsMapEditorAuthoring();
+            bool inAoi = mapEditor;
+            if (!inAoi)
+            {
+                // Client-host: FishNet Observers gate MeshRenderers. Pure client: spawn itself is AOI.
+                inAoi = !IsServer || NetworkObject.Observers.Contains(localConnection);
+            }
+
+            bool shouldHide = ShouldHideUnderfloorMeshes();
+
+            if (shouldHide)
+            {
+                // Host: UnderfloorCoverCondition fails → FishNet removes host from Observers and
+                // SetRenderersVisible(false). Remotes stay in Observers for occupancy — hide draw
+                // with forceRenderingOff only (never fight FishNet by force-showing).
+                ApplyUnderfloorOcclusion();
+                if (!inAoi)
+                    NetworkObject.SetRenderersVisible(false, force: true);
+            }
+            else if (inAoi)
+            {
+                // FishNet SetRenderersVisible only toggles renderers that were enabled when its
+                // cache was first built. After AOI disables them, UpdateRenderers can shrink the
+                // cache to empty — walls often recover via adjacency churn; floors/plenums stay off.
+                // Re-enable children and rebuild the cache before asking FishNet to show them.
+                EnableAllChildRenderers();
+                SetSelectableEnabled(true);
+                NetworkObject.UpdateRenderers(false);
+                NetworkObject.SetRenderersVisible(true, force: true);
+            }
+            else
+            {
+                NetworkObject.SetRenderersVisible(false, force: true);
+            }
+
+            TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+            if (shouldHide)
+                ApplyUnderfloorOcclusion();
+        }
+
+        /// <summary>
+        /// MeshRenderer/Selectable only — safe before NetworkObject is spawned or client is ready.
+        /// </summary>
+        private void ApplyUnderfloorPresentationOnly()
+        {
+            if (IsMapEditorAuthoring())
+            {
+                EnableAllChildRenderers();
+                SetSelectableEnabled(true);
+                return;
+            }
+
+            if (!ShouldHideUnderfloorMeshes())
                 return;
 
-            NetworkObject.SetRenderersVisible(NetworkObject.Observers.Contains(localConnection), force: true);
-            TileLayerVisibilityService.TryApplyPlacedTileObject(this);
+            TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: true);
+            SetSelectableEnabled(false);
         }
+
+        private void ApplyUnderfloorOcclusion()
+        {
+            if (!ShouldHideUnderfloorMeshes())
+                return;
+
+            // Do not set Renderer.enabled — FishNet AOI owns that. Cover-hide uses forceRenderingOff.
+            TileUnderfloorVisibility.SetCoverRenderingHidden(gameObject, hidden: true);
+            SetSelectableEnabled(false);
+        }
+
+        private bool ShouldHideUnderfloorMeshes()
+        {
+            if (_tileObjectSo == null || !TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
+                return false;
+
+            if (IsMapEditorAuthoring())
+                return false;
+
+            if (!SubSystems.TryGet(out TileSubSystem tiles) || tiles.CurrentMap == null)
+                return false;
+
+            // Prefer live transform; WorldOrigin can lag SyncVar apply on pure clients.
+            Vector3 world = transform.position;
+            world.y = 0f;
+            if (TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, world, mapEditorAuthoring: false))
+                return true;
+
+            Vector3 synced = new Vector3(WorldOrigin.x, 0f, WorldOrigin.y);
+            return TileUnderfloorVisibility.ShouldHideUnderfloor(tiles.CurrentMap, synced, mapEditorAuthoring: false);
+        }
+
+        private void SetSelectableEnabled(bool enabled)
+        {
+            if (TryGetComponent(out SS3D.Systems.Selection.Selectable selectable) && selectable != null)
+                selectable.enabled = enabled;
+        }
+
+        private static void EnableAllChildRenderers(GameObject root)
+        {
+            if (root == null)
+                return;
+
+            // Clear cover-hide and ensure FishNet can show meshes again when uncovered / Map Editor.
+            TileUnderfloorVisibility.SetCoverRenderingHidden(root, hidden: false);
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    renderers[i].enabled = true;
+            }
+        }
+
+        private void EnableAllChildRenderers() => EnableAllChildRenderers(gameObject);
+
+        private static bool IsMapEditorAuthoring() =>
+            SubSystems.TryGet(out MapEditorSubSystem editor) && editor.IsActive;
 
         private void PublishIdentityToNetwork()
         {

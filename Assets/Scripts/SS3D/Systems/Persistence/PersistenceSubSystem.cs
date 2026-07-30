@@ -1,4 +1,5 @@
 using Coimbra.Services.Events;
+using Cysharp.Threading.Tasks;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Data.Persistence;
@@ -7,10 +8,14 @@ using SS3D.Logging;
 using SS3D.Permissions;
 using SS3D.Permissions.Events;
 using SS3D.Systems.Area;
+using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Electricity;
+using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.SpawnPoints;
 using FishNet;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -101,15 +106,12 @@ namespace SS3D.Systems.Persistence
 
         public bool LoadStationTemplate(string templateName)
         {
-            string path = GetStationTemplatePath(templateName);
-            if (!TryLoadEnvelope(path, templateName, out PersistenceEnvelope envelope))
-            {
-                return false;
-            }
-
-            RestoreStationTemplate(envelope, templateName);
-            return true;
+            // Sync / EditMode path — no frame yields (can freeze Editor on MetaStation-scale maps).
+            return LoadStationTemplateInternal(templateName, timeSlice: false);
         }
+
+        public UniTask<bool> LoadStationTemplateAsync(string templateName) =>
+            LoadStationTemplateInternalAsync(templateName, timeSlice: true);
 
         public bool LoadMostRecentStationTemplate()
         {
@@ -121,6 +123,42 @@ namespace SS3D.Systems.Persistence
             }
 
             return LoadStationTemplate(templateName);
+        }
+
+        public async UniTask<bool> LoadMostRecentStationTemplateAsync()
+        {
+            string templateName = GetMostRecentTemplateName();
+            if (string.IsNullOrEmpty(templateName))
+            {
+                Log.Warning(this, "No station templates found to load");
+                return false;
+            }
+
+            return await LoadStationTemplateAsync(templateName);
+        }
+
+        private bool LoadStationTemplateInternal(string templateName, bool timeSlice)
+        {
+            string path = GetStationTemplatePath(templateName);
+            if (!TryLoadEnvelope(path, templateName, out PersistenceEnvelope envelope))
+            {
+                return false;
+            }
+
+            RestoreStationTemplate(envelope, templateName, timeSlice);
+            return true;
+        }
+
+        private async UniTask<bool> LoadStationTemplateInternalAsync(string templateName, bool timeSlice)
+        {
+            string path = GetStationTemplatePath(templateName);
+            if (!TryLoadEnvelope(path, templateName, out PersistenceEnvelope envelope))
+            {
+                return false;
+            }
+
+            await RestoreStationTemplateAsync(envelope, templateName, timeSlice);
+            return true;
         }
 
         public bool StationTemplateExists(string templateName)
@@ -249,7 +287,28 @@ namespace SS3D.Systems.Persistence
             return envelope;
         }
 
-        private void RestoreStationTemplate(PersistenceEnvelope envelope, string templateName)
+        private void RestoreStationTemplate(PersistenceEnvelope envelope, string templateName, bool timeSlice)
+        {
+            IEnumerator routine = RestoreStationTemplateRoutine(envelope, templateName, timeSlice);
+            while (routine.MoveNext())
+            {
+            }
+        }
+
+        private async UniTask RestoreStationTemplateAsync(
+            PersistenceEnvelope envelope,
+            string templateName,
+            bool timeSlice)
+        {
+            IEnumerator routine = RestoreStationTemplateRoutine(envelope, templateName, timeSlice);
+            while (routine.MoveNext())
+                await UniTask.Yield();
+        }
+
+        private IEnumerator RestoreStationTemplateRoutine(
+            PersistenceEnvelope envelope,
+            string templateName,
+            bool timeSlice)
         {
             OnBeforeRestore?.Invoke(PersistenceLayer.StationTemplate);
 
@@ -266,12 +325,31 @@ namespace SS3D.Systems.Persistence
                 TemplateName = templateName,
             };
 
+            bool hasElectricity = SubSystems.TryGet(out ElectricitySubSystem electricity);
+            bool hasAtmos = SubSystems.TryGet(out AtmosSubSystem atmos);
+            bool hasDisposal = SubSystems.TryGet(out DisposalSubSystem disposal);
+            bool priorAtmosPaused = false;
+            TileMap map = SubSystems.TryGet(out TileSubSystem tileSystem) ? tileSystem.CurrentMap : null;
+
             // APCs spawn mid-tile-placement and would flood against an incomplete map (missing
             // chunks look like empty space). Defer flood until every contributor has finished.
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 areaSubSystem.BeginDeferredAreaFlood();
             }
+
+            if (hasElectricity)
+                electricity.SuspendCircuitUpdates(true);
+            if (hasAtmos)
+            {
+                priorAtmosPaused = atmos.SimulationPaused;
+                atmos.SimulationPaused = true;
+            }
+
+            if (hasDisposal)
+                disposal.BeginDeferredNetworkRebuild();
+
+            map?.BeginBulkMutation();
 
             try
             {
@@ -286,11 +364,34 @@ namespace SS3D.Systems.Persistence
                     }
 
                     object payload = DeserializePayload(contributor, chunk.payloadJson);
+
+                    if (contributor.ContributorId == TileMapPersistenceContributor.ContributorIdValue
+                        && payload is SavedTileMap savedTileMap
+                        && map != null)
+                    {
+                        IEnumerator load = map.LoadRoutine(
+                            savedTileMap,
+                            invokeMapLoadedEvent: false,
+                            yieldFrames: timeSlice);
+                        while (load.MoveNext())
+                            yield return load.Current;
+                        continue;
+                    }
+
                     contributor.Restore(payload, context);
                 }
             }
             finally
             {
+                map?.EndBulkMutation();
+
+                if (hasDisposal)
+                    disposal.EndDeferredNetworkRebuild();
+                if (hasElectricity)
+                    electricity.SuspendCircuitUpdates(false);
+                if (hasAtmos)
+                    atmos.SimulationPaused = priorAtmosPaused;
+
                 if (SubSystems.TryGet(out AreaSubSystem areaAfterRestore))
                 {
                     areaAfterRestore.EndDeferredAreaFlood();

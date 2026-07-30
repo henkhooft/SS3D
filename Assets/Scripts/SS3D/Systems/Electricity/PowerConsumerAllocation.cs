@@ -20,27 +20,37 @@ namespace SS3D.Systems.Electricity
             float budgetKw)
         {
             var poweredConsumers = new List<IPowerConsumer>();
+            AllocateUnderBudget(consumers, budgetKw, poweredConsumers);
+            return poweredConsumers;
+        }
+
+        /// <summary>Hot-path variant: clears and fills <paramref name="results"/> with no new List.</summary>
+        public static void AllocateUnderBudget(
+            IReadOnlyList<IPowerConsumer> consumers,
+            float budgetKw,
+            List<IPowerConsumer> results)
+        {
+            results.Clear();
             if (budgetKw <= 0f || consumers == null || consumers.Count == 0)
             {
-                return poweredConsumers;
+                return;
             }
 
             float remainingBudget = budgetKw;
             foreach (PowerChannel channel in InclusionOrder)
             {
-                foreach (IPowerConsumer consumer in consumers)
+                for (int i = 0; i < consumers.Count; i++)
                 {
+                    IPowerConsumer consumer = consumers[i];
                     if (consumer.Channel != channel || consumer.PowerNeeded > remainingBudget)
                     {
                         continue;
                     }
 
-                    poweredConsumers.Add(consumer);
+                    results.Add(consumer);
                     remainingBudget -= consumer.PowerNeeded;
                 }
             }
-
-            return poweredConsumers;
         }
     }
 }

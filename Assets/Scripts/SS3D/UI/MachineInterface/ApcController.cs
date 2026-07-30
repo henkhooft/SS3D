@@ -45,7 +45,7 @@ namespace SS3D.UI.MachineInterface
 
         public ApcControlFlags Channels => _channels;
 
-        public PlacedTileObject TileObject => GetComponent<PlacedTileObject>();
+        public PlacedTileObject TileObject => this ? GetComponent<PlacedTileObject>() : null;
 
         public TileCoord OriginTile
         {

@@ -1,3 +1,4 @@
+using System;
 using Coimbra;
 using FishNet;
 using FishNet.Managing;
@@ -295,7 +296,8 @@ namespace SS3D.Networking
 
         /// <summary>
         /// Player IMGUI default (LegacyRuntime) is missing under Wine and some stripped
-        /// players — empty Retry/Quit labels plus per-frame font warnings. Prefer OS fonts.
+        /// players — empty Retry/Quit labels plus per-frame font warnings. Prefer OS fonts
+        /// that exist on the current platform (Segoe UI is Windows-only).
         /// </summary>
         private void EnsureGuiStyles()
         {
@@ -323,15 +325,69 @@ namespace SS3D.Networking
         {
             // Builtin LegacyRuntime often exists as an asset but fails to resolve a face in
             // Wine / some players ("Unable to load font face for [LegacyRuntime]").
-            Font osFont = Font.CreateDynamicFontFromOSFont(
-                new[] { "Segoe UI", "Arial", "DejaVu Sans", "Liberation Sans", "FreeSans" },
-                14);
-            if (osFont != null)
+            // CreateDynamicFontFromOSFont(string[]) still binds the first name even when that
+            // face is missing (Segoe UI on Linux → blank buttons + per-frame spam). Pick a
+            // family that is actually installed.
+            string[] preferred = PreferredOsFontFamilies();
+            string[] installed = Font.GetOSInstalledFontNames();
+            if (installed != null && installed.Length > 0)
             {
-                return osFont;
+                for (int i = 0; i < preferred.Length; i++)
+                {
+                    string match = FindInstalledFontFamily(preferred[i], installed);
+                    if (match == null)
+                        continue;
+
+                    Font font = Font.CreateDynamicFontFromOSFont(match, 14);
+                    if (font != null)
+                        return font;
+                }
             }
 
+            Font fallback = Font.CreateDynamicFontFromOSFont(preferred, 14);
+            if (fallback != null)
+                return fallback;
+
             return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
+        private static string[] PreferredOsFontFamilies()
+        {
+#if UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX
+            return new[]
+            {
+                "DejaVu Sans",
+                "Liberation Sans",
+                "Noto Sans",
+                "Inter",
+                "FreeSans",
+                "Ubuntu",
+                "Cantarell",
+                "Arial",
+            };
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+            return new[] { "Helvetica", "Helvetica Neue", "Arial", "Lucida Grande" };
+#else
+            return new[] { "Segoe UI", "Arial", "Tahoma", "DejaVu Sans", "Liberation Sans" };
+#endif
+        }
+
+        private static string FindInstalledFontFamily(string preferred, string[] installed)
+        {
+            for (int i = 0; i < installed.Length; i++)
+            {
+                if (string.Equals(installed[i], preferred, StringComparison.OrdinalIgnoreCase))
+                    return installed[i];
+            }
+
+            // Some distros report "DejaVu Sans Book" etc.
+            for (int i = 0; i < installed.Length; i++)
+            {
+                if (installed[i].StartsWith(preferred, StringComparison.OrdinalIgnoreCase))
+                    return installed[i];
+            }
+
+            return null;
         }
 
         private void Retry()

@@ -41,7 +41,14 @@ namespace SS3D.Systems.Tile.Connections
 
         public int HorizontalConnectionCount => _adjacencyMap?.CardinalConnectionCount ?? 0;
 
-        public IConnectionRule ConnectionRule => _connectionRule ??= new DisposalPipeConnectionRule(this);
+        public IConnectionRule ConnectionRule
+        {
+            get
+            {
+                Setup();
+                return _connectionRule ??= new DisposalPipeConnectionRule(this);
+            }
+        }
 
         private void Setup()
         {
@@ -233,7 +240,7 @@ namespace SS3D.Systems.Tile.Connections
             Vector3 pos = transform.position;
             Quaternion localRotation = _filter.transform.localRotation;
             Vector3 eulerRotation = localRotation.eulerAngles;
-            _filter.mesh = info.Item1;
+            _filter.sharedMesh = info.Item1;
 
             if (info.Item3 == AdjacencyShape.Vertical)
             {

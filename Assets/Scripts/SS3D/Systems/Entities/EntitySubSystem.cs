@@ -116,14 +116,14 @@ namespace SS3D.Systems.Entities
         }
 
         /// <summary>
-        /// List of currently spawned players in the round.
+        /// Currently spawned players in the round. Do not mutate; SyncList is the source of truth.
         /// </summary>
-        public List<Entity> SpawnedPlayers => _spawnedPlayers.ToList();
+        public IReadOnlyList<Entity> SpawnedPlayers => _spawnedPlayers;
 
         /// <summary>
         /// Returns the last spawned player.
         /// </summary>
-        public Entity LastSpawned => _spawnedPlayers.Count != 0 ? _spawnedPlayers.Last() : null;
+        public Entity LastSpawned => _spawnedPlayers.Count != 0 ? _spawnedPlayers[^1] : null;
 
         protected override void OnStart()
         {
@@ -357,7 +357,7 @@ namespace SS3D.Systems.Entities
 
             _hasSpawnedInitialPlayers = true;
 
-            new InitialPlayersSpawned(SpawnedPlayers).Invoke(this);
+            new InitialPlayersSpawned(new List<Entity>(_spawnedPlayers)).Invoke(this);
         }
 
         /// <summary>
@@ -366,8 +366,13 @@ namespace SS3D.Systems.Entities
         [Server]
         private void DestroySpawnedPlayers()
         {
-            foreach (Entity player in SpawnedPlayers)
+            var snapshot = new List<Entity>(_spawnedPlayers);
+            for (int i = 0; i < snapshot.Count; i++)
             {
+                Entity player = snapshot[i];
+                if (player == null)
+                    continue;
+
                 ServerManager.Despawn(player.NetworkObject);
                 player.GameObject.Dispose(true);
             }
@@ -419,12 +424,12 @@ namespace SS3D.Systems.Entities
 
         private void SyncSpawnedPlayers()
         {
-            if (SpawnedPlayers.IsNullOrEmpty())
+            if (_spawnedPlayers.Count == 0)
             {
                 return;
             }
 
-            SpawnedPlayersUpdated spawnedPlayersUpdated = new(SpawnedPlayers);
+            SpawnedPlayersUpdated spawnedPlayersUpdated = new(new List<Entity>(_spawnedPlayers));
             spawnedPlayersUpdated.Invoke(this);
         }
 

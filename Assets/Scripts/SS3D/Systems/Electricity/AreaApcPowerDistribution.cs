@@ -12,6 +12,11 @@ namespace SS3D.Systems.Electricity
     {
         public static bool IsAreaScopedConsumer(IPowerConsumer consumer)
         {
+            if (SubSystems.TryGet(out ElectricitySubSystem electricity))
+            {
+                return electricity.IsIndexedAreaScopedConsumer(consumer);
+            }
+
             return consumer is IElectricDevice device
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetEffectiveApcForDevice(device, out _);
@@ -41,19 +46,38 @@ namespace SS3D.Systems.Electricity
         }
 
         public static List<IPowerConsumer> GetActiveConsumers(
-            IEnumerable<IPowerConsumer> consumers,
+            IReadOnlyList<IPowerConsumer> consumers,
             ApcControlFlags enabledChannels)
         {
             var activeConsumers = new List<IPowerConsumer>();
-            foreach (IPowerConsumer consumer in consumers)
+            FillActiveConsumers(consumers, enabledChannels, activeConsumers);
+            return activeConsumers;
+        }
+
+        /// <summary>
+        /// Hot-path variant: clears and fills <paramref name="results"/> with no new List.
+        /// Takes <see cref="IReadOnlyList{T}"/> and indexes — foreach over <see cref="IEnumerable{T}"/>
+        /// boxes List's enumerator (~40 B per APC per tick).
+        /// </summary>
+        public static void FillActiveConsumers(
+            IReadOnlyList<IPowerConsumer> consumers,
+            ApcControlFlags enabledChannels,
+            List<IPowerConsumer> results)
+        {
+            results.Clear();
+            if (consumers == null)
             {
-                if (IsChannelEnabled(consumer.Channel, enabledChannels))
-                {
-                    activeConsumers.Add(consumer);
-                }
+                return;
             }
 
-            return activeConsumers;
+            for (int i = 0; i < consumers.Count; i++)
+            {
+                IPowerConsumer consumer = consumers[i];
+                if (IsChannelEnabled(consumer.Channel, enabledChannels))
+                {
+                    results.Add(consumer);
+                }
+            }
         }
 
         public static bool IsChannelEnabled(PowerChannel channel, ApcControlFlags enabledChannels) =>
@@ -90,9 +114,36 @@ namespace SS3D.Systems.Electricity
             IReadOnlyList<IPowerConsumer> activeAreaConsumers,
             float tickSeconds = ElectricityUnits.DefaultTickSeconds)
         {
+            PowerAreaConsumers(
+                apc,
+                apcCell,
+                gridSupplyKw,
+                areaConsumers,
+                activeAreaConsumers,
+                tickSeconds,
+                poweredScratch: null,
+                poweredSetScratch: null);
+        }
+
+        /// <summary>
+        /// Hot-path variant. Pass reusable <paramref name="poweredScratch"/> /
+        /// <paramref name="poweredSetScratch"/> to avoid per-tick List/HashSet allocs.
+        /// </summary>
+        public static void PowerAreaConsumers(
+            IApcChannelSource apc,
+            IPowerStorage apcCell,
+            float gridSupplyKw,
+            IReadOnlyList<IPowerConsumer> areaConsumers,
+            IReadOnlyList<IPowerConsumer> activeAreaConsumers,
+            float tickSeconds,
+            List<IPowerConsumer> poweredScratch,
+            HashSet<IPowerConsumer> poweredSetScratch)
+        {
             float cellDeliverableKw = apcCell is { IsOn: true } ? apcCell.MaxDeliverableKw(tickSeconds) : 0f;
             float totalBudgetKw = gridSupplyKw + cellDeliverableKw;
-            List<IPowerConsumer> poweredConsumers = PowerConsumerAllocation.AllocateUnderBudget(activeAreaConsumers, totalBudgetKw);
+
+            List<IPowerConsumer> poweredConsumers = poweredScratch ?? new List<IPowerConsumer>();
+            PowerConsumerAllocation.AllocateUnderBudget(activeAreaConsumers, totalBudgetKw, poweredConsumers);
 
             float poweredDemandKw = SumPowerNeeded(poweredConsumers);
             float cellDrawKw = poweredDemandKw - gridSupplyKw;
@@ -108,7 +159,13 @@ namespace SS3D.Systems.Electricity
 
             // Assign final status once per consumer. Setting Inactive then Powered every tick
             // flickers SyncVar OnChange (e.g. airlock close timers never fire — fixed thrice).
-            HashSet<IPowerConsumer> poweredSet = new HashSet<IPowerConsumer>(poweredConsumers);
+            HashSet<IPowerConsumer> poweredSet = poweredSetScratch ?? new HashSet<IPowerConsumer>();
+            poweredSet.Clear();
+            for (int i = 0; i < poweredConsumers.Count; i++)
+            {
+                poweredSet.Add(poweredConsumers[i]);
+            }
+
             for (int i = 0; i < areaConsumers.Count; i++)
             {
                 IPowerConsumer consumer = areaConsumers[i];

@@ -104,6 +104,20 @@ namespace EditorTests
         }
 
         [Test]
+        public void DisposalPipeConnectionRule_IsConnected_DoesNotRequireConnectorSetup()
+        {
+            PlacedTileObject self = CreatePlacedTileWithDisposalPipeConnector(TileObjectGenericType.Disposal, TileObjectSpecificType.None);
+            PlacedTileObject neighbour = CreatePlacedTileWithDisposalPipeConnector(TileObjectGenericType.Disposal, TileObjectSpecificType.None);
+
+            DisposalPipeAdjacencyConnector connector = self.GetComponent<DisposalPipeAdjacencyConnector>();
+            // Mimic bulk import: ConnectionRule accessed before Setup/OnStartClient.
+            Assert.IsNull(connector.PlacedObject);
+
+            Assert.IsTrue(connector.ConnectionRule.IsConnected(self, neighbour));
+            Assert.IsNotNull(connector.PlacedObject);
+        }
+
+        [Test]
         public void DisposalPipeConnectionRule_ConnectsMatchingDisposalPipes()
         {
             PlacedTileObject self = CreatePlacedTileWithDisposalPipeConnector(TileObjectGenericType.Disposal, TileObjectSpecificType.None);

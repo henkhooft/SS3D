@@ -2,8 +2,9 @@ namespace SS3D.Systems.Electricity
 {
     /// <summary>
     /// Development-only toggle so wall light fixtures can glow without a powered grid.
-    /// When active, fixtures are treated as powered without grid supply but still follow APC channel toggles and area Normal/Emergency/Dark policy.
-    /// Release builds always require real power.
+    /// When active, fixtures are treated as powered without grid supply. Fixtures with an area
+    /// still follow APC channel toggles and Normal/Emergency/Dark policy; fixtures with no area
+    /// (manual place / no APC flood) glow. Release builds always require real power.
     /// </summary>
     public static class LightingDevBypass
     {

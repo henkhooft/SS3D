@@ -8,17 +8,19 @@ namespace SS3D.Systems.Atmospherics.ECS
     /// Heat conduction across open cell edges, independent of pressure. Runs as an energy-conserving
     /// Jacobi gather: each undirected edge is processed exactly once (lower index owns it when both
     /// endpoints are simulated), moving energy — not temperature — so total <c>Σ heatCapacity·T</c>
-    /// is preserved. Only temperature and wake-state are written; moles are untouched.
+    /// is preserved. Only the <see cref="WorkingSet"/> is copied/seeded/resolved — passive cells
+    /// keep their last committed temperature.
     /// </summary>
     [BurstCompile]
     public struct ConductHeatJob : IJob
     {
         [ReadOnly] public NativeArray<int> ActiveCells;
+        [ReadOnly] public NativeArray<int> WorkingSet;
         [ReadOnly] public NativeArray<float> Moles;
-        [ReadOnly] public NativeArray<AtmosCellMeta> CellMeta;
         [ReadOnly] public NativeArray<AtmosNeighbours> Neighbours;
         [ReadOnly] public NativeArray<float> SpecificHeat;
 
+        public NativeArray<AtmosCellMeta> CellMeta;
         public NativeArray<AtmosCellMeta> CellMetaWrite;
         public NativeArray<float> EnergyScratch;
 
@@ -29,11 +31,13 @@ namespace SS3D.Systems.Atmospherics.ECS
 
         public void Execute()
         {
-            for (int i = 0; i < CellMeta.Length; i++)
-                CellMetaWrite[i] = CellMeta[i];
-
-            for (int c = 0; c < CellMeta.Length; c++)
+            for (int w = 0; w < WorkingSet.Length; w++)
             {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMeta.Length)
+                    continue;
+
+                CellMetaWrite[c] = CellMeta[c];
                 float heatCapacity = AtmosThermo.HeatCapacity(Moles, SpecificHeat, c, MaxGasTypes, GasTypeCount);
                 EnergyScratch[c] = heatCapacity * CellMeta[c].Temperature;
             }
@@ -104,11 +108,13 @@ namespace SS3D.Systems.Atmospherics.ECS
                 }
             }
 
-            // Resolve conduction results back into temperatures. Near-empty cells blend toward
-            // space temperature instead of dividing energy by ~0, so a vented cell settles stably
-            // to space temperature rather than oscillating.
-            for (int c = 0; c < CellMetaWrite.Length; c++)
+            // Resolve conduction results back into temperatures for the working set only.
+            for (int w = 0; w < WorkingSet.Length; w++)
             {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMetaWrite.Length)
+                    continue;
+
                 AtmosCellMeta meta = CellMetaWrite[c];
                 if (meta.State == AtmosCellState.Blocked || meta.State == AtmosCellState.Vacuum)
                     continue;
@@ -138,6 +144,15 @@ namespace SS3D.Systems.Atmospherics.ECS
                     (SpaceTemperature - meta.Temperature);
                 meta.State = AtmosCellState.Active;
                 CellMetaWrite[c] = meta;
+            }
+
+            for (int w = 0; w < WorkingSet.Length; w++)
+            {
+                int c = WorkingSet[w];
+                if (c < 0 || c >= CellMeta.Length)
+                    continue;
+
+                CellMeta[c] = CellMetaWrite[c];
             }
         }
 

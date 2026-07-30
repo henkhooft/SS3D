@@ -203,7 +203,7 @@ namespace SS3D.Systems.Tile.Connections
                 Log.Warning(this, "Missing mesh {meshDirectionInfo}", Logs.Generic, info);
             }
 
-            _filter.mesh = info.Mesh;
+            _filter.sharedMesh = info.Mesh;
 
             Quaternion localRotation = transform.localRotation;
             Vector3 eulerRotation = localRotation.eulerAngles;

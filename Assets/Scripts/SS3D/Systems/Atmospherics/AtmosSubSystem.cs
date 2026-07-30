@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using FishNet.Connection;
 using FishNet.Object;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -7,6 +8,7 @@ using SS3D.Logging;
 using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Atmospherics.Visualization;
+using SS3D.Systems.Area;
 using SS3D.Systems.Tile;
 using SS3D.Systems.WorldReadiness;
 using System;
@@ -35,6 +37,7 @@ namespace SS3D.Systems.Atmospherics
         private AtmosPipeSimulation _pipeSimulation;
         private GasPipeNetworkRegistry _pipeRegistry;
         private readonly AtmosPortRegistry _portRegistry = new();
+        private readonly AtmosAreaPortIndex _areaPortIndex = new();
         private AtmosVisualizationBridge _visualizationBridge;
         private AtmosClientVisualizationBridge _clientVisualizationBridge;
         private AtmosDirtyChunkTracker _dirtyChunkTracker;
@@ -53,6 +56,12 @@ namespace SS3D.Systems.Atmospherics
         public AtmosPipeSimulation PipeSimulation => _pipeSimulation;
         public GasPipeNetworkRegistry PipeRegistry => _pipeRegistry;
         public AtmosPortRegistry PortRegistry => _portRegistry;
+
+        /// <summary>
+        /// Area → vent/scrubber index. Rebuilds on invalidate (port register or area reflood).
+        /// </summary>
+        public AtmosAreaPortIndex AreaPortIndex => _areaPortIndex;
+
         public bool SimulationPaused { get; set; }
         public float LastTickMilliseconds { get; private set; }
 
@@ -317,10 +326,15 @@ namespace SS3D.Systems.Atmospherics
         /// Sends each visually-dirty chunk to observing clients so pure clients (which have no
         /// local <see cref="AtmosSimulation"/>) can build a matching atlas. See
         /// Documents/architecture/2026-07_atmos-client-visualization-sync.md.
+        /// Host GPU visuals use <see cref="AtmosVisualizationBridge.PublishSnapshot"/> — skip
+        /// patch build/serialize when there are no remote clients.
         /// </summary>
         private void BroadcastDirtyChunks()
         {
             if (_dirtyChunkTracker == null || _patchBuilder == null)
+                return;
+
+            if (!HasRemoteAtmosClients())
                 return;
 
             _dirtyChunkTracker.Update(_simulation);
@@ -336,6 +350,23 @@ namespace SS3D.Systems.Atmospherics
                 AtmosChunkPatch patch = _patchBuilder.Build(_simulation, chunkIndex, chunkKey);
                 RpcApplyChunkPatch(patch);
             }
+        }
+
+        /// <summary>
+        /// Pure clients need chunk patches; host-only Play Mode does not (atlas is local).
+        /// </summary>
+        private bool HasRemoteAtmosClients()
+        {
+            if (ServerManager == null || ServerManager.Clients.Count == 0)
+                return false;
+
+            foreach (NetworkConnection conn in ServerManager.Clients.Values)
+            {
+                if (conn != null && conn.IsActive && !conn.IsLocalClient)
+                    return true;
+            }
+
+            return false;
         }
 
         [ObserversRpc]
@@ -365,9 +396,36 @@ namespace SS3D.Systems.Atmospherics
                 out actuallyMoved);
         }
 
-        public void RegisterPort(IAtmosPortDevice port) => _portRegistry.Register(port);
+        public void RegisterPort(IAtmosPortDevice port)
+        {
+            _portRegistry.Register(port);
+            _areaPortIndex.Invalidate();
+        }
 
-        public void UnregisterPort(IAtmosPortDevice port) => _portRegistry.Unregister(port);
+        public void UnregisterPort(IAtmosPortDevice port)
+        {
+            _portRegistry.Unregister(port);
+            _areaPortIndex.Invalidate();
+        }
+
+        /// <summary>
+        /// Marks the area→port index dirty after area membership changes (reflood / APC lifecycle).
+        /// </summary>
+        public void InvalidateAreaPortIndex() => _areaPortIndex.Invalidate();
+
+        /// <summary>
+        /// Ensures the area→port index is current, then returns vents/scrubbers for <paramref name="areaId"/>.
+        /// </summary>
+        public IReadOnlyList<(AtmosPortControllerBase Port, AtmosAreaPortKind Kind)> GetIndexedPortsForArea(AreaId areaId)
+        {
+            if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+            {
+                return Array.Empty<(AtmosPortControllerBase, AtmosAreaPortKind)>();
+            }
+
+            _areaPortIndex.EnsureBuilt(_portRegistry, areaSubSystem);
+            return _areaPortIndex.GetPortsInArea(areaId);
+        }
 
         public bool TryGetCellDebugInfo(TileCoord coord, out AtmosCellDebugInfo info)
         {

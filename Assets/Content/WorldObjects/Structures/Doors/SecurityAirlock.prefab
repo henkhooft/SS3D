@@ -56,8 +56,8 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -170,8 +170,8 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -238,7 +238,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2079395355536659087}
   - component: {fileID: 7942135432533076774}
-  - component: {fileID: -6616120420594439688}
   - component: {fileID: -3952917033083390060}
   - component: {fileID: -2593019434011219120}
   - component: {fileID: 2073047018609668257}
@@ -289,7 +288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NetworkObserver: {fileID: 0}
-  <PrefabId>k__BackingField: 140
+  <PrefabId>k__BackingField: 170
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
@@ -298,7 +297,6 @@ MonoBehaviour:
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
-  - {fileID: -6616120420594439688}
   - {fileID: -3952917033083390060}
   - {fileID: 2073047018609668257}
   - {fileID: -8800000000000000021}
@@ -313,27 +311,6 @@ MonoBehaviour:
   _isGlobal: 0
   _initializeOrder: 0
   _defaultDespawnType: 0
---- !u!114 &-6616120420594439688
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7133738675197207439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _componentIndexCache: 0
-  _addedNetworkObject: {fileID: 7942135432533076774}
-  _networkObjectCache: {fileID: 7942135432533076774}
-  IgnoredParameters: []
-  _animator: {fileID: 0}
-  _smoothFloats: 1
-  _interpolation: 2
-  _clientAuthoritative: 0
-  _sendToOwner: 0
 --- !u!114 &-3952917033083390060
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -346,10 +323,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d00d6a1b2cb9fb54fbefde21a9eb88a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 1
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   wallCapPrefab: {fileID: 3591147544166670882, guid: 9682b163cae64f74a93b6e84ce84ae5b, type: 3}
   doorType: 0
 --- !u!114 &-2593019434011219120
@@ -378,49 +356,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7c01168513e70b429b0893f60362744, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 2
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
   _animator: {fileID: 556509194791000406}
+  _powerConsumer: {fileID: -8800000000000000021}
   doorTriggerLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  _proximityVolume: {fileID: 0}
   _meshesToColor:
   - {fileID: 6060823761219191581}
   - {fileID: 7941901518868879156}
   _skinnedMeshesToColor:
   - {fileID: 1526798170224380914}
   - {fileID: 1610574527409645708}
-  _powerConsumer: {fileID: -8800000000000000021}
---- !u!114 &8811223344556677881
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7133738675197207439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _deviceId: SecurityAirlock
-  _logCapacity: 32
---- !u!114 &8811223344556677882
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7133738675197207439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b7e8f9a0c1d2e3f4a5b6c7d8e9f0a1b2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _requireAccess: 1
-  _useAreaDefault: 0
-  _overrideRequiredAccessBits: 2
+  _isOpen: 0
 --- !u!95 &556509194791000406
 Animator:
   serializedVersion: 7
@@ -432,7 +383,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 43b3d57cceffaa5498e91901477ba8c9, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 2
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
@@ -517,7 +468,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5dc697195ff36649947ce641b391e16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 3
+  _componentIndexCache: 2
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
   _powerConsumption: 0.3
@@ -535,7 +486,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bbc87ddd49b01f4098910ffdf858004, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 4
+  _componentIndexCache: 3
   _addedNetworkObject: {fileID: 7942135432533076774}
   _networkObjectCache: {fileID: 7942135432533076774}
 --- !u!114 &-8800000000000000023
@@ -559,6 +510,35 @@ MonoBehaviour:
   - Renderer: {fileID: 7941901518868879156}
     MaterialIndex: 1
     PoweredColor: {r: 0, g: 0, b: 0, a: 1}
+--- !u!114 &8811223344556677881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133738675197207439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _deviceId: SecurityAirlock
+  _logCapacity: 32
+--- !u!114 &8811223344556677882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133738675197207439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e8f9a0c1d2e3f4a5b6c7d8e9f0a1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _requireAccess: 1
+  _useAreaDefault: 0
+  _overrideRequiredAccessBits: 2
 --- !u!1001 &2157331936072973061
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -570,6 +550,10 @@ PrefabInstance:
     - target: {fileID: 362297111316997015, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_Name
       value: RightPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 840353475596866441, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7781362268607177237, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_RootOrder
@@ -641,6 +625,10 @@ PrefabInstance:
     - target: {fileID: 362297111316997015, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_Name
       value: LeftPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 840353475596866441, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7781362268607177237, guid: 480205804f0315f43be80da9b651b6c9, type: 3}
       propertyPath: m_RootOrder

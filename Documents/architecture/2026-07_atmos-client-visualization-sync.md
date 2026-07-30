@@ -64,8 +64,8 @@ Thin sync layer on top of existing types — no renderer rewrite.
 |---|---|---|
 | 0 | Effort doc + system-map gap noted (this doc) | done |
 | 1 | Dirty-chunk tracking on server; client bridge applies patches; visuals work in dedicated-server + client | done |
-| 2 | AOI-scoped sends, bandwidth cap, late-join bootstrap | planned |
-| 3 | Optional: active-region-only atlas bounds, delta encoding | planned |
+| 2 | AOI-scoped sends, bandwidth cap, late-join bootstrap | planned (partial: host-only skips patch broadcast; dirty scan = active cells only; patch buffer reuse) |
+| 3 | Optional: active-region-only atlas bounds, delta encoding | **partial** — host AOI atlas bounds shipped in [2026-07_metastation-scale-perf.md](2026-07_metastation-scale-perf.md); delta encoding still open |
 
 ## Out of scope
 

@@ -194,7 +194,7 @@ namespace SS3D.Systems.Tile.Connections
                 _placedObject.SetDirection(direction);
 
             if (_filter != null)
-                _filter.mesh = mesh;
+                _filter.sharedMesh = mesh;
 
             Quaternion localRotation = transform.localRotation;
             Vector3 eulerRotation = localRotation.eulerAngles;
@@ -240,7 +240,7 @@ namespace SS3D.Systems.Tile.Connections
             localRotation = Quaternion.Euler(eulerRotation.x, rotation, eulerRotation.z);
             transform.localRotation = localRotation;
             Mesh mesh = AdjacencyResolver.ShapeToMesh(shape);
-            _filter.mesh = mesh;
+            _filter.sharedMesh = mesh;
         }
     }
 }

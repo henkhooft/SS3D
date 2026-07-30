@@ -1,26 +1,31 @@
 using System;
 using System.Collections.Generic;
 using SS3D.Core;
-using SS3D.Systems.Area;
-using SS3D.Systems.Tile.Connections;
 using UnityEngine;
 
 namespace SS3D.Systems.Electricity
 {
     /// <summary>
     /// Dims emissive materials and optional panel indicators when a power consumer is inactive.
+    /// Driven by <see cref="IPowerConsumer"/> status changes (and a one-shot refresh when electricity
+    /// becomes ready) — not per-tick <see cref="ElectricitySubSystem.OnTick"/>, which is too expensive
+    /// at SS13 door counts when power is steady.
     /// </summary>
     public class ConsumerPowerVisual : MonoBehaviour
     {
         static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
         static readonly int LuminId = Shader.PropertyToID("_Lumin");
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [Serializable]
         struct EmissiveSlot
         {
-            public Material Material;
+            public Renderer Renderer;
             public float PoweredLumin;
             public Color PoweredEmission;
+            public bool HasLumin;
+            public bool HasEmission;
         }
 
         [Serializable]
@@ -29,6 +34,9 @@ namespace SS3D.Systems.Electricity
             public Renderer Renderer;
             public int MaterialIndex;
             public Color PoweredColor;
+            /// <summary>Determined from the target shared material once — used for MPB updates.</summary>
+            [NonSerialized]
+            public int ColorPropertyId;
         }
 
         [SerializeField]
@@ -40,11 +48,20 @@ namespace SS3D.Systems.Electricity
 
         private IPowerConsumer _consumer;
         private readonly List<EmissiveSlot> _emissiveSlots = new();
-        private bool _electricityTickSubscribed;
+        private bool _waitingForElectricityReady;
+        private bool _hasAppliedPowered;
+        private bool _lastShownPowered;
+
+        private MaterialPropertyBlock _emissivePropertyBlock;
+        private MaterialPropertyBlock _panelPropertyBlock;
 
         private void Awake()
         {
             _consumer = ResolveConsumer();
+
+            // Unity disallows `new MaterialPropertyBlock()` in instance field initializers.
+            _emissivePropertyBlock = new MaterialPropertyBlock();
+            _panelPropertyBlock = new MaterialPropertyBlock();
         }
 
         private void Start()
@@ -64,7 +81,7 @@ namespace SS3D.Systems.Electricity
             }
 
             CacheVisuals();
-            TrySubscribeElectricityTick();
+            TryBindElectricityReady();
             RefreshVisuals();
         }
 
@@ -79,7 +96,7 @@ namespace SS3D.Systems.Electricity
                 machineConsumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
             }
 
-            UnsubscribeElectricityTick();
+            UnbindElectricityReady();
         }
 
         private IPowerConsumer ResolveConsumer()
@@ -117,25 +134,51 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                Material[] materials = renderer.materials;
-                for (int i = 0; i < materials.Length; i++)
+                float lumin = 0f;
+                Color emission = Color.black;
+                bool hasLumin = false;
+                bool hasEmission = false;
+                bool hasAnyEmissive = false;
+
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                for (int i = 0; i < sharedMaterials.Length; i++)
                 {
-                    Material material = materials[i];
-                    if (!material.HasProperty(LuminId) && !material.HasProperty(EmissionColorId))
+                    Material sharedMaterial = sharedMaterials[i];
+                    if (sharedMaterial == null)
                     {
                         continue;
                     }
 
-                    float lumin = material.HasProperty(LuminId) ? material.GetFloat(LuminId) : 0f;
-                    Color emission = material.HasProperty(EmissionColorId)
-                        ? material.GetColor(EmissionColorId)
-                        : Color.black;
+                    if (sharedMaterial.HasProperty(LuminId))
+                    {
+                        hasAnyEmissive = true;
+                        if (!hasLumin)
+                        {
+                            lumin = sharedMaterial.GetFloat(LuminId);
+                            hasLumin = true;
+                        }
+                    }
 
+                    if (sharedMaterial.HasProperty(EmissionColorId))
+                    {
+                        hasAnyEmissive = true;
+                        if (!hasEmission)
+                        {
+                            emission = sharedMaterial.GetColor(EmissionColorId);
+                            hasEmission = true;
+                        }
+                    }
+                }
+
+                if (hasAnyEmissive)
+                {
                     _emissiveSlots.Add(new EmissiveSlot
                     {
-                        Material = material,
+                        Renderer = renderer,
                         PoweredLumin = lumin,
                         PoweredEmission = emission,
+                        HasLumin = hasLumin,
+                        HasEmission = hasEmission,
                     });
                 }
             }
@@ -153,13 +196,36 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                Material[] materials = slot.Renderer.materials;
-                if (slot.MaterialIndex >= materials.Length)
+                Material[] sharedMaterials = slot.Renderer.sharedMaterials;
+                if (slot.MaterialIndex >= sharedMaterials.Length)
                 {
                     continue;
                 }
 
-                slot.PoweredColor = materials[slot.MaterialIndex].color;
+                Material targetMaterial = sharedMaterials[slot.MaterialIndex];
+                if (targetMaterial == null)
+                {
+                    continue;
+                }
+
+                // Material.color is the visible base-color alias for the shader in use.
+                slot.PoweredColor = targetMaterial.color;
+
+                // Pick a color property that exists on the targeted shader; use MPB so we don't instantiate materials.
+                if (targetMaterial.HasProperty(BaseColorId))
+                {
+                    slot.ColorPropertyId = BaseColorId;
+                }
+                else if (targetMaterial.HasProperty(ColorId))
+                {
+                    slot.ColorPropertyId = ColorId;
+                }
+                else
+                {
+                    // No known base-color property; skip updates for this slot.
+                    continue;
+                }
+
                 _panelIndicators[i] = slot;
             }
         }
@@ -169,21 +235,20 @@ namespace SS3D.Systems.Electricity
             RefreshVisuals();
         }
 
-        private void TrySubscribeElectricityTick()
+        private void TryBindElectricityReady()
         {
-            if (_electricityTickSubscribed || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (_waitingForElectricityReady || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
             if (electricitySubSystem.IsReady)
             {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
                 return;
             }
 
             electricitySubSystem.WhenReady += HandleElectricitySystemSetup;
+            _waitingForElectricityReady = true;
         }
 
         private void HandleElectricitySystemSetup()
@@ -194,38 +259,33 @@ namespace SS3D.Systems.Electricity
             }
 
             electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
-            if (!_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick += HandleElectricityTick;
-                _electricityTickSubscribed = true;
-            }
-
+            _waitingForElectricityReady = false;
             RefreshVisuals();
         }
 
-        private void UnsubscribeElectricityTick()
+        private void UnbindElectricityReady()
         {
-            if (!SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
+            if (!_waitingForElectricityReady || !SubSystems.TryGet(out ElectricitySubSystem electricitySubSystem))
             {
                 return;
             }
 
             electricitySubSystem.WhenReady -= HandleElectricitySystemSetup;
-            if (_electricityTickSubscribed)
-            {
-                electricitySubSystem.OnTick -= HandleElectricityTick;
-                _electricityTickSubscribed = false;
-            }
-        }
-
-        private void HandleElectricityTick()
-        {
-            RefreshVisuals();
+            _waitingForElectricityReady = false;
         }
 
         public void RefreshVisuals()
         {
-            if (ShouldShowPowered())
+            bool powered = ShouldShowPowered();
+            if (_hasAppliedPowered && _lastShownPowered == powered)
+            {
+                return;
+            }
+
+            _hasAppliedPowered = true;
+            _lastShownPowered = powered;
+
+            if (powered)
             {
                 SetEmissiveState(true);
                 SetPanelIndicators(true);
@@ -239,52 +299,62 @@ namespace SS3D.Systems.Electricity
 
         private bool ShouldShowPowered()
         {
-            return PowerGate.IsEffectivelyPowered(_consumer, NullConsumerPolicy.Deny);
+            // Prefer simulation PowerStatus: area ticks already apply channel gating before
+            // assigning Powered/Inactive. Avoids per-tick APC lookups on hundreds of airlocks.
+            return PowerGate.IsPowered(_consumer, NullConsumerPolicy.Deny);
         }
 
         private void SetEmissiveState(bool powered)
         {
             foreach (EmissiveSlot slot in _emissiveSlots)
             {
-                if (slot.Material == null)
+                if (slot.Renderer == null)
                 {
                     continue;
                 }
 
-                if (slot.Material.HasProperty(LuminId))
+                Renderer renderer = slot.Renderer;
+                renderer.GetPropertyBlock(_emissivePropertyBlock);
+
+                if (slot.HasLumin)
                 {
-                    slot.Material.SetFloat(LuminId, powered ? slot.PoweredLumin : 0f);
+                    _emissivePropertyBlock.SetFloat(LuminId, powered ? slot.PoweredLumin : 0f);
                 }
 
-                if (slot.Material.HasProperty(EmissionColorId))
+                if (slot.HasEmission)
                 {
-                    slot.Material.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
+                    _emissivePropertyBlock.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
                 }
+
+                renderer.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
 
         private void SetPanelIndicators(bool powered)
         {
-            if (_panelIndicators == null || powered)
+            if (_panelIndicators == null)
             {
                 return;
             }
 
-            foreach (PanelIndicatorSlot slot in _panelIndicators)
+            for (int i = 0; i < _panelIndicators.Length; i++)
             {
-                if (slot.Renderer == null || slot.MaterialIndex < 0)
+                PanelIndicatorSlot slot = _panelIndicators[i];
+                if (slot.Renderer == null)
                 {
                     continue;
                 }
 
-                Material[] materials = slot.Renderer.materials;
-                if (slot.MaterialIndex >= materials.Length)
+                if (slot.ColorPropertyId == 0)
                 {
                     continue;
                 }
 
-                materials[slot.MaterialIndex].color = Color.black;
+                slot.Renderer.GetPropertyBlock(_panelPropertyBlock);
+                _panelPropertyBlock.SetColor(slot.ColorPropertyId, powered ? slot.PoweredColor : Color.black);
+                slot.Renderer.SetPropertyBlock(_panelPropertyBlock);
             }
         }
+
     }
 }

@@ -55,6 +55,12 @@ namespace SS3D.Systems.Furniture
         public static readonly Color DoorLightClosingColor = new Color(1f, 0.18f, 0.2f);
         public static readonly Color DoorLightIdleColor = Color.black;
 
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+
+        private AirLockDoorInteraction _cachedDoorInteraction;
+        private IInteraction[] _cachedDoorInteractions;
+
         [SerializeField]
         private Animator _animator;
 
@@ -80,6 +86,13 @@ namespace SS3D.Systems.Furniture
         private readonly HashSet<HumanInventory> _authorizedOccupants = new();
         private readonly HashSet<HumanInventory> _deniedOccupants = new();
         private readonly HashSet<HumanInventory> _proximityScratch = new();
+        private readonly List<HumanInventory> _deniedPruneScratch = new();
+
+        private MaterialPropertyBlock _doorLightPropertyBlock;
+        private readonly List<Material> _sharedMaterialsScratch = new(4);
+        private int _doorLightColorPropertyId;
+        private bool _doorLightColorPropertyResolved;
+        private bool _hasDoorLightMaterialSlot;
 
         private AirLockAccessGate _accessGate;
         private Coroutine _closeTimer;
@@ -92,6 +105,10 @@ namespace SS3D.Systems.Furniture
         public bool IsOpen => _isOpen;
 
         public bool IsPowered => PowerGate.IsPowered(_powerConsumer, NullConsumerPolicy.Allow);
+
+        /// <summary>True when this door still needs a proximity pass after players leave its HashGrid neighborhood.</summary>
+        internal bool NeedsEmptyProximityPass =>
+            _authorizedOccupants.Count > 0 || _deniedOccupants.Count > 0;
 
         private void Awake()
         {
@@ -125,6 +142,8 @@ namespace SS3D.Systems.Furniture
                 _powerConsumer.OnPowerStatusUpdated += HandlePowerStatusUpdated;
             }
 
+            AirLockProximityService.Instance.Register(this);
+
             UpdateAnimator();
             NotifyTileStateChanged();
         }
@@ -132,6 +151,7 @@ namespace SS3D.Systems.Furniture
         public override void OnStartClient()
         {
             base.OnStartClient();
+
             UpdateAnimator();
             NotifyTileStateChanged();
         }
@@ -143,18 +163,17 @@ namespace SS3D.Systems.Furniture
                 _powerConsumer.OnPowerStatusUpdated -= HandlePowerStatusUpdated;
             }
 
+            AirLockProximityService.Instance.Unregister(this);
+
             base.OnStopServer();
         }
 
         public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
         {
-            return new IInteraction[]
-            {
-                new AirLockDoorInteraction(this)
-                {
-                    Name = IsOpen ? "Close" : "Open",
-                },
-            };
+            _cachedDoorInteraction ??= new AirLockDoorInteraction(this);
+            _cachedDoorInteraction.Name = IsOpen ? "Close" : "Open";
+            _cachedDoorInteractions ??= new IInteraction[] { _cachedDoorInteraction };
+            return _cachedDoorInteractions;
         }
 
         /// <summary>
@@ -164,21 +183,22 @@ namespace SS3D.Systems.Furniture
         {
             if (_meshesToColor != null)
             {
-                for (int i = 0; i < _meshesToColor.Count; i++)
+                EnsureDoorLightColorProperty();
+                if (_hasDoorLightMaterialSlot && _doorLightColorPropertyId != 0)
                 {
-                    MeshRenderer renderer = _meshesToColor[i];
-                    if (renderer == null)
+                    _doorLightPropertyBlock ??= new MaterialPropertyBlock();
+                    for (int i = 0; i < _meshesToColor.Count; i++)
                     {
-                        continue;
-                    }
+                        MeshRenderer renderer = _meshesToColor[i];
+                        if (renderer == null)
+                        {
+                            continue;
+                        }
 
-                    Material[] materials = renderer.materials;
-                    if (DoorLightMaterialIndex >= materials.Length)
-                    {
-                        continue;
+                        renderer.GetPropertyBlock(_doorLightPropertyBlock, DoorLightMaterialIndex);
+                        _doorLightPropertyBlock.SetColor(_doorLightColorPropertyId, color);
+                        renderer.SetPropertyBlock(_doorLightPropertyBlock, DoorLightMaterialIndex);
                     }
-
-                    materials[DoorLightMaterialIndex].color = color;
                 }
             }
 
@@ -209,6 +229,56 @@ namespace SS3D.Systems.Furniture
                 {
                     skinnedRenderer.SetBlendShapeWeight(1, 0);
                     skinnedRenderer.SetBlendShapeWeight(2, 0);
+                }
+            }
+        }
+
+        private void EnsureDoorLightColorProperty()
+        {
+            if (_doorLightColorPropertyResolved)
+            {
+                return;
+            }
+
+            _doorLightColorPropertyResolved = true;
+            if (_meshesToColor == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _meshesToColor.Count; i++)
+            {
+                MeshRenderer renderer = _meshesToColor[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                _sharedMaterialsScratch.Clear();
+                renderer.GetSharedMaterials(_sharedMaterialsScratch);
+                if (DoorLightMaterialIndex >= _sharedMaterialsScratch.Count)
+                {
+                    continue;
+                }
+
+                Material targetMaterial = _sharedMaterialsScratch[DoorLightMaterialIndex];
+                if (targetMaterial == null)
+                {
+                    continue;
+                }
+
+                if (targetMaterial.HasProperty(BaseColorId))
+                {
+                    _hasDoorLightMaterialSlot = true;
+                    _doorLightColorPropertyId = BaseColorId;
+                    return;
+                }
+
+                if (targetMaterial.HasProperty(ColorId))
+                {
+                    _hasDoorLightMaterialSlot = true;
+                    _doorLightColorPropertyId = ColorId;
+                    return;
                 }
             }
         }
@@ -255,18 +325,15 @@ namespace SS3D.Systems.Furniture
             SetOpen(false);
         }
 
-        private void FixedUpdate()
+        /// <summary>Called by <see cref="AirLockProximityService"/> for doors near players (or needing an empty pass).</summary>
+        [Server]
+        internal void ServerUpdateProximityFromService(IReadOnlyList<Entity> spawnedPlayers)
         {
-            if (!IsServer)
-            {
-                return;
-            }
-
-            ServerUpdateProximity();
+            ServerUpdateProximity(spawnedPlayers);
         }
 
         [Server]
-        private void ServerUpdateProximity()
+        private void ServerUpdateProximity(IReadOnlyList<Entity> spawnedPlayers)
         {
             if (_proximityVolume == null)
             {
@@ -285,7 +352,7 @@ namespace SS3D.Systems.Furniture
                 return;
             }
 
-            if (!SubSystems.TryGet(out EntitySubSystem entitySubSystem))
+            if (spawnedPlayers == null)
             {
                 return;
             }
@@ -294,7 +361,6 @@ namespace SS3D.Systems.Furniture
             _authorizedOccupants.Clear();
             _proximityScratch.Clear();
 
-            List<Entity> spawnedPlayers = entitySubSystem.SpawnedPlayers;
             for (int i = 0; i < spawnedPlayers.Count; i++)
             {
                 Entity entity = spawnedPlayers[i];
@@ -314,8 +380,7 @@ namespace SS3D.Systems.Furniture
                     continue;
                 }
 
-                HumanInventory inventory = entity.GetComponent<HumanInventory>();
-                if (inventory == null)
+                if (!entity.TryGetHumanInventory(out HumanInventory inventory))
                 {
                     continue;
                 }
@@ -337,7 +402,7 @@ namespace SS3D.Systems.Furniture
                 _authorizedOccupants.Add(inventory);
             }
 
-            _deniedOccupants.RemoveWhere(inventory => inventory == null || !_proximityScratch.Contains(inventory));
+            PruneDeniedOccupants();
 
             bool isEmpty = _authorizedOccupants.Count == 0;
             if (!isEmpty)
@@ -352,6 +417,23 @@ namespace SS3D.Systems.Furniture
             else if (!wasEmpty)
             {
                 ScheduleCloseAfterDelay();
+            }
+        }
+
+        private void PruneDeniedOccupants()
+        {
+            _deniedPruneScratch.Clear();
+            foreach (HumanInventory inventory in _deniedOccupants)
+            {
+                if (inventory == null || !_proximityScratch.Contains(inventory))
+                {
+                    _deniedPruneScratch.Add(inventory);
+                }
+            }
+
+            for (int i = 0; i < _deniedPruneScratch.Count; i++)
+            {
+                _deniedOccupants.Remove(_deniedPruneScratch[i]);
             }
         }
 

@@ -63,7 +63,7 @@ namespace SS3D.Systems.Tile
         {
 	        await UniTask.WaitUntil(() => Loader.IsInitialized);
 
-            Load();
+            await LoadAsync();
         }
 
         [ServerOrClient]
@@ -360,11 +360,17 @@ namespace SS3D.Systems.Tile
         [Server]
         public void Load()
         {
+            LoadAsync().Forget();
+        }
+
+        [Server]
+        public async UniTask LoadAsync()
+        {
             Log.Debug(this, "Loading most recent station template");
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
-                if (!persistenceSubSystem.LoadMostRecentStationTemplate())
+                if (!await persistenceSubSystem.LoadMostRecentStationTemplateAsync())
                 {
                     NotifyEmptyMapReady();
                 }
@@ -374,18 +380,24 @@ namespace SS3D.Systems.Tile
             }
 
 	        SavedTileMap mapSave = LocalStorage.LoadMostRecentObject<SavedTileMap>(legacySavePath);
-            LoadLegacyMap(mapSave);
+            await LoadLegacyMapAsync(mapSave);
             SyncFloorDecalsToClients();
         }
 
         [Server]
         public void Load(string mapName)
         {
+            LoadAsync(mapName).Forget();
+        }
+
+        [Server]
+        public async UniTask LoadAsync(string mapName)
+        {
             Log.Debug(this, $"Loading station template {mapName}");
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
-                if (!persistenceSubSystem.LoadStationTemplate(mapName))
+                if (!await persistenceSubSystem.LoadStationTemplateAsync(mapName))
                 {
                     NotifyEmptyMapReady();
                 }
@@ -395,7 +407,7 @@ namespace SS3D.Systems.Tile
             }
 
             SavedTileMap mapSave = LocalStorage.LoadObject<SavedTileMap>(legacySavePath + "/" + mapName);
-            LoadLegacyMap(mapSave);
+            await LoadLegacyMapAsync(mapSave);
             SyncFloorDecalsToClients();
         }
 
@@ -405,17 +417,61 @@ namespace SS3D.Systems.Tile
         /// </summary>
         private void LoadLegacyMap(SavedTileMap mapSave)
         {
+            IEnumerator routine = LoadLegacyMapRoutine(mapSave, timeSlice: false);
+            while (routine.MoveNext())
+            {
+            }
+        }
+
+        private async UniTask LoadLegacyMapAsync(SavedTileMap mapSave)
+        {
+            IEnumerator routine = LoadLegacyMapRoutine(mapSave, timeSlice: true);
+            while (routine.MoveNext())
+                await UniTask.Yield();
+        }
+
+        private IEnumerator LoadLegacyMapRoutine(SavedTileMap mapSave, bool timeSlice)
+        {
+            bool hasElectricity = SubSystems.TryGet(out Electricity.ElectricitySubSystem electricity);
+            bool hasAtmos = SubSystems.TryGet(out Atmospherics.AtmosSubSystem atmos);
+            bool hasDisposal = SubSystems.TryGet(out Furniture.Disposal.DisposalSubSystem disposal);
+            bool priorAtmosPaused = false;
+
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 areaSubSystem.BeginDeferredAreaFlood();
             }
 
+            if (hasElectricity)
+                electricity.SuspendCircuitUpdates(true);
+            if (hasAtmos)
+            {
+                priorAtmosPaused = atmos.SimulationPaused;
+                atmos.SimulationPaused = true;
+            }
+
+            if (hasDisposal)
+                disposal.BeginDeferredNetworkRebuild();
+
+            _currentMap?.BeginBulkMutation();
+
             try
             {
-                _currentMap.Load(mapSave);
+                IEnumerator load = _currentMap.LoadRoutine(mapSave, invokeMapLoadedEvent: true, yieldFrames: timeSlice);
+                while (load.MoveNext())
+                    yield return load.Current;
             }
             finally
             {
+                _currentMap?.EndBulkMutation();
+
+                if (hasDisposal)
+                    disposal.EndDeferredNetworkRebuild();
+                if (hasElectricity)
+                    electricity.SuspendCircuitUpdates(false);
+                if (hasAtmos)
+                    atmos.SimulationPaused = priorAtmosPaused;
+
                 if (SubSystems.TryGet(out AreaSubSystem areaAfterLoad))
                 {
                     areaAfterLoad.EndDeferredAreaFlood();

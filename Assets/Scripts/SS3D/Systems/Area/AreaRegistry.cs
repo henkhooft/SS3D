@@ -6,6 +6,8 @@ namespace SS3D.Systems.Area
     {
         private readonly Dictionary<ushort, AreaRecord> _byId = new();
         private readonly Dictionary<IAreaApcOrigin, AreaId> _byApc = new();
+        private readonly List<AreaRecord> _allAreasCache = new();
+        private bool _allAreasDirty = true;
         private ushort _nextId = 1;
 
         public IReadOnlyDictionary<ushort, AreaRecord> ById => _byId;
@@ -14,6 +16,8 @@ namespace SS3D.Systems.Area
         {
             _byId.Clear();
             _byApc.Clear();
+            _allAreasCache.Clear();
+            _allAreasDirty = false;
             _nextId = 1;
         }
 
@@ -30,6 +34,7 @@ namespace SS3D.Systems.Area
             _byId[record.Id.Value] = record;
             if (record.Apc != null)
                 _byApc[record.Apc] = record.Id;
+            _allAreasDirty = true;
         }
 
         public void Unregister(AreaId areaId)
@@ -41,6 +46,7 @@ namespace SS3D.Systems.Area
                 _byApc.Remove(record.Apc);
 
             _byId.Remove(areaId.Value);
+            _allAreasDirty = true;
         }
 
         public bool TryGet(AreaId areaId, out AreaRecord record)
@@ -65,13 +71,25 @@ namespace SS3D.Systems.Area
             return _byApc.TryGetValue(apc, out areaId);
         }
 
+        /// <summary>
+        /// Live snapshot of registered areas. Cached until Register/Unregister/Clear;
+        /// do not mutate the returned list.
+        /// </summary>
         public IReadOnlyList<AreaRecord> GetAllAreas()
         {
-            var list = new List<AreaRecord>(_byId.Count);
-            foreach (AreaRecord record in _byId.Values)
-                list.Add(record);
+            if (!_allAreasDirty)
+            {
+                return _allAreasCache;
+            }
 
-            return list;
+            _allAreasCache.Clear();
+            foreach (AreaRecord record in _byId.Values)
+            {
+                _allAreasCache.Add(record);
+            }
+
+            _allAreasDirty = false;
+            return _allAreasCache;
         }
     }
 }

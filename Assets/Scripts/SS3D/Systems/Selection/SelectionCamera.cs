@@ -92,12 +92,24 @@ namespace SS3D.Systems.Selection
                 return;
             }
 
+            // Pointer over UI: skip the entire pick pass (hundreds of DrawMesh) — hover is cleared
+            // in OnEndCameraRendering via black colour anyway.
+            if (InputInterface.IsPointerOverInterface())
+            {
+                SelectionPickContext.ClearRequest();
+                return;
+            }
+
             EnsureRenderTextureSize();
+
+            bool hasScreen = TryGetMouseScreenPosition(out Vector2 screenPosition);
             SelectionPickContext.SetRequest(new SelectionPickContext.Request
             {
                 SourceCamera = _playerCamera,
                 Target = _renderTexture,
-                DebugView = _debugMode
+                DebugView = _debugMode,
+                ScreenPosition = screenPosition,
+                HasScreenPosition = hasScreen,
             });
         }
 
@@ -155,7 +167,9 @@ namespace SS3D.Systems.Selection
             // Selection feeds examine/outlines/interaction hover. Clear it while over UI so world
             // targets do not "show through" registered UI Toolkit panels (Main HUD, MI, radial).
             Color32 col = Color.black;
-            if (!InputInterface.IsPointerOverInterface() && TryGetMousePixel(out int x, out int y))
+            if (!InputInterface.IsPointerOverInterface()
+                && SelectionPickContext.TryGetRequest(out _)
+                && TryGetMousePixel(out int x, out int y))
             {
                 RenderTexture previous = RenderTexture.active;
                 RenderTexture.active = _renderTexture;
@@ -168,16 +182,33 @@ namespace SS3D.Systems.Selection
             _system.UpdateColourFromCamera(col);
         }
 
+        private bool TryGetMouseScreenPosition(out Vector2 screenPosition)
+        {
+            screenPosition = Vector2.zero;
+            if (_playerCamera == null)
+            {
+                return false;
+            }
+
+            Vector2 position = Mouse.current != null
+                ? Mouse.current.position.ReadValue()
+                : (Vector2)Input.mousePosition;
+
+            if (!_playerCamera.pixelRect.Contains(position))
+            {
+                return false;
+            }
+
+            screenPosition = position;
+            return true;
+        }
+
         private bool TryGetMousePixel(out int x, out int y)
         {
             x = 0;
             y = 0;
 
-            Vector3 screenPosition = Mouse.current != null
-                ? (Vector3)Mouse.current.position.ReadValue()
-                : Input.mousePosition;
-
-            if (!_playerCamera.pixelRect.Contains(screenPosition))
+            if (!TryGetMouseScreenPosition(out Vector2 screenPosition))
             {
                 return false;
             }

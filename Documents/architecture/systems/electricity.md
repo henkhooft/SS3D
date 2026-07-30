@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: 00cbab299 — 2026-07-27
+> Verified: be79cc8ad — 2026-07-29 (CircuitsTick GC: GetAllAreas cache + IReadOnlyList FillActive)
 
 # Electricity
 
@@ -36,7 +36,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerStorageMath.cs` — shared APC/SMES/battery charge/discharge helpers
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerGate.cs` — `IsPowered` / `IsChannelOpen` / `IsEffectivelyPowered`
 - `Assets/Scripts/SS3D/Systems/Electricity/PowerConsumerAllocation.cs` — channel-priority consumer budgeting
-- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; `IWorldReady`; awaits `AreasFlooded` then notifies `ElectricityReady`; per-APC consumer index
+- `Assets/Scripts/SS3D/Systems/Electricity/ElectricitySubSystem.cs` — subsystem entry point; `IWorldReady`; awaits `AreasFlooded` then notifies `ElectricityReady`; per-APC consumer index; `_circuitByDevice` O(1) lookup
 - `Assets/Scripts/SS3D/Systems/Electricity/AreaApcPowerDistribution.cs` — area APC powers local consumers without per-device cables
 - `Assets/Scripts/SS3D/Systems/Electricity/ApcStatusDeriver.cs` — APC power/battery state derivation
 - `Assets/Scripts/SS3D/Systems/Electricity/ElectricCableConnectivity.cs` — HV cable links only grid backbone devices
@@ -66,6 +66,16 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
+- **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). **Also:** `AreaRegistry.GetAllAreas()` must not allocate a fresh List each tick (cache until Register/Unregister); `FillActiveConsumers` must take `IReadOnlyList` + index — foreach over `IEnumerable` boxes List's enumerator (~40 B/APC). Hit 2026-07-28 / 2026-07-29.
+- **`TryGetCircuitForDevice` must stay O(1):** scanning `_circuits` × `ContainsDevice` was ~507 membership tests per APC lookup × two calls/area/tick on Metastation. Rebuild `_circuitByDevice` in `UpdateAllCircuitsTopology`; do not reintroduce linear scans on the tick or MI stats path. Hit 2026-07-29 (deep profile).
+- **Cable filter must not re-resolve area each consumer:** `FillActiveConsumers` used to call `IsAreaScopedConsumer` + channel resolver (each → `TryGetEffectiveApcForDevice`) per consumer per tick. Rebuild `_areaScopedConsumers` / `_apcByConsumer` in `RebuildApcConsumerIndex` and use those in the circuit lambdas. Hit 2026-07-29.
+- **`SS3D.Electricity.FixedUpdate` / OnTick fan-out:** do not subscribe every `ConsumerPowerVisual` to `ElectricitySubSystem.OnTick` — at Metastation door counts that rewrites emissives (and used to alloc `Renderer.materials`) every 0.2 s. Drive visuals from `OnPowerStatusUpdated` (+ one-shot `WhenReady`); cache material refs in `CacheVisuals`. Hit 2026-07-28.
+- **`FixedUpdate` ≫ `CircuitsTick` self-time:** the FixedUpdate marker wraps CircuitsTick **and** `OnTick` subscriber fan-out. Zoom-out hitches often coincide with a 0.2 s tick: CircuitsTick may be ~6 ms while OnTick was the rest. Marker `SS3D.Electricity.OnTick` splits the bucket. Hit 2026-07-28.
+- **Lighting bypass ignores manually placed fixtures:** `LightPower.ShouldBeLit` returned false when `!_hasArea` before applying `LightingDevBypass`. No-APC / Map-Editor place stays dark with **SS3D/Dev/Lighting/Always Power Light Fixtures** on. Bypass still respects area Dark + channel policy when an area exists. Hit 2026-07-28.
+- **`RemoveElectricalElement` must not require a live `TileObject`.** `BasicElectricDevice.TileObject` is null during `OnDestroyed` (Unity fake-null). Bailing on null left zombies in `_registeredDevices` → NRE in `RebuildElectricGraph`/`ToCoordinates` after `TileMap.Clear` (Map Editor load, DMM import with Clear). Unregister by device reference; prune null-`TileObject` entries on rebuild. Hit 2026-07-28.
+- **`TileMap.Clear` vs FishNet despawn:** Clear empties `_chunks` before despawn finishes. Orphan cables still report `TileObject` but `GetChunk` is null → NRE in `ElectricNeighbourLookup.GetElectricDevicesOnSameTile`. Neighbour lookup must null-check map/chunk; rebuild prunes chunkless devices. Hit on MetaStation DMM import 2026-07-28.
+- **Interface-typed destroyed devices throw, not null.** `IElectricDevice device?.TileObject` does **not** Unity-null-check — a destroyed `ApcController` still invokes `get_TileObject` → `MissingReferenceException`. Use `device is Object u && u` before `TileObject`, and keep `ApcController.TileObject` as `this ? GetComponent… : null` (same as `BasicElectricDevice`). Full DMM import suspends circuit ticks + clears the registry around Clear/place. Hit 2026-07-28.
+- **Walls invisible until adjacency refresh finishes:** DMM import places with `skipAdjacency`, then `RefreshAllAdjacencies`. Airlocks are full meshes so they appear first; walls/windows need the adjacency pass. Mid-import electricity spam can make a full MetaStation import look “doors only” until the apply finishes cleanly.
 - **Never assign `Inactive` then `Powered` in the same tick.** `PowerStatus` is a SyncVar; OnChange fires on every real transition. Furniture (notably [furniture](furniture.md) airlocks) treats `Inactive` as a power-loss edge. Clear-then-set every ~0.2s tick restarts close timers forever. `PowerAreaConsumers` must write the final status once (and skip no-ops). Cable path in `Circuit` already does single-assignment — keep area path aligned. Test: `PowerAreaConsumers_AssignsFinalStatusOnceWithoutFlicker`.
 - **`PowerStatus` setter must allow EditMode/offline.** Guard pure clients with `NetworkObject != null && NetworkObject.IsSpawned && !IsServer` (not bare `!IsServer`). Bare `IsServer` NREs when `_networkObjectCache` is null, and treating all non-server as skip leaves Circuit EditMode tests stuck at `Inactive`. Same pattern as [tile](tile.md) adjacency SyncVar publishes / `PlacedTileObject.CanWriteIntegritySyncVars`.
 - **Client light fixtures ignore APC / wall-switch toggles:** Host `LightPower` can read live APC channels from the area registry; pure clients cannot. Fixture lit mode is a **server SyncVar** (`LightPower._fixtureVisual`); clients only apply it. Do not re-derive emit on clients from area/obsolete `IsSetUp`. `ApcController.OnChannelsChanged` refreshes fixtures on the server so the SyncVar updates immediately.

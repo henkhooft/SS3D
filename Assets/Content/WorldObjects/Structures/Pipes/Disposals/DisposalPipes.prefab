@@ -119,8 +119,8 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -221,3 +221,4 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+  - {fileID: 11400000, guid: e5f8a1b2c3d44e5f9a0b1c2d3e4f5a6b, type: 2}

@@ -18,6 +18,13 @@ namespace SS3D.Systems.Electricity
         private Func<IPowerConsumer, ApcControlFlags> _getEnabledChannelsForConsumer;
         private Func<IPowerConsumer, bool> _includeInCableDistribution;
 
+        private readonly List<IPowerConsumer> _activeConsumersScratch = new();
+        private readonly List<IPowerConsumer> _poweredConsumersScratch = new();
+        private readonly HashSet<IPowerConsumer> _poweredSetScratch = new();
+        private readonly List<IPowerStorage> _storageScratch = new();
+
+        private float _pendingProducerSurplus;
+
         public Circuit()
         {
             _consumers = new();
@@ -134,9 +141,13 @@ namespace SS3D.Systems.Electricity
         /// </summary>
         public void UpdateCableDistributionOnly(float tickSeconds = ElectricityUnits.DefaultTickSeconds)
         {
-            List<IPowerConsumer> activeConsumers = GetActiveConsumers();
-            _pendingProducerSurplus = ConsumePower(activeConsumers, tickSeconds, out List<IPowerConsumer> poweredConsumers);
-            UpdateConsumerStatus(poweredConsumers);
+            FillActiveConsumers(_activeConsumersScratch);
+            _pendingProducerSurplus = ConsumePower(
+                _activeConsumersScratch,
+                tickSeconds,
+                _poweredConsumersScratch,
+                _storageScratch);
+            UpdateConsumerStatus(_poweredConsumersScratch);
         }
 
         /// <summary>
@@ -158,9 +169,17 @@ namespace SS3D.Systems.Electricity
         /// </summary>
         public float GetAvailableGridSupplyForArea(float tickSeconds = ElectricityUnits.DefaultTickSeconds)
         {
-            float storageSupply = GetNonApcStorages()
-                .Where(storage => storage.IsOn)
-                .Sum(storage => storage.MaxDeliverableKw(tickSeconds));
+            float storageSupply = 0f;
+            for (int i = 0; i < _storages.Count; i++)
+            {
+                IPowerStorage storage = _storages[i];
+                if (IsApcCellStorage(storage) || !storage.IsOn)
+                {
+                    continue;
+                }
+
+                storageSupply += storage.MaxDeliverableKw(tickSeconds);
+            }
 
             return Math.Max(0f, _pendingProducerSurplus + storageSupply);
         }
@@ -184,17 +203,13 @@ namespace SS3D.Systems.Electricity
 
             if (remaining > 0f)
             {
-                List<IPowerStorage> availableStorages = GetNonApcStorages()
-                    .Where(storage => storage.IsOn && storage.MaxDeliverableKw(tickSeconds) > 0f)
-                    .OrderBy(storage => storage.MaxDeliverableKw(tickSeconds))
-                    .ToList();
-                DrainBatteries(remaining, availableStorages, tickSeconds);
+                FillAvailableNonApcStorages(_storageScratch, tickSeconds);
+                SortStoragesByDeliverableAscending(_storageScratch, tickSeconds);
+                DrainBatteries(remaining, _storageScratch, tickSeconds);
             }
 
             return requestedKw - remaining;
         }
-
-        private float _pendingProducerSurplus;
 
         /// <summary>
         /// Turn on or off consumers, depending on whether they are powered.
@@ -202,6 +217,12 @@ namespace SS3D.Systems.Electricity
         /// <param name="poweredConsumers">Consumers, that were powered</param>
         private void UpdateConsumerStatus(List<IPowerConsumer> poweredConsumers)
         {
+            _poweredSetScratch.Clear();
+            for (int i = 0; i < poweredConsumers.Count; i++)
+            {
+                _poweredSetScratch.Add(poweredConsumers[i]);
+            }
+
             foreach (IPowerConsumer consumer in _consumers)
             {
                 if (_includeInCableDistribution != null && !_includeInCableDistribution(consumer))
@@ -209,13 +230,12 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                if (poweredConsumers.Contains(consumer))
+                PowerStatus target = _poweredSetScratch.Contains(consumer)
+                    ? PowerStatus.Powered
+                    : PowerStatus.Inactive;
+                if (consumer.PowerStatus != target)
                 {
-                    consumer.PowerStatus = PowerStatus.Powered;
-                }
-                else
-                {
-                    consumer.PowerStatus = PowerStatus.Inactive;
+                    consumer.PowerStatus = target;
                 }
             }
         }
@@ -223,24 +243,41 @@ namespace SS3D.Systems.Electricity
         /// <summary>
         /// Try to satisfy consumers with producer output and non-APC storage discharge.
         /// </summary>
-        /// <param name="poweredConsumers">Which consumers were satisfied</param>
         /// <returns>Unused producer output in kW</returns>
-        private float ConsumePower(List<IPowerConsumer> activeConsumers, float tickSeconds, out List<IPowerConsumer> poweredConsumers)
+        private float ConsumePower(
+            List<IPowerConsumer> activeConsumers,
+            float tickSeconds,
+            List<IPowerConsumer> poweredConsumers,
+            List<IPowerStorage> storageScratch)
         {
-            float producerSupply = _producers.Sum(x => x.PowerProduction);
-            List<IPowerStorage> availableStorages = GetNonApcStorages()
-                .Where(x => x.IsOn && x.MaxDeliverableKw(tickSeconds) > 0f)
-                .ToList();
-            float batterySupply = availableStorages.Sum(x => x.MaxDeliverableKw(tickSeconds));
+            float producerSupply = 0f;
+            for (int i = 0; i < _producers.Count; i++)
+            {
+                producerSupply += _producers[i].PowerProduction;
+            }
+
+            FillAvailableNonApcStorages(storageScratch, tickSeconds);
+            float batterySupply = 0f;
+            for (int i = 0; i < storageScratch.Count; i++)
+            {
+                batterySupply += storageScratch[i].MaxDeliverableKw(tickSeconds);
+            }
+
             float totalBudget = producerSupply + batterySupply;
 
-            poweredConsumers = PowerConsumerAllocation.AllocateUnderBudget(activeConsumers, totalBudget);
-            float poweredDemand = poweredConsumers.Sum(x => x.PowerNeeded);
+            PowerConsumerAllocation.AllocateUnderBudget(activeConsumers, totalBudget, poweredConsumers);
+            float poweredDemand = 0f;
+            for (int i = 0; i < poweredConsumers.Count; i++)
+            {
+                poweredDemand += poweredConsumers[i].PowerNeeded;
+            }
+
             float batteryDraw = Math.Max(0f, poweredDemand - producerSupply);
 
             if (batteryDraw > 0f)
             {
-                DrainBatteries(batteryDraw, availableStorages, tickSeconds);
+                SortStoragesByDeliverableAscending(storageScratch, tickSeconds);
+                DrainBatteries(batteryDraw, storageScratch, tickSeconds);
             }
 
             return Math.Max(0f, producerSupply - poweredDemand);
@@ -258,7 +295,13 @@ namespace SS3D.Systems.Electricity
                 return;
             }
 
-            if (powerKw > storages.Sum(x => x.MaxDeliverableKw(tickSeconds)))
+            float availableKw = 0f;
+            for (int i = 0; i < storages.Count; i++)
+            {
+                availableKw += storages[i].MaxDeliverableKw(tickSeconds);
+            }
+
+            if (powerKw > availableKw)
             {
                 Log.Error(this, "Energy requested for draining batteries is greater than available energy in batteries." +
                     "This will result in creating some free energy.");
@@ -292,24 +335,34 @@ namespace SS3D.Systems.Electricity
                 return 0f;
             }
 
-            List<IPowerStorage> notFullStorages = _storages
-                .Where(x => x.RemainingCapacityKwh > 0f && x.IsOn && x.MaxChargeRateKw > 0f && !IsApcCellStorage(x))
-                .OrderBy(x => x.RemainingCapacityKwh)
-                .ToList();
+            _storageScratch.Clear();
+            for (int i = 0; i < _storages.Count; i++)
+            {
+                IPowerStorage storage = _storages[i];
+                if (storage.RemainingCapacityKwh > 0f
+                    && storage.IsOn
+                    && storage.MaxChargeRateKw > 0f
+                    && !IsApcCellStorage(storage))
+                {
+                    _storageScratch.Add(storage);
+                }
+            }
 
-            if (notFullStorages.Count == 0)
+            if (_storageScratch.Count == 0)
             {
                 return availablePowerKw;
             }
 
-            float equalAmount = availablePowerKw / notFullStorages.Count;
-            for (int i = 0; i < notFullStorages.Count; i++)
+            SortStoragesByRemainingCapacityAscending(_storageScratch);
+
+            float equalAmount = availablePowerKw / _storageScratch.Count;
+            for (int i = 0; i < _storageScratch.Count; i++)
             {
-                float maxChargeKw = notFullStorages[i].MaxChargeRateKw;
+                float maxChargeKw = _storageScratch[i].MaxChargeRateKw;
                 float chargeKw = Math.Min(equalAmount, maxChargeKw);
-                float absorbed = notFullStorages[i].AddPowerKw(chargeKw, tickSeconds);
+                float absorbed = _storageScratch[i].AddPowerKw(chargeKw, tickSeconds);
                 availablePowerKw -= absorbed;
-                equalAmount = notFullStorages.Count - i - 1 > 0 ? availablePowerKw / (notFullStorages.Count - i - 1) : 0f;
+                equalAmount = _storageScratch.Count - i - 1 > 0 ? availablePowerKw / (_storageScratch.Count - i - 1) : 0f;
             }
 
             return availablePowerKw;
@@ -333,14 +386,31 @@ namespace SS3D.Systems.Electricity
 
         private List<IPowerConsumer> GetActiveConsumers()
         {
+            FillActiveConsumers(_activeConsumersScratch);
+            return _activeConsumersScratch;
+        }
+
+        private void FillActiveConsumers(List<IPowerConsumer> results)
+        {
+            results.Clear();
             if (_getEnabledChannelsForConsumer == null)
             {
-                return GetActiveConsumers(_consumers, GetEnabledChannels());
+                ApcControlFlags enabledChannels = GetEnabledChannels();
+                for (int i = 0; i < _consumers.Count; i++)
+                {
+                    IPowerConsumer consumer = _consumers[i];
+                    if (PowerGate.IsChannelEnabled(consumer.Channel, enabledChannels))
+                    {
+                        results.Add(consumer);
+                    }
+                }
+
+                return;
             }
 
-            var activeConsumers = new List<IPowerConsumer>();
-            foreach (IPowerConsumer consumer in _consumers)
+            for (int i = 0; i < _consumers.Count; i++)
             {
+                IPowerConsumer consumer = _consumers[i];
                 if (_includeInCableDistribution != null && !_includeInCableDistribution(consumer))
                 {
                     continue;
@@ -349,25 +419,62 @@ namespace SS3D.Systems.Electricity
                 ApcControlFlags enabledChannels = _getEnabledChannelsForConsumer(consumer);
                 if (PowerGate.IsChannelEnabled(consumer.Channel, enabledChannels))
                 {
-                    activeConsumers.Add(consumer);
+                    results.Add(consumer);
                 }
             }
-
-            return activeConsumers;
         }
 
-        private static List<IPowerConsumer> GetActiveConsumers(IReadOnlyList<IPowerConsumer> consumers, ApcControlFlags enabledChannels)
+        private void FillAvailableNonApcStorages(List<IPowerStorage> results, float tickSeconds)
         {
-            List<IPowerConsumer> activeConsumers = new();
-            foreach (IPowerConsumer consumer in consumers)
+            results.Clear();
+            for (int i = 0; i < _storages.Count; i++)
             {
-                if (PowerGate.IsChannelEnabled(consumer.Channel, enabledChannels))
+                IPowerStorage storage = _storages[i];
+                if (IsApcCellStorage(storage) || !storage.IsOn)
                 {
-                    activeConsumers.Add(consumer);
+                    continue;
+                }
+
+                if (storage.MaxDeliverableKw(tickSeconds) > 0f)
+                {
+                    results.Add(storage);
                 }
             }
+        }
 
-            return activeConsumers;
+        private static void SortStoragesByDeliverableAscending(List<IPowerStorage> storages, float tickSeconds)
+        {
+            // Insertion sort — storage lists are tiny; avoids Comparison<> alloc from List.Sort lambda.
+            for (int i = 1; i < storages.Count; i++)
+            {
+                IPowerStorage current = storages[i];
+                float currentDeliverable = current.MaxDeliverableKw(tickSeconds);
+                int j = i - 1;
+                while (j >= 0 && storages[j].MaxDeliverableKw(tickSeconds) > currentDeliverable)
+                {
+                    storages[j + 1] = storages[j];
+                    j--;
+                }
+
+                storages[j + 1] = current;
+            }
+        }
+
+        private static void SortStoragesByRemainingCapacityAscending(List<IPowerStorage> storages)
+        {
+            for (int i = 1; i < storages.Count; i++)
+            {
+                IPowerStorage current = storages[i];
+                float currentCapacity = current.RemainingCapacityKwh;
+                int j = i - 1;
+                while (j >= 0 && storages[j].RemainingCapacityKwh > currentCapacity)
+                {
+                    storages[j + 1] = storages[j];
+                    j--;
+                }
+
+                storages[j + 1] = current;
+            }
         }
 
         private static float SumChannelLoad(IEnumerable<IPowerConsumer> consumers, PowerChannel channel)
@@ -376,8 +483,5 @@ namespace SS3D.Systems.Electricity
         }
 
         private static bool IsApcCellStorage(IPowerStorage storage) => storage is IApcChannelSource;
-
-        private IEnumerable<IPowerStorage> GetNonApcStorages() =>
-            _storages.Where(storage => !IsApcCellStorage(storage));
     }
 }

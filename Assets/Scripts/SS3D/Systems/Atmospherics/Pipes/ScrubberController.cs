@@ -2,7 +2,6 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Tile;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics.Pipes
@@ -124,30 +123,61 @@ namespace SS3D.Systems.Atmospherics.Pipes
             bool movedAny = false;
             float remainingBudget = budgetMoles;
 
-            foreach (GasId gasId in GetActiveFilteredGases())
+            // Unrolled filters — do not use yield/IEnumerable (allocates a state machine per scrubber per tick).
+            if (_filterO2)
             {
-                if (remainingBudget <= 0f)
-                    break;
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Oxygen, ref remainingBudget);
+            }
 
-                if (!turfSimulation.TryGetGasMoles(turfCell, gasId, out float available) || available <= 0f)
-                    continue;
+            if (_filterN2 && remainingBudget > 0f)
+            {
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Nitrogen, ref remainingBudget);
+            }
 
-                float request = Mathf.Min(remainingBudget, available);
-                if (pipeSimulation.TryTransferMoles(
-                        networkId,
-                        gasId,
-                        request,
-                        turfCell,
-                        PipeTransferDirection.ToNetwork,
-                        out float moved)
-                    && moved > 0f)
-                {
-                    remainingBudget -= moved;
-                    movedAny = true;
-                }
+            if (_filterCo2 && remainingBudget > 0f)
+            {
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.CarbonDioxide, ref remainingBudget);
+            }
+
+            // "Toxins" is currently treated as an alias of plasma in the core gas set.
+            if ((_filterPlasma || _filterToxins) && remainingBudget > 0f)
+            {
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Plasma, ref remainingBudget);
             }
 
             return movedAny;
+        }
+
+        private static bool TryScrubGas(
+            AtmosPipeSimulation pipeSimulation,
+            AtmosSimulation turfSimulation,
+            GasPipeNetworkId networkId,
+            TileCoord turfCell,
+            GasId gasId,
+            ref float remainingBudget)
+        {
+            if (remainingBudget <= 0f
+                || !turfSimulation.TryGetGasMoles(turfCell, gasId, out float available)
+                || available <= 0f)
+            {
+                return false;
+            }
+
+            float request = Mathf.Min(remainingBudget, available);
+            if (!pipeSimulation.TryTransferMoles(
+                    networkId,
+                    gasId,
+                    request,
+                    turfCell,
+                    PipeTransferDirection.ToNetwork,
+                    out float moved)
+                || moved <= 0f)
+            {
+                return false;
+            }
+
+            remainingBudget -= moved;
+            return true;
         }
 
         protected override void ApplyDeviceSpecificAnimatorState(bool flowing)
@@ -171,28 +201,5 @@ namespace SS3D.Systems.Atmospherics.Pipes
             };
         }
 
-        private IEnumerable<GasId> GetActiveFilteredGases()
-        {
-            if (_filterO2)
-            {
-                yield return AtmosConstants.Oxygen;
-            }
-
-            if (_filterN2)
-            {
-                yield return AtmosConstants.Nitrogen;
-            }
-
-            if (_filterCo2)
-            {
-                yield return AtmosConstants.CarbonDioxide;
-            }
-
-            // "Toxins" is currently treated as an alias of plasma in the core gas set.
-            if (_filterPlasma || _filterToxins)
-            {
-                yield return AtmosConstants.Plasma;
-            }
-        }
     }
 }

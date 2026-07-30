@@ -49,6 +49,8 @@ writes `Logs/perf/_contract-fixture.md`.
 - Continuous `ProfilerRecorder` budgets / smoke thresholds
 - Separate `perf_summarize.py` (export already aggregates)
 
+Sibling GPU / draw-call tooling: [2026-07_unity-framedebug-ai-tooling.md](2026-07_unity-framedebug-ai-tooling.md).
+
 Gameplay `ProfilerMarker`s currently include Vision FOV, `SS3D.Interactions.Outline` /
 `Discover`, and `SS3D.Atmos.Sim` / `Upload` — extend via export `GameMarkerPrefixes` when
 adding domains outside `SS3D` / `Vision.` / `Atmos` / `FishNet`.

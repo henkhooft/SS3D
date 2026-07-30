@@ -37,6 +37,18 @@ namespace SS3D.Systems.Entities
 
         public string Ckey => _mind.player.Ckey;
 
+        private HumanInventory _cachedHumanInventory;
+
+        /// <summary>Cached inventory lookup for hot paths (airlock proximity, etc.).</summary>
+        public bool TryGetHumanInventory(out HumanInventory inventory)
+        {
+            if (_cachedHumanInventory == null)
+                TryGetComponent(out _cachedHumanInventory);
+
+            inventory = _cachedHumanInventory;
+            return inventory != null;
+        }
+
         private const float ObserverGridCheckIntervalSeconds = 0.25f;
 
         private Vector2Int? _lastObserverGridCell;

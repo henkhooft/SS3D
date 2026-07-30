@@ -54,8 +54,8 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -111,6 +111,8 @@ GameObject:
   - component: {fileID: 8827364519023341194}
   - component: {fileID: 8827364519023341195}
   - component: {fileID: 8827364519023341196}
+  - component: {fileID: 3704510414340258197}
+  - component: {fileID: 2432446114476015351}
   m_Layer: 0
   m_Name: Scrubber
   m_TagString: Untagged
@@ -155,8 +157,8 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
@@ -226,7 +228,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 0b60a6b65f27ff84d82e9ba0a4655f6b, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 2
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
@@ -250,7 +252,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NetworkObserver: {fileID: 0}
-  <PrefabId>k__BackingField: 0
+  <PrefabId>k__BackingField: 18
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
@@ -263,6 +265,7 @@ MonoBehaviour:
   - {fileID: 8827364519023341194}
   - {fileID: 8827364519023341195}
   - {fileID: 8827364519023341196}
+  - {fileID: 3704510414340258197}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -335,6 +338,7 @@ MonoBehaviour:
   _animatorActive: 0
   _portFlowing: 0
   _previewAnimatorInEditor: 1
+  _flowRate: 5
 --- !u!114 &8827364519023341194
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -383,8 +387,52 @@ MonoBehaviour:
   _componentIndexCache: 3
   _addedNetworkObject: {fileID: -1764620254179843544}
   _networkObjectCache: {fileID: -1764620254179843544}
+  _accessGranted: 0
+  _accessScanning: 0
+  _accessDenied: 0
   _title: "SCRUBBER \xB7 ATMOSPHERICS"
   _modelLabel: "SCB-09 \xB7 atmospheric scrubber unit"
   _deviceTitle: SCB-09
   _subtitle: "Engineering Bay 3 \u2014 Atmospheric Scrubber"
   _powerConsumer: {fileID: 8827364519023341194}
+--- !u!114 &3704510414340258197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9154955770433736351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 4
+  _addedNetworkObject: {fileID: -1764620254179843544}
+  _networkObjectCache: {fileID: -1764620254179843544}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
+--- !u!114 &2432446114476015351
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9154955770433736351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.IdAccess.AuthLogDeviceBehaviour
+  _deviceId: Scrubber
+  _logCapacity: 32
