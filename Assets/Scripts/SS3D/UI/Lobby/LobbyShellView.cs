@@ -64,7 +64,12 @@ namespace SS3D.UI.Lobby
                 _root.styleSheets.Add(_catalog.LobbyStyle);
             }
 
-            BuildChrome();
+            VisualElement window = new() { name = "lobby-shell-window" };
+            window.AddToClassList("lobby-shell__window");
+            window.pickingMode = PickingMode.Position;
+            _root.Add(window);
+
+            BuildChrome(window);
             layerRoot.Add(_root);
             RefreshTabs();
             ShowTab(_activeTab);
@@ -98,9 +103,9 @@ namespace SS3D.UI.Lobby
             _root.pickingMode = visible ? PickingMode.Position : PickingMode.Ignore;
         }
 
-        private void BuildChrome()
+        private void BuildChrome(VisualElement window)
         {
-            _root.Clear();
+            window.Clear();
 
             VisualElement header = new();
             header.AddToClassList("lobby-shell__header");
@@ -109,7 +114,7 @@ namespace SS3D.UI.Lobby
             VisualElement headerLeft = new();
             headerLeft.AddToClassList("lobby-shell__header-left");
             headerLeft.pickingMode = PickingMode.Ignore;
-            headerLeft.Add(MakeLabel(LobbyMockData.ServerName, "font-titling", "text-primary"));
+            headerLeft.Add(MakeLabel(LobbyMockData.ServerName, "font-body", "text-primary"));
             headerLeft.Add(MakeSep());
             headerLeft.Add(MakeLabel(LobbyMockData.MapName, "font-body", "text-secondary"));
             headerLeft.Add(MakeSep());
@@ -128,13 +133,12 @@ namespace SS3D.UI.Lobby
                 }
             }
 
-            headerRight.Add(MakeMeta($"{readyCount}/{LobbyMockData.Players.Length} ready"));
+            // Header is session strip only (design): players + round — not build/uptime.
+            headerRight.Add(MakeMeta($"{readyCount}/{LobbyMockData.Players.Length} players"));
             headerRight.Add(MakeSep());
             headerRight.Add(MakeMeta($"Round {LobbyMockData.RoundNumber}"));
-            headerRight.Add(MakeSep());
-            headerRight.Add(MakeMeta($"build {LobbyMockData.BuildVersion} · up {LobbyMockData.UptimeLabel}"));
             header.Add(headerRight);
-            _root.Add(header);
+            window.Add(header);
 
             VisualElement body = new();
             body.AddToClassList("lobby-shell__body");
@@ -152,7 +156,7 @@ namespace SS3D.UI.Lobby
 
             body.Add(main);
             body.Add(BuildSidebar());
-            _root.Add(body);
+            window.Add(body);
         }
 
         private VisualElement BuildSidebar()
@@ -304,6 +308,8 @@ namespace SS3D.UI.Lobby
             Button tab = new(() => SelectTab(key)) { text = label.ToUpperInvariant() };
             tab.AddToClassList("lobby-shell__tab");
             tab.AddToClassList("font-titling");
+            tab.style.flexGrow = 1;
+            tab.style.flexBasis = 0;
             if (admin)
             {
                 tab.AddToClassList("lobby-shell__tab--admin");
@@ -393,30 +399,54 @@ namespace SS3D.UI.Lobby
             hero.Add(markRow);
             parent.Add(hero);
 
-            Label title = new(LobbyMockData.ServerName);
+            VisualElement titleRow = new();
+            titleRow.AddToClassList("lobby-shell__server-title-row");
+            titleRow.pickingMode = PickingMode.Ignore;
+
+            Label title = new(LobbyMockData.ServerName.ToUpperInvariant());
             title.AddToClassList("lobby-shell__server-title");
             title.AddToClassList("font-titling");
-            parent.Add(title);
+            titleRow.Add(title);
 
-            Label meta = new($"BUILD {LobbyMockData.BuildVersion.ToUpperInvariant()} · UP {LobbyMockData.UptimeLabel.ToUpperInvariant()}");
+            Label meta = new($"build {LobbyMockData.BuildVersion} · up {LobbyMockData.UptimeLabel}");
             meta.AddToClassList("lobby-shell__server-meta");
-            meta.AddToClassList("font-body");
-            parent.Add(meta);
+            meta.AddToClassList("font-terminal");
+            titleRow.Add(meta);
+            parent.Add(titleRow);
 
-            VisualElement grid = new();
-            grid.AddToClassList("lobby-shell__info-grid");
-
-            VisualElement motdCol = new();
-            motdCol.AddToClassList("lobby-shell__info-col");
-            motdCol.Add(SectionTitle("Message of the Day"));
+            VisualElement motdBlock = new();
+            motdBlock.AddToClassList("lobby-shell__motd");
+            motdBlock.Add(SectionTitle("Message of the Day"));
             Label motd = new(LobbyMockData.Motd);
             motd.AddToClassList("lobby-shell__inset");
             motd.AddToClassList("font-body");
-            motdCol.Add(motd);
-            grid.Add(motdCol);
+            motdBlock.Add(motd);
+            parent.Add(motdBlock);
+
+            VisualElement bottom = new();
+            bottom.AddToClassList("lobby-shell__bottom-row");
+
+            VisualElement mapModeBlock = new();
+            mapModeBlock.AddToClassList("lobby-shell__map-mode-block");
+            mapModeBlock.Add(SectionTitle("Map & Mode"));
+
+            VisualElement mapModeRow = new();
+            mapModeRow.AddToClassList("lobby-shell__map-mode-row");
+            mapModeRow.Add(BuildSelectCard(
+                LobbyMockData.MapName,
+                "Map",
+                LobbyMockData.MapName.Length > 0 ? LobbyMockData.MapName[0].ToString().ToUpperInvariant() : "?",
+                mapSwatch: true));
+            mapModeRow.Add(BuildSelectCard(
+                LobbyMockData.ModeLabel,
+                "Mode",
+                LobbyMockData.ModeLabel.Length > 0 ? LobbyMockData.ModeLabel[0].ToString().ToUpperInvariant() : "?",
+                mapSwatch: false));
+            mapModeBlock.Add(mapModeRow);
+            bottom.Add(mapModeBlock);
 
             VisualElement logCol = new();
-            logCol.AddToClassList("lobby-shell__info-col");
+            logCol.AddToClassList("lobby-shell__changelog-col");
             logCol.Add(SectionTitle("Change Log"));
             VisualElement logBox = new();
             logBox.AddToClassList("lobby-shell__inset");
@@ -436,15 +466,40 @@ namespace SS3D.UI.Lobby
             }
 
             logCol.Add(logBox);
-            grid.Add(logCol);
-            parent.Add(grid);
+            bottom.Add(logCol);
+            parent.Add(bottom);
+        }
 
-            parent.Add(SectionTitle("Map & Mode"));
-            VisualElement mapBox = new();
-            mapBox.AddToClassList("lobby-shell__inset");
-            mapBox.Add(MakeLabel($"Map  ·  {LobbyMockData.MapName}", "font-body", "text-primary"));
-            mapBox.Add(MakeLabel($"Mode  ·  {LobbyMockData.ModeLabel}", "font-body", "text-secondary"));
-            parent.Add(mapBox);
+        private static VisualElement BuildSelectCard(string name, string kind, string initial, bool mapSwatch)
+        {
+            VisualElement card = new();
+            card.AddToClassList("lobby-shell__select-card");
+
+            VisualElement swatch = new();
+            swatch.AddToClassList("lobby-shell__select-swatch");
+            if (mapSwatch)
+            {
+                swatch.AddToClassList("lobby-shell__select-swatch--map");
+            }
+
+            Label swatchLabel = new(initial);
+            swatchLabel.AddToClassList("lobby-shell__select-swatch-label");
+            swatchLabel.AddToClassList("font-titling");
+            swatch.Add(swatchLabel);
+            card.Add(swatch);
+
+            VisualElement textCol = new();
+            textCol.AddToClassList("lobby-shell__select-text");
+            Label nameLabel = new(name);
+            nameLabel.AddToClassList("lobby-shell__select-name");
+            nameLabel.AddToClassList("font-titling");
+            textCol.Add(nameLabel);
+            Label kindLabel = new(kind);
+            kindLabel.AddToClassList("lobby-shell__select-kind");
+            kindLabel.AddToClassList("font-body");
+            textCol.Add(kindLabel);
+            card.Add(textCol);
+            return card;
         }
 
         private void BuildJobsTab(VisualElement parent)
