@@ -15,6 +15,7 @@ MonoBehaviour:
   _lobbyStyle: {fileID: 7433441132597879392, guid: 2bfe9922cb974e49aca2466dd348187d, type: 3}
   _previewPlaceholder: {fileID: 21300000, guid: 75ead553c05c482fae442fad6748b24a, type: 3}
   _serverInfoBanner: {fileID: 21300000, guid: 97eb5bc2a8f94653941b8defb224a3a7, type: 3}
+  _chevronDown: {fileID: 2800000, guid: b503f0cc149527347bf81823be9e52fa, type: 3}
   _jobIcons:
   - Id: Bartender
     Sprite: {fileID: 21300000, guid: 6d5342d85e1a400b89f765c3930f40f3, type: 3}
@@ -44,3 +45,18 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 2d1647a28e974e0093d9fe959b15740f, type: 3}
   - Id: Warden
     Sprite: {fileID: 21300000, guid: 693ee013412b45a88a832ce17b0fb096, type: 3}
+  _departmentIcons:
+  - Id: command
+    Texture: {fileID: 2800000, guid: 313bf655852b8d94abe6336caa161d4c, type: 3}
+  - Id: security
+    Texture: {fileID: 2800000, guid: 999d37f454fe45b42acaf47935ba37dc, type: 3}
+  - Id: engineering
+    Texture: {fileID: 2800000, guid: 826ed57d18f5733488130a90866d52e1, type: 3}
+  - Id: medical
+    Texture: {fileID: 2800000, guid: 63eb5b29ab261d546877b72ce2c8f21f, type: 3}
+  - Id: science
+    Texture: {fileID: 2800000, guid: 1deff6dc039deee4ca3c20fc4306041f, type: 3}
+  - Id: cargo
+    Texture: {fileID: 2800000, guid: a4a125d636696b94f8fa6e31d2172414, type: 3}
+  - Id: service
+    Texture: {fileID: 2800000, guid: 5cab647fe28f9404bbeeaa4deda0e4c3, type: 3}

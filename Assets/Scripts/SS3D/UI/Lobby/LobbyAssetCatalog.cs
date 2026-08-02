@@ -17,7 +17,9 @@ namespace SS3D.UI.Lobby
         [SerializeField] private StyleSheet _lobbyStyle;
         [SerializeField] private Sprite _previewPlaceholder;
         [SerializeField] private Sprite _serverInfoBanner;
+        [SerializeField] private Texture2D _chevronDown;
         [SerializeField] private List<LobbyNamedSprite> _jobIcons = new();
+        [SerializeField] private List<LobbyNamedTexture> _departmentIcons = new();
 
         public StyleSheet LobbyStyle => _lobbyStyle;
 
@@ -25,26 +27,12 @@ namespace SS3D.UI.Lobby
 
         public Sprite ServerInfoBanner => _serverInfoBanner;
 
-        public bool TryGetJobIcon(string id, out Sprite sprite)
-        {
-            sprite = null;
-            if (string.IsNullOrEmpty(id) || _jobIcons == null)
-            {
-                return false;
-            }
+        public Texture2D ChevronDown => _chevronDown;
 
-            for (int i = 0; i < _jobIcons.Count; i++)
-            {
-                LobbyNamedSprite entry = _jobIcons[i];
-                if (entry != null && entry.Id == id && entry.Sprite != null)
-                {
-                    sprite = entry.Sprite;
-                    return true;
-                }
-            }
+        public bool TryGetJobIcon(string id, out Sprite sprite) => TryGetNamedSprite(_jobIcons, id, out sprite);
 
-            return false;
-        }
+        public bool TryGetDepartmentIcon(string id, out Texture2D texture) =>
+            TryGetNamedTexture(_departmentIcons, id, out texture);
 
         public bool HasRequiredAssets(out string missingField)
         {
@@ -66,6 +54,12 @@ namespace SS3D.UI.Lobby
                 return false;
             }
 
+            if (_chevronDown == null)
+            {
+                missingField = "chevronDown";
+                return false;
+            }
+
             missingField = null;
             return true;
         }
@@ -75,14 +69,60 @@ namespace SS3D.UI.Lobby
             StyleSheet lobbyStyle,
             Sprite previewPlaceholder,
             Sprite serverInfoBanner,
-            List<LobbyNamedSprite> jobIcons)
+            Texture2D chevronDown,
+            List<LobbyNamedSprite> jobIcons,
+            List<LobbyNamedTexture> departmentIcons)
         {
             _lobbyStyle = lobbyStyle;
             _previewPlaceholder = previewPlaceholder;
             _serverInfoBanner = serverInfoBanner;
+            _chevronDown = chevronDown;
             _jobIcons = jobIcons ?? new List<LobbyNamedSprite>();
+            _departmentIcons = departmentIcons ?? new List<LobbyNamedTexture>();
         }
 #endif
+
+        private static bool TryGetNamedSprite(List<LobbyNamedSprite> list, string id, out Sprite sprite)
+        {
+            sprite = null;
+            if (string.IsNullOrEmpty(id) || list == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                LobbyNamedSprite entry = list[i];
+                if (entry != null && entry.Id == id && entry.Sprite != null)
+                {
+                    sprite = entry.Sprite;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryGetNamedTexture(List<LobbyNamedTexture> list, string id, out Texture2D texture)
+        {
+            texture = null;
+            if (string.IsNullOrEmpty(id) || list == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                LobbyNamedTexture entry = list[i];
+                if (entry != null && entry.Id == id && entry.Texture != null)
+                {
+                    texture = entry.Texture;
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     [Serializable]
@@ -99,6 +139,23 @@ namespace SS3D.UI.Lobby
         {
             Id = id;
             Sprite = sprite;
+        }
+    }
+
+    [Serializable]
+    public sealed class LobbyNamedTexture
+    {
+        public string Id;
+        public Texture2D Texture;
+
+        public LobbyNamedTexture()
+        {
+        }
+
+        public LobbyNamedTexture(string id, Texture2D texture)
+        {
+            Id = id;
+            Texture = texture;
         }
     }
 }

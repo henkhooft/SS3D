@@ -17,5 +17,7 @@ namespace SS3D.UI.Lobby
         public const string PreviewPlaceholder = IconRoot + "PnSecurity.png";
         public const string ServerInfoBanner =
             "Assets/Art/Textures/Lobby/ProbablyNotChaseBanner.png";
+        public const string HeroiconsOutlineRoot = "Assets/Art/Icons/Heroicons/Outline/";
+        public const string ChevronDownIcon = HeroiconsOutlineRoot + "ChevronDown.png";
     }
 }

@@ -14,6 +14,17 @@ namespace SS3D.Editor
     /// </summary>
     public static class LobbyAssetCatalogBuilder
     {
+        private static readonly (string Id, string FileName)[] DepartmentIconFiles =
+        {
+            ("command", "OfficeBuilding.png"),
+            ("security", "ShieldCheck.png"),
+            ("engineering", "Cog.png"),
+            ("medical", "Plus.png"),
+            ("science", "Beaker.png"),
+            ("cargo", "Truck.png"),
+            ("service", "Cake.png"),
+        };
+
         /// <summary>BatchMode: <c>-executeMethod SS3D.Editor.LobbyAssetCatalogBuilder.RebuildCatalogBatch</c></summary>
         public static void RebuildCatalogBatch()
         {
@@ -43,6 +54,8 @@ namespace SS3D.Editor
             StyleSheet lobbyStyle = LoadRequired<StyleSheet>(LobbyAssetPaths.StyleSheet, missing);
             Sprite preview = LoadRequiredSprite(LobbyAssetPaths.PreviewPlaceholder, missing);
             Sprite banner = LoadRequiredSprite(LobbyAssetPaths.ServerInfoBanner, missing);
+            // Heroicons are Default Texture2D (not Sprite) — load as textures for UITK backgrounds.
+            Texture2D chevron = LoadRequiredTexture(LobbyAssetPaths.ChevronDownIcon, missing);
 
             List<LobbyNamedSprite> jobIcons = new();
             if (Directory.Exists(LobbyAssetPaths.JobIconRoot))
@@ -67,6 +80,16 @@ namespace SS3D.Editor
                 missing.Add(LobbyAssetPaths.JobIconRoot);
             }
 
+            List<LobbyNamedTexture> departmentIcons = new();
+            foreach ((string id, string fileName) in DepartmentIconFiles)
+            {
+                Texture2D texture = LoadRequiredTexture(LobbyAssetPaths.HeroiconsOutlineRoot + fileName, missing);
+                if (texture != null)
+                {
+                    departmentIcons.Add(new LobbyNamedTexture(id, texture));
+                }
+            }
+
             if (missing.Count > 0)
             {
                 error = "Lobby asset catalog rebuild failed. Missing assets:\n- "
@@ -89,7 +112,7 @@ namespace SS3D.Editor
                 AssetDatabase.CreateAsset(catalog, LobbyAssetPaths.CatalogAssetPath);
             }
 
-            catalog.EditorAssign(lobbyStyle, preview, banner, jobIcons);
+            catalog.EditorAssign(lobbyStyle, preview, banner, chevron, jobIcons, departmentIcons);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;
@@ -115,6 +138,17 @@ namespace SS3D.Editor
             }
 
             return sprite;
+        }
+
+        private static Texture2D LoadRequiredTexture(string path, List<string> missing)
+        {
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null)
+            {
+                missing.Add($"Texture2D: {path}");
+            }
+
+            return texture;
         }
     }
 }

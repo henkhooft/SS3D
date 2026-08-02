@@ -587,23 +587,41 @@
     margin-bottom: 2px;
 }
 
+.lobby-shell__dept-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--ss3d-text-secondary);
+}
+
 .lobby-shell__dept-name {
     flex-grow: 1;
-    font-size: 14px;
+    font-size: 15px;
     letter-spacing: 1px;
     color: var(--ss3d-text-primary);
     text-transform: uppercase;
+    -unity-font-style: normal;
 }
 
 .lobby-shell__dept-slots {
-    font-size: 11px;
-    color: var(--ss3d-text-tertiary);
+    font-size: 12px;
+    color: var(--ss3d-text-secondary);
     margin-right: 8px;
 }
 
 .lobby-shell__dept-chevron {
-    font-size: 12px;
-    color: var(--ss3d-text-tertiary);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--ss3d-text-tertiary);
+    rotate: 0deg;
+}
+
+.lobby-shell__dept-chevron--collapsed {
+    rotate: 270deg;
 }
 
 .lobby-shell__job-row {
@@ -620,13 +638,22 @@
     opacity: 0.55;
 }
 
-.lobby-shell__job-icon {
+.lobby-shell__job-icon-well {
     width: 30px;
     height: 30px;
     margin-right: 8px;
-    background-color: var(--lobby-surface-raised);
+    background-color: #161616;
     flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.lobby-shell__job-icon {
+    width: 20px;
+    height: 20px;
     -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--ss3d-text-secondary);
 }
 
 .lobby-shell__job-info {
@@ -641,8 +668,11 @@
 }
 
 .lobby-shell__job-meta {
-    font-size: 11px;
-    color: var(--ss3d-text-tertiary);
+    font-size: 12px;
+    letter-spacing: 0.2px;
+    color: var(--ss3d-text-secondary);
+    margin-top: 2px;
+    opacity: 0.95;
 }
 
 .lobby-shell__priority {
@@ -721,12 +751,20 @@
     color: var(--ss3d-text-primary);
 }
 
+.lobby-shell__antag-divider {
+    height: 1px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    background-color: var(--lobby-border-subtle);
+    flex-shrink: 0;
+}
+
 .lobby-shell__antag-hint {
     font-size: 11px;
     color: var(--ss3d-text-tertiary);
     white-space: normal;
-    margin-top: 8px;
-    margin-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .lobby-shell__link {

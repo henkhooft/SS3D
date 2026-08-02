@@ -541,7 +541,17 @@ namespace SS3D.UI.Lobby
                     ShowTab(TabJobs);
                 });
 
-                Label name = new(dept.Name);
+                VisualElement deptIcon = new();
+                deptIcon.AddToClassList("lobby-shell__dept-icon");
+                deptIcon.pickingMode = PickingMode.Ignore;
+                if (_catalog != null && _catalog.TryGetDepartmentIcon(dept.IconId, out Texture2D deptTexture))
+                {
+                    deptIcon.style.backgroundImage = new StyleBackground(deptTexture);
+                }
+
+                header.Add(deptIcon);
+
+                Label name = new(dept.Name.ToUpperInvariant());
                 name.AddToClassList("lobby-shell__dept-name");
                 name.AddToClassList("font-titling");
                 name.pickingMode = PickingMode.Ignore;
@@ -553,9 +563,15 @@ namespace SS3D.UI.Lobby
                 slots.pickingMode = PickingMode.Ignore;
                 header.Add(slots);
 
-                Label chevron = new(expanded ? "▾" : "▸");
+                VisualElement chevron = new();
                 chevron.AddToClassList("lobby-shell__dept-chevron");
+                chevron.EnableInClassList("lobby-shell__dept-chevron--collapsed", !expanded);
                 chevron.pickingMode = PickingMode.Ignore;
+                if (_catalog != null && _catalog.ChevronDown != null)
+                {
+                    chevron.style.backgroundImage = new StyleBackground(_catalog.ChevronDown);
+                }
+
                 header.Add(chevron);
                 list.Add(header);
 
@@ -584,6 +600,8 @@ namespace SS3D.UI.Lobby
                 row.AddToClassList("lobby-shell__job-row--locked");
             }
 
+            VisualElement iconWell = new();
+            iconWell.AddToClassList("lobby-shell__job-icon-well");
             VisualElement icon = new();
             icon.AddToClassList("lobby-shell__job-icon");
             if (_catalog != null && _catalog.TryGetJobIcon(job.IconId, out Sprite sprite))
@@ -591,7 +609,8 @@ namespace SS3D.UI.Lobby
                 icon.style.backgroundImage = new StyleBackground(sprite);
             }
 
-            row.Add(icon);
+            iconWell.Add(icon);
+            row.Add(iconWell);
 
             VisualElement info = new();
             info.AddToClassList("lobby-shell__job-info");
@@ -602,7 +621,7 @@ namespace SS3D.UI.Lobby
 
             string meta = job.Locked && !string.IsNullOrEmpty(job.LockReason)
                 ? job.LockReason
-                : $"{job.Open}/{job.Slots} open · {job.Interested} interested";
+                : $"{job.Open}/{job.Slots} open  ·  {job.Interested} interested";
             Label metaLabel = new(meta);
             metaLabel.AddToClassList("lobby-shell__job-meta");
             metaLabel.AddToClassList("font-body");
@@ -701,11 +720,6 @@ namespace SS3D.UI.Lobby
             titleRow.Add(toggleAll);
             panel.Add(titleRow);
 
-            Label hint = new("Affects eligibility only — checking a role does not guarantee it.");
-            hint.AddToClassList("lobby-shell__antag-hint");
-            hint.AddToClassList("font-body");
-            panel.Add(hint);
-
             foreach (LobbyMockData.AntagRole role in LobbyMockData.AntagRoles)
             {
                 bool on = _antagSelected.TryGetValue(role.Key, out bool selected) && selected;
@@ -734,13 +748,23 @@ namespace SS3D.UI.Lobby
 
                 row.Add(box);
 
-                Label name = new(role.Name);
-                name.AddToClassList("lobby-shell__antag-name");
-                name.AddToClassList("font-body");
-                name.pickingMode = PickingMode.Ignore;
-                row.Add(name);
+                Label roleName = new(role.Name);
+                roleName.AddToClassList("lobby-shell__antag-name");
+                roleName.AddToClassList("font-body");
+                roleName.pickingMode = PickingMode.Ignore;
+                row.Add(roleName);
                 panel.Add(row);
             }
+
+            VisualElement divider = new();
+            divider.AddToClassList("lobby-shell__antag-divider");
+            divider.pickingMode = PickingMode.Ignore;
+            panel.Add(divider);
+
+            Label hint = new("Affects eligibility only — checking a role does not guarantee it.");
+            hint.AddToClassList("lobby-shell__antag-hint");
+            hint.AddToClassList("font-body");
+            panel.Add(hint);
 
             return panel;
         }

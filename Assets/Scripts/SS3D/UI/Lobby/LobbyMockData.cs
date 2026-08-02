@@ -46,36 +46,36 @@ namespace SS3D.UI.Lobby
 
         public static readonly Department[] Departments =
         {
-            new("command", "Command", new JobRow[]
+            new("command", "Command", "command", new JobRow[]
             {
                 Job("captain", "Captain", "Captain", 0, 1, 4, false, null),
             }),
-            new("security", "Security", new JobRow[]
+            new("security", "Security", "security", new JobRow[]
             {
                 Job("warden", "Warden", "Warden", 0, 1, 3, false, null),
                 Job("security-officer", "Security Officer", "SecurityOfficer", 1, 4, 6, false, null),
             }),
-            new("engineering", "Engineering", new JobRow[]
+            new("engineering", "Engineering", "engineering", new JobRow[]
             {
                 Job("chief-engineer", "Chief Engineer", "ChiefEngineer", 0, 1, 2, true, "Requires 10h as Engineer"),
                 Job("engineer", "Engineer", "Engineer", 2, 4, 9, false, null),
                 Job("plumber", "Plumber", "Plumber", 1, 2, 3, false, null),
             }),
-            new("medical", "Medical", new JobRow[]
+            new("medical", "Medical", "medical", new JobRow[]
             {
                 Job("doctor", "Doctor", "Doctor", 1, 3, 5, false, null),
                 Job("chemist", "Chemist", "Chemist", 1, 1, 2, false, null),
             }),
-            new("science", "Science", new JobRow[]
+            new("science", "Science", "science", new JobRow[]
             {
                 Job("roboticist", "Roboticist", "Roboticist", 1, 2, 2, false, null),
             }),
-            new("cargo", "Cargo", new JobRow[]
+            new("cargo", "Cargo", "cargo", new JobRow[]
             {
                 Job("cargo-technician", "Cargo Technician", "CargoTechnician", 2, 3, 4, false, null),
                 Job("miner", "Miner", "Miner", 1, 2, 3, false, null),
             }),
-            new("service", "Service", new JobRow[]
+            new("service", "Service", "service", new JobRow[]
             {
                 Job("bartender", "Bartender", "Bartender", 1, 1, 2, false, null),
                 Job("chef", "Chef", "Chef", 1, 1, 3, false, null),
@@ -176,12 +176,14 @@ namespace SS3D.UI.Lobby
         {
             public readonly string Key;
             public readonly string Name;
+            public readonly string IconId;
             public readonly JobRow[] Jobs;
 
-            public Department(string key, string name, JobRow[] jobs)
+            public Department(string key, string name, string iconId, JobRow[] jobs)
             {
                 Key = key;
                 Name = name;
+                IconId = iconId;
                 Jobs = jobs;
             }
         }
