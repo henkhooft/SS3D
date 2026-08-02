@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fae0d5b5d14683e70a7fffdee7b85b9d, type: 3}
+  m_Name: LobbyAssetCatalog
+  m_EditorClassIdentifier: SS3D.UI.Lobby::SS3D.UI.Lobby.LobbyAssetCatalog
+  _lobbyStyle: {fileID: 7433441132597879392, guid: 2bfe9922cb974e49aca2466dd348187d, type: 3}
+  _previewPlaceholder: {fileID: 21300000, guid: 75ead553c05c482fae442fad6748b24a, type: 3}
+  _jobIcons:
+  - Id: Bartender
+    Sprite: {fileID: 21300000, guid: 6d5342d85e1a400b89f765c3930f40f3, type: 3}
+  - Id: Captain
+    Sprite: {fileID: 21300000, guid: e49944c69eee4ba1831b835f53ed2a7a, type: 3}
+  - Id: CargoTechnician
+    Sprite: {fileID: 21300000, guid: c2b81dc842a547468fea8c39a1b52c33, type: 3}
+  - Id: Chef
+    Sprite: {fileID: 21300000, guid: b6d503824e9d4f77b2adff84de2d06e5, type: 3}
+  - Id: Chemist
+    Sprite: {fileID: 21300000, guid: 0f3658c8460a4183a7c3f847a8fdff7a, type: 3}
+  - Id: ChiefEngineer
+    Sprite: {fileID: 21300000, guid: 354e89734ce645f784797ab1a02e2294, type: 3}
+  - Id: Doctor
+    Sprite: {fileID: 21300000, guid: b55cb3a68cdc40a4829d43adec53f331, type: 3}
+  - Id: Engineer
+    Sprite: {fileID: 21300000, guid: 845639f0fa16480cb8c60ef326c1e12c, type: 3}
+  - Id: Janitor
+    Sprite: {fileID: 21300000, guid: 67c82237d5534df7a367ee8aef354bf0, type: 3}
+  - Id: Miner
+    Sprite: {fileID: 21300000, guid: 975d64691cca4f8dab70fa54f17a14b4, type: 3}
+  - Id: Plumber
+    Sprite: {fileID: 21300000, guid: 08d8dfe092494d38b29bde864284f0e3, type: 3}
+  - Id: Roboticist
+    Sprite: {fileID: 21300000, guid: 5ab44c41128f404a8cf11b81185acfc4, type: 3}
+  - Id: SecurityOfficer
+    Sprite: {fileID: 21300000, guid: 2d1647a28e974e0093d9fe959b15740f, type: 3}
+  - Id: Warden
+    Sprite: {fileID: 21300000, guid: 693ee013412b45a88a832ce17b0fb096, type: 3}

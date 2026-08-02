@@ -14,7 +14,8 @@
         "GUID:6e00473804df0f0468c07310fbce5737",
         "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
         "GUID:8979f103c1228714eb0115e440b2b33a",
-        "SS3D.UI.Examine"
+        "SS3D.UI.Examine",
+        "SS3D.UI.Lobby"
     ],
     "includePlatforms": [
         "Editor"

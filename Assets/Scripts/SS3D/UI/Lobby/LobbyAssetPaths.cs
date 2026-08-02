@@ -1,0 +1,19 @@
+namespace SS3D.UI.Lobby
+{
+    /// <summary>
+    /// Stable asset paths for the pre-round lobby UITK shell.
+    /// Rebuild via <c>SS3D → Data → Rebuild All UI Catalogs</c>.
+    /// </summary>
+    public static class LobbyAssetPaths
+    {
+        public const string ResourcesCatalogName = "LobbyAssetCatalog";
+        public const string CatalogAssetPath =
+            "Assets/Content/Systems/UI/Lobby/Resources/LobbyAssetCatalog.asset";
+
+        public const string StyleSheet = "Assets/Content/Systems/UI/Lobby/LobbyShell.uss";
+
+        public const string IconRoot = "Assets/Art/Icons/Lobby/";
+        public const string JobIconRoot = IconRoot + "Jobs/";
+        public const string PreviewPlaceholder = IconRoot + "PnSecurity.png";
+    }
+}

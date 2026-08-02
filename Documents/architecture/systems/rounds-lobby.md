@@ -1,18 +1,22 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/
-> Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase
-> Status: shipped
-> Verified: 6ce5ab235 — 2026-07-25
+> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
+> Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
+> Status: partial
+> Verified: 66ba71066 — 2026-08-02
 
 # Rounds / lobby
 
 ## Overview
 
-Round lifecycle state machine with single-flight `CancellationTokenSource` (prevents double start/stop and embark-during-ending races). States: `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. `PrepareRound` awaits `WorldReadinessSubSystem` `WorldReady` (not a fixed 500 ms delay). Pre-round lobby UI shows ready players and round state.
+Round lifecycle state machine with single-flight `CancellationTokenSource` (prevents double start/stop and embark-during-ending races). States: `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. `PrepareRound` awaits `WorldReadinessSubSystem` `WorldReady` (not a fixed 500 ms delay).
 
-**Condemned UI:** lobby job-select / ready uGUI — do not extend; replace per [lobby.md](../../design/lobby.md). Round state machine is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+**UITK lobby (in progress):** Phase A visual shell on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md). Mock data only; not wired to Ready/round APIs yet.
+
+**Condemned UI:** lobby job-select / ready uGUI (`Systems/Lobby/UI`, `LobbyCanvas`) — do not extend; replace per [lobby.md](../../design/lobby.md). Round state machine is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
 
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell host (Phase A); attaches `LobbyShellView` into Modal
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — full-screen lobby chrome (tabs + sidebar)
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
@@ -24,18 +28,25 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 - Round transitions: extend `RoundSubSystemBase` state handlers and messages in `Messages/`.
 - Spawn flow: `SpawnReadyPlayersEvent` after Ongoing (world must already be ready from PrepareRound).
+- Lobby UITK: Phase C+ wires Ready / round / jobs into `LobbyShellView`; Character Creator is a separate Modal screen (Phase B/E).
+
+## Pitfalls
+
+- **Phase A double UI:** UITK shell shows on attach while condemned `LobbyCanvas` may still be active. Disable the old canvas in the Hierarchy when visually checking the new shell.
+- **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort.
 
 ## Depends on / Used by
 
 - **Depends on:** [entities](entities.md), [player-control](player-control.md),
   [gamemodes-roles-traits](gamemodes-roles-traits.md), [persistence](persistence.md),
-  [chat-audio-screens](chat-audio-screens.md) (round-start announce), world readiness
-  (tile/area/electricity/atmos/disposal)
+  [chat-audio-screens](chat-audio-screens.md) (round-start announce), [ui-shell](ui-shell.md),
+  world readiness (tile/area/electricity/atmos/disposal)
 - **Used by:** All in-round gameplay
 
 ## Related docs
 
 - Design (read-only): [Documents/design/lobby.md](../../design/lobby.md), [round-config.md](../../design/round-config.md)
+- Effort: [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)
 - [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - [2026-07_comms-non-diegetic-feed](../2026-07_comms-non-diegetic-feed.md)
 - [INDEX.md](../INDEX.md)

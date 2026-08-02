@@ -1,7 +1,7 @@
-> Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud)
-> Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog
-> Status: partial (Phase 0-1 shipped: scaffolding + radial/armed migration)
-> Verified: 4bc2ae93d — 2026-07-25
+> Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud); Assets/Scripts/SS3D/UI/Lobby/ (Modal shell in progress)
+> Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog, LobbyUiSubSystem
+> Status: partial (Phase 0-1 shipped: scaffolding + radial/armed migration; lobby Phase A visual on Modal)
+> Verified: 66ba71066 — 2026-08-02
 
 # UI shell
 
@@ -20,6 +20,8 @@ the full examine overlay — generic hover/detail *and* character paperdoll — 
 condemned uGUI `ExamineUI`, not just a character-only addition). Its `ExamineOverlayAssetCatalog` is a lighter
 one-off catalog (no `PanelSettings`/document of its own, since it attaches into the shared document) rather than
 a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootstrapping overlay-only surfaces show up.
+**Lobby shell (Phase A visual):** `LobbyUiSubSystem` / `LobbyShellView` on `UiLayer.Modal`
+([2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)) — mock data; networking later.
 
 **Not yet migrated (still own their own path-catalog wedge — duplicated pattern):**
 
@@ -29,6 +31,7 @@ a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootst
 | Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
 | Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
 | UI Shell | `UiShellAssetPaths` / `UiShellAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | this map |
+| Lobby | `LobbyAssetPaths` / `LobbyAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [rounds-lobby](rounds-lobby.md) |
 
 Migrating MI and Main HUD onto `UiShellSubSystem` + `UiAssetCatalogBase` is later, separate work (Main HUD next,
 MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 wedge this doc currently reflects.
@@ -67,8 +70,8 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll); local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud)
-- **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), lobby UI, console (as redesigns land)
+- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll); local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud); lobby shell Phase A (`LobbyUiSubSystem` on Modal — mock data)
+- **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), console (as redesigns land); lobby networking + Character Creator (Phases B–E)
 
 ## Related docs
 
