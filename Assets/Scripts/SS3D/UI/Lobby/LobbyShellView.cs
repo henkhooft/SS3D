@@ -195,6 +195,12 @@ namespace SS3D.UI.Lobby
             roundPanel.Add(roundBody);
             sidebar.Add(roundPanel);
 
+            Label characterName = new(LobbyMockData.CharacterName.ToUpperInvariant());
+            characterName.AddToClassList("lobby-shell__character-name");
+            characterName.AddToClassList("font-arcade");
+            characterName.pickingMode = PickingMode.Ignore;
+            sidebar.Add(characterName);
+
             VisualElement preview = new();
             preview.AddToClassList("lobby-shell__preview");
             preview.pickingMode = PickingMode.Position;

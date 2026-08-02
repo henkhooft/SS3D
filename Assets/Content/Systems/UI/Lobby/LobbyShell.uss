@@ -142,7 +142,7 @@
 .lobby-shell__tab-content {
     flex-grow: 1;
     min-height: 0;
-    background-color: var(--lobby-surface-panel);
+    background-color: #2a2a2e;
     padding: 16px;
 }
 
@@ -225,6 +225,16 @@
     margin-bottom: 10px;
     align-items: stretch;
     justify-content: flex-start;
+}
+
+.lobby-shell__character-name {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--ss3d-text-secondary);
+    text-transform: uppercase;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .lobby-shell__preview-image {
@@ -348,6 +358,8 @@
 
 .lobby-shell__motd .lobby-shell__inset {
     max-height: 110px;
+    background-color: #353538;
+    color: var(--ss3d-text-secondary);
 }
 
 .lobby-shell__server-body {
@@ -438,21 +450,28 @@
 }
 
 .lobby-shell__changelog-col {
-    width: 240px;
+    width: 300px;
     flex-shrink: 0;
     flex-direction: column;
     min-height: 0;
     align-self: stretch;
+    min-width: 0;
 }
 
 .lobby-shell__changelog-col .lobby-shell__inset {
     flex-grow: 1;
     min-height: 0;
+    min-width: 0;
+    background-color: #353538;
+    overflow: hidden;
 }
 
 .lobby-shell__changelog-row {
     flex-direction: row;
+    align-items: flex-start;
     margin-bottom: 6px;
+    min-width: 0;
+    flex-shrink: 0;
 }
 
 .lobby-shell__changelog-ver {
@@ -467,6 +486,10 @@
     font-size: 12px;
     white-space: normal;
     flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .lobby-shell__server-title-row {

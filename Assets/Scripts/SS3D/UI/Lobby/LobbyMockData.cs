@@ -12,6 +12,7 @@ namespace SS3D.UI.Lobby
         public const int RoundNumber = 14;
         public const string BuildVersion = "0.14.2-pre";
         public const string UptimeLabel = "6h 12m";
+        public const string CharacterName = "Marcus Voss";
         public const string Motd =
             "Welcome aboard. This build is community-maintained pre-alpha — expect things to break, and report what you find. Voice chat is proximity-based. Text chat has department radio channels — check your headset frequency in the Jobs tab.";
 
