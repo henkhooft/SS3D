@@ -1,3 +1,1 @@
-john ServerOwner
-editorUser ServerOwner
 hostingUser ServerOwner

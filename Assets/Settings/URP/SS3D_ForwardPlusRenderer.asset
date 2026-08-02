@@ -51,6 +51,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: SS3D.Rendering.URP::SS3D.Rendering.URP.UiBackdropBlurRendererFeature
   m_Active: 1
   _blurShader: {fileID: 4800000, guid: f1d7a4b52e6a70d9d3b8a4f5e6d7c8b9, type: 3}
+--- !u!114 &-4460809059613215054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02f817be434d471c9377a7c61382a2cd, type: 3}
+  m_Name: SelectionPickRendererFeature
+  m_EditorClassIdentifier: SS3D.Rendering.URP::SS3D.Rendering.URP.SelectionPickRendererFeature
+  m_Active: 1
+  _selectionShader: {fileID: 4800000, guid: bcd9cf75c1aa43247b53d2014cfde501, type: 3}
 --- !u!114 &-3601183876851600227
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -118,7 +132,7 @@ MonoBehaviour:
   - {fileID: -8472639182736451891}
   - {fileID: -3601183876851600227}
   - {fileID: -6234567890123456789}
-  - {fileID: 1732709085699426183}
+  - {fileID: -4460809059613215054}
   m_RendererFeatureMap: 6dc57abbd793e549b20caf1e17af438f4bcbe5e0a673d2b7cd16f0a28d236b8a9d746509580606ceeb7e223d895d7aa9
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
@@ -148,20 +162,6 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
---- !u!114 &1732709085699426183
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 02f817be434d471c9377a7c61382a2cd, type: 3}
-  m_Name: SelectionPickRendererFeature
-  m_EditorClassIdentifier: SS3D.Rendering.URP::SS3D.Rendering.URP.SelectionPickRendererFeature
-  m_Active: 1
-  _selectionShader: {fileID: 4800000, guid: bcd9cf75c1aa43247b53d2014cfde501, type: 3}
 --- !u!114 &5324824689208116589
 MonoBehaviour:
   m_ObjectHideFlags: 0
