@@ -32,7 +32,7 @@
 /* Compact window closer to the existing uGUI lobby footprint. */
 .lobby-shell__window {
     width: 1080px;
-    height: 680px;
+    height: 760px;
     flex-direction: column;
     background-color: var(--ss3d-surface-void);
     border-width: 1px;
@@ -320,7 +320,7 @@
 }
 
 .lobby-shell__section-title {
-    font-size: 12px;
+    font-size: 16px;
     letter-spacing: 1px;
     color: var(--ss3d-text-primary);
     text-transform: uppercase;
@@ -494,38 +494,45 @@
 
 .lobby-shell__server-title-row {
     flex-direction: row;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
+    min-height: 32px;
 }
 
 .lobby-shell__server-title {
-    font-size: 22px;
+    font-size: 28px;
     color: var(--ss3d-text-primary);
     letter-spacing: 1px;
     text-transform: uppercase;
     flex-grow: 1;
     margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
     -unity-text-align: middle-left;
 }
 
 .lobby-shell__server-meta {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--ss3d-text-tertiary);
     margin-bottom: 0;
     margin-left: 12px;
     flex-shrink: 0;
     letter-spacing: 0;
     text-transform: none;
+    padding-top: 0;
+    padding-bottom: 0;
     -unity-text-align: middle-right;
 }
 
+/* Banner is 3840×1305 (~2.94:1). Height matches main-column width (~808px) so stretch fills without crop. */
 .lobby-shell__hero {
-    height: 160px;
+    width: 100%;
+    height: 275px;
     flex-shrink: 0;
     background-color: var(--lobby-surface-raised);
     margin-bottom: 12px;
-    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-scale-mode: stretch-to-fill;
 }
 
 .lobby-shell__hero-mark {
