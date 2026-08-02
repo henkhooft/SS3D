@@ -16,11 +16,14 @@ namespace SS3D.UI.Lobby
     {
         [SerializeField] private StyleSheet _lobbyStyle;
         [SerializeField] private Sprite _previewPlaceholder;
+        [SerializeField] private Sprite _serverInfoBanner;
         [SerializeField] private List<LobbyNamedSprite> _jobIcons = new();
 
         public StyleSheet LobbyStyle => _lobbyStyle;
 
         public Sprite PreviewPlaceholder => _previewPlaceholder;
+
+        public Sprite ServerInfoBanner => _serverInfoBanner;
 
         public bool TryGetJobIcon(string id, out Sprite sprite)
         {
@@ -57,15 +60,26 @@ namespace SS3D.UI.Lobby
                 return false;
             }
 
+            if (_serverInfoBanner == null)
+            {
+                missingField = "serverInfoBanner";
+                return false;
+            }
+
             missingField = null;
             return true;
         }
 
 #if UNITY_EDITOR
-        public void EditorAssign(StyleSheet lobbyStyle, Sprite previewPlaceholder, List<LobbyNamedSprite> jobIcons)
+        public void EditorAssign(
+            StyleSheet lobbyStyle,
+            Sprite previewPlaceholder,
+            Sprite serverInfoBanner,
+            List<LobbyNamedSprite> jobIcons)
         {
             _lobbyStyle = lobbyStyle;
             _previewPlaceholder = previewPlaceholder;
+            _serverInfoBanner = serverInfoBanner;
             _jobIcons = jobIcons ?? new List<LobbyNamedSprite>();
         }
 #endif

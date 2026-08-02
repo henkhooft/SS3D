@@ -42,6 +42,7 @@ namespace SS3D.Editor
 
             StyleSheet lobbyStyle = LoadRequired<StyleSheet>(LobbyAssetPaths.StyleSheet, missing);
             Sprite preview = LoadRequiredSprite(LobbyAssetPaths.PreviewPlaceholder, missing);
+            Sprite banner = LoadRequiredSprite(LobbyAssetPaths.ServerInfoBanner, missing);
 
             List<LobbyNamedSprite> jobIcons = new();
             if (Directory.Exists(LobbyAssetPaths.JobIconRoot))
@@ -88,7 +89,7 @@ namespace SS3D.Editor
                 AssetDatabase.CreateAsset(catalog, LobbyAssetPaths.CatalogAssetPath);
             }
 
-            catalog.EditorAssign(lobbyStyle, preview, jobIcons);
+            catalog.EditorAssign(lobbyStyle, preview, banner, jobIcons);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;

@@ -342,11 +342,27 @@
 }
 
 .lobby-shell__motd {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
 }
 
 .lobby-shell__motd .lobby-shell__inset {
     max-height: 110px;
+}
+
+.lobby-shell__server-body {
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 0;
+    align-items: stretch;
+}
+
+.lobby-shell__server-left {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    flex-direction: column;
+    margin-right: 16px;
 }
 
 .lobby-shell__bottom-row {
@@ -357,11 +373,10 @@
 }
 
 .lobby-shell__map-mode-block {
-    flex-grow: 1;
-    flex-basis: 0;
-    min-width: 0;
+    flex-grow: 0;
+    flex-shrink: 0;
     flex-direction: column;
-    margin-right: 16px;
+    margin-right: 0;
 }
 
 .lobby-shell__map-mode-row {
@@ -427,6 +442,7 @@
     flex-shrink: 0;
     flex-direction: column;
     min-height: 0;
+    align-self: stretch;
 }
 
 .lobby-shell__changelog-col .lobby-shell__inset {
@@ -482,11 +498,11 @@
 }
 
 .lobby-shell__hero {
-    height: 88px;
+    height: 160px;
+    flex-shrink: 0;
     background-color: var(--lobby-surface-raised);
     margin-bottom: 12px;
-    justify-content: flex-end;
-    padding: 10px 14px;
+    -unity-background-scale-mode: scale-and-crop;
 }
 
 .lobby-shell__hero-mark {

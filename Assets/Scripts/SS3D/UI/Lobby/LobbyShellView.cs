@@ -385,18 +385,11 @@ namespace SS3D.UI.Lobby
             VisualElement hero = new();
             hero.AddToClassList("lobby-shell__hero");
             hero.pickingMode = PickingMode.Ignore;
-            Label mark = new();
-            mark.AddToClassList("lobby-shell__hero-mark");
-            mark.AddToClassList("font-titling");
-            mark.text = "SS";
-            Label markAccent = new("3D");
-            markAccent.AddToClassList("lobby-shell__hero-mark");
-            markAccent.AddToClassList("lobby-shell__hero-mark-accent");
-            markAccent.AddToClassList("font-titling");
-            VisualElement markRow = new() { style = { flexDirection = FlexDirection.Row } };
-            markRow.Add(mark);
-            markRow.Add(markAccent);
-            hero.Add(markRow);
+            if (_catalog != null && _catalog.ServerInfoBanner != null)
+            {
+                hero.style.backgroundImage = new StyleBackground(_catalog.ServerInfoBanner);
+            }
+
             parent.Add(hero);
 
             VisualElement titleRow = new();
@@ -414,6 +407,13 @@ namespace SS3D.UI.Lobby
             titleRow.Add(meta);
             parent.Add(titleRow);
 
+            // Left: MOTD + Map/Mode stacked. Right: Change Log spanning both rows.
+            VisualElement bodyGrid = new();
+            bodyGrid.AddToClassList("lobby-shell__server-body");
+
+            VisualElement leftCol = new();
+            leftCol.AddToClassList("lobby-shell__server-left");
+
             VisualElement motdBlock = new();
             motdBlock.AddToClassList("lobby-shell__motd");
             motdBlock.Add(SectionTitle("Message of the Day"));
@@ -421,10 +421,7 @@ namespace SS3D.UI.Lobby
             motd.AddToClassList("lobby-shell__inset");
             motd.AddToClassList("font-body");
             motdBlock.Add(motd);
-            parent.Add(motdBlock);
-
-            VisualElement bottom = new();
-            bottom.AddToClassList("lobby-shell__bottom-row");
+            leftCol.Add(motdBlock);
 
             VisualElement mapModeBlock = new();
             mapModeBlock.AddToClassList("lobby-shell__map-mode-block");
@@ -443,7 +440,8 @@ namespace SS3D.UI.Lobby
                 LobbyMockData.ModeLabel.Length > 0 ? LobbyMockData.ModeLabel[0].ToString().ToUpperInvariant() : "?",
                 mapSwatch: false));
             mapModeBlock.Add(mapModeRow);
-            bottom.Add(mapModeBlock);
+            leftCol.Add(mapModeBlock);
+            bodyGrid.Add(leftCol);
 
             VisualElement logCol = new();
             logCol.AddToClassList("lobby-shell__changelog-col");
@@ -466,8 +464,8 @@ namespace SS3D.UI.Lobby
             }
 
             logCol.Add(logBox);
-            bottom.Add(logCol);
-            parent.Add(bottom);
+            bodyGrid.Add(logCol);
+            parent.Add(bodyGrid);
         }
 
         private static VisualElement BuildSelectCard(string name, string kind, string initial, bool mapSwatch)
