@@ -44,6 +44,30 @@ namespace SS3D.UI.Lobby
             new("okafor", "Okafor", true, null, "29ms", "19:01", "11mo"),
         };
 
+        public static readonly ChatMessage[] ChatMessages =
+        {
+            new("ooc", ChatMessageKind.Player, "19:04", "Kowalski", null, "anyone else's client stuck loading assets"),
+            new("ooc", ChatMessageKind.Player, "19:04", "Reyes", null, "restart it"),
+            new(
+                "ooc",
+                ChatMessageKind.Announcement,
+                "19:05",
+                null,
+                null,
+                "Round starts automatically once 50% of connected players are ready."),
+            new("ooc", ChatMessageKind.Player, "19:06", "Voss", "mentor", "engineering ready whenever"),
+            new("looc", ChatMessageKind.Player, "19:03", "Voss", "mentor", "Ready when you are."),
+            new("looc", ChatMessageKind.Player, "19:04", "Reyes", null, "standing by near arrivals"),
+            new("admin", ChatMessageKind.Player, "19:02", "Kowalski", "admin", "map vote closed, cerestation locked in"),
+            new(
+                "admin",
+                ChatMessageKind.Announcement,
+                "19:03",
+                null,
+                null,
+                "Adebayo flagged as idle — auto-kick in 2 minutes."),
+        };
+
         public static readonly Department[] Departments =
         {
             new("command", "Command", "command", new JobRow[]
@@ -172,6 +196,32 @@ namespace SS3D.UI.Lobby
             }
         }
 
+        public readonly struct ChatMessage
+        {
+            public readonly string Channel;
+            public readonly ChatMessageKind Kind;
+            public readonly string Time;
+            public readonly string Name;
+            public readonly string Rank;
+            public readonly string Text;
+
+            public ChatMessage(
+                string channel,
+                ChatMessageKind kind,
+                string time,
+                string name,
+                string rank,
+                string text)
+            {
+                Channel = channel;
+                Kind = kind;
+                Time = time;
+                Name = name;
+                Rank = rank;
+                Text = text;
+            }
+        }
+
         public sealed class Department
         {
             public readonly string Key;
@@ -219,6 +269,12 @@ namespace SS3D.UI.Lobby
                 LockReason = lockReason;
             }
         }
+    }
+
+    public enum ChatMessageKind : byte
+    {
+        Player = 0,
+        Announcement = 1,
     }
 
     public enum JobPriority : byte

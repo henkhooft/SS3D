@@ -340,6 +340,7 @@ namespace SS3D.UI.Lobby
             }
 
             _tabContent.Clear();
+            _tabContent.EnableInClassList("lobby-shell__tab-content--chat", key == TabChat);
             switch (key)
             {
                 case TabServerInfo:
@@ -771,34 +772,66 @@ namespace SS3D.UI.Lobby
 
         private void BuildChatTab(VisualElement parent)
         {
+            VisualElement root = new();
+            root.AddToClassList("lobby-shell__chat");
+            parent.Add(root);
+
             VisualElement channels = new();
             channels.AddToClassList("lobby-shell__channel-row");
             AddChannel(channels, "ooc", "OOC");
             AddChannel(channels, "looc", "LOOC");
             AddChannel(channels, "admin", "Admin");
-            parent.Add(channels);
+            root.Add(channels);
 
             ScrollView log = new();
             log.AddToClassList("lobby-shell__chat-log");
-            log.Add(ChatLine("[OOC] Kowalski: Anyone else seeing atmos weirdness on arrivals?"));
-            log.Add(ChatLine("[OOC] Reyes: That's just Cerestation being Cerestation."));
-            log.Add(ChatLine("[LOOC] Voss: Ready when you are."));
-            parent.Add(log);
+            foreach (LobbyMockData.ChatMessage message in LobbyMockData.ChatMessages)
+            {
+                if (!string.Equals(message.Channel, _chatChannel, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                log.Add(BuildChatMessage(message));
+            }
+
+            root.Add(log);
 
             VisualElement composer = new();
             composer.AddToClassList("lobby-shell__chat-composer");
-            TextField input = new() { value = string.Empty };
+            string channelLabel = _chatChannel.ToUpperInvariant();
+            TextField input = new()
+            {
+                value = string.Empty,
+            };
             input.AddToClassList("lobby-shell__chat-input");
             input.AddToClassList("font-body");
-            composer.Add(input);
-            Button send = new(() => Debug.Log($"[Lobby] Chat send ({_chatChannel}): {input.value}"))
+            input.label = string.Empty;
+            if (input.textEdition != null)
             {
-                text = "Send",
-            };
-            send.AddToClassList("lobby-shell__chat-send");
-            send.AddToClassList("font-body");
-            composer.Add(send);
-            parent.Add(composer);
+                input.textEdition.placeholder = $"Message {channelLabel}…";
+                input.textEdition.hidePlaceholderOnFocus = true;
+            }
+
+            input.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter)
+                {
+                    return;
+                }
+
+                string text = input.value?.Trim() ?? string.Empty;
+                if (text.Length == 0)
+                {
+                    return;
+                }
+
+                Debug.Log($"[Lobby] Chat send ({_chatChannel}): {text}");
+                input.value = string.Empty;
+                evt.StopPropagation();
+            });
+            composer.Add(input);
+            root.Add(composer);
         }
 
         private void AddChannel(VisualElement parent, string key, string label)
@@ -812,17 +845,51 @@ namespace SS3D.UI.Lobby
                 text = label.ToUpperInvariant(),
             };
             btn.AddToClassList("lobby-shell__channel");
-            btn.AddToClassList("font-titling");
+            btn.AddToClassList("font-body");
             btn.EnableInClassList("lobby-shell__channel--active", _chatChannel == key);
             parent.Add(btn);
         }
 
-        private static Label ChatLine(string text)
+        private static VisualElement BuildChatMessage(LobbyMockData.ChatMessage message)
         {
-            Label line = new(text);
-            line.AddToClassList("lobby-shell__chat-line");
-            line.AddToClassList("font-terminal");
-            return line;
+            if (message.Kind == ChatMessageKind.Announcement)
+            {
+                VisualElement announcement = new();
+                announcement.AddToClassList("lobby-shell__chat-announcement");
+                Label announcementText = new($"— {message.Text} —");
+                announcementText.AddToClassList("lobby-shell__chat-announcement-text");
+                announcementText.AddToClassList("font-terminal");
+                announcement.Add(announcementText);
+                return announcement;
+            }
+
+            VisualElement row = new();
+            row.AddToClassList("lobby-shell__chat-line");
+
+            Label time = new(message.Time);
+            time.AddToClassList("lobby-shell__chat-time");
+            time.AddToClassList("font-terminal");
+            row.Add(time);
+
+            Label name = new($"{message.Name}:");
+            name.AddToClassList("lobby-shell__chat-name");
+            name.AddToClassList("font-body");
+            if (string.Equals(message.Rank, "admin", StringComparison.Ordinal))
+            {
+                name.AddToClassList("lobby-shell__chat-name--admin");
+            }
+            else if (string.Equals(message.Rank, "mentor", StringComparison.Ordinal))
+            {
+                name.AddToClassList("lobby-shell__chat-name--mentor");
+            }
+
+            row.Add(name);
+
+            Label body = new(message.Text);
+            body.AddToClassList("lobby-shell__chat-text");
+            body.AddToClassList("font-terminal");
+            row.Add(body);
+            return row;
         }
 
         private void BuildPlayersTab(VisualElement parent)

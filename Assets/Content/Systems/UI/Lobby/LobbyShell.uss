@@ -146,6 +146,10 @@
     padding: 16px;
 }
 
+.lobby-shell__tab-content--chat {
+    background-color: #353538;
+}
+
 .lobby-shell__sidebar {
     width: 240px;
     flex-shrink: 0;
@@ -718,7 +722,7 @@
 .lobby-shell__antag-row {
     flex-direction: row;
     align-items: center;
-    padding: 6px 4px;
+    padding: 3px 4px;
 }
 
 .lobby-shell__check {
@@ -806,18 +810,70 @@
     color: var(--ss3d-text-tertiary);
 }
 
+.lobby-shell__chat {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .lobby-shell__chat-log {
     flex-grow: 1;
     min-height: 120px;
-    background-color: var(--lobby-surface-inset);
-    padding: 12px;
-    margin-bottom: 8px;
+    background-color: #2a2a2e;
+    padding: 10px 4px;
+    margin-bottom: 10px;
 }
 
 .lobby-shell__chat-line {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 3px 12px;
+    margin-bottom: 0;
+}
+
+.lobby-shell__chat-time {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--ss3d-text-tertiary);
+    margin-right: 8px;
+    padding-top: 1px;
+}
+
+.lobby-shell__chat-name {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--ss3d-text-primary);
+    margin-right: 8px;
+    -unity-font-style: bold;
+}
+
+.lobby-shell__chat-name--admin {
+    color: #e6ad53;
+}
+
+.lobby-shell__chat-name--mentor {
+    color: #5f86b3;
+}
+
+.lobby-shell__chat-text {
+    flex-grow: 1;
+    flex-shrink: 1;
     font-size: 12px;
     color: var(--ss3d-text-secondary);
-    margin-bottom: 4px;
+    white-space: normal;
+}
+
+.lobby-shell__chat-announcement {
+    align-items: center;
+    padding: 8px 16px;
+    margin: 4px 0;
+}
+
+.lobby-shell__chat-announcement-text {
+    font-size: 12px;
+    color: #e6ad53;
+    letter-spacing: 0.5px;
+    -unity-text-align: middle-center;
     white-space: normal;
 }
 
@@ -828,43 +884,81 @@
 
 .lobby-shell__chat-input {
     flex-grow: 1;
-    height: 32px;
-    background-color: var(--lobby-surface-inset);
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    background-color: #2a2a2e;
+    border-width: 1px;
+    border-color: #5c5955;
+    border-style: solid;
+    border-radius: 0;
+    color: var(--ss3d-text-primary);
+}
+
+.lobby-shell__chat-input > .unity-base-field__label {
+    display: none;
+    width: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.lobby-shell__chat-input > .unity-base-field__input,
+.lobby-shell__chat-input > .unity-text-field__input {
+    flex-grow: 1;
+    height: 100%;
+    margin: 0;
+    padding: 10px 12px;
+    background-color: #2a2a2e;
     border-width: 0;
     border-radius: 0;
     color: var(--ss3d-text-primary);
-    padding: 4px 10px;
-    margin-right: 8px;
 }
 
-.lobby-shell__chat-send {
-    width: 72px;
-    height: 32px;
-    background-color: var(--lobby-btn-blue);
-    border-width: 0;
-    border-radius: 0;
-    color: #ffffff;
+.lobby-shell__chat-input:focus,
+.lobby-shell__chat-input > .unity-base-field__input:focus,
+.lobby-shell__chat-input > .unity-text-field__input:focus {
+    border-color: #5c5955;
+    background-color: #2a2a2e;
+}
+
+.lobby-shell__chat-input .unity-base-text-field__input--placeholder {
+    color: var(--ss3d-text-tertiary);
 }
 
 .lobby-shell__channel-row {
     flex-direction: row;
-    margin-bottom: 8px;
+    align-items: flex-end;
+    margin-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--lobby-border-subtle);
+    border-bottom-style: solid;
 }
 
 .lobby-shell__channel {
-    padding: 6px 12px;
-    margin-right: 4px;
-    background-color: var(--lobby-surface-raised);
+    padding: 0 0 8px 0;
+    margin-right: 18px;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 0;
+    border-bottom-width: 2px;
+    border-bottom-style: solid;
+    border-bottom-color: rgba(0, 0, 0, 0);
     border-radius: 0;
-    color: var(--ss3d-text-secondary);
-    font-size: 11px;
+    color: var(--ss3d-text-tertiary);
+    font-size: 12px;
     letter-spacing: 1px;
+    -unity-font-style: bold;
+}
+
+.lobby-shell__channel:hover {
+    color: var(--ss3d-text-secondary);
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .lobby-shell__channel--active {
-    background-color: var(--lobby-surface-inset);
+    background-color: rgba(0, 0, 0, 0);
     color: var(--ss3d-text-primary);
+    border-bottom-color: var(--ss3d-accent-rust);
 }
 
 .lobby-shell__settings-tabs {
