@@ -340,7 +340,9 @@ namespace SS3D.UI.Lobby
             }
 
             _tabContent.Clear();
-            _tabContent.EnableInClassList("lobby-shell__tab-content--chat", key == TabChat);
+            _tabContent.EnableInClassList(
+                "lobby-shell__tab-content--panel",
+                key == TabChat || key == TabPlayers);
             switch (key)
             {
                 case TabServerInfo:
@@ -830,6 +832,7 @@ namespace SS3D.UI.Lobby
                 input.value = string.Empty;
                 evt.StopPropagation();
             });
+            StyleDarkTextField(input);
             composer.Add(input);
             root.Add(composer);
         }
@@ -894,20 +897,53 @@ namespace SS3D.UI.Lobby
 
         private void BuildPlayersTab(VisualElement parent)
         {
+            VisualElement toolbar = new();
+            toolbar.AddToClassList("lobby-shell__players-toolbar");
+
             TextField search = new() { value = _playerSearch };
             search.AddToClassList("lobby-shell__search");
             search.AddToClassList("font-body");
+            search.label = string.Empty;
+            if (search.textEdition != null)
+            {
+                search.textEdition.placeholder = "Search players…";
+                search.textEdition.hidePlaceholderOnFocus = true;
+            }
+
             search.RegisterValueChangedCallback(evt =>
             {
                 _playerSearch = evt.newValue ?? string.Empty;
                 ShowTab(TabPlayers);
             });
-            parent.Add(search);
+            StyleDarkTextField(search);
+            toolbar.Add(search);
 
-            ScrollView list = new();
-            list.style.flexGrow = 1;
             string filter = _playerSearch.Trim().ToLowerInvariant();
             int shown = 0;
+            foreach (LobbyMockData.PlayerRow player in LobbyMockData.Players)
+            {
+                if (string.IsNullOrEmpty(filter) || player.Name.ToLowerInvariant().Contains(filter))
+                {
+                    shown++;
+                }
+            }
+
+            Label count = new($"{shown}/{LobbyMockData.Players.Length}");
+            count.AddToClassList("lobby-shell__players-count");
+            count.AddToClassList("font-display");
+            toolbar.Add(count);
+            parent.Add(toolbar);
+
+            ScrollView list = new();
+            list.AddToClassList("lobby-shell__players-list");
+
+            if (shown == 0)
+            {
+                list.Add(MakePlaceholder($"No players match \"{_playerSearch}\"."));
+                parent.Add(list);
+                return;
+            }
+
             foreach (LobbyMockData.PlayerRow player in LobbyMockData.Players)
             {
                 if (!string.IsNullOrEmpty(filter) && !player.Name.ToLowerInvariant().Contains(filter))
@@ -915,12 +951,15 @@ namespace SS3D.UI.Lobby
                     continue;
                 }
 
-                shown++;
-                VisualElement row = new();
-                row.AddToClassList("lobby-shell__player-row");
-                row.pickingMode = PickingMode.Position;
+                bool open = _openPlayerId == player.Id;
+                VisualElement card = new();
+                card.AddToClassList("lobby-shell__player-card");
+
+                VisualElement header = new();
+                header.AddToClassList("lobby-shell__player-row");
+                header.pickingMode = PickingMode.Position;
                 string id = player.Id;
-                row.RegisterCallback<ClickEvent>(_ =>
+                header.RegisterCallback<ClickEvent>(_ =>
                 {
                     _openPlayerId = _openPlayerId == id ? null : id;
                     ShowTab(TabPlayers);
@@ -930,45 +969,112 @@ namespace SS3D.UI.Lobby
                 dot.AddToClassList("lobby-shell__player-dot");
                 dot.EnableInClassList("lobby-shell__player-dot--ready", player.Ready);
                 dot.pickingMode = PickingMode.Ignore;
-                row.Add(dot);
+                header.Add(dot);
 
-                string nameText = string.IsNullOrEmpty(player.Rank) ? player.Name : $"{player.Name} ({player.Rank})";
-                Label name = new(nameText);
+                Label name = new(player.Name);
                 name.AddToClassList("lobby-shell__player-name");
-                name.AddToClassList("font-body");
+                name.AddToClassList("font-display");
                 name.pickingMode = PickingMode.Ignore;
-                row.Add(name);
+                header.Add(name);
+
+                if (!string.IsNullOrEmpty(player.Rank))
+                {
+                    string badgeLabel = RankBadgeLabel(player.Rank);
+                    Label badge = new(badgeLabel);
+                    badge.AddToClassList("lobby-shell__player-badge");
+                    badge.AddToClassList("font-titling");
+                    badge.EnableInClassList(
+                        "lobby-shell__player-badge--admin",
+                        player.Rank.Equals("admin", StringComparison.Ordinal));
+                    badge.EnableInClassList(
+                        "lobby-shell__player-badge--mentor",
+                        player.Rank.Equals("mentor", StringComparison.Ordinal));
+                    badge.pickingMode = PickingMode.Ignore;
+                    header.Add(badge);
+                }
 
                 Label status = new(player.Ready ? "Ready" : "Not Ready");
                 status.AddToClassList("lobby-shell__player-status");
                 status.AddToClassList("font-body");
                 status.pickingMode = PickingMode.Ignore;
-                row.Add(status);
-                list.Add(row);
+                header.Add(status);
 
-                if (_openPlayerId == player.Id)
+                VisualElement chevron = new();
+                chevron.AddToClassList("lobby-shell__player-chevron");
+                chevron.EnableInClassList("lobby-shell__player-chevron--collapsed", !open);
+                chevron.pickingMode = PickingMode.Ignore;
+                if (_catalog != null && _catalog.ChevronDown != null)
+                {
+                    chevron.style.backgroundImage = new StyleBackground(_catalog.ChevronDown);
+                }
+
+                header.Add(chevron);
+                card.Add(header);
+
+                if (open)
                 {
                     VisualElement detail = new();
-                    detail.AddToClassList("lobby-shell__inset");
-                    detail.style.marginBottom = 6;
-                    detail.Add(MakeLabel($"Ping: {player.Ping}", "font-terminal", "text-secondary"));
-                    detail.Add(MakeLabel($"Joined: {player.JoinTime}", "font-terminal", "text-secondary"));
-                    detail.Add(MakeLabel($"Account age: {player.AccountAge}", "font-terminal", "text-secondary"));
+                    detail.AddToClassList("lobby-shell__player-detail");
+
+                    VisualElement meta = new();
+                    meta.AddToClassList("lobby-shell__player-meta");
+                    meta.Add(MakePlayerMeta($"Ping: {player.Ping}"));
+                    meta.Add(MakePlayerMeta($"Joined: {player.JoinTime}"));
+                    meta.Add(MakePlayerMeta($"Account age: {player.AccountAge}"));
+                    detail.Add(meta);
+
+                    VisualElement actions = new();
+                    actions.AddToClassList("lobby-shell__player-actions");
                     if (_adminActive)
                     {
-                        detail.Add(MakeLabel("Kick / Ban / Mute (stub)", "font-body", "text-tertiary"));
+                        actions.Add(MakePlayerAction("Kick", id, "kick"));
+                        actions.Add(MakePlayerAction("Ban", id, "ban"));
                     }
 
-                    list.Add(detail);
+                    actions.Add(MakePlayerAction("Mute", id, "mute"));
+                    detail.Add(actions);
+                    card.Add(detail);
                 }
-            }
 
-            if (shown == 0)
-            {
-                list.Add(MakePlaceholder($"No players match \"{_playerSearch}\"."));
+                list.Add(card);
             }
 
             parent.Add(list);
+        }
+
+        private static string RankBadgeLabel(string rank)
+        {
+            if (rank.Equals("admin", StringComparison.Ordinal))
+            {
+                return "ADMIN";
+            }
+
+            if (rank.Equals("mentor", StringComparison.Ordinal))
+            {
+                return "MENTOR";
+            }
+
+            return rank.ToUpperInvariant();
+        }
+
+        private static Label MakePlayerMeta(string text)
+        {
+            Label label = new(text);
+            label.AddToClassList("lobby-shell__player-meta-item");
+            label.AddToClassList("font-terminal");
+            return label;
+        }
+
+        private Button MakePlayerAction(string label, string playerId, string action)
+        {
+            Button btn = new(() => Debug.Log($"[Lobby] Player action stub: {action} → {playerId}"))
+            {
+                text = label.ToUpperInvariant(),
+            };
+            btn.AddToClassList("lobby-shell__player-action");
+            btn.AddToClassList("font-titling");
+            btn.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            return btn;
         }
 
         private void BuildSettingsTab(VisualElement parent)
@@ -1131,6 +1237,39 @@ namespace SS3D.UI.Lobby
             label.AddToClassList("lobby-shell__placeholder");
             label.AddToClassList("font-body");
             return label;
+        }
+
+        /// <summary>
+        /// UITK default theme paints TextField inputs white; force the dark inset fill on the
+        /// inner input element (class names vary slightly across Unity 6 builds).
+        /// </summary>
+        private static void StyleDarkTextField(TextField field)
+        {
+            if (field == null)
+            {
+                return;
+            }
+
+            Color fill = new(0.1647059f, 0.1647059f, 0.1803922f, 1f); // #2A2A2E
+            field.style.backgroundColor = fill;
+
+            void Apply()
+            {
+                VisualElement input = field.Q(className: "unity-base-text-field__input")
+                    ?? field.Q(className: "unity-text-field__input")
+                    ?? field.Q(className: "unity-base-field__input");
+                if (input != null)
+                {
+                    input.style.backgroundColor = fill;
+                    input.style.borderTopWidth = 0;
+                    input.style.borderRightWidth = 0;
+                    input.style.borderBottomWidth = 0;
+                    input.style.borderLeftWidth = 0;
+                }
+            }
+
+            Apply();
+            field.RegisterCallback<AttachToPanelEvent>(_ => Apply());
         }
 
         private static Label MakeLabel(string text, string fontClass, string colorClass = null)
