@@ -1,5 +1,6 @@
 @import url("../Tokens/ss3d-tokens.uss");
 @import url("../Tokens/ss3d-typography.uss");
+@import url("CharacterCreator.uss");
 
 /* Lobby shell — Phase A visual. Flat charcoal chrome; functional buttons are borderless fills. */
 

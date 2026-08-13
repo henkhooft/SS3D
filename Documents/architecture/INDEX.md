@@ -35,7 +35,7 @@ Update as part of `update-system-docs`.
 | crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (obsolete runtime purged; awaiting redesign) |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
-| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A visual shell) | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A/B visual) | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-config | [round-config.md](../design/round-config.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
 | round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
@@ -119,7 +119,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks (HashGrid proximity + SyncVar animator, no NetworkAnimator + Open/Close + access-denied), lockers, vendors, jukebox; disposal → [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee + ranged StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine; epicenter blast VFX (fireball/light/scorch/shake/flash); `hurtstructure` / `blast` |
 | Disposal | [disposal](systems/disposal.md) | partial | Item disposal network; awaits TileMapLoaded → DisposalReady; pipe craft / Cargo / player transit deferred |
-| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine; PrepareRound awaits WorldReady; UITK lobby Phase A visual on Modal; uGUI lobby condemned |
+| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine; PrepareRound awaits WorldReady; UITK lobby Phase A/B visual on Modal; uGUI lobby condemned |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | partial | Player subsystem, connect/authorize/disconnect lifecycle (incl. reconnect-to-body), and input routing |
 | Chat / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech + T-compose (Tab + `/eng`/`/sec`/`/announce`); left feed (radio-tower icon) + top announce banner + chime sequence; Chat hub purged; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |

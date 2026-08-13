@@ -20,6 +20,7 @@ namespace SS3D.UI.Lobby
         [SerializeField] private Texture2D _chevronDown;
         [SerializeField] private List<LobbyNamedSprite> _jobIcons = new();
         [SerializeField] private List<LobbyNamedTexture> _departmentIcons = new();
+        [SerializeField] private List<LobbyNamedSprite> _loadoutThumbs = new();
 
         public StyleSheet LobbyStyle => _lobbyStyle;
 
@@ -33,6 +34,9 @@ namespace SS3D.UI.Lobby
 
         public bool TryGetDepartmentIcon(string id, out Texture2D texture) =>
             TryGetNamedTexture(_departmentIcons, id, out texture);
+
+        public bool TryGetLoadoutThumb(string id, out Sprite sprite) =>
+            TryGetNamedSprite(_loadoutThumbs, id, out sprite);
 
         public bool HasRequiredAssets(out string missingField)
         {
@@ -71,7 +75,8 @@ namespace SS3D.UI.Lobby
             Sprite serverInfoBanner,
             Texture2D chevronDown,
             List<LobbyNamedSprite> jobIcons,
-            List<LobbyNamedTexture> departmentIcons)
+            List<LobbyNamedTexture> departmentIcons,
+            List<LobbyNamedSprite> loadoutThumbs)
         {
             _lobbyStyle = lobbyStyle;
             _previewPlaceholder = previewPlaceholder;
@@ -79,6 +84,7 @@ namespace SS3D.UI.Lobby
             _chevronDown = chevronDown;
             _jobIcons = jobIcons ?? new List<LobbyNamedSprite>();
             _departmentIcons = departmentIcons ?? new List<LobbyNamedTexture>();
+            _loadoutThumbs = loadoutThumbs ?? new List<LobbyNamedSprite>();
         }
 #endif
 

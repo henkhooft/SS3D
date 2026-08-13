@@ -15,6 +15,7 @@ namespace SS3D.UI.Lobby
         public const string IconRoot = "Assets/Art/Icons/Lobby/";
         public const string JobIconRoot = IconRoot + "Jobs/";
         public const string PreviewPlaceholder = IconRoot + "PnSecurity.png";
+        public const string LoadoutJanitor = IconRoot + "PnJanitor.png";
         public const string ServerInfoBanner =
             "Assets/Art/Textures/Lobby/ProbablyNotChaseBanner.png";
         public const string HeroiconsOutlineRoot = "Assets/Art/Icons/Heroicons/Outline/";

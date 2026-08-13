@@ -90,6 +90,19 @@ namespace SS3D.Editor
                 }
             }
 
+            List<LobbyNamedSprite> loadoutThumbs = new();
+            Sprite securityThumb = LoadRequiredSprite(LobbyAssetPaths.PreviewPlaceholder, missing);
+            if (securityThumb != null)
+            {
+                loadoutThumbs.Add(new LobbyNamedSprite("PnSecurity", securityThumb));
+            }
+
+            Sprite janitorThumb = LoadRequiredSprite(LobbyAssetPaths.LoadoutJanitor, missing);
+            if (janitorThumb != null)
+            {
+                loadoutThumbs.Add(new LobbyNamedSprite("PnJanitor", janitorThumb));
+            }
+
             if (missing.Count > 0)
             {
                 error = "Lobby asset catalog rebuild failed. Missing assets:\n- "
@@ -112,7 +125,14 @@ namespace SS3D.Editor
                 AssetDatabase.CreateAsset(catalog, LobbyAssetPaths.CatalogAssetPath);
             }
 
-            catalog.EditorAssign(lobbyStyle, preview, banner, chevron, jobIcons, departmentIcons);
+            catalog.EditorAssign(
+                lobbyStyle,
+                preview,
+                banner,
+                chevron,
+                jobIcons,
+                departmentIcons,
+                loadoutThumbs);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;

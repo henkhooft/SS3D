@@ -20,7 +20,7 @@ the full examine overlay — generic hover/detail *and* character paperdoll — 
 condemned uGUI `ExamineUI`, not just a character-only addition). Its `ExamineOverlayAssetCatalog` is a lighter
 one-off catalog (no `PanelSettings`/document of its own, since it attaches into the shared document) rather than
 a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootstrapping overlay-only surfaces show up.
-**Lobby shell (Phase A visual):** `LobbyUiSubSystem` / `LobbyShellView` on `UiLayer.Modal`
+**Lobby shell (Phase A/B visual):** `LobbyUiSubSystem` / `LobbyShellView` + `CharacterCreatorView` on `UiLayer.Modal`
 ([2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)) — mock data; networking later.
 
 **Not yet migrated (still own their own path-catalog wedge — duplicated pattern):**
@@ -70,7 +70,7 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll); local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud); lobby shell Phase A (`LobbyUiSubSystem` on Modal — mock data)
+- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll); local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud); lobby shell + Character Creator Phase A/B (`LobbyUiSubSystem` on Modal — mock data)
 - **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), console (as redesigns land); lobby networking + Character Creator (Phases B–E)
 
 ## Related docs

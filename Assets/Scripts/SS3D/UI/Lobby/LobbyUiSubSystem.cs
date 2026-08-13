@@ -8,14 +8,15 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.Lobby
 {
     /// <summary>
-    /// Self-bootstrapping host for the UITK pre-round lobby shell. Attaches into
-    /// <see cref="UiLayer.Modal"/>. Phase A shows the shell with mock data for visual QA;
+    /// Self-bootstrapping host for the UITK pre-round lobby shell and Character Creator.
+    /// Attaches into <see cref="UiLayer.Modal"/>. Phase A/B are visual + local mock state;
     /// Phase C gates visibility on spawn/round state and retires the condemned uGUI lobby.
     /// </summary>
     public sealed class LobbyUiSubSystem : SubSystem
     {
         private LobbyAssetCatalog _catalog;
         private LobbyShellView _shellView;
+        private CharacterCreatorView _creatorView;
         private bool _attached;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -38,6 +39,13 @@ namespace SS3D.UI.Lobby
                 _shellView.CharacterCreatorRequested -= HandleCharacterCreatorRequested;
                 _shellView.Detach();
                 _shellView = null;
+            }
+
+            if (_creatorView != null)
+            {
+                _creatorView.ReturnToLobbyRequested -= HandleReturnToLobbyRequested;
+                _creatorView.Detach();
+                _creatorView = null;
             }
 
             base.OnDestroyed();
@@ -76,10 +84,15 @@ namespace SS3D.UI.Lobby
             _shellView.Attach(modalLayer);
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
 
-            // Phase A: keep visible for visual QA. Old uGUI LobbyCanvas may still draw underneath
-            // or above depending on canvas sort — disable that canvas in the Hierarchy while checking.
+            _creatorView = new CharacterCreatorView(_catalog);
+            _creatorView.Attach(modalLayer);
+            _creatorView.ReturnToLobbyRequested += HandleReturnToLobbyRequested;
+
+            // Phase A/B: keep lobby visible for visual QA. Old uGUI LobbyCanvas may still draw
+            // underneath or above depending on canvas sort — disable that canvas while checking.
             _shellView.SetVisible(true);
-            Debug.Log("[Lobby] UITK Lobby Shell attached (Phase A mock data).");
+            _creatorView.SetVisible(false);
+            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase A/B mock data).");
         }
 
         private bool TryEnsureCatalog()
@@ -111,10 +124,28 @@ namespace SS3D.UI.Lobby
             return true;
         }
 
-        private static void HandleCharacterCreatorRequested()
+        private void HandleCharacterCreatorRequested()
         {
-            // Phase B builds the separate Character Creator screen. Preview click is wired now.
-            Debug.Log("[Lobby] Character creator requested (Phase B stub).");
+            if (_shellView == null || _creatorView == null)
+            {
+                return;
+            }
+
+            _shellView.SetVisible(false);
+            _creatorView.Open();
+            Debug.Log("[Lobby] Character Creator opened.");
+        }
+
+        private void HandleReturnToLobbyRequested()
+        {
+            if (_shellView == null || _creatorView == null)
+            {
+                return;
+            }
+
+            _creatorView.SetVisible(false);
+            _shellView.SetVisible(true);
+            Debug.Log("[Lobby] Returned to Lobby Shell from Character Creator.");
         }
     }
 }
