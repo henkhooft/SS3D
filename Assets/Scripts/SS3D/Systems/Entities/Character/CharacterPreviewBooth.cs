@@ -26,8 +26,11 @@ namespace SS3D.Systems.Entities.Character
         [SerializeField] private Light _keyLight;
         [SerializeField] private Light _fillLight;
         [SerializeField] private Transform _spawnPoint;
-        [SerializeField] private int _textureWidth = 512;
-        [SerializeField] private int _textureHeight = 512;
+        // Portrait RT sized for the CC sidebar (~360px wide, tall frame) at high DPI.
+        // Render above display size so UITK downscales — edges stay sharper than 1:1.
+        [SerializeField] private int _textureWidth = 1536;
+        [SerializeField] private int _textureHeight = 2048;
+        [SerializeField] private int _antiAliasing = 8;
 
         private GameObject _dummy;
         private RenderTexture _renderTexture;
@@ -154,13 +157,13 @@ namespace SS3D.Systems.Entities.Character
             _previewCamera = cameraObject.AddComponent<Camera>();
             _previewCamera.clearFlags = CameraClearFlags.SolidColor;
             _previewCamera.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 1f);
-            _previewCamera.fieldOfView = 28f;
+            _previewCamera.fieldOfView = 26f;
             _previewCamera.nearClipPlane = 0.05f;
             _previewCamera.farClipPlane = 40f;
             _previewCamera.depth = -100f;
             _previewCamera.cullingMask = 1 << PreviewLayer;
             _previewCamera.allowHDR = false;
-            _previewCamera.allowMSAA = false;
+            _previewCamera.allowMSAA = true;
             _previewCamera.enabled = false;
 
             ConfigureUrpCamera(_previewCamera);
@@ -214,6 +217,9 @@ namespace SS3D.Systems.Entities.Character
             cameraData.requiresDepthOption = CameraOverrideOption.Off;
             cameraData.renderShadows = false;
             cameraData.dithering = false;
+            // SMAA stacks with RT MSAA and is visible in UITK even when pipeline MSAA is modest.
+            cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            cameraData.antialiasingQuality = AntialiasingQuality.High;
 #endif
         }
 
@@ -224,10 +230,22 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            _renderTexture = new RenderTexture(_textureWidth, _textureHeight, 16, RenderTextureFormat.ARGB32)
+            // Unity RT MSAA only accepts 1 / 2 / 4 / 8.
+            int samples = _antiAliasing switch
+            {
+                <= 1 => 1,
+                2 => 2,
+                <= 4 => 4,
+                _ => 8,
+            };
+
+            _renderTexture = new RenderTexture(_textureWidth, _textureHeight, 24, RenderTextureFormat.ARGB32)
             {
                 name = "CharacterPreviewRT",
-                antiAliasing = 1,
+                antiAliasing = samples,
+                filterMode = FilterMode.Bilinear,
+                useMipMap = false,
+                anisoLevel = 0,
             };
             _renderTexture.Create();
             _previewCamera.targetTexture = _renderTexture;
@@ -271,21 +289,29 @@ namespace SS3D.Systems.Entities.Character
             }
 
             Bounds bounds = CalculateBounds(_dummy);
+            float height = Mathf.Max(bounds.size.y, 0.75f);
+
+            // True body center — upper-torso bias pushed the dummy down and cropped the feet.
             Vector3 lookAt = bounds.center;
-            lookAt.y = Mathf.Lerp(bounds.min.y, bounds.max.y, 0.55f);
+            lookAt.y = Mathf.Lerp(bounds.min.y, bounds.max.y, 0.5f);
 
-            float radius = Mathf.Max(bounds.extents.magnitude, 0.75f);
-            float distance = radius / Mathf.Tan(_previewCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
-            distance = Mathf.Clamp(distance * 1.15f, 1.5f, 8f);
+            // Fit full height with a small margin; padding > 1 pulls the camera back.
+            const float verticalPadding = 1.08f;
+            float halfHeight = height * 0.5f * verticalPadding;
+            float distance = halfHeight / Mathf.Tan(_previewCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            distance = Mathf.Clamp(distance, 1.1f, 8f);
 
-            Vector3 forward = Quaternion.Euler(8f, 180f, 0f) * Vector3.forward;
-            _previewCamera.transform.position = lookAt - (forward * distance) + (Vector3.up * (radius * 0.05f));
-            _previewCamera.transform.LookAt(lookAt);
+            // Dummy yaw 180° faces -Z; camera sits on +Z looking back at the face.
+            Vector3 camPos = lookAt + new Vector3(0f, 0f, distance);
+            _previewCamera.transform.position = camPos;
+            _previewCamera.transform.rotation = Quaternion.LookRotation(lookAt - camPos, Vector3.up);
             _previewCamera.enabled = true;
         }
 
         private static Bounds CalculateBounds(GameObject root)
         {
+            // Include MeshRenderers (shoes / gear) — skinned-only bounds omitted feet and
+            // framed as if the body were shorter and higher in the shot.
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             Bounds bounds = new(root.transform.position, Vector3.one * 0.1f);
             bool initialized = false;
@@ -294,6 +320,11 @@ namespace SS3D.Systems.Entities.Character
             {
                 Renderer renderer = renderers[i];
                 if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
                 {
                     continue;
                 }
