@@ -87,6 +87,27 @@ namespace SS3D.Systems.Entities.Character
             ApplyAngleYaw();
         }
 
+        /// <summary>
+        /// Applies Human FBX body shape keys + height scale to the preview dummy.
+        /// Values are 0–1; jaw is bipolar (thin ↔ wide).
+        /// </summary>
+        public void ApplyBodyMorphs(
+            float female,
+            float breasts,
+            float fat,
+            float muscle,
+            float jaw,
+            float height)
+        {
+            if (_dummy == null)
+            {
+                return;
+            }
+
+            HumanoidMorphApplier.Apply(_dummy, female, breasts, fat, muscle, jaw, height);
+            FrameCamera();
+        }
+
         public void DisposeBooth()
         {
             SetActive(false);

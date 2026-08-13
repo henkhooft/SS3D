@@ -17,7 +17,7 @@ character preview.
 | C | Wire Ready / round state / admin start-stop / player list / show-hide | pending |
 | D | Jobs H/M/L/N + antag prefs sync + resolution | pending |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
-| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | pending |
+| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — body shape keys live on booth; hair/skin/network pending |
 | F | Purge condemned LobbyCanvas / uGUI views; docs finalize | pending |
 
 ## Design divergences (do not edit design docs)
@@ -32,14 +32,16 @@ character preview.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — full shell chrome
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator
 - `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22)
+- `Assets/Scripts/SS3D/Systems/Entities/Character/HumanoidMorphApplier.cs` — Human.fbx body blend shapes (Female/Fat/Muscle/…)
 - `Assets/Content/Systems/UI/Lobby/LobbyShell.uss` (+ `@import CharacterCreator.uss`) + `Resources/LobbyAssetCatalog.asset`
 - Rebuild: **SS3D → Data → Rebuild All UI Catalogs**
 
 ## Visual QA
 
-Play Mode: click character preview → Character Creator with live humanoid RT; Front/Side/Back rotates
-the dummy; **Save Character** updates lobby name; **Return to Lobby** restores the shell with the
-same RT. Disable `LobbyCanvas` in the Hierarchy if the old uGUI lobby fights for input/visibility.
+Play Mode: click character preview → Character Creator with live humanoid RT; Body sliders drive
+Human.fbx shape keys (Female/Fat/Muscle/Chest/Jaw) + height scale; Front/Side/Back rotates the
+dummy; **Save Character** updates lobby name; **Return to Lobby** restores the shell with the same
+RT. Disable `LobbyCanvas` in the Hierarchy if the old uGUI lobby fights for input/visibility.
 
 ## Related
 

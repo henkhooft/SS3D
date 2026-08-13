@@ -3,6 +3,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -49,6 +50,7 @@ namespace SS3D.UI.Lobby
                 _creatorView.ReturnToLobbyRequested -= HandleReturnToLobbyRequested;
                 _creatorView.CharacterSaved -= HandleCharacterSaved;
                 _creatorView.PreviewAngleChanged -= HandlePreviewAngleChanged;
+                _creatorView.BodyMorphsChanged -= HandleBodyMorphsChanged;
                 _creatorView.Detach();
                 _creatorView = null;
             }
@@ -96,11 +98,12 @@ namespace SS3D.UI.Lobby
             _creatorView.ReturnToLobbyRequested += HandleReturnToLobbyRequested;
             _creatorView.CharacterSaved += HandleCharacterSaved;
             _creatorView.PreviewAngleChanged += HandlePreviewAngleChanged;
+            _creatorView.BodyMorphsChanged += HandleBodyMorphsChanged;
             _creatorView.ApplyDraft(_draft);
 
             _shellView.SetVisible(true);
             _creatorView.SetVisible(false);
-            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 preview).");
+            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + body morphs).");
         }
 
         private bool TryEnsureCatalog()
@@ -143,6 +146,10 @@ namespace SS3D.UI.Lobby
             {
                 Debug.LogWarning("[Lobby] Character Creator opened without live preview (human prefab missing).");
             }
+            else
+            {
+                ApplyBodyMorphsToBooth(_creatorView.CurrentBodyMorphs);
+            }
 
             PushPreviewTexture();
             _shellView.SetVisible(false);
@@ -179,6 +186,7 @@ namespace SS3D.UI.Lobby
 
             _draft = draft;
             _shellView?.SetCharacterName(_draft.Name);
+            ApplyBodyMorphsToBooth(_draft.BodyMorphs);
             Debug.Log($"[Lobby] Character draft saved locally: {_draft.Name}");
         }
 
@@ -188,6 +196,35 @@ namespace SS3D.UI.Lobby
             {
                 _booth.SetAngleIndex(angleIndex);
             }
+        }
+
+        private void HandleBodyMorphsChanged(IReadOnlyDictionary<string, float> morphs)
+        {
+            if (_draft != null)
+            {
+                _draft.CopyMorphsFrom(morphs);
+            }
+
+            ApplyBodyMorphsToBooth(morphs);
+        }
+
+        private void ApplyBodyMorphsToBooth(IReadOnlyDictionary<string, float> morphs)
+        {
+            if (_booth == null || morphs == null)
+            {
+                return;
+            }
+
+            float Get(string key, float fallback) =>
+                morphs.TryGetValue(key, out float value) ? value : fallback;
+
+            _booth.ApplyBodyMorphs(
+                female: Get("female", 0f),
+                breasts: Get("breasts", 0f),
+                fat: Get("fat", 0f),
+                muscle: Get("muscle", 0f),
+                jaw: Get("jaw", 0.5f),
+                height: Get("height", 0.5f));
         }
 
         private bool EnsureBooth()

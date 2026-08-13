@@ -20,14 +20,13 @@ namespace SS3D.UI.Lobby
 
         public static readonly SliderDef[] BodySliders =
         {
-            new("height", "Height", 0.9f),
-            new("belly", "Belly", 1f),
-            new("upperBody", "Upper Body", 0.9f),
-            new("lowerBody", "Lower Body", 0.91f),
-            new("chest", "Chest", 0.25f),
-            new("waist", "Waist", 0.88f),
-            new("jaw", "Jaw", 1f),
-            new("skinTone", "Skin Tone", 0.64f),
+            // Keys map to Human.fbx blend shapes (see HumanoidMorphApplier). Height is root scale.
+            new("height", "Height", 0.5f),
+            new("female", "Female", 0f),
+            new("fat", "Fat", 0f),
+            new("muscle", "Muscle", 0f),
+            new("breasts", "Chest", 0f),
+            new("jaw", "Jaw", 0.5f),
         };
 
         public static readonly Color[] UniformSwatches =

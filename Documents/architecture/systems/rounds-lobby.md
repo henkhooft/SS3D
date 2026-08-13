@@ -39,7 +39,7 @@ Ready/round APIs and appearance apply (E2) still pending.
 - **Phase A double UI:** UITK shell shows on attach while condemned `LobbyCanvas` may still be active. Disable the old canvas in the Hierarchy when visually checking the new shell.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
-- **E1 vs E2:** Save only stores a local name draft; hair/species/morphs do not yet apply to the dummy or spawn.
+- **E1 vs E2:** Save stores a local name + body morph draft; hair/species do not yet apply. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
 
 ## Depends on / Used by
 

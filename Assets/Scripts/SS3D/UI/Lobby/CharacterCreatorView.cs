@@ -45,6 +45,9 @@ namespace SS3D.UI.Lobby
 
         public event Action<int> PreviewAngleChanged;
 
+        /// <summary>Fired when a body morph slider changes (live preview).</summary>
+        public event Action<IReadOnlyDictionary<string, float>> BodyMorphsChanged;
+
         public CharacterCreatorView(LobbyAssetCatalog catalog)
         {
             _catalog = catalog;
@@ -81,6 +84,7 @@ namespace SS3D.UI.Lobby
             ReturnToLobbyRequested = null;
             CharacterSaved = null;
             PreviewAngleChanged = null;
+            BodyMorphsChanged = null;
             if (_root != null && _root.parent != null)
             {
                 _root.parent.Remove(_root);
@@ -115,20 +119,40 @@ namespace SS3D.UI.Lobby
         {
             SetVisible(true);
             PreviewAngleChanged?.Invoke(_angleIndex);
+            NotifyBodyMorphsChanged();
         }
 
         public void ApplyDraft(CharacterCreatorDraft draft)
         {
-            if (draft == null || string.IsNullOrWhiteSpace(draft.Name))
+            if (draft == null)
             {
                 return;
             }
 
-            _editName = draft.Name;
+            if (!string.IsNullOrWhiteSpace(draft.Name))
+            {
+                _editName = draft.Name;
+            }
+
+            foreach (KeyValuePair<string, float> pair in draft.BodyMorphs)
+            {
+                _sliders[pair.Key] = pair.Value;
+            }
+
             if (_root != null && _root.style.display == DisplayStyle.Flex)
             {
                 Rebuild();
             }
+
+            NotifyBodyMorphsChanged();
+        }
+
+        /// <summary>Current body slider values (0–1) for live booth apply.</summary>
+        public IReadOnlyDictionary<string, float> CurrentBodyMorphs => _sliders;
+
+        public void NotifyBodyMorphsChanged()
+        {
+            BodyMorphsChanged?.Invoke(_sliders);
         }
 
         public void SetPreviewTexture(Texture texture)
@@ -540,6 +564,7 @@ namespace SS3D.UI.Lobby
             {
                 _sliders[key] = evt.newValue;
                 valueLabel.text = Mathf.RoundToInt(evt.newValue * 100f).ToString();
+                NotifyBodyMorphsChanged();
             });
             row.Add(slider);
             return row;
@@ -761,6 +786,7 @@ namespace SS3D.UI.Lobby
             {
                 Name = string.IsNullOrWhiteSpace(_editName) ? LobbyMockData.CharacterName : _editName.Trim(),
             };
+            draft.CopyMorphsFrom(_sliders);
             _editName = draft.Name;
             CharacterSaved?.Invoke(draft);
         }
