@@ -18,6 +18,7 @@ namespace SS3D.UI.Lobby
         [SerializeField] private Sprite _previewPlaceholder;
         [SerializeField] private Sprite _serverInfoBanner;
         [SerializeField] private Texture2D _chevronDown;
+        [SerializeField] private GameObject _previewHumanPrefab;
         [SerializeField] private List<LobbyNamedSprite> _jobIcons = new();
         [SerializeField] private List<LobbyNamedTexture> _departmentIcons = new();
         [SerializeField] private List<LobbyNamedSprite> _loadoutThumbs = new();
@@ -29,6 +30,8 @@ namespace SS3D.UI.Lobby
         public Sprite ServerInfoBanner => _serverInfoBanner;
 
         public Texture2D ChevronDown => _chevronDown;
+
+        public GameObject PreviewHumanPrefab => _previewHumanPrefab;
 
         public bool TryGetJobIcon(string id, out Sprite sprite) => TryGetNamedSprite(_jobIcons, id, out sprite);
 
@@ -64,6 +67,12 @@ namespace SS3D.UI.Lobby
                 return false;
             }
 
+            if (_previewHumanPrefab == null)
+            {
+                missingField = "previewHumanPrefab";
+                return false;
+            }
+
             missingField = null;
             return true;
         }
@@ -74,6 +83,7 @@ namespace SS3D.UI.Lobby
             Sprite previewPlaceholder,
             Sprite serverInfoBanner,
             Texture2D chevronDown,
+            GameObject previewHumanPrefab,
             List<LobbyNamedSprite> jobIcons,
             List<LobbyNamedTexture> departmentIcons,
             List<LobbyNamedSprite> loadoutThumbs)
@@ -82,6 +92,7 @@ namespace SS3D.UI.Lobby
             _previewPlaceholder = previewPlaceholder;
             _serverInfoBanner = serverInfoBanner;
             _chevronDown = chevronDown;
+            _previewHumanPrefab = previewHumanPrefab;
             _jobIcons = jobIcons ?? new List<LobbyNamedSprite>();
             _departmentIcons = departmentIcons ?? new List<LobbyNamedTexture>();
             _loadoutThumbs = loadoutThumbs ?? new List<LobbyNamedSprite>();

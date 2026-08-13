@@ -1,5 +1,6 @@
 using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
 using UnityEngine;
@@ -9,7 +10,7 @@ namespace SS3D.UI.Lobby
 {
     /// <summary>
     /// Self-bootstrapping host for the UITK pre-round lobby shell and Character Creator.
-    /// Attaches into <see cref="UiLayer.Modal"/>. Phase A/B are visual + local mock state;
+    /// Attaches into <see cref="UiLayer.Modal"/>. Phase E1: live booth preview + local draft.
     /// Phase C gates visibility on spawn/round state and retires the condemned uGUI lobby.
     /// </summary>
     public sealed class LobbyUiSubSystem : SubSystem
@@ -17,6 +18,8 @@ namespace SS3D.UI.Lobby
         private LobbyAssetCatalog _catalog;
         private LobbyShellView _shellView;
         private CharacterCreatorView _creatorView;
+        private CharacterPreviewBooth _booth;
+        private CharacterCreatorDraft _draft;
         private bool _attached;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -44,10 +47,13 @@ namespace SS3D.UI.Lobby
             if (_creatorView != null)
             {
                 _creatorView.ReturnToLobbyRequested -= HandleReturnToLobbyRequested;
+                _creatorView.CharacterSaved -= HandleCharacterSaved;
+                _creatorView.PreviewAngleChanged -= HandlePreviewAngleChanged;
                 _creatorView.Detach();
                 _creatorView = null;
             }
 
+            DisposeBooth();
             base.OnDestroyed();
         }
 
@@ -65,7 +71,6 @@ namespace SS3D.UI.Lobby
         {
             if (!TryEnsureCatalog())
             {
-                // Permanent failure until catalogs are rebuilt — stop retrying.
                 _attached = true;
                 return;
             }
@@ -73,26 +78,29 @@ namespace SS3D.UI.Lobby
             if (!SubSystems.TryGet(out UiShellSubSystem uiShell)
                 || !uiShell.TryGetLayer(UiLayer.Modal, out VisualElement modalLayer))
             {
-                // Shell may not have bootstrapped yet — retry next frame.
                 return;
             }
 
             _attached = true;
             InputInterface.RegisterDocument(uiShell.Document);
 
+            _draft = new CharacterCreatorDraft();
+
             _shellView = new LobbyShellView(_catalog);
             _shellView.Attach(modalLayer);
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
+            _shellView.SetCharacterName(_draft.Name);
 
             _creatorView = new CharacterCreatorView(_catalog);
             _creatorView.Attach(modalLayer);
             _creatorView.ReturnToLobbyRequested += HandleReturnToLobbyRequested;
+            _creatorView.CharacterSaved += HandleCharacterSaved;
+            _creatorView.PreviewAngleChanged += HandlePreviewAngleChanged;
+            _creatorView.ApplyDraft(_draft);
 
-            // Phase A/B: keep lobby visible for visual QA. Old uGUI LobbyCanvas may still draw
-            // underneath or above depending on canvas sort — disable that canvas while checking.
             _shellView.SetVisible(true);
             _creatorView.SetVisible(false);
-            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase A/B mock data).");
+            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 preview).");
         }
 
         private bool TryEnsureCatalog()
@@ -131,6 +139,12 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            if (!EnsureBooth())
+            {
+                Debug.LogWarning("[Lobby] Character Creator opened without live preview (human prefab missing).");
+            }
+
+            PushPreviewTexture();
             _shellView.SetVisible(false);
             _creatorView.Open();
             Debug.Log("[Lobby] Character Creator opened.");
@@ -143,9 +157,76 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            if (_booth != null)
+            {
+                // Keep booth warm for lobby sidebar RT; camera stays on.
+                _booth.SetActive(true);
+            }
+
+            PushPreviewTexture();
+            _shellView.SetCharacterName(_draft?.Name ?? LobbyMockData.CharacterName);
             _creatorView.SetVisible(false);
             _shellView.SetVisible(true);
             Debug.Log("[Lobby] Returned to Lobby Shell from Character Creator.");
+        }
+
+        private void HandleCharacterSaved(CharacterCreatorDraft draft)
+        {
+            if (draft == null)
+            {
+                return;
+            }
+
+            _draft = draft;
+            _shellView?.SetCharacterName(_draft.Name);
+            Debug.Log($"[Lobby] Character draft saved locally: {_draft.Name}");
+        }
+
+        private void HandlePreviewAngleChanged(int angleIndex)
+        {
+            if (_booth != null)
+            {
+                _booth.SetAngleIndex(angleIndex);
+            }
+        }
+
+        private bool EnsureBooth()
+        {
+            if (_booth != null)
+            {
+                _booth.SetActive(true);
+                return _booth.PreviewTexture != null;
+            }
+
+            GameObject prefab = _catalog != null ? _catalog.PreviewHumanPrefab : null;
+            if (prefab == null)
+            {
+                return false;
+            }
+
+            GameObject host = new("CharacterPreviewBooth");
+            DontDestroyOnLoad(host);
+            _booth = host.AddComponent<CharacterPreviewBooth>();
+            _booth.Initialize(prefab);
+            return _booth.PreviewTexture != null;
+        }
+
+        private void PushPreviewTexture()
+        {
+            Texture texture = _booth != null ? _booth.PreviewTexture : null;
+            _creatorView?.SetPreviewTexture(texture);
+            _shellView?.SetPreviewTexture(texture);
+        }
+
+        private void DisposeBooth()
+        {
+            if (_booth == null)
+            {
+                return;
+            }
+
+            _booth.DisposeBooth();
+            _booth = null;
         }
     }
 }

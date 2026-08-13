@@ -29,6 +29,8 @@ namespace SS3D.UI.Lobby
         private Button _readyButton;
         private Button _adminButton;
         private VisualElement _previewImage;
+        private Label _characterNameLabel;
+        private Texture _livePreviewTexture;
 
         private string _activeTab = TabServerInfo;
         private bool _ready = true;
@@ -88,6 +90,8 @@ namespace SS3D.UI.Lobby
             _readyButton = null;
             _adminButton = null;
             _previewImage = null;
+            _characterNameLabel = null;
+            _livePreviewTexture = null;
             _root?.RemoveFromHierarchy();
             _root = null;
         }
@@ -101,6 +105,46 @@ namespace SS3D.UI.Lobby
 
             _root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             _root.pickingMode = visible ? PickingMode.Position : PickingMode.Ignore;
+        }
+
+        public void SetCharacterName(string name)
+        {
+            string display = string.IsNullOrWhiteSpace(name) ? LobbyMockData.CharacterName : name.Trim();
+            if (_characterNameLabel != null)
+            {
+                _characterNameLabel.text = display.ToUpperInvariant();
+            }
+        }
+
+        public void SetPreviewTexture(Texture texture)
+        {
+            _livePreviewTexture = texture;
+            ApplyPreviewFallbackOrLive();
+        }
+
+        private void ApplyPreviewFallbackOrLive()
+        {
+            if (_previewImage == null)
+            {
+                return;
+            }
+
+            if (_livePreviewTexture is RenderTexture renderTexture)
+            {
+                _previewImage.style.backgroundImage = Background.FromRenderTexture(renderTexture);
+                return;
+            }
+
+            if (_livePreviewTexture is Texture2D texture2D)
+            {
+                _previewImage.style.backgroundImage = new StyleBackground(texture2D);
+                return;
+            }
+
+            if (_catalog != null && _catalog.PreviewPlaceholder != null)
+            {
+                _previewImage.style.backgroundImage = new StyleBackground(_catalog.PreviewPlaceholder);
+            }
         }
 
         private void BuildChrome(VisualElement window)
@@ -195,11 +239,11 @@ namespace SS3D.UI.Lobby
             roundPanel.Add(roundBody);
             sidebar.Add(roundPanel);
 
-            Label characterName = new(LobbyMockData.CharacterName.ToUpperInvariant());
-            characterName.AddToClassList("lobby-shell__character-name");
-            characterName.AddToClassList("font-arcade");
-            characterName.pickingMode = PickingMode.Ignore;
-            sidebar.Add(characterName);
+            _characterNameLabel = new Label(LobbyMockData.CharacterName.ToUpperInvariant());
+            _characterNameLabel.AddToClassList("lobby-shell__character-name");
+            _characterNameLabel.AddToClassList("font-arcade");
+            _characterNameLabel.pickingMode = PickingMode.Ignore;
+            sidebar.Add(_characterNameLabel);
 
             VisualElement preview = new();
             preview.AddToClassList("lobby-shell__preview");
@@ -209,11 +253,7 @@ namespace SS3D.UI.Lobby
             _previewImage = new VisualElement();
             _previewImage.AddToClassList("lobby-shell__preview-image");
             _previewImage.pickingMode = PickingMode.Ignore;
-            if (_catalog != null && _catalog.PreviewPlaceholder != null)
-            {
-                _previewImage.style.backgroundImage = new StyleBackground(_catalog.PreviewPlaceholder);
-            }
-
+            ApplyPreviewFallbackOrLive();
             preview.Add(_previewImage);
 
             Label previewHint = new("Click to open character creator");

@@ -21,6 +21,7 @@ namespace SS3D.UI.Lobby
         private Label _loadoutNameLabel;
         private VisualElement _loadoutThumb;
         private VisualElement _loadoutMenu;
+        private Texture _livePreviewTexture;
 
         private int _stepIndex;
         private string _editName = LobbyMockData.CharacterName;
@@ -39,6 +40,10 @@ namespace SS3D.UI.Lobby
         private readonly Dictionary<string, float> _sliders = new();
 
         public event Action ReturnToLobbyRequested;
+
+        public event Action<CharacterCreatorDraft> CharacterSaved;
+
+        public event Action<int> PreviewAngleChanged;
 
         public CharacterCreatorView(LobbyAssetCatalog catalog)
         {
@@ -74,6 +79,8 @@ namespace SS3D.UI.Lobby
         public void Detach()
         {
             ReturnToLobbyRequested = null;
+            CharacterSaved = null;
+            PreviewAngleChanged = null;
             if (_root != null && _root.parent != null)
             {
                 _root.parent.Remove(_root);
@@ -86,6 +93,7 @@ namespace SS3D.UI.Lobby
             _loadoutNameLabel = null;
             _loadoutThumb = null;
             _loadoutMenu = null;
+            _livePreviewTexture = null;
         }
 
         public void SetVisible(bool visible)
@@ -106,6 +114,27 @@ namespace SS3D.UI.Lobby
         public void Open()
         {
             SetVisible(true);
+            PreviewAngleChanged?.Invoke(_angleIndex);
+        }
+
+        public void ApplyDraft(CharacterCreatorDraft draft)
+        {
+            if (draft == null || string.IsNullOrWhiteSpace(draft.Name))
+            {
+                return;
+            }
+
+            _editName = draft.Name;
+            if (_root != null && _root.style.display == DisplayStyle.Flex)
+            {
+                Rebuild();
+            }
+        }
+
+        public void SetPreviewTexture(Texture texture)
+        {
+            _livePreviewTexture = texture;
+            RefreshPreview();
         }
 
         private void BuildChrome(VisualElement window)
@@ -200,6 +229,7 @@ namespace SS3D.UI.Lobby
             {
                 _angleIndex = (_angleIndex + CharacterCreatorMockData.AngleLabels.Length - 1)
                     % CharacterCreatorMockData.AngleLabels.Length;
+                PreviewAngleChanged?.Invoke(_angleIndex);
                 RefreshPreview();
             })
             {
@@ -217,6 +247,7 @@ namespace SS3D.UI.Lobby
             Button nextAngle = new(() =>
             {
                 _angleIndex = (_angleIndex + 1) % CharacterCreatorMockData.AngleLabels.Length;
+                PreviewAngleChanged?.Invoke(_angleIndex);
                 RefreshPreview();
             })
             {
@@ -601,7 +632,7 @@ namespace SS3D.UI.Lobby
                 CharacterCreatorMockData.StyleLabel("hair", _selectedHair)));
             panel.Add(summary);
 
-            Button save = new(() => Debug.Log($"[Lobby] Save character stub: {_editName} / {_species}"))
+            Button save = new(SaveCharacter)
             {
                 text = "SAVE CHARACTER",
             };
@@ -701,15 +732,37 @@ namespace SS3D.UI.Lobby
                 _angleLabel.text = CharacterCreatorMockData.AngleLabels[_angleIndex];
             }
 
+            if (_previewImage == null)
+            {
+                return;
+            }
+
+            _previewImage.style.scale = new Scale(Vector3.one);
+
+            if (_livePreviewTexture is RenderTexture renderTexture)
+            {
+                _previewImage.style.backgroundImage = Background.FromRenderTexture(renderTexture);
+                return;
+            }
+
+            if (_livePreviewTexture is Texture2D texture2D)
+            {
+                _previewImage.style.backgroundImage = new StyleBackground(texture2D);
+                return;
+            }
+
             CharacterCreatorMockData.LoadoutDef loadout = SelectedLoadout();
             ApplyThumb(_previewImage, loadout.ThumbId);
-            if (_previewImage != null)
+        }
+
+        private void SaveCharacter()
+        {
+            CharacterCreatorDraft draft = new()
             {
-                // Side/Back: flip as a Phase B stand-in until live preview exists.
-                _previewImage.style.scale = _angleIndex == 1
-                    ? new Scale(new Vector3(-1f, 1f, 1f))
-                    : new Scale(Vector3.one);
-            }
+                Name = string.IsNullOrWhiteSpace(_editName) ? LobbyMockData.CharacterName : _editName.Trim(),
+            };
+            _editName = draft.Name;
+            CharacterSaved?.Invoke(draft);
         }
 
         private CharacterCreatorMockData.LoadoutDef SelectedLoadout()

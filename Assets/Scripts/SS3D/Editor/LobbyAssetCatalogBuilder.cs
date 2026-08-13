@@ -56,6 +56,7 @@ namespace SS3D.Editor
             Sprite banner = LoadRequiredSprite(LobbyAssetPaths.ServerInfoBanner, missing);
             // Heroicons are Default Texture2D (not Sprite) — load as textures for UITK backgrounds.
             Texture2D chevron = LoadRequiredTexture(LobbyAssetPaths.ChevronDownIcon, missing);
+            GameObject previewHuman = LoadRequired<GameObject>(LobbyAssetPaths.PreviewHumanPrefab, missing);
 
             List<LobbyNamedSprite> jobIcons = new();
             if (Directory.Exists(LobbyAssetPaths.JobIconRoot))
@@ -130,6 +131,7 @@ namespace SS3D.Editor
                 preview,
                 banner,
                 chevron,
+                previewHuman,
                 jobIcons,
                 departmentIcons,
                 loadoutThumbs);

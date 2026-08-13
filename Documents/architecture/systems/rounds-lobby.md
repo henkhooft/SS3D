@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 66ba71066 — 2026-08-02
+> Verified: 473f62eea — 2026-08-13
 
 # Rounds / lobby
 
@@ -9,7 +9,9 @@
 
 Round lifecycle state machine with single-flight `CancellationTokenSource` (prevents double start/stop and embark-during-ending races). States: `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. `PrepareRound` awaits `WorldReadinessSubSystem` `WorldReady` (not a fixed 500 ms delay).
 
-**UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md). Mock data only; not wired to Ready/round APIs yet.
+**UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
+preview on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
+Ready/round APIs and appearance apply (E2) still pending.
 
 **Condemned UI:** lobby job-select / ready uGUI (`Systems/Lobby/UI`, `LobbyCanvas`) — do not extend; replace per [lobby.md](../../design/lobby.md). Round state machine is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
@@ -17,7 +19,8 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell + Character Creator host; attaches into Modal
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — full-screen lobby chrome (tabs + sidebar)
-- `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator (Phase B visual)
+- `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator
+- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights)
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
@@ -35,6 +38,8 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 - **Phase A double UI:** UITK shell shows on attach while condemned `LobbyCanvas` may still be active. Disable the old canvas in the Hierarchy when visually checking the new shell.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort.
+- **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
+- **E1 vs E2:** Save only stores a local name draft; hair/species/morphs do not yet apply to the dummy or spawn.
 
 ## Depends on / Used by
 
