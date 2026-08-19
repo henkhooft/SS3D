@@ -113,7 +113,11 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            Object.Instantiate(prefab, socket, false);
+            GameObject instance = Object.Instantiate(prefab, socket, false);
+            instance.name = prefab.name;
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
         }
 
         private static void ApplyHairTint(Transform socket, Color color)

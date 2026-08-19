@@ -431,7 +431,12 @@ namespace SS3D.Systems.Entities.Character
                     animator.enabled = true;
                     animator.speed = 1f;
                     animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-                    animator.SetFloat(Animations.Humanoid.MovementSpeed, 0f);
+                    // Make preview motion more readable than subtle idle.
+                    animator.SetFloat(Animations.Humanoid.MovementSpeed, 1f);
+                    animator.SetFloat(Animations.Humanoid.VelX, 0f);
+                    animator.SetFloat(Animations.Humanoid.VelZ, 1f);
+                    animator.SetFloat(Animations.Humanoid.Turn, 0f);
+                    animator.SetBool(Animations.Humanoid.Floating, false);
                     continue;
                 }
 
