@@ -245,7 +245,7 @@ namespace SS3D.Editor
                 found.Add((id, prefab));
             }
 
-            found.Sort((a, b) => string.Compare(a.id, b.id, System.StringComparison.Ordinal));
+            found.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
             foreach ((string id, GameObject prefab) in found)
             {
                 list.Add(new LobbyNamedPrefab(id, prefab));
