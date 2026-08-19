@@ -124,6 +124,9 @@ namespace SS3D.Systems.Entities.Character
             }
 
             HumanoidStyleApplier.Apply(_dummy, hairPrefab, beardPrefab, hairColor);
+
+            // Hair prefabs are spawned after EnsureDummy, so their layer must be fixed up here.
+            SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
 
         public void DisposeBooth()
