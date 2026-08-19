@@ -109,6 +109,23 @@ namespace SS3D.Systems.Entities.Character
             // Do not reframe — auto-fit would cancel height scale in the viewport.
         }
 
+        /// <summary>
+        /// Spawns / swaps the hair and beard prefabs on the preview dummy and tints them.
+        /// Pass null prefabs to clear the slot (show no hair / beard).
+        /// </summary>
+        public void ApplyStyle(
+            GameObject hairPrefab,
+            GameObject beardPrefab,
+            Color hairColor)
+        {
+            if (_dummy == null)
+            {
+                return;
+            }
+
+            HumanoidStyleApplier.Apply(_dummy, hairPrefab, beardPrefab, hairColor);
+        }
+
         public void DisposeBooth()
         {
             SetActive(false);

@@ -5,6 +5,7 @@ using SS3D.UI.Lobby;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Color = UnityEngine.Color;
 
 namespace SS3D.Editor
 {
@@ -14,6 +15,38 @@ namespace SS3D.Editor
     /// </summary>
     public static class LobbyAssetCatalogBuilder
     {
+        /// <summary>Hair prefabs are auto-discovered from this folder, sorted alphabetically. Index 0 is the "None" sentinel (null).</summary>
+        private const string HairPrefabRoot = "Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanHair/Head";
+
+        /// <summary>Beard/facial-hair prefabs are auto-discovered from this folder.</summary>
+        private const string BeardPrefabRoot = "Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanHair/Face";
+
+        /// <summary>
+        /// Default hair colour palette. These are authored here rather than as assets because
+        /// they are simple named swatches and adding a new colour only needs a code change + rebuild.
+        /// </summary>
+        private static readonly (string Id, Color Color)[] DefaultHairColors =
+        {
+            ("black",       new Color(0.07f, 0.07f, 0.07f)),
+            ("dark-brown",  new Color(0.25f, 0.13f, 0.07f)),
+            ("brown",       new Color(0.47f, 0.26f, 0.13f)),
+            ("auburn",      new Color(0.55f, 0.20f, 0.09f)),
+            ("light-brown", new Color(0.62f, 0.42f, 0.22f)),
+            ("dark-blonde", new Color(0.72f, 0.57f, 0.26f)),
+            ("blonde",      new Color(0.93f, 0.82f, 0.49f)),
+            ("platinum",    new Color(0.96f, 0.96f, 0.92f)),
+            ("grey",        new Color(0.55f, 0.55f, 0.55f)),
+            ("white",       new Color(0.95f, 0.95f, 0.95f)),
+            ("red",         new Color(0.72f, 0.15f, 0.08f)),
+            ("ginger",      new Color(0.87f, 0.39f, 0.10f)),
+            ("strawberry",  new Color(0.96f, 0.64f, 0.50f)),
+            ("pink",        new Color(0.97f, 0.63f, 0.74f)),
+            ("purple",      new Color(0.50f, 0.17f, 0.72f)),
+            ("blue",        new Color(0.14f, 0.32f, 0.87f)),
+            ("green",       new Color(0.10f, 0.60f, 0.25f)),
+            ("teal",        new Color(0.08f, 0.62f, 0.62f)),
+        };
+
         private static readonly (string Id, string FileName)[] DepartmentIconFiles =
         {
             ("command", "OfficeBuilding.png"),
@@ -104,6 +137,19 @@ namespace SS3D.Editor
                 loadoutThumbs.Add(new LobbyNamedSprite("PnJanitor", janitorThumb));
             }
 
+            // Hair: index 0 is the "none" sentinel (null prefab), then alpha-sorted discoveries.
+            List<LobbyNamedPrefab> hairStyles = new() { new LobbyNamedPrefab("none", null) };
+            hairStyles.AddRange(DiscoverPrefabs(HairPrefabRoot));
+
+            List<LobbyNamedPrefab> beardStyles = new() { new LobbyNamedPrefab("none", null) };
+            beardStyles.AddRange(DiscoverPrefabs(BeardPrefabRoot));
+
+            List<Color> hairColors = new();
+            foreach ((string _, Color c) in DefaultHairColors)
+            {
+                hairColors.Add(c);
+            }
+
             if (missing.Count > 0)
             {
                 error = "Lobby asset catalog rebuild failed. Missing assets:\n- "
@@ -134,7 +180,10 @@ namespace SS3D.Editor
                 previewHuman,
                 jobIcons,
                 departmentIcons,
-                loadoutThumbs);
+                loadoutThumbs,
+                hairStyles,
+                beardStyles,
+                hairColors);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;
@@ -171,6 +220,38 @@ namespace SS3D.Editor
             }
 
             return texture;
+        }
+
+        private static List<LobbyNamedPrefab> DiscoverPrefabs(string folder)
+        {
+            List<LobbyNamedPrefab> list = new();
+            if (!Directory.Exists(folder))
+            {
+                return list;
+            }
+
+            string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
+            List<(string id, GameObject prefab)> found = new();
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null)
+                {
+                    continue;
+                }
+
+                string id = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+                found.Add((id, prefab));
+            }
+
+            found.Sort((a, b) => string.Compare(a.id, b.id, System.StringComparison.Ordinal));
+            foreach ((string id, GameObject prefab) in found)
+            {
+                list.Add(new LobbyNamedPrefab(id, prefab));
+            }
+
+            return list;
         }
     }
 }

@@ -23,6 +23,15 @@ namespace SS3D.UI.Lobby
         [SerializeField] private List<LobbyNamedTexture> _departmentIcons = new();
         [SerializeField] private List<LobbyNamedSprite> _loadoutThumbs = new();
 
+        /// <summary>Ordered head-hair prefabs. Index 0 = None (no prefab).</summary>
+        [SerializeField] private List<LobbyNamedPrefab> _hairStyles = new();
+
+        /// <summary>Ordered facial-hair prefabs. Index 0 = None.</summary>
+        [SerializeField] private List<LobbyNamedPrefab> _beardStyles = new();
+
+        /// <summary>Hair / skin tint colours shown in the Body colour pickers.</summary>
+        [SerializeField] private List<Color> _hairColors = new();
+
         public StyleSheet LobbyStyle => _lobbyStyle;
 
         public Sprite PreviewPlaceholder => _previewPlaceholder;
@@ -33,6 +42,12 @@ namespace SS3D.UI.Lobby
 
         public GameObject PreviewHumanPrefab => _previewHumanPrefab;
 
+        public IReadOnlyList<LobbyNamedPrefab> HairStyles => _hairStyles;
+
+        public IReadOnlyList<LobbyNamedPrefab> BeardStyles => _beardStyles;
+
+        public IReadOnlyList<Color> HairColors => _hairColors;
+
         public bool TryGetJobIcon(string id, out Sprite sprite) => TryGetNamedSprite(_jobIcons, id, out sprite);
 
         public bool TryGetDepartmentIcon(string id, out Texture2D texture) =>
@@ -40,6 +55,36 @@ namespace SS3D.UI.Lobby
 
         public bool TryGetLoadoutThumb(string id, out Sprite sprite) =>
             TryGetNamedSprite(_loadoutThumbs, id, out sprite);
+
+        public GameObject GetHairStyle(int index)
+        {
+            if (_hairStyles == null || index <= 0 || index >= _hairStyles.Count)
+            {
+                return null;
+            }
+
+            return _hairStyles[index].Prefab;
+        }
+
+        public GameObject GetBeardStyle(int index)
+        {
+            if (_beardStyles == null || index <= 0 || index >= _beardStyles.Count)
+            {
+                return null;
+            }
+
+            return _beardStyles[index].Prefab;
+        }
+
+        public Color GetHairColor(int index)
+        {
+            if (_hairColors == null || _hairColors.Count == 0)
+            {
+                return new Color(0.5f, 0.28f, 0.19f);
+            }
+
+            return _hairColors[Mathf.Clamp(index, 0, _hairColors.Count - 1)];
+        }
 
         public bool HasRequiredAssets(out string missingField)
         {
@@ -86,7 +131,10 @@ namespace SS3D.UI.Lobby
             GameObject previewHumanPrefab,
             List<LobbyNamedSprite> jobIcons,
             List<LobbyNamedTexture> departmentIcons,
-            List<LobbyNamedSprite> loadoutThumbs)
+            List<LobbyNamedSprite> loadoutThumbs,
+            List<LobbyNamedPrefab> hairStyles,
+            List<LobbyNamedPrefab> beardStyles,
+            List<Color> hairColors)
         {
             _lobbyStyle = lobbyStyle;
             _previewPlaceholder = previewPlaceholder;
@@ -96,6 +144,9 @@ namespace SS3D.UI.Lobby
             _jobIcons = jobIcons ?? new List<LobbyNamedSprite>();
             _departmentIcons = departmentIcons ?? new List<LobbyNamedTexture>();
             _loadoutThumbs = loadoutThumbs ?? new List<LobbyNamedSprite>();
+            _hairStyles = hairStyles ?? new List<LobbyNamedPrefab>();
+            _beardStyles = beardStyles ?? new List<LobbyNamedPrefab>();
+            _hairColors = hairColors ?? new List<Color>();
         }
 #endif
 
@@ -139,6 +190,23 @@ namespace SS3D.UI.Lobby
             }
 
             return false;
+        }
+    }
+
+    [Serializable]
+    public sealed class LobbyNamedPrefab
+    {
+        public string Id;
+        public GameObject Prefab;
+
+        public LobbyNamedPrefab()
+        {
+        }
+
+        public LobbyNamedPrefab(string id, GameObject prefab)
+        {
+            Id = id;
+            Prefab = prefab;
         }
     }
 

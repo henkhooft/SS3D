@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace SS3D.UI.Lobby
 {
@@ -9,6 +10,23 @@ namespace SS3D.UI.Lobby
 
         /// <summary>Body slider keys → 0–1 values (see <see cref="CharacterCreatorMockData.BodySliders"/>).</summary>
         public Dictionary<string, float> BodyMorphs { get; } = CreateDefaultMorphs();
+
+        /// <summary>
+        /// Index into <see cref="LobbyAssetCatalog.HairStyles"/>.
+        /// 0 = no hair.
+        /// </summary>
+        public int HairStyleIndex;
+
+        /// <summary>
+        /// Index into <see cref="LobbyAssetCatalog.BeardStyles"/>.
+        /// 0 = no beard.
+        /// </summary>
+        public int BeardStyleIndex;
+
+        /// <summary>
+        /// Index into <see cref="LobbyAssetCatalog.HairColors"/>.
+        /// </summary>
+        public int HairColorIndex = 1;
 
         public static Dictionary<string, float> CreateDefaultMorphs()
         {

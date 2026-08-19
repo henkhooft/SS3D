@@ -50,8 +50,9 @@ namespace SS3D.UI.Lobby
                 _creatorView.ReturnToLobbyRequested -= HandleReturnToLobbyRequested;
                 _creatorView.CharacterSaved -= HandleCharacterSaved;
                 _creatorView.PreviewAngleChanged -= HandlePreviewAngleChanged;
-                _creatorView.BodyMorphsChanged -= HandleBodyMorphsChanged;
-                _creatorView.Detach();
+            _creatorView.BodyMorphsChanged -= HandleBodyMorphsChanged;
+            _creatorView.StyleChanged -= HandleStyleChanged;
+            _creatorView.Detach();
                 _creatorView = null;
             }
 
@@ -99,11 +100,12 @@ namespace SS3D.UI.Lobby
             _creatorView.CharacterSaved += HandleCharacterSaved;
             _creatorView.PreviewAngleChanged += HandlePreviewAngleChanged;
             _creatorView.BodyMorphsChanged += HandleBodyMorphsChanged;
+            _creatorView.StyleChanged += HandleStyleChanged;
             _creatorView.ApplyDraft(_draft);
 
             _shellView.SetVisible(true);
             _creatorView.SetVisible(false);
-            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + body morphs).");
+            Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + hair styles).");
         }
 
         private bool TryEnsureCatalog()
@@ -149,6 +151,7 @@ namespace SS3D.UI.Lobby
             else
             {
                 ApplyBodyMorphsToBooth(_creatorView.CurrentBodyMorphs);
+                _creatorView.NotifyStyleChanged();
             }
 
             PushPreviewTexture();
@@ -187,6 +190,7 @@ namespace SS3D.UI.Lobby
             _draft = draft;
             _shellView?.SetCharacterName(_draft.Name);
             ApplyBodyMorphsToBooth(_draft.BodyMorphs);
+            ApplyStyleToBooth(_draft.HairStyleIndex, _draft.BeardStyleIndex, _draft.HairColorIndex);
             Debug.Log($"[Lobby] Character draft saved locally: {_draft.Name}");
         }
 
@@ -206,6 +210,31 @@ namespace SS3D.UI.Lobby
             }
 
             ApplyBodyMorphsToBooth(morphs);
+        }
+
+        private void HandleStyleChanged(int hairIndex, int beardIndex, int colorIndex)
+        {
+            if (_draft != null)
+            {
+                _draft.HairStyleIndex = hairIndex;
+                _draft.BeardStyleIndex = beardIndex;
+                _draft.HairColorIndex = colorIndex;
+            }
+
+            ApplyStyleToBooth(hairIndex, beardIndex, colorIndex);
+        }
+
+        private void ApplyStyleToBooth(int hairIndex, int beardIndex, int colorIndex)
+        {
+            if (_booth == null || _catalog == null)
+            {
+                return;
+            }
+
+            GameObject hairPrefab = _catalog.GetHairStyle(hairIndex);
+            GameObject beardPrefab = _catalog.GetBeardStyle(beardIndex);
+            Color hairColor = _catalog.GetHairColor(colorIndex);
+            _booth.ApplyStyle(hairPrefab, beardPrefab, hairColor);
         }
 
         private void ApplyBodyMorphsToBooth(IReadOnlyDictionary<string, float> morphs)

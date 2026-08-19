@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -31,8 +32,9 @@ namespace SS3D.UI.Lobby
         private int _eyeColorIndex;
         private int _angleIndex;
         private string _styleTab = "hair";
-        private string _selectedHair = "beep";
-        private string _selectedFacial = "none";
+        // Catalog-backed style indices (0 = none).
+        private int _hairStyleIndex;
+        private int _beardStyleIndex;
         private string _selectedBrows = "thin";
         private string _loadoutId = CharacterCreatorMockData.Loadouts[0].Id;
         private bool _loadoutOpen;
@@ -47,6 +49,12 @@ namespace SS3D.UI.Lobby
 
         /// <summary>Fired when a body morph slider changes (live preview).</summary>
         public event Action<IReadOnlyDictionary<string, float>> BodyMorphsChanged;
+
+        /// <summary>
+        /// Fired when hair style, beard style, or hair colour selection changes.
+        /// Args: hairStyleIndex, beardStyleIndex, hairColorIndex.
+        /// </summary>
+        public event Action<int, int, int> StyleChanged;
 
         public CharacterCreatorView(LobbyAssetCatalog catalog)
         {
@@ -85,6 +93,7 @@ namespace SS3D.UI.Lobby
             CharacterSaved = null;
             PreviewAngleChanged = null;
             BodyMorphsChanged = null;
+            StyleChanged = null;
             if (_root != null && _root.parent != null)
             {
                 _root.parent.Remove(_root);
@@ -120,6 +129,7 @@ namespace SS3D.UI.Lobby
             SetVisible(true);
             PreviewAngleChanged?.Invoke(_angleIndex);
             NotifyBodyMorphsChanged();
+            NotifyStyleChanged();
         }
 
         public void ApplyDraft(CharacterCreatorDraft draft)
@@ -139,12 +149,17 @@ namespace SS3D.UI.Lobby
                 _sliders[pair.Key] = pair.Value;
             }
 
+            _hairStyleIndex = draft.HairStyleIndex;
+            _beardStyleIndex = draft.BeardStyleIndex;
+            _hairColorIndex = draft.HairColorIndex;
+
             if (_root != null && _root.style.display == DisplayStyle.Flex)
             {
                 Rebuild();
             }
 
             NotifyBodyMorphsChanged();
+            NotifyStyleChanged();
         }
 
         /// <summary>Current body slider values (0–1) for live booth apply.</summary>
@@ -153,6 +168,11 @@ namespace SS3D.UI.Lobby
         public void NotifyBodyMorphsChanged()
         {
             BodyMorphsChanged?.Invoke(_sliders);
+        }
+
+        public void NotifyStyleChanged()
+        {
+            StyleChanged?.Invoke(_hairStyleIndex, _beardStyleIndex, _hairColorIndex);
         }
 
         public void SetPreviewTexture(Texture texture)
@@ -515,12 +535,16 @@ namespace SS3D.UI.Lobby
             }
 
             panel.Add(FieldLabel("Hair Color"));
+            Color[] hairColors = _catalog != null && _catalog.HairColors != null && _catalog.HairColors.Count > 0
+                ? System.Linq.Enumerable.ToArray(_catalog.HairColors)
+                : CharacterCreatorMockData.HairColors;
             panel.Add(BuildColorRow(
-                CharacterCreatorMockData.HairColors,
+                hairColors,
                 _hairColorIndex,
                 index =>
                 {
                     _hairColorIndex = index;
+                    NotifyStyleChanged();
                     Rebuild();
                 }));
 
@@ -602,40 +626,120 @@ namespace SS3D.UI.Lobby
             VisualElement grid = new();
             grid.AddToClassList("char-creator__style-grid");
 
-            string selected = SelectedStyleOption();
-            foreach (CharacterCreatorMockData.StyleOptionDef opt in CharacterCreatorMockData.StyleOptionsFor(_styleTab))
+            switch (_styleTab)
             {
-                string key = opt.Key;
-                VisualElement tile = new();
-                tile.AddToClassList("char-creator__style-tile");
-                tile.EnableInClassList("char-creator__style-tile--selected", key == selected);
-                tile.pickingMode = PickingMode.Position;
-                tile.RegisterCallback<ClickEvent>(_ =>
+                case "facialHair":
                 {
-                    SetSelectedStyleOption(key);
-                    Rebuild();
-                });
-
-                if (opt.IsNone)
-                {
-                    Label noneMark = new("✕");
-                    noneMark.AddToClassList("char-creator__style-none");
-                    noneMark.AddToClassList("font-body");
-                    noneMark.pickingMode = PickingMode.Ignore;
-                    tile.Add(noneMark);
+                    BuildBeardTiles(grid);
+                    break;
                 }
 
-                Label tileLabel = new(opt.Label.ToUpperInvariant());
-                tileLabel.AddToClassList("char-creator__style-tile-label");
-                tileLabel.AddToClassList("font-body");
-                tileLabel.pickingMode = PickingMode.Ignore;
-                tile.Add(tileLabel);
-                grid.Add(tile);
+                case "eyebrows":
+                {
+                    BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("eyebrows"), _selectedBrows,
+                        key => { _selectedBrows = key; });
+                    break;
+                }
+
+                default:
+                {
+                    BuildHairTiles(grid);
+                    break;
+                }
             }
 
             gridScroll.Add(grid);
             panel.Add(gridScroll);
             host.Add(panel);
+        }
+
+        private void BuildHairTiles(VisualElement grid)
+        {
+            bool hasCatalog = _catalog != null && _catalog.HairStyles != null && _catalog.HairStyles.Count > 0;
+            if (!hasCatalog)
+            {
+                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("hair"), string.Empty, _ => { });
+                return;
+            }
+
+            for (int i = 0; i < _catalog.HairStyles.Count; i++)
+            {
+                int index = i;
+                LobbyNamedPrefab entry = _catalog.HairStyles[i];
+                bool isNone = i == 0;
+                string label = isNone ? "None" : entry.Id;
+                VisualElement tile = BuildStyleTile(label, isNone, _hairStyleIndex == index, () =>
+                {
+                    _hairStyleIndex = index;
+                    NotifyStyleChanged();
+                    Rebuild();
+                });
+                grid.Add(tile);
+            }
+        }
+
+        private void BuildBeardTiles(VisualElement grid)
+        {
+            bool hasCatalog = _catalog != null && _catalog.BeardStyles != null && _catalog.BeardStyles.Count > 0;
+            if (!hasCatalog)
+            {
+                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("facialHair"), string.Empty, _ => { });
+                return;
+            }
+
+            for (int i = 0; i < _catalog.BeardStyles.Count; i++)
+            {
+                int index = i;
+                LobbyNamedPrefab entry = _catalog.BeardStyles[i];
+                bool isNone = i == 0;
+                string label = isNone ? "None" : entry.Id;
+                VisualElement tile = BuildStyleTile(label, isNone, _beardStyleIndex == index, () =>
+                {
+                    _beardStyleIndex = index;
+                    NotifyStyleChanged();
+                    Rebuild();
+                });
+                grid.Add(tile);
+            }
+        }
+
+        private static void BuildMockStyleTiles(
+            VisualElement grid,
+            System.Collections.Generic.IReadOnlyList<CharacterCreatorMockData.StyleOptionDef> options,
+            string selectedKey,
+            Action<string> onSelect)
+        {
+            foreach (CharacterCreatorMockData.StyleOptionDef opt in options)
+            {
+                string key = opt.Key;
+                VisualElement tile = BuildStyleTile(opt.Label, opt.IsNone, key == selectedKey, () => onSelect(key));
+                grid.Add(tile);
+            }
+        }
+
+        private static VisualElement BuildStyleTile(string label, bool isNone, bool isSelected, Action onClick)
+        {
+            VisualElement tile = new();
+            tile.AddToClassList("char-creator__style-tile");
+            tile.EnableInClassList("char-creator__style-tile--selected", isSelected);
+            tile.pickingMode = PickingMode.Position;
+            tile.RegisterCallback<ClickEvent>(_ => onClick());
+
+            if (isNone)
+            {
+                Label noneMark = new("✕");
+                noneMark.AddToClassList("char-creator__style-none");
+                noneMark.AddToClassList("font-body");
+                noneMark.pickingMode = PickingMode.Ignore;
+                tile.Add(noneMark);
+            }
+
+            Label tileLabel = new(label.ToUpperInvariant());
+            tileLabel.AddToClassList("char-creator__style-tile-label");
+            tileLabel.AddToClassList("font-body");
+            tileLabel.pickingMode = PickingMode.Ignore;
+            tile.Add(tileLabel);
+            return tile;
         }
 
         private void BuildReview(VisualElement host)
@@ -652,9 +756,13 @@ namespace SS3D.UI.Lobby
             summary.AddToClassList("char-creator__review-card");
             summary.Add(ReviewLine("Name", _editName));
             summary.Add(ReviewLine("Species", _species));
-            summary.Add(ReviewLine(
-                "Hair",
-                CharacterCreatorMockData.StyleLabel("hair", _selectedHair)));
+            string hairLabel = _catalog != null
+                && _catalog.HairStyles != null
+                && _hairStyleIndex > 0
+                && _hairStyleIndex < _catalog.HairStyles.Count
+                ? _catalog.HairStyles[_hairStyleIndex].Id
+                : _hairStyleIndex == 0 ? "None" : "?";
+            summary.Add(ReviewLine("Hair", hairLabel));
             panel.Add(summary);
 
             Button save = new(SaveCharacter)
@@ -785,6 +893,9 @@ namespace SS3D.UI.Lobby
             CharacterCreatorDraft draft = new()
             {
                 Name = string.IsNullOrWhiteSpace(_editName) ? LobbyMockData.CharacterName : _editName.Trim(),
+                HairStyleIndex = _hairStyleIndex,
+                BeardStyleIndex = _beardStyleIndex,
+                HairColorIndex = _hairColorIndex,
             };
             draft.CopyMorphsFrom(_sliders);
             _editName = draft.Name;
@@ -804,36 +915,6 @@ namespace SS3D.UI.Lobby
             return CharacterCreatorMockData.Loadouts[0];
         }
 
-        private string SelectedStyleOption() => _styleTab switch
-        {
-            "facialHair" => _selectedFacial,
-            "eyebrows" => _selectedBrows,
-            _ => _selectedHair,
-        };
-
-        private void SetSelectedStyleOption(string key)
-        {
-            switch (_styleTab)
-            {
-                case "facialHair":
-                {
-                    _selectedFacial = key;
-                    break;
-                }
-
-                case "eyebrows":
-                {
-                    _selectedBrows = key;
-                    break;
-                }
-
-                default:
-                {
-                    _selectedHair = key;
-                    break;
-                }
-            }
-        }
 
         private void ApplyThumb(VisualElement target, string thumbId)
         {
