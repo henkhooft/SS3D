@@ -66,3 +66,36 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 75ead553c05c482fae442fad6748b24a, type: 3}
   - Id: PnJanitor
     Sprite: {fileID: 21300000, guid: 0c4c46a799be4c079d3544a17242efb4, type: 3}
+  _hairStyles:
+  - Id: none
+    Prefab: {fileID: 0}
+  - Id: humanhairanime
+    Prefab: {fileID: 5774385816057912484, guid: 0ee0ca265f940c142ac7275101586730, type: 3}
+  - Id: humanhairbeep
+    Prefab: {fileID: 5774385816057912484, guid: 55d79b8cdc40d5a4ea61ec53a77ee40d, type: 3}
+  - Id: humanhairfry
+    Prefab: {fileID: 5774385816057912484, guid: af9ab580a04337e4ca9b51a7e5162ea9, type: 3}
+  _beardStyles:
+  - Id: none
+    Prefab: {fileID: 0}
+  - Id: humanfacehairdanishfull
+    Prefab: {fileID: 5774385816057912484, guid: 2e0dd555bfcda7c4aa2d9bb994a9e2f2, type: 3}
+  _hairColors:
+  - {r: 0.07, g: 0.07, b: 0.07, a: 1}
+  - {r: 0.25, g: 0.13, b: 0.07, a: 1}
+  - {r: 0.47, g: 0.26, b: 0.13, a: 1}
+  - {r: 0.55, g: 0.2, b: 0.09, a: 1}
+  - {r: 0.62, g: 0.42, b: 0.22, a: 1}
+  - {r: 0.72, g: 0.57, b: 0.26, a: 1}
+  - {r: 0.93, g: 0.82, b: 0.49, a: 1}
+  - {r: 0.96, g: 0.96, b: 0.92, a: 1}
+  - {r: 0.55, g: 0.55, b: 0.55, a: 1}
+  - {r: 0.95, g: 0.95, b: 0.95, a: 1}
+  - {r: 0.72, g: 0.15, b: 0.08, a: 1}
+  - {r: 0.87, g: 0.39, b: 0.1, a: 1}
+  - {r: 0.96, g: 0.64, b: 0.5, a: 1}
+  - {r: 0.97, g: 0.63, b: 0.74, a: 1}
+  - {r: 0.5, g: 0.17, b: 0.72, a: 1}
+  - {r: 0.14, g: 0.32, b: 0.87, a: 1}
+  - {r: 0.1, g: 0.6, b: 0.25, a: 1}
+  - {r: 0.08, g: 0.62, b: 0.62, a: 1}
