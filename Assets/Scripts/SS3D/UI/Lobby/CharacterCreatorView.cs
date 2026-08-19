@@ -658,7 +658,15 @@ namespace SS3D.UI.Lobby
             bool hasCatalog = _catalog != null && _catalog.HairStyles != null && _catalog.HairStyles.Count > 0;
             if (!hasCatalog)
             {
-                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("hair"), string.Empty, _ => { });
+                // Hair prefabs not yet in catalog — run SS3D → Data → Rebuild All UI Catalogs.
+                Debug.LogWarning("[CharacterCreator] HairStyles list is empty. Run SS3D → Data → Rebuild All UI Catalogs.");
+                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("hair"), "none",
+                    _ =>
+                    {
+                        _hairStyleIndex = 0;
+                        NotifyStyleChanged();
+                        Rebuild();
+                    });
                 return;
             }
 
@@ -683,7 +691,13 @@ namespace SS3D.UI.Lobby
             bool hasCatalog = _catalog != null && _catalog.BeardStyles != null && _catalog.BeardStyles.Count > 0;
             if (!hasCatalog)
             {
-                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("facialHair"), string.Empty, _ => { });
+                BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("facialHair"), "none",
+                    _ =>
+                    {
+                        _beardStyleIndex = 0;
+                        NotifyStyleChanged();
+                        Rebuild();
+                    });
                 return;
             }
 
