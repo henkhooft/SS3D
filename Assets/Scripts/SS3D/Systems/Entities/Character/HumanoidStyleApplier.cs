@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Coimbra;
 using UnityEngine;
 
@@ -7,8 +6,8 @@ namespace SS3D.Systems.Entities.Character
     /// <summary>
     /// Applies hair / beard prefabs and hair colour tint to a humanoid preview dummy.
     ///
-    /// Hair prefabs are authored in model space under the Human "03 Hair" group. Sockets are
-    /// parented to the animated head bone using bind-pose offsets sampled from the baked meshes.
+    /// Static hair prefabs attach to the animated head bone at origin. Meshes are authored in
+    /// model space with a +Z-forward tilt, so the socket applies a -90° X correction.
     /// </summary>
     public static class HumanoidStyleApplier
     {
@@ -17,74 +16,11 @@ namespace SS3D.Systems.Entities.Character
         private const string FacialHairSocketName = "FacialHairSocket";
         private const string BakedHairName = "Hair";
         private const string BakedFacialHairName = "Facial Hair";
+
+        /// <summary>Corrects HumanHair FBX prefabs that point +Z instead of +Y on the head.</summary>
+        private static readonly Quaternion StyleMeshCorrection = Quaternion.Euler(-90f, 0f, 0f);
+
         private static readonly int ShaderColorId = Shader.PropertyToID("_BaseColor");
-
-        private static readonly Dictionary<int, StyleSocketOffsets> OffsetCache = new();
-
-        private struct StyleSocketOffsets
-        {
-            public bool HasHair;
-            public Vector3 HairLocalPosition;
-            public Quaternion HairLocalRotation;
-            public bool HasFacial;
-            public Vector3 FacialLocalPosition;
-            public Quaternion FacialLocalRotation;
-        }
-
-        /// <summary>
-        /// Samples baked hair / facial-hair transforms relative to the head bone (bind pose).
-        /// Call while the animator is at Speed=0 before enabling walk locomotion.
-        /// </summary>
-        public static void WarmOffsetCache(GameObject root)
-        {
-            if (root == null)
-            {
-                return;
-            }
-
-            int id = root.GetInstanceID();
-            if (OffsetCache.ContainsKey(id))
-            {
-                return;
-            }
-
-            Transform head = FindHead(root.transform);
-            if (head == null)
-            {
-                return;
-            }
-
-            Transform hairGroup = FindDescendant(root.transform, HairGroupName);
-            Transform bakedHair = FindDirectChild(hairGroup, BakedHairName);
-            Transform bakedFacial = FindDirectChild(hairGroup, BakedFacialHairName);
-
-            StyleSocketOffsets offsets = default;
-            if (bakedHair != null)
-            {
-                offsets.HasHair = true;
-                offsets.HairLocalPosition = head.InverseTransformPoint(bakedHair.position);
-                offsets.HairLocalRotation = Quaternion.Inverse(head.rotation) * bakedHair.rotation;
-            }
-
-            if (bakedFacial != null)
-            {
-                offsets.HasFacial = true;
-                offsets.FacialLocalPosition = head.InverseTransformPoint(bakedFacial.position);
-                offsets.FacialLocalRotation = Quaternion.Inverse(head.rotation) * bakedFacial.rotation;
-            }
-
-            OffsetCache[id] = offsets;
-        }
-
-        public static void ClearOffsetCache(GameObject root)
-        {
-            if (root == null)
-            {
-                return;
-            }
-
-            OffsetCache.Remove(root.GetInstanceID());
-        }
 
         /// <param name="root">Root GameObject of the preview dummy.</param>
         /// <param name="hairPrefab">Head hair prefab, or null for none.</param>
@@ -101,10 +37,8 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            WarmOffsetCache(root);
-
-            Transform hairSocket = EnsureSocket(root, HairSocketName, facial: false);
-            Transform facialSocket = EnsureSocket(root, FacialHairSocketName, facial: true);
+            Transform hairSocket = EnsureSocket(root, HairSocketName);
+            Transform facialSocket = EnsureSocket(root, FacialHairSocketName);
 
             DisableBakedStyleMeshes(root, hairSocket, facialSocket);
 
@@ -118,12 +52,12 @@ namespace SS3D.Systems.Entities.Character
             ApplyHairTint(facialSocket, hairColor);
         }
 
-        private static Transform EnsureSocket(GameObject root, string socketName, bool facial)
+        private static Transform EnsureSocket(GameObject root, string socketName)
         {
             Transform existing = FindDescendant(root.transform, socketName);
             if (existing != null)
             {
-                ApplySocketOffset(existing, root, facial);
+                ApplySocketTransform(existing);
                 return existing;
             }
 
@@ -132,43 +66,15 @@ namespace SS3D.Systems.Entities.Character
 
             GameObject socket = new(socketName);
             socket.transform.SetParent(parent, false);
-            ApplySocketOffset(socket.transform, root, facial);
-            socket.transform.localScale = Vector3.one;
+            ApplySocketTransform(socket.transform);
             return socket.transform;
         }
 
-        private static void ApplySocketOffset(Transform socket, GameObject root, bool facial)
+        private static void ApplySocketTransform(Transform socket)
         {
-            StyleSocketOffsets offsets = GetOffsets(root);
-            if (facial && offsets.HasFacial)
-            {
-                socket.localPosition = offsets.FacialLocalPosition;
-                socket.localRotation = offsets.FacialLocalRotation;
-                return;
-            }
-
-            if (!facial && offsets.HasHair)
-            {
-                socket.localPosition = offsets.HairLocalPosition;
-                socket.localRotation = offsets.HairLocalRotation;
-                return;
-            }
-
             socket.localPosition = Vector3.zero;
-            socket.localRotation = Quaternion.identity;
-        }
-
-        private static StyleSocketOffsets GetOffsets(GameObject root)
-        {
-            int id = root.GetInstanceID();
-            if (OffsetCache.TryGetValue(id, out StyleSocketOffsets offsets))
-            {
-                return offsets;
-            }
-
-            WarmOffsetCache(root);
-            OffsetCache.TryGetValue(id, out offsets);
-            return offsets;
+            socket.localRotation = StyleMeshCorrection;
+            socket.localScale = Vector3.one;
         }
 
         private static void DisableBakedStyleMeshes(
@@ -182,14 +88,9 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
-            Transform bakedHair = FindDirectChild(hairGroup, BakedHairName);
-            Transform bakedFacial = FindDirectChild(hairGroup, BakedFacialHairName);
-
-            DisableRendererOn(bakedHair, hairSocket, facialSocket);
-            DisableRendererOn(bakedFacial, hairSocket, facialSocket);
-
-            Transform bakedBrows = FindDirectChild(hairGroup, "Eyebrows");
-            DisableRendererOn(bakedBrows, hairSocket, facialSocket);
+            DisableRendererOn(FindDirectChild(hairGroup, BakedHairName), hairSocket, facialSocket);
+            DisableRendererOn(FindDirectChild(hairGroup, BakedFacialHairName), hairSocket, facialSocket);
+            DisableRendererOn(FindDirectChild(hairGroup, "Eyebrows"), hairSocket, facialSocket);
         }
 
         private static void DisableRendererOn(

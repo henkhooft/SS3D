@@ -137,7 +137,6 @@ namespace SS3D.Systems.Entities.Character
 
             if (_dummy != null)
             {
-                HumanoidStyleApplier.ClearOffsetCache(_dummy);
                 _dummy.Dispose(true);
                 _dummy = null;
             }
@@ -161,7 +160,6 @@ namespace SS3D.Systems.Entities.Character
         {
             if (_dummy != null)
             {
-                HumanoidStyleApplier.ClearOffsetCache(_dummy);
                 _dummy.Dispose(true);
                 _dummy = null;
             }
@@ -313,8 +311,6 @@ namespace SS3D.Systems.Entities.Character
 
             StripNetworking(_dummy);
             DisableGameplay(_dummy);
-            ConfigurePreviewLocomotion(_dummy, 0f, 0f);
-            HumanoidStyleApplier.WarmOffsetCache(_dummy);
             ConfigurePreviewLocomotion(_dummy, PreviewWalkSpeed, PreviewWalkSpeed);
             SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
