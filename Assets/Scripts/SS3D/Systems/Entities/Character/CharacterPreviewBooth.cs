@@ -21,6 +21,8 @@ namespace SS3D.Systems.Entities.Character
 
         private static readonly Vector3 BoothOrigin = new(-250f, -250f, -250f);
         private const float BaseYawDegrees = 180f;
+        /// <summary>Peaceful locomotion blend tree: ~0.3 = walk, 1.0 = run.</summary>
+        private const float PreviewWalkSpeed = 0.3f;
 
         [SerializeField] private GameObject _humanPrefab;
         [SerializeField] private Camera _previewCamera;
@@ -135,6 +137,7 @@ namespace SS3D.Systems.Entities.Character
 
             if (_dummy != null)
             {
+                HumanoidStyleApplier.ClearOffsetCache(_dummy);
                 _dummy.Dispose(true);
                 _dummy = null;
             }
@@ -158,6 +161,7 @@ namespace SS3D.Systems.Entities.Character
         {
             if (_dummy != null)
             {
+                HumanoidStyleApplier.ClearOffsetCache(_dummy);
                 _dummy.Dispose(true);
                 _dummy = null;
             }
@@ -309,6 +313,9 @@ namespace SS3D.Systems.Entities.Character
 
             StripNetworking(_dummy);
             DisableGameplay(_dummy);
+            ConfigurePreviewLocomotion(_dummy, 0f, 0f);
+            HumanoidStyleApplier.WarmOffsetCache(_dummy);
+            ConfigurePreviewLocomotion(_dummy, PreviewWalkSpeed, PreviewWalkSpeed);
             SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
 
@@ -431,16 +438,10 @@ namespace SS3D.Systems.Entities.Character
                     animator.enabled = true;
                     animator.speed = 1f;
                     animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-                    // Make preview motion more readable than subtle idle.
-                    animator.SetFloat(Animations.Humanoid.MovementSpeed, 1f);
-                    animator.SetFloat(Animations.Humanoid.VelX, 0f);
-                    animator.SetFloat(Animations.Humanoid.VelZ, 1f);
-                    animator.SetFloat(Animations.Humanoid.Turn, 0f);
-                    animator.SetBool(Animations.Humanoid.Floating, false);
                     continue;
                 }
 
-                // Leave only the Animator driving an idle pose; strip everything else.
+                // Leave only the Animator driving preview locomotion; strip everything else.
                 behaviour.enabled = false;
             }
 
@@ -455,6 +456,25 @@ namespace SS3D.Systems.Entities.Character
             {
                 body.isKinematic = true;
                 body.detectCollisions = false;
+            }
+        }
+
+        private static void ConfigurePreviewLocomotion(GameObject root, float speed, float velZ)
+        {
+            Animator[] animators = root.GetComponentsInChildren<Animator>(true);
+            for (int i = 0; i < animators.Length; i++)
+            {
+                Animator animator = animators[i];
+                if (animator == null)
+                {
+                    continue;
+                }
+
+                animator.SetFloat(Animations.Humanoid.MovementSpeed, speed);
+                animator.SetFloat(Animations.Humanoid.VelX, 0f);
+                animator.SetFloat(Animations.Humanoid.VelZ, velZ);
+                animator.SetFloat(Animations.Humanoid.Turn, 0f);
+                animator.SetBool(Animations.Humanoid.Floating, false);
             }
         }
     }
