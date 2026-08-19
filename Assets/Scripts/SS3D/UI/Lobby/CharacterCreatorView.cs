@@ -536,7 +536,7 @@ namespace SS3D.UI.Lobby
 
             panel.Add(FieldLabel("Hair Color"));
             Color[] hairColors = _catalog != null && _catalog.HairColors != null && _catalog.HairColors.Count > 0
-                ? System.Linq.Enumerable.ToArray(_catalog.HairColors)
+                ? _catalog.HairColors.ToArray()
                 : CharacterCreatorMockData.HairColors;
             panel.Add(BuildColorRow(
                 hairColors,
@@ -756,12 +756,18 @@ namespace SS3D.UI.Lobby
             summary.AddToClassList("char-creator__review-card");
             summary.Add(ReviewLine("Name", _editName));
             summary.Add(ReviewLine("Species", _species));
-            string hairLabel = _catalog != null
+            string hairLabel;
+            if (_catalog != null
                 && _catalog.HairStyles != null
                 && _hairStyleIndex > 0
-                && _hairStyleIndex < _catalog.HairStyles.Count
-                ? _catalog.HairStyles[_hairStyleIndex].Id
-                : _hairStyleIndex == 0 ? "None" : "?";
+                && _hairStyleIndex < _catalog.HairStyles.Count)
+            {
+                hairLabel = _catalog.HairStyles[_hairStyleIndex].Id;
+            }
+            else
+            {
+                hairLabel = _hairStyleIndex == 0 ? "None" : "?";
+            }
             summary.Add(ReviewLine("Hair", hairLabel));
             panel.Add(summary);
 
