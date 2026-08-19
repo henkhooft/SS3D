@@ -1,3 +1,4 @@
+using Coimbra;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Character
@@ -58,7 +59,8 @@ namespace SS3D.Systems.Entities.Character
             }
 
             // Attach to head bone if found, otherwise to root.
-            Transform parent = FindDescendant(root.transform, "head") ?? root.transform;
+            Transform found = FindDescendant(root.transform, "head");
+            Transform parent = found != null ? found : root.transform;
 
             GameObject socket = new(socketName);
             socket.transform.SetParent(parent, false);
@@ -100,7 +102,7 @@ namespace SS3D.Systems.Entities.Character
 
             for (int i = socket.childCount - 1; i >= 0; i--)
             {
-                Object.Destroy(socket.GetChild(i).gameObject);
+                socket.GetChild(i).gameObject.Dispose(true);
             }
         }
 
