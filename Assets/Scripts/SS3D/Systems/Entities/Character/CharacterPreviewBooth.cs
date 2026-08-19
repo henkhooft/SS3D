@@ -1,6 +1,7 @@
 using Coimbra;
 using FishNet.Object;
 using FishNet.Observing;
+using SS3D.Systems.Entities.Data;
 using UnityEngine;
 #if UNITY_RENDER_PIPELINE_UNIVERSAL
 using UnityEngine.Rendering.Universal;
@@ -105,7 +106,7 @@ namespace SS3D.Systems.Entities.Character
             }
 
             HumanoidMorphApplier.Apply(_dummy, female, breasts, fat, muscle, jaw, height);
-            FrameCamera();
+            // Do not reframe — auto-fit would cancel height scale in the viewport.
         }
 
         public void DisposeBooth()
@@ -408,14 +409,14 @@ namespace SS3D.Systems.Entities.Character
                 if (behaviour is Animator animator)
                 {
                     animator.enabled = true;
-                    animator.speed = 0f;
+                    animator.speed = 1f;
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    animator.SetFloat(Animations.Humanoid.MovementSpeed, 0f);
                     continue;
                 }
 
-                if (behaviour is AudioListener)
-                {
-                    behaviour.enabled = false;
-                }
+                // Leave only the Animator driving an idle pose; strip everything else.
+                behaviour.enabled = false;
             }
 
             Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
