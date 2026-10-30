@@ -225,3 +225,12 @@ failed `compile.sh` with file:line, clean tree exit 0; injected post-Play `Chunk
 
 Final: `validate.sh --full` run `validate-20261030-173633` passed unattended on the restored tree
 (2093 EditMode, 122 visual, 28 lifecycle, build current, remote 17 checks).
+
+## Implementation notes — 2026-10-30 (uinput)
+
+Real OS input moved from xdotool to `Testing/ui/uinput_input.py serve` (stdlib-only virtual uinput
+pointer+keyboard, one device per remote run). On GNOME 49 Wayland, xdotool's XTEST went through
+Xwayland's libei RemoteDesktop portal and asked the owner for permission on every remote run. xdotool
+remains only for the client window lookup. `/dev/uinput` access comes from the session's uaccess ACL
+(Steam's udev rule on the owner's machine), so no new sudo rule was needed. Verified by
+`validate-20261030-193923` (remote 17 checks, chat line typed, no portal dialog in the journal).

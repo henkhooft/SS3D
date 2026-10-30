@@ -6,7 +6,7 @@
 #      Ongoing), then stop it;
 #   3. start a second round without this client readying (client late-joins), then stop it.
 # The client ckey must not hold Administrator permission. The Host must also perform os_* requests
-# (OsClick/OsType/OsKey test signals) as real input on this window, e.g. with xdotool.
+# (OsClick/OsType/OsKey test signals) as real input on this window (the pilot uses Testing/ui/uinput_input.py).
 wait_timeout 180
 wait_connected
 ui_wait #lobby-shell-surface visible
@@ -23,7 +23,7 @@ start_round
 wait_seconds 5
 ui_text .lobby-shell__countdown-sub Stopped
 
-# Real OS input from here to the chat line: the host performs os_* requests with xdotool, so hit
+# Real OS input from here to the chat line: the host performs os_* requests via uinput, so hit
 # testing (nothing covering the button) and keyboard focus are exercised, not just callbacks.
 os_click .lobby-shell__btn--ready
 ui_text .lobby-shell__btn--ready ✓

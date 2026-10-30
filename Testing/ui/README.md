@@ -250,12 +250,23 @@ screenshots (`remote-0*.png`) and `host-after-remote.png`. A pass needs the clie
 `ScriptComplete` signal and no errors in either log.
 
 **Real OS input:** the client's Ready click, the Chat tab and chat-field clicks, the typed chat
-line and Return are real X11 input. The client scenario's `os_click <selector>` resolves the element
-to window pixels and emits an `OsClick` test signal; the pilot reads `client.log` and performs it
-with `xdotool` on the client window (`os_type`, `os_key` likewise). This moves the desktop pointer
-and types into the focused window during the run; don't use the desktop meanwhile. Requires
-`xdotool` (installed on Rutger's machine 2026-10-30). A transparent overlay over the shell makes the
+line and Return are real OS input. The client scenario's `os_click <selector>` resolves the element
+to window pixels and emits an `OsClick` test signal; the pilot reads `client.log` and sends it to
+`Testing/ui/uinput_input.py serve`, a virtual uinput pointer+keyboard that lives for the whole run
+(`os_type`, `os_key` likewise). This moves the desktop pointer and types into the focused window
+during the run; don't use the desktop meanwhile. A transparent overlay over the shell makes the
 click miss and fails the pilot at the Ready step; synthetic events would have passed.
+
+Requirements: write access to `/dev/uinput` for the session user (on Rutger's machine Steam's
+`60-steam-input.rules` grants it via uaccess; otherwise add a udev rule such as
+`KERNEL=="uinput", TAG+="uaccess"`), `xdotool` for the client window lookup only, and every monitor
+at scale 1 (the absolute pointer spans the X root, which then equals GNOME's logical desktop).
+
+Why not xdotool for input: on GNOME Wayland its XTEST events go through Xwayland's libei portal,
+which shows an "allow remote interaction" dialog on every run. uinput sits below the compositor and
+needs no dialog. Pitfalls found: udev tags the device as a keyboard only when keycodes 1–31 are all
+declared (otherwise clicks work but typing silently does nothing), and keys from a second, freshly
+created device did not reach the window the first device clicked, hence one device per run.
 
 Run `remote-20261030-162400-944`: **passed**, 15 host checks, zero errors, 37s. The client may
 still be tearing down after `ScriptComplete` (`Environment.Exit` stalls in a windowed player); the

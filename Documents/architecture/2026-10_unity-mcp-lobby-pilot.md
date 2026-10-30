@@ -85,7 +85,7 @@ this does not grant gameplay equipment. See the [outfit implementation](2026-08_
 - Uses the actual boot flow and asserts the legacy uGUI lobby canvas is absent (purged in Phase F);
   this is not an isolated UI scene. The lifecycle pilot covers a single-editor Host session only,
   not a separate client process.
-- Synthetic UI events cover callback wiring, not physical input/hit testing. The remote pilot adds real X11 input for Ready and chat only.
+- Synthetic UI events cover callback wiring, not physical input/hit testing. The remote pilot adds real OS input (uinput virtual device) for Ready and chat only.
 - Current captures are review evidence; animation timing is not deterministic and
   pixel baseline comparison is not enabled.
 - Follow-up: additional resolutions, deterministic captures, then rendered-client CI coverage.

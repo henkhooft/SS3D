@@ -37,7 +37,7 @@ namespace SS3D.Systems.Testing
     /// Graphical (non-batchmode) clients can also probe and drive the UI Toolkit lobby with
     /// <c>ui_wait</c>/<c>ui_text</c>/<c>ui_submit</c>/<c>screenshot</c> - synthetic UI events, not OS input.
     /// <c>os_click</c>/<c>os_type</c>/<c>os_key</c> only emit a request signal (with screen pixels for a click);
-    /// the driving harness performs the real OS input on this window (xdotool), so they need one.
+    /// the driving harness performs the real OS input on this window (uinput), so they need one.
     /// </para>
     /// <para>
     /// Bootstrapped by <see cref="SS3D.Systems.Bootstrap.SystemsBootstrap"/> — a no-op unless

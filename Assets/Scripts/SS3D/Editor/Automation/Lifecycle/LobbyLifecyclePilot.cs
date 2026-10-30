@@ -56,6 +56,7 @@ namespace SS3D.Editor.Automation
         private static Report _pending;
         private static int _osInputsDone;
         private static string _clientWindow;
+        private static System.Diagnostics.Process _input;
         private const string ChatProbe = "remoteprobe real keyboard";
 
         private sealed class Step
@@ -511,7 +512,7 @@ namespace SS3D.Editor.Automation
         private static bool RemoteSpawned() => RemotePlayer() != null && SubSystems.TryGet(out EntitySubSystem entities) && entities.IsPlayerSpawned(RemotePlayer());
 
         // The client emits OsClick "x y selector" / OsType "text" / OsKey "keysym"; perform each once, in order,
-        // as real X11 input on its window. Clicking focuses the window, so typing goes to it.
+        // as real OS input from a virtual uinput device. Clicking focuses the window, so typing goes to it.
         private static void PerformOsInput()
         {
             if (_client == null || _client.HasExited) return;
@@ -522,13 +523,12 @@ namespace SS3D.Editor.Automation
                 string payload = requests[_osInputsDone].Groups[2].Value;
                 _clientWindow ??= ClientWindow();
                 string[] parts = payload.Split(' ');
-                string args = kind switch
+                UinputInput(kind switch
                 {
-                    "OsClick" => $"mousemove --window {_clientWindow} {parts[0]} {parts[1]} click 1",
-                    "OsType" => $"type --delay 40 -- \"{payload}\"",
-                    _ => $"key -- {payload}",
-                };
-                Xdotool(args);
+                    "OsClick" => $"click {_clientWindow} {parts[0]} {parts[1]}",
+                    "OsType" => $"type {payload}",
+                    _ => $"key {payload}",
+                });
                 Timeline.Add($"{Elapsed():0.0}s OS input {kind} {payload}");
             }
         }
@@ -542,7 +542,7 @@ namespace SS3D.Editor.Automation
             return windows[^1].Trim();
         }
 
-        // Needs xdotool and an X display (Unity under XWayland on DISPLAY=:0); moves the real pointer.
+        // Window lookup only: xdotool's XTEST input would raise GNOME's remote-interaction portal dialog every run.
         private static string Xdotool(string arguments)
         {
             System.Diagnostics.ProcessStartInfo info = new("xdotool", arguments)
@@ -559,10 +559,45 @@ namespace SS3D.Editor.Automation
             return output;
         }
 
+        // `Testing/ui/uinput_input.py serve`: one kernel-level virtual device for the whole run, no portal dialog.
+        // Keep it alive: keys from a second, new device did not reach the window the first one clicked.
+        // Needs write access to /dev/uinput and an X display (Unity under XWayland on DISPLAY=:0); moves the real pointer.
+        private static void UinputInput(string command)
+        {
+            if (_input == null || _input.HasExited)
+            {
+                string script = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Testing", "ui", "uinput_input.py"));
+                System.Diagnostics.ProcessStartInfo info = new("python3")
+                {
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                };
+                info.ArgumentList.Add("-I");
+                info.ArgumentList.Add(script);
+                info.ArgumentList.Add("serve");
+                _input = System.Diagnostics.Process.Start(info);
+                string ready = _input.StandardOutput.ReadLine();
+                if (ready != "ready") throw new InvalidOperationException($"uinput_input.py serve did not start: {ready ?? "exited (see editor log)"}");
+            }
+            _input.StandardInput.WriteLine(command);
+            string reply = _input.StandardOutput.ReadLine();
+            if (reply == null || !reply.StartsWith("ok ", StringComparison.Ordinal))
+                throw new InvalidOperationException($"uinput_input.py {command}: {reply ?? "exited (see editor log)"}");
+        }
+
         private static void StopClient()
         {
             if (_client != null && !_client.HasExited) _client.Kill();
             _client = null;
+            if (_input != null)
+            {
+                // Closing stdin ends serve, which destroys the virtual device.
+                if (!_input.HasExited) _input.StandardInput.Close();
+                if (!_input.WaitForExit(3000)) _input.Kill();
+                _input.Dispose();
+                _input = null;
+            }
         }
 
         private static double _nextRetry;
@@ -727,7 +762,7 @@ namespace SS3D.Editor.Automation
                 timeline = Timeline.ToArray(),
                 errors = Errors.ToArray(),
                 scope = Remote
-                    ? "Editor Host + built non-admin client process on loopback. The client's Ready click and chat typing are real X11 input (xdotool); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
+                    ? "Editor Host + built non-admin client process on loopback. The client's Ready click and chat typing are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
                     : "Single-editor Host session; synthetic UI events. Does not cover a remote client process, non-admin permissions or OS input.",
             };
             // Drivers wait for passed/failed; the final status follows the post-Play scene check.
