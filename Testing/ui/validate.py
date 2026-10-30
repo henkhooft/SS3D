@@ -9,6 +9,7 @@ artifacts/ui/validate-<UTC>/summary.md.
 import argparse
 import asyncio
 import json
+import os
 import re
 import subprocess
 import time
@@ -19,6 +20,7 @@ from typing import NamedTuple
 from fastmcp import Client
 
 ROOT = Path(__file__).resolve().parents[2]
+MCP_URL = os.environ.get("SS3D_MCP_URL", "http://127.0.0.1:8080")
 UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
@@ -303,7 +305,7 @@ async def main():
     async def quiet(_message):
         pass  # the server's INFO notifications would bury the step output
 
-    async with Client("http://127.0.0.1:8080/mcp", timeout=120, log_handler=quiet) as client:
+    async with Client(MCP_URL + "/mcp", timeout=120, log_handler=quiet) as client:
         editor = Editor(client)
         await editor.connect()
         for name in steps:

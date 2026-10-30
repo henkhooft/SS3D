@@ -7,4 +7,4 @@ if [[ ! -x "$venv/bin/mcp-for-unity" ]]; then
     "$venv/bin/pip" install -r Testing/ui/requirements-mcp.txt
 fi
 export UNITY_MCP_DISABLE_TELEMETRY=true
-exec "$venv/bin/mcp-for-unity" --transport http --http-url http://127.0.0.1:8080
+exec "$venv/bin/mcp-for-unity" --transport http --http-url "${SS3D_MCP_URL:-http://127.0.0.1:8080}"

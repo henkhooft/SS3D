@@ -5,17 +5,19 @@ predate registration of the server. No direct Unity socket or private protocol.
 """
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from fastmcp import Client
 
 ROOT = Path(__file__).resolve().parents[2]
+MCP_URL = os.environ.get("SS3D_MCP_URL", "http://127.0.0.1:8080")
 
 
 async def main():
     output = ROOT / "artifacts/ui"
     before = set(output.glob("*/status.json"))
-    async with Client("http://127.0.0.1:8080/mcp", timeout=60) as client:
+    async with Client(MCP_URL + "/mcp", timeout=60) as client:
         resources = await client.read_resource("mcpforunity://instances")
         data = json.loads(resources[0].text)
         instances = data.get("instances", [])

@@ -17,7 +17,7 @@ Testing/ui/open-unity.sh
 ```
 
 The first script installs the server if missing, then serves MCP on loopback
-`http://127.0.0.1:8080/mcp`. The second uses the exact project editor version and
+`http://127.0.0.1:8080/mcp` (override with `SS3D_MCP_URL`, e.g. `http://127.0.0.1:8095`, in the environment of all three: start-mcp.sh, open-unity.sh and the drivers). The second uses the exact project editor version and
 connects the bridge. Set `SS3D_UNITY_EDITOR` if Unity is installed elsewhere. A
 valid Unity license and graphical desktop are required. Do not launch a second
 editor against an already-open checkout; use **SS3D → Testing → Connect Unity MCP**

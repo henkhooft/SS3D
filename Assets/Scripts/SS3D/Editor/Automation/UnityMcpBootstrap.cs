@@ -20,7 +20,9 @@ namespace SS3D.Editor.Automation
         {
             if (MCPServiceLocator.Bridge.IsRunning) return;
             EditorPrefs.SetBool("MCPForUnity.UseHttpTransport", true);
-            EditorPrefs.SetString("MCPForUnity.HttpUrl", "http://127.0.0.1:8080");
+            // SS3D_MCP_URL overrides the port where 8080 is taken; keep it in sync with start-mcp.sh.
+            string url = System.Environment.GetEnvironmentVariable("SS3D_MCP_URL");
+            EditorPrefs.SetString("MCPForUnity.HttpUrl", string.IsNullOrEmpty(url) ? "http://127.0.0.1:8080" : url);
             EditorPrefs.SetBool("MCPForUnity.TelemetryDisabled", true);
             bool connected = await MCPServiceLocator.Bridge.StartAsync();
             Debug.Log($"[SS3D Automation] MCP connected: {connected}");
