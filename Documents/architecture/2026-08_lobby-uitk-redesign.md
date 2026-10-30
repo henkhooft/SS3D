@@ -341,6 +341,35 @@ Validation: `Testing/ui/validate.sh --full` (`validate-20261030-191427`) passed:
 `GamemodeObjectivesView` still references `Gamemode Objective Canvas`. The pilots don't cover reconnect-to-existing-body
 (reclaim); it relies on the same `IsPlayerSpawned(connection)` poll that was already the only live path.
 
+## Playtest fixes — 2026-10-30
+
+Owner-reported issues after Phase F:
+
+- **B in lobby chat opened the map editor.** `Global` always enables `TileCreator/ToggleMenu`; lobby and creator
+  text fields (chat, player search, character name) now hold `InputTextEntryScope` while focused and release it
+  on tab/step rebuild, hide and detach.
+- **Escape did nothing in-round.** Phase F removed the only `Other/Toggle Menu` listener (the legacy
+  `GameScreensController`, which toggled the lobby over a spawned body). `LobbyUiSubSystem` now listens: while the
+  local player is spawned, Escape opens/closes the shell as an overlay and pushes the new `InputContext.Menu`
+  (only `Other` live, so movement/camera/interactions are masked). The action button reads **IN ROUND**, disabled.
+  Escape is ignored before spawn, while an interaction is armed, while the map editor is open and during keybind capture.
+- **Hair colour didn't change.** `HumanHair.mat` (Simple Toon) had `_AmbientCol: 0`, which makes the lit term use
+  the light colour instead of `_Color`, and the tint wrote `_BaseColor`, which the shader lacks. The material now
+  uses `_AmbientCol: 1` like `HumanSkin.mat`, and `HumanoidStyleApplier` sets `_Color` (plus `_BaseColor`). This
+  also fixes spawned bodies.
+- **Character selector showed a placeholder.** `CharacterPreviewBooth.TryCapturePortrait` blits a head crop of the
+  Front-angle RT into a 128px per-character portrait. `LobbyUiSubSystem` recaptures after style/body/outfit/angle
+  changes, and the creator uses it for the header thumb and menu rows. Characters never shown at Front (the mock
+  slots before first selection) keep the old thumbnail.
+- **Assertions at boot.** The booth's stripped dummy kept `ContainerItemDisplay`, whose `Awake` asserts its
+  (destroyed, networked) `AttachedContainer`. It is now stripped too.
+
+Verified: `validate.sh` compile + EditMode + visual (122 checks) + lifecycle `lifecycle-20261030-201405-665`
+(69 checks, new: B in focused chat leaves the map editor closed, leaving the tab releases text entry, Escape
+opens the menu over the spawned body with movement masked, Escape closes it and restores movement). Synthetic
+Input System key events, not OS input. Red/blue hair/beard tint and the portrait crop were checked from booth captures.
+
+
 ## 2026-10-30 Server Settings
 
 Source: attached `SS3D Pre-round Lobby UI(2).zip`, Server Settings section of
@@ -409,3 +438,26 @@ Deferred-loading verification: full `validate-20261030-205054` passed compile,
 passed compile, visual (122), lifecycle (108), rebuilt client and remote (21). Loading,
 waiting, countdown and running screenshots were reviewed; the running form shows Stop
 without Start, and the long map status no longer displaces the sidebar actions.
+
+
+## Remaining-change review — 2026-10-30
+
+Reviewed the uncommitted playtest fixes: lobby/creator focus scopes, the Escape menu input
+context and lifecycle checks, hair tint via Simple Toon `_Color` / `_AmbientCol`, head-crop
+selector portraits and stripping `ContainerItemDisplay` before preview activation. Portrait
+capture now restores the previous `RenderTexture.active`; the lifecycle pilot checks both a
+rendered selector texture and preservation of a sentinel active target.
+
+Review also traced renderer asset churn to startup setup destroying a healthy Selection Pick
+feature. Setup now reuses the feature, updates its recovery-ID map, and saves only the renderer
+asset when a change is needed. Repeated setup is covered by an EditMode identity/map regression.
+No lighting/render-quality policy was changed. Dynamic font atlas data, neutral URP default/build
+serialization, regenerated prefab IDs and runtime null catalog entries are generated state;
+they are excluded from the authored-work commit. Linux Addressables build/profile caches and
+Python bytecode are ignored. Generated tracked diffs are backed up before cleanup.
+
+
+Review verification: `validate-20261030-211254` passed preflight, compile, all 2090 EditMode
+tests (including renderer setup identity/recovery mapping), 122 visual checks, 110 lifecycle
+checks (including portrait target preservation and Escape/focus behavior), client rebuild and
+21 remote checks. Selector portrait and in-round menu captures were visually reviewed.

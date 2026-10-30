@@ -34,6 +34,9 @@ namespace SS3D.Systems.Entities.Character
         private const float BaseYawDegrees = 0f;
         /// <summary>Peaceful locomotion blend tree: ~0.3 = walk, 1.0 = run.</summary>
         private const float PreviewWalkSpeed = 0.3f;
+        /// <summary>Portrait crop height as a fraction of the full-body frame.</summary>
+        private const float PortraitViewportHeight = 0.2f;
+        private const float PortraitHeadOffset = 0.08f;
 
         [SerializeField] private GameObject _humanPrefab;
         [SerializeField] private Camera _previewCamera;
@@ -178,6 +181,62 @@ namespace SS3D.Systems.Entities.Character
                 }
             }
             SetLayerRecursively(_dummy.transform, PreviewLayer);
+        }
+
+        /// <summary>
+        /// Copies a square head crop of the last rendered frame into <paramref name="target"/>.
+        /// Only the Front angle gives a usable portrait, so other angles return false.
+        /// </summary>
+        public bool TryCapturePortrait(RenderTexture target)
+        {
+            if (target == null || _renderTexture == null || _previewCamera == null || !_previewCamera.enabled
+                || _dummy == null || _angleIndex != 0)
+            {
+                return false;
+            }
+
+            Transform head = FindHeadBone(_dummy.transform);
+            if (head == null)
+            {
+                return false;
+            }
+
+            // Head bone sits at the skull base; aim slightly above it for the face.
+            Vector3 viewport = _previewCamera.WorldToViewportPoint(head.position + (Vector3.up * PortraitHeadOffset));
+            float height = PortraitViewportHeight;
+            float width = height * _renderTexture.height / _renderTexture.width;
+            Vector2 offset = new(
+                Mathf.Clamp(viewport.x - (width * 0.5f), 0f, 1f - width),
+                Mathf.Clamp(viewport.y - (height * 0.5f), 0f, 1f - height));
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(_renderTexture, target, new Vector2(width, height), offset);
+                return true;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+            }
+        }
+
+        private static Transform FindHeadBone(Transform root)
+        {
+            if (root.name.Equals("head", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return root;
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform found = FindHeadBone(root.GetChild(i));
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
 
         public void DisposeBooth()
@@ -492,6 +551,8 @@ namespace SS3D.Systems.Entities.Character
             DestroyAll<HumanoidCombatController>(root);
             DestroyAll<HumanoidBodyStateBridge>(root);
             DestroyAll<RagdollPart>(root);
+            // Asserts its AttachedContainer (a NetworkBehaviour) in Awake, which still runs when disabled.
+            DestroyAll<ContainerItemDisplay>(root);
             DestroyAll<NetworkObserver>(root);
             DestroyAll<NetworkBehaviour>(root);
             DestroyAll<NetworkObject>(root);

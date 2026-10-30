@@ -13,9 +13,12 @@ using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Interactions;
+using SS3D.Systems.Tile.MapEditor;
 using SS3D.UI.Shell;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Cloth = SS3D.Systems.Inventory.Containers.Cloth;
 using UnityEngine.UIElements;
 
@@ -24,7 +27,8 @@ namespace SS3D.UI.Lobby
     /// <summary>
     /// Self-bootstrapping host for the UITK pre-round lobby shell and Character Creator.
     /// Attaches into <see cref="UiLayer.Modal"/>. Phase E1: live booth preview + local draft.
-    /// Owns session visibility, ready/late-join and administrator round requests.
+    /// Owns session visibility, ready/late-join and administrator round requests. While the local
+    /// player has a body, Escape (<c>Other/Toggle Menu</c>) opens the shell as an in-round menu.
     /// </summary>
     public sealed class LobbyUiSubSystem : SubSystem
     {
@@ -34,6 +38,10 @@ namespace SS3D.UI.Lobby
         private CharacterPreviewBooth _booth;
         private CharacterCreatorDraft _draft;
         private bool _attached;
+        private readonly Dictionary<string, RenderTexture> _portraits = new();
+        private bool _portraitDirty;
+        private int _portraitDirtyFrame;
+        private const int PortraitSize = 128;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -52,6 +60,10 @@ namespace SS3D.UI.Lobby
 
         protected override void OnDestroyed()
         {
+            BindToggleMenu(null);
+            _menuHandle?.Dispose();
+            _menuHandle = null;
+            ReleasePortraits();
             if (_shellView != null)
             {
                 _shellView.CharacterCreatorRequested -= HandleCharacterCreatorRequested;
@@ -84,6 +96,7 @@ namespace SS3D.UI.Lobby
         {
             if (!_attached) TryAttachShell();
             if (_shellView != null) RefreshSession();
+            if (_portraitDirty) TryCapturePortrait();
         }
 
         private void TryAttachShell()
@@ -149,6 +162,11 @@ namespace SS3D.UI.Lobby
         private bool _inWorld;
         private NetworkConnection _preferencesSentTo;
         private NetworkConnection _appearanceSentTo;
+        private bool _spawned;
+        private bool _menuOpen;
+        private IInputHandle _menuHandle;
+        private InputSubSystem _inputSystem;
+        private InputAction _toggleMenuAction;
 
         private RoundState _lastRoundSnapshot;
         private StationLoadState _lastStationSnapshot;
@@ -174,7 +192,17 @@ namespace SS3D.UI.Lobby
             SubSystems.TryGet(out EntitySubSystem entities);
             Player local = connected ? players.GetPlayer(InstanceFinder.ClientManager.Connection) : null;
             bool spawned = local != null && entities != null && entities.IsPlayerSpawned(InstanceFinder.ClientManager.Connection);
-            bool visible = connected && !spawned;
+            _spawned = spawned;
+            if (!spawned) _menuOpen = false;
+            BindToggleMenu(SubSystems.TryGet(out InputSubSystem input) ? input : null);
+            bool visible = connected && (!spawned || _menuOpen);
+            bool holdMenu = visible && spawned;
+            if (holdMenu && _menuHandle == null && _inputSystem != null) _menuHandle = _inputSystem.PushContext(InputContext.Menu);
+            else if (!holdMenu && _menuHandle != null)
+            {
+                _menuHandle.Dispose();
+                _menuHandle = null;
+            }
             if (!visible)
             {
                 _shellView.SetVisible(false);
@@ -218,7 +246,31 @@ namespace SS3D.UI.Lobby
                     null, "—", "—", "—")).ToArray() : System.Array.Empty<LobbyMockData.PlayerRow>();
             _shellView.SetSession(rounds != null ? rounds.CurrentRoundState : RoundState.Stopped,
                 rounds != null ? rounds.CurrentTimerSeconds : 0,
-                local != null && ready != null && ready.IsReady(local), local != null && (rounds == null || rounds.CurrentRoundState != RoundState.Ongoing || rounds.AllowLateJoin), admin, rows);
+                local != null && ready != null && ready.IsReady(local), local != null && (rounds == null || rounds.CurrentRoundState != RoundState.Ongoing || rounds.AllowLateJoin), admin, rows, spawned);
+        }
+
+        /// <summary>Follows InputSubSystem across scene reloads (it owns a new Controls each time).</summary>
+        private void BindToggleMenu(InputSubSystem input)
+        {
+            if (input == _inputSystem) return;
+            if (_toggleMenuAction != null) _toggleMenuAction.performed -= HandleToggleMenu;
+            _menuHandle?.Dispose();
+            _menuHandle = null;
+            _inputSystem = input;
+            _toggleMenuAction = input != null ? input.Inputs?.Other.ToggleMenu : null;
+            if (_toggleMenuAction != null) _toggleMenuAction.performed += HandleToggleMenu;
+        }
+
+        private void HandleToggleMenu(InputAction.CallbackContext context)
+        {
+            // Before spawn the shell is the whole screen; Escape there belongs to other owners.
+            if (!_spawned || _shellView == null) return;
+            if (_shellView.IsCapturingKey) return;
+            if (SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed) return;
+            if (SubSystems.TryGet(out MapEditorSubSystem mapEditor) && mapEditor.IsActive) return;
+            _menuOpen = !_menuOpen;
+            _nextSessionRefresh = 0f;
+            RefreshSession();
         }
 
         /// <summary>
@@ -383,8 +435,51 @@ namespace SS3D.UI.Lobby
             Debug.Log($"[Lobby] Character draft saved: {_draft.Name}");
         }
 
+        /// <summary>Recapture the current character's selector portrait once the booth renders the change.</summary>
+        private void MarkPortraitDirty()
+        {
+            _portraitDirty = true;
+            _portraitDirtyFrame = Time.frameCount;
+        }
+
+        private void TryCapturePortrait()
+        {
+            // The booth camera renders at end of frame: wait one full frame after the change.
+            if (_booth == null || _creatorView == null || Time.frameCount <= _portraitDirtyFrame + 1) return;
+            string id = _creatorView.CurrentCharacterId;
+            if (string.IsNullOrEmpty(id)) return;
+            if (!_portraits.TryGetValue(id, out RenderTexture portrait) || portrait == null)
+            {
+                portrait = new RenderTexture(PortraitSize, PortraitSize, 0, RenderTextureFormat.ARGB32)
+                {
+                    name = "CharacterPortraitRT",
+                    filterMode = FilterMode.Bilinear,
+                };
+                portrait.Create();
+                _portraits[id] = portrait;
+            }
+
+            // Side/Back angles keep the flag set until the preview returns to Front.
+            if (!_booth.TryCapturePortrait(portrait)) return;
+            _portraitDirty = false;
+            _creatorView.SetPortrait(id, portrait);
+        }
+
+        private void ReleasePortraits()
+        {
+            foreach (RenderTexture portrait in _portraits.Values)
+            {
+                if (portrait == null) continue;
+                portrait.Release();
+                Destroy(portrait);
+            }
+
+            _portraits.Clear();
+        }
+
         private void HandleOutfitChanged(int outfitIndex)
         {
+            MarkPortraitDirty();
             if (_booth == null || _catalog == null)
             {
                 return;
@@ -395,6 +490,7 @@ namespace SS3D.UI.Lobby
 
         private void HandlePreviewAngleChanged(int angleIndex)
         {
+            MarkPortraitDirty();
             if (_booth != null)
             {
                 _booth.SetAngleIndex(angleIndex);
@@ -403,11 +499,13 @@ namespace SS3D.UI.Lobby
 
         private void HandleBodyMorphsChanged(IReadOnlyDictionary<string, float> morphs)
         {
+            MarkPortraitDirty();
             ApplyBodyMorphsToBooth(morphs);
         }
 
         private void HandleStyleChanged(int hairIndex, int beardIndex, int colorIndex, int beardColorIndex)
         {
+            MarkPortraitDirty();
             ApplyStyleToBooth(hairIndex, beardIndex, colorIndex, beardColorIndex);
         }
 

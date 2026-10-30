@@ -35,7 +35,7 @@ Update as part of `update-system-docs`.
 | crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (obsolete runtime purged; awaiting redesign) |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
-| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A/B/D + E1 + E2 networked name/body/hair + F legacy uGUI purge; jobs/antag prefs + resolution shipped; session wiring verified on host lifecycle + remote non-admin client pilots, Ready/chat via real OS input); [unity-mcp-lobby-pilot](2026-10_unity-mcp-lobby-pilot.md) — tooling shipped, baseline green (122 checks); one-command `Testing/ui/validate.sh` loop ([plan](../plans/agent_validation_loop.plan.md)) | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A/B/D + E1 + E2 networked name/body/hair + F legacy uGUI purge; jobs/antag prefs + resolution shipped; session wiring verified on host lifecycle + remote non-admin client pilots, Ready/chat via real OS input; Escape overlay/focused text capture, hair tint and rendered selector portraits reviewed); [unity-mcp-lobby-pilot](2026-10_unity-mcp-lobby-pilot.md) — tooling shipped, baseline green (122 checks); one-command `Testing/ui/validate.sh` loop ([plan](../plans/agent_validation_loop.plan.md)) | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-config | [round-config.md](../design/round-config.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — Server Settings direct selection/actions shipped; weighted pools and disk persistence deferred | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
@@ -95,7 +95,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Localization | [localization](systems/localization.md) | partial | `LocalizedTextService` and examine string tables |
 | Logging | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | Permissions | [permissions](systems/permissions.md) | partial | Admin permission checks; persisted via [persistence](systems/persistence.md) envelope with legacy txt fallback |
-| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick, atmos VFX, Vision FOV; Decal Layers + DBuffer blood; SSAO off (DepthNormals kept for decals); ST + GenericShadeless instancing / Content probes Off; Frame Debugger → `Logs/framedebug/` |
+| Rendering | [rendering](systems/rendering.md) | partial | URP features: selection pick, atmos VFX, Vision FOV; idempotent selection-feature registration; Decal Layers + DBuffer blood; SSAO off (DepthNormals kept for decals); ST + GenericShadeless instancing / Content probes Off; Frame Debugger → `Logs/framedebug/` |
 | Asset organization | [asset-organization](systems/asset-organization.md) | partial | Art/Content/Data folder taxonomy; Phase 1 icons under `Art/Icons/`; InteractionIcons + remaining Phase 1 leftovers open; audit in [2026-07_asset-file-structure-taxonomy](2026-07_asset-file-structure-taxonomy.md) |
 
 ## Gameplay

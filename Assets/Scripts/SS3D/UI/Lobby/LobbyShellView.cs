@@ -79,16 +79,23 @@ namespace SS3D.UI.Lobby
 
         public IReadOnlyCollection<string> AntagonistOptIns => _antagSelected;
         private bool _runtime;
+        // Focused lobby text fields mask keybinds (B = map editor, Escape = menu).
         private readonly InputTextEntryScope _textEntry = new();
         private LobbyMockData.PlayerRow[] _players = Array.Empty<LobbyMockData.PlayerRow>();
         private Label _playerCount;
         private Label _roundStatus;
         private RoundState _roundState;
+        private bool _inRound;
 
+        /// <summary>True while a keybind button waits for its next key (Escape cancels it).</summary>
+        public bool IsCapturingKey => _rebindingKey != null;
+
+        /// <param name="inRound">The local player has a body; the shell is open as the Escape menu.</param>
         public void SetSession(RoundState state, int seconds, bool ready, bool canAct,
-            bool admin, LobbyMockData.PlayerRow[] players)
+            bool admin, LobbyMockData.PlayerRow[] players, bool inRound)
         {
             _runtime = true;
+            _inRound = inRound;
             _roundState = state;
             if (_roundStatus != null) _roundStatus.text = state.ToString();
             _ready = ready;
@@ -101,7 +108,7 @@ namespace SS3D.UI.Lobby
             _adminButton?.SetEnabled(admin);
             RefreshSidebar();
             RefreshServerSettings();
-            _readyButton?.SetEnabled(canAct && state is not RoundState.Ending);
+            _readyButton?.SetEnabled(canAct && !inRound && state is not RoundState.Ending);
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
         }
 
@@ -394,7 +401,7 @@ namespace SS3D.UI.Lobby
             if (_readyButton != null)
             {
                 _readyButton.text = _ready ? "✓  READY" : "NOT READY";
-                if (_runtime && _roundState == RoundState.Ongoing) _readyButton.text = "JOIN ROUND";
+                if (_runtime && _roundState == RoundState.Ongoing) _readyButton.text = _inRound ? "IN ROUND" : "JOIN ROUND";
                 _readyButton.EnableInClassList("lobby-shell__btn--ready-on", _ready);
             }
 
@@ -455,6 +462,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            // A focused field removed by the rebuild gets no FocusOut.
             _textEntry.Exit();
             _tabContent.Clear();
             _tabContent.EnableInClassList(
@@ -967,6 +975,7 @@ namespace SS3D.UI.Lobby
                 evt.StopPropagation();
             }, TrickleDown.TrickleDown);
             StyleDarkTextField(input);
+            HoldTextEntry(input);
             composer.Add(input);
             root.Add(composer);
         }
@@ -1050,6 +1059,7 @@ namespace SS3D.UI.Lobby
                 ShowTab(TabPlayers);
             });
             StyleDarkTextField(search);
+            HoldTextEntry(search);
             toolbar.Add(search);
 
             string filter = _playerSearch.Trim().ToLowerInvariant();
@@ -1433,6 +1443,12 @@ namespace SS3D.UI.Lobby
             label.AddToClassList("lobby-shell__placeholder");
             label.AddToClassList("font-body");
             return label;
+        }
+
+        private void HoldTextEntry(TextField field)
+        {
+            field.RegisterCallback<FocusInEvent>(_ => _textEntry.Enter());
+            field.RegisterCallback<FocusOutEvent>(_ => _textEntry.Exit());
         }
 
         /// <summary>

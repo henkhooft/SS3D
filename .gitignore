@@ -121,3 +121,13 @@ Testing/multiplayer/.runs/
 
 # Local / CI Unity runner output (editmode, build logs)
 /artifacts/
+
+# Local Python bytecode and Addressables build/profile caches (not authored groups).
+__pycache__/
+*.py[cod]
+/Assets/Content/Addressables/Linux.meta
+/Assets/Content/Addressables/Linux/addressables_content_state.bin
+/Assets/Content/Addressables/Linux/addressables_content_state.bin.meta
+/Assets/AddressableAssetsData.meta
+/Assets/AddressableAssetsData/ProfileDataSourceSettings.asset
+/Assets/AddressableAssetsData/ProfileDataSourceSettings.asset.meta

@@ -7,6 +7,7 @@
         "SS3D.Data",
         "SS3D.Permissions",
         "FishNet.Runtime",
+        "Unity.InputSystem",
         "SS3D.Editor",
         "SS3D.Editor.Automation"
     ],

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 2fcfc9fa8 — 2026-10-30
+> Verified: ebf05fdfb — 2026-10-30
 
 # Rounds / lobby
 
@@ -11,7 +11,7 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 **UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
 preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard + colors) is sent to the server and applied to the spawned body (E2 slice); species/skin/eyes/eyebrows and persistence remain pending. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
+Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility (plus Escape as an in-round menu overlay, `InputContext.Menu`) and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard + colors) is sent to the server and applied to the spawned body (E2 slice); species/skin/eyes/eyebrows and persistence remain pending. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
 
 Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
@@ -63,6 +63,8 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem` (including job preference sends); `LobbyShellView` renders `RoleSubSystem.Jobs`; Character Creator is a separate Modal screen (Phase B/E).
 
 ## Pitfalls
+
+- **Portrait capture must restore `RenderTexture.active`:** `Graphics.Blit` changes the global active target. Save/restore it around the head crop so later rendering/readback does not inherit the portrait target; the lifecycle pilot uses a sentinel target to check this.
 
 - **Long map status displaced Ready over the preview:** wrapping a full save name made the fixed sidebar too tall. Keep status labels single-line with ellipsis; the lifecycle pilot uses a long temporary map name to check this.
 

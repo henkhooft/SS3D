@@ -20,7 +20,9 @@ namespace SS3D.Systems.Entities.Character
         /// <summary>Corrects HumanHair FBX prefabs that point +Z instead of +Y on the head.</summary>
         private static readonly Quaternion StyleMeshCorrection = Quaternion.Euler(-90f, 0f, 0f);
 
-        private static readonly int ShaderColorId = Shader.PropertyToID("_BaseColor");
+        // HumanHair.mat uses Simple Toon (_Color); _BaseColor covers URP/Lit style meshes.
+        private static readonly int ShaderColorId = Shader.PropertyToID("_Color");
+        private static readonly int ShaderBaseColorId = Shader.PropertyToID("_BaseColor");
 
         /// <param name="root">Root GameObject of the preview dummy.</param>
         /// <param name="hairPrefab">Head hair prefab, or null for none.</param>
@@ -144,6 +146,7 @@ namespace SS3D.Systems.Entities.Character
 
             MaterialPropertyBlock mpb = new();
             mpb.SetColor(ShaderColorId, color);
+            mpb.SetColor(ShaderBaseColorId, color);
 
             foreach (Renderer r in socket.GetComponentsInChildren<Renderer>(true))
             {

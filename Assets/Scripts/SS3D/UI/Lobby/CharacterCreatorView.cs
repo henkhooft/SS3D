@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -30,6 +31,8 @@ namespace SS3D.UI.Lobby
         private string _species = CharacterCreatorMockData.SpeciesOptions[0];
         private bool _saved;
         private readonly Dictionary<string, CharacterCreatorDraft> _characters = new();
+        // Booth head crops per character id; owned (and released) by LobbyUiSubSystem.
+        private readonly Dictionary<string, Texture> _portraits = new();
         private int _outfitIndex;
         private int _hairColorIndex;
         private int _beardColorIndex;
@@ -45,6 +48,8 @@ namespace SS3D.UI.Lobby
         private bool _loadoutOpen;
 
         private readonly Dictionary<string, float> _sliders = new();
+        // Focused name field masks keybinds (B = map editor, Escape = menu).
+        private readonly InputTextEntryScope _textEntry = new();
 
         public event Action ReturnToLobbyRequested;
 
@@ -117,6 +122,7 @@ namespace SS3D.UI.Lobby
             _loadoutThumb = null;
             _loadoutMenu = null;
             _livePreviewTexture = null;
+            _textEntry.Exit();
         }
 
         public void SetVisible(bool visible)
@@ -127,6 +133,7 @@ namespace SS3D.UI.Lobby
             }
 
             _root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible) _textEntry.Exit();
             if (visible)
             {
                 _loadoutOpen = false;
@@ -194,6 +201,24 @@ namespace SS3D.UI.Lobby
         {
             _saved = false;
             StyleChanged?.Invoke(_hairStyleIndex, _beardStyleIndex, _hairColorIndex, _beardColorIndex);
+        }
+
+        /// <summary>Id of the character currently being edited.</summary>
+        public string CurrentCharacterId => _loadoutId;
+
+        /// <summary>Shows a rendered portrait for the character in the selector and its menu row.</summary>
+        public void SetPortrait(string characterId, Texture portrait)
+        {
+            if (string.IsNullOrEmpty(characterId) || portrait == null)
+            {
+                return;
+            }
+
+            _portraits[characterId] = portrait;
+            if (characterId == _loadoutId)
+            {
+                ApplyPortrait(_loadoutThumb, characterId);
+            }
         }
 
         public void SetPreviewTexture(Texture texture)
@@ -334,6 +359,8 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            // A focused field removed by the rebuild gets no FocusOut.
+            _textEntry.Exit();
             RebuildRail();
             RebuildLoadoutChrome();
             _bodyHost.Clear();
@@ -387,14 +414,13 @@ namespace SS3D.UI.Lobby
 
         private void RebuildLoadoutChrome()
         {
-            CharacterCreatorMockData.LoadoutDef selected = SelectedLoadout();
             if (_loadoutNameLabel != null)
             {
                 _loadoutNameLabel.text = _characters.TryGetValue(_loadoutId, out CharacterCreatorDraft saved)
                     ? saved.Name : _editName;
             }
 
-            ApplyThumb(_loadoutThumb, selected.ThumbId);
+            ApplyPortrait(_loadoutThumb, _loadoutId);
 
             if (_loadoutMenu == null)
             {
@@ -430,7 +456,7 @@ namespace SS3D.UI.Lobby
                 VisualElement thumb = new();
                 thumb.AddToClassList("char-creator__loadout-row-thumb");
                 thumb.pickingMode = PickingMode.Ignore;
-                ApplyThumb(thumb, SelectedLoadoutThumb(id));
+                ApplyPortrait(thumb, id);
                 row.Add(thumb);
 
                 Label name = new(saved.Name);
@@ -509,6 +535,8 @@ namespace SS3D.UI.Lobby
                 _saved = false;
             });
             StyleDarkTextField(nameField);
+            nameField.RegisterCallback<FocusInEvent>(_ => _textEntry.Enter());
+            nameField.RegisterCallback<FocusOutEvent>(_ => _textEntry.Exit());
             panel.Add(nameField);
 
             panel.Add(FieldLabel("Species"));
@@ -1026,6 +1054,24 @@ namespace SS3D.UI.Lobby
             return CharacterCreatorMockData.Loadouts[0];
         }
 
+
+        private void ApplyPortrait(VisualElement target, string characterId)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (_portraits.TryGetValue(characterId, out Texture portrait) && portrait != null)
+            {
+                target.style.backgroundImage = portrait is RenderTexture renderTexture
+                    ? Background.FromRenderTexture(renderTexture)
+                    : new StyleBackground(portrait as Texture2D);
+                return;
+            }
+
+            ApplyThumb(target, SelectedLoadoutThumb(characterId));
+        }
 
         private void ApplyThumb(VisualElement target, string thumbId)
         {

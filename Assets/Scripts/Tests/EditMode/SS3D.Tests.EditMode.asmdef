@@ -9,6 +9,8 @@
         "SS3D.Hacks",
         "SS3D.Atmospherics.ECS",
         "SS3D.Rendering.URP",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
         "SS3D.Utils",
         "Coimbra",
         "SS3D.Data",

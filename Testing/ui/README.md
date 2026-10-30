@@ -347,3 +347,20 @@ Deferred-loading verification: full `validate-20261030-205054` passed compile,
 passed compile, visual (122), lifecycle (108), rebuilt client and remote (21). Loading,
 waiting, countdown and running screenshots were reviewed; the running form shows Stop
 without Start, and the long map status no longer displaces the sidebar actions.
+
+
+## Playtest fix review coverage — 2026-10-30
+
+The lifecycle pilot exercises B while typing in lobby chat, releases text capture on tab rebuild,
+opens/closes the Escape menu over a spawned body and verifies gameplay input suppression and
+restoration. It also waits for a rendered character-selector portrait and checks that head-crop
+blitting preserves a sentinel `RenderTexture.active` (`character-selector-portrait.png`).
+`SelectionRendererSetupTests` checks repeated renderer wiring retains the same selection-feature
+instance/local ID and a matching feature recovery map. Generated glyph atlases, build-prefilter
+flags and runtime-only catalog entries are not authored feature changes.
+
+
+Review verification: `validate-20261030-211254` passed preflight, compile, all 2090 EditMode
+tests (including renderer setup identity/recovery mapping), 122 visual checks, 110 lifecycle
+checks (including portrait target preservation and Escape/focus behavior), client rebuild and
+21 remote checks. Selector portrait and in-round menu captures were visually reviewed.

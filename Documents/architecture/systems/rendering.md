@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: a403d978f — 2026-07-29 (probes Off recipe; SSAO off; Frame Debugger AI tooling)
+> Verified: ebf05fdfb — 2026-10-30 (selection feature registration/recovery IDs)
 
 # Rendering
 
 ## Overview
 
-URP rendering extensions for this fork. The selection pick pass ([selection](selection.md)) is gameplay-critical for interaction targeting. The atmospherics pass ([atmospherics](atmospherics.md)) composites gas scatter, plasma glow, and heat distortion from sim GPU textures via `AtmosRenderContext`. **Decal Renderer** is enabled on the forward renderer (Use Rendering Layers on) for health blood decals and future surface marks — see `DecalRenderingLayers`. **Atmos snapshot is server-built only** — clients render when a snapshot is present; multiplayer client sync is not implemented yet.
+URP rendering extensions for this fork. The selection pick pass ([selection](selection.md)) is gameplay-critical for interaction targeting. The atmospherics pass ([atmospherics](atmospherics.md)) composites gas scatter, plasma glow, and heat distortion from sim GPU textures via `AtmosRenderContext`. **Decal Renderer** is enabled on the forward renderer (Use Rendering Layers on) for health blood decals and future surface marks — see `DecalRenderingLayers`. **Atmos snapshots are server-built** — hosts render directly; pure clients consume Phase 1 dirty-chunk patches through `AtmosClientVisualizationBridge`. Late-join bootstrap / AOI remain Phase 2; see [atmospherics](atmospherics.md).
 
 Station materials use the **Simple Toon** shader stack (`STDefault` / `STTransparent`). ST already has `UnityPerMaterial` + `#pragma multi_compile_instancing` — Metastation wins come from enabling material instancing and keeping MeshRenderers free of permanent MaterialPropertyBlocks (see [srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md)). Palette emission must sample `_EmissionMap` (same UV swatch pattern as albedo) — a flat `_EmissionColor` alone washes shared `PaletteEmission` materials white. `STDefault` includes DepthOnly + DepthNormals (with `_WRITE_RENDERING_LAYERS`) so URP Decal Layers can distinguish characters from tiles, and ForwardLit samples DBuffer (`ApplyDecalToBaseColor`) so health blood / surface `DecalProjector`s tint skin and worn clothing. **SSAO is off** on `SS3D_ForwardPlusRenderer` (design deprioritizes AO under fixture-driven toon lighting); DepthNormals prepass remains for DBuffer + Decal Layers — do not remove it with SSAO.
 
@@ -28,6 +28,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - `Assets/Content/Resources/Simple Toon/Shaders/STDefault.shader` — opaque toon (+ DepthNormals for Decal Layers)
 - `Assets/Content/Resources/Simple Toon/Shaders/ObjectIcon.shader` — unlit bright full-toon for UI icon previews
 - `Assets/Scripts/SS3D/Utils/IconPreviewGenerator.cs` — ObjectIcon material swap for UI icon previews
+- `Assets/Editor/URPMigration/SelectionPickRendererFeatureSetup.cs` — idempotent selection-feature registration and recovery-map synchronization
 - `Assets/Settings/URP/` — pipeline asset and Forward+ renderer (includes Decal Renderer feature)
 - **SS3D/Rendering/Run Content Prefab Recipes** — `RendererProbeUsageSetup` (light/reflection probes Off on Content prefabs)
 
@@ -38,6 +39,8 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 - World surface marks: stamp `DecalRenderingLayers.ReceiveWorldDecals` on receiver renderers; point floor `DecalProjector`s at `WorldFloorProjectorMask`. Custom opaque shaders must implement DepthNormals with `_WRITE_RENDERING_LAYERS` or Decal Layers will not exclude them, and must sample DBuffer (`ApplyDecalToBaseColor` / `_DBUFFER_MRT*`) or Automatic→DBuffer projectors never tint albedo (worn jumpsuit / ST floors).
 
 ## Pitfalls
+
+- **Selection feature changed IDs on every script reload:** `SelectionPickRendererFeatureSetup.RemoveBrokenFeatures` destroyed healthy selection features as well as broken stubs. Keep valid instances, synchronize `m_RendererFeatureMap` to the actual sub-asset IDs and save only when wiring changes. `SelectionRendererSetupTests` asserts repeated setup preserves object identity and the recovery map.
 
 - **Permanent MaterialPropertyBlocks break SRP Batcher:** any MPB on a MeshRenderer (e.g. old Selectable `_SelectionColor`, Intact white integrity tint) drops that draw out of the SRP Batcher path. Selection pick uses transient MPB on `DrawMesh` via `SelectionPickContext`; intact integrity clears MPBs. Hit 2026-07-28 (Metastation).
 - **Light/reflection probes block GPU instancing:** BlendProbes (and reflection probes) inject per-renderer non-instanced data — Frame Debugger shows "Non-instanced properties set for instanced shader." SS3D does not use probe lighting; keep `LightProbeUsage` / `ReflectionProbeUsage` **Off** on Content renderers via **SS3D/Rendering/Run Content Prefab Recipes** (`RendererProbeUsageSetup`). Hit 2026-07-29.

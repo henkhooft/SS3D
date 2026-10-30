@@ -7,13 +7,17 @@ using SS3D.Core;
 using SS3D.Permissions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
+using SS3D.Systems.Inputs;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.Tile.MapEditor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.UIElements;
 
 namespace SS3D.Editor.Automation
@@ -61,6 +65,7 @@ namespace SS3D.Editor.Automation
         private static string _clientWindow;
         private static System.Diagnostics.Process _input;
         private const string ChatProbe = "remoteprobe real keyboard";
+        private static double _settleUntil;
 
         private sealed class Step
         {
@@ -431,11 +436,60 @@ namespace SS3D.Editor.Automation
                 },
             },
             new Step { Name = "Back to Server Info", Enter = () => Click(Shell().Q<Button>("tab-server-info")), Until = () => SecurityChip("H") == null },
+            new Step { Name = "Open Chat tab", Enter = () => Click(Shell().Q<Button>("tab-chat")), Until = () => ChatInput() != null },
+            new Step
+            {
+                Name = "B typed in lobby chat stays out of the map editor",
+                Enter = () =>
+                {
+                    ChatInput().Focus();
+                    TapKey(Key.B);
+                    Settle(1);
+                },
+                Until = Settled,
+                Verify = () =>
+                {
+                    Require(InputInterface.IsCapturingText, "Focused chat field holds text entry");
+                    Require(!MapEditorActive(), "B in chat did not open the map editor");
+                },
+            },
+            new Step
+            {
+                Name = "Leaving Chat releases text entry",
+                Enter = () => Click(Shell().Q<Button>("tab-server-info")),
+                Until = () => ChatInput() == null,
+                Verify = () => Require(!InputInterface.IsCapturingText, "Text entry released when the chat field is rebuilt away"),
+            },
             new Step
             {
                 Name = "Open creator before round start",
                 Enter = () => Click(Shell().Q(className: "lobby-shell__preview")),
                 Until = () => Visible(Creator()) && !Visible(Shell()),
+            },
+            new Step
+            {
+                Name = "Creator selector receives a rendered portrait",
+                Until = () => Creator()?.Q(className: "char-creator__loadout-thumb")?.resolvedStyle.backgroundImage.renderTexture != null,
+                Verify = () =>
+                {
+                    CharacterPreviewBooth booth = UnityEngine.Object.FindAnyObjectByType<CharacterPreviewBooth>();
+                    RenderTexture previous = RenderTexture.active;
+                    RenderTexture sentinel = RenderTexture.GetTemporary(16, 16, 0);
+                    RenderTexture portrait = RenderTexture.GetTemporary(128, 128, 0);
+                    try
+                    {
+                        RenderTexture.active = sentinel;
+                        Require(booth.TryCapturePortrait(portrait), "Front preview produces a selector portrait");
+                        Require(RenderTexture.active == sentinel, "Portrait capture restores the active render texture");
+                    }
+                    finally
+                    {
+                        RenderTexture.active = previous;
+                        RenderTexture.ReleaseTemporary(sentinel);
+                        RenderTexture.ReleaseTemporary(portrait);
+                    }
+                    Capture("character-selector-portrait");
+                },
             },
             new Step
             {
@@ -489,6 +543,31 @@ namespace SS3D.Editor.Automation
                     Require(Job("Security").Assigned == 1, "Security slot count replicated as taken");
                     VerifySpawnedAppearance();
                     Capture("spawned-appearance");
+                },
+            },
+            new Step
+            {
+                Name = "Escape opens the lobby over the spawned body",
+                Enter = () => TapKey(Key.Escape),
+                Until = () => Visible(Shell()),
+                Verify = () =>
+                {
+                    Require(Spawned(), "Still spawned while the menu is open");
+                    Require(BoothLive(), "Booth live while the menu is open");
+                    Require(!ReadyButton().enabledInHierarchy && ReadyButton().text == "IN ROUND", "Action button reads IN ROUND, disabled");
+                    Require(!GameplayMapEnabled(), "Movement input masked while the menu is open");
+                    Capture("escape-menu");
+                },
+            },
+            new Step
+            {
+                Name = "Escape closes the in-round menu",
+                Enter = () => TapKey(Key.Escape),
+                Until = () => !Visible(Shell()),
+                Verify = () =>
+                {
+                    Require(!BoothLive(), "Booth deactivated after closing the menu");
+                    Require(GameplayMapEnabled(), "Movement input restored after closing the menu");
                 },
             },
             new Step
@@ -844,6 +923,24 @@ namespace SS3D.Editor.Automation
         private static VisualElement Root() => UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None)
             .Select(d => d.rootVisualElement)
             .FirstOrDefault(r => r != null && r.Q("lobby-shell-surface") != null);
+
+        private static TextField ChatInput() => Shell()?.Q<TextField>(className: "lobby-shell__chat-input");
+
+        private static bool MapEditorActive() => SubSystems.TryGet(out MapEditorSubSystem mapEditor) && mapEditor.IsActive;
+
+        private static bool GameplayMapEnabled() => SubSystems.TryGet(out InputSubSystem input) && input.Inputs.Movement.Get().enabled;
+
+        private static void Settle(double seconds) => _settleUntil = EditorApplication.timeSinceStartup + seconds;
+
+        private static bool Settled() => EditorApplication.timeSinceStartup > _settleUntil;
+
+        /// <summary>Synthetic press + release through the Input System (actions, not UITK events).</summary>
+        private static void TapKey(Key key)
+        {
+            Keyboard keyboard = Keyboard.current ?? InputSystem.AddDevice<Keyboard>();
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+        }
 
         private static VisualElement Shell() => Root()?.Q("lobby-shell-surface");
 
