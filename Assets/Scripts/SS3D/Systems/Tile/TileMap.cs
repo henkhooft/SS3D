@@ -201,6 +201,13 @@ namespace SS3D.Systems.Tile
         /// <returns></returns>
         private TileChunk CreateChunk(Vector2Int chunkKey, Vector3 origin)
         {
+            // An async station load can outlive its map (Play Mode exit, scene unload). Creating the
+            // chunk first would orphan it in whatever scene is active - in the editor, the saved Game scene.
+            if (this == null)
+            {
+                throw new OperationCanceledException("Tile map was destroyed while loading.");
+            }
+
             TileChunk chunk = TileChunk.Create(chunkKey, origin);
             chunk.transform.SetParent(transform);
 

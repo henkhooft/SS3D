@@ -1,6 +1,8 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using Coimbra;
+using Cysharp.Threading.Tasks;
 using FishNet.Connection;
 using FishNet.Object;
+using SS3D.Application;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Data.AssetDatabases;
@@ -81,7 +83,15 @@ namespace SS3D.Systems.Tile
 		        return;
 	        }
 
-	        await WaitForResourcesLoad();
+	        try
+	        {
+		        await WaitForResourcesLoad();
+	        }
+	        catch (OperationCanceledException)
+	        {
+		        Log.Debug(this, "Tile load cancelled: map destroyed before loading finished");
+		        return;
+	        }
 
             Log.Debug(this, "All tiles loaded successfully");
         }
@@ -366,10 +376,26 @@ namespace SS3D.Systems.Tile
         [Server]
         public async UniTask LoadAsync()
         {
-            Log.Debug(this, "Loading most recent station template");
+            string editorTemplate = UnityEngine.Application.isEditor
+                ? ScriptableSettings.GetOrFind<ApplicationSettings>().EditorStationTemplate?.Trim()
+                : null;
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
+                // Editor playtests can pin a small template; a missing one falls back to most recent.
+                if (!string.IsNullOrEmpty(editorTemplate))
+                {
+                    Log.Debug(this, $"Loading editor station template {editorTemplate}");
+                    if (await persistenceSubSystem.LoadStationTemplateAsync(editorTemplate))
+                    {
+                        SyncFloorDecalsToClients();
+                        return;
+                    }
+
+                    Log.Warning(this, $"Editor station template '{editorTemplate}' not found; loading most recent");
+                }
+
+                Log.Debug(this, "Loading most recent station template");
                 if (!await persistenceSubSystem.LoadMostRecentStationTemplateAsync())
                 {
                     NotifyEmptyMapReady();
