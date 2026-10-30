@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
 using SS3D.UI.Lobby;
@@ -58,6 +58,7 @@ namespace SS3D.Editor
             ("science", "Beaker.png"),
             ("cargo", "Truck.png"),
             ("service", "Cake.png"),
+            ("civilian", "UserGroup.png"),
         };
 
         /// <summary>BatchMode: <c>-executeMethod SS3D.Editor.LobbyAssetCatalogBuilder.RebuildCatalogBatch</c></summary>

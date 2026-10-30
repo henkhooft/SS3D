@@ -1,7 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using SS3D.UI.Shell;
+using SS3D.Systems.IdAccess;
+using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -61,13 +63,20 @@ namespace SS3D.UI.Lobby
         };
         private readonly Dictionary<string, string> _keybinds = new();
 
-        private readonly Dictionary<string, JobPriority> _priorities = LobbyMockData.DefaultPriorities();
-        private readonly Dictionary<string, bool> _antagSelected = LobbyMockData.DefaultAntagSelections();
+        // Missing jobs are Never: an empty list is the explicit "no preference" (lobby.md §3).
+        private readonly Dictionary<string, JobPriority> _priorities = new();
+        private readonly HashSet<string> _antagSelected = new();
+        private JobSlotInfo[] _jobs = Array.Empty<JobSlotInfo>();
         private readonly HashSet<string> _collapsedDepts = new();
 
         public event Action CharacterCreatorRequested;
         public event Action ReadyRequested;
         public event Action<bool> RoundChangeRequested;
+        public event Action JobPreferencesChanged;
+
+        public IReadOnlyDictionary<string, JobPriority> JobPriorities => _priorities;
+
+        public IReadOnlyCollection<string> AntagonistOptIns => _antagSelected;
         private bool _runtime;
         private LobbyMockData.PlayerRow[] _players = Array.Empty<LobbyMockData.PlayerRow>();
         private Label _playerCount;
@@ -91,6 +100,13 @@ namespace SS3D.UI.Lobby
             RefreshSidebar();
             _readyButton?.SetEnabled(canAct && state is not RoundState.Ending);
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
+        }
+
+        public void SetJobs(IReadOnlyList<JobSlotInfo> jobs)
+        {
+            if (_jobs.SequenceEqual(jobs)) return;
+            _jobs = jobs.ToArray();
+            if (_activeTab == TabJobs) ShowTab(TabJobs);
         }
 
 
@@ -134,6 +150,7 @@ namespace SS3D.UI.Lobby
             CharacterCreatorRequested = null;
             ReadyRequested = null;
             RoundChangeRequested = null;
+            JobPreferencesChanged = null;
             _tabBar = null;
             _tabContent = null;
             _roundDot = null;
@@ -615,21 +632,24 @@ namespace SS3D.UI.Lobby
             list.AddToClassList("lobby-shell__jobs-list");
             list.style.flexGrow = 1;
 
-            foreach (LobbyMockData.Department dept in LobbyMockData.Departments)
+            if (_jobs.Length == 0)
             {
-                bool expanded = !_collapsedDepts.Contains(dept.Key);
-                int openSum = 0;
-                int slotSum = 0;
-                foreach (LobbyMockData.JobRow job in dept.Jobs)
-                {
-                    openSum += job.Open;
-                    slotSum += job.Slots;
-                }
+                list.Add(MakeLabel(_runtime ? "No jobs available." : "Connecting…", "font-body", "text-secondary"));
+            }
+
+            foreach (IGrouping<Department, JobSlotInfo> dept in _jobs
+                         .GroupBy(job => (Department)job.Department)
+                         .OrderBy(group => group.Key == Department.None ? int.MaxValue : (int)group.Key))
+            {
+                string deptKey = dept.Key == Department.None ? "other" : dept.Key.ToString().ToLowerInvariant();
+                bool expanded = !_collapsedDepts.Contains(deptKey);
+                bool unlimited = dept.Any(job => job.Unlimited);
+                int openSum = dept.Sum(job => job.Unlimited ? 0 : job.Open);
+                int slotSum = dept.Sum(job => job.Unlimited ? 0 : job.Slots);
 
                 VisualElement header = new();
                 header.AddToClassList("lobby-shell__dept-header");
                 header.pickingMode = PickingMode.Position;
-                string deptKey = dept.Key;
                 header.RegisterCallback<ClickEvent>(_ =>
                 {
                     if (!_collapsedDepts.Add(deptKey))
@@ -643,20 +663,20 @@ namespace SS3D.UI.Lobby
                 VisualElement deptIcon = new();
                 deptIcon.AddToClassList("lobby-shell__dept-icon");
                 deptIcon.pickingMode = PickingMode.Ignore;
-                if (_catalog != null && _catalog.TryGetDepartmentIcon(dept.IconId, out Texture2D deptTexture))
+                if (_catalog != null && _catalog.TryGetDepartmentIcon(deptKey, out Texture2D deptTexture))
                 {
                     deptIcon.style.backgroundImage = new StyleBackground(deptTexture);
                 }
 
                 header.Add(deptIcon);
 
-                Label name = new(dept.Name.ToUpperInvariant());
+                Label name = new((dept.Key == Department.None ? "Other" : dept.Key.ToString()).ToUpperInvariant());
                 name.AddToClassList("lobby-shell__dept-name");
                 name.AddToClassList("font-titling");
                 name.pickingMode = PickingMode.Ignore;
                 header.Add(name);
 
-                Label slots = new($"{openSum}/{slotSum}");
+                Label slots = new(unlimited ? "OPEN" : $"{openSum}/{slotSum}");
                 slots.AddToClassList("lobby-shell__dept-slots");
                 slots.AddToClassList("font-terminal");
                 slots.pickingMode = PickingMode.Ignore;
@@ -679,7 +699,7 @@ namespace SS3D.UI.Lobby
                     continue;
                 }
 
-                foreach (LobbyMockData.JobRow job in dept.Jobs)
+                foreach (JobSlotInfo job in dept)
                 {
                     list.Add(BuildJobRow(job));
                 }
@@ -690,20 +710,18 @@ namespace SS3D.UI.Lobby
             parent.Add(split);
         }
 
-        private VisualElement BuildJobRow(LobbyMockData.JobRow job)
+        private VisualElement BuildJobRow(JobSlotInfo job)
         {
             VisualElement row = new();
             row.AddToClassList("lobby-shell__job-row");
-            if (job.Locked)
-            {
-                row.AddToClassList("lobby-shell__job-row--locked");
-            }
+            bool full = !job.Unlimited && job.Open == 0;
+            row.EnableInClassList("lobby-shell__job-row--locked", full);
 
             VisualElement iconWell = new();
             iconWell.AddToClassList("lobby-shell__job-icon-well");
             VisualElement icon = new();
             icon.AddToClassList("lobby-shell__job-icon");
-            if (_catalog != null && _catalog.TryGetJobIcon(job.IconId, out Sprite sprite))
+            if (_catalog != null && _catalog.TryGetJobIcon(JobIconId(job.Name), out Sprite sprite))
             {
                 icon.style.backgroundImage = new StyleBackground(sprite);
             }
@@ -718,18 +736,29 @@ namespace SS3D.UI.Lobby
             name.AddToClassList("font-body");
             info.Add(name);
 
-            name.tooltip = job.Locked ? job.LockReason : $"{job.Interested} interested";
+            // Live demand next to the slot count (lobby.md §3), counted over online players.
+            Label demand = new($"{job.Interested} interested");
+            demand.AddToClassList("lobby-shell__job-meta");
+            demand.AddToClassList("font-body");
+            info.Add(demand);
             row.Add(info);
-            Label slots = new($"{job.Open}/{job.Slots}");
+
+            Label slots = new(job.Unlimited ? "OPEN" : $"{job.Open}/{job.Slots}");
             slots.AddToClassList("lobby-shell__job-slots");
             slots.AddToClassList("font-terminal");
+            slots.tooltip = job.Unlimited ? "No slot limit" : $"{job.Open} of {job.Slots} slots open";
             row.Add(slots);
-            VisualElement priorities = BuildPriorityChips(job.Id);
-            priorities.SetEnabled(!job.Locked);
-            row.Add(priorities);
+            row.Add(BuildPriorityChips(job.Name));
 
             return row;
         }
+
+        // Job icons are named after the art (e.g. SecurityOfficer.png), not the role asset.
+        private static string JobIconId(string jobName) => jobName switch
+        {
+            "Security" => "SecurityOfficer",
+            _ => jobName.Replace(" ", string.Empty),
+        };
 
         private VisualElement BuildPriorityChips(string jobId)
         {
@@ -742,7 +771,9 @@ namespace SS3D.UI.Lobby
                 JobPriority captured = level;
                 Button chip = new(() =>
                 {
-                    _priorities[jobId] = captured;
+                    if (captured == JobPriority.Never) _priorities.Remove(jobId);
+                    else _priorities[jobId] = captured;
+                    JobPreferencesChanged?.Invoke();
                     ShowTab(TabJobs);
                 })
                 {
@@ -788,15 +819,7 @@ namespace SS3D.UI.Lobby
             title.style.marginBottom = 0;
             titleRow.Add(title);
 
-            bool allOn = true;
-            foreach (LobbyMockData.AntagRole role in LobbyMockData.AntagRoles)
-            {
-                if (!_antagSelected.TryGetValue(role.Key, out bool on) || !on)
-                {
-                    allOn = false;
-                    break;
-                }
-            }
+            bool allOn = AntagonistCategories.All.All(role => _antagSelected.Contains(role.Key));
 
             Label toggleAll = new(allOn ? "Clear All" : "Select All");
             toggleAll.AddToClassList("lobby-shell__link");
@@ -804,28 +827,30 @@ namespace SS3D.UI.Lobby
             toggleAll.pickingMode = PickingMode.Position;
             toggleAll.RegisterCallback<ClickEvent>(_ =>
             {
-                bool next = !allOn;
-                foreach (LobbyMockData.AntagRole role in LobbyMockData.AntagRoles)
+                foreach ((string key, string _) in AntagonistCategories.All)
                 {
-                    _antagSelected[role.Key] = next;
+                    if (allOn) _antagSelected.Remove(key);
+                    else _antagSelected.Add(key);
                 }
 
+                JobPreferencesChanged?.Invoke();
                 ShowTab(TabJobs);
             });
             titleRow.Add(toggleAll);
             panel.Add(titleRow);
 
-            foreach (LobbyMockData.AntagRole role in LobbyMockData.AntagRoles)
+            foreach ((string key, string roleLabel) in AntagonistCategories.All)
             {
-                bool on = _antagSelected.TryGetValue(role.Key, out bool selected) && selected;
-                string key = role.Key;
+                bool on = _antagSelected.Contains(key);
 
                 VisualElement row = new();
                 row.AddToClassList("lobby-shell__antag-row");
                 row.pickingMode = PickingMode.Position;
                 row.RegisterCallback<ClickEvent>(_ =>
                 {
-                    _antagSelected[key] = !on;
+                    if (on) _antagSelected.Remove(key);
+                    else _antagSelected.Add(key);
+                    JobPreferencesChanged?.Invoke();
                     ShowTab(TabJobs);
                 });
 
@@ -843,7 +868,7 @@ namespace SS3D.UI.Lobby
 
                 row.Add(box);
 
-                Label roleName = new(role.Name);
+                Label roleName = new(roleLabel);
                 roleName.AddToClassList("lobby-shell__antag-name");
                 roleName.AddToClassList("font-body");
                 roleName.pickingMode = PickingMode.Ignore;

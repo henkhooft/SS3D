@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +8,7 @@ using SS3D.Permissions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.PlayerControl;
+using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
 using UnityEditor;
@@ -213,6 +214,22 @@ namespace SS3D.Editor.Automation
             new Step { Name = "Unready", Enter = () => Click(ReadyButton()), Until = () => !IsReady() && CountLabel() == "0/1 ready",
                 Verify = () => Require(ReadyButton().text == "NOT READY", "Unready reflected in button and count") },
             new Step { Name = "Ready again", Enter = () => Click(ReadyButton()), Until = IsReady },
+            new Step { Name = "Open Jobs tab", Enter = () => Click(Shell().Q<Button>("tab-jobs")), Until = () => SecurityChip("H") != null },
+            new Step
+            {
+                Name = "Security High reaches the server",
+                Enter = () => Click(SecurityChip("H")),
+                // The shell reads replicated jobs on its 200ms refresh: wait on the UI, not only the server.
+                Until = () => Job("Security").Interested == 1 && SecurityRowText().Contains("1 interested"),
+                Verify = () =>
+                {
+                    Require(SecurityChip("H").ClassListContains("lobby-shell__priority-chip--high"), "Security H chip selected");
+                    Require(Job("Assistant").Interested == 0, "Only Security counts as interested");
+                    Require(SecurityRowText().Contains("1/1"), "Jobs tab shows Security slots");
+                    Capture("jobs-security-high");
+                },
+            },
+            new Step { Name = "Back to Server Info", Enter = () => Click(Shell().Q<Button>("tab-server-info")), Until = () => SecurityChip("H") == null },
             new Step
             {
                 Name = "Open creator before round start",
@@ -225,7 +242,12 @@ namespace SS3D.Editor.Automation
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(true)),
                 Timeout = 120,
                 Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && Spawned() && !Visible(Shell()) && !Visible(Creator()),
-                Verify = () => Require(!BoothLive(), "Booth deactivated while in world"),
+                Verify = () =>
+                {
+                    Require(!BoothLive(), "Booth deactivated while in world");
+                    Require(AssignedRole() == "Security", "Round start resolved the High preference to Security");
+                    Require(Job("Security").Assigned == 1, "Security slot count replicated as taken");
+                },
             },
             new Step
             {
@@ -238,6 +260,7 @@ namespace SS3D.Editor.Automation
                     Require(!Visible(Creator()), "Return shows shell, not creator");
                     Require(BoothLive(), "Booth restored with RT bound");
                     Require(CharacterName() == _savedName, "Saved character name restored");
+                    Require(AssignedRole() == null && Job("Security").Assigned == 0, "Round stop cleared job assignments");
                 },
             },
             new Step { Name = "Ensure unready for late join", Enter = () => { if (IsReady()) Click(ReadyButton()); }, Until = () => !IsReady() },
@@ -259,7 +282,11 @@ namespace SS3D.Editor.Automation
                 Name = "Late join spawns",
                 Enter = () => Click(ReadyButton()),
                 Until = () => Spawned() && !Visible(Shell()),
-                Verify = () => Require(!BoothLive(), "Booth deactivated after late join"),
+                Verify = () =>
+                {
+                    Require(!BoothLive(), "Booth deactivated after late join");
+                    Require(AssignedRole() == "Security", "Late join took the highest ranked open job");
+                },
             },
             new Step
             {
@@ -537,6 +564,21 @@ namespace SS3D.Editor.Automation
         private static string CountLabel() => Shell().Q<Label>(className: "lobby-shell__countdown")?.text;
 
         private static string CharacterName() => Shell().Q<Label>(className: "lobby-shell__character-name")?.text;
+
+        private static JobSlotInfo Job(string name) =>
+            SubSystems.TryGet(out RoleSubSystem roles) ? roles.Jobs.FirstOrDefault(job => job.Name == name) : default;
+
+        private static string AssignedRole() =>
+            SubSystems.TryGet(out RoleSubSystem roles) && roles.TryGetRole(Local(), out RoleData role) ? role.Name : null;
+
+        private static VisualElement SecurityRow() => Shell()?.Query(className: "lobby-shell__job-row")
+            .Where(row => row.Q<Label>(className: "lobby-shell__job-name")?.text == "Security").First();
+
+        private static string SecurityRowText() =>
+            string.Join(" ", SecurityRow()?.Query<Label>().ToList().Select(label => label.text) ?? Array.Empty<string>());
+
+        private static Button SecurityChip(string text) =>
+            SecurityRow()?.Query<Button>(className: "lobby-shell__priority-chip").Where(chip => chip.text == text).First();
 
         private static Button FindButton(VisualElement surface, string text) =>
             surface?.Query<Button>().Where(b => b.text == text && b.worldBound.width > 0).First();

@@ -1,6 +1,6 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: in-progress (Phase A/B visual + Phase E1 live preview/draft; C/D/E2/F pending)
+> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2/F pending)
 
 # Lobby UITK redesign
 
@@ -15,7 +15,7 @@ character preview.
 | A | Lobby Shell layout + USS + mock data; catalog; preview placeholder click stub | **shipped** |
 | B | Character Creator separate screen (guided-steps visual) | **shipped** (visual) |
 | C | Wire Ready / round state / admin start-stop / player list / show-hide | implemented; host lifecycle + remote non-admin client verified (Ready click and chat typing as real OS input; other steps synthetic) |
-| D | Jobs H/M/L/N + antag prefs sync + resolution | pending |
+| D | Jobs H/M/L/N + antag prefs sync + resolution | **shipped** (round-start pass + latejoin; antag opt-ins stored, no gamemode consumer yet) |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
 | E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — body shape keys and local hair/beard/color live on booth; skin/network pending |
 | F | Purge condemned LobbyCanvas / uGUI views; docs finalize | pending |
@@ -170,7 +170,7 @@ the server retains its permission check. Mock force-start/extend-timer controls 
 removed. Observe is disabled until an observer backend exists. Legacy LobbyCanvas
 roots are disabled at runtime, including after scene reload; asset purge remains Phase F.
 
-Jobs/antag preferences, lobby chat, settings application, server metadata/configuration
+Lobby chat, settings application, server metadata/configuration
 and networked/persisted character appearance remain subsequent implementation slices.
 The existing visual pilot now checks production legacy suppression instead of doing
 the suppression itself. Runtime/multiplayer verification is required before Phase C
@@ -241,3 +241,37 @@ Not covered: OS mouse/keyboard input, a second machine, and the client after `Sc
 (a windowed player may stall in `Environment.Exit`; the pilot kills it). The remote client's first
 post-spawn capture showed the camera over open space; not investigated. Header map/mode is
 still the mock "Cerestation".
+
+## Jobs and antagonist preferences (Phase D) — 2026-10-30
+
+The Jobs tab now shows `RoleSubSystem`'s replicated `JobSlotInfo` list instead of mock departments:
+role name, department (`IdAccessSubSystem.DepartmentForRole`), slots (0 = unlimited, shown as OPEN),
+assigned and **interested** (online players ranking the job above Never, shown per row as live
+demand, `lobby.md` §3). Today that is the two authored roles in `StartingRoles.asset`: Security (1)
+and Assistant (unlimited). Departments without roles do not appear; Civilian uses Heroicons `UserGroup`.
+
+- **Sync:** every chip/opt-in change sends a `JobPreferencesMessage` broadcast with the full list;
+  `LobbyUiSubSystem` also resends once per connection after the local player record replicates. The
+  server resolves the player from the sending connection, ignores unknown jobs/categories, and keeps
+  preferences per ckey, so they survive reconnects within a server session (not persisted to disk).
+- **Defaults:** every job Never and no antagonist opt-ins — an empty list is the explicit
+  "no preference" and resolves to the fallback.
+- **Resolution (`JobResolver`, pure + EditMode-tested):** `EntitySubSystem.SpawnReadyPlayers` calls
+  `RoleSubSystem.ResolveRoundStartRoles` before spawning. All players' High jobs are tried before any
+  Medium, then Low, in a fresh random order per tier with a random pick among a player's tied open
+  jobs. Leftovers get `_fallbackRole` (Assistant), which ignores its cap. Latejoin
+  (`GiveRoleLoadoutToPlayer` with no assignment) takes the highest ranked open job, else the fallback.
+  Assignments clear on `Stopped`. The old assign-on-connect (first joiner → Security) is removed, as is
+  the client-callable `ServerRpc` on `GiveRoleLoadoutToPlayer` (now `[Server]`).
+- **Antagonists:** `AntagonistCategories` (Nuclear Operative, Traitor) replaces the mock list.
+  `RoleSubSystem.IsAntagonistOptedIn(ckey, category)` is the server API; no gamemode selects from it yet
+  (MVP1 M0 assignment).
+
+Divergences from `lobby.md`: H/M/L/N tiers instead of a drag-ranked list (already recorded); latejoin
+uses the same preference chips filtered by open slots rather than a direct pick list; no playtime
+locks exist, so full jobs (not locked ones) render dimmed.
+
+Verified by `Testing/ui/validate.sh --full` (`validate-20261030-182754`): 2101 EditMode tests incl.
+8 `JobResolverTests`, visual 122 checks, lifecycle 38 checks (Security H chip → server interest 1 and
+row label → round start assigns Security and slot 1/1 taken → stop clears → late join takes Security),
+client rebuild and remote pilot 17 checks.

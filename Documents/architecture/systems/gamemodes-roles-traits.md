@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Gamemodes/, Assets/Scripts/SS3D/Systems/Roles/, Assets/Scripts/SS3D/Systems/Traits/
 > Entry points: GamemodeSubSystem, RoleSubSystem
-> Status: stub
+> Status: partial
 
 # Gamemodes / roles / traits
 
@@ -11,12 +11,21 @@ Round objectives, job roles/loadouts, and character traits (e.g. ID permissions)
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Gamemodes/GamemodeSubSystem.cs` — gamemode subsystem
-- `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` — role assignment
+- `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` — replicated job slots (`Jobs`), lobby preferences (`JobPreferencesMessage`), assignment, ID/PDA + loadout spawn
+- `Assets/Scripts/SS3D/Systems/Roles/JobResolver.cs` — pure round-start (High → Medium → Low, fallback Assistant) and latejoin resolution; `JobResolverTests`
+- `Assets/Scripts/SS3D/Systems/Roles/AntagonistCategories.cs` — lobby antagonist opt-in keys
+- `Assets/Content/Data/Roles/StartingRoles.asset` — available roles and slot caps (0 = unlimited)
 - `GamemodeObjectivePanelView` — legacy uGUI panel hidden (no Tab hotkey; PDA tab later)
 
 ## Extension points
 
 - Active gamemode name: `GamemodeSubSystem.CurrentGamemodeName` (used by round-history persistence).
+- New job: add a `RoleData` to `StartingRoles.asset` and map its department in `IdAccessSubSystem.DepartmentForRole`.
+- Antagonist selection: choose among `RoleSubSystem.IsAntagonistOptedIn(ckey, AntagonistCategories.*)`; nothing consumes it yet.
+
+## Pitfalls
+
+- Assignment happens at round start (`ResolveRoundStartRoles`, called by `EntitySubSystem.SpawnReadyPlayers`) or at latejoin spawn, not on connect. `TryGetRole` is empty in the lobby.
 
 ## Depends on / Used by
 

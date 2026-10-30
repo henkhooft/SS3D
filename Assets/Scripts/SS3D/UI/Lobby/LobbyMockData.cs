@@ -1,5 +1,5 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
+using SS3D.Systems.Roles;
 
 namespace SS3D.UI.Lobby
 {
@@ -22,16 +22,6 @@ namespace SS3D.UI.Lobby
             new("0.14.1", "Added department radio channels to the Jobs tab."),
             new("0.14.0", "Reworked lobby ready-up flow and admin round controls."),
             new("0.13.6", "Cerestation map lighting pass, minor pathing fixes."),
-        };
-
-        public static readonly AntagRole[] AntagRoles =
-        {
-            new("traitor", "Traitor"),
-            new("changeling", "Changeling"),
-            new("nukeop", "Nuclear Operative"),
-            new("cultist", "Cultist"),
-            new("revolutionary", "Revolutionary"),
-            new("blob", "Blob"),
         };
 
         public static readonly PlayerRow[] Players =
@@ -68,81 +58,6 @@ namespace SS3D.UI.Lobby
                 "Adebayo flagged as idle — auto-kick in 2 minutes."),
         };
 
-        public static readonly Department[] Departments =
-        {
-            new("command", "Command", "command", new JobRow[]
-            {
-                Job("captain", "Captain", "Captain", 0, 1, 4, false, null),
-            }),
-            new("security", "Security", "security", new JobRow[]
-            {
-                Job("warden", "Warden", "Warden", 0, 1, 3, false, null),
-                Job("security-officer", "Security Officer", "SecurityOfficer", 1, 4, 6, false, null),
-            }),
-            new("engineering", "Engineering", "engineering", new JobRow[]
-            {
-                Job("chief-engineer", "Chief Engineer", "ChiefEngineer", 0, 1, 2, true, "Requires 10h as Engineer"),
-                Job("engineer", "Engineer", "Engineer", 2, 4, 9, false, null),
-                Job("plumber", "Plumber", "Plumber", 1, 2, 3, false, null),
-            }),
-            new("medical", "Medical", "medical", new JobRow[]
-            {
-                Job("doctor", "Doctor", "Doctor", 1, 3, 5, false, null),
-                Job("chemist", "Chemist", "Chemist", 1, 1, 2, false, null),
-            }),
-            new("science", "Science", "science", new JobRow[]
-            {
-                Job("roboticist", "Roboticist", "Roboticist", 1, 2, 2, false, null),
-            }),
-            new("cargo", "Cargo", "cargo", new JobRow[]
-            {
-                Job("cargo-technician", "Cargo Technician", "CargoTechnician", 2, 3, 4, false, null),
-                Job("miner", "Miner", "Miner", 1, 2, 3, false, null),
-            }),
-            new("service", "Service", "service", new JobRow[]
-            {
-                Job("bartender", "Bartender", "Bartender", 1, 1, 2, false, null),
-                Job("chef", "Chef", "Chef", 1, 1, 3, false, null),
-                Job("janitor", "Janitor", "Janitor", 1, 2, 2, false, null),
-            }),
-        };
-
-        public static Dictionary<string, JobPriority> DefaultPriorities()
-        {
-            Dictionary<string, JobPriority> map = new();
-            foreach (Department dept in Departments)
-            {
-                foreach (JobRow job in dept.Jobs)
-                {
-                    map[job.Id] = job.Open > 0 && !job.Locked ? JobPriority.Medium : JobPriority.Never;
-                }
-            }
-
-            return map;
-        }
-
-        public static Dictionary<string, bool> DefaultAntagSelections()
-        {
-            Dictionary<string, bool> map = new();
-            foreach (AntagRole role in AntagRoles)
-            {
-                map[role.Key] = true;
-            }
-
-            return map;
-        }
-
-        private static JobRow Job(
-            string id,
-            string name,
-            string iconId,
-            int open,
-            int slots,
-            int interested,
-            bool locked,
-            string lockReason) =>
-            new(id, name, iconId, open, slots, interested, locked, lockReason);
-
         public readonly struct ChangelogEntry
         {
             public readonly string Version;
@@ -152,18 +67,6 @@ namespace SS3D.UI.Lobby
             {
                 Version = version;
                 Text = text;
-            }
-        }
-
-        public readonly struct AntagRole
-        {
-            public readonly string Key;
-            public readonly string Name;
-
-            public AntagRole(string key, string name)
-            {
-                Key = key;
-                Name = name;
             }
         }
 
@@ -221,68 +124,12 @@ namespace SS3D.UI.Lobby
                 Text = text;
             }
         }
-
-        public sealed class Department
-        {
-            public readonly string Key;
-            public readonly string Name;
-            public readonly string IconId;
-            public readonly JobRow[] Jobs;
-
-            public Department(string key, string name, string iconId, JobRow[] jobs)
-            {
-                Key = key;
-                Name = name;
-                IconId = iconId;
-                Jobs = jobs;
-            }
-        }
-
-        public sealed class JobRow
-        {
-            public readonly string Id;
-            public readonly string Name;
-            public readonly string IconId;
-            public readonly int Open;
-            public readonly int Slots;
-            public readonly int Interested;
-            public readonly bool Locked;
-            public readonly string LockReason;
-
-            public JobRow(
-                string id,
-                string name,
-                string iconId,
-                int open,
-                int slots,
-                int interested,
-                bool locked,
-                string lockReason)
-            {
-                Id = id;
-                Name = name;
-                IconId = iconId;
-                Open = open;
-                Slots = slots;
-                Interested = interested;
-                Locked = locked;
-                LockReason = lockReason;
-            }
-        }
     }
 
     public enum ChatMessageKind : byte
     {
         Player = 0,
         Announcement = 1,
-    }
-
-    public enum JobPriority : byte
-    {
-        Never = 0,
-        Low = 1,
-        Medium = 2,
-        High = 3,
     }
 
     public static class JobPriorityUtil

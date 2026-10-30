@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 8069d119e — 2026-10-30
+> Verified: Phase D jobs commit — 2026-10-30
 
 # Rounds / lobby
 
@@ -11,7 +11,7 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 **UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
 preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop and spawn-based visibility are wired. Networked appearance apply (E2) remains pending; local hair/beard application with independent color palettes exists. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (xdotool). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
+Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. Networked appearance apply (E2) remains pending; local hair/beard application with independent color palettes exists. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (xdotool). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
 
 Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
@@ -25,6 +25,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorDraft.cs` — local name/species/body/style/preferences + separate hair/beard/brow colors + stable outfit index
 - `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights), worn jumpsuit/shoe mesh application
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
+- `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
@@ -41,7 +42,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 
 - Round transitions: extend `RoundSubSystemBase` state handlers and messages in `Messages/`.
 - Spawn flow: `SpawnReadyPlayersEvent` after Ongoing (world must already be ready from PrepareRound).
-- Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem`; jobs preference sync remains pending in `LobbyShellView`; Character Creator is a separate Modal screen (Phase B/E).
+- Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem` (including job preference sends); `LobbyShellView` renders `RoleSubSystem.Jobs`; Character Creator is a separate Modal screen (Phase B/E).
 
 ## Pitfalls
 
@@ -50,7 +51,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - **Pilot clicks:** a synthetic `ClickEvent` does not fire `Button.clicked` (its `Clickable` listens to pointer/submit). Drive buttons with `NavigationSubmitEvent`; keep `ClickEvent` for `RegisterCallback<ClickEvent>` surfaces such as the preview. UI snapshots lag subsystem state by the 200ms refresh — wait on the UI, not only the backend.
 - **Playtest map:** editor boot loads `ApplicationSettings.EditorStationTemplate` (`ministation`) instead of the most recently saved template (Metastation, ~70s to WorldReady). Round start is then ~5s.
 - **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
-- **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort.
+- **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
 - **E1 vs E2:** Save stores session-local character slots (name/species/body/style/preferences); only Human body morphs and catalog hair/beard/color render in the booth. Species/skin/eye/brow rendering, disk persistence and networked spawn appearance remain deferred. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
 
@@ -72,6 +73,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - **Remote client booth threw in `HumanoidController.Setup`:** instantiating the active Human prefab ran every gameplay `Awake` before stripping; on a remote client the booth is built before `CameraSubSystem` exists. The dummy is now instantiated under an inactive staging parent and stripped with `DestroyImmediate` before activation. Host-only pilots never saw this — run the remote pilot after booth changes.
 - **Disabled lobby buttons looked clickable:** the fill-colour button rules had no `:disabled` state, so a non-admin's Admin (and unwired Observe) rendered like live buttons; `ui_wait … disabled` still passed. `.lobby-shell__btn:disabled` dims them. UI renders in linear colour space, so opacity 0.35 reads closer to 60% — judge the screenshot, not the number.
 - **Chat Return ignored in real play:** a real Return keydown targets the `TextField`'s inner text element, which consumes it before it bubbles; the composer's bubble-phase `KeyDownEvent` handler never ran, while synthetic events sent to the field itself passed. Register Return/submit handlers on text fields with `TrickleDown.TrickleDown`; found by the remote pilot's real keyboard input.
+- **Catalog rebuild over MCP:** SS3D → Data → Rebuild All UI Catalogs ends in a modal "UI Catalogs" OK dialog that blocks MCP and ignores xdotool under XWayland; prefer `LobbyAssetCatalogBuilder.RebuildCatalogBatch` via `execute_code`.
 - **Players persist offline:** `PlayerSubSystem.GetPlayer(ckey)` still returns a disconnected player. Use the online count or the connection, not a null record, to detect a remote leaving.
 
 ## Depends on / Used by

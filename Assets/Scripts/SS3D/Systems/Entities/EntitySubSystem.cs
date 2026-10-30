@@ -253,9 +253,12 @@ namespace SS3D.Systems.Entities
             {
                 SpawnPlayer(player);
 
-                // TODO: replace with character name and role
+                // TODO: replace with character name
+                string job = SubSystems.Get<RoleSubSystem>().TryGetRole(player, out RoleData role)
+                    ? role.Name.ToLowerInvariant()
+                    : "crew";
                 SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
-                    $"{player.Ckey}, assistant, has joined the ship");
+                    $"{player.Ckey}, {job}, has joined the ship");
             }
         }
 
@@ -349,6 +352,8 @@ namespace SS3D.Systems.Entities
             {
                 Log.Information(this, "No players to spawn", Logs.ServerOnly);
             }
+
+            SubSystems.Get<RoleSubSystem>().ResolveRoundStartRoles(players);
 
             foreach (Player ckey in players)
             {

@@ -1,9 +1,12 @@
-using SS3D.Core;
+﻿using SS3D.Core;
 using System.Linq;
 using FishNet;
+using FishNet.Connection;
 using SS3D.Permissions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.PlayerControl;
+using SS3D.Systems.Roles;
+using SS3D.Systems.Roles.Messages;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.Screens;
@@ -103,6 +106,7 @@ namespace SS3D.UI.Lobby
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
+            _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.SetCharacterName(_draft.Name);
 
             _creatorView = new CharacterCreatorView(_catalog, _draft);
@@ -131,6 +135,7 @@ namespace SS3D.UI.Lobby
 
         private float _nextSessionRefresh;
         private bool _inWorld;
+        private NetworkConnection _preferencesSentTo;
 
         private void RefreshSession()
         {
@@ -162,6 +167,11 @@ namespace SS3D.UI.Lobby
                 _inWorld = false;
                 HandleReturnToLobbyRequested();
             }
+            // Wait for the replicated player record: the server drops preferences from unknown senders.
+            if (local == null) _preferencesSentTo = null;
+            else if (_preferencesSentTo != InstanceFinder.ClientManager.Connection) SendJobPreferences();
+            _shellView.SetJobs(connected && SubSystems.TryGet(out RoleSubSystem roles)
+                ? roles.Jobs : System.Array.Empty<JobSlotInfo>());
             bool admin = CanAdmin();
             LobbyMockData.PlayerRow[] rows = connected ? players.OnlinePlayers.Where(p => p != null)
                 .Select(p => new LobbyMockData.PlayerRow(p.Ckey, p.Ckey, ready != null && ready.IsReady(p),
@@ -169,6 +179,23 @@ namespace SS3D.UI.Lobby
             _shellView.SetSession(rounds != null ? rounds.CurrentRoundState : RoundState.Stopped,
                 rounds != null ? rounds.CurrentTimerSeconds : 0,
                 local != null && ready != null && ready.IsReady(local), local != null, admin, rows);
+        }
+
+        /// <summary>
+        /// Sends the full preference list; the server keeps it per ckey until the next change, so it
+        /// is also resent once per connection.
+        /// </summary>
+        private void SendJobPreferences()
+        {
+            if (_shellView == null || InstanceFinder.ClientManager == null || !InstanceFinder.ClientManager.Started) return;
+            string[] jobs = _shellView.JobPriorities.Keys.ToArray();
+            InstanceFinder.ClientManager.Broadcast(new JobPreferencesMessage
+            {
+                Jobs = jobs,
+                Priorities = jobs.Select(job => (byte)_shellView.JobPriorities[job]).ToArray(),
+                AntagonistOptIns = _shellView.AntagonistOptIns.ToArray(),
+            });
+            _preferencesSentTo = InstanceFinder.ClientManager.Connection;
         }
 
         private bool CanAdmin() => SubSystems.TryGet(out PermissionSubSystem permissions)
