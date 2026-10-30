@@ -156,6 +156,10 @@ namespace SS3D.Editor.Automation
                 .FirstOrDefault(r => r != null && r.Q("lobby-shell-surface") != null);
         }
 
+        // The uGUI lobby (LobbyCanvas, renamed "Lobby" in Game.unity) and Character Customizer canvases were purged in Phase F.
+        private static bool LegacyLobbyCanvasPresent() => UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Any(canvas => canvas.isRootCanvas && (canvas.name == "Lobby" || canvas.name == "Character Customizer"));
+
         private static void Require(bool value, string message)
         {
             if (!value) throw new InvalidOperationException(message);
@@ -357,12 +361,7 @@ namespace SS3D.Editor.Automation
                 switch (_step)
                 {
                     case 0:
-                        // Game.unity renames the LobbyCanvas instance; match its LobbyScreen component.
-                        MonoBehaviour[] legacy = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
-                                FindObjectsInactive.Include, FindObjectsSortMode.None)
-                            .Where(behaviour => behaviour.GetType().Name == "LobbyScreen").ToArray();
-                        Require(legacy.Length > 0 && legacy.All(behaviour => !behaviour.gameObject.activeInHierarchy),
-                            "Production host disables the legacy lobby screen");
+                        Require(!LegacyLobbyCanvasPresent(), "No legacy uGUI lobby canvas in the scene");
                         if (!CheckShell(shell))
                         {
                             _step--;
@@ -529,7 +528,7 @@ namespace SS3D.Editor.Automation
             public string unityVersion;
             public int width, height;
             public string[] checks, errors, postconditions;
-            public string scope = "Rendered lobby smoke; synthetic UI events, not OS pointer/keyboard coverage. Asserts production suppression of the legacy LobbyScreen. Screenshots require visual review; no pixel baseline comparison.";
+            public string scope = "Rendered lobby smoke; synthetic UI events, not OS pointer/keyboard coverage. Asserts the legacy uGUI lobby canvas is absent. Screenshots require visual review; no pixel baseline comparison.";
         }
 
         private static void Finish(string failure, bool stopPlay)

@@ -1,6 +1,6 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2 networked name/body/hair shipped, species/skin/persistence pending; F pending)
+> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2 networked name/body/hair shipped, species/skin/persistence pending; F legacy purge shipped)
 
 # Lobby UITK redesign
 
@@ -18,7 +18,7 @@ character preview.
 | D | Jobs H/M/L/N + antag prefs sync + resolution | **shipped** (round-start pass + latejoin; antag opt-ins stored, no gamemode consumer yet) |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
 | E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — name, body morphs, hair/beard + colors sync to the spawned body; species/skin/eyes/eyebrows/persistence pending |
-| F | Purge condemned LobbyCanvas / uGUI views; docs finalize | pending |
+| F | Purge condemned LobbyCanvas / uGUI views; docs finalize | **shipped** — see [Phase F](#legacy-ugui-purge-phase-f--2026-10-30) |
 
 ## Design divergences (do not edit design docs)
 
@@ -31,7 +31,7 @@ character preview.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — DDOL bootstrap; shell + creator + booth lifecycle
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — full shell chrome
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator
-- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22)
+- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 23)
 - `Assets/Scripts/SS3D/Systems/Entities/Character/HumanoidMorphApplier.cs` — Human.fbx body blend shapes (Female/Fat/Muscle/…)
 - `Assets/Content/Systems/UI/Lobby/LobbyShell.uss` (+ `@import CharacterCreator.uss`) + `Resources/LobbyAssetCatalog.asset`
 - Rebuild: **SS3D → Data → Rebuild All UI Catalogs**
@@ -142,7 +142,7 @@ for commands and evidence. It does not establish physical-input or multiplayer c
 Play Mode: click character preview → Character Creator with live humanoid RT; Body sliders drive
 Human.fbx shape keys (Female/Fat/Muscle/Chest/Jaw) + height scale; Front/Side/Back rotates the
 dummy; **Save Character** updates lobby name; **Return to Lobby** restores the shell with the saved
-RT appearance. The runtime host suppresses the old `LobbyScreen` (the renamed `LobbyCanvas` instance); the smoke test checks that suppression.
+RT appearance. The old uGUI lobby was removed in Phase F; the pilots assert it is absent.
 
 ## Related
 
@@ -308,3 +308,35 @@ Verified by `Testing/ui/validate.sh --full` (`validate-20261030-184621`): 2110 E
 Save → round-start spawn and late-join spawn each carry the mind name, armature height with unit root
 scale, the Fat shape key and one hair mesh; `spawned-appearance.png` reviewed), client rebuild, remote
 pilot 17 checks. The remote client was not asserted on another client's appearance.
+
+## Legacy uGUI purge (Phase F) — 2026-10-30
+
+The condemned uGUI lobby is gone, not just suppressed. Nothing in it was live: `LobbyUiSubSystem` had disabled
+the `LobbyScreen` root on every refresh, and the UITK shell already owned ready, round, admin and player-list behavior.
+
+- **Scene (`Game.unity`):** removed the `Lobby` (LobbyCanvas) and `Character Customizer` canvases, `Static World Objects`
+  (old customizer plane/camera writing `LobbyCameraRenderTexture`) and the `GameScreensController` object under
+  `Lobby Subsystems`.
+- **Networked View prefab:** kept only `GamemodeObjectiveView` (`GamemodeObjectivesView`, which feeds the in-round
+  `Gamemode Objective Canvas`). Its legacy Player Username List / Lobby Ready / Change Round State / Round State
+  children are gone.
+- **Assets deleted:** `LobbyCanvas`, `CharacterCustomizer`, `CharacterCustomizerCanvas`, `PlayerNameUI`, `Settings/`
+  (Category/Dropdown/Slider/Toogle), `StaticWorldObjects`, `LobbyCameraRenderTexture`, `GameScreenSettings.asset`
+  (also dropped from Preloaded Assets). FishNet `DefaultPrefabObjects` was regenerated (three entries removed), so
+  client and server builds from before this change will not connect to builds after it.
+- **Scripts deleted:** `Systems/Lobby/UI/*` (LobbyView, LobbyTabsView, LobbyReadyView, ChangeRoundStateView,
+  RoundStateView, PlayerUsernameListView, PlayerUsernameView) and the `GameScreens` system that only that canvas
+  used (`GameScreen`, `GameScreens`, `GameScreensController`, `GameScreenSettings`, `ScreenType`, `LobbyScreen`,
+  `ChangeGameScreenEvent`). The `Other.ToggleMenu` input action now has no listener. It used to re-open the
+  legacy lobby over a spawned body, which already had no visible effect.
+- **Kept:** `Canvas Template`, `Black Overlay`, `Player Canvas`, `Gamemode Objective Canvas` and the
+  intro/server-connection canvases are not lobby UI. The generic `SS3D.UI` widgets (`GenericTabView`, `LabelButton`,
+  `GlobalUiVisibilityControllerView`) remain for other users.
+- **Pilots:** the runtime suppression loop and the "legacy exists and is suppressed" checks are replaced by
+  "no root `Lobby`/`Character Customizer` canvas in the scene".
+
+Validation: `Testing/ui/validate.sh --full` (`validate-20261030-191427`) passed: compile clean, 2083 EditMode tests
+(27 fewer than before, all from `PrefabTests` running 3 cases for each of the 9 deleted prefabs), visual 122 checks, lifecycle
+58 checks, client rebuilt for the new prefab list, remote pilot 17 checks. The scene has no missing scripts and
+`GamemodeObjectivesView` still references `Gamemode Objective Canvas`. The pilots don't cover reconnect-to-existing-body
+(reclaim); it relies on the same `IsPlayerSpawned(connection)` poll that was already the only live path.

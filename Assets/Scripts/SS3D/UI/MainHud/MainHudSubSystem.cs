@@ -36,7 +36,7 @@ namespace SS3D.UI.MainHud
     /// (<see cref="Hands"/>/<see cref="HumanInventory"/>) and help/harm intent (<see cref="IIntentProvider"/>).
     /// <para>
     /// Hidden until a local spawned body exists during an in-game round; hidden again when the round leaves
-    /// Ongoing/Ending (same spawn/round gate idea as <c>GameScreensController</c>). Also suppressed while a
+    /// Ongoing/Ending (same spawn/round gate idea as <c>LobbyUiSubSystem</c>). Also suppressed while a
     /// diegetic machine panel or the map editor is open — visibility authority stays here (observes
     /// <see cref="MachineInterfaceSubSystem"/> / <see cref="MapEditorSubSystem"/>); those UIs must not call
     /// into Main HUD.

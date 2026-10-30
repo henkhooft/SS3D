@@ -9,7 +9,6 @@ using SS3D.Systems.Roles;
 using SS3D.Systems.Roles.Messages;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
-using SS3D.Systems.Screens;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inventory.Containers;
@@ -147,11 +146,6 @@ namespace SS3D.UI.Lobby
         {
             if (Time.unscaledTime < _nextSessionRefresh) return;
             _nextSessionRefresh = Time.unscaledTime + 0.2f;
-            // Disable scene-owned legacy presentation, including after scene reloads. Match the component:
-            // Game.unity renames the LobbyCanvas prefab instance to "Lobby".
-            foreach (LobbyScreen legacy in FindObjectsByType<LobbyScreen>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                legacy.gameObject.SetActive(false);
-
             bool online = InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Started;
             bool connected = online && SubSystems.TryGet(out PlayerSubSystem _) && SubSystems.TryGet(out RoundSubSystem _);
             SubSystems.TryGet(out PlayerSubSystem players);

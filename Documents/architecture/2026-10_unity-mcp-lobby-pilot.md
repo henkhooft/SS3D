@@ -82,7 +82,7 @@ this does not grant gameplay equipment. See the [outfit implementation](2026-08_
 ## Boundaries and follow-up
 
 - No Boot/Game or Human prefab changes, no new gameplay UI, no design changes.
-- Uses the actual boot flow and asserts production suppression of the legacy `LobbyScreen`;
+- Uses the actual boot flow and asserts the legacy uGUI lobby canvas is absent (purged in Phase F);
   this is not an isolated UI scene. The lifecycle pilot covers a single-editor Host session only,
   not a separate client process.
 - Synthetic UI events cover callback wiring, not physical input/hit testing. The remote pilot adds real X11 input for Ready and chat only.

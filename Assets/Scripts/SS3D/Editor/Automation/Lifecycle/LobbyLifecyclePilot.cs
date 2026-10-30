@@ -201,10 +201,7 @@ namespace SS3D.Editor.Automation
                     && CountLabel() == "0/1 ready" && ReadyButton().enabledInHierarchy,
                 Verify = () =>
                 {
-                    MonoBehaviour[] legacy = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
-                            FindObjectsInactive.Include, FindObjectsSortMode.None)
-                        .Where(behaviour => behaviour.GetType().Name == "LobbyScreen").ToArray();
-                    Require(legacy.Length > 0 && legacy.All(b => !b.gameObject.activeInHierarchy), "Legacy LobbyScreen exists and is suppressed");
+                    Require(!LegacyLobbyCanvasPresent(), "No legacy uGUI lobby canvas in the scene");
                     Require(!Visible(Creator()), "Creator hidden on boot");
                     Require(BoothLive(), "Preview booth active with RT bound");
                     Require(AdminButton().enabledInHierarchy, "Host owner has Admin enabled");
@@ -600,6 +597,10 @@ namespace SS3D.Editor.Automation
         private static VisualElement Shell() => Root()?.Q("lobby-shell-surface");
 
         private static VisualElement Creator() => Root()?.Q("character-creator-surface");
+
+        // The uGUI lobby (LobbyCanvas, renamed "Lobby" in Game.unity) and Character Customizer canvases were purged in Phase F.
+        private static bool LegacyLobbyCanvasPresent() => UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Any(canvas => canvas.isRootCanvas && (canvas.name == "Lobby" || canvas.name == "Character Customizer"));
 
         private static bool Visible(VisualElement surface) => surface != null && surface.resolvedStyle.display != DisplayStyle.None;
 

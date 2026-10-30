@@ -29,7 +29,7 @@ namespace SS3D.Systems.Testing
     /// Drives a headless client/host/dedicated-server process through a scripted sequence of real
     /// gameplay actions for the multiplayer test harness (Testing/multiplayer/), using the same
     /// client-&gt;server broadcast/RPC APIs the UI calls
-    /// (SS3D.Systems.Lobby.UI.LobbyReadyView, SS3D.Systems.Lobby.UI.ChangeRoundStateView) - never
+    /// (SS3D.UI.Lobby.LobbyUiSubSystem) - never
     /// simulated input, never the Editor-only stub broadcasts on
     /// <see cref="ReadyPlayersSubSystem"/>/<see cref="RoundSubSystem"/>, since those don't compile
     /// into a real built player/server.

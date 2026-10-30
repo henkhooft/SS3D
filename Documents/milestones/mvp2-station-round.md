@@ -58,10 +58,9 @@ flowchart TB
 
 Hidden blockers this sketch makes explicit (each its own future pass):
 
-- **Jobs need a job-select UI, and the lobby is condemned.** S1 can't ship on the condemned uGUI
-  lobby; it needs the lobby UITK redesign ([lobby.md](../design/lobby.md)) — now
-  implementation-ready per the owner (UI direction settled), a parallel track to commission — or a
-  minimal replacement path. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
+- **Jobs need a job-select UI** — now provided by the UITK lobby ([lobby.md](../design/lobby.md);
+  [effort](../architecture/2026-08_lobby-uitk-redesign.md) Phase D, legacy uGUI purged in Phase F). What
+  remains for S1 is a real roster: only Security and Assistant are authored in `StartingRoles.asset`. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
   [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); access presets come
   from [id-access.md](../design/id-access.md) §5.
 - **"Atmos as a real threat when breached"** — client atmos VFX Phase 1 is already shipped
@@ -85,7 +84,7 @@ Hidden blockers this sketch makes explicit (each its own future pass):
 
 | Id | Name | Status | Links |
 |----|------|--------|-------|
-| S1 | Job system (bare roster) | pending — blocked on a job-select UI (condemned lobby) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) |
+| S1 | Job system (bare roster) | pending — job-select UI unblocked (UITK lobby H/M/L/N prefs + one-pass resolution shipped, legacy uGUI purged); roster is still two roles (Security, Assistant) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) |
 | S2 | Station loop felt | pending — builds on MVP1 M8 env exposure + alarms; Area-id merge still out | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M8; id-access doors |
 | S3 | Medical shift thin | pending — defib (shipped) is the thin save path; cloning rides crafting rewrite | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) §3, §5; [crafting](../architecture/systems/crafting.md) (fabricator); reuses MVP1 death spine |
 | S4 | Comms radio | partial — feed + Tab/slash compose + announce SFX + Chat purge shipped; headset gating / PDA log / radial still open | [comms.md](../design/comms.md) §6; [2026-07_comms-non-diegetic-feed.md](../architecture/2026-07_comms-non-diegetic-feed.md) |

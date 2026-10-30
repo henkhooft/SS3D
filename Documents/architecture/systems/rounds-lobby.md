@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: E2 networked character — 2026-10-30
+> Verified: Phase F legacy purge — 2026-10-30
 
 # Rounds / lobby
 
@@ -15,7 +15,7 @@ Ready/late-join, replicated player readiness/counts, round timer/state, admin st
 
 Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
-**Condemned UI:** lobby job-select / ready uGUI (`Systems/Lobby/UI`, `LobbyCanvas`) — do not extend; replace per [lobby.md](../../design/lobby.md). Round state machine is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+**Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
 
@@ -24,7 +24,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator, local character slots + pinned Save footer
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorDraft.cs` — local name/species/body/style/preferences + separate hair/beard/brow colors + stable outfit index
 - `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterAppearance.cs` — replicated character + server sanitization; `Human.cs` applies it, `Mind.DisplayName` is the in-world name
-- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights), worn jumpsuit/shoe mesh application
+- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 23, own lights), worn jumpsuit/shoe mesh application
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
@@ -47,13 +47,13 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 
 ## Pitfalls
 
-- **Legacy UI suppression:** `LobbyUiSubSystem` disables active `LobbyScreen` objects after scene loads; legacy assets/scripts remain pending purge. Match the component, not a name: `Game.unity` renames the `LobbyCanvas` prefab instance to `Lobby`, so a name check silently matched nothing while the old lobby stayed live under the UITK shell. Smoke tests assert a `LobbyScreen` exists and is inactive (non-vacuous); never disable it themselves.
+- **Legacy lobby purged:** the uGUI lobby is deleted (Phase F), not suppressed. Before that, the suppression keyed on a name and silently matched nothing because `Game.unity` renamed the `LobbyCanvas` instance to `Lobby`, so the old lobby stayed live under the UITK shell. The pilots now assert there is no root `Lobby`/`Character Customizer` canvas. `GamemodeObjectivesView` still lives on the `Networked View` prefab; don't delete that prefab as lobby debris.
 - **Ready window:** the server accepts ready toggles in every state except Ongoing/Ending and spawns whoever is ready on Ongoing, so Ready stays enabled through Preparing/WarmingUp (countdown). Ongoing switches it to Join Round (late spawn RPC).
 - **Pilot clicks:** a synthetic `ClickEvent` does not fire `Button.clicked` (its `Clickable` listens to pointer/submit). Drive buttons with `NavigationSubmitEvent`; keep `ClickEvent` for `RegisterCallback<ClickEvent>` surfaces such as the preview. UI snapshots lag subsystem state by the 200ms refresh — wait on the UI, not only the backend.
 - **Playtest map:** editor boot loads `ApplicationSettings.EditorStationTemplate` (`ministation`) instead of the most recently saved template (Metastation, ~70s to WorldReady). Round start is then ~5s.
 - **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
-- **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
+- **Preview booth:** live preview uses `CharacterPreviewBooth` on layer **23** with its own camera/lights/RT at (-250, -250, 250). Never share layer 22 or (-250, -250, -250) with `RuntimePreviewGenerator`: sharing put the dummy in every item icon — (the old `LobbyCameraRenderTexture`/`StaticWorldObjects` customizer was deleted in Phase F). Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
 - **E1 vs E2:** Save stores session-local character slots and sends the saved slot as `CharacterAppearanceMessage` (also once per connection); `EntitySubSystem` sanitizes/stores it per ckey and stamps `Mind.CharacterName` + `Human.SetAppearance` at spawn. Save never changes a living body. Species/skin/eye/brow rendering and disk persistence remain deferred.
 - **Spawned height:** scale the armature (`HumanoidRigReferences.ArmatureRoot`), never the networked root (capsule, NetworkTransform). The server applies morphs too so bone hit colliders match. Clothing mesh swaps reset shape keys — `ClothesDisplayer` calls `Human.ReapplyBodyMorphs`.
 - **Style indices:** hair/beard replicate as `LobbyAssetCatalog` indices resolved via `HumanoidStyleSource.Current` (registered by the lobby UI); a headless server spawns no style meshes, and mismatched client/server catalogs would show the wrong style. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).

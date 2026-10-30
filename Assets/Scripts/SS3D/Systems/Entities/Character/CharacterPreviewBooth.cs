@@ -23,10 +23,14 @@ namespace SS3D.Systems.Entities.Character
     /// </summary>
     public sealed class CharacterPreviewBooth : MonoBehaviour
     {
-        /// <summary>Unused user layer (index 22) reserved for character preview isolation.</summary>
-        public const int PreviewLayer = 22;
+        /// <summary>
+        /// Unused user layer (index 23) reserved for character preview isolation. Not 22: that is
+        /// <c>RuntimePreviewGenerator</c>'s item/tile icon layer, and sharing it put the booth dummy in item icons.
+        /// </summary>
+        public const int PreviewLayer = 23;
 
-        private static readonly Vector3 BoothOrigin = new(-250f, -250f, -250f);
+        /// <summary>Kept apart from <c>RuntimePreviewGenerator</c>'s icon position (-250, -250, -250).</summary>
+        private static readonly Vector3 BoothOrigin = new(-250f, -250f, 250f);
         private const float BaseYawDegrees = 0f;
         /// <summary>Peaceful locomotion blend tree: ~0.3 = walk, 1.0 = run.</summary>
         private const float PreviewWalkSpeed = 0.3f;

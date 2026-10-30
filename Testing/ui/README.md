@@ -96,8 +96,7 @@ Each run writes `artifacts/ui/<UTC timestamp>/status.json` and fourteen PNGs: ei
 Display, Sound, muted Sound, Keyboard), plus lobby, identity, body/side, style,
 review and saved lobby. Captures use a fixed 1920×1080 Game
 View preset. The selected Game View size and Play Mode start scene are restored
-after the run; Boot/Game assets are not edited. Production lobby hosting disables the legacy `LobbyScreen` (the `LobbyCanvas`
-instance, renamed `Lobby` in Game.unity) during Play; the pilot asserts it exists and is inactive. Other startup/game UI can still appear.
+after the run; Boot/Game assets are not edited. The pilot asserts the legacy uGUI lobby canvas (purged in Phase F) is absent. Other startup/game UI can still appear.
 
 The pilot opens the real lobby and creator, changes name and body sliders, rotates
 the preview, navigates steps, saves, and returns. It checks visibility, control
