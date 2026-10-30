@@ -1,0 +1,16 @@
+{
+    "name": "SS3D.Editor.Automation.Lifecycle",
+    "rootNamespace": "SS3D.Editor.Automation",
+    "references": [
+        "SS3D.Core",
+        "SS3D.Systems",
+        "SS3D.Permissions",
+        "FishNet.Runtime",
+        "SS3D.Editor",
+        "SS3D.Editor.Automation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": false
+}

@@ -1,0 +1,65 @@
+# Non-admin graphical client joining an externally driven Host (e.g. the Unity editor), checking
+# the UI Toolkit lobby from the remote side. Run windowed, not -batchmode (the lobby UI does not
+# bootstrap headless). The Host must:
+#   1. be in the lobby (Stopped, not ready) before this client connects;
+#   2. start a round after the client shows Ready and has sent its chat line (client spawns on
+#      Ongoing), then stop it;
+#   3. start a second round without this client readying (client late-joins), then stop it.
+# The client ckey must not hold Administrator permission. The Host must also perform os_* requests
+# (OsClick/OsType/OsKey test signals) as real input on this window, e.g. with xdotool.
+wait_timeout 180
+wait_connected
+ui_wait #lobby-shell-surface visible
+ui_wait #character-creator-surface hidden
+ui_wait .lobby-shell__btn--ready enabled
+ui_wait .lobby-shell__btn--admin disabled
+ui_text .lobby-shell__countdown 0/2 ready
+# Let the scene fade-in finish before capturing.
+wait_seconds 2
+screenshot remote-01-lobby
+
+# Server-side permission check: a non-admin start request must be ignored.
+start_round
+wait_seconds 5
+ui_text .lobby-shell__countdown-sub Stopped
+
+# Real OS input from here to the chat line: the host performs os_* requests with xdotool, so hit
+# testing (nothing covering the button) and keyboard focus are exercised, not just callbacks.
+os_click .lobby-shell__btn--ready
+ui_text .lobby-shell__btn--ready ✓
+ui_text .lobby-shell__countdown 1/2 ready
+screenshot remote-02-ready
+
+# Keyboard focus: click into the chat composer, type, send with Return (the host checks client.log).
+os_click #tab-chat
+os_click .lobby-shell__chat-input
+os_type remoteprobe real keyboard
+wait_seconds 2
+screenshot remote-02-chat-typed
+os_key Return
+
+# Host starts round 1: ready client spawns and the lobby hides.
+wait_round Ongoing
+assert_embarked
+ui_wait #lobby-shell-surface hidden
+screenshot remote-03-spawned
+
+# Host stops round 1: client returns to the shell.
+wait_round Stopped
+ui_wait #lobby-shell-surface visible
+ui_wait #character-creator-surface hidden
+screenshot remote-04-returned
+
+# Host starts round 2 without this client ready: Join Round late-spawns.
+wait_round Ongoing
+ui_text .lobby-shell__btn--ready JOIN ROUND
+ui_wait .lobby-shell__btn--ready enabled
+screenshot remote-05-join-round
+ui_submit .lobby-shell__btn--ready
+assert_embarked
+ui_wait #lobby-shell-surface hidden
+
+wait_round Stopped
+ui_wait #lobby-shell-surface visible
+screenshot remote-06-final
+disconnect
