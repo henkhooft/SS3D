@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SS3D.Permissions;
 using SS3D.UI.Shell;
+using SS3D.Systems.Comms;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Roles;
@@ -44,7 +46,11 @@ namespace SS3D.UI.Lobby
         private int _secondsLeft = 4 * 60 + 12;
         private string _playerSearch = string.Empty;
         private string _settingsSubTab = "display";
-        private string _chatChannel = "ooc";
+        private OocChannel _chatChannel = OocChannel.Ooc;
+        private OocChatMessage[] _chat = Array.Empty<OocChatMessage>();
+        private int _chatVersion = -1;
+        private bool _chatAdmin;
+        private ScrollView _chatLog;
         private string _openPlayerId;
         private string _resolution = "1920x1080";
         private bool _fullscreen = true;
@@ -74,6 +80,7 @@ namespace SS3D.UI.Lobby
         public event Action ReadyRequested;
         public event Action<bool> RoundChangeRequested;
         public event Action JobPreferencesChanged;
+        public event Action<OocChannel, string> ChatSubmitted;
 
         public IReadOnlyDictionary<string, JobPriority> JobPriorities => _priorities;
 
@@ -912,6 +919,22 @@ namespace SS3D.UI.Lobby
             return panel;
         }
 
+        /// <summary>Replaces the chat log snapshot; the open log rebuilds only when the version changes.</summary>
+        public void SetChat(IEnumerable<OocChatMessage> log, int version, bool admin)
+        {
+            if (admin != _chatAdmin)
+            {
+                _chatAdmin = admin;
+                if (!admin && _chatChannel == OocChannel.Admin) _chatChannel = OocChannel.Ooc;
+                if (_activeTab == TabChat) ShowTab(TabChat);
+            }
+
+            if (version == _chatVersion) return;
+            _chatVersion = version;
+            _chat = log.ToArray();
+            RefreshChatLog();
+        }
+
         private void BuildChatTab(VisualElement parent)
         {
             VisualElement root = new();
@@ -920,38 +943,32 @@ namespace SS3D.UI.Lobby
 
             VisualElement channels = new();
             channels.AddToClassList("lobby-shell__channel-row");
-            AddChannel(channels, "ooc", "OOC");
-            AddChannel(channels, "looc", "LOOC");
-            AddChannel(channels, "admin", "Admin");
+            AddChannel(channels, OocChannel.Ooc, "OOC");
+            AddChannel(channels, OocChannel.Looc, "LOOC");
+            if (_chatAdmin) AddChannel(channels, OocChannel.Admin, "Admin");
             root.Add(channels);
 
-            ScrollView log = new();
-            log.AddToClassList("lobby-shell__chat-log");
-            foreach (LobbyMockData.ChatMessage message in LobbyMockData.ChatMessages)
-            {
-                if (!string.Equals(message.Channel, _chatChannel, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                log.Add(BuildChatMessage(message));
-            }
-
-            root.Add(log);
+            _chatLog = new ScrollView();
+            _chatLog.AddToClassList("lobby-shell__chat-log");
+            root.Add(_chatLog);
+            RefreshChatLog();
 
             VisualElement composer = new();
             composer.AddToClassList("lobby-shell__chat-composer");
-            string channelLabel = _chatChannel.ToUpperInvariant();
+            string channelLabel = _chatChannel.ToString().ToUpperInvariant();
             TextField input = new()
             {
                 value = string.Empty,
+                maxLength = OocChatRules.MaxLength,
             };
             input.AddToClassList("lobby-shell__chat-input");
             input.AddToClassList("font-body");
             input.label = string.Empty;
             if (input.textEdition != null)
             {
-                input.textEdition.placeholder = $"Message {channelLabel}…";
+                input.textEdition.placeholder = _chatChannel == OocChannel.Looc
+                    ? "Message players near your character…"
+                    : $"Message {channelLabel}…";
                 input.textEdition.hidePlaceholderOnFocus = true;
             }
 
@@ -970,7 +987,8 @@ namespace SS3D.UI.Lobby
                     return;
                 }
 
-                Debug.Log($"[Lobby] Chat send ({_chatChannel}): {text}");
+                Debug.Log($"[Lobby] Chat send ({_chatChannel.ToString().ToLowerInvariant()}): {text}");
+                ChatSubmitted?.Invoke(_chatChannel, text);
                 input.value = string.Empty;
                 evt.StopPropagation();
             }, TrickleDown.TrickleDown);
@@ -980,29 +998,58 @@ namespace SS3D.UI.Lobby
             root.Add(composer);
         }
 
-        private void AddChannel(VisualElement parent, string key, string label)
+        private void AddChannel(VisualElement parent, OocChannel channel, string label)
         {
             Button btn = new(() =>
             {
-                _chatChannel = key;
+                _chatChannel = channel;
                 ShowTab(TabChat);
             })
             {
+                name = $"chat-channel-{channel.ToString().ToLowerInvariant()}",
                 text = label.ToUpperInvariant(),
             };
             btn.AddToClassList("lobby-shell__channel");
             btn.AddToClassList("font-body");
-            btn.EnableInClassList("lobby-shell__channel--active", _chatChannel == key);
+            btn.EnableInClassList("lobby-shell__channel--active", _chatChannel == channel);
             parent.Add(btn);
         }
 
-        private static VisualElement BuildChatMessage(LobbyMockData.ChatMessage message)
+        private void RefreshChatLog()
         {
-            if (message.Kind == ChatMessageKind.Announcement)
+            if (_chatLog == null || _chatLog.panel == null) return;
+            // Follow new lines only while the reader is already at the bottom.
+            bool follow = _chatLog.scrollOffset.y >= _chatLog.verticalScroller.highValue - 4f;
+            _chatLog.Clear();
+            bool any = false;
+            foreach (OocChatMessage message in _chat)
+            {
+                if (message.Channel != _chatChannel) continue;
+                _chatLog.Add(BuildChatMessage(message));
+                any = true;
+            }
+
+            if (!any)
+            {
+                Label empty = new(_runtime ? "No messages yet." : "Not connected.");
+                empty.AddToClassList("lobby-shell__chat-empty");
+                empty.AddToClassList("font-body");
+                _chatLog.Add(empty);
+            }
+
+            if (!follow) return;
+            // Pin to the newest line once the rebuilt content has been laid out.
+            ScrollView log = _chatLog;
+            log.schedule.Execute(() => log.scrollOffset = new Vector2(0f, float.MaxValue)).ExecuteLater(1);
+        }
+
+        private static VisualElement BuildChatMessage(OocChatMessage message)
+        {
+            if (message.IsSystem)
             {
                 VisualElement announcement = new();
                 announcement.AddToClassList("lobby-shell__chat-announcement");
-                Label announcementText = new($"— {message.Text} —");
+                Label announcementText = new($"— {message.Text} —") { enableRichText = false };
                 announcementText.AddToClassList("lobby-shell__chat-announcement-text");
                 announcementText.AddToClassList("font-terminal");
                 announcement.Add(announcementText);
@@ -1012,26 +1059,20 @@ namespace SS3D.UI.Lobby
             VisualElement row = new();
             row.AddToClassList("lobby-shell__chat-line");
 
-            Label time = new(message.Time);
-            time.AddToClassList("lobby-shell__chat-time");
-            time.AddToClassList("font-terminal");
-            row.Add(time);
+            string time = DateTimeOffset.FromUnixTimeSeconds(message.UnixSeconds).ToLocalTime().ToString("HH:mm");
+            Label timeLabel = new(time);
+            timeLabel.AddToClassList("lobby-shell__chat-time");
+            timeLabel.AddToClassList("font-terminal");
+            row.Add(timeLabel);
 
-            Label name = new($"{message.Name}:");
+            // Player-supplied text: never interpret rich-text tags.
+            Label name = new($"{message.Sender}:") { enableRichText = false };
             name.AddToClassList("lobby-shell__chat-name");
             name.AddToClassList("font-body");
-            if (string.Equals(message.Rank, "admin", StringComparison.Ordinal))
-            {
-                name.AddToClassList("lobby-shell__chat-name--admin");
-            }
-            else if (string.Equals(message.Rank, "mentor", StringComparison.Ordinal))
-            {
-                name.AddToClassList("lobby-shell__chat-name--mentor");
-            }
-
+            name.EnableInClassList("lobby-shell__chat-name--admin", message.SenderRole >= ServerRoleTypes.Administrator);
             row.Add(name);
 
-            Label body = new(message.Text);
+            Label body = new(message.Text) { enableRichText = false };
             body.AddToClassList("lobby-shell__chat-text");
             body.AddToClassList("font-terminal");
             row.Add(body);

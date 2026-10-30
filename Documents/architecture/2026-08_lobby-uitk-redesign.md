@@ -14,7 +14,7 @@ character preview.
 |---|---|---|
 | A | Lobby Shell layout + USS + mock data; catalog; preview placeholder click stub | **shipped** |
 | B | Character Creator separate screen (guided-steps visual) | **shipped** (visual) |
-| C | Wire Ready / round state / admin start-stop / player list / show-hide | implemented; host lifecycle + remote non-admin client verified (Ready click and chat typing as real OS input; other steps synthetic) |
+| C | Wire Ready / round state / admin start-stop / player list / show-hide / chat | implemented (networked OOC/LOOC/Admin chat shipped); host lifecycle + remote non-admin client verified (Ready click and chat typing as real OS input; other steps synthetic) |
 | D | Jobs H/M/L/N + antag prefs sync + resolution | **shipped** (round-start pass + latejoin; antag opt-ins stored, no gamemode consumer yet) |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
 | E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **shipped for Human** — name/body/hair/beard/eyebrows and skin/eye/style colors sync to spawned bodies; local presets persisted; other species disabled pending models |
@@ -170,7 +170,7 @@ the server retains its permission check. Mock force-start/extend-timer controls 
 removed. Observe is disabled until an observer backend exists. Legacy LobbyCanvas
 roots are disabled at runtime, including after scene reload; asset purge remains Phase F.
 
-Lobby chat, settings application, server metadata/configuration
+Lobby chat (shipped 2026-10-31, below), settings application, server metadata/configuration
 and networked/persisted character appearance remain subsequent implementation slices.
 The existing visual pilot now checks production legacy suppression instead of doing
 the suppression itself. Runtime/multiplayer verification is required before Phase C
@@ -510,4 +510,50 @@ GenericDropdownMenu with disabled entries while the field's selectable list cont
 
 Validation covers per-character/per-material tint isolation, server color/style sanitization,
 legacy preset mapping, local profile round trips, the disabled species menu, preview tints and
-spawned/latejoin appearance. Results follow after runtime verification.
+spawned/latejoin appearance.
+
+Runtime verification found two bugs, both fixed:
+
+- **Colors were truncated on the wire.** FishNet's default `Color` serializer writes each channel
+  as `(byte)(value * 100)`, so a spawned body got e.g. skin (0.54, 0.34, 0.23) instead of the
+  palette's (0.549, 0.341, 0.235). `CharacterAppearance` colors are now `Color32` (sent
+  byte-exact); the palettes are byte-defined anyway. This also affected hair/beard colors.
+- **Eyebrow/hair tint was wiped on spawned bodies.** `Selectable` cleared any non-empty
+  renderer-wide property block on mesh renderers to remove stale selection colors, which also
+  removed style tints. It now clears only blocks that carry the selection color. Booth dummies
+  strip `Selectable`, so the preview never showed this.
+
+The pilot's species and swatch steps also needed fixes. A navigation event sent with no target
+goes to the focused element, and each swatch click rebuilds the step, so the next element is not
+laid out yet. Validation `validate-20261030-225941` passed: 2112 EditMode tests, 122 visual,
+227 lifecycle and 22 remote checks.
+
+
+## Lobby chat — 2026-10-31
+
+The Chat tab now uses real networked OOC/LOOC/Admin channels instead of mock lines. These are
+the non-diegetic channels from [comms.md](../design/comms.md) §7. The UI is in the lobby
+shell, which is also the in-round Escape menu. There is no HUD feed for OOC yet.
+
+- **Transport:** FishNet broadcasts in a `CommsSubSystem` partial (`CommsSubSystem.Ooc.cs`), so
+  no new NetworkObject or scene edit is needed. The client sends `OocChatSendMessage`. The server
+  takes the sender's ckey from the connection, normalizes the text (control characters, whitespace,
+  256-character cap), rate-limits each sender to 5 messages per 5 s and stamps the role and UTC time.
+- **Channels:** OOC goes to every authenticated client. Admin is sent to and readable by
+  Administrators only; the tab is hidden for everyone else. LOOC needs a spawned body and reaches
+  spawned players within 10 m. Without a body the sender gets a notice instead. Round start/end
+  are posted as OOC system lines.
+- **History:** the server keeps the last 200 OOC and Admin lines for this server session (not
+  saved to disk). LOOC is not kept. Each line has a per-session id. Once its player record exists,
+  each connection requests the lines after its last id. The client log orders and dedupes by id,
+  so a replay that arrives after live lines still works.
+- **Rendering:** labels have rich text disabled, so player text cannot inject markup. The log
+  rebuilds only when its version changes and follows new lines only while scrolled to the
+  bottom. Transcript lines go to `Logs/Comms.txt` on the server.
+
+Verification: EditMode tests for normalization, rate limiting and history ordering. Lifecycle
+pilot: a host line round-trips with rich text shown literally, an Administrator sees the Admin
+channel, and unspawned LOOC is refused. Remote pilot: a non-admin client types an OOC line with
+real OS input, and the host receives it attributed to `remoteprobe`.
+
+Deferred: OOC/LOOC in the in-round comms feed (§7), mute/ban moderation, persistent history.

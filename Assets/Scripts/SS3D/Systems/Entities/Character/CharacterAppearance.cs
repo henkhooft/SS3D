@@ -21,18 +21,20 @@ namespace SS3D.Systems.Entities.Character
         public float Height;
         public int HairStyle;
         public int BeardStyle;
-        public Color HairColor;
-        public Color BeardColor;
-        public Color SkinColor;
-        public Color EyeColor;
-        public Color EyebrowColor;
+        // Color32, not Color: FishNet's default Color serializer packs each channel as
+        // (byte)(value * 100), which truncates palette colors on the wire.
+        public Color32 HairColor;
+        public Color32 BeardColor;
+        public Color32 SkinColor;
+        public Color32 EyeColor;
+        public Color32 EyebrowColor;
         public string EyebrowStyle;
 
         /// <summary>
         /// False for the default (unset) value: <see cref="Sanitized"/> always yields opaque colors,
         /// so one replicated field carries both the value and whether a body has one.
         /// </summary>
-        public bool IsSet => HairColor.a > 0f;
+        public bool IsSet => HairColor.a > 0;
 
         /// <summary>
         /// Server-side cleanup of client input: printable single-line name without rich-text
@@ -92,7 +94,6 @@ namespace SS3D.Systems.Entities.Character
         // NaN fails both comparisons in Clamp01 and would survive; treat it as neutral.
         private static float Clamp(float value) => float.IsNaN(value) ? 0.5f : Mathf.Clamp01(value);
 
-        private static Color Opaque(Color color) =>
-            new(Clamp(color.r), Clamp(color.g), Clamp(color.b), 1f);
+        private static Color32 Opaque(Color32 color) => new(color.r, color.g, color.b, 255);
     }
 }

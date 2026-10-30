@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: 6ce5ab235 — 2026-07-25
+> Verified: c07530a34 — 2026-10-31
 
 # Chat / audio / screens
 
@@ -21,10 +21,17 @@ prefixes (`/eng`, `/sec`, `/announce`) also route commit (prefix wins over Tab);
 prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnouncement`. Feed UI on
 `UiShell` HUD: middle-left radio stack + top ALL-STATION banner.
 
+**OOC / LOOC / Admin chat (comms.md §7):** server-attributed, rate-limited broadcasts in the
+`CommsSubSystem.Ooc.cs` partial. OOC goes to everyone, Admin only to Administrators, and LOOC to
+spawned players within 10 m of the sender's body. The server keeps a bounded OOC/Admin history,
+replayed by id on connect. The lobby/Escape shell Chat tab is the only UI so far; there is no
+HUD feed yet.
+
 ## Start here
 
 - `CommsSubSystem.cs` — local + radio/announce hub; `SendAnnouncement` / `HandleAnnouncementRequest`;
   `TryResolveComposePrefix`; transcript `Logs/Comms.txt` on server.
+- `CommsSubSystem.Ooc.cs` — `SendOoc` / `RequestOocHistory` (client), `PostOocSystem` (server); `OocChat.cs` — messages, `OocChatRules`, `OocRateLimiter`, `OocChatHistory` (EditMode-tested in `OocChatTests`).
 - `LocalSpeechEmitter` — `CmdSpeak` / `CmdSendRadio` / `CmdSendAnnouncement` on the speaking Entity.
 - `CommsComposePrefix` — pure `/token` parse/strip (EditMode-tested).
 - `LocalSpeechBubbleController` + `LocalSpeechBubbleView` — head chips + compose on
@@ -73,9 +80,13 @@ prefix-only (not in Tab). Radio → `CmdSendRadio`; announce → `CmdSendAnnounc
 - **`CameraFollow` ignores `enabled = false`:** Coimbra `UpdateEvent` needs `isActiveAndEnabled` early-out.
 - Radio/Announcement **head-chip** CSS is draft/preview only; live path is `CommsFeedView`.
 
+- **OOC sender identity:** never trust a client-supplied name. The server resolves the ckey from the connection. Chat labels set `enableRichText = false`.
+- **OOC history replay** may arrive after live lines. `OocChatHistory.Add` inserts by id and dedupes, so don't append blindly.
+
 ## Extension points
 
 - Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
+- OOC/LOOC lines in the in-round `CommsFeedView` (§7 typography); mute/ban moderation; persistent history.
 - PDA log / history ([comms.md](../../design/comms.md) §9).
 - Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
 - More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +

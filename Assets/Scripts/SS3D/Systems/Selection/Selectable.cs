@@ -191,7 +191,8 @@ namespace SS3D.Systems.Selection
         {
             MaterialPropertyBlock block = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(block);
-            if (block.isEmpty)
+            // Other systems own blocks too (hair/eyebrow tint): only drop one carrying a selection color.
+            if (block.isEmpty || !block.HasColor(SelectionColorId))
                 return;
 
             // Drop leftover selection MPBs from older builds. Integrity re-applies when damaged.

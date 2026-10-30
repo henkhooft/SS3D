@@ -169,6 +169,7 @@ namespace SS3D.Systems.Rounds
             SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
                 "Welcome to the station crew, enjoy your stay.",
                 CommsAudioTrackIds.StationWelcome);
+            if (SubSystems.TryGet(out CommsSubSystem comms)) comms.PostOocSystem(OocChannel.Ooc, "The round has started.");
 
             while (IsOngoing)
             {
@@ -187,6 +188,7 @@ namespace SS3D.Systems.Rounds
         {
             RoundState = RoundState.Ending;
             CancelTick();
+            if (SubSystems.TryGet(out CommsSubSystem comms)) comms.PostOocSystem(OocChannel.Ooc, "The round has ended.");
 
             AppendRoundHistory();
 

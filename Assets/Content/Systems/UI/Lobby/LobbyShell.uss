@@ -1010,6 +1010,12 @@
     white-space: normal;
 }
 
+.lobby-shell__chat-empty {
+    font-size: 12px;
+    color: var(--ss3d-text-tertiary);
+    padding: 3px 12px;
+}
+
 .lobby-shell__chat-composer {
     flex-direction: row;
     flex-shrink: 0;

@@ -251,7 +251,7 @@ namespace SS3D.Editor.Automation
             switch (_shellCheckStep++)
             {
                 case 0:
-                    Require(Mathf.Abs(shell.Q("lobby-shell-window").worldBound.width - 1180f) < 1f, "Shell matches reference maximum width");
+                    Require(Mathf.Abs(shell.Q("lobby-shell-window").worldBound.width - 1180f) < 1f, $"Shell matches reference maximum width (got {shell.Q("lobby-shell-window").worldBound.width}, screen {Screen.width}x{Screen.height})");
                     Require(Mathf.Abs(shell.Q(className: "lobby-shell__sidebar").worldBound.width - 280f) < 1f, "Shell has 280px sidebar");
                     Require(shell.Q(className: "lobby-shell__preview-image").resolvedStyle.backgroundImage.renderTexture != null,
                         "Lobby starts with a live character preview");
@@ -361,6 +361,12 @@ namespace SS3D.Editor.Automation
                 switch (_step)
                 {
                     case 0:
+                        // The shell appears once the host session is online; wait for its layout.
+                        if (shell == null || shell.Q("lobby-shell-window")?.worldBound.width < 1f)
+                        {
+                            _step--;
+                            break;
+                        }
                         Require(!LegacyLobbyCanvasPresent(), "No legacy uGUI lobby canvas in the scene");
                         if (!CheckShell(shell))
                         {

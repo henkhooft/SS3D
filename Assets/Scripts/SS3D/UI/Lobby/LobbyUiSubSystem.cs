@@ -3,6 +3,7 @@ using System.Linq;
 using FishNet;
 using FishNet.Connection;
 using SS3D.Permissions;
+using SS3D.Systems.Comms;
 using SS3D.Systems.Entities;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Roles;
@@ -137,6 +138,7 @@ namespace SS3D.UI.Lobby
                 if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdRoundAdminAction(action);
             };
             _shellView.JobPreferencesChanged += SendJobPreferences;
+            _shellView.ChatSubmitted += HandleChatSubmitted;
             _shellView.SetCharacterName(_draft.Name);
 
             _creatorView = new CharacterCreatorView(_catalog, _draft, profile?.Characters);
@@ -168,6 +170,7 @@ namespace SS3D.UI.Lobby
         private bool _inWorld;
         private NetworkConnection _preferencesSentTo;
         private NetworkConnection _appearanceSentTo;
+        private NetworkConnection _chatHistoryRequestedFrom;
         private bool _spawned;
         private bool _menuOpen;
         private IInputHandle _menuHandle;
@@ -226,17 +229,26 @@ namespace SS3D.UI.Lobby
             {
                 _preferencesSentTo = null;
                 _appearanceSentTo = null;
+                _chatHistoryRequestedFrom = null;
             }
             else
             {
                 if (_preferencesSentTo != InstanceFinder.ClientManager.Connection) SendJobPreferences();
                 if (_appearanceSentTo != InstanceFinder.ClientManager.Connection) SendCharacterAppearance();
+                if (_chatHistoryRequestedFrom != InstanceFinder.ClientManager.Connection
+                    && SubSystems.TryGet(out CommsSubSystem historyComms))
+                {
+                    historyComms.RequestOocHistory();
+                    _chatHistoryRequestedFrom = InstanceFinder.ClientManager.Connection;
+                }
             }
             _shellView.SetJobs(connected && SubSystems.TryGet(out RoleSubSystem roles)
                 ? roles.Jobs : System.Array.Empty<JobSlotInfo>());
             _shellView.SetStationLoadState(rounds != null ? rounds.CurrentStationLoadState : StationLoadState.NotLoaded,
                 rounds != null ? rounds.StationName : "");
             bool admin = CanAdmin();
+            if (SubSystems.TryGet(out CommsSubSystem comms))
+                _shellView.SetChat(comms.OocLog, comms.OocLogVersion, connected && admin);
             if (admin && rounds != null && connected)
             {
                 if (Time.unscaledTime >= _nextAdminRefresh)
@@ -333,6 +345,11 @@ namespace SS3D.UI.Lobby
             && permissions.HasLoadedPermissions
             && !string.IsNullOrEmpty(SS3D.Core.Settings.LocalPlayer.Ckey)
             && permissions.IsAtLeast(SS3D.Core.Settings.LocalPlayer.Ckey, ServerRoleTypes.Administrator);
+
+        private void HandleChatSubmitted(OocChannel channel, string text)
+        {
+            if (SubSystems.TryGet(out CommsSubSystem comms)) comms.SendOoc(channel, text);
+        }
 
         private void HandleRoundChangeRequested(bool start)
         {

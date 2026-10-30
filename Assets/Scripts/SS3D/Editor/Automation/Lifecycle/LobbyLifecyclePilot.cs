@@ -6,6 +6,7 @@ using FishNet;
 using SS3D.Core;
 using SS3D.UI.Lobby;
 using SS3D.Permissions;
+using SS3D.Systems.Comms;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inputs;
@@ -456,6 +457,33 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "OOC line round-trips through the server into the chat log",
+                Enter = () => SubSystems.Get<CommsSubSystem>().SendOoc(OocChannel.Ooc, "  host <b>probe</b>\n line  "),
+                Until = () => ChatLines().Contains("host <b>probe</b> line"),
+                Verify = () =>
+                {
+                    OocChatMessage line = SubSystems.Get<CommsSubSystem>().OocLog.Last(m => !m.IsSystem);
+                    Require(line.Sender == SS3D.Core.Settings.LocalPlayer.Ckey, "Server attributes the line to the sender's ckey");
+                    Require(Shell().Query<Label>(className: "lobby-shell__chat-text").ToList().All(l => !l.enableRichText),
+                        "Chat text renders tags literally");
+                    Require(Shell().Q<Button>("chat-channel-admin") != null, "Administrator sees the Admin channel");
+                    Capture("chat-ooc");
+                },
+            },
+            new Step
+            {
+                Name = "LOOC without a body explains why it was not sent",
+                Enter = () =>
+                {
+                    Click(Shell().Q<Button>("chat-channel-looc"));
+                    SubSystems.Get<CommsSubSystem>().SendOoc(OocChannel.Looc, "nobody hears this");
+                },
+                Until = () => SubSystems.Get<CommsSubSystem>().OocLog.Any(m => m.Channel == OocChannel.Looc && m.IsSystem),
+                Verify = () => Require(!SubSystems.Get<CommsSubSystem>().OocLog.Any(m => m.Text == "nobody hears this"),
+                    "Unspawned LOOC was not delivered"),
+            },
+            new Step
+            {
                 Name = "Leaving Chat releases text entry",
                 Enter = () => Click(Shell().Q<Button>("tab-server-info")),
                 Until = () => ChatInput() == null,
@@ -474,7 +502,11 @@ namespace SS3D.Editor.Automation
                 {
                     DropdownField species = Creator().Q<DropdownField>("character-species");
                     Require(species.value == "Human" && species.choices.SequenceEqual(new string[] { "Human" }), "Human is the only selectable species");
-                    using (NavigationSubmitEvent evt = NavigationSubmitEvent.GetPooled()) species.SendEvent(evt);
+                    // Untargeted navigation events go to the focused element, so focus and target the field.
+                    species.Focus();
+                    using NavigationSubmitEvent evt = NavigationSubmitEvent.GetPooled();
+                    evt.target = species;
+                    species.SendEvent(evt);
                 },
                 Until = () => Creator().panel.visualTree.Query<Label>().ToList().Any(l => l.text == "Skrell (unavailable)"),
                 Verify = () =>
@@ -493,7 +525,9 @@ namespace SS3D.Editor.Automation
                 Enter = () =>
                 {
                     Label human = Creator().panel.visualTree.Query<Label>().ToList().Last(l => l.text == "Human");
-                    using (NavigationCancelEvent evt = NavigationCancelEvent.GetPooled()) human.SendEvent(evt);
+                    using NavigationCancelEvent evt = NavigationCancelEvent.GetPooled();
+                    evt.target = human;
+                    human.SendEvent(evt);
                 },
                 Until = () => !Creator().panel.visualTree.Query<Label>().ToList().Any(l => l.text == "Skrell (unavailable)"),
             },
@@ -539,10 +573,21 @@ namespace SS3D.Editor.Automation
                 {
                     Creator().Q<Slider>("body-height").value = PilotHeight;
                     Creator().Q<Slider>("body-fat").value = PilotFat;
-                    Click(Creator().Q("skin-color-picker").Query(className: "char-creator__swatch").ToList()[5]);
-                    Click(Creator().Q("eye-color-picker").Query(className: "char-creator__swatch").ToList()[1]);
-                    Click(FindButton(Creator(), "NEXT"));
+                    Click(Swatch("skin-color-picker", 5));
                 },
+                // Each swatch click rebuilds the step; wait for the new elements to be laid out.
+                Until = () => SwatchSelectedAndLaidOut("skin-color-picker", 5),
+            },
+            new Step
+            {
+                Name = "Creator: eye color",
+                Enter = () => Click(Swatch("eye-color-picker", 1)),
+                Until = () => SwatchSelectedAndLaidOut("eye-color-picker", 1),
+            },
+            new Step
+            {
+                Name = "Creator: body → style",
+                Enter = () => Click(FindButton(Creator(), "NEXT")),
                 Until = () => StyleTiles().Count > 1,
             },
             new Step
@@ -555,11 +600,21 @@ namespace SS3D.Editor.Automation
             {
                 Name = "Creator: eyebrows",
                 Enter = () => Click(FindButton(Creator(), "EYEBROWS")),
-                Until = () => Creator().Q("eyebrows-humaneyebrowsbold") != null,
+                Until = () => Creator().Q("eyebrows-humaneyebrowsbold")?.worldBound.width > 0,
+            },
+            new Step
+            {
+                Name = "Creator: eyebrow style",
+                Enter = () => Click(Creator().Q("eyebrows-humaneyebrowsbold")),
+                Until = () => Swatch("style-color-picker", 4)?.worldBound.width > 0,
+            },
+            new Step
+            {
+                Name = "Creator: eyebrow color",
+                Enter = () => Click(Swatch("style-color-picker", 4)),
+                Until = () => SwatchSelectedAndLaidOut("style-color-picker", 4),
                 Verify = () =>
                 {
-                    Click(Creator().Q("eyebrows-humaneyebrowsbold"));
-                    Click(Creator().Q("style-color-picker").Query(className: "char-creator__swatch").ToList()[4]);
                     CharacterPreviewBooth booth = UnityEngine.Object.FindAnyObjectByType<CharacterPreviewBooth>();
                     VerifyFace(booth.Dummy);
                     Capture("creator-face");
@@ -752,8 +807,15 @@ namespace SS3D.Editor.Automation
             {
                 Name = "Remote sends chat with real keyboard input",
                 Timeout = 60,
-                Until = () => ClientAlive() && ClientLog().Contains("Chat send (") && ClientLog().Contains(ChatProbe),
-                Verify = () => Require(_osInputsDone >= 5, "Chat tab click, field click, typing and Return performed as OS input"),
+                Until = () => ClientAlive() && ClientLog().Contains("Chat send (") && ClientLog().Contains(ChatProbe)
+                    && HostChatContains(ChatProbe),
+                Verify = () =>
+                {
+                    Require(_osInputsDone >= 5, "Chat tab click, field click, typing and Return performed as OS input");
+                    OocChatMessage line = SubSystems.Get<CommsSubSystem>().OocLog.Last(m => m.Text == ChatProbe);
+                    Require(line.Channel == OocChannel.Ooc && line.Sender == "remoteprobe" && !line.IsSystem,
+                        "Host received the remote line on OOC, attributed to the sending connection's ckey");
+                },
             },
             new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true },
             new Step
@@ -978,6 +1040,24 @@ namespace SS3D.Editor.Automation
             .Select(d => d.rootVisualElement)
             .FirstOrDefault(r => r != null && r.Q("lobby-shell-surface") != null);
 
+        private static VisualElement Swatch(string picker, int index)
+        {
+            List<VisualElement> swatches = Creator()?.Q(picker)?.Query(className: "char-creator__swatch").ToList();
+            return swatches != null && index < swatches.Count ? swatches[index] : null;
+        }
+
+        private static bool SwatchSelectedAndLaidOut(string picker, int index)
+        {
+            VisualElement swatch = Swatch(picker, index);
+            return swatch != null && swatch.worldBound.width > 0 && swatch.ClassListContains("char-creator__swatch--selected");
+        }
+
+        private static List<string> ChatLines() =>
+            Shell()?.Query<Label>(className: "lobby-shell__chat-text").ToList().ConvertAll(l => l.text) ?? new List<string>();
+
+        private static bool HostChatContains(string text) =>
+            SubSystems.TryGet(out CommsSubSystem comms) && comms.OocLog.Any(m => m.Text == text);
+
         private static TextField ChatInput() => Shell()?.Q<TextField>(className: "lobby-shell__chat-input");
 
         private static bool MapEditorActive() => SubSystems.TryGet(out MapEditorSubSystem mapEditor) && mapEditor.IsActive;
@@ -1070,7 +1150,8 @@ namespace SS3D.Editor.Automation
                         {
                             MaterialPropertyBlock block = new();
                             renderer.GetPropertyBlock(block, i);
-                            Require(block.GetColor(property) == color, materialName + " tint matches saved selection on " + renderer.name);
+                            Require(SameColor32(block.GetColor(property), color), materialName + " tint matches saved selection on " + renderer.name
+                                + $" (got {block.GetColor(property)}, expected {color}, empty={block.isEmpty}, slot {i}/{renderer.sharedMaterials.Length}, path {renderer.transform.parent.name}/{renderer.name})");
                             found = true;
                         }
                 Require(found, materialName + " renderers were checked");
@@ -1079,7 +1160,17 @@ namespace SS3D.Editor.Automation
             Require(brows != null && brows.childCount == 1 && brows.GetChild(0).name.Contains("Bold"), "Selected eyebrow mesh is attached to the head");
             MaterialPropertyBlock browBlock = new();
             brows.GetComponentInChildren<Renderer>().GetPropertyBlock(browBlock);
-            Require(browBlock.GetColor("_Color") == ((LobbyAssetCatalog)HumanoidStyleSource.Current).GetHairColor(4), "Eyebrow color is independent");
+            Color browExpected = ((LobbyAssetCatalog)HumanoidStyleSource.Current).GetHairColor(4);
+            Require(SameColor32(browBlock.GetColor("_Color"), browExpected),
+                $"Eyebrow color is independent (got {browBlock.GetColor("_Color")}, expected {browExpected}, renderer {brows.GetComponentInChildren<Renderer>().name})");
+        }
+
+        // Appearance colors replicate as Color32; compare at that precision.
+        private static bool SameColor32(Color a, Color b)
+        {
+            Color32 x = a;
+            Color32 y = b;
+            return x.r == y.r && x.g == y.g && x.b == y.b && x.a == y.a;
         }
 
         private static Button FindButton(VisualElement surface, string text) =>

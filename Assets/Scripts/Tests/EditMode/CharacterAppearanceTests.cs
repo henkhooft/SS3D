@@ -16,11 +16,20 @@ namespace EditorTests
         [Test]
         public void Sanitized_IsSetEvenWithTransparentInput()
         {
-            CharacterAppearance appearance = new CharacterAppearance { HairColor = new Color(0.2f, 0.1f, 0f, 0f) }.Sanitized();
+            CharacterAppearance appearance = new CharacterAppearance { HairColor = new Color32(51, 26, 0, 0) }.Sanitized();
 
             Assert.That(appearance.IsSet, Is.True);
-            Assert.That(appearance.HairColor.a, Is.EqualTo(1f));
-            Assert.That(appearance.BeardColor.a, Is.EqualTo(1f));
+            Assert.That(appearance.HairColor.a, Is.EqualTo(255));
+            Assert.That(appearance.BeardColor.a, Is.EqualTo(255));
+        }
+
+        [Test]
+        public void PaletteColors_SurviveByteTransport()
+        {
+            // Regression: FishNet packs Color as hundredths; palette colors must arrive unchanged.
+            Color skin = new Color32(140, 87, 60, 255);
+            CharacterAppearance appearance = new CharacterAppearance { SkinColor = skin }.Sanitized();
+            Assert.That((Color)appearance.SkinColor, Is.EqualTo(skin));
         }
 
         [Test]
@@ -43,18 +52,18 @@ namespace EditorTests
         }
 
         [Test]
-        public void Sanitized_ClampsFaceColorsAndRejectsUnknownEyebrowStyles()
+        public void Sanitized_MakesFaceColorsOpaqueAndRejectsUnknownEyebrowStyles()
         {
             CharacterAppearance appearance = new CharacterAppearance
             {
-                SkinColor = new Color(float.NaN, -1f, 2f, 0f),
-                EyeColor = new Color(2f, 0.3f, 0.1f, 0f),
-                EyebrowColor = Color.clear,
+                SkinColor = new Color32(140, 87, 60, 0),
+                EyeColor = new Color32(76, 126, 168, 12),
+                EyebrowColor = new Color32(0, 0, 0, 0),
                 EyebrowStyle = "not-a-style",
             }.Sanitized();
-            Assert.That(appearance.SkinColor, Is.EqualTo(new Color(0.5f, 0f, 1f, 1f)));
-            Assert.That(appearance.EyeColor, Is.EqualTo(new Color(1f, 0.3f, 0.1f, 1f)));
-            Assert.That(appearance.EyebrowColor.a, Is.EqualTo(1f));
+            Assert.That(appearance.SkinColor, Is.EqualTo(new Color32(140, 87, 60, 255)));
+            Assert.That(appearance.EyeColor, Is.EqualTo(new Color32(76, 126, 168, 255)));
+            Assert.That(appearance.EyebrowColor.a, Is.EqualTo(255));
             Assert.That(appearance.EyebrowStyle, Is.EqualTo("humaneyebrowsdefault"));
         }
 
