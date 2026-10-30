@@ -907,6 +907,8 @@ namespace SS3D.UI.Lobby
                 input.textEdition.hidePlaceholderOnFocus = true;
             }
 
+            // TrickleDown: a real Return targets the inner text element, which consumes it before it
+            // bubbles to the field (synthetic events sent to the field itself never showed this).
             input.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter)
@@ -923,7 +925,7 @@ namespace SS3D.UI.Lobby
                 Debug.Log($"[Lobby] Chat send ({_chatChannel}): {text}");
                 input.value = string.Empty;
                 evt.StopPropagation();
-            });
+            }, TrickleDown.TrickleDown);
             StyleDarkTextField(input);
             composer.Add(input);
             root.Add(composer);
