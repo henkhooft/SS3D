@@ -13,7 +13,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 
 - **T1** — Loadable Windows build (Config/Tilemaps packaging OK on `059e3dd`; re-cut after host loopback fix)
 - **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
-- **T3** — Session stability: round/connect lifecycle, doors under MP, admin wedge tools, Nuke Ops happy-path smoke, test-station perf floor
+- **T3** — Session stability: round/connect lifecycle, doors under MP, remaining admin wedge tools (round controls shipped), Nuke Ops happy-path smoke, test-station perf floor
 - **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):

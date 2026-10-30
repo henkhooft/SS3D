@@ -1,6 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Gamemodes/, Assets/Scripts/SS3D/Systems/Roles/, Assets/Scripts/SS3D/Systems/Traits/
 > Entry points: GamemodeSubSystem, RoleSubSystem
 > Status: partial
+> Verified: 2fcfc9fa8 — 2026-10-30
 
 # Gamemodes / roles / traits
 
@@ -16,6 +17,11 @@ Round objectives, job roles/loadouts, and character traits (e.g. ID permissions)
 - `Assets/Scripts/SS3D/Systems/Roles/AntagonistCategories.cs` — lobby antagonist opt-in keys
 - `Assets/Content/Data/Roles/StartingRoles.asset` — available roles and slot caps (0 = unlimited)
 - `GamemodeObjectivePanelView` — legacy uGUI panel hidden (no Tab hotkey; PDA tab later)
+
+Server Settings selects Secret / Extended / Nuclear Emergency. Extended skips objective
+initialization; Secret uses the sole existing antagonist mode. The runtime gamemode reference
+is server-side (no SyncVar); authorized settings use the rounds subsystem's TargetRpc.
+Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 
 ## Extension points
 

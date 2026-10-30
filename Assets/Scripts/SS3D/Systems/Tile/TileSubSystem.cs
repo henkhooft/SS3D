@@ -1,4 +1,4 @@
-﻿using Coimbra;
+using Coimbra;
 using Cysharp.Threading.Tasks;
 using FishNet.Connection;
 using FishNet.Object;
@@ -61,39 +61,15 @@ namespace SS3D.Systems.Tile
         }
 
         [ServerOrClient]
-        private async UniTask WaitForResourcesLoad()
+        private void Setup()
         {
-	        await UniTask.WaitUntil(() => Loader.IsInitialized);
-
-            await LoadAsync();
-        }
-
-        [ServerOrClient]
-        private async void Setup()
-        {
-	        Loader = GetComponent<TileResourceLoader>();
-
-	        // Both peers hold a map instance. On a remote client it starts empty and is populated by
-	        // replicated placed objects; only the server loads persisted tiles from disk.
-	        CreateMap(unnamedMapName);
-	        FlushPendingClientPlaced();
-
-	        if (!IsServer)
-	        {
-		        return;
-	        }
-
-	        try
-	        {
-		        await WaitForResourcesLoad();
-	        }
-	        catch (OperationCanceledException)
-	        {
-		        Log.Debug(this, "Tile load cancelled: map destroyed before loading finished");
-		        return;
-	        }
-
-            Log.Debug(this, "All tiles loaded successfully");
+            Loader = GetComponent<TileResourceLoader>();
+            // Keep an empty map container for authoring and client AOI registration. A station is
+            // restored only by Start Round (or an explicit Map Editor load), never by session boot.
+            CreateMap(unnamedMapName);
+            FlushPendingClientPlaced();
+            if (IsServer && SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+                readiness.NotifyStationTemplateRestoreBeginning();
         }
 
         [ServerOrClient]

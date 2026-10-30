@@ -340,3 +340,72 @@ Validation: `Testing/ui/validate.sh --full` (`validate-20261030-191427`) passed:
 58 checks, client rebuilt for the new prefab list, remote pilot 17 checks. The scene has no missing scripts and
 `GamemodeObjectivesView` still references `Gamemode Objective Canvas`. The pilots don't cover reconnect-to-existing-body
 (reclaim); it relies on the same `IsPlayerSpawned(connection)` poll that was already the only live path.
+
+## 2026-10-30 Server Settings
+
+Source: attached `SS3D Pre-round Lobby UI(2).zip`, Server Settings section of
+`Lobby Shell - Player View.dc.html`. Replaced the static admin rows with a max-640px
+form: inset Round State card, ready ratio, green Start, amber outline Force Start /
+Extend Timer / Cancel Countdown, stacked map/mode selectors, paired numeric inputs,
+and four rule checkboxes. Stop Round is an in-round extension of the pre-round reference.
+
+The existing round subsystem owns validated, server-session configuration. Every admin
+read/write/action checks the requesting connection's role on the server. Individual edits
+merge one field into authoritative data, so stale UI snapshots cannot overwrite another edit. Configuration
+snapshots target authorized admins only, and the active gamemode is no longer a SyncVar.
+Late-join policy and station load state/name replicate publicly. Cap admission is checked at player authorization;
+late spawn checks sender ownership and the server policy. Round length ends the round at
+the configured elapsed duration; countdown time is reset when the round begins.
+
+Map options are actual saved templates, not prototype fixture names. The lobby starts without
+a restored station. Every Start restores the selected template asynchronously before readiness
+and countdown; changing selection while stopped never gets stuck behind a prior loaded map.
+Modes are Secret (the one available antagonist mode), Extended (no objectives), and Nuclear
+Emergency (existing implementation). Unsupported Traitor/Deathmatch are omitted. Random
+Events, Friendly Fire policy and Cloning are visible disabled controls with explanations.
+Manual start replaces the prototype's unimplemented autostart threshold caption.
+
+This is the attached prototype's direct-selection UI, not the weighted pool editor in
+[round-config.md](../design/round-config.md) §5. Weighted pools, history UI, spawn-coverage
+checks, autostart and disk persistence remain deferred. No design spec was edited.
+
+Harness: lifecycle pilot covers authorized snapshots, edits, validation, waiting/countdown/rules
+screenshots, saved-map restore, extension, cancellation, Force Start, an Extended round with
+server-enforced late-join denial, active-round edit rejection and automatic one-minute expiry; the remote scenario probes unauthorized
+reads/writes/actions in addition to its real Ready/chat input. Numeric bounds have EditMode tests.
+
+Verification: `validate-20261030-203641` passed compile, lifecycle (96 checks, zero captured
+errors), rebuild and remote (19 host checks, zero captured errors). EditMode (2089 completed)
+and visual (122 checks) passed in `validate-20261030-203255`; the subsequent runtime rerun
+verified the per-field merge correction. Server Settings waiting/countdown/rules PNGs were
+visually reviewed. See [test runbook](../../Testing/ui/README.md#server-settings-coverage--2026-10-30).
+
+
+## 2026-10-30 Deferred round-map loading
+
+Owner follow-up: remove automatic station loading from session boot. `TileSubSystem.Setup`
+now creates an empty map container only (needed by authoring/AOI); it does not read station
+saves. Start Round waits for the tile resource loader, restores the selected saved template,
+initializes world systems and then starts the warmup countdown. Every new start restores the
+selection, including after cancellation or a previous round. The selector has no ambiguous
+Current station option; it lists actual saves. Default preference is saved ministation, otherwise
+the first save; no available map disables Start and a direct start request reports failure.
+
+Replicated station state/name drives both the player sidebar and admin map status: No map
+loaded, Loading map, Initializing station, Map ready or load failed. Round/load transitions bypass
+the ordinary 200ms snapshot throttle. Start and Stop are mutually exclusive; active rounds show
+only Stop, while countdown shows Force Start / Extend / Cancel. Preparation locks configuration.
+A failed restore returns to Stopped for retry, and round operations cancel during server teardown.
+
+Regression coverage asserts empty startup, loading/ready indicators, a temporary second saved
+map selected after countdown cancellation and restored on the next Start, a fresh readiness
+epoch, and exclusive actions in host and remote-client pilots. Temporary map fixtures are removed
+when the pilot finishes. No scene or prefab wiring changed.
+
+
+Deferred-loading verification: full `validate-20261030-205054` passed compile,
+2089/2089 EditMode tests, visual (122 checks), lifecycle (107 checks), rebuild and remote
+(21 checks). After the long-name status layout adjustment, `validate-20261030-205721`
+passed compile, visual (122), lifecycle (108), rebuilt client and remote (21). Loading,
+waiting, countdown and running screenshots were reviewed; the running form shows Stop
+without Start, and the long map status no longer displaces the sidebar actions.

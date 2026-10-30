@@ -1,4 +1,4 @@
-﻿using SS3D.Core;
+using SS3D.Core;
 using System.Linq;
 using FishNet;
 using FishNet.Connection;
@@ -110,6 +110,14 @@ namespace SS3D.UI.Lobby
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
+            _shellView.ServerSettingsChanged += (field, settings) =>
+            {
+                if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdUpdateServerSetting(field, settings);
+            };
+            _shellView.RoundAdminRequested += action =>
+            {
+                if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdRoundAdminAction(action);
+            };
             _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.SetCharacterName(_draft.Name);
 
@@ -142,14 +150,26 @@ namespace SS3D.UI.Lobby
         private NetworkConnection _preferencesSentTo;
         private NetworkConnection _appearanceSentTo;
 
+        private RoundState _lastRoundSnapshot;
+        private StationLoadState _lastStationSnapshot;
+        private string _lastStationName;
+
         private void RefreshSession()
         {
-            if (Time.unscaledTime < _nextSessionRefresh) return;
+            SubSystems.TryGet(out RoundSubSystem rounds);
+            bool roundChanged = rounds != null && (rounds.CurrentRoundState != _lastRoundSnapshot
+                || rounds.CurrentStationLoadState != _lastStationSnapshot || rounds.StationName != _lastStationName);
+            if (!roundChanged && Time.unscaledTime < _nextSessionRefresh) return;
+            if (rounds != null)
+            {
+                _lastRoundSnapshot = rounds.CurrentRoundState;
+                _lastStationSnapshot = rounds.CurrentStationLoadState;
+                _lastStationName = rounds.StationName;
+            }
             _nextSessionRefresh = Time.unscaledTime + 0.2f;
             bool online = InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Started;
             bool connected = online && SubSystems.TryGet(out PlayerSubSystem _) && SubSystems.TryGet(out RoundSubSystem _);
             SubSystems.TryGet(out PlayerSubSystem players);
-            SubSystems.TryGet(out RoundSubSystem rounds);
             SubSystems.TryGet(out ReadyPlayersSubSystem ready);
             SubSystems.TryGet(out EntitySubSystem entities);
             Player local = connected ? players.GetPlayer(InstanceFinder.ClientManager.Connection) : null;
@@ -180,13 +200,25 @@ namespace SS3D.UI.Lobby
             }
             _shellView.SetJobs(connected && SubSystems.TryGet(out RoleSubSystem roles)
                 ? roles.Jobs : System.Array.Empty<JobSlotInfo>());
+            _shellView.SetStationLoadState(rounds != null ? rounds.CurrentStationLoadState : StationLoadState.NotLoaded,
+                rounds != null ? rounds.StationName : "");
             bool admin = CanAdmin();
+            if (admin && rounds != null && connected)
+            {
+                if (Time.unscaledTime >= _nextAdminRefresh)
+                {
+                    _nextAdminRefresh = Time.unscaledTime + 1f;
+                    rounds.CmdReadServerSettings();
+                }
+                if (rounds.HasAdminSettings)
+                    _shellView.SetServerSettings(rounds.AdminSettings, rounds.AdminMaps, rounds.AdminSettingsStatus);
+            }
             LobbyMockData.PlayerRow[] rows = connected ? players.OnlinePlayers.Where(p => p != null)
                 .Select(p => new LobbyMockData.PlayerRow(p.Ckey, p.Ckey, ready != null && ready.IsReady(p),
                     null, "—", "—", "—")).ToArray() : System.Array.Empty<LobbyMockData.PlayerRow>();
             _shellView.SetSession(rounds != null ? rounds.CurrentRoundState : RoundState.Stopped,
                 rounds != null ? rounds.CurrentTimerSeconds : 0,
-                local != null && ready != null && ready.IsReady(local), local != null, admin, rows);
+                local != null && ready != null && ready.IsReady(local), local != null && (rounds == null || rounds.CurrentRoundState != RoundState.Ongoing || rounds.AllowLateJoin), admin, rows);
         }
 
         /// <summary>
@@ -232,6 +264,8 @@ namespace SS3D.UI.Lobby
             });
             _appearanceSentTo = InstanceFinder.ClientManager.Connection;
         }
+
+        private float _nextAdminRefresh;
 
         private bool CanAdmin() => SubSystems.TryGet(out PermissionSubSystem permissions)
             && permissions.HasLoadedPermissions

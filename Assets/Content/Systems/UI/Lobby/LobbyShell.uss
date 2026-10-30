@@ -1377,3 +1377,55 @@
 .lobby-shell__hero { flex-shrink: 1; min-height: 100px; }
 .lobby-shell__server-information { flex-shrink: 0; }
 .lobby-shell__actions { margin-top: auto; padding-top: 16px; }
+
+/* Admin Server Settings, matching the attached pre-round reference. */
+.lobby-shell__server-settings-scroll { flex-grow: 1; flex-basis: 0; min-height: 0; }
+.lobby-shell__server-settings { max-width: 640px; flex-shrink: 0; padding-right: 4px; }
+.lobby-shell__round-card { background-color: var(--lobby-surface-inset); margin-bottom: 22px; flex-shrink: 0; }
+.lobby-shell__round-card-heading {
+    height: 42px; margin: 0; padding: 0 14px; -unity-text-align: middle-left;
+    background-color: var(--lobby-surface-raised);
+    border-bottom-width: 2px; border-bottom-color: #b13d3d;
+    font-size: 24px; letter-spacing: 1px; color: var(--ss3d-text-primary);
+}
+.lobby-shell__round-card-body { height: 86px; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 14px; }
+.lobby-shell__round-card-body Label { color: var(--ss3d-text-tertiary); margin: 0; padding: 0; }
+.lobby-shell__round-card-body .lobby-shell__round-state { height: 32px; font-size: 26px; color: var(--ss3d-text-secondary); letter-spacing: 1px; }
+.lobby-shell__round-card-body .lobby-shell__round-detail { height: 24px; font-size: 15px; color: var(--ss3d-text-secondary); }
+.lobby-shell__round-card-body .lobby-shell__ready-ratio { height: 34px; font-size: 24px; color: var(--ss3d-text-primary); }
+.lobby-shell__server-settings .lobby-shell__section-title { height: 28px; margin: 0 0 8px; padding: 0; font-size: 22px; color: var(--ss3d-text-tertiary); }
+.lobby-shell__server-settings .lobby-shell__admin-controls { margin-bottom: 22px; }
+.lobby-shell__server-settings .lobby-shell__admin-btn { height: 40px; margin: 0 10px 0 0; padding: 0 16px; font-size: 20px; -unity-font-style: bold; border-radius: 3px; }
+.lobby-shell__admin-btn--start { background-color: var(--lobby-btn-green); }
+.lobby-shell__admin-btn--outline {
+    background-color: rgba(0,0,0,0); border-width: 1px;
+    border-color: var(--lobby-btn-amber); color: var(--lobby-btn-amber);
+}
+.lobby-shell__admin-btn:disabled { opacity: 0.35; }
+.lobby-shell__server-select { height: 64px; flex-shrink: 0; flex-direction: column; align-items: stretch; background-color: var(--lobby-surface-inset); padding: 8px 14px; margin: 0 0 10px; }
+.lobby-shell__server-select > .unity-base-field__label { height: 16px; min-height: 16px; color: var(--ss3d-text-tertiary); font-size: 12px; min-width: 0; margin: 0 0 4px; padding: 0; }
+.lobby-shell__server-select > .unity-base-field__input { height: 26px; min-height: 26px; padding: 0; background-color: rgba(0,0,0,0); border-width: 0; color: var(--ss3d-text-primary); font-size: 16px; border-radius: 0; }
+.lobby-shell__server-map { padding-left: 60px; }
+.lobby-shell__server-map-swatch { position: absolute; left: 14px; top: 15px; width: 34px; height: 34px; background-color: #5e7a8a; color: #ffffff; font-size: 16px; -unity-text-align: middle-center; }
+.lobby-shell__server-numbers { flex-direction: row; margin-top: 12px; margin-bottom: 22px; flex-shrink: 0; }
+.lobby-shell__server-number { flex-grow: 1; flex-basis: 0; margin-right: 16px; }
+.lobby-shell__server-number > Label { height: 18px; margin: 0 0 6px; color: var(--ss3d-text-tertiary); font-size: 12px; padding: 0; }
+.lobby-shell__server-number .unity-base-field { margin: 0; height: 38px; }
+.lobby-shell__server-number .unity-base-field__input {
+    background-color: var(--lobby-surface-inset); border-width: 1px;
+    border-color: var(--lobby-border-subtle); border-radius: 0;
+    color: var(--ss3d-text-primary); padding: 8px 10px; min-height: 36px; font-size: 16px;
+}
+.lobby-shell__server-settings .lobby-shell__settings-toggle { min-height: 34px; flex-shrink: 0; margin: 0; }
+.lobby-shell__server-status { color: var(--ss3d-text-tertiary); white-space: normal; margin-top: 10px; font-size: 12px; }
+.lobby-shell__server-select .unity-base-popup-field__arrow { -unity-background-image-tint-color: var(--ss3d-text-tertiary); }
+
+.lobby-shell__map-load-status {
+    font-size: 12px; color: var(--ss3d-text-tertiary); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; align-self: stretch; min-width: 0;
+    margin: 4px 0 10px; padding: 0; flex-shrink: 0;
+}
+.lobby-shell__map-load-status--loading { color: var(--lobby-btn-amber); }
+.lobby-shell__map-load-status--ready { color: var(--lobby-btn-green); }
+.lobby-shell__map-load-status--failed { color: #d36b6b; }
+.lobby-shell__panel-body .lobby-shell__map-load-status { -unity-text-align: middle-center; margin-bottom: 0; }

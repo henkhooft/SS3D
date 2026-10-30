@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,6 +48,9 @@ namespace SS3D.Editor.Automation
         private static double _started;
         private static bool _running;
         private static string _savedName;
+        private static bool _sawStationLoading;
+        private static string _alternateStation;
+        private static uint _previousStationEpoch;
 
         private const string PilotCharacterName = "Lifecycle Pilot";
         private const float PilotHeight = 0.9f;
@@ -126,6 +129,8 @@ namespace SS3D.Editor.Automation
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
                 _osInputsDone = 0;
+                _sawStationLoading = false;
+                _alternateStation = null;
                 _clientWindow = null;
                 _running = true;
                 Application.logMessageReceived += OnLog;
@@ -168,6 +173,12 @@ namespace SS3D.Editor.Automation
             try
             {
                 if (Remote) PerformOsInput();
+                if (Rounds() != null && Rounds().CurrentStationLoadState == StationLoadState.Loading
+                    && Shell()?.Q<Label>("lobby-map-load-status")?.text.StartsWith("Loading map:") == true)
+                {
+                    if (!_sawStationLoading) Capture("server-settings-loading");
+                    _sawStationLoading = true;
+                }
                 Step step = _steps[_index];
                 if (!_entered)
                 {
@@ -208,9 +219,197 @@ namespace SS3D.Editor.Automation
                     Require(AdminButton().enabledInHierarchy, "Host owner has Admin enabled");
                     Require(ReadyButton().enabledInHierarchy && ReadyButton().text == "NOT READY", "Ready button enabled and NOT READY");
                     Require(CountLabel() == "0/1 ready", "Sidebar shows 0/1 ready");
+                    Require(SubSystems.Get<SS3D.Systems.Tile.TileSubSystem>().CurrentMap.ChunkCount == 0, "Lobby boots without station chunks");
+                    Require(Rounds().CurrentStationLoadState == StationLoadState.NotLoaded
+                        && Shell().Q<Label>("lobby-map-load-status").text == "No map loaded", "Lobby reports no map loaded");
                     _savedName = CharacterName();
                 },
             },
+            new Step
+            {
+                Name = "Open Server Settings and receive authorized snapshot",
+                Enter = () => Click(AdminButton()),
+                Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true,
+                Verify = () =>
+                {
+                    Require(!Shell().Q<DropdownField>("server-map").choices.Contains("Current station")
+                        && Shell().Q<DropdownField>("server-map").choices.Contains(Shell().Q<DropdownField>("server-map").value), "Map selector contains actual saved templates only");
+                    Require(Shell().Q<DropdownField>("server-map").enabledInHierarchy, "Map can be changed before the first start");
+                    Require(Shell().Q<DropdownField>("server-mode").choices.SequenceEqual(new string[] { "Secret", "Extended", "Nuclear Emergency" }), "Only implemented modes are offered");
+                    Require(Shell().Q<Label>("server-ready-ratio").text == "0/1", "Admin ready ratio is live");
+                    Require(!Shell().Q<Button>("server-force").enabledInHierarchy && !Shell().Q<Button>("server-extend").enabledInHierarchy
+                        && !Shell().Q<Button>("server-cancel").enabledInHierarchy, "Countdown actions disabled while waiting");
+                    foreach (string name in new string[] { "server-random-events", "server-friendly-fire", "server-respawn" })
+                        Require(!Shell().Q<Toggle>(name).enabledInHierarchy && !string.IsNullOrEmpty(Shell().Q<Toggle>(name).tooltip), "Unsupported rule explains its disabled state: " + name);
+                    Capture("server-settings-waiting");
+                },
+            },
+            new Step
+            {
+                Name = "Inspect numeric fields and round rules",
+                Enter = () => Shell().Q<ScrollView>("server-settings-scroll").ScrollTo(Shell().Q("server-respawn")),
+                Until = () => Shell().Q("server-respawn").worldBound.yMax <= Shell().Q<ScrollView>("server-settings-scroll").contentViewport.worldBound.yMax,
+                Verify = () => Capture("server-settings-rules"),
+            },
+            new Step
+            {
+                Name = "Return to round controls",
+                Enter = () => Shell().Q<ScrollView>("server-settings-scroll").scrollOffset = Vector2.zero,
+                Until = () => Shell().Q<ScrollView>("server-settings-scroll").scrollOffset.y == 0,
+            },
+            new Step
+            {
+                Name = "Rapid edits preserve both server settings",
+                Enter = () =>
+                {
+                    Shell().Q<IntegerField>("server-player-cap").value = 24;
+                    Shell().Q<IntegerField>("server-round-length").value = 45;
+                },
+                Until = () => Rounds().SettingsForServer.PlayerCap == 24 && Rounds().AdminSettings.PlayerCap == 24
+                    && Rounds().SettingsForServer.RoundLengthMinutes == 45 && Rounds().AdminSettings.RoundLengthMinutes == 45,
+                Verify = () => Require(true, "Rapid field edits both reach server and return in admin snapshot"),
+            },
+            new Step
+            {
+                Name = "Edit round length through Server Settings",
+                Enter = () => Shell().Q<IntegerField>("server-round-length").value = 45,
+                Until = () => Rounds().SettingsForServer.RoundLengthMinutes == 45,
+            },
+            new Step
+            {
+                Name = "Select Extended mode",
+                Enter = () => Shell().Q<DropdownField>("server-mode").value = "Extended",
+                Until = () => Rounds().SettingsForServer.Mode == "Extended",
+            },
+            new Step
+            {
+                Name = "Disable late join through Server Settings",
+                Enter = () => Shell().Q<Toggle>("server-late-join").value = false,
+                Until = () => !Rounds().AllowLateJoin && !Rounds().SettingsForServer.AllowLateJoin,
+                Verify = () => Require(true, "Late-join policy reaches authoritative server"),
+            },
+            new Step
+            {
+                Name = "Reject out-of-range server configuration",
+                Enter = () => { ServerSettings invalid = Rounds().SettingsForServer; invalid.PlayerCap = 0; Rounds().CmdSaveServerSettings(invalid); },
+                Until = () => Rounds().AdminSettingsStatus.Contains("rejected"),
+                Verify = () => Require(Rounds().SettingsForServer.PlayerCap == 24, "Invalid request leaves authoritative settings unchanged"),
+            },
+            new Step
+            {
+                Name = "Select a real saved station",
+                Enter = () => Shell().Q<DropdownField>("server-map").value = "ministation",
+                Until = () => Rounds().SettingsForServer.Map == "ministation" && Rounds().AdminSettings.Map == "ministation",
+                Verify = () => Require(Shell().Q<DropdownField>("server-map").choices.Contains("ministation"), "Selected map is a saved template offered by the server"),
+            },
+            new Step
+            {
+                Name = "Configure a one-minute Extended round",
+                Enter = () => Shell().Q<IntegerField>("server-round-length").value = 1,
+                Until = () => Rounds().SettingsForServer.RoundLengthMinutes == 1,
+            },
+            new Step
+            {
+                Name = "Start countdown from the admin form",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Rounds().CurrentRoundState == RoundState.WarmingUp && Shell().Q<Button>("server-extend").enabledInHierarchy,
+                Verify = () =>
+                {
+                    Require(!Shell().Q<DropdownField>("server-map").enabledInHierarchy && !Shell().Q<Button>("server-start").enabledInHierarchy,
+                        "Configuration and duplicate start disabled during countdown");
+                    Require(_sawStationLoading, "Start Round showed a live loading indicator");
+                    Require(Rounds().CurrentStationLoadState == StationLoadState.Ready
+                        && SubSystems.Get<SS3D.Systems.Tile.TileSubSystem>().CurrentMap.ChunkCount > 0, "Selected map is restored and ready before countdown");
+                    Require(Shell().Q<Label>("server-map-load-status").text.StartsWith("Map ready:"), "Admin form reports map ready");
+                    Require(!Visible(Shell().Q("server-start")) && !Visible(Shell().Q("server-stop")), "Start and Stop are both hidden during countdown");
+                    Capture("server-settings-countdown");
+                },
+            },
+            new Step
+            {
+                Name = "Extend countdown by sixty seconds",
+                Enter = () => Click(Shell().Q<Button>("server-extend")),
+                Until = () => Rounds().CurrentTimerSeconds > 50,
+                Verify = () => Require(true, "Extend Timer updates the authoritative countdown"),
+            },
+            new Step
+            {
+                Name = "Cancel countdown without spawning",
+                Enter = () => Click(Shell().Q<Button>("server-cancel")),
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
+                Verify = () => Require(!Spawned() && Rounds().CurrentTimerSeconds == 0, "Cancel restores waiting state without a spawn"),
+            },
+            new Step
+            {
+                Name = "Offer a second saved station for map switching",
+                Enter = () =>
+                {
+                    _alternateStation = "lobby-pilot-" + Guid.NewGuid().ToString("N");
+                    Require(SubSystems.Get<SS3D.Systems.Persistence.PersistenceSubSystem>().SaveStationTemplate(_alternateStation, false), "Created temporary alternate map fixture");
+                    Rounds().CmdReadServerSettings();
+                },
+                Until = () => Shell().Q<DropdownField>("server-map").choices.Contains(_alternateStation),
+            },
+            new Step
+            {
+                Name = "Select a different map while an earlier station is loaded",
+                Enter = () =>
+                {
+                    _previousStationEpoch = SubSystems.Get<SS3D.Systems.WorldReadiness.WorldReadinessSubSystem>().Epoch;
+                    Shell().Q<DropdownField>("server-map").value = _alternateStation;
+                },
+                Until = () => Rounds().SettingsForServer.Map == _alternateStation,
+                Verify = () => Require(Rounds().StationName == "ministation", "Changing selection does not silently replace the loaded station"),
+            },
+            new Step
+            {
+                Name = "Start the configured Extended round",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && Shell().Q<Button>("server-stop").enabledInHierarchy,
+                Verify = () =>
+                {
+                    Require(SubSystems.Get<SS3D.Systems.Gamemodes.GamemodeSubSystem>().CurrentGamemodeName == "Extended", "Extended configuration reaches gamemode runtime");
+                    Require(Rounds().StationName == _alternateStation
+                        && SubSystems.Get<SS3D.Systems.WorldReadiness.WorldReadinessSubSystem>().Epoch > _previousStationEpoch,
+                        "Next start restores the newly selected map in a fresh readiness epoch");
+                    Require(!Visible(Shell().Q("server-start")) && Visible(Shell().Q("server-stop"))
+                        && !Visible(Shell().Q("server-force")), "Only Stop Round is shown during an active round");
+                    Require(Shell().Q<Label>("lobby-map-load-status").worldBound.height <= 20f,
+                        "Long map names keep the sidebar status on one line");
+                    Capture("server-settings-running");
+                    Require(!ReadyButton().enabledInHierarchy, "Join Round is disabled by server policy");
+                    Require(Rounds().CurrentTimerSeconds < 3, "Round elapsed clock excludes countdown time");
+                },
+            },
+            new Step
+            {
+                Name = "Attempt late join while policy forbids it",
+                Enter = () => SubSystems.Get<EntitySubSystem>().CmdSpawnLatePlayer(Local()),
+                Until = () => Rounds().CurrentTimerSeconds >= 2,
+                Verify = () => Require(!Spawned(), "Server rejects late spawn even when the UI is bypassed"),
+            },
+            new Step
+            {
+                Name = "Reject configuration changes during an active round",
+                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Until = () => Rounds().AdminSettingsStatus.Contains("rejected"),
+                Verify = () => Require(Rounds().SettingsForServer.RoundLengthMinutes == 1 && !Rounds().AllowLateJoin, "Active round configuration cannot change"),
+            },
+            new Step
+            {
+                Name = "Configured round length ends the round",
+                Timeout = 90,
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
+                Verify = () => Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn"),
+            },
+            new Step
+            {
+                Name = "Restore server defaults before lifecycle",
+                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Until = () => Rounds().SettingsForServer.PlayerCap == 32 && Rounds().AllowLateJoin
+                    && Shell().Q<Toggle>("server-late-join").value && Shell().Q<IntegerField>("server-round-length").value == 90,
+            },
+            new Step { Name = "Leave admin before lifecycle", Enter = () => Click(AdminButton()), Until = () => Shell().Q("server-settings-form") == null },
             new Step { Name = "Ready", Enter = () => Click(ReadyButton()), Until = () => IsReady() && ReadyButton().text.Contains("READY") && CountLabel() == "1/1 ready",
                 Verify = () => Require(ReadyButton().text == "✓  READY", "Ready reflected in button and count") },
             new Step { Name = "Unready", Enter = () => Click(ReadyButton()), Until = () => !IsReady() && CountLabel() == "0/1 ready",
@@ -307,11 +506,17 @@ namespace SS3D.Editor.Automation
                 },
             },
             new Step { Name = "Ensure unready for late join", Enter = () => { if (IsReady()) Click(ReadyButton()); }, Until = () => !IsReady() },
-            new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => FindButton(Shell(), "START ROUND") != null },
+            new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true },
             new Step
             {
-                Name = "Admin Start Round leaves unready player in lobby",
+                Name = "Start countdown for Force Start",
                 Enter = () => Click(FindButton(Shell(), "START ROUND")),
+                Until = () => Rounds().CurrentRoundState == RoundState.WarmingUp && Shell().Q<Button>("server-force").enabledInHierarchy,
+            },
+            new Step
+            {
+                Name = "Admin Force Start leaves unready player in lobby",
+                Enter = () => Click(Shell().Q<Button>("server-force")),
                 Timeout = 120,
                 Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && ReadyButton().text == "JOIN ROUND",
                 Verify = () =>
@@ -387,7 +592,13 @@ namespace SS3D.Editor.Automation
                 Timeout = 120,
                 Enter = LaunchClient,
                 Until = () => ClientAlive() && RemotePlayer() != null && CountLabel() == "0/2 ready",
-                Verify = () => Require(!RemoteSpawned(), "Remote player joins unspawned"),
+                Verify = () =>
+                {
+                    Require(!RemoteSpawned(), "Remote player joins unspawned");
+                    Require(Rounds().CurrentStationLoadState == StationLoadState.NotLoaded
+                        && SubSystems.Get<SS3D.Systems.Tile.TileSubSystem>().CurrentMap.ChunkCount == 0,
+                        "Remote joins the lobby before a station is loaded");
+                },
             },
             new Step
             {
@@ -397,6 +608,8 @@ namespace SS3D.Editor.Automation
                 Verify = () =>
                 {
                     Require(Rounds().CurrentRoundState == RoundState.Stopped, "Non-admin start request did not start a round");
+                    Require(ClientLog().Contains("ServerSettingsPermissionVerified"), "Remote cannot read admin configuration");
+                    Require(Rounds().SettingsForServer.PlayerCap == 32 && Rounds().AllowLateJoin, "Non-admin configuration writes were rejected");
                     Require(ClientSignal("UiText", ".lobby-shell__countdown-sub Stopped"), "Client observed Stopped after its start request");
                     Require(!IsReady(), "Host stays unready");
                     Require(_osInputsDone >= 1 && !ClientLog().Contains("UiSubmitted"), "Remote readied through a real OS click, not a synthetic submit");
@@ -409,7 +622,7 @@ namespace SS3D.Editor.Automation
                 Until = () => ClientAlive() && ClientLog().Contains("Chat send (") && ClientLog().Contains(ChatProbe),
                 Verify = () => Require(_osInputsDone >= 5, "Chat tab click, field click, typing and Return performed as OS input"),
             },
-            new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => FindButton(Shell(), "START ROUND") != null },
+            new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true },
             new Step
             {
                 Name = "Admin Start Round spawns ready remote only",
@@ -421,13 +634,15 @@ namespace SS3D.Editor.Automation
                 {
                     Require(!Spawned() && Visible(Shell()), "Unready host stays in lobby");
                     Require(ReadyButton().text == "JOIN ROUND", "Host shows Join Round while Ongoing");
+                    Require(!Visible(Shell().Q("server-start")) && Visible(Shell().Q("server-stop")), "Host shows Stop without Start while remote is in round");
                 },
             },
             new Step
             {
                 Name = "Admin Stop Round returns remote",
                 Enter = () => Click(FindButton(Shell(), "STOP ROUND")),
-                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned() && CountLabel() == "0/2 ready",
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned() && CountLabel() == "0/2 ready"
+                    && Shell().Q<Button>("server-start").enabledInHierarchy,
             },
             // The client must see Stopped and its shell before the next round starts.
             new Step { Name = "Remote shell restored", Timeout = 60, Until = () => !ClientAlive() || ClientLog().Contains("remote-04-returned.png") },
@@ -443,7 +658,8 @@ namespace SS3D.Editor.Automation
             {
                 Name = "Stop second round",
                 Enter = () => Click(FindButton(Shell(), "STOP ROUND")),
-                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned(),
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned()
+                    && Shell().Q<Button>("server-start").enabledInHierarchy,
             },
             new Step
             {
@@ -753,6 +969,11 @@ namespace SS3D.Editor.Automation
             EditorApplication.update -= Tick;
             Application.logMessageReceived -= OnLog;
             StopClient();
+            if (!string.IsNullOrEmpty(_alternateStation))
+            {
+                SS3D.Data.Management.LocalStorage.DeleteFile(SS3D.Data.Persistence.PersistencePaths.StationTemplates + "/" + _alternateStation);
+                _alternateStation = null;
+            }
             Report report = new()
             {
                 status = failure == null && Errors.Count == 0 ? "passed" : "failed",

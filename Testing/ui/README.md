@@ -228,11 +228,11 @@ checks the round-start and late-join bodies (name, armature height, Fat shape ke
 does not cover a separate client process, non-admin permissions or OS input. Buttons are
 driven with `NavigationSubmitEvent` (a synthetic `ClickEvent` does not fire `Button.clicked`).
 
-Editor boot uses `ApplicationSettings.EditorStationTemplate` (Project Settings → SS3D →
-Application Settings; default `ministation`) rather than the most recently saved template
-(Metastation). Clear it to play the most recent map. Edit it through the inspector or
-`SerializedObject`/`SetDirty`: a text edit to the asset while the editor is open can be
-overwritten by the in-memory copy.
+Lobby boot now leaves the station unloaded. Choose an actual saved template in Server
+Settings and press Start Round; a default selection prefers saved ministation, otherwise the
+first available save. `ApplicationSettings.EditorStationTemplate` still applies to an explicit
+parameterless `TileSubSystem.LoadAsync()` call, not lobby startup. Edit project settings through
+the inspector or `SerializedObject`/`SetDirty` while the editor is open.
 
 ## Lobby remote client pilot — 2026-10-30
 
@@ -307,3 +307,43 @@ Run `20261030-150133-789`: **passed**, 102 assertions, zero captured errors, 14 
 Ready/chat input (`remote-20261030-174007-995`). Each acceptance check in the
 [plan](../../Documents/plans/agent_validation_loop.plan.md#implementation-notes-2026-10-30) was
 demonstrated by a deliberate break, then reverted.
+
+
+## Server Settings coverage — 2026-10-30
+
+The lifecycle pilot opens Admin and checks the real authorized snapshot, live ready ratio,
+map/mode options, disabled explanations for unsupported rules, cap/length/mode/late-join edits,
+invalid server-side rejection, settings lock during countdown, Extend Timer (+60 seconds),
+Cancel Countdown (no spawn) and Force Start. It captures `server-settings-waiting.png` and
+`server-settings-countdown.png` and `server-settings-rules.png` in its lifecycle output folder.
+It also restores ministation through the map selector and runs a real one-minute Extended round
+to verify server-enforced late-join denial, active-round edit rejection and automatic expiry. These are synthetic UI callback
+checks; inspect the screenshots as well. The remote client sends unauthorized settings
+read/write/action RPCs with `probe_server_settings_permissions`; the host verifies that the
+cap and join policy remain unchanged, and the client verifies that no admin snapshot arrives.
+
+
+Verification: runtime validation `validate-20261030-203641` passed compile, lifecycle
+(96 checks, no captured errors), client rebuild and remote (19 host checks, client
+permission probe + real Ready/chat input). The preceding full run
+`validate-20261030-203255` passed EditMode (2089 completed tests) and visual (122 checks);
+its lifecycle failure exposed the stale-snapshot edit race fixed by per-field server merges.
+Waiting/countdown/rules screenshots from `lifecycle-20261030-203711-067` were reviewed.
+
+
+## Deferred round-map loading — 2026-10-30
+
+The lobby no longer restores a station at boot. Start Round loads the selected saved map,
+waits for world readiness, then counts down. `lobby-map-load-status` and
+`server-map-load-status` expose loading / initializing / ready / failed states. The lifecycle
+pilot checks empty startup, captures `server-settings-loading.png`, validates a temporary second
+map selection/restore and captures `server-settings-running.png` with Stop visible and Start hidden.
+The remote scenario verifies no map is loaded on join and a ready status after the host starts.
+
+
+Deferred-loading verification: full `validate-20261030-205054` passed compile,
+2089/2089 EditMode tests, visual (122 checks), lifecycle (107 checks), rebuild and remote
+(21 checks). After the long-name status layout adjustment, `validate-20261030-205721`
+passed compile, visual (122), lifecycle (108), rebuilt client and remote (21). Loading,
+waiting, countdown and running screenshots were reviewed; the running form shows Stop
+without Start, and the long map status no longer displaces the sidebar actions.

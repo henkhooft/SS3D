@@ -257,6 +257,22 @@ namespace SS3D.Systems.Testing
                     SendReady(true);
                     break;
 
+                case "probe_server_settings_permissions":
+                    RoundSubSystem settingsRounds = SubSystems.Get<RoundSubSystem>();
+                    settingsRounds.CmdReadServerSettings();
+                    ServerSettings unauthorized = ServerSettings.Default;
+                    unauthorized.PlayerCap = 1;
+                    unauthorized.AllowLateJoin = false;
+                    settingsRounds.CmdSaveServerSettings(unauthorized);
+                    settingsRounds.CmdUpdateServerSetting(ServerSetting.PlayerCap, unauthorized);
+                    foreach (RoundAdminAction action in Enum.GetValues(typeof(RoundAdminAction)))
+                        settingsRounds.CmdRoundAdminAction(action);
+                    yield return new WaitForSeconds(2);
+                    if (settingsRounds.HasAdminSettings || settingsRounds.CurrentRoundState != RoundState.Stopped)
+                        throw new InvalidOperationException("Non-admin gained server settings access.");
+                    TestSignal.Emit(this, "ServerSettingsPermissionVerified");
+                    break;
+
                 case "start_round":
                     InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(true));
                     break;

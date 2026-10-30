@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using SS3D.UI.Shell;
 using SS3D.Systems.IdAccess;
+using SS3D.Systems.Inputs;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace SS3D.UI.Lobby
     /// <summary>
     /// Pre-round lobby shell. Session actions and snapshots are supplied by LobbyUiSubSystem.
     /// </summary>
-    public sealed class LobbyShellView : IUiSurface
+    public sealed partial class LobbyShellView : IUiSurface
     {
         private const string TabServerInfo = "server-info";
         private const string TabJobs = "jobs";
@@ -78,6 +79,7 @@ namespace SS3D.UI.Lobby
 
         public IReadOnlyCollection<string> AntagonistOptIns => _antagSelected;
         private bool _runtime;
+        private readonly InputTextEntryScope _textEntry = new();
         private LobbyMockData.PlayerRow[] _players = Array.Empty<LobbyMockData.PlayerRow>();
         private Label _playerCount;
         private Label _roundStatus;
@@ -98,6 +100,7 @@ namespace SS3D.UI.Lobby
             if (!admin && _adminActive) ToggleAdmin();
             _adminButton?.SetEnabled(admin);
             RefreshSidebar();
+            RefreshServerSettings();
             _readyButton?.SetEnabled(canAct && state is not RoundState.Ending);
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
         }
@@ -150,17 +153,22 @@ namespace SS3D.UI.Lobby
             CharacterCreatorRequested = null;
             ReadyRequested = null;
             RoundChangeRequested = null;
+            ServerSettingsChanged = null;
+            RoundAdminRequested = null;
             JobPreferencesChanged = null;
             _tabBar = null;
             _tabContent = null;
             _roundDot = null;
             _countdownLabel = null;
             _countdownSub = null;
+            _stationLoadLabel = null;
+            _headerMapLabel = null;
             _readyButton = null;
             _adminButton = null;
             _previewImage = null;
             _characterNameLabel = null;
             _livePreviewTexture = null;
+            _textEntry.Exit();
             _root?.RemoveFromHierarchy();
             _root = null;
         }
@@ -173,6 +181,7 @@ namespace SS3D.UI.Lobby
             }
 
             _rebindingKey = null;
+            if (!visible) _textEntry.Exit();
             _root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             _root.pickingMode = visible ? PickingMode.Position : PickingMode.Ignore;
         }
@@ -227,7 +236,8 @@ namespace SS3D.UI.Lobby
             headerLeft.pickingMode = PickingMode.Ignore;
             headerLeft.Add(MakeLabel(LobbyMockData.ServerName, "font-body", "text-primary"));
             headerLeft.Add(MakeSep());
-            headerLeft.Add(MakeLabel(LobbyMockData.MapName, "font-body", "text-secondary"));
+            _headerMapLabel = MakeLabel("No map loaded", "font-body", "text-secondary");
+            headerLeft.Add(_headerMapLabel);
             headerLeft.Add(MakeSep());
             headerLeft.Add(MakeLabel(LobbyMockData.ModeLabel, "font-body", "text-secondary"));
             header.Add(headerLeft);
@@ -291,6 +301,9 @@ namespace SS3D.UI.Lobby
             _countdownSub.AddToClassList("font-titling");
             roundBody.Add(_countdownSub);
             roundBody.Add(_countdownLabel);
+            _stationLoadLabel = new Label("No map loaded") { name = "lobby-map-load-status" };
+            _stationLoadLabel.AddToClassList("lobby-shell__map-load-status");
+            roundBody.Add(_stationLoadLabel);
             roundPanel.Add(roundBody);
             sidebar.Add(roundPanel);
 
@@ -442,6 +455,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            _textEntry.Exit();
             _tabContent.Clear();
             _tabContent.EnableInClassList(
                 "lobby-shell__tab-content--panel",
@@ -552,9 +566,9 @@ namespace SS3D.UI.Lobby
             VisualElement mapModeRow = new();
             mapModeRow.AddToClassList("lobby-shell__map-mode-row");
             mapModeRow.Add(BuildSelectCard(
-                LobbyMockData.MapName,
+                string.IsNullOrEmpty(_stationName) ? "No map loaded" : _stationName,
                 "Map",
-                LobbyMockData.MapName.Length > 0 ? LobbyMockData.MapName[0].ToString().ToUpperInvariant() : "?",
+                string.IsNullOrEmpty(_stationName) ? "?" : _stationName.Substring(0, 1).ToUpperInvariant(),
                 mapSwatch: true));
             mapModeRow.Add(BuildSelectCard(
                 LobbyMockData.ModeLabel,
@@ -611,6 +625,7 @@ namespace SS3D.UI.Lobby
             VisualElement textCol = new();
             textCol.AddToClassList("lobby-shell__select-text");
             Label nameLabel = new(name);
+            if (mapSwatch) nameLabel.name = "server-info-map";
             nameLabel.AddToClassList("lobby-shell__select-name");
             nameLabel.AddToClassList("font-titling");
             textCol.Add(nameLabel);
@@ -1367,25 +1382,6 @@ namespace SS3D.UI.Lobby
             row.Add(left);
             row.Add(right);
             return row;
-        }
-
-        private void BuildServerSettingsTab(VisualElement parent)
-        {
-            parent.Add(SectionTitle("Round Controls"));
-            VisualElement controls = new();
-            controls.AddToClassList("lobby-shell__admin-controls");
-            controls.Add(AdminButton("Start Round", () => RoundChangeRequested?.Invoke(true)));
-            controls.Add(AdminButton("Stop Round", () => RoundChangeRequested?.Invoke(false), "lobby-shell__admin-btn--danger"));
-            parent.Add(controls);
-
-            parent.Add(SectionTitle("Map & Mode"));
-            parent.Add(SettingRow("Map", LobbyMockData.MapName));
-            parent.Add(SettingRow("Game Mode", LobbyMockData.ModeLabel));
-            parent.Add(SettingRow("Player Cap", "32"));
-            parent.Add(SettingRow("Round Length (min)", "90"));
-
-            parent.Add(SectionTitle("Round Rules"));
-            parent.Add(MakePlaceholder("Round-rule toggles are visual stubs until round-config wiring."));
         }
 
         private static Button AdminButton(string label, Action onClick, string extraClass = null)

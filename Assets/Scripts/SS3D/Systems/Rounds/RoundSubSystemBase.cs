@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -96,6 +96,19 @@ namespace SS3D.Systems.Rounds
             ServerSubscribeToEvents();
         }
 
+        public override void OnStopServer()
+        {
+            Interlocked.Increment(ref _roundOperationGeneration);
+            TickCancellationToken?.Cancel();
+            TickCancellationToken?.Dispose();
+            TickCancellationToken = null;
+            _roundOperationCts?.Cancel();
+            _roundOperationCts?.Dispose();
+            _roundOperationCts = null;
+            ServerManager.UnregisterBroadcast<ChangeRoundStateMessage>(HandleRequestStartRound);
+            base.OnStopServer();
+        }
+
         /// <summary>
         /// Runs on the server to listen to events
         /// </summary>
@@ -145,6 +158,9 @@ namespace SS3D.Systems.Rounds
         [Server]
         protected void RequestRoundStateChange(ChangeRoundStateMessage m)
         {
+            // Reject stale/duplicate client requests before cancelling the active operation.
+            if (m.State && RoundState is not (RoundState.Stopped or RoundState.Ended)) return;
+            if (!m.State && RoundState != RoundState.Ongoing) return;
             RunRoundStateChangeAsync(m).Forget();
         }
 
@@ -175,6 +191,16 @@ namespace SS3D.Systems.Rounds
             {
                 // Superseded by a newer round operation.
             }
+        }
+
+        [Server]
+        protected void CancelCountdown()
+        {
+            Interlocked.Increment(ref _roundOperationGeneration);
+            _roundOperationCts?.Cancel();
+            CancelTick();
+            RoundState = RoundState.Stopped;
+            RoundSeconds = 0;
         }
 
         [Server]

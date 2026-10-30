@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: a8624d365 — 2026-07-29 (TileMap.StructureVersion for area cache)
+> Verified: 2fcfc9fa8 — 2026-10-30
 
 # Tile / construction
 
@@ -12,6 +12,10 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 **Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed) live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
 
 **Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Scripts were removed with the Map Editor; orphan `Assets/Content/Systems/UI/Systems/Construction/` prefabs (`ConstructionMenu`, slots, `DeleteIndicator`) and their `DefaultPrefabObjects` entry were purged so AssetAudit no longer sees missing scripts. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+
+Session boot creates an empty tile container for Map Editor/AOI registration. It does not
+restore persisted station content. `RoundSubSystem` owns Start → selected-template restore →
+WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 
 ## Start here
 
@@ -121,7 +125,7 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 - **Drag holograms stayed green on invalid cells:** path used to skip per-tile `TryPreviewTile` for perf (old `RpcSendCanBuild` hitch). Local preview is cheap — `SyncDragHolograms` recolors each ghost; skip toasts list every distinct fail reason (not only the first occupied cell).
 - **Map-editor SVG icons blank (e.g. Select cursor):** Unity VectorImage import does not resolve SVG `fill="currentColor"`. Filled shapes must use a concrete color (e.g. `#d8d8d8`); `-unity-background-image-tint-color` then tints them in USS.
 - **Save/Load (or any popover) throws `ArgumentOutOfRangeException` in `StylePropertyReader`:** UITK style apply crashes on Map Editor USS footguns — (`-unity-font-definition: initial`), `left`/`right: calc(...)`, nested `var(--missing, var(--fallback))`, and a **wrong `.uss.meta` importer**. `MapEditor.uss` must use Unity's StyleSheet `ScriptedImporter` (`fileID: 12385`), not `DefaultImporter`, or `@import` tokens / stylesheet rebuilds silently break. Use concrete font URLs, `left: 100%` + `margin-left`, and only defined token vars.
-- **Station load outlives Play Mode → chunks saved into `Game.unity`:** `TileSubSystem.Setup` awaits the load with no cancellation, and UniTask keeps running continuations in edit mode after Play exits. `TileChunk.Create` then made a root `Chunk [x,z]` GameObject (with a scene `NetworkObject`) in the edit-time Game scene before parenting to the destroyed `TileMap` threw `MissingReferenceException`; saving the dirty scene baked the chunks in. `TileMap.CreateChunk` now throws `OperationCanceledException` when the map is destroyed, and `Setup` logs it as a cancelled load. If `Game.unity` shows a `*` after playtesting, check for root `Chunk [` objects before saving.
+- **Station load outlives Play Mode → chunks saved into `Game.unity`:** historically `TileSubSystem.Setup` awaited a boot load with no cancellation, and UniTask keeps running continuations in edit mode after Play exits. `TileChunk.Create` then made a root `Chunk [x,z]` GameObject (with a scene `NetworkObject`) in the edit-time Game scene before parenting to the destroyed `TileMap` threw `MissingReferenceException`; saving the dirty scene baked the chunks in. `TileMap.CreateChunk` refuses a destroyed map; round-owned loads now cancel their operation token on server stop (there is no boot restore in `Setup`). If `Game.unity` shows a `*` after playtesting, check for root `Chunk [` objects before saving.
 
 ## Depends on / Used by
 

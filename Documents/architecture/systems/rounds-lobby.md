@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: Phase F legacy purge — 2026-10-30
+> Verified: 2fcfc9fa8 — 2026-10-30
 
 # Rounds / lobby
 
@@ -17,6 +17,21 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 
 **Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
+Server Settings now has the reference state card, countdown actions, map/mode selectors,
+player cap/round-length inputs and rule checkboxes. `ServerSettings.cs` extends the existing
+round subsystem: permission-checked ServerRpcs and admin-only TargetRpc snapshots. Late-join policy and station load state/name are publicly
+replicated; gamemode identity stays protected. Configuration is editable while stopped, retained
+across rounds in memory, and not yet persisted to disk. Map options come from saved station
+templates. Session boot creates an empty tile container without restoring any station; Start
+always restores the selected template and awaits world readiness before the countdown.
+The map selector stays editable while stopped, even if a prior round left a station in memory.
+Public and admin indicators distinguish no map, loading, initializing, ready and failed.
+Only Stop is visible while a round runs; Start is visible only while stopped/ended.
+Secret resolves to the sole available antagonist mode; Extended suppresses objectives;
+Nuclear Emergency uses the existing mode. Random Events, Friendly Fire and Cloning controls
+are disabled with explanations because their configurable gameplay consumers do not exist.
+The waiting card says Manual start: there is no population autostart policy yet.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell + Character Creator host; attaches into Modal
@@ -27,6 +42,8 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 23, own lights), worn jumpsuit/shoe mesh application
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
+- `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
@@ -47,10 +64,17 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 
 ## Pitfalls
 
+- **Long map status displaced Ready over the preview:** wrapping a full save name made the fixed sidebar too tall. Keep status labels single-line with ellipsis; the lifecycle pilot uses a long temporary map name to check this.
+
+- **Rapid settings edits lost earlier values:** UI snapshots can lag later callbacks. The UI sends a field key; the server merges that one field into current authoritative settings. Never submit the whole cached form for an individual edit. The lifecycle pilot changes cap/length together to cover this race.
+
+- **Admin state refresh:** ordinary player snapshots refresh every 200ms, but round/load-state changes bypass that throttle so loading and action visibility update promptly. Pilots still wait on enabled UI and completed layout before the next action.
+- **Selected-map start:** enter Preparing before asynchronous restore, locking configuration and rejecting duplicate starts before cancelling any active operation. Cancel Countdown applies only to WarmingUp; preparation finishes its restore/readiness work.
+
 - **Legacy lobby purged:** the uGUI lobby is deleted (Phase F), not suppressed. Before that, the suppression keyed on a name and silently matched nothing because `Game.unity` renamed the `LobbyCanvas` instance to `Lobby`, so the old lobby stayed live under the UITK shell. The pilots now assert there is no root `Lobby`/`Character Customizer` canvas. `GamemodeObjectivesView` still lives on the `Networked View` prefab; don't delete that prefab as lobby debris.
 - **Ready window:** the server accepts ready toggles in every state except Ongoing/Ending and spawns whoever is ready on Ongoing, so Ready stays enabled through Preparing/WarmingUp (countdown). Ongoing switches it to Join Round (late spawn RPC).
 - **Pilot clicks:** a synthetic `ClickEvent` does not fire `Button.clicked` (its `Clickable` listens to pointer/submit). Drive buttons with `NavigationSubmitEvent`; keep `ClickEvent` for `RegisterCallback<ClickEvent>` surfaces such as the preview. UI snapshots lag subsystem state by the 200ms refresh — wait on the UI, not only the backend.
-- **Playtest map:** editor boot loads `ApplicationSettings.EditorStationTemplate` (`ministation`) instead of the most recently saved template (Metastation, ~70s to WorldReady). Round start is then ~5s.
+- **No boot restore:** `TileSubSystem.Setup` creates only an empty container, never a saved station. The first Start waits for tile resources, restores the selected map and then awaits `WorldReady`. A default selection prefers saved `ministation`, otherwise the first saved template; it is not loaded until Start.
 - **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on layer **23** with its own camera/lights/RT at (-250, -250, 250). Never share layer 22 or (-250, -250, -250) with `RuntimePreviewGenerator`: sharing put the dummy in every item icon — (the old `LobbyCameraRenderTexture`/`StaticWorldObjects` customizer was deleted in Phase F). Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.

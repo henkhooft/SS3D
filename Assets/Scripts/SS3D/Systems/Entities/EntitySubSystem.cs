@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Coimbra;
@@ -193,6 +193,7 @@ namespace SS3D.Systems.Entities
         [ServerRpc(RequireOwnership = false)]
         public void CmdSpawnLatePlayer(Player player, NetworkConnection networkConnection = null)
         {
+            if (player == null || player.Owner != networkConnection) return;
             SpawnLatePlayer(player);
         }
 
@@ -272,7 +273,8 @@ namespace SS3D.Systems.Entities
         [Server]
         private void SpawnLatePlayer(Player player)
         {
-            if (SubSystems.Get<RoundSubSystem>().CurrentRoundState != RoundState.Ongoing)
+            if (SubSystems.Get<RoundSubSystem>().CurrentRoundState != RoundState.Ongoing
+                || !SubSystems.Get<RoundSubSystem>().AllowLateJoin)
             {
                 return;
             }

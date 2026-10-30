@@ -14,11 +14,13 @@ ui_wait #character-creator-surface hidden
 ui_wait .lobby-shell__btn--ready enabled
 ui_wait .lobby-shell__btn--admin disabled
 ui_text .lobby-shell__countdown 0/2 ready
+ui_text #lobby-map-load-status No map loaded
 # Let the scene fade-in finish before capturing.
 wait_seconds 2
 screenshot remote-01-lobby
 
 # Server-side permission check: a non-admin start request must be ignored.
+probe_server_settings_permissions
 start_round
 wait_seconds 5
 ui_text .lobby-shell__countdown-sub Stopped
@@ -40,6 +42,7 @@ os_key Return
 
 # Host starts round 1: ready client spawns and the lobby hides.
 wait_round Ongoing
+ui_text #lobby-map-load-status Map ready:
 assert_embarked
 ui_wait #lobby-shell-surface hidden
 screenshot remote-03-spawned
