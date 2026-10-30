@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SS3D.Systems.Entities.Character;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -12,7 +13,7 @@ namespace SS3D.UI.Lobby
     [CreateAssetMenu(
         fileName = LobbyAssetPaths.ResourcesCatalogName,
         menuName = "SS3D/UI/Lobby Asset Catalog")]
-    public sealed class LobbyAssetCatalog : ScriptableObject
+    public sealed class LobbyAssetCatalog : ScriptableObject, IHumanoidStyleSource
     {
         [SerializeField] private StyleSheet _lobbyStyle;
         [SerializeField] private Sprite _previewPlaceholder;

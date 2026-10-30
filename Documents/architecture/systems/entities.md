@@ -16,7 +16,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
-- `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment
+- `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment; `Mind.DisplayName` (lobby character name, else ckey) is the in-world speaker/record name
+- `Assets/Scripts/SS3D/Systems/Entities/Human.cs` — replicated `CharacterAppearance` from the lobby (morphs on the armature, hair/beard) — see [rounds-lobby](rounds-lobby.md)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidBodyStateMachine.cs` — authoritative body/combat snapshot
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/HumanoidPredictedMovement.cs` — FishNet predicted move + space float (when enabled)
 - `Assets/Scripts/SS3D/Systems/Entities/Humanoid/HumanoidLivingController.cs` — **live** loco path (`Human.prefab` has PredictedMovement disabled); owns space float coast + `SetFloating`

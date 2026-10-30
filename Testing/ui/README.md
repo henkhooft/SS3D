@@ -222,7 +222,10 @@ join, a second return, then local client disconnect/reconnect 70s after server s
 state, captured errors) and `lobby-after-reconnect.png`. Each step has its own timeout; a
 failure names the step and the current session state.
 
-Run `lifecycle-20261030-153833-081`: **passed**, 28 checks, zero captured errors, 72s. It
+Run `lifecycle-20261030-153833-081`: **passed**, 28 checks, zero captured errors, 72s.
+Since the E2 character slice it also edits name/height/fat/hair in the creator, saves, and
+checks the round-start and late-join bodies (name, armature height, Fat shape key, hair mesh;
+`spawned-appearance.png`): `lifecycle-20261030-184836-089`, 58 checks. It
 does not cover a separate client process, non-admin permissions or OS input. Buttons are
 driven with `NavigationSubmitEvent` (a synthetic `ClickEvent` does not fire `Button.clicked`).
 

@@ -72,6 +72,11 @@ namespace SS3D.UI.Lobby
                 _creatorView = null;
             }
 
+            if (ReferenceEquals(HumanoidStyleSource.Current, _catalog))
+            {
+                HumanoidStyleSource.Current = null;
+            }
+
             DisposeBooth();
             base.OnDestroyed();
         }
@@ -136,6 +141,7 @@ namespace SS3D.UI.Lobby
         private float _nextSessionRefresh;
         private bool _inWorld;
         private NetworkConnection _preferencesSentTo;
+        private NetworkConnection _appearanceSentTo;
 
         private void RefreshSession()
         {
@@ -168,8 +174,16 @@ namespace SS3D.UI.Lobby
                 HandleReturnToLobbyRequested();
             }
             // Wait for the replicated player record: the server drops preferences from unknown senders.
-            if (local == null) _preferencesSentTo = null;
-            else if (_preferencesSentTo != InstanceFinder.ClientManager.Connection) SendJobPreferences();
+            if (local == null)
+            {
+                _preferencesSentTo = null;
+                _appearanceSentTo = null;
+            }
+            else
+            {
+                if (_preferencesSentTo != InstanceFinder.ClientManager.Connection) SendJobPreferences();
+                if (_appearanceSentTo != InstanceFinder.ClientManager.Connection) SendCharacterAppearance();
+            }
             _shellView.SetJobs(connected && SubSystems.TryGet(out RoleSubSystem roles)
                 ? roles.Jobs : System.Array.Empty<JobSlotInfo>());
             bool admin = CanAdmin();
@@ -196,6 +210,33 @@ namespace SS3D.UI.Lobby
                 AntagonistOptIns = _shellView.AntagonistOptIns.ToArray(),
             });
             _preferencesSentTo = InstanceFinder.ClientManager.Connection;
+        }
+
+        /// <summary>
+        /// Sends the saved character (never unsaved creator edits); the server applies it at the next
+        /// spawn, so it is also resent once per connection.
+        /// </summary>
+        private void SendCharacterAppearance()
+        {
+            if (_draft == null || _catalog == null || InstanceFinder.ClientManager == null || !InstanceFinder.ClientManager.Started) return;
+            InstanceFinder.ClientManager.Broadcast(new CharacterAppearanceMessage
+            {
+                Appearance = new CharacterAppearance
+                {
+                    Name = _draft.Name,
+                    Female = _draft.GetMorph("female", 0f),
+                    Breasts = _draft.GetMorph("breasts", 0f),
+                    Fat = _draft.GetMorph("fat", 0f),
+                    Muscle = _draft.GetMorph("muscle", 0f),
+                    Jaw = _draft.GetMorph("jaw", 0.5f),
+                    Height = _draft.GetMorph("height", 0.5f),
+                    HairStyle = _draft.HairStyleIndex,
+                    BeardStyle = _draft.BeardStyleIndex,
+                    HairColor = _catalog.GetHairColor(_draft.HairColorIndex),
+                    BeardColor = _catalog.GetHairColor(_draft.BeardColorIndex),
+                },
+            });
+            _appearanceSentTo = InstanceFinder.ClientManager.Connection;
         }
 
         private bool CanAdmin() => SubSystems.TryGet(out PermissionSubSystem permissions)
@@ -249,6 +290,7 @@ namespace SS3D.UI.Lobby
                 return false;
             }
 
+            HumanoidStyleSource.Current = _catalog;
             return true;
         }
 
@@ -309,7 +351,8 @@ namespace SS3D.UI.Lobby
             HandleOutfitChanged(_draft.OutfitIndex);
             ApplyBodyMorphsToBooth(_draft.BodyMorphs);
             ApplyStyleToBooth(_draft.HairStyleIndex, _draft.BeardStyleIndex, _draft.HairColorIndex, _draft.BeardColorIndex);
-            Debug.Log($"[Lobby] Character draft saved locally: {_draft.Name}");
+            SendCharacterAppearance();
+            Debug.Log($"[Lobby] Character draft saved: {_draft.Name}");
         }
 
         private void HandleOutfitChanged(int outfitIndex)

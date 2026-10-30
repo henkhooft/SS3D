@@ -309,7 +309,7 @@ namespace SS3D.Systems.Roles
             IDCard idCard = (IDCard)idCardItem;
 
             CrewRecord crewRecord = idAccess.CreateCrewRecord(
-                entity.Ckey,
+                entity.Mind.DisplayName,
                 role.Name,
                 IdAccessSubSystem.DepartmentForRole(role.Name),
                 role.StartingAccess);

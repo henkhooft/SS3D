@@ -276,7 +276,7 @@ namespace SS3D.Systems.Comms
             BroadcastCommsMessage(new CommsMessage
             {
                 ChannelId = channel.name,
-                Sender = player.Ckey,
+                Sender = entity.Mind.DisplayName,
                 Text = text,
                 Kind = CommsChannelKind.Radio,
             });
@@ -331,7 +331,7 @@ namespace SS3D.Systems.Comms
             BroadcastCommsMessage(new CommsMessage
             {
                 ChannelId = channel.name,
-                Sender = player.Ckey,
+                Sender = entity.Mind.DisplayName,
                 Text = text,
                 Kind = CommsChannelKind.Announcement,
             });

@@ -48,6 +48,10 @@ namespace SS3D.Editor.Automation
         private static double _started;
         private static bool _running;
         private static string _savedName;
+
+        private const string PilotCharacterName = "Lifecycle Pilot";
+        private const float PilotHeight = 0.9f;
+        private const float PilotFat = 0.7f;
         private static System.Diagnostics.Process _client;
         private static Report _pending;
         private static int _osInputsDone;
@@ -238,6 +242,45 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Creator: name",
+                Enter = () =>
+                {
+                    Creator().Q<TextField>("character-name").value = PilotCharacterName;
+                    Click(FindButton(Creator(), "NEXT"));
+                },
+                Until = () => Creator().Q<Slider>("body-height") != null,
+            },
+            new Step
+            {
+                Name = "Creator: body",
+                Enter = () =>
+                {
+                    Creator().Q<Slider>("body-height").value = PilotHeight;
+                    Creator().Q<Slider>("body-fat").value = PilotFat;
+                    Click(FindButton(Creator(), "NEXT"));
+                },
+                Until = () => StyleTiles().Count > 1,
+            },
+            new Step
+            {
+                Name = "Creator: first hair style",
+                Enter = () => Click(StyleTiles()[1]),
+                Until = () => StyleTiles()[1].ClassListContains("char-creator__style-tile--selected"),
+            },
+            new Step { Name = "Creator: review", Enter = () => Click(FindButton(Creator(), "NEXT")), Until = () => FindButton(Creator(), "SAVE CHARACTER") != null },
+            new Step
+            {
+                Name = "Save character",
+                Enter = () => Click(FindButton(Creator(), "SAVE CHARACTER")),
+                Until = () => FindButton(Creator(), "SAVED") != null,
+                Verify = () =>
+                {
+                    _savedName = CharacterName();
+                    Require(string.Equals(_savedName, PilotCharacterName, StringComparison.OrdinalIgnoreCase), "Lobby sidebar shows the saved name");
+                },
+            },
+            new Step
+            {
                 Name = "Round start spawns ready player and hides lobby",
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(true)),
                 Timeout = 120,
@@ -247,6 +290,8 @@ namespace SS3D.Editor.Automation
                     Require(!BoothLive(), "Booth deactivated while in world");
                     Require(AssignedRole() == "Security", "Round start resolved the High preference to Security");
                     Require(Job("Security").Assigned == 1, "Security slot count replicated as taken");
+                    VerifySpawnedAppearance();
+                    Capture("spawned-appearance");
                 },
             },
             new Step
@@ -286,6 +331,7 @@ namespace SS3D.Editor.Automation
                 {
                     Require(!BoothLive(), "Booth deactivated after late join");
                     Require(AssignedRole() == "Security", "Late join took the highest ranked open job");
+                    VerifySpawnedAppearance();
                 },
             },
             new Step
@@ -579,6 +625,31 @@ namespace SS3D.Editor.Automation
 
         private static Button SecurityChip(string text) =>
             SecurityRow()?.Query<Button>(className: "lobby-shell__priority-chip").Where(chip => chip.text == text).First();
+
+        private static List<VisualElement> StyleTiles() =>
+            Creator()?.Query(className: "char-creator__style-tile").ToList() ?? new List<VisualElement>();
+
+        /// <summary>The saved lobby character reached the server and was applied to the spawned body.</summary>
+        private static void VerifySpawnedAppearance()
+        {
+            Require(SubSystems.Get<EntitySubSystem>().TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity),
+                "Local spawned entity found");
+            Require(entity.Mind.CharacterName == PilotCharacterName && entity.Mind.DisplayName == PilotCharacterName,
+                "Spawned mind carries the saved character name");
+            Require(entity is Human, "Spawned entity is a Human");
+
+            Transform armature = entity.GetComponent<SS3D.Systems.Entities.Humanoid.Body.HumanoidRigReferences>().ArmatureRoot;
+            Require(Mathf.Approximately(armature.localScale.y, Mathf.Lerp(0.88f, 1.12f, PilotHeight)), "Height scales the armature");
+            Require(entity.transform.localScale == Vector3.one, "Networked root keeps unit scale");
+
+            bool fat = entity.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .Any(r => r.sharedMesh != null && r.sharedMesh.GetBlendShapeIndex(HumanoidMorphApplier.Fat) >= 0
+                    && Mathf.Approximately(r.GetBlendShapeWeight(r.sharedMesh.GetBlendShapeIndex(HumanoidMorphApplier.Fat)), PilotFat * 100f));
+            Require(fat, "Fat shape key applied to the body");
+
+            Transform socket = Array.Find(entity.GetComponentsInChildren<Transform>(true), t => t.name == "HairSocket");
+            Require(socket != null && socket.childCount == 1, "Saved hair style spawned on the head");
+        }
 
         private static Button FindButton(VisualElement surface, string text) =>
             surface?.Query<Button>().Where(b => b.text == text && b.worldBound.width > 0).First();

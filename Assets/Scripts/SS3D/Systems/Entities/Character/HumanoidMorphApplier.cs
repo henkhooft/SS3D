@@ -29,7 +29,9 @@ namespace SS3D.Systems.Entities.Character
 
         /// <summary>
         /// Applies body morphs. Values are 0–1. Jaw is bipolar (0 = thin, 0.5 = neutral, 1 = wide).
-        /// Height scales the root uniformly (no Height blend shape on the mesh).
+        /// Height scales <paramref name="heightTarget"/> (default: the root) uniformly; there is no
+        /// Height blend shape on the mesh. Networked bodies pass their armature so colliders and the
+        /// replicated root keep their size.
         /// </summary>
         public static void Apply(
             GameObject root,
@@ -38,7 +40,8 @@ namespace SS3D.Systems.Entities.Character
             float fat,
             float muscle,
             float jaw,
-            float height)
+            float height,
+            Transform heightTarget = null)
         {
             if (root == null)
             {
@@ -46,7 +49,7 @@ namespace SS3D.Systems.Entities.Character
             }
 
             float heightScale = Mathf.Lerp(0.88f, 1.12f, Mathf.Clamp01(height));
-            root.transform.localScale = Vector3.one * heightScale;
+            (heightTarget != null ? heightTarget : root.transform).localScale = Vector3.one * heightScale;
 
             float jawWide = Mathf.Clamp01((jaw - 0.5f) * 2f);
             float jawThin = Mathf.Clamp01((0.5f - jaw) * 2f);

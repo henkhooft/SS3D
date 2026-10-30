@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: Phase D jobs commit — 2026-10-30
+> Verified: E2 networked character — 2026-10-30
 
 # Rounds / lobby
 
@@ -11,7 +11,7 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 **UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
 preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. Networked appearance apply (E2) remains pending; local hair/beard application with independent color palettes exists. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (xdotool). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
+Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard + colors) is sent to the server and applied to the spawned body (E2 slice); species/skin/eyes/eyebrows and persistence remain pending. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (xdotool). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
 
 Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
@@ -23,6 +23,7 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — Player View tabs/sidebar + local Display/Sound/Keyboard controls
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator, local character slots + pinned Save footer
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorDraft.cs` — local name/species/body/style/preferences + separate hair/beard/brow colors + stable outfit index
+- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterAppearance.cs` — replicated character + server sanitization; `Human.cs` applies it, `Mind.DisplayName` is the in-world name
 - `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights), worn jumpsuit/shoe mesh application
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
@@ -53,7 +54,9 @@ Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.
 - **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
-- **E1 vs E2:** Save stores session-local character slots (name/species/body/style/preferences); only Human body morphs and catalog hair/beard/color render in the booth. Species/skin/eye/brow rendering, disk persistence and networked spawn appearance remain deferred. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
+- **E1 vs E2:** Save stores session-local character slots and sends the saved slot as `CharacterAppearanceMessage` (also once per connection); `EntitySubSystem` sanitizes/stores it per ckey and stamps `Mind.CharacterName` + `Human.SetAppearance` at spawn. Save never changes a living body. Species/skin/eye/brow rendering and disk persistence remain deferred.
+- **Spawned height:** scale the armature (`HumanoidRigReferences.ArmatureRoot`), never the networked root (capsule, NetworkTransform). The server applies morphs too so bone hit colliders match. Clothing mesh swaps reset shape keys — `ClothesDisplayer` calls `Human.ReapplyBodyMorphs`.
+- **Style indices:** hair/beard replicate as `LobbyAssetCatalog` indices resolved via `HumanoidStyleSource.Current` (registered by the lobby UI); a headless server spawns no style meshes, and mismatched client/server catalogs would show the wrong style. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
 
 - **Preview stripping order:** remove combat/speech/movement dependents and the non-networked `HumanoidBodyStateBridge` before the generic network pass; prefab component order is not dependency order and Unity refuses required-component removal.
 - **Preview orientation:** Human faces +Z at yaw 0 and the booth camera sits on +Z; a 180° base yaw silently swaps Front/Back. Keep base yaw at 0; verify the face in screenshots, not just the RenderTexture binding.

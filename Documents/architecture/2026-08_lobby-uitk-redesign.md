@@ -1,6 +1,6 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2/F pending)
+> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2 networked name/body/hair shipped, species/skin/persistence pending; F pending)
 
 # Lobby UITK redesign
 
@@ -17,7 +17,7 @@ character preview.
 | C | Wire Ready / round state / admin start-stop / player list / show-hide | implemented; host lifecycle + remote non-admin client verified (Ready click and chat typing as real OS input; other steps synthetic) |
 | D | Jobs H/M/L/N + antag prefs sync + resolution | **shipped** (round-start pass + latejoin; antag opt-ins stored, no gamemode consumer yet) |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
-| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — body shape keys and local hair/beard/color live on booth; skin/network pending |
+| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — name, body morphs, hair/beard + colors sync to the spawned body; species/skin/eyes/eyebrows/persistence pending |
 | F | Purge condemned LobbyCanvas / uGUI views; docs finalize | pending |
 
 ## Design divergences (do not edit design docs)
@@ -275,3 +275,36 @@ Verified by `Testing/ui/validate.sh --full` (`validate-20261030-182754`): 2101 E
 8 `JobResolverTests`, visual 122 checks, lifecycle 38 checks (Security H chip → server interest 1 and
 row label → round start assigns Security and slot 1/1 taken → stop clears → late join takes Security),
 client rebuild and remote pilot 17 checks.
+
+## Networked character (Phase E2 slice) — 2026-10-30
+
+The saved lobby character now reaches the spawned body. `lobby.md` §6 requires only a name;
+appearance goes beyond that as the effort's recorded Character Creator scope.
+
+- **Sync:** `LobbyUiSubSystem` sends a `CharacterAppearanceMessage` broadcast on Save and once
+  per connection (same pattern as job preferences). It carries the last *saved* draft (never
+  unsaved creator edits), with name, the six body values, hair/beard indices and resolved hair/beard
+  colors. `EntitySubSystem` resolves the player from the sending connection, runs
+  `CharacterAppearance.Sanitized()` (name: no control chars or `<`/`>`, max 32; values clamped;
+  colors opaque) and keeps it per ckey for the server session (not persisted).
+- **Spawn:** `SpawnPlayer` sets `Mind.CharacterName` and `Human.SetAppearance` (one SyncVar).
+  A Save affects the next spawn only, never a living body.
+- **Apply:** `Human` applies on the server and on every client (`OnStartClient` + SyncVar change).
+  Body morphs use `HumanoidMorphApplier`, but height scales the **armature** (`HumanoidRigReferences.ArmatureRoot`), not the
+  networked root, so the movement capsule and root stay unit scale. The server applies it too so its
+  bone hit colliders match clients. `ClothesDisplayer` re-applies morphs after a worn-mesh swap.
+  Hair/beard prefabs resolve through `IHumanoidStyleSource`, which `LobbyAssetCatalog` implements and
+  registers at UI bootstrap. Headless servers have none and spawn no style meshes. Like the booth,
+  applying a style hides the baked Hair/Facial Hair/Eyebrows meshes.
+- **Name:** `Mind.DisplayName` (character name, else ckey) replaces the ckey in speech bubbles,
+  radio/announcement senders, crew records/ID cards and the late-join announcement. A ghost keeps
+  its mind and therefore its name. The comms log now records the character name, not the ckey.
+
+Still deferred in E2: species models, skin/eye tint, eyebrow meshes/color, disk persistence.
+Index-based styles assume server and clients run the same build/catalog.
+
+Verified by `Testing/ui/validate.sh --full` (`validate-20261030-184621`): 2110 EditMode tests incl. 9
+`CharacterAppearanceTests`, visual 122 checks, lifecycle 58 checks (creator name/height/fat/first hair →
+Save → round-start spawn and late-join spawn each carry the mind name, armature height with unit root
+scale, the Fat shape key and one hair mesh; `spawned-appearance.png` reviewed), client rebuild, remote
+pilot 17 checks. The remote client was not asserted on another client's appearance.
