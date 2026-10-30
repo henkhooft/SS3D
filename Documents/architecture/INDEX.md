@@ -35,7 +35,7 @@ Update as part of `update-system-docs`.
 | crafting | [crafting.md](../design/crafting.md) — active | none yet | [crafting](systems/crafting.md) — stub (obsolete runtime purged; awaiting redesign) |
 | death-cloning-respawn | [death-cloning-respawn.md](../design/death-cloning-respawn.md) — active | none yet | none yet |
 | surgery | [surgery.md](../design/surgery.md) — active | none yet | none yet |
-| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A/B + E1) | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| lobby | [lobby.md](../design/lobby.md) — active | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — in-progress (Phase A/B + E1; session wiring verified on host lifecycle + remote non-admin client pilots, Ready/chat via real OS input); [unity-mcp-lobby-pilot](2026-10_unity-mcp-lobby-pilot.md) — tooling shipped, baseline green (122 checks); one-command `Testing/ui/validate.sh` loop ([plan](../plans/agent_validation_loop.plan.md)) | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-config | [round-config.md](../design/round-config.md) — active | none yet | [rounds-lobby](systems/rounds-lobby.md) — shipped |
 | round-end | [round-end.md](../design/round-end.md) — active | none yet | none yet |
 | observer | [observer.md](../design/observer.md) — active | none yet | none yet |
@@ -108,7 +108,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Tile / construction | [tile](systems/tile.md) | partial | Tilemap/adjacency; Map Editor (sim suspend while open); underfloor MeshRenderer occlusion (play); SS13 DMM import (structural + cables/pipes/disposals/fixtures); end-of-restore → TileMapLoaded (not OnMapCreated); staged build ladder unbuilt |
 | Atmospherics | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim (pressure share + equal-P composition diffusion); awaits TileMapLoaded / notifies AtmosReady; client VFX Phase 1 dirty-chunk sync; host AOI atlas upload; late-join/AOI Phase 2 open |
 | Area | [area](systems/area.md) | partial | APC flood-fill; notifies AreasFlooded; client lighting snapshot + floor-cache area ids |
-| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; O(1) `_circuitByDevice`; solar panels + tracker (stub `SolarCycle`); awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; Pacman vibrate captures rest yaw on enable |
+| Electricity | [electricity](systems/electricity.md) | partial | kWh / HV grid / APC; O(1) `_circuitByDevice`; solar panels + tracker (stub `SolarCycle`); awaits AreasFlooded → ElectricityReady; client LightPower SyncVar; orphan-light guard preserves preview-booth lights; Pacman vibrate captures rest yaw on enable |
 | Substances | [substances](systems/substances.md) | partial | Volume-first networked containers + reaction/heat foundation shipped — [substances-foundation](2026-07_substances-foundation.md); chemistry gameplay deferred |
 | Inventory | [inventory](systems/inventory.md) | partial | Items/containers/hands + weight/size-class/stacking/locks; clothing folded world form (`ClothingItemPresentation`) vs worn body mesh; HUD icons via `IconPreviewGenerator` / ObjectIcon; Main HUD sole equip/storage UI + StoragePanel + zone reticle (lock-on recharge + connect flash + ranged bloom; ScreenToPanel cursor + pivot-centered hit flash) + intent chip (polls `CurrentIntent`); HUD suppressed while MI open; old uGUI purged; `CarriedWeight` → stamina; Human hands wiring now recipe-managed (`HandsPrefabSetup`) |
 | Stamina | [stamina](systems/stamina.md) | partial | Phase 7a core: health-modulated regen, encumbrance, sprint drain, overdraw→oxy; no permanent bar; combat swing/fire drains + exertion feedback (accuracy cone, windup/recovery) shipped; block drain deferred |
@@ -119,7 +119,7 @@ Design Philosophy/Worked Examples/Integration Notes/Out of Scope matching every 
 | Furniture / world objects | [furniture](systems/furniture.md) | partial | Airlocks (HashGrid proximity + SyncVar animator, no NetworkAnimator + Open/Close + access-denied), lockers, vendors, jukebox; disposal → [disposal](systems/disposal.md); vending via diegetic machine-interface |
 | Structural destruction | [structural-destruction](systems/structural-destruction.md) | partial | Phase 1–4: Turf integrity stages; melee + ranged StructuralForce; blast BFS + cascade; Destroyed→clear; Cracked airtightness; Area deferred live reflood; MPB stage tint + Cracked hiss; examine; epicenter blast VFX (fireball/light/scorch/shake/flash); `hurtstructure` / `blast` |
 | Disposal | [disposal](systems/disposal.md) | partial | Item disposal network; awaits TileMapLoaded → DisposalReady; pipe craft / Cargo / player transit deferred |
-| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine; PrepareRound awaits WorldReady; UITK lobby Phase A/B + E1 booth preview on Modal; uGUI lobby condemned |
+| Rounds / lobby | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine; PrepareRound awaits WorldReady; UITK lobby Phase A/B + E1 live booth from first attachment, scroll-free Server Info; live ready/late-join/admin/player snapshots (host lifecycle + remote client pilots green); legacy LobbyScreen suppressed (purge pending) |
 | Gamemodes / roles / traits | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | stub | Objectives, job roles, character traits |
 | Player control | [player-control](systems/player-control.md) | partial | Player subsystem, connect/authorize/disconnect lifecycle (incl. reconnect-to-body), and input routing |
 | Chat / screens | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Local speech + T-compose (Tab + `/eng`/`/sec`/`/announce`); left feed (radio-tower icon) + top announce banner + chime sequence; Chat hub purged; camera ownership planned ([camera-ownership](2026-07_camera-ownership.md)) |
@@ -181,6 +181,7 @@ Implementation history — not navigation maps. Update `Status` in the header wh
 | [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) | in-progress (TomNAS-unity online; EditMode + develop-release TomNAS+GitHub fallback; warm smoke proof open; Phases 1–2 pending; rendered-client + soak deferred) |
 | [2026-07_editor-tooling-tiers](2026-07_editor-tooling-tiers.md) | shipped (A/B/C Editor menu tiers; demote one-shot PrefabSetup MenuItems to recipe aggregators; delete finished migrations; catalog rebuild pipeline still TECH_DEBT 1.4/1.5) |
 | [2026-07_substances-foundation](2026-07_substances-foundation.md) | shipped (Phases 0–2: shared reagent defs, networked containers, reaction+heat; chemistry gameplay MVP2) |
+| [2026-10_unity-mcp-lobby-pilot](2026-10_unity-mcp-lobby-pilot.md) | shipped (MCP + rendered lobby, lifecycle and remote-client pilots; `Testing/ui/validate.sh --full` runs them unattended with compile, EditMode, dirty-scene/dialog guards and stale-build rebuild) |
 
 ## Implementation plans
 
@@ -205,6 +206,7 @@ Temporary working plans in [Documents/plans/](../plans/). Update todos when work
 | [station_structural_damage.plan.md](../plans/station_structural_damage.plan.md) | Structural integrity / blast / items (Phase 1–4 shipped; 5–6 pending) |
 | [shuttle_system_design_a3dd2e04.plan.md](../plans/shuttle_system_design_a3dd2e04.plan.md) | Shuttle tile blueprints / multi-map (pending) |
 | [substances_foundation_implementation.plan.md](../plans/substances_foundation_implementation.plan.md) | Substances clean-slate foundation (Phases 0–2 shipped; chemistry gameplay MVP2) |
+| [agent_validation_loop.plan.md](../plans/agent_validation_loop.plan.md) | Agent validation loop: preflight, compile check, one-command validate, stale-build guard, real input (pending) |
 
 ## Design specs (read-only)
 

@@ -66,6 +66,8 @@ Run the **`update-system-docs`** skill (`.cursor/skills/update-system-docs/SKILL
 - Architecture effort doc status, if applicable
 - Milestone slice status and hub current focus under `Documents/milestones/`, if the work advanced a playable gate
 
+For UI/session work, run `Testing/ui/validate.sh` (`--full` when runtime/USS changed) with the editor open and review the listed screenshots; see [Testing/ui/README.md](Testing/ui/README.md).
+
 ## Composition, prefabs, and UI
 
 Before adding a SubSystem, entity behaviour, or UI surface, read [Documents/architecture/2026-07_agent-first-composition.md](Documents/architecture/2026-07_agent-first-composition.md).

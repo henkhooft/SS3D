@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 473f62eea — 2026-08-13
+> Verified: 8069d119e — 2026-10-30
 
 # Rounds / lobby
 
@@ -10,17 +10,21 @@
 Round lifecycle state machine with single-flight `CancellationTokenSource` (prevents double start/stop and embark-during-ending races). States: `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. `PrepareRound` awaits `WorldReadinessSubSystem` `WorldReady` (not a fixed 500 ms delay).
 
 **UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
-preview on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/round APIs and appearance apply (E2) still pending.
+preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
+Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop and spawn-based visibility are wired. Networked appearance apply (E2) remains pending; local hair/beard application with independent color palettes exists. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (xdotool). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
+
+Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
 **Condemned UI:** lobby job-select / ready uGUI (`Systems/Lobby/UI`, `LobbyCanvas`) — do not extend; replace per [lobby.md](../../design/lobby.md). Round state machine is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell + Character Creator host; attaches into Modal
-- `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — full-screen lobby chrome (tabs + sidebar)
-- `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator
-- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights)
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — Player View tabs/sidebar + local Display/Sound/Keyboard controls
+- `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator, local character slots + pinned Save footer
+- `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorDraft.cs` — local name/species/body/style/preferences + separate hair/beard/brow colors + stable outfit index
+- `Assets/Scripts/SS3D/Systems/Entities/Character/CharacterPreviewBooth.cs` — off-map RT booth (layer 22, own lights), worn jumpsuit/shoe mesh application
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
@@ -28,18 +32,47 @@ Ready/round APIs and appearance apply (E2) still pending.
 - `Assets/Scripts/SS3D/Systems/Rounds/ReadyPlayersSubSystem.cs` — player ready tracking; spawns on `Ongoing`
 - `Assets/Scripts/SS3D/Systems/WorldReadiness/WorldReadinessSubSystem.cs` — readiness gate for prepare
 
+- `Assets/Scripts/SS3D/Editor/Automation/LobbyUiPilot.cs` — **SS3D → Testing → Run Lobby UI Pilot**, screenshot/check report under `artifacts/ui/`
+- `Assets/Scripts/SS3D/Editor/Automation/Lifecycle/LobbyLifecyclePilot.cs` — **SS3D → Testing → Run Lobby Lifecycle Pilot**, host session lifecycle report under `artifacts/ui/lifecycle-*`; **Run Lobby Remote Client Pilot** launches `Builds/Game` as non-admin `remoteprobe` (report + client screenshots under `artifacts/ui/remote-*`); performs the client's `os_*` requests as real X11 input (xdotool)
+- `Testing/multiplayer/scenarios/lobby-remote-client.txt` — the remote client's half (UI and `os_*` opcodes in `AutomationSubSystem`)
+- `Testing/ui/validate.sh` — preflight → compile → EditMode → both pilots → stale-build rebuild → remote; `Testing/ui/README.md` — runbook
+
 ## Extension points
 
 - Round transitions: extend `RoundSubSystemBase` state handlers and messages in `Messages/`.
 - Spawn flow: `SpawnReadyPlayersEvent` after Ongoing (world must already be ready from PrepareRound).
-- Lobby UITK: Phase C+ wires Ready / round / jobs into `LobbyShellView`; Character Creator is a separate Modal screen (Phase B/E).
+- Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem`; jobs preference sync remains pending in `LobbyShellView`; Character Creator is a separate Modal screen (Phase B/E).
 
 ## Pitfalls
 
-- **Phase A double UI:** UITK shell shows on attach while condemned `LobbyCanvas` may still be active. Disable the old canvas in the Hierarchy when visually checking the new shell.
+- **Legacy UI suppression:** `LobbyUiSubSystem` disables active `LobbyScreen` objects after scene loads; legacy assets/scripts remain pending purge. Match the component, not a name: `Game.unity` renames the `LobbyCanvas` prefab instance to `Lobby`, so a name check silently matched nothing while the old lobby stayed live under the UITK shell. Smoke tests assert a `LobbyScreen` exists and is inactive (non-vacuous); never disable it themselves.
+- **Ready window:** the server accepts ready toggles in every state except Ongoing/Ending and spawns whoever is ready on Ongoing, so Ready stays enabled through Preparing/WarmingUp (countdown). Ongoing switches it to Join Round (late spawn RPC).
+- **Pilot clicks:** a synthetic `ClickEvent` does not fire `Button.clicked` (its `Clickable` listens to pointer/submit). Drive buttons with `NavigationSubmitEvent`; keep `ClickEvent` for `RegisterCallback<ClickEvent>` surfaces such as the preview. UI snapshots lag subsystem state by the 200ms refresh — wait on the UI, not only the backend.
+- **Playtest map:** editor boot loads `ApplicationSettings.EditorStationTemplate` (`ministation`) instead of the most recently saved template (Metastation, ~70s to WorldReady). Round start is then ~5s.
+- **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
 - **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on unused layer **22** with its own camera/lights/RT — do **not** bind `LobbyCameraRenderTexture` or the `StaticWorldObjects` customizer camera. Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
-- **E1 vs E2:** Save stores a local name + body morph draft; hair/species do not yet apply. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
+- **E1 vs E2:** Save stores session-local character slots (name/species/body/style/preferences); only Human body morphs and catalog hair/beard/color render in the booth. Species/skin/eye/brow rendering, disk persistence and networked spawn appearance remain deferred. Body sliders map to Human.fbx blend shapes via `HumanoidMorphApplier` (Height is root scale — there is no Height shape key).
+
+- **Preview stripping order:** remove combat/speech/movement dependents and the non-networked `HumanoidBodyStateBridge` before the generic network pass; prefab component order is not dependency order and Unity refuses required-component removal.
+- **Preview orientation:** Human faces +Z at yaw 0 and the booth camera sits on +Z; a 180° base yaw silently swaps Front/Back. Keep base yaw at 0; verify the face in screenshots, not just the RenderTexture binding.
+
+- **Creator colors:** lobby and creator are sibling Modal surfaces; variables declared only on `.lobby-shell` do not reach the creator. Scope shared lobby variables to both roots; reference text colors are overridden locally on `.char-creator`.
+- **Character drafts:** live preview callbacks must not mutate the saved draft; commit on Save only, or switching/New Character silently overwrites the saved body/style. The loadout popup is the window's last absolute child so the step form cannot paint over it.
+
+- **Slider fill:** Unity 6's Slider has no `unity-base-slider__fill` element; styling that selector silently leaves an empty track. Add a non-picking fill under the tracker and update its percentage width with the value.
+
+- **Linux rounded inputs/images:** rounded borders on the settings dropdown and sprite preview rendered solid white in the tested editor. Keep those surfaces square; screenshot review is necessary even when all UI assertions pass.
+- **Settings toggles:** use `Toggle.text` for check-before-label layout; forcing its input to `flex-grow: 0` collapses the text. Keep the input growing with an automatic basis.
+- **Settings tests:** a `ScrollView` contains internal `Slider`s for its scrollers. Query `lobby-shell__settings-slider` when counting or checking enabled volume controls.
+
+- **Startup preview goes black:** `AreaSubSystem.CompleteSetup` runs the orphan-light guard after an early booth is created. The guard must exempt `CharacterPreviewBooth`-owned lights; delaying the booth until creator open only hides the ownership bug.
+
+- **Preview clothes:** use `Cloth.GetClothMesh` on catalog prefab assets and activate the dummy's existing Jumpsuit/ShoeLeft/ShoeRight renderers. Do not instantiate folded Item prefabs or route offline preview through server-only `ClothesDisplayer`. Pick an outfit once per draft, not on each appearance callback.
+- **Remote client booth threw in `HumanoidController.Setup`:** instantiating the active Human prefab ran every gameplay `Awake` before stripping; on a remote client the booth is built before `CameraSubSystem` exists. The dummy is now instantiated under an inactive staging parent and stripped with `DestroyImmediate` before activation. Host-only pilots never saw this — run the remote pilot after booth changes.
+- **Disabled lobby buttons looked clickable:** the fill-colour button rules had no `:disabled` state, so a non-admin's Admin (and unwired Observe) rendered like live buttons; `ui_wait … disabled` still passed. `.lobby-shell__btn:disabled` dims them. UI renders in linear colour space, so opacity 0.35 reads closer to 60% — judge the screenshot, not the number.
+- **Chat Return ignored in real play:** a real Return keydown targets the `TextField`'s inner text element, which consumes it before it bubbles; the composer's bubble-phase `KeyDownEvent` handler never ran, while synthetic events sent to the field itself passed. Register Return/submit handlers on text fields with `TrickleDown.TrickleDown`; found by the remote pilot's real keyboard input.
+- **Players persist offline:** `PlayerSubSystem.GetPlayer(ckey)` still returns a disconnected player. Use the online count or the connection, not a null record, to detect a remote leaving.
 
 ## Depends on / Used by
 
@@ -56,3 +89,5 @@ Ready/round APIs and appearance apply (E2) still pending.
 - [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
 - [2026-07_comms-non-diegetic-feed](../2026-07_comms-non-diegetic-feed.md)
 - [INDEX.md](../INDEX.md)
+
+- **Preview framing:** authored skinned-renderer bounds include animation padding; empty equipment slots can report large bounds despite having no mesh. Fit the shared lobby/creator camera to baked visible geometry after evaluating the initial pose, skipping inactive renderers and null meshes. Keep framing fixed during morph edits so Height remains visible; padding leaves room for shoes and walking.
