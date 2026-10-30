@@ -82,6 +82,17 @@ MonoBehaviour:
     Prefab: {fileID: 0}
   - Id: humanfacehairdanishfull
     Prefab: {fileID: 5774385816057912484, guid: 2e0dd555bfcda7c4aa2d9bb994a9e2f2, type: 3}
+  _eyebrowStyles:
+  - Id: humaneyebrowsbold
+    Prefab: {fileID: 5774385816057912484, guid: d22873970c77411469da85a704dccedd, type: 3}
+  - Id: humaneyebrowscircle
+    Prefab: {fileID: 5774385816057912484, guid: ebe5adc53ee5f1244a2f4194d14b270a, type: 3}
+  - Id: humaneyebrowsclassic
+    Prefab: {fileID: 5774385816057912484, guid: 8136890d5e74b804b904a595d9b8a967, type: 3}
+  - Id: humaneyebrowsdainty
+    Prefab: {fileID: 5774385816057912484, guid: b97162ddf78852c4b9ce6da43f1640c3, type: 3}
+  - Id: humaneyebrowsdefault
+    Prefab: {fileID: 5774385816057912484, guid: 8325b1a0a1718674bbce7405540336fd, type: 3}
   _hairColors:
   - {r: 0.07, g: 0.07, b: 0.07, a: 1}
   - {r: 0.25, g: 0.13, b: 0.07, a: 1}

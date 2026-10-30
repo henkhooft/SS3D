@@ -41,6 +41,13 @@ namespace SS3D.UI.Lobby
             Hex("#eeeeee"),
         };
 
+        public static readonly Color[] SkinColors =
+        {
+            new(1f, 0.7411765f, 0.6f),
+            Hex("#f5dbc7"), Hex("#e7bc9b"), Hex("#ce9873"),
+            Hex("#ae7752"), Hex("#8c573c"), Hex("#68412f"), Hex("#462d24"),
+        };
+
         public static readonly Color[] EyeColors =
         {
             Hex("#3d2b1f"),

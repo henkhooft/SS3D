@@ -38,6 +38,7 @@ namespace SS3D.UI.Lobby
         private int _beardColorIndex;
         private int _eyebrowColorIndex;
         private int _eyeColorIndex;
+        private int _skinColorIndex;
         private int _angleIndex;
         private string _styleTab = "hair";
         // Catalog-backed style indices (0 = none).
@@ -66,12 +67,15 @@ namespace SS3D.UI.Lobby
         /// Args: hairStyleIndex, beardStyleIndex, hairColorIndex, beardColorIndex.
         /// </summary>
         public event Action<int, int, int, int> StyleChanged;
+        public event Action<Color, Color, string, Color> FaceChanged;
 
-        public CharacterCreatorView(LobbyAssetCatalog catalog, CharacterCreatorDraft initialDraft)
+        public CharacterCreatorView(LobbyAssetCatalog catalog, CharacterCreatorDraft initialDraft, IEnumerable<CharacterCreatorDraft> savedCharacters = null)
         {
             _catalog = catalog;
             foreach (CharacterCreatorMockData.LoadoutDef loadout in CharacterCreatorMockData.Loadouts)
                 _characters[loadout.Id] = new CharacterCreatorDraft { Id = loadout.Id, Name = loadout.Name, OutfitIndex = _catalog.ChoosePreviewOutfitIndex() };
+            if (savedCharacters != null)
+                foreach (CharacterCreatorDraft saved in savedCharacters) _characters[saved.Id] = saved;
             _characters[initialDraft.Id] = initialDraft;
             foreach (CharacterCreatorMockData.SliderDef slider in CharacterCreatorMockData.BodySliders)
             {
@@ -109,6 +113,7 @@ namespace SS3D.UI.Lobby
             OutfitChanged = null;
             BodyMorphsChanged = null;
             StyleChanged = null;
+            FaceChanged = null;
             if (_root != null && _root.parent != null)
             {
                 _root.parent.Remove(_root);
@@ -147,6 +152,7 @@ namespace SS3D.UI.Lobby
             PreviewAngleChanged?.Invoke(_angleIndex);
             NotifyBodyMorphsChanged();
             NotifyStyleChanged();
+            NotifyFaceChanged();
         }
 
         public void ApplyDraft(CharacterCreatorDraft draft)
@@ -175,8 +181,9 @@ namespace SS3D.UI.Lobby
             _beardColorIndex = draft.BeardColorIndex;
             _eyebrowColorIndex = draft.EyebrowColorIndex;
             _eyeColorIndex = draft.EyeColorIndex;
-            _species = draft.Species;
-            _selectedBrows = draft.Eyebrows;
+            _skinColorIndex = draft.SkinColorIndex;
+            _species = "Human";
+            _selectedBrows = SS3D.Systems.Entities.Character.CharacterAppearance.NormalizeEyebrowStyle(draft.Eyebrows);
             _saved = false;
 
             if (_root != null && _root.style.display == DisplayStyle.Flex)
@@ -186,6 +193,7 @@ namespace SS3D.UI.Lobby
 
             NotifyBodyMorphsChanged();
             NotifyStyleChanged();
+            NotifyFaceChanged();
         }
 
         /// <summary>Current body slider values (0–1) for live booth apply.</summary>
@@ -203,8 +211,19 @@ namespace SS3D.UI.Lobby
             StyleChanged?.Invoke(_hairStyleIndex, _beardStyleIndex, _hairColorIndex, _beardColorIndex);
         }
 
+        private void NotifyFaceChanged()
+        {
+            FaceChanged?.Invoke(PaletteColor(CharacterCreatorMockData.SkinColors, _skinColorIndex),
+                PaletteColor(CharacterCreatorMockData.EyeColors, _eyeColorIndex), _selectedBrows,
+                _catalog.GetHairColor(_eyebrowColorIndex));
+        }
+
+        public static Color PaletteColor(Color[] palette, int index) => palette[Mathf.Clamp(index, 0, palette.Length - 1)];
+
         /// <summary>Id of the character currently being edited.</summary>
         public string CurrentCharacterId => _loadoutId;
+
+        public IEnumerable<CharacterCreatorDraft> SavedCharacters => _characters.Values;
 
         /// <summary>Shows a rendered portrait for the character in the selector and its menu row.</summary>
         public void SetPortrait(string characterId, Texture portrait)
@@ -540,19 +559,35 @@ namespace SS3D.UI.Lobby
             panel.Add(nameField);
 
             panel.Add(FieldLabel("Species"));
-            DropdownField species = new(new List<string>(CharacterCreatorMockData.SpeciesOptions),
-                Array.IndexOf(CharacterCreatorMockData.SpeciesOptions, _species))
+            DropdownField species = new(new List<string> { "Human" }, 0)
             {
                 name = "character-species",
-                tooltip = "Species preference is saved locally. The live preview currently uses the Human model.",
+                tooltip = "Only Human is available. Other species need their own models.",
             };
             species.AddToClassList("char-creator__input");
             species.AddToClassList("font-body");
-            species.RegisterValueChangedCallback(evt =>
+            // DropdownField's menu factory is internal in Unity 6; intercept opening to expose
+            // unavailable species as disabled entries while keeping the field's choices Human-only.
+            void ShowSpeciesMenu()
             {
-                _species = evt.newValue;
-                _saved = false;
-            });
+                GenericDropdownMenu menu = new();
+                menu.AddItem("Human", true, () => species.value = "Human");
+                foreach (string option in CharacterCreatorMockData.SpeciesOptions)
+                    if (option != "Human") menu.AddDisabledItem(option + " (unavailable)", false);
+                menu.DropDown(species.worldBound, species, true);
+            }
+            species.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                evt.StopImmediatePropagation();
+                ShowSpeciesMenu();
+            }, TrickleDown.TrickleDown);
+            species.RegisterCallback<NavigationSubmitEvent>(evt =>
+            {
+                evt.StopImmediatePropagation();
+                ShowSpeciesMenu();
+            }, TrickleDown.TrickleDown);
+            species.RegisterValueChangedCallback(_ => species.SetValueWithoutNotify("Human"));
             panel.Add(species);
 
             host.Add(panel);
@@ -574,16 +609,29 @@ namespace SS3D.UI.Lobby
                 panel.Add(BuildSliderRow(def));
             }
 
+            panel.Add(FieldLabel("Skin Tone"));
+            VisualElement skinColors = BuildColorRow(CharacterCreatorMockData.SkinColors, _skinColorIndex, index =>
+            {
+                _skinColorIndex = index;
+                _saved = false;
+                NotifyFaceChanged();
+                Rebuild();
+            });
+            skinColors.name = "skin-color-picker";
+            panel.Add(skinColors);
             panel.Add(FieldLabel("Eye Color"));
-            panel.Add(BuildColorRow(
+            VisualElement eyeColors = BuildColorRow(
                 CharacterCreatorMockData.EyeColors,
                 _eyeColorIndex,
                 index =>
                 {
                     _eyeColorIndex = index;
                     _saved = false;
+                    NotifyFaceChanged();
                     Rebuild();
-                }));
+                });
+            eyeColors.name = "eye-color-picker";
+            panel.Add(eyeColors);
 
             host.Add(panel);
         }
@@ -669,8 +717,15 @@ namespace SS3D.UI.Lobby
 
                 case "eyebrows":
                 {
-                    BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("eyebrows"), _selectedBrows,
-                        key => { _selectedBrows = key; _saved = false; Rebuild(); });
+                    grid.Add(BuildStyleTile("None", true, _selectedBrows == "none", () => SelectEyebrows("none")));
+                    foreach (LobbyNamedPrefab style in _catalog.EyebrowStyles)
+                    {
+                        string id = style.Id;
+                        VisualElement tile = BuildStyleTile(StyleDisplayName(id).Replace("HumanEyebrows", ""), false,
+                            _selectedBrows == id, () => SelectEyebrows(id));
+                        tile.name = "eyebrows-" + id;
+                        grid.Add(tile);
+                    }
                     break;
                 }
 
@@ -685,6 +740,14 @@ namespace SS3D.UI.Lobby
             panel.Add(gridScroll);
             BuildStyleColorPicker(panel);
             host.Add(panel);
+        }
+
+        private void SelectEyebrows(string id)
+        {
+            _selectedBrows = id;
+            _saved = false;
+            NotifyFaceChanged();
+            Rebuild();
         }
 
         private void BuildStyleColorPicker(VisualElement panel)
@@ -731,6 +794,7 @@ namespace SS3D.UI.Lobby
                     case "eyebrows":
                     {
                         _eyebrowColorIndex = index;
+                        NotifyFaceChanged();
                         break;
                     }
                     default:
@@ -1014,6 +1078,7 @@ namespace SS3D.UI.Lobby
                 BeardColorIndex = _beardColorIndex,
                 EyebrowColorIndex = _eyebrowColorIndex,
                 EyeColorIndex = _eyeColorIndex,
+                SkinColorIndex = _skinColorIndex,
                 Species = _species,
                 Eyebrows = _selectedBrows,
             };
@@ -1027,7 +1092,7 @@ namespace SS3D.UI.Lobby
         private static string StyleDisplayName(string id)
         {
             string name = id ?? string.Empty;
-            foreach (string prefix in new string[] { "HumanHair", "HumanBeard", "HumanFacialHair" })
+            foreach (string prefix in new string[] { "HumanHair", "HumanBeard", "HumanFacialHair", "HumanEyebrows" })
                 if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     name = name.Substring(prefix.Length);
             name = StyleWordBoundary.Replace(name, "$1 $2");

@@ -86,10 +86,9 @@ namespace SS3D.Systems.Entities
             ReapplyBodyMorphs();
 
             IHumanoidStyleSource styles = HumanoidStyleSource.Current;
-            if (styles == null)
-            {
-                return;
-            }
+            HumanoidStyleApplier.ApplyFace(gameObject, _appearance.SkinColor, _appearance.EyeColor,
+                styles?.GetEyebrowStyle(_appearance.EyebrowStyle), _appearance.EyebrowColor);
+            if (styles == null) return;
 
             HumanoidStyleApplier.Apply(
                 gameObject,

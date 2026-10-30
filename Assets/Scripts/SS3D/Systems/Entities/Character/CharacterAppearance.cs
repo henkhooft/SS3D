@@ -23,6 +23,10 @@ namespace SS3D.Systems.Entities.Character
         public int BeardStyle;
         public Color HairColor;
         public Color BeardColor;
+        public Color SkinColor;
+        public Color EyeColor;
+        public Color EyebrowColor;
+        public string EyebrowStyle;
 
         /// <summary>
         /// False for the default (unset) value: <see cref="Sanitized"/> always yields opaque colors,
@@ -48,8 +52,22 @@ namespace SS3D.Systems.Entities.Character
             result.BeardStyle = Mathf.Max(0, BeardStyle);
             result.HairColor = Opaque(HairColor);
             result.BeardColor = Opaque(BeardColor);
+            result.SkinColor = Opaque(SkinColor);
+            result.EyeColor = Opaque(EyeColor);
+            result.EyebrowColor = Opaque(EyebrowColor);
+            result.EyebrowStyle = NormalizeEyebrowStyle(EyebrowStyle);
             return result;
         }
+
+        public static string NormalizeEyebrowStyle(string id) => id?.ToLowerInvariant() switch
+        {
+            "none" => "none",
+            "humaneyebrowsbold" or "thick" or "bushy" => "humaneyebrowsbold",
+            "humaneyebrowscircle" => "humaneyebrowscircle",
+            "humaneyebrowsclassic" or "angled" => "humaneyebrowsclassic",
+            "humaneyebrowsdainty" or "thin" => "humaneyebrowsdainty",
+            _ => "humaneyebrowsdefault",
+        };
 
         public static string SanitizeName(string name)
         {

@@ -13,6 +13,8 @@ namespace SS3D.Systems.Entities.Character
 
         /// <returns>The facial-hair prefab, or null for none/unknown.</returns>
         GameObject GetBeardStyle(int index);
+
+        GameObject GetEyebrowStyle(string id);
     }
 
     public static class HumanoidStyleSource

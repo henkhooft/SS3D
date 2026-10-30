@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using FishNet;
 using SS3D.Core;
+using SS3D.UI.Lobby;
 using SS3D.Permissions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
@@ -468,6 +469,36 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Species menu shows unavailable models disabled",
+                Enter = () =>
+                {
+                    DropdownField species = Creator().Q<DropdownField>("character-species");
+                    Require(species.value == "Human" && species.choices.SequenceEqual(new string[] { "Human" }), "Human is the only selectable species");
+                    using (NavigationSubmitEvent evt = NavigationSubmitEvent.GetPooled()) species.SendEvent(evt);
+                },
+                Until = () => Creator().panel.visualTree.Query<Label>().ToList().Any(l => l.text == "Skrell (unavailable)"),
+                Verify = () =>
+                {
+                    foreach (string species in new string[] { "Skrell", "Vox" })
+                    {
+                        Label label = Creator().panel.visualTree.Query<Label>().ToList().First(l => l.text == species + " (unavailable)");
+                        Require(!label.enabledInHierarchy, species + " menu item is disabled");
+                    }
+                    Capture("species-unavailable");
+                },
+            },
+            new Step
+            {
+                Name = "Close species menu",
+                Enter = () =>
+                {
+                    Label human = Creator().panel.visualTree.Query<Label>().ToList().Last(l => l.text == "Human");
+                    using (NavigationCancelEvent evt = NavigationCancelEvent.GetPooled()) human.SendEvent(evt);
+                },
+                Until = () => !Creator().panel.visualTree.Query<Label>().ToList().Any(l => l.text == "Skrell (unavailable)"),
+            },
+            new Step
+            {
                 Name = "Creator selector receives a rendered portrait",
                 Until = () => Creator()?.Q(className: "char-creator__loadout-thumb")?.resolvedStyle.backgroundImage.renderTexture != null,
                 Verify = () =>
@@ -508,6 +539,8 @@ namespace SS3D.Editor.Automation
                 {
                     Creator().Q<Slider>("body-height").value = PilotHeight;
                     Creator().Q<Slider>("body-fat").value = PilotFat;
+                    Click(Creator().Q("skin-color-picker").Query(className: "char-creator__swatch").ToList()[5]);
+                    Click(Creator().Q("eye-color-picker").Query(className: "char-creator__swatch").ToList()[1]);
                     Click(FindButton(Creator(), "NEXT"));
                 },
                 Until = () => StyleTiles().Count > 1,
@@ -517,6 +550,20 @@ namespace SS3D.Editor.Automation
                 Name = "Creator: first hair style",
                 Enter = () => Click(StyleTiles()[1]),
                 Until = () => StyleTiles()[1].ClassListContains("char-creator__style-tile--selected"),
+            },
+            new Step
+            {
+                Name = "Creator: eyebrows",
+                Enter = () => Click(FindButton(Creator(), "EYEBROWS")),
+                Until = () => Creator().Q("eyebrows-humaneyebrowsbold") != null,
+                Verify = () =>
+                {
+                    Click(Creator().Q("eyebrows-humaneyebrowsbold"));
+                    Click(Creator().Q("style-color-picker").Query(className: "char-creator__swatch").ToList()[4]);
+                    CharacterPreviewBooth booth = UnityEngine.Object.FindAnyObjectByType<CharacterPreviewBooth>();
+                    VerifyFace(booth.Dummy);
+                    Capture("creator-face");
+                },
             },
             new Step { Name = "Creator: review", Enter = () => Click(FindButton(Creator(), "NEXT")), Until = () => FindButton(Creator(), "SAVE CHARACTER") != null },
             new Step
@@ -528,6 +575,13 @@ namespace SS3D.Editor.Automation
                 {
                     _savedName = CharacterName();
                     Require(string.Equals(_savedName, PilotCharacterName, StringComparison.OrdinalIgnoreCase), "Lobby sidebar shows the saved name");
+                    CharacterProfileStore.Profile profile = new CharacterProfileStore(CharacterProfileStore.DefaultPath).Load();
+                    Require(profile != null, "Save writes a readable character profile to disk");
+                    CharacterCreatorDraft saved = profile.Characters.First(c => c.Id == profile.SelectedId);
+                    Require(saved.Name == PilotCharacterName && Mathf.Approximately(saved.GetMorph("height"), PilotHeight)
+                        && Mathf.Approximately(saved.GetMorph("fat"), PilotFat) && saved.HairStyleIndex == 1 && saved.SkinColorIndex == 5 && saved.EyeColorIndex == 1
+                        && saved.Eyebrows == "humaneyebrowsbold" && saved.EyebrowColorIndex == 4,
+                        "Reloaded selected character preserves name, body and hair");
                 },
             },
             new Step
@@ -998,6 +1052,34 @@ namespace SS3D.Editor.Automation
 
             Transform socket = Array.Find(entity.GetComponentsInChildren<Transform>(true), t => t.name == "HairSocket");
             Require(socket != null && socket.childCount == 1, "Saved hair style spawned on the head");
+            VerifyFace(entity.gameObject);
+        }
+
+        private static void VerifyFace(GameObject root)
+        {
+            foreach ((string materialName, Color color, string property) in new (string, Color, string)[]
+            {
+                ("HumanSkin", CharacterCreatorMockData.SkinColors[5], "_Color"),
+                ("HumanEye", CharacterCreatorMockData.EyeColors[1], "_BaseColor"),
+            })
+            {
+                bool found = false;
+                foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+                    for (int i = 0; i < renderer.sharedMaterials.Length; i++)
+                        if (renderer.sharedMaterials[i] != null && renderer.sharedMaterials[i].name == materialName)
+                        {
+                            MaterialPropertyBlock block = new();
+                            renderer.GetPropertyBlock(block, i);
+                            Require(block.GetColor(property) == color, materialName + " tint matches saved selection on " + renderer.name);
+                            found = true;
+                        }
+                Require(found, materialName + " renderers were checked");
+            }
+            Transform brows = Array.Find(root.GetComponentsInChildren<Transform>(true), t => t.name == "EyebrowSocket");
+            Require(brows != null && brows.childCount == 1 && brows.GetChild(0).name.Contains("Bold"), "Selected eyebrow mesh is attached to the head");
+            MaterialPropertyBlock browBlock = new();
+            brows.GetComponentInChildren<Renderer>().GetPropertyBlock(browBlock);
+            Require(browBlock.GetColor("_Color") == ((LobbyAssetCatalog)HumanoidStyleSource.Current).GetHairColor(4), "Eyebrow color is independent");
         }
 
         private static Button FindButton(VisualElement surface, string text) =>

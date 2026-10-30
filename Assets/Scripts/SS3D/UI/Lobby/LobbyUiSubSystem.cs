@@ -37,6 +37,7 @@ namespace SS3D.UI.Lobby
         private CharacterCreatorView _creatorView;
         private CharacterPreviewBooth _booth;
         private CharacterCreatorDraft _draft;
+        private CharacterProfileStore _profileStore;
         private bool _attached;
         private readonly Dictionary<string, RenderTexture> _portraits = new();
         private bool _portraitDirty;
@@ -79,6 +80,7 @@ namespace SS3D.UI.Lobby
                 _creatorView.OutfitChanged -= HandleOutfitChanged;
             _creatorView.BodyMorphsChanged -= HandleBodyMorphsChanged;
             _creatorView.StyleChanged -= HandleStyleChanged;
+            _creatorView.FaceChanged -= HandleFaceChanged;
             _creatorView.Detach();
                 _creatorView = null;
             }
@@ -116,7 +118,10 @@ namespace SS3D.UI.Lobby
             _attached = true;
             InputInterface.RegisterDocument(uiShell.Document);
 
-            _draft = new CharacterCreatorDraft { OutfitIndex = _catalog.ChoosePreviewOutfitIndex() };
+            _profileStore = new CharacterProfileStore(CharacterProfileStore.DefaultPath);
+            CharacterProfileStore.Profile profile = _profileStore.Load();
+            _draft = profile?.Characters.FirstOrDefault(c => c.Id == profile.SelectedId)
+                ?? new CharacterCreatorDraft { OutfitIndex = _catalog.ChoosePreviewOutfitIndex() };
 
             _shellView = new LobbyShellView(_catalog);
             _shellView.Attach(modalLayer);
@@ -134,7 +139,7 @@ namespace SS3D.UI.Lobby
             _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.SetCharacterName(_draft.Name);
 
-            _creatorView = new CharacterCreatorView(_catalog, _draft);
+            _creatorView = new CharacterCreatorView(_catalog, _draft, profile?.Characters);
             _creatorView.Attach(modalLayer);
             _creatorView.ReturnToLobbyRequested += HandleReturnToLobbyRequested;
             _creatorView.CharacterSaved += HandleCharacterSaved;
@@ -142,6 +147,7 @@ namespace SS3D.UI.Lobby
             _creatorView.OutfitChanged += HandleOutfitChanged;
             _creatorView.BodyMorphsChanged += HandleBodyMorphsChanged;
             _creatorView.StyleChanged += HandleStyleChanged;
+            _creatorView.FaceChanged += HandleFaceChanged;
             if (!EnsureBooth())
             {
                 Debug.LogError("[Lobby] Could not initialize the live character preview.");
@@ -312,6 +318,10 @@ namespace SS3D.UI.Lobby
                     BeardStyle = _draft.BeardStyleIndex,
                     HairColor = _catalog.GetHairColor(_draft.HairColorIndex),
                     BeardColor = _catalog.GetHairColor(_draft.BeardColorIndex),
+                    SkinColor = CharacterCreatorView.PaletteColor(CharacterCreatorMockData.SkinColors, _draft.SkinColorIndex),
+                    EyeColor = CharacterCreatorView.PaletteColor(CharacterCreatorMockData.EyeColors, _draft.EyeColorIndex),
+                    EyebrowColor = _catalog.GetHairColor(_draft.EyebrowColorIndex),
+                    EyebrowStyle = CharacterAppearance.NormalizeEyebrowStyle(_draft.Eyebrows),
                 },
             });
             _appearanceSentTo = InstanceFinder.ClientManager.Connection;
@@ -427,10 +437,14 @@ namespace SS3D.UI.Lobby
             }
 
             _draft = draft;
+            _profileStore.Save(_creatorView.SavedCharacters, draft.Id);
             _shellView?.SetCharacterName(_draft.Name);
             HandleOutfitChanged(_draft.OutfitIndex);
             ApplyBodyMorphsToBooth(_draft.BodyMorphs);
             ApplyStyleToBooth(_draft.HairStyleIndex, _draft.BeardStyleIndex, _draft.HairColorIndex, _draft.BeardColorIndex);
+            HandleFaceChanged(CharacterCreatorView.PaletteColor(CharacterCreatorMockData.SkinColors, _draft.SkinColorIndex),
+                CharacterCreatorView.PaletteColor(CharacterCreatorMockData.EyeColors, _draft.EyeColorIndex),
+                CharacterAppearance.NormalizeEyebrowStyle(_draft.Eyebrows), _catalog.GetHairColor(_draft.EyebrowColorIndex));
             SendCharacterAppearance();
             Debug.Log($"[Lobby] Character draft saved: {_draft.Name}");
         }
@@ -501,6 +515,12 @@ namespace SS3D.UI.Lobby
         {
             MarkPortraitDirty();
             ApplyBodyMorphsToBooth(morphs);
+        }
+
+        private void HandleFaceChanged(Color skin, Color eyes, string eyebrows, Color browColor)
+        {
+            MarkPortraitDirty();
+            if (_booth != null) _booth.ApplyFace(skin, eyes, _catalog.GetEyebrowStyle(eyebrows), browColor);
         }
 
         private void HandleStyleChanged(int hairIndex, int beardIndex, int colorIndex, int beardColorIndex)

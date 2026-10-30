@@ -1,6 +1,6 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2 networked name/body/hair shipped, species/skin/persistence pending; F legacy purge shipped)
+> Status: in-progress (Phase A/B visual + Phase D jobs + Phase E1 live preview/draft; C verified; E2 human appearance shipped; other species unavailable; local presets persisted; F legacy purge shipped)
 
 # Lobby UITK redesign
 
@@ -17,7 +17,7 @@ character preview.
 | C | Wire Ready / round state / admin start-stop / player list / show-hide | implemented; host lifecycle + remote non-admin client verified (Ready click and chat typing as real OS input; other steps synthetic) |
 | D | Jobs H/M/L/N + antag prefs sync + resolution | **shipped** (round-start pass + latejoin; antag opt-ins stored, no gamemode consumer yet) |
 | E1 | Live booth preview + local Save/Return draft (name) | **shipped** |
-| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **partial** — name, body morphs, hair/beard + colors sync to the spawned body; species/skin/eyes/eyebrows/persistence pending |
+| E2 | Appearance apply/sync (hair/skin/catalog, network, spawn) | **shipped for Human** — name/body/hair/beard/eyebrows and skin/eye/style colors sync to spawned bodies; local presets persisted; other species disabled pending models |
 | F | Purge condemned LobbyCanvas / uGUI views; docs finalize | **shipped** — see [Phase F](#legacy-ugui-purge-phase-f--2026-10-30) |
 
 ## Design divergences (do not edit design docs)
@@ -461,3 +461,53 @@ Review verification: `validate-20261030-211254` passed preflight, compile, all 2
 tests (including renderer setup identity/recovery mapping), 122 visual checks, 110 lifecycle
 checks (including portrait target preservation and Escape/focus behavior), client rebuild and
 21 remote checks. Selector portrait and in-round menu captures were visually reviewed.
+
+
+## Local character presets — 2026-10-30
+
+Save Character now writes all saved slots and the last saved slot ID to a versioned local
+profile at `Application.persistentDataPath/Lobby/characters.json`. Startup restores it before
+creating the lobby and booth. Body morphs are stored by key alongside identity, style/color
+indices and preview outfit; unsaved edits and rendered portraits are not persisted. A temporary
+file plus atomic replacement protects the existing save during writes. Unreadable or newer-schema
+profiles fall back to defaults in memory and remain untouched on subsequent Save calls.
+
+This is a client-owned preset library within the effort's expanded creator scope, separate
+from server-owned player meta in [persistence-save.md](../design/persistence-save.md) §5.
+No account identity, job preferences, moderation data or in-round crew records are stored here.
+Style indices retain the existing matching-catalog assumption.
+
+EditMode tests cover fresh stores, multiple slots, selection/body/style round trips, unsaved
+edits, replacement writes and corrupt/newer profile preservation. The lifecycle pilot reloads
+the saved character from disk and checks name, height, fat and hair. Editor pilots route
+profiles into their per-run artifact folders to avoid reading or overwriting personal presets.
+Validation: `validate-20261030-213057` passed compilation, all 2096 EditMode tests and
+122 visual checks. Its driver was interrupted during lifecycle; the independent rerun
+`validate-20261030-213523` passed all 112 lifecycle checks, including the two disk-profile
+assertions. Visual and lifecycle captures were reviewed. `validate-20261030-213728` rebuilt the client and passed all 21 remote checks; remote
+captures were reviewed. Generated font/prefab/URP serialization was backed up and removed
+from the authored diff after validation.
+
+
+## Human skin, eyes and eyebrows — 2026-10-30
+
+Body now provides eight skin tones alongside the existing eye-color palette. Style → Eyebrows
+uses the five authored prefabs (Bold, Circle, Classic, Dainty, Default) plus None, with an
+independent hair-palette color. These update the live booth and portraits, persist with the
+saved slot, and travel in the sanitized `CharacterAppearance` SyncVar for spawning/latejoin.
+Old eyebrow preset names map to current catalog IDs. Skin defaults to the authored HumanSkin
+color for profiles saved before skin selection existed.
+
+`HumanoidStyleApplier.ApplyFace` writes per-material property blocks only for HumanSkin and
+HumanEye slots, preserving shared materials, clothing and cut surfaces. Eyebrows attach to
+an animated head socket with the same imported-mesh correction as hair. The catalog builder
+discovers existing eyebrow prefabs; no scene/mega-prefab edits or new art imports are needed.
+
+Human is the only selectable species. Skrell and Vox remain visible disabled menu items with
+an unavailable caption. Older nonhuman presets open as Human, and Save records Human. Unity 6
+keeps DropdownField's menu factory internal, so pointer/submit interception opens a
+GenericDropdownMenu with disabled entries while the field's selectable list contains only Human.
+
+Validation covers per-character/per-material tint isolation, server color/style sanitization,
+legacy preset mapping, local profile round trips, the disabled species menu, preview tints and
+spawned/latejoin appearance. Results follow after runtime verification.

@@ -3,13 +3,15 @@ using UnityEngine;
 
 namespace SS3D.UI.Lobby
 {
-    /// <summary>In-memory Character Creator draft (local only; no network yet).</summary>
+    /// <summary>Character Creator saved slot or working draft.</summary>
+    [System.Serializable]
     public sealed class CharacterCreatorDraft
     {
         public string Id = CharacterCreatorMockData.Loadouts[0].Id;
         public string Name = LobbyMockData.CharacterName;
         public string Species = CharacterCreatorMockData.SpeciesOptions[0];
         public int EyeColorIndex;
+        public int SkinColorIndex;
         public string Eyebrows = "thin";
         /// <summary>Chosen once from the curated preview outfits; retained when this draft is saved.</summary>
         public int OutfitIndex;

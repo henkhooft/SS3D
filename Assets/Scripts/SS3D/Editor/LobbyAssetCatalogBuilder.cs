@@ -216,6 +216,7 @@ namespace SS3D.Editor
                 loadoutThumbs,
                 hairStyles,
                 beardStyles,
+                new List<LobbyNamedPrefab>(DiscoverPrefabs("Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanHair/Eyebrows")),
                 hairColors,
                 previewOutfits);
             EditorUtility.SetDirty(catalog);

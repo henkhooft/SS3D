@@ -56,6 +56,35 @@ namespace SS3D.Systems.Entities.Character
             ApplyHairTint(facialSocket, beardColor);
         }
 
+        /// <summary>Tint only skin/eye material slots; cut surfaces, clothing and shared assets stay intact.</summary>
+        public static void ApplyFace(GameObject root, Color skin, Color eyes, GameObject eyebrows, Color browColor)
+        {
+            if (root == null) return;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    Material material = materials[i];
+                    if (material == null) continue;
+                    bool isSkin = material.name == "HumanSkin";
+                    bool isEye = material.name == "HumanEye";
+                    if (!isSkin && !isEye) continue;
+                    MaterialPropertyBlock block = new();
+                    renderer.GetPropertyBlock(block, i);
+                    block.SetColor(ShaderColorId, isSkin ? skin : eyes);
+                    block.SetColor(ShaderBaseColorId, isSkin ? skin : eyes);
+                    renderer.SetPropertyBlock(block, i);
+                }
+            }
+            Transform socket = EnsureSocket(root, "EyebrowSocket");
+            Transform group = FindDescendant(root.transform, HairGroupName);
+            if (group != null) DisableRendererOn(FindDirectChild(group, "Eyebrows"), socket, null);
+            ClearChildren(socket);
+            SpawnStyle(eyebrows, socket);
+            ApplyHairTint(socket, browColor);
+        }
+
         private static Transform EnsureSocket(GameObject root, string socketName)
         {
             Transform existing = FindDescendant(root.transform, socketName);
@@ -94,7 +123,7 @@ namespace SS3D.Systems.Entities.Character
 
             DisableRendererOn(FindDirectChild(hairGroup, BakedHairName), hairSocket, facialSocket);
             DisableRendererOn(FindDirectChild(hairGroup, BakedFacialHairName), hairSocket, facialSocket);
-            DisableRendererOn(FindDirectChild(hairGroup, "Eyebrows"), hairSocket, facialSocket);
+
         }
 
         private static void DisableRendererOn(

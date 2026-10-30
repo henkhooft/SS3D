@@ -146,6 +146,13 @@ namespace SS3D.Systems.Entities.Character
             SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
 
+        public void ApplyFace(Color skin, Color eyes, GameObject eyebrows, Color browColor)
+        {
+            if (_dummy == null) return;
+            HumanoidStyleApplier.ApplyFace(_dummy, skin, eyes, eyebrows, browColor);
+            SetLayerRecursively(_dummy.transform, PreviewLayer);
+        }
+
         /// <summary>Apply worn meshes to the existing rig; never spawn networked clothing Items.</summary>
         public void ApplyOutfit(Cloth jumpsuit, Cloth shoes)
         {

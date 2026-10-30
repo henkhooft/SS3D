@@ -29,6 +29,7 @@ namespace SS3D.UI.Lobby
 
         /// <summary>Ordered facial-hair prefabs. Index 0 = None.</summary>
         [SerializeField] private List<LobbyNamedPrefab> _beardStyles = new();
+        [SerializeField] private List<LobbyNamedPrefab> _eyebrowStyles = new();
 
         /// <summary>Hair / skin tint colours shown in the Body colour pickers.</summary>
         [SerializeField] private List<Color> _hairColors = new();
@@ -56,6 +57,15 @@ namespace SS3D.UI.Lobby
         public IReadOnlyList<LobbyNamedPrefab> HairStyles => _hairStyles;
 
         public IReadOnlyList<LobbyNamedPrefab> BeardStyles => _beardStyles;
+
+        public IReadOnlyList<LobbyNamedPrefab> EyebrowStyles => _eyebrowStyles;
+
+        public GameObject GetEyebrowStyle(string id)
+        {
+            foreach (LobbyNamedPrefab style in _eyebrowStyles)
+                if (style.Id == id) return style.Prefab;
+            return null;
+        }
 
         public IReadOnlyList<Color> HairColors => _hairColors;
 
@@ -158,6 +168,7 @@ namespace SS3D.UI.Lobby
             List<LobbyNamedSprite> loadoutThumbs,
             List<LobbyNamedPrefab> hairStyles,
             List<LobbyNamedPrefab> beardStyles,
+            List<LobbyNamedPrefab> eyebrowStyles,
             List<Color> hairColors,
             List<LobbyPreviewOutfit> previewOutfits)
         {
@@ -171,6 +182,7 @@ namespace SS3D.UI.Lobby
             _loadoutThumbs = loadoutThumbs ?? new List<LobbyNamedSprite>();
             _hairStyles = hairStyles ?? new List<LobbyNamedPrefab>();
             _beardStyles = beardStyles ?? new List<LobbyNamedPrefab>();
+            _eyebrowStyles = eyebrowStyles ?? new List<LobbyNamedPrefab>();
             _hairColors = hairColors ?? new List<Color>();
             _previewOutfits = previewOutfits ?? new List<LobbyPreviewOutfit>();
         }
