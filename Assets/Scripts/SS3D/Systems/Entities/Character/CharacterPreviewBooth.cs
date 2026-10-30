@@ -1,8 +1,15 @@
+using System.Collections.Generic;
 using Coimbra;
 using FishNet.Object;
 using FishNet.Observing;
+using SS3D.Systems.Combat;
+using SS3D.Systems.Comms;
 using SS3D.Systems.Entities.Data;
+using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
+using Cloth = SS3D.Systems.Inventory.Containers.Cloth;
 #if UNITY_RENDER_PIPELINE_UNIVERSAL
 using UnityEngine.Rendering.Universal;
 #endif
@@ -20,7 +27,7 @@ namespace SS3D.Systems.Entities.Character
         public const int PreviewLayer = 22;
 
         private static readonly Vector3 BoothOrigin = new(-250f, -250f, -250f);
-        private const float BaseYawDegrees = 180f;
+        private const float BaseYawDegrees = 0f;
         /// <summary>Peaceful locomotion blend tree: ~0.3 = walk, 1.0 = run.</summary>
         private const float PreviewWalkSpeed = 0.3f;
 
@@ -118,16 +125,54 @@ namespace SS3D.Systems.Entities.Character
         public void ApplyStyle(
             GameObject hairPrefab,
             GameObject beardPrefab,
-            Color hairColor)
+            Color hairColor,
+            Color beardColor)
         {
             if (_dummy == null)
             {
                 return;
             }
 
-            HumanoidStyleApplier.Apply(_dummy, hairPrefab, beardPrefab, hairColor);
+            HumanoidStyleApplier.Apply(_dummy, hairPrefab, beardPrefab, hairColor, beardColor);
 
             // Hair prefabs are spawned after EnsureDummy, so their layer must be fixed up here.
+            SetLayerRecursively(_dummy.transform, PreviewLayer);
+        }
+
+        /// <summary>Apply worn meshes to the existing rig; never spawn networked clothing Items.</summary>
+        public void ApplyOutfit(Cloth jumpsuit, Cloth shoes)
+        {
+            if (_dummy == null || jumpsuit == null || shoes == null)
+            {
+                return;
+            }
+
+            foreach (ClothedBodyPart part in _dummy.GetComponentsInChildren<ClothedBodyPart>(true))
+            {
+                Cloth source;
+                switch (part.Type)
+                {
+                    case ClothType.Jumpsuit:
+                    {
+                        source = jumpsuit;
+                        break;
+                    }
+                    case ClothType.ShoeLeft:
+                    case ClothType.ShoeRight:
+                    {
+                        source = shoes;
+                        break;
+                    }
+                    default: continue;
+                }
+                Mesh mesh = source.GetClothMesh(part.Type);
+                if (mesh != null && part.TryGetComponent(out SkinnedMeshRenderer renderer))
+                {
+                    renderer.sharedMesh = mesh;
+                    renderer.enabled = true;
+                    part.gameObject.SetActive(true);
+                }
+            }
             SetLayerRecursively(_dummy.transform, PreviewLayer);
         }
 
@@ -303,16 +348,27 @@ namespace SS3D.Systems.Entities.Character
             }
 
             Transform parent = _spawnPoint != null ? _spawnPoint : transform;
-            _dummy = Instantiate(_humanPrefab, parent);
+
+            // Instantiate inactive so gameplay components never Awake: on a remote client the booth is
+            // built before CameraSubSystem exists and HumanoidController.Setup throws.
+            GameObject staging = new("CharacterPreviewStaging");
+            staging.SetActive(false);
+            staging.transform.SetParent(parent, false);
+            _dummy = Instantiate(_humanPrefab, staging.transform);
             _dummy.name = "CharacterPreviewDummy";
-            _dummy.transform.localPosition = Vector3.zero;
-            _dummy.transform.localRotation = Quaternion.Euler(0f, BaseYawDegrees, 0f);
-            _dummy.transform.localScale = Vector3.one;
 
             StripNetworking(_dummy);
             DisableGameplay(_dummy);
-            ConfigurePreviewLocomotion(_dummy, PreviewWalkSpeed, PreviewWalkSpeed);
             SetLayerRecursively(_dummy.transform, PreviewLayer);
+
+            _dummy.transform.SetParent(parent, false);
+            _dummy.transform.localPosition = Vector3.zero;
+            _dummy.transform.localRotation = Quaternion.Euler(0f, BaseYawDegrees, 0f);
+            _dummy.transform.localScale = Vector3.one;
+            staging.Dispose(true);
+
+            // Animator parameters set while inactive are lost on activation.
+            ConfigurePreviewLocomotion(_dummy, PreviewWalkSpeed, PreviewWalkSpeed);
         }
 
         private void ApplyAngleYaw()
@@ -333,6 +389,13 @@ namespace SS3D.Systems.Entities.Character
                 return;
             }
 
+            // Instantiated rig transforms still carry the prefab's authoring pose until
+            // the Animator evaluates; fit the same posed geometry the camera will render.
+            foreach (Animator animator in _dummy.GetComponentsInChildren<Animator>(true))
+            {
+                if (animator.isActiveAndEnabled && animator.runtimeAnimatorController != null)
+                    animator.Update(0f);
+            }
             Bounds bounds = CalculateBounds(_dummy);
             float height = Mathf.Max(bounds.size.y, 0.75f);
 
@@ -341,12 +404,14 @@ namespace SS3D.Systems.Entities.Character
             lookAt.y = Mathf.Lerp(bounds.min.y, bounds.max.y, 0.5f);
 
             // Fit full height with a small margin; padding > 1 pulls the camera back.
-            const float verticalPadding = 1.08f;
+            // Leave room for walking poses, shoes and the maximum height morph without
+            // auto-fitting every edit (which would hide the effect of the Height slider).
+            const float verticalPadding = 1.2f;
             float halfHeight = height * 0.5f * verticalPadding;
             float distance = halfHeight / Mathf.Tan(_previewCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
             distance = Mathf.Clamp(distance, 1.1f, 8f);
 
-            // Dummy yaw 180° faces -Z; camera sits on +Z looking back at the face.
+            // Human's front faces +Z at yaw 0; the camera sits on +Z looking at it.
             Vector3 camPos = lookAt + new Vector3(0f, 0f, distance);
             _previewCamera.transform.position = camPos;
             _previewCamera.transform.rotation = Quaternion.LookRotation(lookAt - camPos, Vector3.up);
@@ -355,26 +420,42 @@ namespace SS3D.Systems.Entities.Character
 
         private static Bounds CalculateBounds(GameObject root)
         {
-            // Include MeshRenderers (shoes / gear) — skinned-only bounds omitted feet and
-            // framed as if the body were shorter and higher in the shot.
+            // Imported skinned bounds include animation safety margins and hidden parts;
+            // fitting those makes the visible character tiny. Measure actual visible vertices
+            // once when creating the booth, while keeping static gear in the fit as well.
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             Bounds bounds = new(root.transform.position, Vector3.one * 0.1f);
             bool initialized = false;
-
-            for (int i = 0; i < renderers.Length; i++)
+            Mesh bakedMesh = new();
+            List<Vector3> vertices = new();
+            foreach (Renderer renderer in renderers)
             {
-                Renderer renderer = renderers[i];
-                if (renderer == null || !renderer.enabled)
-                {
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
                     continue;
-                }
-
                 if (renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
-                {
                     continue;
-                }
 
-                if (!initialized)
+                if (renderer is SkinnedMeshRenderer skinned)
+                {
+                    // Empty equipment slots still have large authored renderer bounds.
+                    if (skinned.sharedMesh == null) continue;
+                    skinned.BakeMesh(bakedMesh);
+                    bakedMesh.GetVertices(vertices);
+                    foreach (Vector3 vertex in vertices)
+                    {
+                        Vector3 worldPoint = renderer.transform.TransformPoint(vertex);
+                        if (!initialized)
+                        {
+                            bounds = new Bounds(worldPoint, Vector3.zero);
+                            initialized = true;
+                        }
+                        else
+                        {
+                            bounds.Encapsulate(worldPoint);
+                        }
+                    }
+                }
+                else if (!initialized)
                 {
                     bounds = renderer.bounds;
                     initialized = true;
@@ -384,7 +465,7 @@ namespace SS3D.Systems.Entities.Character
                     bounds.Encapsulate(renderer.bounds);
                 }
             }
-
+            Destroy(bakedMesh);
             return bounds;
         }
 
@@ -399,6 +480,13 @@ namespace SS3D.Systems.Entities.Character
 
         private static void StripNetworking(GameObject root)
         {
+            // Remove RequireComponent dependents before their providers. Prefab component
+            // order is not dependency order, and the body bridge is not a NetworkBehaviour.
+            DestroyAll<CombatInteractionNetwork>(root);
+            DestroyAll<LocalSpeechEmitter>(root);
+            DestroyAll<HumanoidPredictedMovement>(root);
+            DestroyAll<HumanoidCombatController>(root);
+            DestroyAll<HumanoidBodyStateBridge>(root);
             DestroyAll<RagdollPart>(root);
             DestroyAll<NetworkObserver>(root);
             DestroyAll<NetworkBehaviour>(root);
@@ -416,7 +504,8 @@ namespace SS3D.Systems.Entities.Character
                     continue;
                 }
 
-                Destroy(component);
+                // Immediate: the dummy activates in the same frame, and a deferred Destroy would still Awake.
+                DestroyImmediate(component);
             }
         }
 

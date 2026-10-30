@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using SS3D.UI.Lobby;
+using SS3D.Systems.Inventory.Containers;
 using UnityEditor;
 using UnityEngine;
+using Cloth = SS3D.Systems.Inventory.Containers.Cloth;
 using UnityEngine.UIElements;
 using Color = UnityEngine.Color;
 
@@ -150,6 +152,36 @@ namespace SS3D.Editor
                 hairColors.Add(c);
             }
 
+            const string clothingRoot = "Assets/Content/WorldObjects/Items/Clothing/";
+            List<LobbyPreviewOutfit> previewOutfits = new();
+            foreach ((string id, string jumpsuitName, string shoesName) in new (string, string, string)[]
+            {
+                ("civilian", "JumpsuitGrey", "ShoeHiTops"),
+                ("engineering", "JumpsuitEngineer", "ShoeJackboots"),
+                ("botany", "JumpsuitBotany", "ShoeHiTops"),
+                ("security", "JumpsuitSecurity", "ShoeJackboots"),
+            })
+            {
+                GameObject jumpsuit = LoadRequired<GameObject>(clothingRoot + jumpsuitName + ".prefab", missing);
+                GameObject shoes = LoadRequired<GameObject>(clothingRoot + shoesName + ".prefab", missing);
+                if (jumpsuit != null && shoes != null)
+                {
+                    Cloth suitCloth = jumpsuit.GetComponent<Cloth>();
+                    Cloth shoeCloth = shoes.GetComponent<Cloth>();
+                    if (suitCloth == null || shoeCloth == null)
+                    {
+                        missing.Add("Cloth data for preview outfit: " + id);
+                    }
+                    else if (suitCloth.GetClothMesh(ClothType.Jumpsuit) == null
+                        || shoeCloth.GetClothMesh(ClothType.ShoeLeft) == null
+                        || shoeCloth.GetClothMesh(ClothType.ShoeRight) == null)
+                    {
+                        missing.Add("Worn meshes for preview outfit: " + id);
+                    }
+                    previewOutfits.Add(new LobbyPreviewOutfit { Id = id, Jumpsuit = jumpsuit, Shoes = shoes });
+                }
+            }
+
             if (missing.Count > 0)
             {
                 error = "Lobby asset catalog rebuild failed. Missing assets:\n- "
@@ -183,7 +215,8 @@ namespace SS3D.Editor
                 loadoutThumbs,
                 hairStyles,
                 beardStyles,
-                hairColors);
+                hairColors,
+                previewOutfits);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             return true;

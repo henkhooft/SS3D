@@ -87,6 +87,8 @@ namespace SS3D.Systems.Rounds
         /// </summary>
         public RoundState CurrentRoundState => _roundState;
 
+        public int CurrentTimerSeconds => _currentTimerSeconds;
+
         public override void OnStartServer()
         {
             base.OnStartServer();

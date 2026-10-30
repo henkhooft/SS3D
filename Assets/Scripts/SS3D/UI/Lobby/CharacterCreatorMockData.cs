@@ -29,15 +29,6 @@ namespace SS3D.UI.Lobby
             new("jaw", "Jaw", 0.5f),
         };
 
-        public static readonly Color[] UniformSwatches =
-        {
-            new(0.77f, 0.31f, 0.19f), // rust
-            new(0.24f, 0.38f, 0.54f), // blue
-            new(0.29f, 0.56f, 0.36f), // green
-            new(0.79f, 0.56f, 0.22f), // amber
-            new(0.55f, 0.58f, 0.60f), // steel
-        };
-
         public static readonly Color[] HairColors =
         {
             Hex("#1b1410"),

@@ -13,6 +13,7 @@ namespace SS3D.UI.Lobby
     /// </summary>
     public sealed class CharacterCreatorView : IUiSurface
     {
+        private static readonly System.Text.RegularExpressions.Regex StyleWordBoundary = new("([a-z])([A-Z])");
         private readonly LobbyAssetCatalog _catalog;
 
         private VisualElement _root;
@@ -27,8 +28,12 @@ namespace SS3D.UI.Lobby
         private int _stepIndex;
         private string _editName = LobbyMockData.CharacterName;
         private string _species = CharacterCreatorMockData.SpeciesOptions[0];
-        private int _uniformIndex;
+        private bool _saved;
+        private readonly Dictionary<string, CharacterCreatorDraft> _characters = new();
+        private int _outfitIndex;
         private int _hairColorIndex;
+        private int _beardColorIndex;
+        private int _eyebrowColorIndex;
         private int _eyeColorIndex;
         private int _angleIndex;
         private string _styleTab = "hair";
@@ -46,19 +51,23 @@ namespace SS3D.UI.Lobby
         public event Action<CharacterCreatorDraft> CharacterSaved;
 
         public event Action<int> PreviewAngleChanged;
+        public event Action<int> OutfitChanged;
 
         /// <summary>Fired when a body morph slider changes (live preview).</summary>
         public event Action<IReadOnlyDictionary<string, float>> BodyMorphsChanged;
 
         /// <summary>
         /// Fired when hair style, beard style, or hair colour selection changes.
-        /// Args: hairStyleIndex, beardStyleIndex, hairColorIndex.
+        /// Args: hairStyleIndex, beardStyleIndex, hairColorIndex, beardColorIndex.
         /// </summary>
-        public event Action<int, int, int> StyleChanged;
+        public event Action<int, int, int, int> StyleChanged;
 
-        public CharacterCreatorView(LobbyAssetCatalog catalog)
+        public CharacterCreatorView(LobbyAssetCatalog catalog, CharacterCreatorDraft initialDraft)
         {
             _catalog = catalog;
+            foreach (CharacterCreatorMockData.LoadoutDef loadout in CharacterCreatorMockData.Loadouts)
+                _characters[loadout.Id] = new CharacterCreatorDraft { Id = loadout.Id, Name = loadout.Name, OutfitIndex = _catalog.ChoosePreviewOutfitIndex() };
+            _characters[initialDraft.Id] = initialDraft;
             foreach (CharacterCreatorMockData.SliderDef slider in CharacterCreatorMockData.BodySliders)
             {
                 _sliders[slider.Key] = slider.DefaultValue;
@@ -92,6 +101,7 @@ namespace SS3D.UI.Lobby
             ReturnToLobbyRequested = null;
             CharacterSaved = null;
             PreviewAngleChanged = null;
+            OutfitChanged = null;
             BodyMorphsChanged = null;
             StyleChanged = null;
             if (_root != null && _root.parent != null)
@@ -149,9 +159,18 @@ namespace SS3D.UI.Lobby
                 _sliders[pair.Key] = pair.Value;
             }
 
+            _loadoutId = draft.Id;
+            _outfitIndex = draft.OutfitIndex;
+            OutfitChanged?.Invoke(_outfitIndex);
             _hairStyleIndex = draft.HairStyleIndex;
             _beardStyleIndex = draft.BeardStyleIndex;
             _hairColorIndex = draft.HairColorIndex;
+            _beardColorIndex = draft.BeardColorIndex;
+            _eyebrowColorIndex = draft.EyebrowColorIndex;
+            _eyeColorIndex = draft.EyeColorIndex;
+            _species = draft.Species;
+            _selectedBrows = draft.Eyebrows;
+            _saved = false;
 
             if (_root != null && _root.style.display == DisplayStyle.Flex)
             {
@@ -167,12 +186,14 @@ namespace SS3D.UI.Lobby
 
         public void NotifyBodyMorphsChanged()
         {
+            _saved = false;
             BodyMorphsChanged?.Invoke(_sliders);
         }
 
         public void NotifyStyleChanged()
         {
-            StyleChanged?.Invoke(_hairStyleIndex, _beardStyleIndex, _hairColorIndex);
+            _saved = false;
+            StyleChanged?.Invoke(_hairStyleIndex, _beardStyleIndex, _hairColorIndex, _beardColorIndex);
         }
 
         public void SetPreviewTexture(Texture texture)
@@ -230,7 +251,6 @@ namespace SS3D.UI.Lobby
 
             _loadoutMenu = new VisualElement();
             _loadoutMenu.AddToClassList("char-creator__loadout-menu");
-            loadoutWrap.Add(_loadoutMenu);
             topRight.Add(loadoutWrap);
 
             Button returnBtn = new(() => ReturnToLobbyRequested?.Invoke())
@@ -303,6 +323,8 @@ namespace SS3D.UI.Lobby
             previewDock.Add(angleRow);
 
             main.Add(previewDock);
+            // Absolute popup is last in paint order so the step form cannot cover it.
+            window.Add(_loadoutMenu);
         }
 
         private void Rebuild()
@@ -315,7 +337,10 @@ namespace SS3D.UI.Lobby
             RebuildRail();
             RebuildLoadoutChrome();
             _bodyHost.Clear();
-            BuildStepContent(_bodyHost);
+            ScrollView content = new(ScrollViewMode.Vertical);
+            content.AddToClassList("char-creator__content-scroll");
+            BuildStepContent(content);
+            _bodyHost.Add(content);
             BuildStepNav(_bodyHost);
             RefreshPreview();
         }
@@ -365,7 +390,8 @@ namespace SS3D.UI.Lobby
             CharacterCreatorMockData.LoadoutDef selected = SelectedLoadout();
             if (_loadoutNameLabel != null)
             {
-                _loadoutNameLabel.text = selected.Name;
+                _loadoutNameLabel.text = _characters.TryGetValue(_loadoutId, out CharacterCreatorDraft saved)
+                    ? saved.Name : _editName;
             }
 
             ApplyThumb(_loadoutThumb, selected.ThumbId);
@@ -382,9 +408,10 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
-            foreach (CharacterCreatorMockData.LoadoutDef loadout in CharacterCreatorMockData.Loadouts)
+            foreach (KeyValuePair<string, CharacterCreatorDraft> character in _characters)
             {
-                string id = loadout.Id;
+                string id = character.Key;
+                CharacterCreatorDraft saved = character.Value;
                 VisualElement row = new();
                 row.AddToClassList("char-creator__loadout-row");
                 row.EnableInClassList("char-creator__loadout-row--active", id == _loadoutId);
@@ -392,7 +419,10 @@ namespace SS3D.UI.Lobby
                 row.RegisterCallback<ClickEvent>(_ =>
                 {
                     _loadoutId = id;
-                    _editName = loadout.Name;
+                    ApplyDraft(saved);
+                    _angleIndex = 0;
+                    _stepIndex = 0;
+                    PreviewAngleChanged?.Invoke(_angleIndex);
                     _loadoutOpen = false;
                     Rebuild();
                 });
@@ -400,10 +430,10 @@ namespace SS3D.UI.Lobby
                 VisualElement thumb = new();
                 thumb.AddToClassList("char-creator__loadout-row-thumb");
                 thumb.pickingMode = PickingMode.Ignore;
-                ApplyThumb(thumb, loadout.ThumbId);
+                ApplyThumb(thumb, SelectedLoadoutThumb(id));
                 row.Add(thumb);
 
-                Label name = new(loadout.Name);
+                Label name = new(saved.Name);
                 name.AddToClassList("char-creator__loadout-row-name");
                 name.AddToClassList("font-body");
                 name.pickingMode = PickingMode.Ignore;
@@ -420,7 +450,10 @@ namespace SS3D.UI.Lobby
             newRow.pickingMode = PickingMode.Position;
             newRow.RegisterCallback<ClickEvent>(_ =>
             {
-                _editName = "New Character";
+                _loadoutId = Guid.NewGuid().ToString("N");
+                ApplyDraft(new CharacterCreatorDraft { Id = _loadoutId, Name = "New Character", OutfitIndex = _catalog.ChoosePreviewOutfitIndex() });
+                _angleIndex = 0;
+                PreviewAngleChanged?.Invoke(_angleIndex);
                 _loadoutOpen = false;
                 _stepIndex = 0;
                 Rebuild();
@@ -469,52 +502,31 @@ namespace SS3D.UI.Lobby
             nameField.AddToClassList("char-creator__input");
             nameField.AddToClassList("font-body");
             nameField.label = string.Empty;
-            nameField.RegisterValueChangedCallback(evt => _editName = evt.newValue ?? string.Empty);
+            nameField.name = "character-name";
+            nameField.RegisterValueChangedCallback(evt =>
+            {
+                _editName = evt.newValue ?? string.Empty;
+                _saved = false;
+            });
             StyleDarkTextField(nameField);
             panel.Add(nameField);
 
             panel.Add(FieldLabel("Species"));
-            VisualElement speciesRow = new();
-            speciesRow.AddToClassList("char-creator__species-row");
-            foreach (string species in CharacterCreatorMockData.SpeciesOptions)
+            DropdownField species = new(new List<string>(CharacterCreatorMockData.SpeciesOptions),
+                Array.IndexOf(CharacterCreatorMockData.SpeciesOptions, _species))
             {
-                string value = species;
-                Button chip = new(() =>
-                {
-                    _species = value;
-                    Rebuild();
-                })
-                {
-                    text = species.ToUpperInvariant(),
-                };
-                chip.AddToClassList("char-creator__species-chip");
-                chip.AddToClassList("font-titling");
-                chip.EnableInClassList("char-creator__species-chip--active", _species == value);
-                speciesRow.Add(chip);
-            }
-
-            panel.Add(speciesRow);
-
-            panel.Add(FieldLabel("Uniform Color"));
-            VisualElement swatches = new();
-            swatches.AddToClassList("char-creator__swatch-row");
-            for (int i = 0; i < CharacterCreatorMockData.UniformSwatches.Length; i++)
+                name = "character-species",
+                tooltip = "Species preference is saved locally. The live preview currently uses the Human model.",
+            };
+            species.AddToClassList("char-creator__input");
+            species.AddToClassList("font-body");
+            species.RegisterValueChangedCallback(evt =>
             {
-                int index = i;
-                VisualElement swatch = new();
-                swatch.AddToClassList("char-creator__swatch");
-                swatch.EnableInClassList("char-creator__swatch--selected", _uniformIndex == index);
-                swatch.style.backgroundColor = CharacterCreatorMockData.UniformSwatches[i];
-                swatch.pickingMode = PickingMode.Position;
-                swatch.RegisterCallback<ClickEvent>(_ =>
-                {
-                    _uniformIndex = index;
-                    Rebuild();
-                });
-                swatches.Add(swatch);
-            }
+                _species = evt.newValue;
+                _saved = false;
+            });
+            panel.Add(species);
 
-            panel.Add(swatches);
             host.Add(panel);
         }
 
@@ -534,20 +546,6 @@ namespace SS3D.UI.Lobby
                 panel.Add(BuildSliderRow(def));
             }
 
-            panel.Add(FieldLabel("Hair Color"));
-            Color[] hairColors = _catalog != null && _catalog.HairColors != null && _catalog.HairColors.Count > 0
-                ? _catalog.HairColors.ToArray()
-                : CharacterCreatorMockData.HairColors;
-            panel.Add(BuildColorRow(
-                hairColors,
-                _hairColorIndex,
-                index =>
-                {
-                    _hairColorIndex = index;
-                    NotifyStyleChanged();
-                    Rebuild();
-                }));
-
             panel.Add(FieldLabel("Eye Color"));
             panel.Add(BuildColorRow(
                 CharacterCreatorMockData.EyeColors,
@@ -555,6 +553,7 @@ namespace SS3D.UI.Lobby
                 index =>
                 {
                     _eyeColorIndex = index;
+                    _saved = false;
                     Rebuild();
                 }));
 
@@ -572,22 +571,28 @@ namespace SS3D.UI.Lobby
             row.Add(label);
 
             float value = _sliders.TryGetValue(def.Key, out float stored) ? stored : def.DefaultValue;
-            Label valueLabel = new(Mathf.RoundToInt(value * 100f).ToString());
+            Label valueLabel = new(value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
             valueLabel.AddToClassList("char-creator__slider-value");
             valueLabel.AddToClassList("font-terminal");
             row.Add(valueLabel);
 
             Slider slider = new(0f, 1f, SliderDirection.Horizontal, 0f)
             {
+                name = "body-" + def.Key,
                 value = value,
                 showInputField = false,
             };
             slider.AddToClassList("char-creator__slider");
+            VisualElement fill = new() { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("char-creator__slider-fill");
+            fill.style.width = Length.Percent(value * 100f);
+            slider.Q(className: "unity-base-slider__tracker").Add(fill);
             string key = def.Key;
             slider.RegisterValueChangedCallback(evt =>
             {
                 _sliders[key] = evt.newValue;
-                valueLabel.text = Mathf.RoundToInt(evt.newValue * 100f).ToString();
+                fill.style.width = Length.Percent(evt.newValue * 100f);
+                valueLabel.text = evt.newValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
                 NotifyBodyMorphsChanged();
             });
             row.Add(slider);
@@ -637,7 +642,7 @@ namespace SS3D.UI.Lobby
                 case "eyebrows":
                 {
                     BuildMockStyleTiles(grid, CharacterCreatorMockData.StyleOptionsFor("eyebrows"), _selectedBrows,
-                        key => { _selectedBrows = key; });
+                        key => { _selectedBrows = key; _saved = false; Rebuild(); });
                     break;
                 }
 
@@ -650,7 +655,66 @@ namespace SS3D.UI.Lobby
 
             gridScroll.Add(grid);
             panel.Add(gridScroll);
+            BuildStyleColorPicker(panel);
             host.Add(panel);
+        }
+
+        private void BuildStyleColorPicker(VisualElement panel)
+        {
+            string label;
+            int selectedIndex;
+            switch (_styleTab)
+            {
+                case "facialHair":
+                {
+                    label = "Facial Hair Color";
+                    selectedIndex = _beardColorIndex;
+                    break;
+                }
+                case "eyebrows":
+                {
+                    label = "Eyebrow Color";
+                    selectedIndex = _eyebrowColorIndex;
+                    break;
+                }
+                default:
+                {
+                    label = "Hair Color";
+                    selectedIndex = _hairColorIndex;
+                    break;
+                }
+            }
+
+            VisualElement picker = new() { name = "style-color-picker" };
+            picker.AddToClassList("char-creator__style-colors");
+            picker.Add(FieldLabel(label));
+            Color[] colors = _catalog != null && _catalog.HairColors != null && _catalog.HairColors.Count > 0
+                ? _catalog.HairColors.ToArray()
+                : CharacterCreatorMockData.HairColors;
+            picker.Add(BuildColorRow(colors, selectedIndex, index =>
+            {
+                switch (_styleTab)
+                {
+                    case "facialHair":
+                    {
+                        _beardColorIndex = index;
+                        break;
+                    }
+                    case "eyebrows":
+                    {
+                        _eyebrowColorIndex = index;
+                        break;
+                    }
+                    default:
+                    {
+                        _hairColorIndex = index;
+                        break;
+                    }
+                }
+                NotifyStyleChanged();
+                Rebuild();
+            }));
+            panel.Add(picker);
         }
 
         private void BuildHairTiles(VisualElement grid)
@@ -675,7 +739,7 @@ namespace SS3D.UI.Lobby
                 int index = i;
                 LobbyNamedPrefab entry = _catalog.HairStyles[i];
                 bool isNone = i == 0;
-                string label = isNone ? "None" : entry.Id;
+                string label = isNone ? "None" : StyleDisplayName(entry.Id);
                 VisualElement tile = BuildStyleTile(label, isNone, _hairStyleIndex == index, () =>
                 {
                     _hairStyleIndex = index;
@@ -706,7 +770,7 @@ namespace SS3D.UI.Lobby
                 int index = i;
                 LobbyNamedPrefab entry = _catalog.BeardStyles[i];
                 bool isNone = i == 0;
-                string label = isNone ? "None" : entry.Id;
+                string label = isNone ? "None" : StyleDisplayName(entry.Id);
                 VisualElement tile = BuildStyleTile(label, isNone, _beardStyleIndex == index, () =>
                 {
                     _beardStyleIndex = index;
@@ -741,7 +805,7 @@ namespace SS3D.UI.Lobby
 
             if (isNone)
             {
-                Label noneMark = new("✕");
+                Label noneMark = new("×");
                 noneMark.AddToClassList("char-creator__style-none");
                 noneMark.AddToClassList("font-body");
                 noneMark.pickingMode = PickingMode.Ignore;
@@ -776,7 +840,7 @@ namespace SS3D.UI.Lobby
                 && _hairStyleIndex > 0
                 && _hairStyleIndex < _catalog.HairStyles.Count)
             {
-                hairLabel = _catalog.HairStyles[_hairStyleIndex].Id;
+                hairLabel = StyleDisplayName(_catalog.HairStyles[_hairStyleIndex].Id);
             }
             else
             {
@@ -785,13 +849,6 @@ namespace SS3D.UI.Lobby
             summary.Add(ReviewLine("Hair", hairLabel));
             panel.Add(summary);
 
-            Button save = new(SaveCharacter)
-            {
-                text = "SAVE CHARACTER",
-            };
-            save.AddToClassList("char-creator__save");
-            save.AddToClassList("font-titling");
-            panel.Add(save);
             host.Add(panel);
         }
 
@@ -830,21 +887,29 @@ namespace SS3D.UI.Lobby
             back.SetEnabled(!first);
             nav.Add(back);
 
+            string nextLabel = "NEXT";
+            if (last) nextLabel = _saved ? "SAVED" : "SAVE CHARACTER";
             Button next = new(() =>
             {
-                if (_stepIndex < CharacterCreatorMockData.Steps.Length - 1)
+                if (last)
+                {
+                    SaveCharacter();
+                    Rebuild();
+                }
+                else
                 {
                     _stepIndex++;
                     Rebuild();
                 }
             })
             {
-                text = "NEXT",
+                text = nextLabel,
             };
             next.AddToClassList("char-creator__nav-btn");
             next.AddToClassList("char-creator__nav-btn--primary");
             next.AddToClassList("font-titling");
-            next.SetEnabled(!last);
+            next.EnableInClassList("char-creator__nav-btn--save", last);
+            next.SetEnabled(!last || !_saved);
             nav.Add(next);
 
             host.Add(nav);
@@ -912,14 +977,40 @@ namespace SS3D.UI.Lobby
         {
             CharacterCreatorDraft draft = new()
             {
+                Id = _loadoutId,
                 Name = string.IsNullOrWhiteSpace(_editName) ? LobbyMockData.CharacterName : _editName.Trim(),
                 HairStyleIndex = _hairStyleIndex,
                 BeardStyleIndex = _beardStyleIndex,
+                OutfitIndex = _outfitIndex,
                 HairColorIndex = _hairColorIndex,
+                BeardColorIndex = _beardColorIndex,
+                EyebrowColorIndex = _eyebrowColorIndex,
+                EyeColorIndex = _eyeColorIndex,
+                Species = _species,
+                Eyebrows = _selectedBrows,
             };
             draft.CopyMorphsFrom(_sliders);
             _editName = draft.Name;
+            _characters[_loadoutId] = draft;
+            _saved = true;
             CharacterSaved?.Invoke(draft);
+        }
+
+        private static string StyleDisplayName(string id)
+        {
+            string name = id ?? string.Empty;
+            foreach (string prefix in new string[] { "HumanHair", "HumanBeard", "HumanFacialHair" })
+                if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    name = name.Substring(prefix.Length);
+            name = StyleWordBoundary.Replace(name, "$1 $2");
+            return name.Replace('_', ' ').Replace('-', ' ').Trim();
+        }
+
+        private static string SelectedLoadoutThumb(string id)
+        {
+            foreach (CharacterCreatorMockData.LoadoutDef loadout in CharacterCreatorMockData.Loadouts)
+                if (loadout.Id == id) return loadout.ThumbId;
+            return CharacterCreatorMockData.Loadouts[0].ThumbId;
         }
 
         private CharacterCreatorMockData.LoadoutDef SelectedLoadout()

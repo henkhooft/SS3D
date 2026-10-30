@@ -6,7 +6,13 @@ namespace SS3D.UI.Lobby
     /// <summary>In-memory Character Creator draft (local only; no network yet).</summary>
     public sealed class CharacterCreatorDraft
     {
+        public string Id = CharacterCreatorMockData.Loadouts[0].Id;
         public string Name = LobbyMockData.CharacterName;
+        public string Species = CharacterCreatorMockData.SpeciesOptions[0];
+        public int EyeColorIndex;
+        public string Eyebrows = "thin";
+        /// <summary>Chosen once from the curated preview outfits; retained when this draft is saved.</summary>
+        public int OutfitIndex;
 
         /// <summary>Body slider keys → 0–1 values (see <see cref="CharacterCreatorMockData.BodySliders"/>).</summary>
         public Dictionary<string, float> BodyMorphs { get; } = CreateDefaultMorphs();
@@ -27,6 +33,8 @@ namespace SS3D.UI.Lobby
         /// Index into <see cref="LobbyAssetCatalog.HairColors"/>.
         /// </summary>
         public int HairColorIndex = 1;
+        public int BeardColorIndex = 1;
+        public int EyebrowColorIndex = 1;
 
         public static Dictionary<string, float> CreateDefaultMorphs()
         {

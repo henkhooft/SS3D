@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SS3D.UI.Shell;
+using SS3D.Systems.Rounds;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SS3D.UI.Lobby
 {
     /// <summary>
-    /// Full-screen pre-round lobby shell (Phase A: mock data + local interaction only).
+    /// Pre-round lobby shell. Session actions and snapshots are supplied by LobbyUiSubSystem.
     /// </summary>
     public sealed class LobbyShellView : IUiSurface
     {
@@ -35,22 +37,68 @@ namespace SS3D.UI.Lobby
         private string _activeTab = TabServerInfo;
         private bool _ready = true;
         private bool _adminActive;
-        private bool _countingDown = true;
+        private bool _countingDown;
         private int _secondsLeft = 4 * 60 + 12;
         private string _playerSearch = string.Empty;
         private string _settingsSubTab = "display";
         private string _chatChannel = "ooc";
         private string _openPlayerId;
+        private string _resolution = "1920x1080";
+        private bool _fullscreen = true;
+        private bool _muted;
+        private string _rebindingKey;
+        private readonly Dictionary<string, float> _settingsValues = new()
+        {
+            ["uiScale"] = 0.5f, ["brightness"] = 0.6f,
+            ["masterVolume"] = 0.8f, ["musicVolume"] = 0.6f, ["sfxVolume"] = 0.8f,
+        };
+        private static readonly (string Key, string Action, string Binding)[] KeybindDefinitions =
+        {
+            ("moveForward", "Move Forward", "W"), ("moveBackward", "Move Backward", "S"),
+            ("moveLeft", "Move Left", "A"), ("moveRight", "Move Right", "D"),
+            ("interact", "Interact", "E"), ("jump", "Jump", "Space"),
+            ("inventory", "Open Inventory", "Tab"), ("toggleChat", "Toggle Chat", "T"),
+        };
+        private readonly Dictionary<string, string> _keybinds = new();
 
         private readonly Dictionary<string, JobPriority> _priorities = LobbyMockData.DefaultPriorities();
         private readonly Dictionary<string, bool> _antagSelected = LobbyMockData.DefaultAntagSelections();
         private readonly HashSet<string> _collapsedDepts = new();
 
         public event Action CharacterCreatorRequested;
+        public event Action ReadyRequested;
+        public event Action<bool> RoundChangeRequested;
+        private bool _runtime;
+        private LobbyMockData.PlayerRow[] _players = Array.Empty<LobbyMockData.PlayerRow>();
+        private Label _playerCount;
+        private Label _roundStatus;
+        private RoundState _roundState;
+
+        public void SetSession(RoundState state, int seconds, bool ready, bool canAct,
+            bool admin, LobbyMockData.PlayerRow[] players)
+        {
+            _runtime = true;
+            _roundState = state;
+            if (_roundStatus != null) _roundStatus.text = state.ToString();
+            _ready = ready;
+            bool playersChanged = !_players.Select(p => (p.Id, p.Ready)).SequenceEqual(players.Select(p => (p.Id, p.Ready)));
+            _players = players;
+            _countingDown = state == RoundState.WarmingUp;
+            _secondsLeft = seconds;
+            if (_playerCount != null) _playerCount.text = $"{players.Length} online";
+            if (!admin && _adminActive) ToggleAdmin();
+            _adminButton?.SetEnabled(admin);
+            RefreshSidebar();
+            _readyButton?.SetEnabled(canAct && state is not RoundState.Ending);
+            if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
+        }
+
 
         public LobbyShellView(LobbyAssetCatalog catalog)
         {
             _catalog = catalog;
+            foreach ((string key, string _, string binding) in KeybindDefinitions)
+                _keybinds[key] = binding;
         }
 
         public bool IsVisible => _root != null && _root.resolvedStyle.display != DisplayStyle.None;
@@ -60,6 +108,8 @@ namespace SS3D.UI.Lobby
             _root = new VisualElement { name = "lobby-shell-surface" };
             _root.AddToClassList("lobby-shell");
             _root.pickingMode = PickingMode.Position;
+            _root.focusable = true;
+            _root.RegisterCallback<KeyDownEvent>(HandleRebindKey);
 
             if (_catalog != null && _catalog.LobbyStyle != null)
             {
@@ -82,6 +132,8 @@ namespace SS3D.UI.Lobby
         public void Detach()
         {
             CharacterCreatorRequested = null;
+            ReadyRequested = null;
+            RoundChangeRequested = null;
             _tabBar = null;
             _tabContent = null;
             _roundDot = null;
@@ -103,6 +155,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            _rebindingKey = null;
             _root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             _root.pickingMode = visible ? PickingMode.Position : PickingMode.Ignore;
         }
@@ -119,10 +172,10 @@ namespace SS3D.UI.Lobby
         public void SetPreviewTexture(Texture texture)
         {
             _livePreviewTexture = texture;
-            ApplyPreviewFallbackOrLive();
+            ApplyPreviewTexture();
         }
 
-        private void ApplyPreviewFallbackOrLive()
+        private void ApplyPreviewTexture()
         {
             if (_previewImage == null)
             {
@@ -141,10 +194,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
-            if (_catalog != null && _catalog.PreviewPlaceholder != null)
-            {
-                _previewImage.style.backgroundImage = new StyleBackground(_catalog.PreviewPlaceholder);
-            }
+            _previewImage.style.backgroundImage = StyleKeyword.None;
         }
 
         private void BuildChrome(VisualElement window)
@@ -168,19 +218,12 @@ namespace SS3D.UI.Lobby
             VisualElement headerRight = new();
             headerRight.AddToClassList("lobby-shell__header-right");
             headerRight.pickingMode = PickingMode.Ignore;
-            int readyCount = 0;
-            foreach (LobbyMockData.PlayerRow p in LobbyMockData.Players)
-            {
-                if (p.Ready)
-                {
-                    readyCount++;
-                }
-            }
-
             // Header is session strip only (design): players + round — not build/uptime.
-            headerRight.Add(MakeMeta($"{readyCount}/{LobbyMockData.Players.Length} players"));
+            _playerCount = MakeMeta("Connecting…");
+            headerRight.Add(_playerCount);
             headerRight.Add(MakeSep());
-            headerRight.Add(MakeMeta($"Round {LobbyMockData.RoundNumber}"));
+            _roundStatus = MakeMeta("Connecting…");
+            headerRight.Add(_roundStatus);
             header.Add(headerRight);
             window.Add(header);
 
@@ -221,21 +264,16 @@ namespace SS3D.UI.Lobby
             roundHeader.Add(roundTitle);
             roundPanel.Add(roundHeader);
 
-            VisualElement accent = new();
-            accent.AddToClassList("lobby-shell__panel-accent");
-            accent.pickingMode = PickingMode.Ignore;
-            roundPanel.Add(accent);
-
             VisualElement roundBody = new();
             roundBody.AddToClassList("lobby-shell__panel-body");
             _countdownLabel = new Label();
             _countdownLabel.AddToClassList("lobby-shell__countdown");
-            _countdownLabel.AddToClassList("font-titling");
-            roundBody.Add(_countdownLabel);
+            _countdownLabel.AddToClassList("font-terminal");
             _countdownSub = new Label();
             _countdownSub.AddToClassList("lobby-shell__countdown-sub");
-            _countdownSub.AddToClassList("font-body");
+            _countdownSub.AddToClassList("font-titling");
             roundBody.Add(_countdownSub);
+            roundBody.Add(_countdownLabel);
             roundPanel.Add(roundBody);
             sidebar.Add(roundPanel);
 
@@ -253,7 +291,7 @@ namespace SS3D.UI.Lobby
             _previewImage = new VisualElement();
             _previewImage.AddToClassList("lobby-shell__preview-image");
             _previewImage.pickingMode = PickingMode.Ignore;
-            ApplyPreviewFallbackOrLive();
+            ApplyPreviewTexture();
             preview.Add(_previewImage);
 
             Label previewHint = new("Click to open character creator");
@@ -269,7 +307,7 @@ namespace SS3D.UI.Lobby
             _readyButton = new Button(ToggleReady) { text = "READY" };
             _readyButton.AddToClassList("lobby-shell__btn");
             _readyButton.AddToClassList("lobby-shell__btn--ready");
-            _readyButton.AddToClassList("font-arcade");
+            _readyButton.AddToClassList("font-titling");
             actions.Add(_readyButton);
 
             VisualElement row = new();
@@ -279,15 +317,17 @@ namespace SS3D.UI.Lobby
             {
                 text = "OBSERVE",
             };
+            observe.SetEnabled(false);
+            observe.tooltip = "Observer mode is not implemented yet.";
             observe.AddToClassList("lobby-shell__btn");
             observe.AddToClassList("lobby-shell__btn--observe");
-            observe.AddToClassList("font-arcade");
+            observe.AddToClassList("font-titling");
             row.Add(observe);
 
             _adminButton = new Button(ToggleAdmin) { text = "ADMIN" };
             _adminButton.AddToClassList("lobby-shell__btn");
             _adminButton.AddToClassList("lobby-shell__btn--admin");
-            _adminButton.AddToClassList("font-arcade");
+            _adminButton.AddToClassList("font-titling");
             row.Add(_adminButton);
 
             actions.Add(row);
@@ -302,6 +342,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
+            _countdownLabel.EnableInClassList("lobby-shell__countdown--waiting", !_countingDown);
             if (_countingDown)
             {
                 int mm = _secondsLeft / 60;
@@ -312,14 +353,18 @@ namespace SS3D.UI.Lobby
             }
             else
             {
-                _countdownLabel.text = "—";
-                _countdownSub.text = "Waiting For Players";
+                int readyCount = 0;
+                foreach (LobbyMockData.PlayerRow player in _players)
+                    if (player.Ready) readyCount++;
+                _countdownLabel.text = $"{readyCount}/{_players.Length} ready";
+                _countdownSub.text = _runtime ? _roundState.ToString() : "Waiting For Players";
                 _roundDot?.EnableInClassList("lobby-shell__panel-dot--live", false);
             }
 
             if (_readyButton != null)
             {
                 _readyButton.text = _ready ? "✓  READY" : "NOT READY";
+                if (_runtime && _roundState == RoundState.Ongoing) _readyButton.text = "JOIN ROUND";
                 _readyButton.EnableInClassList("lobby-shell__btn--ready-on", _ready);
             }
 
@@ -351,7 +396,7 @@ namespace SS3D.UI.Lobby
 
         private void AddTab(string key, string label, bool admin)
         {
-            Button tab = new(() => SelectTab(key)) { text = label.ToUpperInvariant() };
+            Button tab = new(() => SelectTab(key)) { name = "tab-" + key, text = label.ToUpperInvariant() };
             tab.AddToClassList("lobby-shell__tab");
             tab.AddToClassList("font-titling");
             tab.style.flexGrow = 1;
@@ -367,6 +412,7 @@ namespace SS3D.UI.Lobby
 
         private void SelectTab(string key)
         {
+            _rebindingKey = null;
             _activeTab = key;
             RefreshTabs();
             ShowTab(key);
@@ -439,7 +485,17 @@ namespace SS3D.UI.Lobby
                 hero.style.backgroundImage = new StyleBackground(_catalog.ServerInfoBanner);
             }
 
-            parent.Add(hero);
+            float bannerAspect = _catalog != null && _catalog.ServerInfoBanner != null
+                ? _catalog.ServerInfoBanner.rect.width / _catalog.ServerInfoBanner.rect.height
+                : 21f / 9f;
+            hero.RegisterCallback<GeometryChangedEvent>(evt => hero.style.height = evt.newRect.width / bannerAspect);
+            VisualElement card = new();
+            card.AddToClassList("lobby-shell__server-card");
+            parent.Add(card);
+            card.Add(hero);
+            VisualElement information = new();
+            information.AddToClassList("lobby-shell__server-information");
+            card.Add(information);
 
             VisualElement titleRow = new();
             titleRow.AddToClassList("lobby-shell__server-title-row");
@@ -454,7 +510,7 @@ namespace SS3D.UI.Lobby
             meta.AddToClassList("lobby-shell__server-meta");
             meta.AddToClassList("font-terminal");
             titleRow.Add(meta);
-            parent.Add(titleRow);
+            information.Add(titleRow);
 
             // Left: MOTD + Map/Mode stacked. Right: Change Log spanning both rows.
             VisualElement bodyGrid = new();
@@ -514,7 +570,7 @@ namespace SS3D.UI.Lobby
 
             logCol.Add(logBox);
             bodyGrid.Add(logCol);
-            parent.Add(bodyGrid);
+            information.Add(bodyGrid);
         }
 
         private static VisualElement BuildSelectCard(string name, string kind, string initial, bool mapSwatch)
@@ -662,19 +718,15 @@ namespace SS3D.UI.Lobby
             name.AddToClassList("font-body");
             info.Add(name);
 
-            string meta = job.Locked && !string.IsNullOrEmpty(job.LockReason)
-                ? job.LockReason
-                : $"{job.Open}/{job.Slots} open  ·  {job.Interested} interested";
-            Label metaLabel = new(meta);
-            metaLabel.AddToClassList("lobby-shell__job-meta");
-            metaLabel.AddToClassList("font-body");
-            info.Add(metaLabel);
+            name.tooltip = job.Locked ? job.LockReason : $"{job.Interested} interested";
             row.Add(info);
-
-            if (!job.Locked)
-            {
-                row.Add(BuildPriorityChips(job.Id));
-            }
+            Label slots = new($"{job.Open}/{job.Slots}");
+            slots.AddToClassList("lobby-shell__job-slots");
+            slots.AddToClassList("font-terminal");
+            row.Add(slots);
+            VisualElement priorities = BuildPriorityChips(job.Id);
+            priorities.SetEnabled(!job.Locked);
+            row.Add(priorities);
 
             return row;
         }
@@ -698,7 +750,7 @@ namespace SS3D.UI.Lobby
                     tooltip = JobPriorityUtil.FullLabel(level),
                 };
                 chip.AddToClassList("lobby-shell__priority-chip");
-                chip.AddToClassList("font-arcade");
+                chip.AddToClassList("font-body");
                 if (level == current)
                 {
                     chip.AddToClassList(PriorityClass(level));
@@ -960,7 +1012,7 @@ namespace SS3D.UI.Lobby
 
             string filter = _playerSearch.Trim().ToLowerInvariant();
             int shown = 0;
-            foreach (LobbyMockData.PlayerRow player in LobbyMockData.Players)
+            foreach (LobbyMockData.PlayerRow player in _players)
             {
                 if (string.IsNullOrEmpty(filter) || player.Name.ToLowerInvariant().Contains(filter))
                 {
@@ -968,7 +1020,7 @@ namespace SS3D.UI.Lobby
                 }
             }
 
-            Label count = new($"{shown}/{LobbyMockData.Players.Length}");
+            Label count = new($"{shown}/{_players.Length}");
             count.AddToClassList("lobby-shell__players-count");
             count.AddToClassList("font-display");
             toolbar.Add(count);
@@ -984,7 +1036,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
-            foreach (LobbyMockData.PlayerRow player in LobbyMockData.Players)
+            foreach (LobbyMockData.PlayerRow player in _players)
             {
                 if (!string.IsNullOrEmpty(filter) && !player.Name.ToLowerInvariant().Contains(filter))
                 {
@@ -1126,50 +1178,152 @@ namespace SS3D.UI.Lobby
             AddSettingsSubTab(subTabs, "keyboard", "Keyboard");
             parent.Add(subTabs);
 
+            ScrollView scroll = new(ScrollViewMode.Vertical);
+            scroll.AddToClassList("lobby-shell__settings-scroll");
+            parent.Add(scroll);
+            VisualElement form = new();
+            form.AddToClassList("lobby-shell__settings-form");
+            scroll.Add(form);
             switch (_settingsSubTab)
             {
                 case "sound":
                 {
-                    parent.Add(SettingRow("Master Volume", "80%"));
-                    parent.Add(SettingRow("Music Volume", "60%"));
-                    parent.Add(SettingRow("SFX Volume", "80%"));
-                    parent.Add(SettingRow("Mute All Audio", "Off"));
+                    form.Add(SettingsToggle("muted", "Mute All Audio", _muted, value =>
+                    {
+                        _muted = value;
+                        ShowTab(TabSettings);
+                    }));
+                    form.Add(SettingsSlider("masterVolume", "Master Volume", true, !_muted));
+                    form.Add(SettingsSlider("musicVolume", "Music Volume", true, !_muted));
+                    form.Add(SettingsSlider("sfxVolume", "SFX Volume", true, !_muted));
                     break;
                 }
-
                 case "keyboard":
                 {
-                    parent.Add(SettingRow("Move", "WASD"));
-                    parent.Add(SettingRow("Interact", "E"));
-                    parent.Add(SettingRow("Ready Toggle", "F3"));
-                    parent.Add(MakePlaceholder("Keybind rebinding wires in a later pass."));
+                    foreach ((string key, string action, string _) in KeybindDefinitions)
+                    {
+                        VisualElement row = new();
+                        row.AddToClassList("lobby-shell__binding-row");
+                        Label label = MakeLabel(action, "font-body");
+                        label.AddToClassList("lobby-shell__binding-label");
+                        row.Add(label);
+                        string bindingKey = key;
+                        Button binding = new(() =>
+                        {
+                            _rebindingKey = bindingKey;
+                            ShowTab(TabSettings);
+                            _root.Focus();
+                        })
+                        {
+                            name = "bind-" + key,
+                            text = _rebindingKey == key ? "Press a key…" : _keybinds[key],
+                        };
+                        binding.AddToClassList("lobby-shell__binding-button");
+                        binding.AddToClassList("font-terminal");
+                        binding.EnableInClassList("lobby-shell__binding-button--listening", _rebindingKey == key);
+                        row.Add(binding);
+                        form.Add(row);
+                    }
                     break;
                 }
-
                 default:
                 {
-                    parent.Add(SettingRow("Resolution", "1920×1080"));
-                    parent.Add(SettingRow("Fullscreen", "On"));
-                    parent.Add(SettingRow("UI Scale", "100%"));
-                    parent.Add(SettingRow("Brightness", "60%"));
+                    form.Add(SettingsLabel("Resolution"));
+                    DropdownField resolution = new(new List<string>
+                    {
+                        "1280x720", "1600x900", "1920x1080", "2560x1440",
+                    }, _resolution)
+                    {
+                        name = "settings-resolution",
+                    };
+                    resolution.AddToClassList("lobby-shell__settings-dropdown");
+                    resolution.AddToClassList("font-body");
+                    resolution.RegisterValueChangedCallback(evt => _resolution = evt.newValue);
+                    StyleDarkTextField(resolution);
+                    form.Add(resolution);
+                    form.Add(SettingsToggle("fullscreen", "Fullscreen", _fullscreen, value => _fullscreen = value));
+                    form.Add(SettingsSlider("uiScale", "UI Scale", false, true));
+                    form.Add(SettingsSlider("brightness", "Brightness", false, true));
                     break;
                 }
             }
+        }
+
+        private static Label SettingsLabel(string text)
+        {
+            Label label = MakeLabel(text.ToUpperInvariant(), "font-body");
+            label.AddToClassList("lobby-shell__settings-label");
+            return label;
+        }
+
+        private static Toggle SettingsToggle(string key, string label, bool value, Action<bool> changed)
+        {
+            Toggle toggle = new() { text = label, name = "settings-" + key, value = value };
+            toggle.AddToClassList("lobby-shell__settings-toggle");
+            toggle.AddToClassList("font-body");
+            toggle.RegisterValueChangedCallback(evt => changed(evt.newValue));
+            return toggle;
+        }
+
+        private VisualElement SettingsSlider(string key, string title, bool percentage, bool enabled)
+        {
+            VisualElement field = new();
+            field.AddToClassList("lobby-shell__settings-slider-field");
+            field.Add(SettingsLabel(title));
+            VisualElement row = new();
+            row.AddToClassList("lobby-shell__settings-slider-row");
+            Slider slider = new(0f, 1f) { name = "settings-" + key, value = _settingsValues[key] };
+            slider.AddToClassList("lobby-shell__settings-slider");
+            VisualElement fill = new() { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("lobby-shell__settings-slider-fill");
+            fill.style.width = Length.Percent(slider.value * 100f);
+            slider.Q(className: "unity-base-slider__tracker").Add(fill);
+            string Display(float value) => percentage ? Mathf.RoundToInt(value * 100f).ToString()
+                : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            Label number = MakeLabel(Display(slider.value), "font-terminal");
+            number.name = "settings-value-" + key;
+            number.AddToClassList("lobby-shell__settings-number");
+            slider.RegisterValueChangedCallback(evt =>
+            {
+                _settingsValues[key] = evt.newValue;
+                number.text = Display(evt.newValue);
+                fill.style.width = Length.Percent(evt.newValue * 100f);
+            });
+            slider.SetEnabled(enabled);
+            row.Add(slider);
+            row.Add(number);
+            field.Add(row);
+            return field;
+        }
+
+        private void HandleRebindKey(KeyDownEvent evt)
+        {
+            if (_rebindingKey == null) return;
+            if (evt.keyCode != KeyCode.Escape)
+            {
+                if (evt.keyCode == KeyCode.None) return;
+                _keybinds[_rebindingKey] = evt.keyCode.ToString();
+            }
+            _rebindingKey = null;
+            evt.StopImmediatePropagation();
+            ShowTab(TabSettings);
         }
 
         private void AddSettingsSubTab(VisualElement parent, string key, string label)
         {
             Button btn = new(() =>
             {
+                _rebindingKey = null;
                 _settingsSubTab = key;
                 ShowTab(TabSettings);
             })
             {
+                name = "settings-tab-" + key,
                 text = label.ToUpperInvariant(),
             };
-            btn.AddToClassList("lobby-shell__tab");
+            btn.AddToClassList("lobby-shell__settings-tab");
             btn.AddToClassList("font-titling");
-            btn.EnableInClassList("lobby-shell__tab--active", _settingsSubTab == key);
+            btn.EnableInClassList("lobby-shell__settings-tab--active", _settingsSubTab == key);
             parent.Add(btn);
         }
 
@@ -1193,28 +1347,8 @@ namespace SS3D.UI.Lobby
             parent.Add(SectionTitle("Round Controls"));
             VisualElement controls = new();
             controls.AddToClassList("lobby-shell__admin-controls");
-            controls.Add(AdminButton("Start Round", () =>
-            {
-                _countingDown = true;
-                _secondsLeft = 5 * 60;
-                RefreshSidebar();
-            }));
-            controls.Add(AdminButton("Force Start", () =>
-            {
-                _countingDown = false;
-                _secondsLeft = 0;
-                RefreshSidebar();
-            }, "lobby-shell__admin-btn--danger"));
-            controls.Add(AdminButton("Extend Timer", () =>
-            {
-                _secondsLeft += 60;
-                RefreshSidebar();
-            }, "lobby-shell__admin-btn--amber"));
-            controls.Add(AdminButton("Cancel Countdown", () =>
-            {
-                _countingDown = false;
-                RefreshSidebar();
-            }));
+            controls.Add(AdminButton("Start Round", () => RoundChangeRequested?.Invoke(true)));
+            controls.Add(AdminButton("Stop Round", () => RoundChangeRequested?.Invoke(false), "lobby-shell__admin-btn--danger"));
             parent.Add(controls);
 
             parent.Add(SectionTitle("Map & Mode"));
@@ -1242,8 +1376,7 @@ namespace SS3D.UI.Lobby
 
         private void ToggleReady()
         {
-            _ready = !_ready;
-            RefreshSidebar();
+            ReadyRequested?.Invoke();
         }
 
         private void ToggleAdmin()
@@ -1283,7 +1416,7 @@ namespace SS3D.UI.Lobby
         /// UITK default theme paints TextField inputs white; force the dark inset fill on the
         /// inner input element (class names vary slightly across Unity 6 builds).
         /// </summary>
-        private static void StyleDarkTextField(TextField field)
+        private static void StyleDarkTextField(BaseField<string> field)
         {
             if (field == null)
             {
@@ -1301,6 +1434,7 @@ namespace SS3D.UI.Lobby
                 if (input != null)
                 {
                     input.style.backgroundColor = fill;
+                    input.style.color = Color.white;
                     input.style.borderTopWidth = 0;
                     input.style.borderRightWidth = 0;
                     input.style.borderBottomWidth = 0;

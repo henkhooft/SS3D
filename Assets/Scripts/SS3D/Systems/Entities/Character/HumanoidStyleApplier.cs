@@ -25,12 +25,14 @@ namespace SS3D.Systems.Entities.Character
         /// <param name="root">Root GameObject of the preview dummy.</param>
         /// <param name="hairPrefab">Head hair prefab, or null for none.</param>
         /// <param name="beardPrefab">Facial hair prefab, or null for none.</param>
-        /// <param name="hairColor">Tint applied to both hair and beard renderers.</param>
+        /// <param name="hairColor">Tint applied to hair renderers.</param>
+        /// <param name="beardColor">Independent tint applied to beard renderers.</param>
         public static void Apply(
             GameObject root,
             GameObject hairPrefab,
             GameObject beardPrefab,
-            Color hairColor)
+            Color hairColor,
+            Color beardColor)
         {
             if (root == null)
             {
@@ -49,7 +51,7 @@ namespace SS3D.Systems.Entities.Character
             SpawnStyle(beardPrefab, facialSocket);
 
             ApplyHairTint(hairSocket, hairColor);
-            ApplyHairTint(facialSocket, hairColor);
+            ApplyHairTint(facialSocket, beardColor);
         }
 
         private static Transform EnsureSocket(GameObject root, string socketName)

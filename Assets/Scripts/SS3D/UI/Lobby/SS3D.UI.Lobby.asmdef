@@ -5,7 +5,9 @@
         "SS3D.Core",
         "SS3D.Systems",
         "SS3D.UI.Shell",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "SS3D.Permissions",
+        "FishNet.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

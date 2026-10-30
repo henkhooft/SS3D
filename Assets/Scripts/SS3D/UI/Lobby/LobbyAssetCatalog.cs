@@ -32,6 +32,16 @@ namespace SS3D.UI.Lobby
         /// <summary>Hair / skin tint colours shown in the Body colour pickers.</summary>
         [SerializeField] private List<Color> _hairColors = new();
 
+        private static readonly System.Random PreviewOutfitRandom = new();
+        [SerializeField] private List<LobbyPreviewOutfit> _previewOutfits = new();
+
+        public IReadOnlyList<LobbyPreviewOutfit> PreviewOutfits => _previewOutfits;
+
+        public int ChoosePreviewOutfitIndex() => PreviewOutfitRandom.Next(_previewOutfits.Count);
+
+        public LobbyPreviewOutfit GetPreviewOutfit(int index) =>
+            _previewOutfits[Mathf.Clamp(index, 0, _previewOutfits.Count - 1)];
+
         public StyleSheet LobbyStyle => _lobbyStyle;
 
         public Sprite PreviewPlaceholder => _previewPlaceholder;
@@ -118,6 +128,19 @@ namespace SS3D.UI.Lobby
                 return false;
             }
 
+            if (_previewOutfits == null || _previewOutfits.Count == 0)
+            {
+                missingField = "previewOutfits";
+                return false;
+            }
+            foreach (LobbyPreviewOutfit outfit in _previewOutfits)
+            {
+                if (outfit == null || outfit.Jumpsuit == null || outfit.Shoes == null)
+                {
+                    missingField = "previewOutfit clothing";
+                    return false;
+                }
+            }
             missingField = null;
             return true;
         }
@@ -134,7 +157,8 @@ namespace SS3D.UI.Lobby
             List<LobbyNamedSprite> loadoutThumbs,
             List<LobbyNamedPrefab> hairStyles,
             List<LobbyNamedPrefab> beardStyles,
-            List<Color> hairColors)
+            List<Color> hairColors,
+            List<LobbyPreviewOutfit> previewOutfits)
         {
             _lobbyStyle = lobbyStyle;
             _previewPlaceholder = previewPlaceholder;
@@ -147,6 +171,7 @@ namespace SS3D.UI.Lobby
             _hairStyles = hairStyles ?? new List<LobbyNamedPrefab>();
             _beardStyles = beardStyles ?? new List<LobbyNamedPrefab>();
             _hairColors = hairColors ?? new List<Color>();
+            _previewOutfits = previewOutfits ?? new List<LobbyPreviewOutfit>();
         }
 #endif
 
@@ -191,6 +216,15 @@ namespace SS3D.UI.Lobby
 
             return false;
         }
+    }
+
+    /// <summary>Existing clothing assets used as read-only worn-mesh sources for the local booth.</summary>
+    [Serializable]
+    public sealed class LobbyPreviewOutfit
+    {
+        public string Id;
+        public GameObject Jumpsuit;
+        public GameObject Shoes;
     }
 
     [Serializable]

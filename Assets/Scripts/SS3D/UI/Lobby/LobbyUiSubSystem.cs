@@ -1,10 +1,20 @@
 using SS3D.Core;
+using System.Linq;
+using FishNet;
+using SS3D.Permissions;
+using SS3D.Systems.Entities;
+using SS3D.Systems.PlayerControl;
+using SS3D.Systems.Rounds;
+using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.Screens;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
+using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
 using System.Collections.Generic;
 using UnityEngine;
+using Cloth = SS3D.Systems.Inventory.Containers.Cloth;
 using UnityEngine.UIElements;
 
 namespace SS3D.UI.Lobby
@@ -12,7 +22,7 @@ namespace SS3D.UI.Lobby
     /// <summary>
     /// Self-bootstrapping host for the UITK pre-round lobby shell and Character Creator.
     /// Attaches into <see cref="UiLayer.Modal"/>. Phase E1: live booth preview + local draft.
-    /// Phase C gates visibility on spawn/round state and retires the condemned uGUI lobby.
+    /// Owns session visibility, ready/late-join and administrator round requests.
     /// </summary>
     public sealed class LobbyUiSubSystem : SubSystem
     {
@@ -26,6 +36,8 @@ namespace SS3D.UI.Lobby
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
+
             if (SubSystems.TryGet(out LobbyUiSubSystem _))
             {
                 return;
@@ -50,6 +62,7 @@ namespace SS3D.UI.Lobby
                 _creatorView.ReturnToLobbyRequested -= HandleReturnToLobbyRequested;
                 _creatorView.CharacterSaved -= HandleCharacterSaved;
                 _creatorView.PreviewAngleChanged -= HandlePreviewAngleChanged;
+                _creatorView.OutfitChanged -= HandleOutfitChanged;
             _creatorView.BodyMorphsChanged -= HandleBodyMorphsChanged;
             _creatorView.StyleChanged -= HandleStyleChanged;
             _creatorView.Detach();
@@ -62,12 +75,8 @@ namespace SS3D.UI.Lobby
 
         private void Update()
         {
-            if (_attached)
-            {
-                return;
-            }
-
-            TryAttachShell();
+            if (!_attached) TryAttachShell();
+            if (_shellView != null) RefreshSession();
         }
 
         private void TryAttachShell()
@@ -87,25 +96,104 @@ namespace SS3D.UI.Lobby
             _attached = true;
             InputInterface.RegisterDocument(uiShell.Document);
 
-            _draft = new CharacterCreatorDraft();
+            _draft = new CharacterCreatorDraft { OutfitIndex = _catalog.ChoosePreviewOutfitIndex() };
 
             _shellView = new LobbyShellView(_catalog);
             _shellView.Attach(modalLayer);
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
+            _shellView.ReadyRequested += HandleReadyRequested;
+            _shellView.RoundChangeRequested += HandleRoundChangeRequested;
             _shellView.SetCharacterName(_draft.Name);
 
-            _creatorView = new CharacterCreatorView(_catalog);
+            _creatorView = new CharacterCreatorView(_catalog, _draft);
             _creatorView.Attach(modalLayer);
             _creatorView.ReturnToLobbyRequested += HandleReturnToLobbyRequested;
             _creatorView.CharacterSaved += HandleCharacterSaved;
             _creatorView.PreviewAngleChanged += HandlePreviewAngleChanged;
+            _creatorView.OutfitChanged += HandleOutfitChanged;
             _creatorView.BodyMorphsChanged += HandleBodyMorphsChanged;
             _creatorView.StyleChanged += HandleStyleChanged;
+            if (!EnsureBooth())
+            {
+                Debug.LogError("[Lobby] Could not initialize the live character preview.");
+            }
             _creatorView.ApplyDraft(_draft);
+            if (_booth != null)
+            {
+                _booth.SetAngleIndex(0);
+            }
+            PushPreviewTexture();
 
             _shellView.SetVisible(true);
             _creatorView.SetVisible(false);
             Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + hair styles).");
+        }
+
+        private float _nextSessionRefresh;
+        private bool _inWorld;
+
+        private void RefreshSession()
+        {
+            if (Time.unscaledTime < _nextSessionRefresh) return;
+            _nextSessionRefresh = Time.unscaledTime + 0.2f;
+            // Disable scene-owned legacy presentation, including after scene reloads. Match the component:
+            // Game.unity renames the LobbyCanvas prefab instance to "Lobby".
+            foreach (LobbyScreen legacy in FindObjectsByType<LobbyScreen>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                legacy.gameObject.SetActive(false);
+
+            bool online = InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Started;
+            bool connected = online && SubSystems.TryGet(out PlayerSubSystem _) && SubSystems.TryGet(out RoundSubSystem _);
+            SubSystems.TryGet(out PlayerSubSystem players);
+            SubSystems.TryGet(out RoundSubSystem rounds);
+            SubSystems.TryGet(out ReadyPlayersSubSystem ready);
+            SubSystems.TryGet(out EntitySubSystem entities);
+            Player local = connected ? players.GetPlayer(InstanceFinder.ClientManager.Connection) : null;
+            bool spawned = local != null && entities != null && entities.IsPlayerSpawned(InstanceFinder.ClientManager.Connection);
+            bool visible = connected && !spawned;
+            if (!visible)
+            {
+                _shellView.SetVisible(false);
+                _creatorView.SetVisible(false);
+                if (_booth != null) _booth.SetActive(false);
+                _inWorld = true;
+            }
+            else if (_inWorld)
+            {
+                _inWorld = false;
+                HandleReturnToLobbyRequested();
+            }
+            bool admin = CanAdmin();
+            LobbyMockData.PlayerRow[] rows = connected ? players.OnlinePlayers.Where(p => p != null)
+                .Select(p => new LobbyMockData.PlayerRow(p.Ckey, p.Ckey, ready != null && ready.IsReady(p),
+                    null, "—", "—", "—")).ToArray() : System.Array.Empty<LobbyMockData.PlayerRow>();
+            _shellView.SetSession(rounds != null ? rounds.CurrentRoundState : RoundState.Stopped,
+                rounds != null ? rounds.CurrentTimerSeconds : 0,
+                local != null && ready != null && ready.IsReady(local), local != null, admin, rows);
+        }
+
+        private bool CanAdmin() => SubSystems.TryGet(out PermissionSubSystem permissions)
+            && permissions.HasLoadedPermissions
+            && !string.IsNullOrEmpty(SS3D.Core.Settings.LocalPlayer.Ckey)
+            && permissions.IsAtLeast(SS3D.Core.Settings.LocalPlayer.Ckey, ServerRoleTypes.Administrator);
+
+        private void HandleRoundChangeRequested(bool start)
+        {
+            if (CanAdmin() && InstanceFinder.ClientManager.Started)
+                InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(start));
+        }
+
+        private void HandleReadyRequested()
+        {
+            if (!InstanceFinder.ClientManager.Started || !SubSystems.TryGet(out PlayerSubSystem players)
+                || !SubSystems.TryGet(out RoundSubSystem rounds) || !SubSystems.TryGet(out ReadyPlayersSubSystem ready)) return;
+            Player local = players.GetPlayer(InstanceFinder.ClientManager.Connection);
+            if (local == null) return;
+            if (rounds.CurrentRoundState == RoundState.Ongoing)
+            {
+                if (SubSystems.TryGet(out EntitySubSystem entities)) entities.CmdSpawnLatePlayer(local);
+            }
+            else if (rounds.CurrentRoundState is not RoundState.Ending)
+                InstanceFinder.ClientManager.Broadcast(new ChangePlayerReadyMessage(local.Ckey, !ready.IsReady(local)));
         }
 
         private bool TryEnsureCatalog()
@@ -173,6 +261,8 @@ namespace SS3D.UI.Lobby
                 _booth.SetActive(true);
             }
 
+            // Return shows the last explicitly saved character, not unsaved preview edits.
+            _creatorView.ApplyDraft(_draft);
             PushPreviewTexture();
             _shellView.SetCharacterName(_draft?.Name ?? LobbyMockData.CharacterName);
             _creatorView.SetVisible(false);
@@ -189,9 +279,20 @@ namespace SS3D.UI.Lobby
 
             _draft = draft;
             _shellView?.SetCharacterName(_draft.Name);
+            HandleOutfitChanged(_draft.OutfitIndex);
             ApplyBodyMorphsToBooth(_draft.BodyMorphs);
-            ApplyStyleToBooth(_draft.HairStyleIndex, _draft.BeardStyleIndex, _draft.HairColorIndex);
+            ApplyStyleToBooth(_draft.HairStyleIndex, _draft.BeardStyleIndex, _draft.HairColorIndex, _draft.BeardColorIndex);
             Debug.Log($"[Lobby] Character draft saved locally: {_draft.Name}");
+        }
+
+        private void HandleOutfitChanged(int outfitIndex)
+        {
+            if (_booth == null || _catalog == null)
+            {
+                return;
+            }
+            LobbyPreviewOutfit outfit = _catalog.GetPreviewOutfit(outfitIndex);
+            _booth.ApplyOutfit(outfit.Jumpsuit.GetComponent<Cloth>(), outfit.Shoes.GetComponent<Cloth>());
         }
 
         private void HandlePreviewAngleChanged(int angleIndex)
@@ -204,27 +305,15 @@ namespace SS3D.UI.Lobby
 
         private void HandleBodyMorphsChanged(IReadOnlyDictionary<string, float> morphs)
         {
-            if (_draft != null)
-            {
-                _draft.CopyMorphsFrom(morphs);
-            }
-
             ApplyBodyMorphsToBooth(morphs);
         }
 
-        private void HandleStyleChanged(int hairIndex, int beardIndex, int colorIndex)
+        private void HandleStyleChanged(int hairIndex, int beardIndex, int colorIndex, int beardColorIndex)
         {
-            if (_draft != null)
-            {
-                _draft.HairStyleIndex = hairIndex;
-                _draft.BeardStyleIndex = beardIndex;
-                _draft.HairColorIndex = colorIndex;
-            }
-
-            ApplyStyleToBooth(hairIndex, beardIndex, colorIndex);
+            ApplyStyleToBooth(hairIndex, beardIndex, colorIndex, beardColorIndex);
         }
 
-        private void ApplyStyleToBooth(int hairIndex, int beardIndex, int colorIndex)
+        private void ApplyStyleToBooth(int hairIndex, int beardIndex, int colorIndex, int beardColorIndex)
         {
             if (_booth == null || _catalog == null)
             {
@@ -234,7 +323,7 @@ namespace SS3D.UI.Lobby
             GameObject hairPrefab = _catalog.GetHairStyle(hairIndex);
             GameObject beardPrefab = _catalog.GetBeardStyle(beardIndex);
             Color hairColor = _catalog.GetHairColor(colorIndex);
-            _booth.ApplyStyle(hairPrefab, beardPrefab, hairColor);
+            _booth.ApplyStyle(hairPrefab, beardPrefab, hairColor, _catalog.GetHairColor(beardColorIndex));
         }
 
         private void ApplyBodyMorphsToBooth(IReadOnlyDictionary<string, float> morphs)
