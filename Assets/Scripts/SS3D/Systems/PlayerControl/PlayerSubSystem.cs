@@ -32,8 +32,10 @@ namespace SS3D.Systems.PlayerControl
         [SyncObject]
         private readonly SyncDictionary<string, Player> _onlinePlayers = new();
 
-        public IEnumerable<Player> ServerPlayers => _serverPlayers.Values;
-        public IEnumerable<Player> OnlinePlayers => _onlinePlayers.Values;
+        // SyncDictionary can briefly contain a null value on a late-joining client before the
+        // referenced Player NetworkObject is spawned. Never expose those nulls to callers.
+        public IEnumerable<Player> ServerPlayers => _serverPlayers.Values.Where(player => player != null);
+        public IEnumerable<Player> OnlinePlayers => _onlinePlayers.Values.Where(player => player != null);
 
         protected override void OnStart()
         {
@@ -107,7 +109,8 @@ namespace SS3D.Systems.PlayerControl
                     break;
             }
 
-            OnlinePlayersChanged serverPlayersChanged = new(_onlinePlayers.Values.ToList(), changeType, value, key, asServer);
+            OnlinePlayersChanged serverPlayersChanged = new(
+                _onlinePlayers.Values.Where(player => player != null).ToList(), changeType, value, key, asServer);
             serverPlayersChanged.Invoke(this);
         }
 
@@ -149,7 +152,8 @@ namespace SS3D.Systems.PlayerControl
                     break;
             }
 
-            ServerPlayersChanged serverPlayersChanged = new(_serverPlayers.Values.ToList(), changeType, value);
+            ServerPlayersChanged serverPlayersChanged = new(
+                _serverPlayers.Values.Where(player => player != null).ToList(), changeType, value);
             serverPlayersChanged.Invoke(this);
         }
 
@@ -196,7 +200,7 @@ namespace SS3D.Systems.PlayerControl
                 return;
             }
             string ckey = userAuthorizationMessage.Ckey;
-            bool playedHasConnectedAlready = _serverPlayers.TryGetValue(ckey, out Player player);
+            bool playedHasConnectedAlready = _serverPlayers.TryGetValue(ckey, out Player player) && player != null;
 
             if (playedHasConnectedAlready)
             {
@@ -218,15 +222,31 @@ namespace SS3D.Systems.PlayerControl
                     SubSystems.Get<PermissionSubSystem>().ChangeUserPermission(ckey, ServerRoleTypes.ServerOwner);
                 }
 
-                _serverPlayers.Add(ckey, player);
+                // A previous sync can leave the key present with a null value; replace it
+                // instead of throwing ArgumentException on a duplicate Add.
+                if (_serverPlayers.ContainsKey(ckey))
+                {
+                    _serverPlayers[ckey] = player;
+                }
+                else
+                {
+                    _serverPlayers.Add(ckey, player);
+                }
             }
 
             player.GiveOwnership(conn);
 
-            bool hasOnlinePlayer = _onlinePlayers.TryGetValue(ckey, out Player onlinePlayer);
+            bool hasOnlinePlayer = _onlinePlayers.TryGetValue(ckey, out Player onlinePlayer) && onlinePlayer != null;
             if (!hasOnlinePlayer)
             {
-                _onlinePlayers.Add(ckey, player);
+                if (_onlinePlayers.ContainsKey(ckey))
+                {
+                    _onlinePlayers[ckey] = player;
+                }
+                else
+                {
+                    _onlinePlayers.Add(ckey, player);
+                }
             }
 
             // If this player already had a body in the round (e.g. they disconnected and are
@@ -296,17 +316,17 @@ namespace SS3D.Systems.PlayerControl
 
         public string GetCkey(NetworkConnection conn)
         {
-            return ServerPlayers.ToList().Find(player => player.Owner == conn)?.Ckey;
+            return ServerPlayers.FirstOrDefault(player => player != null && player.Owner == conn)?.Ckey;
         }
 
         public Player GetPlayer(string ckey)
         {
-            return ServerPlayers.ToList().Find(player => player.Ckey == ckey);
+            return ServerPlayers.FirstOrDefault(player => player != null && player.Ckey == ckey);
         }
 
         public Player GetPlayer(NetworkConnection conn)
         {
-            return ServerPlayers.ToList().Find(player => player.Owner == conn);
+            return ServerPlayers.FirstOrDefault(player => player != null && player.Owner == conn);
         }
     }
 }
