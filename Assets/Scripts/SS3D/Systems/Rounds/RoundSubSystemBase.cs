@@ -148,9 +148,15 @@ namespace SS3D.Systems.Rounds
             else
             {
                 Log.Information(this, "User {ckey} has started the round", Logs.ServerOnly, userCkey);
-                RequestRoundStateChange(m);
+                if (m.State) RequestPlayerRoundStart(conn);
+                else RequestRoundStateChange(m);
             }
         }
+
+        protected virtual void RequestPlayerRoundStart(NetworkConnection sender) =>
+            RequestRoundStateChange(new ChangeRoundStateMessage(true));
+
+        protected virtual bool CanStartRound => true;
 
         /// <summary>
         /// Single-flight entry point for round transitions. Supersedes any in-flight operation.
@@ -159,6 +165,7 @@ namespace SS3D.Systems.Rounds
         protected void RequestRoundStateChange(ChangeRoundStateMessage m)
         {
             // Reject stale/duplicate client requests before cancelling the active operation.
+            if (m.State && !CanStartRound) return;
             if (m.State && RoundState is not (RoundState.Stopped or RoundState.Ended)) return;
             // A stop before the round is Ongoing cancels the start (station load or warmup countdown).
             if (!m.State && RoundState is RoundState.Preparing or RoundState.WarmingUp)

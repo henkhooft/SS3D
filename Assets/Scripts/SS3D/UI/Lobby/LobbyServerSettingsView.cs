@@ -287,7 +287,8 @@ namespace SS3D.UI.Lobby
             form.Q<Label>("server-ready-ratio").text = $"{_players.Count(p => p.Ready)}/{_players.Length}";
             Button start = form.Q<Button>("server-start");
             start.style.display = idle ? DisplayStyle.Flex : DisplayStyle.None;
-            start.SetEnabled(idle && _hasServerSettings && _serverMaps.Contains(_serverSettings.Map));
+            start.SetEnabled(idle && _hasServerSettings && _serverMaps.Contains(_serverSettings.Map)
+                && _stationLoadState is not (StationLoadState.Loading or StationLoadState.Initializing));
             foreach (string name in new string[] { "server-force", "server-extend", "server-cancel" })
             {
                 Button action = form.Q<Button>(name);

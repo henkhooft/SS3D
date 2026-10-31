@@ -54,6 +54,7 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
+            RememberEditorReturnTemplate(_serverSettings.Map);
             RoundState = RoundState.Preparing;
             RoundSeconds = 0;
             _stationName = _serverSettings.Map;
@@ -102,6 +103,7 @@ namespace SS3D.Systems.Rounds
             _stationLoadState = StationLoadState.Failed;
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
+            RestoreEditorAfterCancelledStart();
         }
 
         [Server]
@@ -230,10 +232,13 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
+            BeginEditorRestore();
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
 
+            // Stopped removes round bodies before restoring the authoring template.
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
+            await RestoreEditorTemplate(cancellationToken);
         }
 
 #if UNITY_EDITOR

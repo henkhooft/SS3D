@@ -17,6 +17,8 @@ using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.MapEditor.Commands;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -217,6 +219,23 @@ namespace SS3D.Editor.Automation
             catch (Exception exception) { Finish(exception.ToString(), true); }
         }
 
+        private static Vector3 _playtestSpawnPosition;
+
+        private static void EditPlaytestSpawn(bool remove)
+        {
+            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+            if (!remove)
+                _playtestSpawnPosition = tiles.CurrentMap.GetAllChunks()
+                    .SelectMany(chunk => chunk.GetAllTilePlacedObjects()).First(tile => tile.Layer == TileLayer.Plenum).transform.position;
+            SubSystems.Get<MapEditorSubSystem>().SubmitCommands(new[] { new MapEditorCommandDto
+            {
+                Kind = remove ? MapEditorCommandKind.ClearSpawnPoint : MapEditorCommandKind.PlaceSpawnPoint,
+                AssetName = "spawn:job:Assistant", Position = _playtestSpawnPosition, Direction = Direction.North,
+            } });
+        }
+
+        private static bool PlaytestSpawnPresent() => SubSystems.Get<TileSubSystem>().SpawnPoints.HasAt(_playtestSpawnPosition);
+
         private static Step[] BuildSteps() => new Step[]
         {
             new Step
@@ -377,8 +396,38 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Start the configured Extended round",
+                Name = "Author an unsaved spawn before playtesting",
+                Enter = () => EditPlaytestSpawn(false),
+                Until = () => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && PlaytestSpawnPresent(),
+            },
+            new Step
+            {
+                Name = "Start warns about unsaved map changes",
                 Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Visible(Shell().Q("map-start-prompt")),
+                Verify = () =>
+                {
+                    Require(Rounds().CurrentRoundState == RoundState.Stopped, "Prompt leaves map and round untouched");
+                    Capture("map-start-unsaved");
+                },
+            },
+            new Step
+            {
+                Name = "Cancel preserves unsaved map changes",
+                Enter = () => Click(Shell().Q<Button>("map-start-cancel")),
+                Until = () => !Visible(Shell().Q("map-start-prompt")),
+                Verify = () => Require(SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && PlaytestSpawnPresent(), "Cancel preserves authoring edits"),
+            },
+            new Step
+            {
+                Name = "Reopen the unsaved map prompt",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Visible(Shell().Q("map-start-prompt")),
+            },
+            new Step
+            {
+                Name = "Start the configured Extended round",
+                Enter = () => Click(Shell().Q<Button>("map-start-save")),
                 Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && Shell().Q<Button>("server-stop").enabledInHierarchy,
                 Verify = () =>
                 {
@@ -394,6 +443,18 @@ namespace SS3D.Editor.Automation
                     Require(!ReadyButton().enabledInHierarchy, "Join Round is disabled by server policy");
                     Require(Rounds().CurrentTimerSeconds < 3, "Round elapsed clock excludes countdown time");
                 },
+            },
+            new Step
+            {
+                Name = "Playtest blocks authoring mutations; runtime damage stays in memory",
+                Enter = () =>
+                {
+                    EditPlaytestSpawn(true);
+                    Require(PlaytestSpawnPresent(), "Editor RPC cannot mutate the playtest map");
+                    Require(!SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Save and start established a save point");
+                    SubSystems.Get<TileSubSystem>().SpawnPoints.TryClearAt(_playtestSpawnPosition, out _);
+                },
+                Verify = () => Require(!PlaytestSpawnPresent(), "Runtime mutation fixture removed the saved spawn"),
             },
             new Step
             {
@@ -458,7 +519,38 @@ namespace SS3D.Editor.Automation
                 Name = "Configured round length ends the round",
                 Timeout = 90,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
-                Verify = () => Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn"),
+                Verify = () =>
+                {
+                    Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn");
+                    Require(Rounds().MapEditingAllowed && PlaytestSpawnPresent(), "Stop restored the saved authoring template, removing runtime damage");
+                    Require(!SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Restored template starts clean");
+                },
+            },
+            new Step
+            {
+                Name = "Author another unsaved change for Discard",
+                Enter = () => EditPlaytestSpawn(true),
+                Until = () => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && !PlaytestSpawnPresent(),
+            },
+            new Step
+            {
+                Name = "Confirm Discard before starting",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Visible(Shell().Q("map-start-prompt")),
+            },
+            new Step
+            {
+                Name = "Discard reloads the saved map",
+                Enter = () => Click(Shell().Q<Button>("map-start-discard")),
+                Until = () => Rounds().CurrentRoundState == RoundState.WarmingUp && Shell().Q<Button>("server-cancel").enabledInHierarchy,
+                Verify = () => Require(PlaytestSpawnPresent(), "Discard removed unsaved edits and loaded the saved spawn"),
+            },
+            new Step
+            {
+                Name = "Cancelled playtest restores a clean authoring map",
+                Enter = () => Click(Shell().Q<Button>("server-cancel")),
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Rounds().MapEditingAllowed,
+                Verify = () => Require(PlaytestSpawnPresent() && !SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Edit-play-cancel-edit returns to the saved map"),
             },
             new Step
             {

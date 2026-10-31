@@ -1,4 +1,5 @@
 using Coimbra.Services.Events;
+using Cysharp.Threading.Tasks;
 using Coimbra.Services.PlayerLoopEvents;
 using FishNet.Connection;
 using FishNet.Object;
@@ -12,6 +13,8 @@ using SS3D.Systems.Electricity;
 using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Screens;
+using SS3D.Systems.Persistence;
+using SS3D.Systems.Rounds;
 using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
@@ -76,6 +79,23 @@ namespace SS3D.Systems.Tile.MapEditor
         public event Action EditorClosed;
 
         public bool IsActive => _active;
+        public bool HasUnsavedChanges => _commandService.HasUnsavedChanges;
+        public long EditRevision => _commandService.Revision;
+        public string EditingTemplateName { get; private set; }
+        private PersistenceSubSystem _templatePersistence;
+
+        private void TemplateSaved(string name)
+        {
+            EditingTemplateName = name;
+            _commandService.MarkSaved();
+        }
+
+        private void TemplateLoaded(string name)
+        {
+            EditingTemplateName = name;
+            _commandService.ClearHistory();
+            _inspectedRooms.Clear();
+        }
 
         /// <summary>
         /// Live pointer-over-UI via <see cref="InputInterface"/> (registered UITK + uGUI).
@@ -140,6 +160,9 @@ namespace SS3D.Systems.Tile.MapEditor
             _tileSystem = SubSystems.Get<TileSubSystem>();
             _controls = _inputSystem.Inputs.TileCreator;
             _persistence = new MapEditorLocalPersistence(_tileSystem);
+            _templatePersistence = SubSystems.Get<PersistenceSubSystem>();
+            _templatePersistence.StationTemplateSaved += TemplateSaved;
+            _templatePersistence.StationTemplateLoaded += TemplateLoaded;
             _gameplayHud = new MapEditorGameplayHud(transform);
 
             // TileCreator.ToggleMenu is always enabled by the Global context.
@@ -147,6 +170,14 @@ namespace SS3D.Systems.Tile.MapEditor
             EnsureCommandServiceBound();
 
             ResolvePlayerCamera();
+        }
+
+        public override void OnStopServer()
+        {
+            EditingTemplateName = null;
+            _commandService.ClearHistory();
+            _inspectedRooms.Clear();
+            base.OnStopServer();
         }
 
         private void ResolvePlayerCamera()
@@ -183,6 +214,11 @@ namespace SS3D.Systems.Tile.MapEditor
 
         protected override void OnDestroyed()
         {
+            if (_templatePersistence != null)
+            {
+                _templatePersistence.StationTemplateSaved -= TemplateSaved;
+                _templatePersistence.StationTemplateLoaded -= TemplateLoaded;
+            }
             _controls.ToggleMenu.performed -= HandleToggleMenu;
             SetGameplayInputBlocked(false);
             _lighting.Restore();
@@ -285,6 +321,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void SetActive(bool active)
         {
+            if (active && SubSystems.TryGet(out RoundSubSystem rounds) && !rounds.MapEditingAllowed)
+                return;
             _active = active;
 
             if (active)
@@ -442,6 +480,12 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             if (!_active)
                 return;
+
+            if (SubSystems.TryGet(out RoundSubSystem rounds) && !rounds.MapEditingAllowed)
+            {
+                SetActive(false);
+                return;
+            }
 
             bool showAreas = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Areas);
             _areaOverlay.SetVisible(showAreas);
@@ -771,7 +815,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
             }
 
-            RememberQuickSaveName(name);
             RpcSaveMap(name, overwrite: true, LocalConnection);
         }
 
@@ -805,14 +848,12 @@ namespace SS3D.Systems.Tile.MapEditor
         // collides with an existing save, so the Save button itself can safely always overwrite.
         private void OnSaveAsRequested(string name)
         {
-            RememberQuickSaveName(name);
             RpcSaveMap(name, true, LocalConnection);
         }
 
         private void OnLoadMapRequested(string name)
         {
             ClearAreaSelection();
-            RememberQuickSaveName(name);
             // Immediate local feedback — TargetToast only runs if the ServerRpc auth path succeeds.
             _viewModel.ShowToast($"Loading {name}…");
             _toastTimer = 1.6f;
@@ -826,7 +867,9 @@ namespace SS3D.Systems.Tile.MapEditor
             RpcLoadMap(name, LocalConnection);
         }
 
-        private void ApplyLoadMap(string mapName, NetworkConnection conn)
+        private void ApplyLoadMap(string mapName, NetworkConnection conn) => LoadEditorMapAsync(mapName, conn).Forget();
+
+        private async UniTask LoadEditorMapAsync(string mapName, NetworkConnection conn)
         {
             if (!MapEditorPermissions.TryAuthorize(conn))
             {
@@ -835,10 +878,23 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             Log.Information(this, "Map editor loading template {mapName}", Logs.Important, mapName);
-            _persistence.Load(mapName);
-            _commandService.ClearHistory();
-            TargetSyncUndoState(conn, 0, 0);
-            TargetToast(conn, $"Loaded {mapName}.");
+            try
+            {
+                if (!await _templatePersistence.LoadStationTemplateAsync(mapName))
+                {
+                    TargetToast(conn, $"Could not load {mapName}. Your edits are still here.");
+                    return;
+                }
+                _tileSystem.SyncFloorDecalsToClients();
+                TargetRememberTemplate(conn, mapName);
+                TargetSyncUndoState(conn, 0, 0);
+                TargetToast(conn, $"Loaded {mapName}.");
+            }
+            catch (Exception exception)
+            {
+                Log.Error(this, "Map editor load failed: {error}", Logs.ServerOnly, exception.Message);
+                TargetToast(conn, $"Could not finish loading {mapName}. Reload a saved template before editing.");
+            }
         }
 
         private void OnDeleteMapRequested(string name) => RpcDeleteMap(name, LocalConnection);
@@ -1004,9 +1060,18 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            _persistence.Save(mapName, overwrite);
-            TargetToast(conn, $"Saved {mapName}.");
-            TargetRefreshMapList(conn);
+            try
+            {
+                bool saved = _persistence.Save(mapName, overwrite);
+                if (saved) TargetRememberTemplate(conn, mapName);
+                TargetToast(conn, saved ? $"Saved {mapName}." : $"Could not save {mapName}. Your edits are still unsaved.");
+                TargetRefreshMapList(conn);
+            }
+            catch (Exception exception)
+            {
+                Log.Error(this, "Map editor save failed: {error}", Logs.ServerOnly, exception.Message);
+                TargetToast(conn, $"Could not save {mapName}. Your edits are still unsaved.");
+            }
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -1037,7 +1102,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _tileSystem.CurrentMap.Clear();
             _tileSystem.ClearSpawnPoints();
-            _commandService.ClearHistory();
+            _commandService.MarkNewMap();
+            EditingTemplateName = null;
             _hologramManager.DestroyHolograms();
             SpawnPointEditorView.RefreshAll();
             TargetSyncUndoState(conn, 0, 0);
@@ -1130,6 +1196,14 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetRememberTemplate(conn, EditingTemplateName);
+        }
+
+        [TargetRpc]
+        private void TargetRememberTemplate(NetworkConnection conn, string name)
+        {
+            _lastQuickSaveName = name;
+            _viewModel.SaveMapName = string.IsNullOrEmpty(name) ? "Untitled Map" : name;
         }
 
         [TargetRpc]

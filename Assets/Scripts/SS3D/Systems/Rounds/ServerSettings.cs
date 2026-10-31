@@ -132,7 +132,7 @@ namespace SS3D.Systems.Rounds
             switch (action)
             {
                 case RoundAdminAction.Start when CurrentRoundState is RoundState.Stopped or RoundState.Ended:
-                    RequestRoundStateChange(new ChangeRoundStateMessage(true));
+                    RequestPlayerRoundStart(sender);
                     break;
                 case RoundAdminAction.ForceStart when IsWarmingUp:
                     _forceStart = true;
@@ -154,10 +154,7 @@ namespace SS3D.Systems.Rounds
         protected override void CancelCountdown()
         {
             base.CancelCountdown();
-            if (_stationLoadState is StationLoadState.Loading or StationLoadState.Initializing)
-            {
-                _stationLoadState = StationLoadState.NotLoaded;
-            }
+            RestoreEditorAfterCancelledStart();
         }
 
         [Server]

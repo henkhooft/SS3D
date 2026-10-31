@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: 290aa4e1c — 2026-07-28 (chunked station template restore)
+> Verified: 5fe7dbb57 — 2026-10-31
 
 # Persistence
 
@@ -33,6 +33,7 @@ Layered contributor-based disk persistence for station templates and server meta
 - Authored areas: tile chunk `areaIds` are restored as saved when area records carry `authored`; APC-less records carry `noApc`. The area payload also stores a map-level `authored` flag so deleting all rooms does not regenerate them on load; legacy flat saves carry `hasAuthoredAreas` through migration. Missing flags keep legacy APC flood defaults. See [area-authoring](area-authoring.md).
 
 - New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup; add a `DeserializePayload` arm for the DTO type.
+- Successful saves/restores emit `StationTemplateSaved` / `StationTemplateLoaded` with the template name for editor save points. `IsRestoringStationTemplate` serializes restoration; saves fail during restoration or after a partial restore exception until a complete load succeeds.
 - Station template save/load: `SaveStationTemplate` / `LoadStationTemplate` / `LoadMostRecentStationTemplate`.
 - Server meta: `LoadServerMeta` (owned by `PersistenceSubSystem.OnStart` when server), `SaveServerMeta` (on `UserPermissionsChangedEvent`).
 - Round history: `AppendRoundHistory` — hooked from `RoundSubSystem.ProcessEndRound`.
