@@ -14,7 +14,7 @@ captures as the primary input. Only read the ranked markdown produced by
 **SS3D/Perf/Export Frame Debugger…**
 (`Assets/Scripts/SS3D/Editor/Perf/FrameDebuggerExporter.cs`).
 
-Effort doc: [Documents/architecture/2026-07_unity-framedebug-ai-tooling.md](../../Documents/architecture/2026-07_unity-framedebug-ai-tooling.md).
+Effort doc: [Documents/architecture/2026-07_unity-framedebug-ai-tooling.md](../../../Documents/architecture/2026-07_unity-framedebug-ai-tooling.md).
 Tokens / noise: [reference.md](reference.md).
 
 ## Checklist
@@ -52,14 +52,14 @@ Dig into **at most three** named offenders.
 
 | Signature | Likely cause | Where to look |
 |-----------|--------------|---------------|
-| High `Selection Pick` hits / draws | Pick pass over-drawing AOI / no frustum or ray cull | [selection](../../Documents/architecture/systems/selection.md) Pitfalls |
-| Many identical floor objects as separate Mesh draws | Missing GPU instancing / SRP Batcher break (MPB) | [rendering](../../Documents/architecture/systems/rendering.md), [srp-batcher-gpu-instancing](../../Documents/architecture/2026-07_srp-batcher-gpu-instancing.md) |
+| High `Selection Pick` hits / draws | Pick pass over-drawing AOI / no frustum or ray cull | [selection](../../../Documents/architecture/systems/selection.md) Pitfalls |
+| Many identical floor objects as separate Mesh draws | Missing GPU instancing / SRP Batcher break (MPB) | [rendering](../../../Documents/architecture/systems/rendering.md), [srp-batcher-gpu-instancing](../../../Documents/architecture/2026-07_srp-batcher-gpu-instancing.md) |
 | Batch break: different materials / MPB | Permanent `MaterialPropertyBlock` on MeshRenderers | rendering + structural-destruction Intact clear |
-| `Atmos` / `Vision` / `UiBackdrop` dominating | Expected client features; check necessity / RT size | [rendering](../../Documents/architecture/systems/rendering.md) Start here |
+| `Atmos` / `Vision` / `UiBackdrop` dominating | Expected client features; check necessity / RT size | [rendering](../../../Documents/architecture/systems/rendering.md) Start here |
 | `graphics_api: OpenGL*` + empty / tiny tree | Capture invalid on this GPU path | Re-export on Vulkan; do not treat as ship signal |
 | Shadows / URP Lit only, no SS3D tokens | Generic URP cost | rendering look plan — only if client-bound scenario |
 
-Docs-first: [INDEX.md](../../Documents/architecture/INDEX.md) → system map **Pitfalls** → hot path file. Do not full-tree grep as step one.
+Docs-first: [INDEX.md](../../../Documents/architecture/INDEX.md) → system map **Pitfalls** → hot path file. Do not full-tree grep as step one.
 
 ## Step 4: Output format
 
@@ -77,5 +77,5 @@ Keep the reply short unless the user asks for a deep dive.
 - Dump entire Frame Debugger event lists or megabyte JSON into context.
 - Treat Editor Game-view draw counts as a release blocker without noting `source: Editor Frame Debugger`.
 - “Fix” condemned uGUI / grow `Human.prefab` as the first rendering lever
-  ([agent-first composition](../../Documents/architecture/2026-07_agent-first-composition.md)).
+  ([agent-first composition](../../../Documents/architecture/2026-07_agent-first-composition.md)).
 - Edit `Documents/design/*` or `Documents/FORK_STATUS.md`.

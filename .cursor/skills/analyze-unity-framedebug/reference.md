@@ -51,8 +51,8 @@ Treat as secondary unless they dominate **and** the scenario is explicitly rende
 
 ## Related maps
 
-- [rendering.md](../../Documents/architecture/systems/rendering.md)
-- [selection.md](../../Documents/architecture/systems/selection.md)
-- [structural-destruction.md](../../Documents/architecture/systems/structural-destruction.md) (Intact MPB clear)
-- [2026-07_srp-batcher-gpu-instancing.md](../../Documents/architecture/2026-07_srp-batcher-gpu-instancing.md)
+- [rendering.md](../../../Documents/architecture/systems/rendering.md)
+- [selection.md](../../../Documents/architecture/systems/selection.md)
+- [structural-destruction.md](../../../Documents/architecture/systems/structural-destruction.md) (Intact MPB clear)
+- [2026-07_srp-batcher-gpu-instancing.md](../../../Documents/architecture/2026-07_srp-batcher-gpu-instancing.md)
 - Sibling CPU tooling: [analyze-unity-perf](../analyze-unity-perf/SKILL.md)

@@ -20,4 +20,4 @@ Deliberately left out: `domain-modeling`, `grill-with-docs`, `setup-matt-pocock-
 uses `Documents/plans/` and `Documents/milestones/`); `teach` (writes workspace files);
 `prototype`, `codebase-design` and the TypeScript tooling skills.
 
-Older SS3D skills (Unity perf, smoke harness, `update-system-docs`) live in `.cursor/skills/`.
+Older SS3D skills (Unity perf, smoke harness) live in `.cursor/skills/`. `update-system-docs` lives there too; `.claude/skills/update-system-docs` is a thin pointer to it, so Claude Code can invoke it.
