@@ -11,13 +11,13 @@ One thing falls out of reading all of them together that's worth stating up fron
 Four moves carry this doc:
 
 1. **One identity rail, not a database per system.** A crew member's name, job, department, access-level set, and DNA-record reference (`death-cloning-respawn.md` §4) all live on one server-side crew record. The ID card is a physical token bound to that record, not a second source of truth — the same "no parallel model" move Area made for power and the hacking interface made for permissions, applied to identity itself.
-2. **Physical possession is the gate, same as everywhere else.** An access check reads whatever ID is currently on the checking character's person — not a hidden player-level flag. This is the exact rule tools already follow (`surgery.md` §7) and the PDA already committed to (`pda.md` §2): no ID present, no access, full stop.
+2. **Physical possession is the gate, same as everywhere else.** An access check reads the ID the character is **wearing in their ID slot or holding in their active hand** (§3) — not a hidden player-level flag, and not a card buried in a pocket or bag. No ID presented, no access, full stop.
 3. **Granular, named credentials — not eight department flags.** `area.md` §6 already needed "an additional cert" beyond bridge access for the captain's private office. The hacking interface's engineering credential is its own thing, not "has Engineering." `disposal.md` §4 gates a restricted destination on "matching access" that's clearly narrower than a whole department. The precedent across this project already assumes a real list of named levels, not a coarse eight-way split — this doc makes that list's shape explicit rather than retrofitting it.
-4. **Every consumer reads the same bitmask, and every check is logged.** Doors, device firmware tiers, crate and chute locks, the AI's Area authority, the chem dispenser gate — one function, one data shape, called from a dozen places. Every call — pass or fail — writes to a per-device auth log, the identical "detectable, not prevented" doctrine `ai-cyborgs.md` §4 already applies to law violations.
+4. **Every consumer reads the same access levels, and the places that matter keep a log.** Doors, device firmware tiers, crate and chute locks, the AI's Area authority, the chem dispenser gate — one rule, one set of named levels, used from a dozen places. Devices that guard something worth auditing (secure doors, the ID console) keep a log of who used them (§6) — the "detectable, not prevented" doctrine `ai-cyborgs.md` §4 applies to law violations.
 
 ## 2. The crew record — identity rail
 
-A server-side record created when lobby's preference resolution assigns a job (`lobby.md` §5), one per active crew member for the round:
+A record created when lobby's preference resolution assigns a job (`lobby.md` §5), one per active crew member for the round:
 
 - Name, job, department
 - Access-level set (§4–5)
@@ -28,30 +28,37 @@ This is the authoritative object. The physical card (§3) and the PDA's identity
 
 ## 3. The ID card — physical object
 
-A real, held/worn item — the "ID" gear-strip slot main HUD already reserved (`main-hud.md` §8), or inside a PDA occupying the PDA slot (`pda.md` §2). It's a passive token: no onboard intelligence, no firmware of its own. It carries a reference to the crew record in §2, nothing more.
+A real, held/worn item. It's a passive token: no onboard intelligence, no firmware of its own. It carries a reference to the crew record in §2, nothing more.
 
-**Both gear-strip positions count identically as "on your person."** Main HUD's ID slot and the PDA's internal ID slot were established independently by two different docs, each reasonably assuming the other away. This doc closes that gap explicitly: an access check scans the character's ID slot *and*, if occupied, the inserted card of any PDA in the PDA slot, and treats a hit in either place the same way. There's exactly one physical-possession rule, not two competing ones.
+**One slot for ID and PDA.** The gear strip has a single **ID slot** (`main-hud.md` §8). It holds either a bare ID card or a PDA with a card inside it (`pda.md` §2) — a crew member normally spawns with the latter. Both count identically.
 
-**Examine reveals name, job, and department color** — printed on the card's face, world-carries-the-information the same way a crate's manifest is readable without opening it (`cargo.md` §5). Anyone can glance at a held-up ID and know who it claims to be.
+**What counts as presenting an ID** — for access and for identity on examine alike:
 
-**Access levels are not visible on examine.** They're only readable by the card's own holder, through the PDA's ID/access summary tab (`pda.md` §3), or by someone running the hacking interface's permissions panel on a device the card is being used against — exactly the "crew see only whether their own ID works" framing that panel already commits to (`hacking-interface.md` §3). Nobody gets an omniscient readout of a stranger's clearance by looking at their badge.
+- the card in the ID slot, bare or inside the worn PDA; or
+- a card (or PDA with a card) held in the **active hand**, as when you hold your badge up to a door.
+
+A card in a pocket, a backpack, or a box doesn't count. It's yours, but you aren't presenting it. This is SS13's rule, and it means taking someone's ID out of their slot really does strip them of their access and their name.
+
+**Examine reveals name, job, and department color** of the presented ID (`examine.md` §5) — printed on the card's face, readable even through a worn PDA's window, world-carries-the-information the same way a crate's manifest is readable without opening it (`cargo.md` §5). Anyone can glance at a held-up ID and know who it claims to be.
+
+**Access levels are not visible on examine.** They're only readable by the card's own holder (through the PDA's ID/access summary tab once the PDA exists, `pda.md` §3), or by someone running the hacking interface's permissions panel on a device the card is being used against — exactly the "crew see only whether their own ID works" framing that panel already commits to (`hacking-interface.md` §3). Nobody gets an omniscient readout of a stranger's clearance by looking at their badge.
 
 **Dropped, stolen, handed off — no special binding.** Whoever's holding it is whoever it authorizes, the instant they're holding it. `pda.md`'s worked example B already commits to this for a stolen PDA-plus-ID; this doc is what makes that true rather than a one-off.
 
 ## 4. Access levels — the model
 
-Not a flat eight-way department switch. A **named, independently-grantable set of levels**, represented at runtime as a bitmask — the exact "raw bitmask" the hacking interface's hacker tier already reads (§3 there) and the exact thing a cargo crate lock or a disposal chute lock checks against (`cargo.md` §5, `disposal.md` §2).
+Not a flat eight-way department switch. A **named, independently-grantable set of levels** — the exact requirement the hacking interface's hacker tier reads (§3 there) and the exact thing a cargo crate lock or a disposal chute lock checks against (`cargo.md` §5, `disposal.md` §2).
 
 Two bands:
 
 - **Department levels**, one per department already established in `lobby.md` §2: Command, Security, Engineering, Medical, Science, Cargo, Service, Civilian. Most jobs carry exactly their own department level plus a couple of station-wide levels almost everyone gets (Maintenance, general Crew).
 - **Cross-cutting levels**, narrower than a department and not owned by any one of them: Bridge, Captain's Office, Armory, EVA, AI Upload, Evidence Lockup, Change ID (§7), and others as content demands. These are what `area.md` §6's "additional cert" and the hacking interface's "engineering credential" were always pointing at — a real, specific thing, not a department flag standing in for it.
 
-The exact enumerated list — every level that will ever exist and which device checks which — is a content pass, not a design decision (§12). What this doc fixes is the *shape*: department levels plus a short, growable list of named extras, all living in the same flat bitmask so no consumer needs to know which band a given level came from.
+The exact enumerated list — every level that will ever exist and which device checks which — is a content pass, not a design decision (§12). What this doc fixes is the *shape*: department levels plus a short, growable list of named extras, all in one flat set so no consumer needs to know which band a given level came from.
 
 ## 5. Job → access resolution
 
-Each job record (`lobby.md` §2) resolves to a starting access-level set the moment lobby assigns it — this doc supplies the table lobby reads from, the same relationship round config already has with lobby's antag section (`round-config.md` §4: "lobby doesn't invent it, it reads it"). A representative slice, not exhaustive:
+Each job record (`lobby.md` §2) resolves to a starting access-level set the moment lobby assigns it — this doc supplies the table lobby reads from, — lobby doesn't invent it, it reads it. A representative slice, not exhaustive:
 
 | Job | Access-level set |
 |---|---|
@@ -75,15 +82,15 @@ Even the Captain's set is enumerated, not a hardcoded bypass flag — a compromi
 
 ## 6. The access check — one shared function
 
-Every consumer in this project calls the identical function: *does the holder's currently-possessed ID (§3) carry the required level(s)?* Pass or fail, both logged. Nothing here is bespoke per device:
+Every consumer in this project asks the same question: *does the holder's presented ID (§3) carry the required level(s)?* Nothing here is bespoke per device:
 
 - **Doors** default to their Area's requirement, with a per-door override for real exceptions (`area.md` §5) — this doc is what that requirement check actually calls.
 - **The hacking interface's three tiers** (`hacking-interface.md` §3–4) are this check, restated per-doc: crew tier is "does your ID pass," maintenance tier is "does your ID carry the one specific level this device's firmware wants," hacker tier is "read the raw requirement and match it illegitimately."
 - **Cargo crate locks and disposal chute locks** (`cargo.md` §5, `disposal.md` §2) are the same check applied to an object instead of a door.
-- **The AI's Area authority** (`ai-cyborgs.md` §3) is this same check running against the AI's own held authority set instead of a crew ID — "the same underlying check with a different credential," which that doc already says outright. Revoking the AI's access (§4 there) means clearing bits from that set, the identical console-adjacent action §7 below performs on a crew ID.
+- **The AI's Area authority** (`ai-cyborgs.md` §3) is this same check running against the AI's own held authority set instead of a crew ID — "the same underlying check with a different credential," which that doc already says outright. Revoking the AI's access (§4 there) means removing levels from that set, the identical console-adjacent action §7 below performs on a crew ID.
 - **The chem dispenser's ID/access gate** (`chemistry.md`) reads the same function.
 
-**Every call writes an entry** — device, requesting identity, requested level, pass/fail, timestamp — to that device's own auth log. Crew never see it. Engineer tier sees it as the "last-auth log" the hacking interface already promises (§3 there). This is the concrete mechanism behind every "detectable, not prevented" claim this project has made about credentials so far.
+**Logging devices.** A device that guards something worth auditing — a secure door (armory, vault, bridge), the ID console (§7) — keeps an auth log: device, identity, requested level, pass/fail, time. Ordinary doors don't. Each log keeps **this round's entries only**, up to a cap, so it's a usable record rather than an endless one. Crew never see it; engineer tier reads it as the "last-auth log" the hacking interface promises (§3 there). This is the concrete mechanism behind the "detectable, not prevented" claims this project makes about credentials.
 
 ## 7. The ID console — legitimate issuance and modification
 
@@ -96,6 +103,8 @@ A real console, one or a small handful per station (siting is a layout question,
 **Every grant or revoke writes to the console's own log**, same discipline as everything in §6 — an inspectable trail of who changed what access, when, and under whose authorization.
 
 ## 8. Forgery and spoofing — a hacking-interface consumer, not a new mechanic
+
+**Later pass.** Forgery needs the hacking interface (`hacking-interface.md`, deferred), so none of this section is in the first pass. Until then, the only ways to get access you weren't issued are to be granted it at the console (§7) or to take someone else's card (§9).
 
 The console is itself a device in the FDU's three-tier taxonomy, and nothing about it needs inventing beyond plugging it in:
 
@@ -140,7 +149,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 |---|---|---|
 | 1 | A hacker fingerprints the ID console, finds a replayable Change ID credential | Standard hacker-tier discovery, `hacking-interface.md` §3 |
 | 2 | Writes Bridge access onto a blank card without ever holding Change ID | §8's illegitimate-write path |
-| 3 | Uses the card to walk onto the bridge | §6 check passes — the bitmask genuinely matches now |
+| 3 | Uses the card to walk onto the bridge | §6 check passes — the card genuinely carries Bridge now |
 | 4 | Security later reviews the console's log | Sees an edit with no matching legitimate operator session — real evidence, not a hunch |
 
 **D — Stolen ID, later revoked:**
@@ -172,7 +181,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 | Physical possession as the gate | `surgery.md` §7 |
 | Examine-readable identity | Same convention as crate manifests (`cargo.md` §5) |
 
-`lobby.md` §2's job record now carries an access-level-set field, populated from this doc's §5 table — the same shape as round config's antag-category handoff into lobby's opt-in section. No other existing doc needs amendment; everywhere else that already said "the existing ID/access system," this doc is that system, unchanged from what they assumed.
+Lobby reads each job's access from this doc's §5 table (`lobby.md` §2). Everywhere else that said "the existing ID/access system," this doc is that system.
 
 ## 12. Out of scope for this pass
 
@@ -180,6 +189,7 @@ A standalone, console-independent forging tool — a portable cloner an antagoni
 - Real authentication behind a stable per-player identity — designed in `player-accounts.md` (`persistence-save.md` §5 covers the cross-round job-history/playtime shape itself)
 - A standalone, console-independent forging tool ("agent card" or similar) — designed as a Traitor uplink item in `antagonist-content.md` §4
 - Photo ID or any biometric verification beyond the printed name/job/department
+- Forgery and spoofing through the hacking interface (§8) — waits on `hacking-interface.md`
 - Per-gamemode access deltas beyond Traitor's (Head Revolutionary and other undesigned roster entries) — that gamemode's own business, per `antagonist-content.md` §6
 - Console siting, count, and station layout (a map-authoring question)
 - Exact wording/UX of the "report lost" social flow — it's a comms conversation, not a system

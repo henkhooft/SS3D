@@ -18,23 +18,24 @@ Two rules fall out, both direct extensions of principles already load-bearing el
 One shared shape, instantiated per archetype:
 
 - **Archetype** — steal, assassinate, or escape this pass (§5–7); the record shape is built to take more later (§12).
+- **Holder** — one antagonist, or a whole team sharing the objective. A team objective ("detonate the station's nuke", `antagonist-content.md` §6) is the same record held by every team member; when it resolves, it resolves for all of them.
 - **Target** — a reference into an existing system: a specific item instance (steal), a crew record (assassinate), or nothing (escape has no target beyond the holder themselves).
-- **State** — pending, complete, or failed. Starts pending; each archetype's own check function (§5–7) is what flips it.
+- **State** — pending, complete, or failed. Three states, no more: an objective that stops making sense (its target left the round) resolves to complete or failed by its archetype's rule, never to a fourth "cancelled" state. Starts pending; each archetype's own check (§5–7) is what flips it.
 - **Verification mode** — auto (default; a real system supplies the state) or self-report (fallback; §3). Every archetype shipped this pass is auto.
 
-An antagonist typically holds a small set of these — the composition and count is round config's antag-category handoff's business (§4), not this doc's.
+An antagonist typically holds a small set of these — the composition and count is the gamemode's business (§4), not this doc's.
 
 ## 3. Verification — auto by default, self-report as fallback
 
-**Auto-verified objectives read state a system already owns.** Steal reads the inventory/Container system's possession state (`inventory-storage.md` §2). Assassinate reads the health/death system's death event log (`death-cloning-respawn.md`). Escape reads shuttle Area-occupancy at round-end (`shuttles.md` §2). None of these invent new tracked state — they're read paths, the same relationship examine has with every object property it renders (`examine.md` §5).
+**Auto-verified objectives read state a system already owns.** Steal reads the inventory/Container system's possession state (`inventory-storage.md` §2). Assassinate reads the health/death system's death event log (`death-cloning-respawn.md`). Escape reads the evacuation roster and who's alive aboard on arrival (`round-end.md` §3). None of these invent new tracked state — they're read paths, the same relationship examine has with every object property it renders (`examine.md` §5).
 
 **Self-report is a real fallback, not a placeholder for laziness.** The record's verification-mode field exists so a future archetype that genuinely has no system hook — something purely social, with no world-state signature — can still resolve at round-end without forcing every objective through one mechanism that doesn't fit. Nothing in this pass's three archetypes needs it (§12).
 
-**A completed state, once recorded, doesn't un-complete.** Assassinate records the death event at the moment it happens (§6); a later cloning doesn't retract it, the same way completing a task doesn't get undone by cleanup afterward. Steal and escape, by contrast, are inherently round-end snapshots — there's no earlier moment where "possession" or "presence" meaningfully locks in.
+**A completed state, once recorded, doesn't un-complete.** Assassinate records the death event at the moment it happens (§6); a later cloning doesn't retract it, the same way completing a task doesn't get undone by cleanup afterward. Steal, by contrast, is a round-end snapshot — there's no earlier moment where possession meaningfully locks in. Picking an item up completes nothing. Escape resolves when the shuttle arrives (§7).
 
 ## 4. Assignment
 
-Round config's antag-category handoff already establishes the shape lobby reads from for who becomes an antag (`round-config.md` §4). This doc is the analogous supplier one layer down: given an antagonist category, a pool of objective templates resolves into concrete records (§2) the moment that antagonist is assigned — the same "lobby doesn't invent it, it reads it" relationship id/access's access-level table has with lobby (`id-access.md` §5).
+**Only antagonists hold objectives.** Ordinary crew have no objective records; their "objective" is the job and the station. The gamemode decides who becomes an antagonist (`antagonist-content.md` §2); this doc is the supplier one layer down: given an antagonist role, a pool of objective templates resolves into concrete records (§2) the moment that antagonist is assigned.
 
 **Target selection runs one exclusion filter, not a conflict-solver.** An antagonist never gets themselves as an assassination target. Two antagonists in the same round never get the same steal-item instance. Beyond that single-instance exclusion, this doc doesn't attempt to balance objective difficulty or narrative coherence across the crew — that's the same per-gamemode curation territory round config already scopes out as that mode's own business (`round-config.md` §6), not duplicated here.
 
@@ -42,7 +43,7 @@ Round config's antag-category handoff already establishes the shape lobby reads 
 
 ## 5. Steal
 
-**Condition:** the target item instance is somewhere on the antagonist's person at round-end — held, worn, or nested in a carried container, checked recursively the same way Container weight already computes recursively (`inventory-storage.md` §2).
+**Condition:** the target item instance is somewhere on the antagonist's person at round-end — held, worn, or inside anything they carry, however deeply nested (`inventory-storage.md` §2).
 
 **Check:** a single possession query against the Container system at round-end. No mid-round polling needed — the item can change hands any number of times during the round; only where it ends up matters, the same "outcome, not process" resolution escape uses (§7).
 
@@ -58,15 +59,20 @@ Round config's antag-category handoff already establishes the shape lobby reads 
 
 ## 7. Escape
 
-**Condition:** the antagonist is alive and physically present within a departing extraction vehicle's set of Areas when round-end resolves evacuation.
+**Condition:** two things, at two moments (`round-end.md` §3):
 
-**Check:** reuses shuttles' existing Area-attachment model — a shuttle's interior tiles are just Areas riding a moving root transform (`shuttles.md` §11) — so "is this character aboard" is the same occupancy query Area already answers for every other purpose (lighting, atmo, camera grouping). No new tracking needed, just a query run at the moment round-end's own evacuation logic resolves.
+1. The antagonist is **aboard the evacuation shuttle at the point of no return**, which puts them on the escape roster.
+2. They are **on that roster and still alive and aboard when the shuttle arrives.**
 
-**This objective's check runs at the moment round-end's evacuation sequence locks in** — the point of no return `round-end.md` §3 defines for the evac shuttle, closing the dependency shuttles §9 flagged (`shuttles.md` §9). This doc supplies the check function; `round-end.md` §3 supplies the moment it fires.
+Missing the departure fails it; dying in transit fails it. Getting aboard later is impossible by construction. This doc supplies the condition; `round-end.md` §3 supplies both moments. Escape needs shuttles (`shuttles.md`); a round without an evacuation shuttle has no escape objectives.
 
-## 8. The PDA objectives tab
+## 8. Where an antagonist reads their objectives
 
-**A hidden tab, present only for characters holding at least one objective record** — the same gating precedent id/access's summary tab already sets ("crew see only whether their own ID works," `id-access.md` §3, restated for a different kind of privacy). Non-antagonists never see this tab exist; there's no empty state to stumble into.
+**A briefing at spawn.** When an antagonist enters the round, a short private briefing tells them their role and lists their objectives in plain language. It's the moment they learn what they're there to do.
+
+**A Notes panel in the Escape menu** keeps the list afterwards, present only for characters holding at least one objective record — non-antagonists never see it, so there's no empty state to stumble into or to give anyone away.
+
+**The PDA mirrors this later.** Once the PDA exists (`pda.md`, deferred), it gains a hidden objectives tab showing the same list.
 
 **Read-only, listing each held objective in plain language** with its current state (pending / complete / failed) styled the same way the alert stack and hacking interface tiers already use restrained status color rather than decoration. No progress bars, no hidden percentage — an objective is binary, and the tab says so plainly.
 
@@ -102,29 +108,27 @@ At round-end, each held objective's final state (§2) feeds the round-end summar
 |---|---|---|
 | 1 | An antagonist holds an escape objective alongside a steal objective | Both pending |
 | 2 | They complete the steal objective early, then get delayed crossing the station | Steal complete; escape still pending |
-| 3 | The evacuation shuttle undocks and departs while they're still in a station Area | — |
-| 4 | Round-end resolves: alive, but never inside the shuttle's Area set at departure | Escape fails — steal's completion is unaffected by escape's outcome |
+| 3 | The evacuation shuttle reaches the point of no return while they're still on the station | Not on the roster |
+| 4 | The shuttle arrives | Escape fails — alive, but never on the roster. Steal's completion is unaffected |
 
 ## 11. Integration notes
 
 | Element | Touches existing / needed system |
 |---|---|
-| Objective assignment | Antag-category handoff (`round-config.md` §4) |
+| Objective assignment | The gamemode's antagonist assignment (`antagonist-content.md` §2) |
 | Steal check | Container/possession system (`inventory-storage.md` §2) |
 | Steal-eligible item tag | Same pattern as size-class tagging (`inventory-storage.md` §4) |
 | Assassinate check | Death event, health/death system (`health.md` §4, `death-cloning-respawn.md`) |
-| Escape check | Shuttle Area-attachment/occupancy (`shuttles.md` §2, §11) |
-| Escape resolution timing | `round-end.md` §3 (evac point-of-no-return) |
-| PDA objectives tab | Diegetic tab-bar pattern, hidden-tab precedent (`pda.md` §3, `id-access.md` §3) |
+| Escape roster and arrival | `round-end.md` §3 |
+| Briefing and Notes panel | Escape menu; later the PDA (`pda.md`) |
 | Round-end summary read | `round-end.md` §5 (summary screen) |
-
-**Companion edit needed:** `pda.md` should gain a row in its tab bar for the objectives tab (§8) — a small addition to that doc's existing tab-bar list, not a functional change to anything already specified there.
 
 ## 12. Out of scope for this pass
 
 - **Sabotage, protect, and other archetypes** — plausible future entries in §2's shape, not designed here; sabotage in particular needs a real "did this succeed" state that structural-damage systems don't cleanly expose yet.
-- **Faction/shared objectives** (revolution, cult, or any team-goal gamemode) — this doc covers individual-antagonist objectives only, the same scoping line round config already draws around per-gamemode antag logic (`round-config.md` §6).
-- **Uplink or any antag-item-acquisition system** — designed in `antagonist-content.md` §4, resolving §8's flagged dependency.
+- **Conversion and faction-growth objectives** (revolution, cult) — a team sharing one objective is in (§2), but a team that recruits mid-round is a later pass.
+- **Uplink or any antag-item-acquisition system** — `antagonist-content.md` §4.
+- **The PDA objectives tab** — waits on the PDA (§8).
 - **Exact steal-item roster and assassination-target pool composition per job/gamemode** — a content pass.
 - **Round-end reveal presentation** — sequencing, framing, narrative text — belongs to round-end/transition, not this doc.
 - **Admin override of an objective's state** — designed in `admin-tools.md` §6.

@@ -2,7 +2,7 @@
 
 > Status: active
 
-Formalizes a system four other docs have already been leaning on without ever specifying it: death's consciousness-detach (`death-cloning-respawn.md` §2, with one narrow exception carved at §5), the AI/cyborg mid-round re-entry prompts (`ai-cyborgs.md` §7), and the spectate-only lobby entry point (`lobby.md` §8) — all deferred to "the observer/ghost UI," first flagged out of scope in `main-hud.md` §13. Each of those docs independently built its own narrow, on-demand prompt rather than the real thing. This doc is the real thing: it names the single mechanism underneath all three prompts, and defines the free-roam camera/meta layer itself for the first time.
+Formalizes a system four other docs have already been leaning on without ever specifying it: death's consciousness-detach (`death-cloning-respawn.md` §2, with one narrow exception carved at §5), the AI/cyborg mid-round re-entry prompts (`ai-cyborgs.md` §7), and the observe-only lobby entry point (`lobby.md` §7) — all deferred to "the observer/ghost UI," first flagged out of scope in `main-hud.md` §13. Each of those docs independently built its own narrow, on-demand prompt rather than the real thing. This doc is the real thing: it names the single mechanism underneath all three prompts, and defines the free-roam camera/meta layer itself for the first time.
 
 ## 1. Design philosophy
 
@@ -14,8 +14,21 @@ Second: **one shared mechanism, not three.** This project has already built a cl
 
 ## 2. Entering ghost state
 
-- **Death.** Per `death-cloning-respawn.md` §2, consciousness detaches at the moment actual death is reached (not merely critical) — automatic, no choice involved.
-- **Spectate-only from lobby.** Per `lobby.md` §8, a player can choose not to take a body at all. They enter ghost state directly, with no reserved possession path waiting for them — no corpse, no clone in progress, no AI/cyborg opt-in — since none of those exist yet for an identity that never had a body.
+**An observer is a ghost.** There's one spectator state in this game, not two: the ghost a player becomes when they die is the same thing a player chooses from the lobby when they'd rather watch.
+
+- **Death.** Per `death-cloning-respawn.md` §2 and `health.md` §4, consciousness detaches at the moment actual death is reached (not merely critical) — automatic, no choice involved. The ghost appears where the body fell.
+- **Observe from the lobby.** Per `lobby.md` §7, a player can choose not to take a body at all. The Observe button puts them **straight into a ghost**, with no reserved possession path waiting for them — no corpse, no clone in progress, no AI/cyborg opt-in — since none of those exist for an identity that never had a body.
+
+### First pass
+
+The ghost in this pass is the minimal version of §3:
+
+- a **free-flying camera** that passes through everything;
+- it **sees everything** the living world shows;
+- it **can't interact** with anything;
+- it **can't speak to the living** — out-of-character chat (`comms.md` §7) is the only channel it has.
+
+Follow-lock, the dead-chat channel (§4), possession (§5) and the defib reconnection (§6) are later passes.
 
 ## 3. The ghost's screen
 
@@ -25,11 +38,11 @@ No body means no diegetic surface to hang feedback on — the same problem the A
 - **Fully invisible and undetectable to the living**, and to every living-side instrument: no footstep audio, no motion-tracker ping, no camera-feed visibility, nothing. This is the direct consequence of §1's fairness principle, not an oversight to patch later.
 - **Follow-lock.** Camera can snap to track a specific living player or point of interest, releasing on manual input — spectating a specific unfolding scene shouldn't require constant manual flying.
 - **No physical footprint.** Cannot open doors, trigger sensors, be struck, or otherwise causally touch the living simulation, full stop — with exactly one exception, the Possession event in §5.
-- **Permanent chrome:** a slim dead-chat panel (§4) and a nearby-ghosts indicator. That's the entire fixed UI. Everything else is the free camera itself.
+- **Permanent chrome:** a slim dead-chat panel (§4) and a nearby-ghosts indicator, once those exist. That's the entire fixed UI. Everything else is the free camera itself.
 
 ## 4. Dead chat
 
-- A meta channel visible only to other ghosts, reusing comms' existing message/channel backend the same way `pda.md` §3 reused it for private messages, rather than standing up a second chat system.
+- A meta channel visible only to other ghosts, one more channel in the same chat feed as everything else (`comms.md` §5), not a second chat system.
 - **Not proximity-gated.** Unlike local speech, this is explicitly non-positional — it's meta, not diegetic, consistent with ghosts being invisible in the first place.
 - **No path from dead chat into the living simulation, ever.** No exceptions. Any leak here undermines the entire premise of choosing invisible, undetectable ghosts in §1.
 
@@ -61,11 +74,11 @@ If the ghost has already committed elsewhere before defib succeeds, the original
 | Death → ghost detach | `death-cloning-respawn.md` §2 |
 | Clone-ready prompt | Reserved possession path, formalizes `death-cloning-respawn.md` §5 |
 | Become-AI / become-cyborg prompt | Reserved possession path, formalizes `ai-cyborgs.md` §7 |
-| Spectate-only entry | `lobby.md` §8 |
-| Dead chat backend | Message/channel backend, `comms.md` §9 — same reuse pattern as `pda.md` §3 |
+| Observe entry | `lobby.md` §7 |
+| Dead chat | One more channel in the chat feed, `comms.md` §5 |
 | Ghost-role body stats/behavior | Whatever system spawned it (e.g. `crafting.md` §3 fabricator job-state) |
 | Defib-before-commitment reconnection | `death-cloning-respawn.md` §3 |
-| Round-end spectator state | Foundation for `round-end.md` (next doc), which builds its summary screen on top of this |
+| Round end | `round-end.md` §5 paints its summary over ghosts and the living alike |
 
 ## 8. Worked examples
 
@@ -103,5 +116,6 @@ If the ghost has already committed elsewhere before defib succeeds, the original
 - Admin/staff observer tooling (godmode, jump-to-player, stealth observation) — designed in `admin-tools.md` §4, built on this doc's ghost framework
 - Full handling of a defib-revived-but-unoccupied body (AI takeover, NPC behavior, etc.) — flagged in §6, belongs to `death-cloning-respawn.md` to formalize
 - Ghost cosmetic customization (appearance, trail effects, etc.) — no gameplay weight
+- Follow-lock, dead chat, possession and defib reconnection — later passes after the first pass in §2
 - The round-end summary screen and transition logic itself — this doc only supplies the camera/state framework round-end will use; the content and transition mechanics are `round-end.md`'s job
 

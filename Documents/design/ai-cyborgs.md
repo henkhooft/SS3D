@@ -1,6 +1,6 @@
 # AI & Cyborgs — design document
 
-> Status: active
+> Status: deferred
 
 Builds on more of this project's existing systems than any doc so far: Area's power/access/camera model (`area.md`) for what the AI actually controls, the hacking interface's three-tier device model (`hacking-interface.md`) for subversion, comms' existing announcement channel (`comms.md` §8) for how the AI speaks, the fabricator job-state pattern (`crafting.md` §3) for cyborg chassis and AI core fabrication, and the revival framework (`death-cloning-respawn.md` §5) for both AI and cyborg as mid-round paths back into a round. It also extends that last doc's permanent-death condition — see §7.
 
@@ -36,7 +36,7 @@ A fourth, smaller move threads through §9: the AI's actual set of possible acti
 
 **Laws stay an ordered, real list**, visible to the AI player, not automatically visible to crew — an AI can be asked to state its laws and can lie about the answer, the classic tension, fully preserved. Nothing about making laws physical changes that; it changes what happens *around* a violation.
 
-**Audit trail.** Every law change and every "state your laws" query is logged at the console, timestamped, physically inspectable by anyone with the access to read it — the same discipline round config's admin history log already applies to its own draws (`round-config.md` §5: "real, inspectable data... rather than adjusting numbers against a black box"). This is the concrete answer to "detectable, not prevented": the game doesn't stop a rogue AI from acting, it makes sure the evidence exists in the world rather than only in an admin's tools.
+**Audit trail.** Every law change and every "state your laws" query is logged at the console, timestamped, physically inspectable by anyone with the access to read it — the same discipline round config's admin history log already applies to its own draws (`round-config.md` §5). This is the concrete answer to "detectable, not prevented": the game doesn't stop a rogue AI from acting, it makes sure the evidence exists in the world rather than only in an admin's tools.
 
 **Real response tools for crew, once something's caught** — not a leash on the AI, a toolkit for the people who suspect it:
 

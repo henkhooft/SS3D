@@ -1,6 +1,6 @@
 # Construction — design document
 
-> Status: active
+> Status: deferred
 
 Resolves two things this project has been carrying as open items since early docs. First, Area's own flagged-but-unconfirmed question about whether live geometry changes should recompute area boundaries (`area.md` §3) — explosives already answered that from the destructive direction (`explosives-destruction.md` §4); this doc answers it from the constructive direction, and the two meet at the same technique. Second, crafting's deliberately deferred deconstruction item (`crafting.md` §9: "plausible future hook, not designed here"). Builds on the Tier 3 freeform combine grammar already established for cable-laying and pipe-laying (`electricity.md` §3, `disposal.md` §3), the four-stage structural model explosives already established for damage (`explosives-destruction.md` §3), and the shared access-check function doors already call automatically (`id-access.md` §6).
 

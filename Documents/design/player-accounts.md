@@ -6,7 +6,7 @@ Resolves the black box five other docs have all been reading from without anyone
 `persistence-save.md` §5 treats "a stable per-player key exists" as an assumed dependency, explicitly
 noting "until that stable key exists, player meta is only as trustworthy as the connection claiming
 it." `admin-tools.md` §7, §10, and §11 inherit the identical caveat for ban reliability. `id-access.md`
-§12, `lobby.md` §11, and `round-config.md` §10 all defer "real authentication behind a stable
+§12 and `lobby.md` §11 both defer "real authentication behind a stable
 per-player identity" the same way. This doc is what supplies that key.
 
 ## 1. Design philosophy
@@ -126,7 +126,7 @@ No new permanent chrome — verification happens before a player ever sees the l
 | Ban reliability | `admin-tools.md` §7 (the caveat this doc resolves) |
 | Playtime/job-unlock gating | `lobby.md` §2 |
 | Cross-round job history | `id-access.md` §12 |
-| Server-side config persistence | `round-config.md` §10 (this doc doesn't touch config persistence itself) |
+| Server-side config persistence | `round-config.md` §2 (this doc doesn't touch config persistence itself) |
 | Rejection-message precedent | `networking.md` §5, §6 |
 
 ## 9. Out of scope for this pass

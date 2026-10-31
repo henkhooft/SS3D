@@ -1,6 +1,6 @@
 # Crafting — design document
 
-> Status: active
+> Status: deferred
 
 Resolves the deferred "crafting" items flagged in `combat.md` (§8, weapon crafting/attachments) and `armor.md` (§8, armor crafting or modification). Builds on the Tier 3 combine/use-with grammar established for the radial menu (referenced in `main-hud.md` §8), the diegetic device-screen pattern from `hacking-interface.md` §2, and Area's power derivation (`area.md` §5).
 

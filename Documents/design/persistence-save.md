@@ -2,7 +2,7 @@
 
 > Status: active
 
-Resolves a gap five other docs have all been quietly assuming shut: `lobby.md` §11 flags "the persistence/accounts system underlying playtime-gated jobs" as cross-cutting infra it assumes exists; `round-config.md` §10 flags "persistence/accounts and server logging" the same way for its own pool settings; `cargo.md` §12 defers "persistence of the budget across rounds" to it; `id-access.md` §12 defers cross-round job history the same way; `inventory-storage.md` §13 defers container-contents persistence to it. None of those docs invented a parallel save mechanism — they all pointed at this one and moved on. This doc is what they were pointing at.
+Resolves a gap five other docs have all been quietly assuming shut: `lobby.md` §11 flags "the persistence/accounts system underlying playtime-gated jobs" as cross-cutting infra it assumes exists; `round-config.md` §2 keeps its server settings across rounds; `cargo.md` §12 defers "persistence of the budget across rounds" to it; `id-access.md` §12 defers cross-round job history the same way; `inventory-storage.md` §14 defers container-contents persistence to it. None of those docs invented a parallel save mechanism — they all pointed at this one and moved on. This doc is what they were pointing at.
 
 It also has one hard boundary to respect rather than redesign: `death-cloning-respawn.md` §4 already ruled that genetics/crew records are "a real, breakable database... not an always-available save file sitting outside the simulation" — a deliberate stake, not a gap. This doc's job is everything *around* that rule, never a shortcut through it.
 
@@ -29,9 +29,9 @@ Each is real disk state; none of them is the diegetic crew record or ID card dat
 
 ## 3. Station templates
 
-**What's captured:** tile layout and Area metadata exactly as authored — nothing round-specific. Character positions, item placement, and live machine state don't belong here; this layer's job stops at what a map looks like before anyone's touched it, the same boundary creative mode's own saving section already draws (`creative-mode.md` §9: "a snapshot of that live state to a named file, nothing more" — applied here to the pre-round baseline specifically).
+**What's captured:** tile layout and Area metadata exactly as authored — nothing round-specific. Character positions, item placement, and live machine state don't belong here; this layer's job stops at what a map looks like before anyone's touched it, the same boundary the Map Editor's saving already draws (`creative-mode.md` §9), applied here to the pre-round baseline specifically.
 
-**Authored in creative mode, drawn by round config.** A save from a creative-mode session (`creative-mode.md` §9) becomes a new template; round config's map pool (`round-config.md` §2) is what decides which template a given round actually loads. This doc supplies the load, round config supplies the choice — the same "lobby doesn't invent it, it reads it" relationship this project draws everywhere else.
+**Authored in the Map Editor, chosen by round config.** A save from the Map Editor (`creative-mode.md` §9) becomes a new template; round config's map setting (`round-config.md` §2) is what decides which template a given round actually loads. This doc supplies the load, round config supplies the choice — the same "lobby doesn't invent it, it reads it" relationship this project draws everywhere else.
 
 **Re-saving doesn't destroy history.** A builder can snapshot iterative versions under different names at any point (`creative-mode.md` §9); nothing about this layer forces overwriting a template that's already in rotation.
 
@@ -39,9 +39,9 @@ Each is real disk state; none of them is the diegetic crew record or ID card dat
 
 **Admin permissions** — who can do what in whatever admin tooling exists — persist here, migrating forward from whatever the current permission store already is rather than inventing a second one.
 
-**Round config's pools** — the actual enabled/weight/precondition list for gamemodes and maps (`round-config.md` §2) — are server meta, not a template and not round-tied: an admin edits them once, and they apply to every future draw until edited again.
+**Round config's server settings** — gamemode, map, round length, player cap, latejoin (`round-config.md` §2) — are server meta, not a template and not round-tied: an admin edits them once, and they apply to every future draw until edited again.
 
-**Round history log.** Round config's own admin screen already specifies what this looks like: "the last N rounds' drawn mode, drawn map, and whether fallback triggered... real, inspectable data" (`round-config.md` §5). That screen is the reader; this doc is the writer — one entry appended the moment a round actually ends, never summarized away or overwritten.
+**Round history log.** Round config's own admin screen already specifies what this looks like: the last N rounds' mode, map, and whether the round fell back to Extended (`round-config.md` §5). That screen is the reader; this doc is the writer — one entry appended the moment a round actually ends, never summarized away or overwritten.
 
 ## 5. Player meta
 
@@ -83,7 +83,7 @@ No new permanent chrome, same discipline as everywhere else in this project.
 
 | Step | What happens | Persistence state |
 |---|---|---|
-| 1 | Round config draws "Outpost Station" from its map pool at lobby-timer expiry | Round config supplies the choice (`round-config.md` §3) |
+| 1 | The admin's map setting names "Outpost Station" as the countdown ends | Round config supplies the choice (`round-config.md` §2) |
 | 2 | This doc loads that station template | Tile/Area layout restored exactly as last authored |
 | 3 | Round begins | Live simulation takes over; nothing further is read from the template until next round |
 
@@ -116,9 +116,9 @@ No new permanent chrome, same discipline as everywhere else in this project.
 
 | Persistence element | Touches existing / needed system |
 |---|---|
-| Station template load | Round config's map pool draw (`round-config.md` §2–§3) |
-| Station template save | Creative mode's saving action (`creative-mode.md` §9) |
-| Round config pools, permissions | Server meta layer (this doc); admin config screen reads it (`round-config.md` §5) |
+| Station template load | Round config's map setting (`round-config.md` §2) |
+| Station template save | The Map Editor's save (`creative-mode.md` §9) |
+| Round config settings, permissions | Server meta layer (this doc); admin settings screen reads it (`round-config.md` §2, §5) |
 | Round history log | Written here, rendered by round config's admin screen (`round-config.md` §5) |
 | Playtime / job unlocks | Feeds lobby's playtime-gated job display (`lobby.md` §2) |
 | Saved lobby preferences | Lobby's ranked-preference list (`lobby.md` §3) |

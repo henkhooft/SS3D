@@ -28,7 +28,7 @@ Gameplay design specs. Stable. One file per system (e.g. `health.md`, `combat.md
 **Design docs are pure spec — WHAT and WHY only, never HOW.** Two things deliberately do not live here:
 
 - **No prototyping prompts.** A design doc never ends with Claude Design or Cursor seed prompts. Those go stale the moment they're written (they reference a codebase snapshot that keeps moving) and they're implementation instruction, which doesn't belong in the one folder agents can't touch. When a design doc is actually commissioned for a build, generate the prompt fresh from the design doc plus the current system map — that's a `Documents/plans/` artifact, not a `Documents/design/` one.
-- **No implementation-status field.** `Status: draft | active | superseded` answers "is this still the intended design," never "has this been built." Build status lives in the architecture effort and system map for that domain, surfaced project-wide in `Documents/architecture/INDEX.md`'s coverage table (below) — not duplicated into the design doc.
+- **No implementation-status field.** `Status: draft | active | deferred | superseded` answers "is this still the intended design," never "has this been built." `deferred` means the design still stands but no milestone up to the next planned gate needs it, so agents shouldn't plan work against it or treat its cross-references as near-term commitments. Build status lives in the architecture effort and system map for that domain, surfaced project-wide in `Documents/architecture/INDEX.md`'s coverage table (below) — not duplicated into the design doc.
 
 **Design docs cite other design docs only.** Never link a design doc to an architecture effort, a plan, or a system map — that direction of reference only goes the other way. This keeps design docs stable regardless of how implementation churns.
 
@@ -122,7 +122,7 @@ This is the single place that answers "what's left" at the domain level — a de
 Every **design** doc starts with:
 
 ```
-> Status: draft | active | superseded
+> Status: draft | active | deferred | superseded
 > Supersedes: <path, if replacing an old doc/section>
 ```
 

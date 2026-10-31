@@ -1,8 +1,8 @@
 # Cryogenics — design document
 
-> Status: active
+> Status: deferred
 
-Resolves a gap flagged three times without ever being designed: `combat.md` §6 name-checks "cryo" alongside cloning and respawn rules as "a distinct, very SS13-specific system worth its own pass"; `death-cloning-respawn.md` §10 draws the line explicitly — "a genuinely separate 'pause' mechanic, not a revival path, and worth its own pass"; `chemistry.md` §5 goes further and deliberately builds this doc's own physical primitive early ("a real, trackable temperature value on a container... so that pass wouldn't have to invent one from scratch"), flagged again in §13's out-of-scope list. This is that pass.
+Resolves a gap flagged three times without ever being designed: `combat.md` once name-checked "cryo" alongside cloning and respawn as a distinct, very SS13-specific system worth its own pass; `death-cloning-respawn.md` §10 draws the line explicitly — "a genuinely separate 'pause' mechanic, not a revival path, and worth its own pass"; `chemistry.md` §5 goes further and deliberately builds this doc's own physical primitive early ("a real, trackable temperature value on a container... so that pass wouldn't have to invent one from scratch"), flagged again in §13's out-of-scope list. This is that pass.
 
 ## 1. Design philosophy
 

@@ -1,6 +1,6 @@
 # Virology — design document
 
-> Status: active
+> Status: deferred
 
 Resolves an item four other docs deliberately punted on: `health.md` §9 flags "disease/infection" as a natural future system given organs already exist, `chemistry.md` §13 defers "disease/infection interactions," `surgery.md` §11 defers "disease/infection risk from surgery," and `examine.md` §11 flags "a medical scanner tool for exact organ/vitals function values... a plausible future item, not designed here." This doc is that system, and that item. Builds on the organ/systemic-pool model (`health.md` §2–3), the reagent/bloodstream/delivery model (`chemistry.md`), the diegetic device-screen and discovery-tier pattern (`hacking-interface.md` §2–4, `chemistry.md` §7), Area as the current stand-in for co-location (`area.md` §2), armor's zone-coverage check (`armor.md` §2), and the crew identity record DNA already rides (`death-cloning-respawn.md` §4).
 

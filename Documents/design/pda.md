@@ -1,6 +1,6 @@
 # PDA — design document
 
-> Status: active
+> Status: deferred
 
 Formalizes a role the PDA has already been accreting by convention across three other docs without ever being specified itself: the gear-strip slot (`main-hud.md` §8), the comms history log (`comms.md` §9), and the crafting construction guide (`crafting.md` §2, §6). This doc consolidates that into one canonical spec, and resolves what those docs left open: whether PDA-to-PDA private messaging exists, and what future tabs (crew manifest, ID summary, ahelp) should look like when their own systems come up for design.
 

@@ -1,6 +1,6 @@
 # Diagnostic & hacking interface — design document
 
-> Status: active
+> Status: deferred
 
 ## 1. Design philosophy
 

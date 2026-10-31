@@ -13,36 +13,41 @@ Same principle already applied everywhere else in this project: reuse one real s
 **Area record:**
 - `id` — stable, unique
 - `display name` — e.g. "Engineering — main bay"
-- `parent tag` — optional, organizational only (e.g. "Engineering"), used for display/query grouping, never for spatial resolution
+- `department` — optional, organizational (e.g. "Engineering"), used for display/query grouping and the department's colour (§5), never for spatial resolution
+- `access` — what the area's doors require by default (§5)
 - `tile set` — which tiles belong to this area
 
-**Tiles belong to exactly one area.** Strict partition, not nesting. See the reasoning above — six independent systems each needing their own overlap-resolution rule is worse than the occasional workaround of giving a "sub-room" its own full area with a shared parent tag.
+**A tile belongs to at most one area.** Strict partition, not nesting — six independent systems each needing their own overlap-resolution rule is worse than the occasional workaround of giving a "sub-room" its own full area in the same department. Space and unpainted tiles belong to none.
 
-**Storage:** a per-tile area-id field, the same shape as any other tile data layer already on the tilemap (comparable to whatever layer already backs occlusion). O(1) lookup: given a tile, its area is a direct read, not a spatial query.
+Given a tile, its area is always immediately known — every consumer below asks "which area is this tile in" constantly.
 
 ## 3. Authoring
 
-**Auto-detection:** flood fill from any unvisited walkable tile, bounded by walls and closed doors (both already boundary data the tilemap has). Every enclosed region becomes an unnamed area. Doors are boundaries by design — the seam between two areas naturally sits at a door, which is also where power/access already care about the transition.
+**Areas are authored rooms.** A map author paints an area onto tiles in the map editor (`creative-mode.md` §2) and sets its name, department and access. This is SS13's model: areas are part of the map, not something the game guesses. Painting is what makes the real cases work that geometry alone can't decide — an open-plan bay fragmented by support pillars that should stay one area, a private office with no wall separating it from its department, or a locked vault.
 
-**Manual override:** rename, merge, or split auto-detected regions. Needed for real cases the geometry alone can't decide — an open-plan bay fragmented by support pillars that should stay one area, or a private office that should be its own area despite having no wall separating it from the surrounding department.
+**Doors are boundaries.** Every door, open or closed, is a seam between areas — which is also where power and access already care about the transition.
 
-**Live geometry changes:** SS13-style play includes breaching and rebuilding walls mid-round. Area boundaries can't be purely a map-author-time artifact if that's true here too — a hole blown in a wall should be able to affect area boundaries as much as it affects atmosphere. Recommended approach: a local recompute, re-running the flood fill only for the region touching the changed wall/door tile, not the whole station. Flagged as an open scope question rather than assumed — worth confirming this is actually wanted before it's built in.
+**A default for imported maps.** A map without authored areas (for example one imported from SS13, `creative-mode.md` §11) gets a starting set by spreading outward from each APC until walls and doors stop it. Tiles no APC reaches start with no area. The author then repaints from there.
 
-## 4. Why atmospherics isn't here
+**Areas don't change during a round.** A wall blown open connects two rooms' air, not their departments. A hole is not a merger: the tiles on each side keep their area, their APC, their access and their camera group (`explosives-destruction.md` §4).
 
-Deliberately not selected as an Area consumer. Gas simulation wants its own dynamic zone system — merging and splitting live as doors open or walls breach — which is a different lifecycle than Area boundaries (which change rarely, and only on structural events). In practice the two will usually align spatially, since both respect walls and doors, but they shouldn't be code-coupled: a breach connecting two areas' air doesn't mean those tiles suddenly share a power grid or a camera group.
+## 4. Atmospherics and areas
+
+Gas doesn't care about areas: it flows tile by tile wherever walls and doors let it (`atmospherics.md` §2). A breach connecting two areas' air doesn't make them one area.
+
+What *does* use areas is atmospheric **equipment**. An air alarm watches the air in its area and drives that area's vents and scrubbers (`atmospherics.md` §4) — the same "which room am I in" question every other consumer below asks.
 
 ## 5. Consumer systems
 
-**Power net.** Each area optionally owns one APC. This is the concrete simplification Area buys: the hacking interface doc already assumes devices know "which APC they draw from" — with Area in place, that's derived from physical location instead of authored per-device. Place a device on an area's tiles, it inherits that area's APC automatically.
+**Power net.** Each area has **at most one** APC. An area without one (a maintenance tunnel, a vault) simply has no local power. This is the concrete simplification Area buys: the hacking interface doc already assumes devices know "which APC they draw from" — with Area in place, that's derived from physical location instead of authored per-device. Place a device on an area's tiles, it inherits that area's APC automatically.
 
-**Lighting.** Rides the same area→APC link as power rather than existing as a separate system — lighting going out when an area loses power is the same event, not two. Concretely, each area's lighting sits in one of three states driven by its APC's power state — Normal, Emergency (backup battery), Dark (no power left) — per `rendering-lighting.md` §4, which owns the full visual spec; this doc just supplies the APC state that drives it.
+**Lighting.** Rides the same area→APC link as power rather than existing as a separate system — lighting going out when an area loses power is the same event, not two. A **wall light switch** turns an area's lights off and on by hand, independent of the APC's breaker. An area's department also gives it a colour — tinted light and floor stripes — so you can tell where you are at a glance. Concretely, each area's lighting sits in one of three states driven by its APC's power state — Normal, Emergency (backup battery), Dark (no power left) — per `rendering-lighting.md` §4, which owns the full visual spec; this doc just supplies the APC state that drives it.
 
-**Camera network.** Cameras on an area's tiles auto-register to a network group named after the area (or its parent tag, for broader grouping on the security console — e.g. all of Engineering's sub-areas under one channel).
+**Camera network.** Cameras on an area's tiles auto-register to a network group named after the area (or its department, for broader grouping on the security console — e.g. all of Engineering's sub-areas under one channel).
 
 **Job/access restrictions.** Doors default to requiring whatever access the area they open into requires, rather than each door authoring its own requirement redundantly. Per-door override still available for real exceptions (a captain's private office inside a command area that itself only requires bridge access).
 
-**Alarms & announcements.** An area is the default alarm/announcement scope — a fire alarm pulled in an area scopes to that area, with the parent tag as the mechanism for bubbling a critical alert up to the whole department or station. The AI or crew target lockdowns/announcements at an area by referencing its id or parent tag.
+**Alarms & announcements.** An area is the default alarm/announcement scope — a fire alarm pulled in an area scopes to that area, with the department as the mechanism for bubbling a critical alert up to the whole department or station. The AI or crew target lockdowns/announcements at an area or its department.
 
 **Ambience/audio.** An area carries an ambience track id; the player's current area (one tile lookup) drives ambient audio, crossfading at boundaries. `audio.md` §2 owns the full spec, including which tracks are power-dependent.
 
@@ -52,9 +57,9 @@ Deliberately not selected as an Area consumer. Gas simulation wants its own dyna
 |---|---|
 | Power | Owns APC-ENG-03; every device on its tiles draws from that APC without being individually wired to it |
 | Lighting | Tied to APC-ENG-03's power state — lights go dark if the APC does |
-| Cameras | All cameras on its tiles register to the "Engineering — main bay" network group, filed under the "Engineering" parent tag on the security console |
+| Cameras | All cameras on its tiles register to the "Engineering — main bay" network group, filed under the "Engineering" department on the security console |
 | Access | Doors into it default to requiring Engineering access; one door (workshop) is overridden to also require an additional cert |
-| Alarms | A fire alarm here scopes locally by default; a station-wide emergency can additionally target the "Engineering" parent tag to hit every area under it |
+| Alarms | A fire alarm here scopes locally by default; a station-wide emergency can additionally target the "Engineering" department to hit every area in it |
 | Ambience | Plays the "engineering — machinery hum" track; crossfades on crossing into the adjacent hallway's area |
 
 ## 7. Touchpoint back to the HUD
@@ -63,7 +68,6 @@ Worth a small, minimal hook later rather than a fixture: a transient area-name d
 
 ## 8. Out of scope for this pass
 
-- Actual editor tooling UI for the merge/split/rename workflow (separate from this data-architecture pass)
-- Atmospherics' own zone-merging system (deliberately decoupled, per §4, but not designed here)
+- Areas changing during a round (rebuilding or re-zoning mid-round)
 - The HUD touchpoint in §7 (noted, not spec'd)
-- Multi-area effects beyond the parent-tag mechanism (e.g. area groups that aren't strictly hierarchical)
+- Multi-area effects beyond the department mechanism (e.g. area groups that aren't strictly hierarchical)

@@ -2,9 +2,8 @@
 
 > Status: active
 
-Closes the gap flagged in `observer.md` §7 and §9: that doc supplies the camera and
-spectator-state framework a finished round drops players into, but explicitly leaves the summary
-screen and the transition back to a new round to "the next doc." This is that doc. It also spends
+Defines how a round ends, what players are shown when it does, and how the server gets back to
+the lobby for the next one. It also spends
 the secrecy `round-config.md` §4 spent the whole round protecting — the resolved gamemode identity
 that stayed server-side is finally disclosed here, at the one moment revealing it costs nothing.
 This pass also closes a second, more specific gap: `shuttles.md` §9 built the evacuation shuttle as
@@ -24,9 +23,9 @@ does not compute a hidden rating.
 **Reuse, don't reinvent, three times over.** Like `death-cloning-respawn.md` §1, most of this doc
 is other systems already doing their jobs:
 
-- **The spectator framework is observer's.** A player at round end is in exactly the detached
-  camera/state observer already defines (`observer.md` §7) — round end doesn't build a second
-  spectator mode, it drops everyone into the existing one and paints a summary over it.
+- **The spectator framework is observer's.** The dead are already ghosts (`observer.md` §2), and
+  round end doesn't build a second spectator mode — it paints a summary over whatever each player
+  is looking at, living or ghost.
 - **The gamemode identity is round-config's.** The secret that stayed server-side all round
   (`round-config.md` §4) is the exact thing the summary reveals. Round end is where that secrecy is
   deliberately spent, not leaked — the reveal is a designed moment, the payoff for keeping it hidden.
@@ -42,8 +41,9 @@ shuttle got a real transform and real collision instead of an instant teleport i
 eventually ends the round (§3).
 
 **The transition is a return to a known state, not a new subsystem.** Ending a round hands control
-back to the pre-round flow `lobby.md` §7 and `round-config.md` §3 already define — draw the next
-config, reset readiness, start again. Round end owns the seam, not a parallel lifecycle.
+back to the pre-round flow `lobby.md` §7 and `round-config.md` §3 already define — back to the
+lobby, ready up, start again — **without an operator**. A server should be able to run round after
+round on its own. Round end owns the seam, not a parallel lifecycle.
 
 ## 2. What ends a round
 
@@ -51,13 +51,16 @@ A round ends when one canonical thing becomes true, mirroring the single-trigger
 `health.md` §4 uses for death and `death-cloning-respawn.md` §2 uses for permadeath:
 
 - **The active gamemode's end condition is met** — its win/lose/objective-resolution rule fires.
-  This is the primary, designed ending; the specific condition belongs to each gamemode, not here.
-- **A hard round timer elapses**, where a gamemode defines one — a bounded fallback so a stalled
-  round still concludes.
+  This is the primary, designed ending; the specific condition belongs to each gamemode, not here
+  (Nuclear Operatives: `antagonist-content.md` §6).
+- **The round timer elapses** — every round has one, set by the server's round length
+  (`round-config.md` §2). A bounded fallback so a stalled round still concludes; the gamemode
+  decides what a timeout means for its outcome. A gamemode may set its own length in a later pass.
 - **An admin ends it** — an out-of-band manual end, always available, invoked through `admin-tools.md` §6.
 - **The evacuation shuttle completes its journey** — arrives at its rendezvous, or is lost en route
   — the common path for any gamemode that resolves through evacuating rather than a bespoke win
-  check. §3 defines the full call/countdown/arrival sequence this trigger actually runs on.
+  check, **once shuttles exist** (`shuttles.md`). §3 defines the full call/countdown/arrival
+  sequence this trigger runs on. Until then, rounds end on the first three triggers.
 
 The first three fire once, from an instantaneous check. The fourth is deliberately the odd one out
 — a real sequence with its own duration, not a snapshot. Whichever ultimately fires, the outcome is
@@ -76,9 +79,7 @@ device screen in the same family as every other console in this project (`hackin
 §2) — sited at a fixed station location. Any crew member can interact with it to call the shuttle;
 per `shuttles.md` §5's own precedent for the evac shuttle's open, non-access-gated helm, gating the
 call itself would just relocate the same problem one step earlier, so this doc keeps the call
-symmetric with the helm: no credential required. **Flagged as a recommendation, not locked** — same
-status as `shuttles.md` §5's own momentum-model call or `combat.md` §3's hitscan-vs-projectile call,
-worth confirming before implementation-locked.
+symmetric with the helm: no credential required. **Flagged as a recommendation, not locked.**
 
 **A visible countdown starts on call** — a real timer, shown at the console and as an alert-stack
 entry (the same hidden-until-relevant precedent `shuttles.md` §8 already sets), not a hidden clock.
@@ -91,13 +92,9 @@ instant:
 
 - The shuttle undocks and autopilot engages, per `shuttles.md` §3's clamp/seal model run in reverse
   and §4's automated piloting.
-- **Whoever is physically within the shuttle's Area set at that exact tick is locked in as aboard,
-  for good.** Recall is no longer possible; a player not aboard at this instant has missed it, full
-  stop, no grace period. This is the precise moment `objectives.md` §7's escape check reads
-  occupancy against — not because presence is re-verified again later, but because there's no
-  ordinary way to leave a shuttle's Area mid-flight once it's undocked and moving through open
-  space, so the roster locked in here is definitionally the same roster still aboard whenever the
-  shuttle actually arrives.
+- **Whoever is physically aboard at that instant is locked in as the escape roster, for good.**
+  Recall is no longer possible; a player not aboard at this instant has missed it, full stop, no
+  grace period. Nobody joins the roster later.
 
 **The shuttle then transits for real** — `shuttles.md` §4's automated piloting, §6's real collision,
 and §9's own worked example of a hijacked, manually-flown, potentially crashed evac run all apply
@@ -105,8 +102,9 @@ exactly as that doc already specifies. Round end doesn't end at the point of no 
 when the shuttle's journey actually concludes.
 
 **Arrival (or loss) is what fires §2's "evacuation completes" trigger.** The shuttle reaching its
-rendezvous point, or being destroyed en route, is that trigger. Whoever's still alive and still
-aboard at that moment is who `objectives.md` §7's escape objective resolves true for; anyone who
+rendezvous point, or being destroyed en route, is that trigger. **Escape succeeds for whoever is on
+the roster and still alive and aboard at arrival** — the one rule `objectives.md` §7 resolves
+against; anyone who
 died during transit — a hijacker's crash, sabotage along the way — simply isn't alive at that
 check, the same as anywhere else in this project death is checked (`health.md` §4).
 
@@ -121,13 +119,13 @@ protect; revealing it now is the reward for it having held.
 
 ## 5. The summary screen
 
-Painted over the observer spectator state (`observer.md` §7), the summary reports the round's ledger:
+Painted over every player's screen, living or ghost (`observer.md` §2), the summary reports the round's ledger:
 
 - **Gamemode, revealed** — the true gamemode identity from §4.
 - **Objective outcomes** — per antagonist (or team), each objective shown met or failed, as a real
   read of tracked state, not a computed grade. Same "real values, visible failure" discipline the
-  fabricator and hacking screens follow. An antagonist's escape objective (`objectives.md` §7) reads
-  from exactly the moment §3 defines.
+  fabricator and hacking screens follow. An escape objective (`objectives.md` §7) resolves by §3's
+  rule.
 - **Notable fates** — who died and the cause, drawn from the same wound/organ state a corpse already
   carries (`death-cloning-respawn.md` §2); who survived; who was cloned back (`death-cloning-respawn.md`
   §5); who missed the evac shuttle, or was lost aboard it (§3). The player's own fate is legible
@@ -138,12 +136,15 @@ does (`main-hud.md` §13) — it is a summary surface, not a redesign of the HUD
 
 ## 6. The transition
 
-From the ended state, control returns to the pre-round flow:
+From the ended state, control returns to the pre-round flow **automatically**:
 
-- The next round's gamemode and map are drawn per `round-config.md` §3 (draw, gate, fallback), with
-  the same secrecy re-established for the new round (`round-config.md` §4).
-- Player readiness and job preferences reset into the lobby's resolution pass (`lobby.md` §5, §7).
-- Players leave the summary/observer state and re-enter the lobby for the next round.
+- The summary stays up for a short, fixed beat so everyone can read it.
+- Every player returns to the lobby. Readiness resets; job preferences and antagonist opt-ins are
+  kept (`lobby.md` §3).
+- The next round uses the server's current settings (`round-config.md` §2), with the same secrecy
+  re-established (`round-config.md` §4).
+- The countdown starts again once enough players are ready (`lobby.md` §7). No admin action is
+  needed at any step; an admin can still hold the countdown.
 
 The transition is a seam between two states both already designed elsewhere; this doc only defines
 that the seam exists and in what order it runs.
@@ -178,11 +179,12 @@ returns to the lobby.
 
 | Round end leans on | Which does the work |
 |---|---|
-| Spectator camera/state at round end | `observer.md` §7 (the framework this builds its screen over) |
-| Secret gamemode identity, now revealed | `round-config.md` §4 (secrecy) + §3 (next-round draw) |
+| Ghosts at round end | `observer.md` §2 |
+| Round timer | `round-config.md` §2 |
+| Secret gamemode identity, now revealed | `round-config.md` §4 (secrecy) + §3 (next round's mode) |
 | Objective tracking | The active gamemode's own objective state (read, not re-adjudicated) |
 | Death/clone fates in the summary | `death-cloning-respawn.md` §2, §5 |
-| Return to pre-round flow | `lobby.md` §5, §7 |
+| Return to pre-round flow | `lobby.md` §3, §7 |
 | Admin manual end | `admin-tools.md` §6 (invocation point; this doc defines the trigger's effect) |
 | Evac call console | New — diegetic device-screen pattern (`hacking-interface.md` §2) |
 | Evac shuttle physical behavior | `shuttles.md` §2–§6, §9 |
@@ -194,8 +196,8 @@ returns to the lobby.
   each gamemode's specific win/lose rule and objective set belong to that gamemode, not here.
 - **Scoring, MMR, or player-progression rewards.** The summary is a ledger of what happened, not a
   rating; any persistent scoring is a separate, later concern.
-- **Full observer/ghost experience.** Unchanged from `observer.md` §9 and `main-hud.md` §13 — this
-  doc supplies only the summary and transition, not the spectator UI itself.
+- **The ghost experience itself.** `observer.md` — this doc supplies only the summary and
+  transition.
 - **Antagonist content and objective design.** What antagonists exist is designed in
   `antagonist-content.md`; what they pursue is `objectives.md`'s job. Round end only reports outcomes.
 - **Exact countdown duration and the call console's access policy.** §3's no-access-gate call is a
