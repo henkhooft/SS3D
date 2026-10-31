@@ -13,8 +13,8 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 
 - **T1** — Loadable Windows build (Config/Tilemaps packaging OK on `059e3dd`; re-cut after host loopback fix)
 - **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
-- **T3** — Session stability: round/connect lifecycle, doors under MP, remaining admin wedge tools (round controls shipped), Nuke Ops happy-path smoke, test-station perf floor
-- **T4** — End-game screen + restart + latejoin without softlock (**shared with M5**)
+- **T3** — Session stability: doors under MP, remote drop/selection, remaining admin wedge tools (round controls + stop-cancels-start shipped), Nuke Ops happy-path smoke, test-station perf floor. Local `validate.sh --full` covers PlayMode/server build/smoke, but **CI smoke hasn't passed since 2026-10-01** (runner offline)
+- **T4** — End-game screen + restart (**shared with M5**); latejoin without softlock shipped, including after an earlier round
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 
@@ -28,7 +28,7 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 - **M9** — Test-map APC lights matter + wall damage readable at range
 Not focus: Area-id merge on breach, re-wiring client atmos VFX (already shipped), shuttle-as-ops-gate, full PDA/uplink/Traitor, cloning/respawn, evac shuttle, full radio, server browser / accounts.
 
-The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) remains a parallel capacity track; test server only needs a minimal join/spawn path.
+The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) shipped 2026-10-31 ([rounds-lobby](../architecture/systems/rounds-lobby.md)); its deferred items (non-Human species, antag opt-in consumer) wait on MVP1 M4/M0.
 
 ## Gates
 
