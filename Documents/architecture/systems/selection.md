@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Selection/, Assets/Scripts/SS3D/Rendering/URP/
 > Entry points: SelectionSubSystem, SelectionController, SelectionPickRendererFeature
 > Status: shipped
-> Verified: 620ac632 — 2026-07-29 (Frame Debugger AI export tooling link)
+> Verified: 73a838a3b — 2026-11-01
 
 # Selection
 

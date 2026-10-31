@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: f04093919 — 2026-10-31
+> Verified: 73a838a3b — 2026-11-01
 
 # Furniture / world objects
 

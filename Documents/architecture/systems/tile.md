@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 2fcfc9fa8 — 2026-10-30
+> Verified: 73a838a3b — 2026-11-01
 
 # Tile / construction
 
