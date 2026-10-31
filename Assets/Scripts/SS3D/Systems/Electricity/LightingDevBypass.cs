@@ -4,7 +4,8 @@ namespace SS3D.Systems.Electricity
     /// Development-only toggle so wall light fixtures can glow without a powered grid.
     /// When active, fixtures are treated as powered without grid supply. Fixtures with an area
     /// still follow APC channel toggles and Normal/Emergency/Dark policy; fixtures with no area
-    /// (manual place / no APC flood) glow. Release builds always require real power.
+    /// (manual place / no APC flood) glow. Release builds require real power unless the map editor
+    /// "Always Power Lights" setting is on.
     /// </summary>
     public static class LightingDevBypass
     {
@@ -14,7 +15,13 @@ namespace SS3D.Systems.Electricity
         public static bool AlwaysPowerLightFixtures => false;
 #endif
 
-        public static bool IsActive => AlwaysPowerLightFixtures;
+        /// <summary>
+        /// Map editor "Always Power Lights" setting (server-side, available in all builds so testers can
+        /// author lighting without wiring a grid). Admin-gated by <c>MapEditorPermissions</c>.
+        /// </summary>
+        public static bool MapEditorOverride { get; set; }
+
+        public static bool IsActive => AlwaysPowerLightFixtures || MapEditorOverride;
 
 #if UNITY_EDITOR
         const string MenuPath = "SS3D/Dev/Lighting/Always Power Light Fixtures";

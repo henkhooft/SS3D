@@ -57,7 +57,7 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    smoke-tested on Windows. Skipped when `skip_release` is set.
 6. **Prerelease** — primary zip `SS3D-Windows-<tag>.zip` with layout:
    `Start_SS3D_*.bat` + `README.txt` beside `Game/SS3D.exe`, plus CWD fixtures
-   `Game/Config/` (`permissions.txt`, `network.json`) and `Game/Data/Tilemaps/`
+   `Game/Config/` (`permissions.txt`, `network.json`), `Game/Data/Tilemaps/`, and `Game/Data/StationTemplates/`
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
    `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime).
    Linux client/server zips get the same seed under each `StandaloneLinux64/` tree when

@@ -912,6 +912,21 @@
     font-size: 13px;
 }
 
+.map-editor-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    translate: -50% 0;
+    background-color: var(--ss3d-surface-panel-raised);
+    border-width: 1px;
+    border-color: var(--map-editor-accent);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 6px 14px;
+    color: var(--ss3d-text-primary);
+    font-size: 13px;
+    opacity: 0.92;
+}
+
 .map-editor-reveal-btn {
     position: absolute;
     top: 16px;
@@ -940,4 +955,95 @@
     flex-grow: 1;
     flex-shrink: 1;
     margin-left: 12px;
+}
+
+/* Room properties need an explicit runtime font; the editor theme is not in player panels. */
+.map-editor-area-form {
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    font-size: 13px;
+    color: var(--ss3d-text-primary);
+}
+
+.map-editor-area-form Label {
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    color: var(--ss3d-text-secondary);
+    font-size: 12px;
+    white-space: normal;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.map-editor-area-field {
+    margin: 0 0 8px;
+    min-width: 0;
+    min-height: 30px;
+    flex-shrink: 0;
+}
+
+.map-editor-area-field > .unity-base-field__input {
+    min-width: 0;
+    min-height: 30px;
+    flex-grow: 1;
+    background-color: var(--ss3d-surface-inset);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    border-radius: 0;
+    color: var(--ss3d-text-primary);
+    padding: 5px 8px;
+}
+
+.map-editor-area-field .unity-base-popup-field__text {
+    color: var(--ss3d-text-primary);
+}
+
+.map-editor-area-access {
+    height: 200px;
+    flex-shrink: 0;
+    margin-top: 4px;
+    margin-bottom: 12px;
+    padding: 4px 14px 4px 8px;
+    background-color: var(--ss3d-surface-inset);
+}
+
+
+.map-editor-area-access .unity-scroll-view__content-container {
+    padding-right: 12px;
+}
+
+
+.map-editor-area-name {
+    position: absolute;
+    translate: -50% -100%;
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    font-size: 13px;
+    color: var(--ss3d-text-primary);
+    background-color: rgba(18, 21, 25, 0.9);
+    border-bottom-width: 3px;
+    padding: 4px 8px;
+    max-width: 240px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+
+
+/* Room fields use the exact layer switch component and its existing styles. */
+.map-editor-area-form .map-editor-switch-row__label {
+    margin: 0;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+
+.map-editor-room-create-glyph {
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    font-size: 40px;
+    color: var(--ss3d-text-primary);
+    -unity-text-align: middle-center;
+    flex-grow: 1;
+}
+
+.map-editor-slot--create .map-editor-slot__icon-frame {
+    background-color: var(--ss3d-surface-inset);
 }

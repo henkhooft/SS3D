@@ -21,7 +21,22 @@ namespace SS3D.Systems.Area
             _nextId = 1;
         }
 
-        public AreaId AllocateId() => new AreaId(_nextId++);
+        public AreaId AllocateId()
+        {
+            for (int i = 0; i < ushort.MaxValue; i++)
+            {
+                ushort candidate = _nextId++;
+                if (candidate != AreaId.None && !_byId.ContainsKey(candidate)) return new AreaId(candidate);
+            }
+            throw new System.InvalidOperationException("No area ids remain.");
+        }
+
+        public void RefreshApcLookup()
+        {
+            _byApc.Clear();
+            foreach (AreaRecord record in _byId.Values)
+                if (record.Apc != null) _byApc[record.Apc] = record.Id;
+        }
 
         public void EnsureNextIdAbove(ushort highestUsedId)
         {

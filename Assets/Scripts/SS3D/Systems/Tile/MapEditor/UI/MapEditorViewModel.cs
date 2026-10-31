@@ -10,6 +10,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     /// </summary>
     public sealed class MapEditorViewModel
     {
+        public string AreaRoomName { get; set; } = "New room";
+        public ushort AreaRoomId { get; set; }
+        public bool IsRoomCategory => CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
         public MapEditorTool CurrentTool { get; set; } = MapEditorTool.Edit;
         public MapEditorMode CurrentMode { get; set; } = MapEditorMode.Upper;
         public MapEditorSubcategory CurrentSubcategory { get; set; } = MapEditorSubcategory.Flooring;
@@ -18,8 +21,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public MapEditorCatalogEntry SelectedEntry { get; set; }
         public bool IsEraserSelected { get; set; }
         public bool HideUI { get; set; }
-        public bool GridSnap { get; set; } = true;
         public bool DebugOverlay { get; set; }
+        /// <summary>Light fixtures glow without grid power (server-wide; persists after closing the editor).</summary>
+        public bool AlwaysPowerLights { get; set; }
+        /// <summary>Builder takes no damage and walks on open space (persists after closing the editor).</summary>
+        public bool Invincible { get; set; } = true;
         public float CameraFov { get; set; } = 72f;
         public float CameraZoomSpeed { get; set; } = 5f;
         public float CameraRotationSpeed { get; set; } = 4f;
@@ -42,12 +48,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
             {
                 if (!_layerCategoryVisibility.ContainsKey(category))
-                    _layerCategoryVisibility[category] = true;
+                    _layerCategoryVisibility[category] = category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
             }
         }
 
         public bool IsLayerCategoryVisible(TileLayerCategory category) =>
-            !_layerCategoryVisibility.TryGetValue(category, out bool visible) || visible;
+            _layerCategoryVisibility.TryGetValue(category, out bool visible) ? visible : category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
 
         public void SetLayerCategoryVisible(TileLayerCategory category, bool visible)
         {
@@ -60,6 +66,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetTool(MapEditorTool tool)
         {
             CurrentTool = tool;
+            _layerCategoryVisibility[TileLayerCategory.Areas] = IsRoomCategory;
             UpdateHint();
             NotifyChanged();
         }
@@ -69,14 +76,25 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             CurrentMode = mode;
             MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(mode);
             CurrentSubcategory = subs.Length > 0 ? subs[0] : MapEditorSubcategory.Uncategorized;
+            _layerCategoryVisibility[TileLayerCategory.Scripts] = mode == MapEditorMode.Scripting;
+            UpdateCategoryTool();
+            UpdateHint();
             NotifyChanged();
         }
 
         public void SetSubcategory(MapEditorSubcategory subcategory)
         {
             CurrentSubcategory = subcategory;
+            UpdateCategoryTool();
             UpdateHint();
             NotifyChanged();
+        }
+
+        private void UpdateCategoryTool()
+        {
+            bool rooms = CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
+            if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
+            _layerCategoryVisibility[TileLayerCategory.Areas] = rooms;
         }
 
         public void SelectEntry(MapEditorCatalogEntry entry, GenericObjectSo asset)
@@ -116,8 +134,46 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             NotifyChanged();
         }
 
+        /// <summary>Recompute the default hint (after a transient hover message such as a build failure).</summary>
+        public void RefreshHint() => UpdateHint();
+
+        /// <summary>
+        /// Construct-tool hint for the selected asset. Lower-layer runs (plenum, pipes, disposals) and
+        /// flooring are usually laid in areas, so Shift fill leads; wall mounts lead with R to rotate.
+        /// </summary>
+        public string PlacementHint()
+        {
+            TileLayer? layer = (SelectedAsset as TileObjectSo)?.layer;
+
+            if (CurrentMode == MapEditorMode.Items || SelectedAsset is ItemObjectSo)
+                return "Click to place the item";
+
+            if (layer is TileLayer.WallMountHigh or TileLayer.WallMountLow
+                || (layer == null && CurrentSubcategory == MapEditorSubcategory.WallAttachments))
+                return "Press R to rotate — click a wall to place, drag for a line";
+
+            if (CurrentMode == MapEditorMode.Lower
+                || layer is TileLayer.Plenum or TileLayer.Turf or TileLayer.Wire or TileLayer.Disposal
+                    or TileLayer.PipeLeft or TileLayer.PipeMiddle or TileLayer.PipeRight or TileLayer.PipeSurface)
+                return "Hold Shift and drag to fill a rectangle — plain drag places a line";
+
+            return "Drag to place a line, Shift+drag to fill a rectangle — R to rotate";
+        }
+
         private void UpdateHint()
         {
+            if (IsRoomCategory)
+            {
+                SelectedObjectHint = CurrentTool switch
+                {
+                    MapEditorTool.Edit => $"Construct: {AreaRoomName} — drag a line; Shift-drag a rectangle",
+                    MapEditorTool.Select => "Select a room to edit its properties",
+                    MapEditorTool.Dropper => "Pick a room to paint with",
+                    MapEditorTool.Delete => "Delete room assignments — drag a line; Shift-drag a rectangle",
+                    _ => "Choose Construct, Select, Dropper or Delete for rooms",
+                };
+                return;
+            }
             if ((IsEraserSelected && CurrentTool == MapEditorTool.Edit) || CurrentTool == MapEditorTool.Delete)
             {
                 string label = MapEditorCatalog.GetSubcategoryLabel(CurrentSubcategory);
@@ -129,7 +185,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
-                SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to place";
+                SelectedObjectHint = PlacementHint();
                 return;
             }
 

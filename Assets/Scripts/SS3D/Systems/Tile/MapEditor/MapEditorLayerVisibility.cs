@@ -14,7 +14,10 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
+            {
+                if (category == TileLayerCategory.Areas) continue; // Separate authoring overlay.
                 TileLayerVisibilityService.SetGroupVisible(category, viewModel.IsLayerCategoryVisible(category));
+            }
         }
 
         public static void Activate() => TileLayerVisibilityService.Activate();

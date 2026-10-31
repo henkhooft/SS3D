@@ -204,6 +204,11 @@ namespace SS3D.Systems.Health
         [Server]
         public void ApplyDamage(BodyZone zone, float brute, float burn)
         {
+            if (EntityInvincibility.IsInvincible(this))
+            {
+                return;
+            }
+
             int index = (int)zone;
             if (index < 0 || index >= _zones.Length)
             {
@@ -427,6 +432,11 @@ namespace SS3D.Systems.Health
         [Server]
         public bool TrySeverZone(BodyZone zone, bool force = false)
         {
+            if (!force && EntityInvincibility.IsInvincible(this))
+            {
+                return false;
+            }
+
             if (!HealthSimulation.IsSeverableZone(zone))
             {
                 return false;
@@ -619,7 +629,8 @@ namespace SS3D.Systems.Health
         [Server]
         private void TickHealthFromEnvironment()
         {
-            if (HealthEnvironmentSettings.AtmosphericDamageDisabled)
+            if (HealthEnvironmentSettings.AtmosphericDamageDisabled
+                || EntityInvincibility.IsInvincible(this))
             {
                 _environment = HealthEnvironmentState.SafeDefault;
                 TickHealth(atmosphereO2: 1f, toxinIntake: HealthConstants.BaseToxinIntake);

@@ -247,7 +247,7 @@ namespace EditorTests
                 }
             }
 
-            Assert.AreEqual(areaId.Value, context.GetAreaId(apc.OriginTile));
+            Assert.AreEqual(AreaId.None, context.GetAreaId(apc.OriginTile), "The APC wall is not a room tile; resolve the room in front.");
         }
 
         [Test]
@@ -278,9 +278,9 @@ namespace EditorTests
             Assert.IsFalse(rightArea.IsNone);
             Assert.AreNotEqual(leftArea, rightArea);
 
-            // Shared wall tile between the two rooms.
-            // We'll force an area id onto the wall tile to simulate the ambiguous case.
-            var wallMounted = CreateWallMountedDevice(new Vector2Int(4, 2), Direction.East);
+            // The two rooms have adjacent perimeter walls at x=4 and x=5. Face the
+            // right interior (x=6), then put the opposite room id on the mounting wall.
+            var wallMounted = CreateWallMountedDevice(new Vector2Int(5, 2), Direction.East);
             TileCoord origin = AreaDeviceTileResolver.GetOriginTile(wallMounted);
             Assert.IsTrue(context.Map.TrySetAreaId(origin, leftArea.Value));
 

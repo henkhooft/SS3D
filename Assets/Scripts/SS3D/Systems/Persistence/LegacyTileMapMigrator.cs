@@ -36,6 +36,7 @@ namespace SS3D.Systems.Persistence
             SavedTileMap tilePayload = new()
             {
                 mapName = legacy.mapName,
+                hasAuthoredAreas = legacy.hasAuthoredAreas,
                 savedChunkList = legacy.savedChunkList,
                 savedItemList = legacy.savedItemList,
                 savedAreas = null,
@@ -55,12 +56,12 @@ namespace SS3D.Systems.Persistence
                 payloadJson = JsonUtility.ToJson(tilePayload),
             });
 
-            if (legacy.savedAreas is { Length: > 0 })
+            if (legacy.hasAuthoredAreas || legacy.savedAreas is { Length: > 0 })
             {
                 envelope.chunks.Add(new PersistenceChunk
                 {
                     contributorId = AreaPersistenceContributor.ContributorIdValue,
-                    payloadJson = JsonUtility.ToJson(new SavedAreaChunkPayload { records = legacy.savedAreas }),
+                    payloadJson = JsonUtility.ToJson(new SavedAreaChunkPayload { authored = legacy.hasAuthoredAreas, records = legacy.savedAreas }),
                 });
             }
 
