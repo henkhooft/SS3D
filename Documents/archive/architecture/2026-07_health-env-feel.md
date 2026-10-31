@@ -1,10 +1,10 @@
-> Implements: [Documents/design/health.md](../design/health.md) (critical / exposure presentation), [Documents/design/atmospherics.md](../design/atmospherics.md) (turf sample → body), [Documents/design/audio.md](../design/audio.md) §4/§6 (personal + alert cues), [Documents/design/main-hud.md](../design/main-hud.md) §5 (screen overlays)
+> Implements: [Documents/design/health.md](../../design/health.md) (critical / exposure presentation), [Documents/design/atmospherics.md](../../design/atmospherics.md) (turf sample → body), [Documents/design/audio.md](../../design/audio.md) §4/§6 (personal + alert cues), [Documents/design/main-hud.md](../../design/main-hud.md) §5 (screen overlays)
 > Touches systems: health, atmospherics, screen-effects, audio, entities, stamina
 > Status: shipped (MVP1 M8 exposure + M7 feel polish; armor seal / internals / air-alarm audible alarms deferred)
 
 # Health env + feel polish (Jul 2026)
 
-Phased health-feel pass that closed the silent gaps between vitals, presentation, turf atmosphere, and audio. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) **M7** (crit feel) and **M8 exposure** without seal/internals. Cursor plan: `health_feel_integrations` (`.cursor/plans/`). Navigation: [systems/health.md](systems/health.md), [systems/audio.md](systems/audio.md), [systems/screen-effects.md](systems/screen-effects.md).
+Phased health-feel pass that closed the silent gaps between vitals, presentation, turf atmosphere, and audio. Advances [mvp1-nuke-ops.md](../../milestones/mvp1-nuke-ops.md) **M7** (crit feel) and **M8 exposure** without seal/internals. Cursor plan: `health_feel_integrations` (`.cursor/plans/`). Navigation: [systems/health.md](../../architecture/systems/health.md), [systems/audio.md](../../architecture/systems/audio.md), [systems/screen-effects.md](../../architecture/systems/screen-effects.md).
 
 ## Shipped
 
@@ -16,11 +16,11 @@ Phased health-feel pass that closed the silent gaps between vitals, presentation
 | 4 Blood VFX | On-hit spray ObserversRpc + tuned trickle |
 | 5 SFX | FreeSound heartbeat/heavy breathing + SS14 beep/blood/flesh + SS3D-Art gasp/choke/scream; health breathing max-merged with stamina; positional hit/gasp/scream |
 
-Also on this branch (adjacent feel): stance-aware Base `Flinch` + soft Additive gut overlay ([entities](systems/entities.md)).
+Also on this branch (adjacent feel): stance-aware Base `Flinch` + soft Additive gut overlay ([entities](../../architecture/systems/entities.md)).
 
 ## Deferred (still M8 / later)
 
-- Armor environmental seal / breach ([armor.md](../design/armor.md) §3)
+- Armor environmental seal / breach ([armor.md](../../design/armor.md) §3)
 - Internals tanks
 - Air alarms that **audibly** alarm (controllers exist; cue wiring open)
 - Thin fire extinguisher response

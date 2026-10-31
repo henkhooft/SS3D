@@ -20,7 +20,7 @@ Extend the structural DMM importer so cables, heuristically-layered gas pipes, d
 
 ## Follow-on (lattices / tables / SMES)
 
-Shipped in-tree after this effort: `MapImportKind` Lattice/Table/Smes; lattice/catwalk replace Plenum (space+lattice cells import); wood→`TableWood`, other tables→`TableSteel`; SMES as FurnitureBase (priority above Vent). Fixture `tiny_furniture.dmm`. See [tile](systems/tile.md) Extension points / Pitfalls.
+Shipped in-tree after this effort: `MapImportKind` Lattice/Table/Smes; lattice/catwalk replace Plenum (space+lattice cells import); wood→`TableWood`, other tables→`TableSteel`; SMES as FurnitureBase (priority above Vent). Fixture `tiny_furniture.dmm`. See [tile](../../architecture/systems/tile.md) Extension points / Pitfalls.
 
 ## Explicit non-goals
 

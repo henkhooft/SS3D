@@ -34,6 +34,6 @@ Ship design §2 solar as an HV-backbone `IPowerProducer`, with diegetic manual a
 
 ## Related
 
-- System map: [electricity](systems/electricity.md)
-- Design (read-only): [Documents/design/electricity.md](../design/electricity.md) §2
+- System map: [electricity](../../architecture/systems/electricity.md)
+- Design (read-only): [Documents/design/electricity.md](../../design/electricity.md) §2
 - Prior follow-up flag: [electricity_kwh_foundation](../plans/electricity_kwh_foundation_917ccdbc.plan.md) “Out of scope — Solar generation”

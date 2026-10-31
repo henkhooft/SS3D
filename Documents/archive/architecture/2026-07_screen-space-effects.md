@@ -4,7 +4,7 @@
 
 # Screen-space effects foundation (Jul 2026)
 
-Client overlay system for diegetic screen feedback. Navigation map: [systems/screen-effects.md](systems/screen-effects.md).
+Client overlay system for diegetic screen feedback. Navigation map: [systems/screen-effects.md](../../architecture/systems/screen-effects.md).
 
 ## Overview
 

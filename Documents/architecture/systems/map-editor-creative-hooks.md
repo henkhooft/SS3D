@@ -22,5 +22,5 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 - Catalog: `spawn:job:{RoleName}` / `spawn:antag:{Category}` under Scripting → Spawn Placements
 - Registry: `TileSubSystem.SpawnPoints` (`SpawnPointRegistry`); one marker per tile
 - Persist: `SpawnPointPersistenceContributor` (`spawn-points` station-template chunk)
-- Effort: [2026-07_spawn-point-authoring](../2026-07_spawn-point-authoring.md)
+- Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)
 - Still stubbed: RandomSpawners, Triggers, Atmospherics Scripting rails

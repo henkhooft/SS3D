@@ -22,7 +22,7 @@ isProject: false
 
 # Map editor placement validation and scoped delete
 
-Shipped. See [Documents/architecture/systems/tile.md](../architecture/systems/tile.md) Pitfalls.
+Shipped. See [Documents/architecture/systems/tile.md](../../architecture/systems/tile.md) Pitfalls.
 
 ## Implementation notes
 

@@ -15,7 +15,7 @@ Local-owner [screen-effects](screen-effects.md) are driven from `HealthSnapshot`
 
 Phase 0d strips legacy health components from `Human.prefab` and rewires a thinner root — do not dual-stack or grow the mega-prefab ([agent-first composition](../2026-07_agent-first-composition.md), [health_implementation_plan.md](../../plans/health_implementation_plan.md) Phase 0d).
 
-**Body presentation:** Health emits collapse intent only (`BodyPresentationIntent` → `Ragdoll.ServerSetPresentation`). Death is `Human.Kill` → `ServerDeathRagdoll`. Do not add a parallel collapse path — see [2026-07_body-presentation-authority.md](../2026-07_body-presentation-authority.md) (shipped).
+**Body presentation:** Health emits collapse intent only (`BodyPresentationIntent` → `Ragdoll.ServerSetPresentation`). Death is `Human.Kill` → `ServerDeathRagdoll`. Do not add a parallel collapse path — see [2026-07_body-presentation-authority.md](../../archive/architecture/2026-07_body-presentation-authority.md) (shipped).
 
 ## Start here
 
@@ -79,7 +79,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - **Death re-triggers every health tick:** `TickHealth` must latch death (`_deathTriggered`) and stop ticking; otherwise `Human.Kill()` re-runs every second (ghost spam / dispose races). `WoundVfx` also clears and disables on `HealthState.Dead`.
 - **Pain scream on corpses:** `TryPlayPainScream` must gate on dead / unconscious / non-`Locomotion` presentation — `ApplyDamage` still runs on bodies (flesh hit SFX OK); do not scream after death.
 - **Ghost spawn stack-overflows the editor:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()` — the latter re-enters `NetworkActor.Awake` → `OnAwake` forever when `Human.Kill()` instantiates the ghost.
-- **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../2026-07_body-presentation-authority.md).
+- **Death / collapse presentation:** `Ragdoll` owns replicated `BodyPresentationState`. Health must not call collapse visuals or reinforce RPCs. Latch health-owned collapses (`_healthCollapseActive`) so waking does not clear combat timed knockdown. Critical and cardiac arrest collapse even while `IsConscious` is still true. Do not rely on SyncVar OnChange alone — see [body-presentation-authority](../../archive/architecture/2026-07_body-presentation-authority.md).
 - **Screen-effect/personal-audio Clear from other bodies:** only clear when `_drivingLocalPresentation` — other players' mind unassign must not wipe the local owner's Volume intensities or heartbeat cue.
 - **Ghost still gets hit flash after death:** `SwapMinds` used to leave FishNet ownership on the corpse (`SetMind(null)` early-returned). `ApplyDamage` then `RpcHitFlash(Owner)` to the ghost. Clear ownership on null/`Mind.Empty`; skip hit flash when `_deathTriggered` / `HealthState.Dead`; `RpcHitFlash` also requires `IsLocalOwnerMind()`.
 - **Host alert/screen gap:** raise HUD consumers from `PublishSnapshot` as well as SyncVar OnChange — FishNet may skip OnChange on server assigns (same reason screen effects apply in `PublishSnapshot`).
@@ -102,9 +102,9 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - Anatomy map: [health-anatomy-map.md](health-anatomy-map.md)
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
 - Stamina map: [stamina](stamina.md)
-- [2026-07_body-presentation-authority](../2026-07_body-presentation-authority.md) — **shipped** single authority for collapse/death presentation
-- [2026-07_health-env-feel](../2026-07_health-env-feel.md) — **shipped** turf exposure + feel polish (M7/M8 exposure)
-- [2026-07_animation-polish](../2026-07_animation-polish.md) — limp/injured gait, severity idle, arm overlay, left-hand mirror
+- [2026-07_body-presentation-authority](../../archive/architecture/2026-07_body-presentation-authority.md) — **shipped** single authority for collapse/death presentation
+- [2026-07_health-env-feel](../../archive/architecture/2026-07_health-env-feel.md) — **shipped** turf exposure + feel polish (M7/M8 exposure)
+- [2026-07_animation-polish](../../archive/architecture/2026-07_animation-polish.md) — limp/injured gait, severity idle, arm overlay, left-hand mirror
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [screen-effects](screen-effects.md)
 - Milestone: [mvp1-nuke-ops.md](../../milestones/mvp1-nuke-ops.md) M7 / M8

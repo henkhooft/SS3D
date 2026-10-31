@@ -134,7 +134,7 @@ of the same meshes after Save → other character → New Character → saved ch
 
 ## Visual QA
 
-The [MCP lobby pilot](2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
+The [MCP lobby pilot](../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
 Review, name/body edits, preview rotation, Save/Return, character switching and
 New Character reset, plus all player tabs and Settings interactions. See [Testing/ui/README.md](../../Testing/ui/README.md)
 for commands and evidence. It does not establish physical-input or multiplayer correctness.

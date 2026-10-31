@@ -6,7 +6,7 @@
 
 ## Goal
 
-Clean-slate rewrite of the liquid substance runtime: data-driven reagent definitions, networked containers, pour-triggered reaction resolution, and container temperature. Ships the **physical primitives** [`chemistry.md`](../design/chemistry.md) and later atmospherics both need. Does **not** ship chemistry gameplay (bloodstream, delivery tools, analyzer knowledge, chem machines, HUD alerts) — that is a separate MVP2 effort.
+Clean-slate rewrite of the liquid substance runtime: data-driven reagent definitions, networked containers, pour-triggered reaction resolution, and container temperature. Ships the **physical primitives** [`chemistry.md`](../../design/chemistry.md) and later atmospherics both need. Does **not** ship chemistry gameplay (bloodstream, delivery tools, analyzer knowledge, chem machines, HUD alerts) — that is a separate MVP2 effort.
 
 ## Shipped
 
@@ -22,13 +22,13 @@ Clean-slate rewrite of the liquid substance runtime: data-driven reagent definit
 
 Track as a future effort (suggested name `2026-07_chemistry-gameplay.md` when commissioned):
 
-- Per-mind reagent knowledge + chemical analyzer ([chemistry.md](../design/chemistry.md) §7)
+- Per-mind reagent knowledge + chemical analyzer ([chemistry.md](../../design/chemistry.md) §7)
 - Bloodstream metabolism + sedation via `IHealthEffectModifier` (§8)
 - Syringe / patch / pill / ingest / IV delivery (§9)
 - Chem dispenser, grinder, pill press as MI surfaces (§10)
 - HUD organ-readout extension + OD/sedation alerts (§11)
 - Full §6 hazard consumers (atmos gas inject, structural small blast, AoE foam/frost)
-- Powered heater furniture; cryogenics consuming container temperature ([cryogenics.md](../design/cryogenics.md))
+- Powered heater furniture; cryogenics consuming container temperature ([cryogenics.md](../../design/cryogenics.md))
 - Gas/solid reagent states; IV furniture; botanics/food as reagent sources (§13)
 
 ## Documented notes
@@ -38,7 +38,7 @@ Track as a future effort (suggested name `2026-07_chemistry-gameplay.md` when co
 
 ## Related docs
 
-- System map: [systems/substances.md](systems/substances.md)
+- System map: [systems/substances.md](../../architecture/systems/substances.md)
 - Plan: [substances_foundation_implementation.plan.md](../plans/substances_foundation_implementation.plan.md)
-- Design (read-only): [chemistry.md](../design/chemistry.md), [atmospherics.md](../design/atmospherics.md) §3
-- Composition policy: [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+- Design (read-only): [chemistry.md](../../design/chemistry.md), [atmospherics.md](../../design/atmospherics.md) §3
+- Composition policy: [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md)

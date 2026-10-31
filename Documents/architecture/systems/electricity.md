@@ -92,6 +92,6 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Related docs
 
-- Architecture efforts: [solar-generation](../2026-07_solar-generation.md), [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../2026-07_area-foundation.md), [session-world-lifecycle](../2026-07_session-world-lifecycle.md)
-- Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md), [electricity_kwh_foundation_917ccdbc.plan.md](../../plans/electricity_kwh_foundation_917ccdbc.plan.md)
+- Architecture efforts: [solar-generation](../../archive/architecture/2026-07_solar-generation.md), [mi-area-electricity debt](../../archive/architecture/2026-07_mi-area-electricity-debt.md), [machine-interface phase 2](../../archive/architecture/2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../../archive/architecture/2026-07_machine-interface-phase3-smes-generalization.md), [area foundation](../../archive/architecture/2026-07_area-foundation.md), [session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
+- Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md), [electricity_kwh_foundation_917ccdbc.plan.md](../../archive/plans/electricity_kwh_foundation_917ccdbc.plan.md)
 - Design (read-only): [Documents/design/electricity.md](../../design/electricity.md)

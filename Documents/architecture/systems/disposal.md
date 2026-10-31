@@ -7,7 +7,7 @@
 
 ## Overview
 
-Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disposal` form BFS-connected components; chutes inject held items as capsules that travel a routed path to a tagged or main outlet. Mid-transit tile clear spills the capsule at the cut. Player pipe craft recipes, Cargo export, and player-body transit are deferred — see [2026-07_disposal-item-network.md](../2026-07_disposal-item-network.md).
+Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disposal` form BFS-connected components; chutes inject held items as capsules that travel a routed path to a tagged or main outlet. Mid-transit tile clear spills the capsule at the cut. Player pipe craft recipes, Cargo export, and player-body transit are deferred — see [2026-07_disposal-item-network.md](../../archive/architecture/2026-07_disposal-item-network.md).
 
 ## Start here
 
@@ -47,7 +47,7 @@ Server-authoritative **item** disposal network: pipe segments on `TileLayer.Disp
 
 ## Related docs
 
-- Effort: [2026-07_disposal-item-network.md](../2026-07_disposal-item-network.md)
-- Effort: [2026-07_session-world-lifecycle.md](../2026-07_session-world-lifecycle.md)
+- Effort: [2026-07_disposal-item-network.md](../../archive/architecture/2026-07_disposal-item-network.md)
+- Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - Design (read-only): [disposal.md](../../design/disposal.md)
 - [INDEX.md](../INDEX.md)

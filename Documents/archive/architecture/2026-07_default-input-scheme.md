@@ -22,7 +22,7 @@ baseline; 3D continuous movement and stamina invert SS14's walk-modifier model.
 ## Default bindings
 
 Gameplay context only. Debug/admin chords stay on function keys or console — see
-[TECH_DEBT.md](TECH_DEBT.md) §1.13. Map editor / console contexts mask these as today
+[TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.13. Map editor / console contexts mask these as today
 ([2026-07_input-arbitration.md](2026-07_input-arbitration.md)).
 
 ### Locomotion & camera
@@ -100,7 +100,7 @@ Backspace (not Escape) owns cancel so Escape stays free for `Other/Toggle Menu` 
 
 ## Related
 
-- System map: [systems/inputs.md](systems/inputs.md)
+- System map: [systems/inputs.md](../../architecture/systems/inputs.md)
 - Prior effort: [2026-07_input-arbitration.md](2026-07_input-arbitration.md)
-- Design (read-only): [main-hud.md](../design/main-hud.md) §7, [examine.md](../design/examine.md),
-  [stamina.md](../design/stamina.md), [comms.md](../design/comms.md)
+- Design (read-only): [main-hud.md](../../design/main-hud.md) §7, [examine.md](../../design/examine.md),
+  [stamina.md](../../design/stamina.md), [comms.md](../../design/comms.md)

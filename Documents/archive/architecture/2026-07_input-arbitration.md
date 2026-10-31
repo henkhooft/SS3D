@@ -124,4 +124,4 @@ without changing callers.
 
 ## Related
 
-- System map: [systems/inputs.md](systems/inputs.md)
+- System map: [systems/inputs.md](../../architecture/systems/inputs.md)

@@ -17,7 +17,7 @@ Ship APC-seeded area flood-fill with per-tile storage, save/load, overlap diagno
 5. **APC UI** — overlap warning in APC machine interface when multiple APCs share a flood-filled region.
 6. **Dev tooling** — Scene-view area gizmos (`SS3D → Dev → Areas → Show Area Gizmos`).
 7. **Power gating** — per-consumer APC channel resolution in `Circuit`.
-8. **Area-scoped power** — `AreaApcPowerDistribution` draws grid headroom to each APC and drains its cell per area (see [electricity.md](systems/electricity.md)).
+8. **Area-scoped power** — `AreaApcPowerDistribution` draws grid headroom to each APC and drains its cell per area (see [electricity.md](../../architecture/systems/electricity.md)).
 9. **Lighting data** — `AreaLightingState` derivation + transition event + client sync; disabled lighting channel forces Dark.
 10. **Fixture visuals** — `LightPower` + `AreaLightFixturePolicy` + `LightFixtureCapability`; optional departmental tint on `AreaRecord`.
 11. **Electricity follow-ups on branch** — kWh storage model, priority channel shedding, HV cable grid (generators/SMES/APC only), APC grid-in UI fix, SMES UI-only controls.
@@ -32,7 +32,7 @@ Ship APC-seeded area flood-fill with per-tile storage, save/load, overlap diagno
 
 ## Documented fork deviations
 
-- APC-seeded flood fill instead of generic unnamed regions ([area.md](../design/area.md) §3)
+- APC-seeded flood fill instead of generic unnamed regions ([area.md](../../design/area.md) §3)
 - Tiles outside APC reach remain `AreaId.None`
 - All doors block expansion (open/closed irrelevant)
 - Wall-mounted APCs seed from the tile the mount faces, not all adjacent walkable tiles

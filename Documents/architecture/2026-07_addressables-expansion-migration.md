@@ -121,7 +121,7 @@ like upstream — not the diff.
    it until Play Mode or a build. With Addressables addressing there is no second catalog to go stale;
    the Addressables group config *is* the source of truth, and a missing/renamed address fails loudly
    (`LoadAssetAsync` throws/logs "key not found") at the point of use instead of silently no-op'ing.
-   Migrate MI first (best-understood surface, see [2026-07_mi-path-catalog.md](2026-07_mi-path-catalog.md)),
+   Migrate MI first (best-understood surface, see [2026-07_mi-path-catalog.md](../archive/architecture/2026-07_mi-path-catalog.md)),
    then Main HUD, then Storage Panel; delete each `*AssetCatalog` SO + Editor rebuild menu once its
    surface is migrated.
 

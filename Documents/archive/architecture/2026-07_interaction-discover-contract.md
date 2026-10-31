@@ -38,7 +38,7 @@ using `Vector3.zero` as an “unset point” sentinel (TECH_DEBT 1.3).
 
 ## Related
 
-- [interactions-framework.md](systems/interactions-framework.md)
-- [interactions-runtime.md](systems/interactions-runtime.md)
-- [TECH_DEBT.md](TECH_DEBT.md) §1.3 → Resolved
+- [interactions-framework.md](../../architecture/systems/interactions-framework.md)
+- [interactions-runtime.md](../../architecture/systems/interactions-runtime.md)
+- [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.3 → Resolved
 - Prior: [2026-07_interaction-system-hardening.md](2026-07_interaction-system-hardening.md)

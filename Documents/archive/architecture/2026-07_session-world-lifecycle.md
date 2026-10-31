@@ -1,4 +1,4 @@
-> Implements: infrastructure — session/scene lifecycle & world readiness; realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on (a) (code bootstrap + `NetworkSystemsHub`); session/reconnect behavior per [design/networking.md](../design/networking.md) §2–§5
+> Implements: infrastructure — session/scene lifecycle & world readiness; realizes [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) follow-on (a) (code bootstrap + `NetworkSystemsHub`); session/reconnect behavior per [design/networking.md](../../design/networking.md) §2–§5
 > Touches systems: networking-session, scene-management, application, core-subsystems, tile, area, electricity, atmospherics, rounds-lobby, player-control, persistence, disposal
 > Status: shipped
 
@@ -7,8 +7,8 @@
 Server/client init, disconnect handling, and round start are fragile because **prerequisites are
 never modeled**. This effort replaces the ad-hoc init/reconnect bandages with two explicit contracts —
 a **session lifecycle FSM** and a **world readiness graph** — and lands them on the code-bootstrap
-foundation that [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on
-**(a)** and [TECH_DEBT.md](TECH_DEBT.md) §1.7 name.
+foundation that [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) follow-on
+**(a)** and [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.7 name.
 
 Sequenced in three phases; all shipped 2026-07-23.
 
@@ -22,7 +22,7 @@ remain in scenes as launch pads only.
 hub-before-Game ordering — Persistence now owns `LoadServerMeta` (contributors in `OnAwake`);
 `CameraSubSystem.PlayerCamera` lazy-resolves after Game’s MainCamera exists; do **not** re-run the
 Phase 3h “Rebuild Hub + Strip” menu (Game no longer has SerializeField sources). TECH_DEBT §1.7 /
-§1.16 are in [TECH_DEBT.md](TECH_DEBT.md) §6 Resolved.
+§1.16 are in [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §6 Resolved.
 
 **Residual (not Phase 3 scope):** Boot/Game *systems roots* are empty, but some **content prefabs**
 still carry `SubSystem` components that register when Game loads — before `NetworkSystemsHub` is
@@ -55,7 +55,7 @@ an OnGUI Retry/Quit fallback for the case where Boot (and its UI) is already gon
 calls `StartNetworkSession()` again instead of only replaying the loading animation. The previously
 harness-only redirect (`AutomationSubSystem.RedirectOfflineSceneToEmpty`) is now belt-and-suspenders on
 top of the universal fix rather than the only mitigation. See
-[networking-session.md](systems/networking-session.md) Pitfalls for the updated account.
+[networking-session.md](../../architecture/systems/networking-session.md) Pitfalls for the updated account.
 
 **Update (same day, implementation branch):** Phase 1 also landed the named `SessionState` FSM on
 `ClientConnectionRecovery`, `Scenes.Empty` / `Scenes.EmptyPath` codegen, Cold-only Intro auto-join, and
@@ -80,13 +80,13 @@ client-parity contract (orthogonal to the readiness graph).
 self-bootstraps (follow-on **(b)**); `Human.prefab` decomposition (follow-on **(d)**).
 
 **Non-goals.**
-- No prediction/rollback/lag-compensation/interpolation ([design/networking.md](../design/networking.md) §9 keeps
+- No prediction/rollback/lag-compensation/interpolation ([design/networking.md](../../design/networking.md) §9 keeps
   netcode-level concerns out of scope).
 - Do **not** encode a full dependency DAG into `SubSystems.Get` — the fix is *don't call `Get` until
   ready*, and make missing-during-`WaitingForServer` silent (as quit already is).
 - Do **not** fix every domain race with a one-off SyncVar — SyncVars are for *client view of server
   truth*; readiness is for *when simulation may run*.
-- No server browser / matchmaking / capacity-queue ([design/networking.md](../design/networking.md) §5, §9); capacity is a
+- No server browser / matchmaking / capacity-queue ([design/networking.md](../../design/networking.md) §5, §9); capacity is a
   plain reject, deferred here.
 
 ## 2. Phase 1 — Session lifecycle FSM (standalone shippable slice)
@@ -112,7 +112,7 @@ Owned by `ClientConnectionRecovery` (`SessionState` enum). Rules:
   subsystem presence.
 
 Reconnect-to-body unchanged: `PlayerSubSystem.ProcessAuthorizePlayer` →
-`EntitySubSystem.TryReclaimEntity` ([design/networking.md](../design/networking.md) §3).
+`EntitySubSystem.TryReclaimEntity` ([design/networking.md](../../design/networking.md) §3).
 
 **Key files:** `Networking/SessionState.cs`, `Networking/ClientConnectionRecovery.cs`,
 `Networking/NetworkSessionSubSystem.cs`, `Networking/ServerConnectionView.cs`,
@@ -144,8 +144,8 @@ lighting RPCs were not buffered, so a client's `LightPower` could not resolve ar
 This validates the contract shape this doc asked for (buffered server truth + a client-side resolver
 that doesn't depend on host-only state) with a real, narrower implementation than a general
 "world epoch N" broadcast — worth keeping as the reference pattern for any future domain that hits the
-same host/client divergence. Detail: [area.md](systems/area.md) Pitfalls ("Client fixtures stay stuck
-on/off"), [electricity.md](systems/electricity.md) Pitfalls ("Client light fixtures ignore APC / wall-switch
+same host/client divergence. Detail: [area.md](../../architecture/systems/area.md) Pitfalls ("Client fixtures stay stuck
+on/off"), [electricity.md](../../architecture/systems/electricity.md) Pitfalls ("Client light fixtures ignore APC / wall-switch
 toggles").
 
 **Key files (as shipped):** `Systems/Electricity/LightPower.cs`, `Systems/Area/AreaSubSystem.cs`,
@@ -177,8 +177,8 @@ toggles").
 
 ## 4. Phase 3 — Thin scenes + code bootstrap + `NetworkSystemsHub`
 
-Realizes [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) follow-on **(a)**;
-pays down [TECH_DEBT.md](TECH_DEBT.md) §1.7 / §1.12.
+Realizes [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) follow-on **(a)**;
+pays down [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.7 / §1.12.
 
 **Status: shipped.**
 
@@ -216,11 +216,11 @@ scenarios; EditMode via `.github/workflows/editmodetestrunner.yml`.
 
 ## 6. Related docs
 
-- Composition target: [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) (follow-on (a))
-- Debt register: [TECH_DEBT.md](TECH_DEBT.md) §1.7 (bootstrap), §1.12 (`Get` FindObject), §1.16 (lifecycle)
-- Design (read-only): [design/networking.md](../design/networking.md) §2–§5 (disconnect/reconnect/capacity)
-- System maps: [networking-session](systems/networking-session.md), [scene-management](systems/scene-management.md),
-  [application](systems/application.md), [core-subsystems](systems/core-subsystems.md),
-  [player-control](systems/player-control.md), [tile](systems/tile.md), [area](systems/area.md),
-  [electricity](systems/electricity.md), [atmospherics](systems/atmospherics.md), [disposal](systems/disposal.md),
-  [persistence](systems/persistence.md), [rounds-lobby](systems/rounds-lobby.md)
+- Composition target: [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) (follow-on (a))
+- Debt register: [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.7 (bootstrap), §1.12 (`Get` FindObject), §1.16 (lifecycle)
+- Design (read-only): [design/networking.md](../../design/networking.md) §2–§5 (disconnect/reconnect/capacity)
+- System maps: [networking-session](../../architecture/systems/networking-session.md), [scene-management](../../architecture/systems/scene-management.md),
+  [application](../../architecture/systems/application.md), [core-subsystems](../../architecture/systems/core-subsystems.md),
+  [player-control](../../architecture/systems/player-control.md), [tile](../../architecture/systems/tile.md), [area](../../architecture/systems/area.md),
+  [electricity](../../architecture/systems/electricity.md), [atmospherics](../../architecture/systems/atmospherics.md), [disposal](../../architecture/systems/disposal.md),
+  [persistence](../../architecture/systems/persistence.md), [rounds-lobby](../../architecture/systems/rounds-lobby.md)

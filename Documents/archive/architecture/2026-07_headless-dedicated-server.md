@@ -89,9 +89,9 @@ This list is almost certainly incomplete — see Testing gap below for why.
 
 - **Selection outline not working** against a real remote client (client-authored, only
   ever manually tested in host mode before). Not yet investigated — see
-  [selection.md](systems/selection.md).
+  [selection.md](../../architecture/systems/selection.md).
 - **Drop interaction** behaves incorrectly against a real remote client. Not yet
-  investigated — see [inventory.md](systems/inventory.md).
+  investigated — see [inventory.md](../../architecture/systems/inventory.md).
 - Likely more: this fork has never had a real client ↔ dedicated-server session run this
   thoroughly before. Anything that only worked because host mode collapses server and
   client into one process (shared memory, no real RTT, no real desync window) is a
@@ -134,7 +134,7 @@ own plan.
   `CameraSubSystem` etc. cover the actual client-only-instantiation surface instead).
 - Windows dedicated server build (Linux-only per this effort's scope).
 - Publishing the server build as a release artifact — superseded by
-  [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md)
+  [2026-07_ci-develop-release-pipeline.md](../../architecture/2026-07_ci-develop-release-pipeline.md)
   (manual Windows+bats prerelease after EditMode + Linux multiplayer smoke; Linux zips secondary).
 
 ## Success criteria
@@ -147,5 +147,5 @@ own plan.
 - [x] Round start/end and player disconnect handled without server-side exceptions
 - [ ] Selection outline and drop interaction work correctly against a real client (deferred)
 - [x] Automated multiplayer test coverage exists — see
-      [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) (partial: mouse/
+      [2026-07_multiplayer-test-harness.md](../../architecture/2026-07_multiplayer-test-harness.md) (partial: mouse/
       screen-space interaction and pocket/container round-trip regressions not yet covered)

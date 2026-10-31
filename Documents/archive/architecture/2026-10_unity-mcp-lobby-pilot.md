@@ -11,14 +11,14 @@ through the standard MCP `execute_menu_item` tool.
 
 ## Entry points
 
-- [Testing/ui/README.md](../../Testing/ui/README.md) — setup, commands, evidence, limitations and observed baseline defects.
+- [Testing/ui/README.md](../../../Testing/ui/README.md) — setup, commands, evidence, limitations and observed baseline defects.
 - `Testing/ui/start-mcp.sh` / `open-unity.sh` — local server and exact-version editor launch.
 - `Testing/ui/lobby-pilot.py` — project identity check, MCP invocation, bounded result wait, failure exit status.
 - `Assets/Scripts/SS3D/Editor/Automation/UnityMcpBootstrap.cs` — explicit bridge connection, editor-only.
 - `Assets/Scripts/SS3D/Editor/Automation/LobbyUiPilot.cs` — Play Mode scenario, fixed Game View resolution, screenshots, checks and error report.
 - `Assets/Scripts/SS3D/Editor/Automation/Lifecycle/LobbyLifecyclePilot.cs` — single-editor Host session lifecycle (ready → round → spawn → return, late join, reconnect) and the remote client pilot; own asmdef because it references SS3D runtime assemblies.
 - `Assets/Scripts/SS3D/Editor/Automation/AutomationPreflight.cs`, `AutomationCompileReport.cs`, `Lifecycle/AutomationBuild.cs` — dirty-scene/leak guard, compile result file, non-interactive stamped client build.
-- `Testing/ui/validate.sh` / `validate.py`, `compile.sh`, `watch-dialogs.sh`, `source_hash.py` — the [agent validation loop](../plans/agent_validation_loop.plan.md).
+- `Testing/ui/validate.sh` / `validate.py`, `compile.sh`, `watch-dialogs.sh`, `source_hash.py` — the [agent validation loop](../../plans/agent_validation_loop.plan.md).
 
 The automation moved from `Assets/Editor/Automation/` on 2026-10-30: `AssetTaxonomyTests.FirstPartyAsmdefsLiveUnderScripts` requires first-party asmdefs under `Assets/Scripts/`.
 
@@ -46,7 +46,7 @@ Species dropdown, removal of Uniform Color, one pinned Save/Saved footer,
 character switching, fresh-draft reset and saved name/body restoration. Targeted
 visual review confirms the wider preview, local reference colors, readable style
 labels and red slider fills. The agreed model-supported body controls and remaining
-appearance limits are recorded in the [lobby effort](2026-08_lobby-uitk-redesign.md#2026-10-30-character-creator-refresh).
+appearance limits are recorded in the [lobby effort](../../architecture/2026-08_lobby-uitk-redesign.md#2026-10-30-character-creator-refresh).
 
 The palette-move follow-up (`SS3D Pre-round Lobby UI(2).zip`) passed run
 `20261030-134939-028` with **60 checks**, zero captured errors and six PNGs.
@@ -62,7 +62,7 @@ Assertions exercise local Display/Sound state, mute disabling/readouts, next-key
 capture and value retention before the existing creator scenario. Screenshot review
 caught white rounded image/input output and collapsed toggle text despite passing
 checks; square image/input corners and a growing toggle input fixed them. Settings
-remain local UI state; see the [effort scope](2026-08_lobby-uitk-redesign.md#2026-10-30-player-view-shell-refresh).
+remain local UI state; see the [effort scope](../../architecture/2026-08_lobby-uitk-redesign.md#2026-10-30-player-view-shell-refresh).
 
 The owner-requested scroll-free/live-startup follow-up passed run
 `20261030-142251-600` with **89 checks**, zero captured errors and 14 PNGs.
@@ -70,14 +70,14 @@ Startup asserts a live preview RT, active booth lights, no outer Server Info
 ScrollView, information bounds and spacing above Ready. Images confirm the full
 information card and a lit character before creator interaction. The first attempt
 exposed the orphan-light guard disabling the early booth; see the
-[lobby follow-up](2026-08_lobby-uitk-redesign.md#lobby-layoutstartup-follow-up--2026-10-30).
+[lobby follow-up](../../architecture/2026-08_lobby-uitk-redesign.md#lobby-layoutstartup-follow-up--2026-10-30).
 
 Default preview outfits passed run `20261030-144343-787` with **100 checks**, zero
 captured errors and 14 PNGs. New checks cover active jumpsuit/left-shoe/right-shoe
 renderers, outfit mesh stability during morph edits, and restoration after switching
 characters. Lobby, creator and side captures show the selected clothing correctly.
 Outfits are chosen once per new draft from catalog-backed existing clothing sources;
-this does not grant gameplay equipment. See the [outfit implementation](2026-08_lobby-uitk-redesign.md#default-preview-outfits--2026-10-30).
+this does not grant gameplay equipment. See the [outfit implementation](../../architecture/2026-08_lobby-uitk-redesign.md#default-preview-outfits--2026-10-30).
 
 ## Boundaries and follow-up
 
@@ -93,10 +93,10 @@ this does not grant gameplay equipment. See the [outfit implementation](2026-08_
 
 ## Related docs
 
-- [rounds-lobby](systems/rounds-lobby.md)
-- [ui-shell](systems/ui-shell.md)
-- [Lobby redesign](2026-08_lobby-uitk-redesign.md)
-- [Existing multiplayer harness](2026-07_multiplayer-test-harness.md)
+- [rounds-lobby](../../architecture/systems/rounds-lobby.md)
+- [ui-shell](../../architecture/systems/ui-shell.md)
+- [Lobby redesign](../../architecture/2026-08_lobby-uitk-redesign.md)
+- [Existing multiplayer harness](../../architecture/2026-07_multiplayer-test-harness.md)
 
 ## Enlarged preview verification — 2026-10-30
 

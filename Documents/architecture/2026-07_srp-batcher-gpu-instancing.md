@@ -67,5 +67,5 @@ Cut Metastation `Render.Mesh` / `ApplyShader` cost by unlocking URP **SRP Batche
 
 ## Related docs
 
-- Prior scale pass: [2026-07_metastation-scale-perf.md](2026-07_metastation-scale-perf.md)
+- Prior scale pass: [2026-07_metastation-scale-perf.md](../archive/architecture/2026-07_metastation-scale-perf.md)
 - System maps: [rendering](systems/rendering.md), [selection](systems/selection.md), [tile](systems/tile.md), [structural-destruction](systems/structural-destruction.md)

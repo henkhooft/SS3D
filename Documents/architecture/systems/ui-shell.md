@@ -28,7 +28,7 @@ a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootst
 
 | Surface | Paths + SO | Rebuild menu | Map |
 |---|---|---|---|
-| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [machine-interface](machine-interface.md), [mi-path-catalog](../2026-07_mi-path-catalog.md) |
+| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [machine-interface](machine-interface.md), [mi-path-catalog](../../archive/architecture/2026-07_mi-path-catalog.md) |
 | Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
 | Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
 | UI Shell | `UiShellAssetPaths` / `UiShellAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | this map |
@@ -45,7 +45,7 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 - Shared catalog base: `Assets/Scripts/SS3D/UI/Shell/Catalog/UiAssetCatalogBase.cs`, `UiCatalogRuntimeLoader.cs`
 - Shared panel animation: `Assets/Scripts/SS3D/UI/Shell/Animation/PanelAnimator.cs`
 - Shared binder base (scaffolded, not yet consumed): `Assets/Scripts/SS3D/UI/Shell/Binding/`
-- First wedge (MI path catalog): [2026-07_mi-path-catalog.md](../2026-07_mi-path-catalog.md)
+- First wedge (MI path catalog): [2026-07_mi-path-catalog.md](../../archive/architecture/2026-07_mi-path-catalog.md)
 - Interim MI: `Assets/Content/Systems/UI/MachineInterface/Resources/MachineUiAssetCatalog.asset`
 - Interim Main HUD: `Assets/Content/Systems/UI/MainHud/Resources/MainHudAssetCatalog.asset`
 - Tokens: `Assets/Content/Systems/UI/Tokens/`, `Assets/Content/Systems/UI/MachineInterface/Tokens/`
@@ -78,5 +78,5 @@ MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 
 
 - [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md)
 - [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md)
-- [2026-07_mi-path-catalog.md](../2026-07_mi-path-catalog.md)
+- [2026-07_mi-path-catalog.md](../../archive/architecture/2026-07_mi-path-catalog.md)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)

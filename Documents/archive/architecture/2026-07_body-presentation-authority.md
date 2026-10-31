@@ -1,4 +1,4 @@
-> Implements: [Documents/design/health.md](../design/health.md) (consciousness / death presentation), [Documents/design/death-cloning-respawn.md](../design/death-cloning-respawn.md) (corpse / ghost handoff)
+> Implements: [Documents/design/health.md](../../design/health.md) (consciousness / death presentation), [Documents/design/death-cloning-respawn.md](../../design/death-cloning-respawn.md) (corpse / ghost handoff)
 > Touches systems: entities, health
 > Status: shipped
 
@@ -52,12 +52,12 @@ Shipped refactor. Banked after the health-rewrite collapse bugs (death crash, up
 
 ## Out of scope
 
-- Prefab strip of `Human.prefab` ([agent-first composition](2026-07_agent-first-composition.md) / health Phase 0d).
+- Prefab strip of `Human.prefab` ([agent-first composition](../../architecture/2026-07_agent-first-composition.md) / health Phase 0d).
 - Ghost controller / mind-swap redesign beyond presentation handoff.
 - Full animation system redesign ([player-body-animation](2026-07_player-body-animation.md)).
 
 ## Related
 
-- System maps: [entities](systems/entities.md), [health](systems/health.md)
-- Plan context: [health_implementation_plan.md](../plans/health_implementation_plan.md)
+- System maps: [entities](../../architecture/systems/entities.md), [health](../../architecture/systems/health.md)
+- Plan context: [health_implementation_plan.md](../../plans/health_implementation_plan.md)
 - TECH_DEBT §1.2 — resolved with this effort

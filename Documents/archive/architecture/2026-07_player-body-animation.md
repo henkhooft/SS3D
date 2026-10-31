@@ -4,7 +4,7 @@
 
 # Player body & animation foundation (Jul 2026)
 
-Design decisions resolving [#1060](https://github.com/RE-SS3D/SS3D/issues/1060) and the shipped foundation for [#1333](https://github.com/RE-SS3D/SS3D/issues/1333) and [#1246](https://github.com/RE-SS3D/SS3D/issues/1246). Navigation map: [systems/entities.md](systems/entities.md). Working plan: [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md).
+Design decisions resolving [#1060](https://github.com/RE-SS3D/SS3D/issues/1060) and the shipped foundation for [#1333](https://github.com/RE-SS3D/SS3D/issues/1333) and [#1246](https://github.com/RE-SS3D/SS3D/issues/1246). Navigation map: [systems/entities.md](../../architecture/systems/entities.md). Working plan: [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md).
 
 ## Overview
 
@@ -54,9 +54,9 @@ Each state exposes: `CanMove`, `CanRotate`, `CanRun`, `CanUseHands`, `CanInterac
 ### Animator Layers
 
 1. **Base** — three FreeformCartesian2D locomotion blends switched by `CombatStance` (0 Peaceful / 1 Melee / 2 Ranged):
-   - **Peaceful** — [Locomotion Pack](../../Assets/Art/Animations/Locomotion%20Pack/) idle / walk / run / strafes
-   - **Melee** — [Pro Melee Axe Pack](../../Assets/Art/Animations/Pro%20Melee%20Axe%20Pack/) standing idle / walk F-B-L-R / run F-B (includes backpedal)
-   - **Ranged** — [Basic Shooter Pack](../../Assets/Art/Animations/Basic%20Shooter%20Pack/) rifle idle / walk / walk back / strafes / run / run back
+   - **Peaceful** — [Locomotion Pack](../../../Assets/Art/Animations/Locomotion%20Pack/) idle / walk / run / strafes
+   - **Melee** — [Pro Melee Axe Pack](../../../Assets/Art/Animations/Pro%20Melee%20Axe%20Pack/) standing idle / walk F-B-L-R / run F-B (includes backpedal)
+   - **Ranged** — [Basic Shooter Pack](../../../Assets/Art/Animations/Basic%20Shooter%20Pack/) rifle idle / walk / walk back / strafes / run / run back
 2. **UpperBody** (spine+arms mask, head excluded) — **Melee** holds and `AttackSwing`; Ranged uses base shooter locomotion (no hold overlay). Head stays on base + look-at IK. Weight is 1 for entire Melee stance (Hold Default when empty-handed); 0 in Peaceful/Ranged.
 3. **Additive** — flinch (`Flinch` uses melee gut react), injured-arm overlay (`Empty Additive` → Male Injured Pack hurting idle; layer weight scales with `InjuredArm*` and yields when `InjuredLeg` owns stumble)
 4. **FullBody Override** — sit, crawl, emote, stand-up
@@ -67,7 +67,7 @@ Base locomotion also includes **Injured Locomotion** (Male Injured Pack Freeform
 
 Rebuild via **SS3D → Animation → Rebuild Combat Stance Blend Trees** after reimporting pack FBX clips.
 
-Shelved (unwired) packs: [Misc](../../Assets/Art/Animations/Misc/), [Probably Not](../../Assets/Art/Animations/Probably%20Not/).
+Shelved (unwired) packs: [Misc](../../../Assets/Art/Animations/Misc/), [Probably Not](../../../Assets/Art/Animations/Probably%20Not/).
 
 ### Who tunes what (animators vs code)
 

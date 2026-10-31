@@ -119,6 +119,6 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 ## Related docs
 
 - [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md)
-- [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)
+- [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)
 - [2026-07_multiplayer-testing-self-hosted-ci.md](2026-07_multiplayer-testing-self-hosted-ci.md)
 - [networking-session.md](systems/networking-session.md)

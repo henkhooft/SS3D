@@ -60,7 +60,7 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 
 ## Related docs
 
-- Architecture efforts: [phase 1](../2026-07_machine-interface-phase1-foundation.md), [phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [diegetic screen UI](../2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [area foundation](../2026-07_area-foundation.md), [agent-first composition](../2026-07_agent-first-composition.md), [mi path catalog](../2026-07_mi-path-catalog.md)
+- Architecture efforts: [phase 1](../../archive/architecture/2026-07_machine-interface-phase1-foundation.md), [phase 2](../../archive/architecture/2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../../archive/architecture/2026-07_machine-interface-phase3-smes-generalization.md), [diegetic screen UI](../../archive/architecture/2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity debt](../../archive/architecture/2026-07_mi-area-electricity-debt.md), [area foundation](../../archive/architecture/2026-07_area-foundation.md), [agent-first composition](../2026-07_agent-first-composition.md), [mi path catalog](../../archive/architecture/2026-07_mi-path-catalog.md)
 - Target shell: [ui-shell](ui-shell.md)
-- Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
+- Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md)
 - Design (read-only): [Documents/design/id-access.md](../../design/id-access.md), [Documents/design/main-hud.md](../../design/main-hud.md)

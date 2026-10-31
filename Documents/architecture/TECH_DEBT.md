@@ -138,13 +138,13 @@ arbitration, click-through, and pointer-over-UI code all still have to account f
 
 `InteractionController` decomposed (TECH_DEBT paydown): discovery/dispatch helpers, outline driver,
 delayed tracker, and sibling `CombatInteractionNetwork` for Harm melee/ranged RPCs — see
-[2026-07_interaction-controller-decomposition.md](2026-07_interaction-controller-decomposition.md)
+[2026-07_interaction-controller-decomposition.md](../archive/architecture/2026-07_interaction-controller-decomposition.md)
 (**shipped**). World/inventory/examine RPCs remain on the controller by design (follow-on optional).
 `MainHudSubSystem.cs` (~1.1k lines) still composes equip/unequip, gear, hands, intent chip, zone-reticle,
 and HUD/MI visibility in one class with **no** decomposition plan — remains open under this item.
 
 - Related: [interactions-runtime.md](systems/interactions-runtime.md), [inventory.md](systems/inventory.md)
-- Effort (interactions): [2026-07_interaction-controller-decomposition.md](2026-07_interaction-controller-decomposition.md) — shipped
+- Effort (interactions): [2026-07_interaction-controller-decomposition.md](../archive/architecture/2026-07_interaction-controller-decomposition.md) — shipped
 - Effort (MainHud): none yet
 
 ### 1.10 Play Mode / multiplayer verification is optional in practice
@@ -163,7 +163,7 @@ outline and drop interaction break against a real client) that has shipped for m
 because nothing in CI would catch it. This isn't one bug — it's a structural gap where "the tests
 pass" and "a human pressed Play once" are different, unenforced bars.
 
-- Related: [networking-session.md](systems/networking-session.md), [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)
+- Related: [networking-session.md](systems/networking-session.md), [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)
 
 ### 1.11 StyleCop disabled repo-wide with no replacement gate
 
@@ -186,10 +186,10 @@ not: `TileMap.cs` scans every `Item` in the scene (`FindObjectsOfType<Item>()`),
 every `ContainerViewer`, and — more structurally — `Core/Subsystems.cs`, the service locator every
 domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache.
 The locator fallback is now skipped while quitting **and** while `WaitingForServer`
-([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3 scaffolding);
+([2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) Phase 3 scaffolding);
 prefer `TryGet` + ready. Hot-path Item/Locker scans remain.
 
-- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)
+- Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md)
 
 ### 1.13 Hotkey-bound debug UIs sprawl with no shared shell
 
@@ -215,11 +215,11 @@ labels on the alert menu). Console commands (`screeneffect`, `alertstack`, …) 
 API; the hotkey panels are convenience debt until UiShell owns a debug layer.
 
 **Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md) +
-[2026-07_default-input-scheme.md](2026-07_default-input-scheme.md)
+[2026-07_default-input-scheme.md](../archive/architecture/2026-07_default-input-scheme.md)
 and (b) preferring an in-game console command first. Target: one arbitrated debug overlay host under
 UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when that lands.
 
-- Related: [inputs.md](systems/inputs.md), [2026-07_default-input-scheme.md](2026-07_default-input-scheme.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
+- Related: [inputs.md](systems/inputs.md), [2026-07_default-input-scheme.md](../archive/architecture/2026-07_default-input-scheme.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
 
 ### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
 
@@ -312,7 +312,7 @@ tables before starting any redesign that touches `Human.prefab` or a condemned s
 
 - **Dedicated server vs. real client:** selection outline and drop interaction break when a real
   client connects to a dedicated server build; not root-caused despite the headless server having
-  shipped for multiple sessions. [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md).
+  shipped for multiple sessions. [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md).
 - **Multiplayer harness gaps:** mouse/screen-space interaction and pocket/container round-trip are
   not covered by the automated harness yet, so regressions there ship silently.
   [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md).
@@ -347,7 +347,7 @@ RPCs removed. Movement / bridge / orchestrator read `Presentation`.
 
 - **Closed by:** this session's body-presentation refactor (TECH_DEBT 1.2 plan); bump with PR when merged.
 - **Not in this close:** ghost/mind-swap redesign; collapse animation content; prefab strip.
-- Related: [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), [health.md](systems/health.md), [entities.md](systems/entities.md)
+- Related: [2026-07_body-presentation-authority.md](../archive/architecture/2026-07_body-presentation-authority.md), [health.md](systems/health.md), [entities.md](systems/entities.md)
 
 ### 1.3 Interaction Discover contract — 2026-07-23
 
@@ -356,7 +356,7 @@ Discover semantics locked: candidates vs `FilterAndSort` viability; `Interaction
 receives hit `context`. Pickable≠rangeable (missing wall-mount colliders) remains open under the
 framework map.
 
-- **Closed by:** `0499ab7cd` on `cursor/interaction-discover-contract` ([2026-07_interaction-discover-contract.md](2026-07_interaction-discover-contract.md)); bump with PR when merged.
+- **Closed by:** `0499ab7cd` on `cursor/interaction-discover-contract` ([2026-07_interaction-discover-contract.md](../archive/architecture/2026-07_interaction-discover-contract.md)); bump with PR when merged.
 - **Not in this close:** forcing one extension gate style; wall-mount colliders (pickable≠rangeable).
 - Related: [interactions-framework.md](systems/interactions-framework.md), [interactions-runtime.md](systems/interactions-runtime.md)
 
@@ -375,7 +375,7 @@ Empty-hand outline pollution from `OpenCraftingMenu` discovery is gone with the 
 
 Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `NetworkSystemsHub`
 (Online spawn). Boot/Game no longer place per-system SubSystem GameObjects
-([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) Phase 3h).
+([2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) Phase 3h).
 
 - **Closed by:** `b74f47123` (Phase 3h hub + scene strip); post-ship hardening `ab79afee2` (ServerMeta
   boot ownership), `b57f3974e` (PlayerCamera lazy resolve); smoke hardening (Selection/Armed
@@ -383,14 +383,14 @@ Gameplay SubSystems are code-owned: `SystemsBootstrap` (DDOL process-wide) + `Ne
 - **Not in this close:** UiShell / MainHud / StoragePanel `RuntimeInitializeOnLoad` — agent-first
   follow-on **(b)**. Also residual: content-prefab `SubSystem`s (PlayerCamera / Radial / Armed /
   MapEditor) that still register when Game loads before hub Online — consumers use `TryGet` until
-  those move to bootstrap/hub ([2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md)).
+  those move to bootstrap/hub ([2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md)).
 - Related: [core-subsystems.md](systems/core-subsystems.md), [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 
 ### 1.16 Session/world lifecycle — 2026-07-23
 
 Session FSM, Empty offline, world-readiness graph, `PrepareRound` gate, `SystemsBootstrap`, and
 `NetworkSystemsHub` shipped under
-[2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) (`Status: shipped`).
+[2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) (`Status: shipped`).
 
 - **Closed by:** `77f4d9798` / `84401b2fe` / `b74f47123` (phases 1–3h); follow-up Play Mode fixes on
   `cursor/session-world-lifecycle` as above.

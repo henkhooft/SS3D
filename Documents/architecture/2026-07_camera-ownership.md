@@ -6,7 +6,7 @@
 
 ## Why
 
-Player-camera pose has the same failure mode [input arbitration](2026-07_input-arbitration.md) fixed for actions: **many writers, no single owner.**
+Player-camera pose has the same failure mode [input arbitration](../archive/architecture/2026-07_input-arbitration.md) fixed for actions: **many writers, no single owner.**
 
 Today `CameraFollow`, `MapEditorSession`, FOV tweens on `PlayerCameraSubSystem`, and ad-hoc `Camera.main` / `CameraSubSystem.PlayerCamera` lookups all mutate or read the same transform. Correctness depends on every caller disabling the others in the right order. Coimbra `UpdateEvent` still fires after `enabled = false`, so “disable `CameraFollow`” was not enough — map-editor orbit was overwritten every frame and hologram picks stayed locked to follow-camera axes (mouse X = world east/west).
 
@@ -32,4 +32,4 @@ Map editor then requests `CameraContext.MapEditor` and never touches `CameraFoll
 
 - Symptom / interim fix: [systems/tile.md](systems/tile.md) Pitfalls (map editor hologram / orbit)
 - Screens map: [systems/chat-audio-screens.md](systems/chat-audio-screens.md)
-- Precedent: [2026-07_input-arbitration.md](2026-07_input-arbitration.md)
+- Precedent: [2026-07_input-arbitration.md](../archive/architecture/2026-07_input-arbitration.md)

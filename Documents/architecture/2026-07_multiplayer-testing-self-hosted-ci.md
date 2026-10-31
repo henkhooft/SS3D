@@ -134,7 +134,7 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
   box, screenshot on a `Test signal`, and assert UI-presence / pixel state. Only path to the
   **machine-UI-leak-to-host** bug as a visual fact, and it simultaneously reopens the three
   gaps the harness doc lists as unported: mouse/screen-space **drop-pickup**, **selection
-  outline** ([2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)
+  outline** ([2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)
   Known issues), and *visual* light sync. Materially heavier (real display, OS input
   injection, screenshot diffing) — its own architecture effort.
 - **Phase 4 — 24/7 soak server.** Long-lived dedicated server + scripted bot clients running
@@ -187,5 +187,5 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 
 - [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — the harness Phases 1–2 extend
 - [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md) — the workflows Phase 0 moves onto the runner
-- [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md) — the deferred visual regressions Phase 3 would reopen
+- [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) — the deferred visual regressions Phase 3 would reopen
 - [networking-session.md](systems/networking-session.md), [electricity.md](systems/electricity.md), [area.md](systems/area.md)

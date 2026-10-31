@@ -102,8 +102,8 @@ HUD feed yet.
 ## Related docs
 
 - Design: [Documents/design/comms.md](../../design/comms.md)
-- Effort: [2026-07_comms-non-diegetic-feed.md](../2026-07_comms-non-diegetic-feed.md)
-- Plan: [comms_non_diegetic_feed.plan.md](../../plans/comms_non_diegetic_feed.plan.md)
+- Effort: [2026-07_comms-non-diegetic-feed.md](../../archive/architecture/2026-07_comms-non-diegetic-feed.md)
+- Plan: [comms_non_diegetic_feed.plan.md](../../archive/plans/comms_non_diegetic_feed.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
-- [2026-07_input-arbitration](../2026-07_input-arbitration.md)
+- [2026-07_input-arbitration](../../archive/architecture/2026-07_input-arbitration.md)
 - [2026-07_camera-ownership.md](../2026-07_camera-ownership.md)

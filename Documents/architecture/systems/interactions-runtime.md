@@ -49,7 +49,7 @@ Entities (`Human`, ghosts) are excluded from hover outlines; medical targeting w
 
 Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.IsSourceOnly` / `SourceOnly()`). Those always appear while an item is held and must not outline every `Selectable` under the cursor. Prefer `TryEvaluateOutlineInteractability` (skips source discovery); `FilterForOutline` for list-based filters.
 
-Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md).
+Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../../archive/architecture/2026-07_interaction-discover-contract.md).
 
 ## Pitfalls
 
@@ -63,14 +63,14 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - **Entity body-part selectables vs NetworkObject root:** Client builds viable lists on the hovered child `Selectable`; `CmdRunInteraction` revalidates on the parent `NetworkObject.gameObject`, so `targetComponentIndex` often mismatches (`SyntheticTargetIndex` -2). Use `InteractionDispatch.TryResolveDispatchedInteraction` (exact id, then generic-name fallback) — do not require limb mesh contact for combat Hits.
 - **`F` toggles Help/Harm** via arbitrated `InputSubSystem.ToggleIntent` (was hardcoded `C`, which
   also fired Cancel). Cancel delayed/armed interactions with **Backspace**. Defaults:
-  [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
+  [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
 - **Radial shows icons but petal clicks no-op after first close:** `Disappear` unsubscribes `InteractionSelected`/`CloseRequested` (avoids double-fire during hide). The UiShell-backed menu view is reused, so `ShowInteractionsMenu` must call `BindMenuViewHandlers` every open — otherwise the second hold-RMB session looks fine (icons populate) but petals never route. Not Addressables-related.
 
 ## Cancellation
 
 - **Cancel Interaction** (`<Keyboard>/backspace`) — `CmdCancelInteraction` for in-progress delayed interactions.
-- **Intent toggle** is **F**, not Cancel — see [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
+- **Intent toggle** is **F**, not Cancel — see [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 - Movement — `DelayedInteraction` auto-cancel via `CharacterMoveCheck` (melee uses entity root).
 
 ## Extension points
@@ -90,11 +90,11 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 
 ## Related docs
 
-- Effort: [2026-07_interaction-controller-decomposition](../2026-07_interaction-controller-decomposition.md) — shipped (TECH_DEBT 1.9 interactions)
-- Effort: [2026-07_interaction-discover-contract](../2026-07_interaction-discover-contract.md)
-- Effort: [2026-07_interaction-system-hardening](../2026-07_interaction-system-hardening.md)
-- Defaults: [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)
+- Effort: [2026-07_interaction-controller-decomposition](../../archive/architecture/2026-07_interaction-controller-decomposition.md) — shipped (TECH_DEBT 1.9 interactions)
+- Effort: [2026-07_interaction-discover-contract](../../archive/architecture/2026-07_interaction-discover-contract.md)
+- Effort: [2026-07_interaction-system-hardening](../../archive/architecture/2026-07_interaction-system-hardening.md)
+- Defaults: [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md)
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)
-- Plan: [interaction_system_improvements_9e14ae22.plan.md](../../plans/interaction_system_improvements_9e14ae22.plan.md)
+- Plan: [interaction_system_improvements_9e14ae22.plan.md](../../archive/plans/interaction_system_improvements_9e14ae22.plan.md)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
 - Tests: EditMode `InteractionPipelineTests` / `InteractionDispatchTests`; PlayMode `InteractionPlayModeTests` / `ClientGameActions.PlayerCanDropAndPickUpItem`

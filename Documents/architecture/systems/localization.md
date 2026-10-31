@@ -30,4 +30,4 @@ Shared localization accessor with caching, locale-change invalidation, and dev/r
 
 ## Related docs
 
-- Plan: [examine_localization_design_5ca361a6.plan.md](../../plans/examine_localization_design_5ca361a6.plan.md)
+- Plan: [examine_localization_design_5ca361a6.plan.md](../../archive/plans/examine_localization_design_5ca361a6.plan.md)

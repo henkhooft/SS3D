@@ -112,5 +112,5 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
 - [2026-07_inventory-storage-redesign](../2026-07_inventory-storage-redesign.md)
-- [clothing_world_presentation.plan.md](../../plans/clothing_world_presentation.plan.md)
+- [clothing_world_presentation.plan.md](../../archive/plans/clothing_world_presentation.plan.md)
 - [INDEX.md](../INDEX.md)

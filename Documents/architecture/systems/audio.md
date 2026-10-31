@@ -195,5 +195,5 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Related docs
 
 - Design (read-only): [Documents/design/audio.md](../../design/audio.md)
-- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../2026-07_health-env-feel.md)
-- Precedent: [2026-07_screen-space-effects](../2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)
+- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../../archive/architecture/2026-07_health-env-feel.md)
+- Precedent: [2026-07_screen-space-effects](../../archive/architecture/2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)

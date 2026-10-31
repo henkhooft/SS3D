@@ -30,6 +30,6 @@ Expand the machine-interface stack from APC-only to multi-machine support, begin
 ## Follow-ups (out of scope for this effort)
 
 - Explicit integration test coverage for multi-viewer mixed machine sessions.
-- Additional machine types via registry extension pattern documented in [diegetic screen UI framework](2026-07_diegetic-screen-ui-framework.md) and the updated [machine-interface](systems/machine-interface.md) system map.
+- Additional machine types via registry extension pattern documented in [diegetic screen UI framework](2026-07_diegetic-screen-ui-framework.md) and the updated [machine-interface](../../architecture/systems/machine-interface.md) system map.
 
 Diagnostics consolidation / Host-SubSystem thinning continued in [2026-07_mi-area-electricity-debt](2026-07_mi-area-electricity-debt.md).

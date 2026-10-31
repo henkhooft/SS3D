@@ -6,7 +6,7 @@
 
 ## Goal
 
-Ship the physical disposal pipe network for **items**: BFS topology, chute drop-in, destination tagging, visible transit capsules, outlet grace/eject, and mid-transit spill when a pipe tile is cleared — per [disposal.md](../design/disposal.md) §2–§7.
+Ship the physical disposal pipe network for **items**: BFS topology, chute drop-in, destination tagging, visible transit capsules, outlet grace/eject, and mid-transit spill when a pipe tile is cleared — per [disposal.md](../../design/disposal.md) §2–§7.
 
 ## Shipped
 
@@ -23,7 +23,7 @@ Ship the physical disposal pipe network for **items**: BFS topology, chute drop-
 
 - Player pipe-coil place + wirecutter cut recipes (same unfinished path as HV cable; map-editor / `TryClearTile` drives sabotage spill today)
 - Cargo export consumer of `IDisposalSweepable` (Cargo still design-only)
-- Player transit ([disposal.md](../design/disposal.md) §8)
+- Player transit ([disposal.md](../../design/disposal.md) §8)
 - Design-doc companion wording on SizeClass in `disposal.md` §2 (owner-only; code already uses `Item.SizeClass`)
 
 ## Documented fork notes
@@ -33,6 +33,6 @@ Ship the physical disposal pipe network for **items**: BFS topology, chute drop-
 
 ## Related docs
 
-- System map: [systems/disposal.md](systems/disposal.md)
-- Design (read-only): [disposal.md](../design/disposal.md)
-- Inventory SizeClass: [inventory-storage.md](../design/inventory-storage.md) §4
+- System map: [systems/disposal.md](../../architecture/systems/disposal.md)
+- Design (read-only): [disposal.md](../../design/disposal.md)
+- Inventory SizeClass: [inventory-storage.md](../../design/inventory-storage.md) §4

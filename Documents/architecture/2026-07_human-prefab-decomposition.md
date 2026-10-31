@@ -80,7 +80,7 @@ copy-pasted organ from landing on `Human.prefab` in review.
   keeps doing that as part of its own redesign touching entity wiring (existing policy), this effort
   only makes sure a recipe tool exists when they do.
 - Body presentation ownership (collapse/death/ragdoll) — that's
-  [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), out of scope here
+  [2026-07_body-presentation-authority.md](../archive/architecture/2026-07_body-presentation-authority.md), out of scope here
   by that doc's own "Out of scope" note.
 
 ## Phased plan

@@ -4,11 +4,11 @@
 
 # Comms non-diegetic feed + Tab compose (Jul 2026)
 
-Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hub: local speech (already shipped) plus radio and station announcements. Purges the headless legacy `ChatSubSystem` (`SS3D.Engine.Chat`) after salvaging channel ScriptableObject data.
+Extends [CommsSubSystem](../../architecture/systems/chat-audio-screens.md) into the single comms hub: local speech (already shipped) plus radio and station announcements. Purges the headless legacy `ChatSubSystem` (`SS3D.Engine.Chat`) after salvaging channel ScriptableObject data.
 
 ## Deviates from design
 
-- **Channel pick:** Tab / Shift+Tab while drafting instead of hold-comms → channel radial ([comms.md](../design/comms.md) §6). Radial deferred; recorded on the system map.
+- **Channel pick:** Tab / Shift+Tab while drafting instead of hold-comms → channel radial ([comms.md](../../design/comms.md) §6). Radial deferred; recorded on the system map.
 - **Slash prefixes:** interim `/eng`, `/sec`, `/announce` in T-compose (design §5 rejects typed prefixes). Prefix wins over Tab; Announcement is prefix-only (not in Tab cycle).
 - **Announcements:** All `Announcement`-kind traffic uses the top-middle banner this pass (no routine→feed split yet). Player `/announce` unlocked until headset/role gating.
 - **Placement:** Radio stack on the left (mock); design said bottom-left of main HUD — same family.
@@ -37,7 +37,7 @@ Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hu
 ## Deferred (MVP2 / later)
 
 - Headset trait / ID gating for channels
-- PDA history log ([comms.md](../design/comms.md) §9)
+- PDA history log ([comms.md](../../design/comms.md) §9)
 - Channel radial (replaces interim Tab + slash prefixes)
 - OOC/LOOC/dead distinct typography
 - Re-lock player `/announce` behind role/access when gating lands
@@ -45,5 +45,5 @@ Extends [CommsSubSystem](systems/chat-audio-screens.md) into the single comms hu
 ## Related
 
 - Plan: [Documents/plans/comms_non_diegetic_feed.plan.md](../plans/comms_non_diegetic_feed.plan.md)
-- Design: [Documents/design/comms.md](../design/comms.md)
-- Map: [systems/chat-audio-screens.md](systems/chat-audio-screens.md)
+- Design: [Documents/design/comms.md](../../design/comms.md)
+- Map: [systems/chat-audio-screens.md](../../architecture/systems/chat-audio-screens.md)

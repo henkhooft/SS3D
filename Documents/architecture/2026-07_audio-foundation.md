@@ -35,7 +35,7 @@ is content, §10 / this doc's Deferred).
    *for a given listener* — it depends on the local `AudioListener` position, so it cannot be baked
    into the server RPC (which only says "play clip X at position P"). The server stays the trigger
    authority; the muffle/attenuate and the ambience crossfade are per-client presentation, exactly
-   like [screen-space-effects](2026-07_screen-space-effects.md) drives overlays from a synced
+   like [screen-space-effects](../archive/architecture/2026-07_screen-space-effects.md) drives overlays from a synced
    `HealthSnapshot` client-side. The server pool guard (`#if !UNITY_SERVER`) already reflects this.
 2. **Occlusion is the seventh consumer of `SS3D.Utils.LineOfSight`** (`audio.md` §1). Reuse
    `LineOfSight.HasLineOfSight(listener, source, occluderMask)` — the same helper Drop, combat cover,

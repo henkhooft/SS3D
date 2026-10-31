@@ -4,7 +4,7 @@
 
 # Animation polish — melee torso, limp, blend-tree ownership (Jul 2026)
 
-Follow-on to [2026-07_player-body-animation.md](2026-07_player-body-animation.md). Navigation: [systems/entities.md](systems/entities.md).
+Follow-on to [2026-07_player-body-animation.md](2026-07_player-body-animation.md). Navigation: [systems/entities.md](../../architecture/systems/entities.md).
 
 ## Decisions
 
@@ -47,4 +47,4 @@ Intentional leftovers in code: Upper Body weight lerp for stance enter/leave; lo
 ## Related
 
 - Plan: [animation_system_design_250de599.plan.md](../plans/animation_system_design_250de599.plan.md)
-- Design (read-only): [health.md](../design/health.md) (visible limp), [combat.md](../design/combat.md)
+- Design (read-only): [health.md](../../design/health.md) (visible limp), [combat.md](../../design/combat.md)

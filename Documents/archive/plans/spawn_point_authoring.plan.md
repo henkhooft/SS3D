@@ -25,7 +25,7 @@ isProject: false
 
 # Spawn Point Authoring (Map Editor + Save)
 
-Implements [creative-mode.md](../design/creative-mode.md) §8 **authoring + save only**. See architecture effort [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md).
+Implements [creative-mode.md](../../design/creative-mode.md) §8 **authoring + save only**. See architecture effort [2026-07_spawn-point-authoring.md](../architecture/2026-07_spawn-point-authoring.md).
 
 ## Implementation notes
 

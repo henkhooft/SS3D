@@ -70,7 +70,7 @@ See system map: [systems/combat.md](../architecture/systems/combat.md) (`Status:
 |-------|-----|
 | `HumanHealthController.ApplyDamage` / damage packet into health | Health owns damage intake |
 | `ZoneTargetResolver` / `BodyParts` / `ZoneTargetCollider` | Health zone targeting (health plan Phase 4) |
-| `HumanoidCombatController`, stance packs, `AnimationOrchestrator.PlayAttackTrigger` | Presentation hooks from [player-body-animation](../architecture/2026-07_player-body-animation.md) |
+| `HumanoidCombatController`, stance packs, `AnimationOrchestrator.PlayAttackTrigger` | Presentation hooks from [player-body-animation](../archive/architecture/2026-07_player-body-animation.md) |
 | Help/Harm via Main HUD + `IIntentRestrictedInteraction` | Intent gating |
 | `StaminaController.ServerDepleteStamina` / `ApplyOxyDebt` | Ready; combat drains are Phase 4 of *this* plan |
 | Screen hit-flash via health → `ScreenEffectsSubSystem` | Already wired |

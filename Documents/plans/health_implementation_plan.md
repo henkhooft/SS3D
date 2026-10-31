@@ -412,7 +412,7 @@ Ships between Phase 5 and Phase 6. Design authority: health.md §5 (Severed tier
 | 7c Surgery | Incise → clamp → repair → close; unclamped-close → internal bleed |
 | 7d Death/cloning | DNA record, defib polish, cloning pod |
 | 7e Chemistry | Reagents → pools via `IHealthEffectModifier`; sedation for surgery; disease cures are ordinary recipes (virology.md §6) |
-| Feel / env | **Shipped:** [2026-07_health-env-feel.md](../architecture/2026-07_health-env-feel.md) — crit ragdoll, screen FX, turf breath/exposure, blood spray, personal/hit SFX |
+| Feel / env | **Shipped:** [2026-07_health-env-feel.md](../archive/architecture/2026-07_health-env-feel.md) — crit ragdoll, screen FX, turf breath/exposure, blood spray, personal/hit SFX |
 
 Deferred organ gameplay when assets exist: eyes (vision), stomach (hunger), ears, kidneys (replace interim clearance).
 
@@ -602,4 +602,4 @@ health.md §8 + death-cloning §9 example A, end-to-end:
 
 Death and unconsciousness collapse use single-authority `Ragdoll` + replicated `BodyPresentationState`.
 Health maps vitals via `BodyPresentationIntent` and must not grow a parallel collapse path.
-See [2026-07_body-presentation-authority.md](../architecture/2026-07_body-presentation-authority.md).
+See [2026-07_body-presentation-authority.md](../archive/architecture/2026-07_body-presentation-authority.md).

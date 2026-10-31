@@ -7,7 +7,7 @@
 
 ## Overview
 
-FishNet session management — host/join, network type and port settings. Distinct from tile AOI helpers under `Systems/Networking/`. Includes a genuine headless dedicated-server build (`UNITY_SERVER` subtarget), not just a client build launched with `-serveronly` — see [2026-07_headless-dedicated-server](../2026-07_headless-dedicated-server.md). A real multi-process test harness now exercises this end to end — see [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md). Manual CI prerelease + nightly `develop-nightly` (EditMode/smoke opt-in on dispatch): [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md). Self-hosted TomNAS runner (smoke + EditMode/release with GitHub fallback): [2026-07_multiplayer-testing-self-hosted-ci](../2026-07_multiplayer-testing-self-hosted-ci.md).
+FishNet session management — host/join, network type and port settings. Distinct from tile AOI helpers under `Systems/Networking/`. Includes a genuine headless dedicated-server build (`UNITY_SERVER` subtarget), not just a client build launched with `-serveronly` — see [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md). A real multi-process test harness now exercises this end to end — see [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md). Manual CI prerelease + nightly `develop-nightly` (EditMode/smoke opt-in on dispatch): [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md). Self-hosted TomNAS runner (smoke + EditMode/release with GitHub fallback): [2026-07_multiplayer-testing-self-hosted-ci](../2026-07_multiplayer-testing-self-hosted-ci.md).
 
 ## Start here
 
@@ -59,7 +59,7 @@ FishNet session management — host/join, network type and port settings. Distin
 ## Related docs
 
 - [INDEX.md](../INDEX.md)
-- [2026-07_headless-dedicated-server](../2026-07_headless-dedicated-server.md) — headless
+- [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md) — headless
   server build, runtime guards, known issues, testing-harness gap
 - [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md) — the harness that closes that gap
 - [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md) — manual + nightly CI prerelease (EditMode/smoke opt-in on dispatch)

@@ -8,7 +8,7 @@
 
 Turn `InteractionController` from a god-class (~2.3k lines) into a thin player-owned input/policy
 router. Domains own network and feedback. Preserve the shipped framework contract
-([interactions-framework](systems/interactions-framework.md)): `IInteraction`, `InteractionPipeline`,
+([interactions-framework](../../architecture/systems/interactions-framework.md)): `IInteraction`, `InteractionPipeline`,
 Discover/`HasPoint`, `InteractionIdentifier`, Harm-never-falls-through.
 
 Closes TECH_DEBT §1.9 for **interactions only** (`MainHudSubSystem` remains open).
@@ -43,8 +43,8 @@ Follow-up fix: `CombatEditorAssembly.asmdef` must reference `SS3D.Core` (`ac35e3
 
 ## Related
 
-- [interactions-runtime.md](systems/interactions-runtime.md)
-- [interactions-framework.md](systems/interactions-framework.md)
-- [combat.md](systems/combat.md)
-- [TECH_DEBT.md](TECH_DEBT.md) §1.9
+- [interactions-runtime.md](../../architecture/systems/interactions-runtime.md)
+- [interactions-framework.md](../../architecture/systems/interactions-framework.md)
+- [combat.md](../../architecture/systems/combat.md)
+- [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.9
 - Prior: [2026-07_interaction-system-hardening.md](2026-07_interaction-system-hardening.md)

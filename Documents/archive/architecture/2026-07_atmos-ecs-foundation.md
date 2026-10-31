@@ -15,7 +15,7 @@ Ship turf gas simulation with tile-driven neighbour graph, plasma combustion, GP
 3. **Gas data** — four core gases (O₂, N₂, CO₂, plasma); `GasRegistry` + `GasDefinition` ScriptableObjects; molar mass and specific heat on each gas.
 4. **Tile bridge** — `AtmosTileObserver` on `ITileMutationObserver`; `AtmosNeighbourBuilder`; deferred refresh on tile clear.
 5. **Dynamic occupancy** — `IDynamicTileOccupant` on airlocks; `TileSubSystem.NotifyTileStateChanged` reopens/closes gas paths when doors move.
-6. **Visualization** — `AtmosGpuUploader` → pressure/temperature/composition/fire textures; `AtmosRendererFeature` scatter + plasma glow + heat distortion; per-gas visual profiles. **Server/host only** until [client visualization sync](2026-07_atmos-client-visualization-sync.md) ships.
+6. **Visualization** — `AtmosGpuUploader` → pressure/temperature/composition/fire textures; `AtmosRendererFeature` scatter + plasma glow + heat distortion; per-gas visual profiles. **Server/host only** until [client visualization sync](../../architecture/2026-07_atmos-client-visualization-sync.md) ships.
 7. **Debug** — `AtmosDebugController` overlay; shader debug views on renderer feature.
 8. **Scene wiring** — `AtmosSystem` on `Game.unity`; renderer feature on `SS3D_ForwardPlusRenderer.asset`.
 9. **Tests** — `AtmosFluxTests` (incl. equal-pressure composition mix), `AtmosCombustionTests`, `AtmosNeighbourTests`, `AtmosGpuUploaderTests`, `AtmosVisualMetricsTests`.
@@ -32,11 +32,11 @@ Breath O₂→CO₂ swaps conserve moles, so stable rooms never mixed under pres
 - Liquid/solid rendering (puddles, decals)
 - Breach hooks (explosives, suit breach, wet-floor shocks)
 - Perception-altering gas effects
-- **Client VFX sync** — see [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md)
+- **Client VFX sync** — see [2026-07_atmos-client-visualization-sync.md](../../architecture/2026-07_atmos-client-visualization-sync.md)
 
 ## Shipped on fork (pipe layer, 2026)
 
-- Gas pipe networks, vents, scrubbers, pumps, air alarms, and diegetic machine interfaces (see [atmospherics](systems/atmospherics.md))
+- Gas pipe networks, vents, scrubbers, pumps, air alarms, and diegetic machine interfaces (see [atmospherics](../../architecture/systems/atmospherics.md))
 
 ## Documented fork deviations
 
@@ -47,6 +47,6 @@ Breath O₂→CO₂ swaps conserve moles, so stable rooms never mixed under pres
 
 ## Related docs
 
-- System map: [atmospherics.md](systems/atmospherics.md)
-- Effort (planned): [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md)
-- Design (read-only): [atmospherics.md](../design/atmospherics.md)
+- System map: [atmospherics.md](../../architecture/systems/atmospherics.md)
+- Effort (planned): [2026-07_atmos-client-visualization-sync.md](../../architecture/2026-07_atmos-client-visualization-sync.md)
+- Design (read-only): [atmospherics.md](../../design/atmospherics.md)

@@ -216,7 +216,7 @@ Run `update-system-docs` skill after shipping:
 - Update [machine-interface.md](Documents/architecture/systems/machine-interface.md) — diegetic shell kind, component catalog, extension recipe
 - Update [furniture.md](Documents/architecture/systems/furniture.md) — vending now uses machine interface
 - Add architecture effort `2026-07_diegetic-screen-ui-framework.md` (Status: shipped)
-- Close remaining items in [phase 3 generalization doc](Documents/architecture/2026-07_machine-interface-phase3-smes-generalization.md) where this work addresses registry extension docs
+- Close remaining items in [phase 3 generalization doc](../architecture/2026-07_machine-interface-phase3-smes-generalization.md) where this work addresses registry extension docs
 
 ---
 
@@ -281,6 +281,6 @@ Shipped on branch `feature/diegetic-screen-ui-framework` (commits through `a4656
 
 **Documentation**
 - Architecture effort: [2026-07_diegetic-screen-ui-framework.md](../architecture/2026-07_diegetic-screen-ui-framework.md)
-- Updated maps: [machine-interface.md](../architecture/systems/machine-interface.md), [furniture.md](../architecture/systems/furniture.md)
+- Updated maps: [machine-interface.md](../../architecture/systems/machine-interface.md), [furniture.md](../../architecture/systems/furniture.md)
 - Phase 3 registry-extension doc item closed in [2026-07_machine-interface-phase3-smes-generalization.md](../architecture/2026-07_machine-interface-phase3-smes-generalization.md)
 

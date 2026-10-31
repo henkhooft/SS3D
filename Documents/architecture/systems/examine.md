@@ -66,7 +66,7 @@ Glance examine (hover + Shift-hold) is **not** an `IInteraction` — `Examinable
 
 ## Related docs
 
-- Plan: [examine_localization_design_5ca361a6.plan.md](../../plans/examine_localization_design_5ca361a6.plan.md), [health_implementation_plan.md](../../plans/health_implementation_plan.md) Phase 6
+- Plan: [examine_localization_design_5ca361a6.plan.md](../../archive/plans/examine_localization_design_5ca361a6.plan.md), [health_implementation_plan.md](../../plans/health_implementation_plan.md) Phase 6
 - Design (read-only): [Documents/design/examine.md](../../design/examine.md), [health.md](../../design/health.md) §7
-- Defaults: [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)
+- Defaults: [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md)
 - Tests: `ExamineContentResolverTests`, `CharacterExamineHealthBuilderTests`, `CharacterExamineContentBuilderTests`, `CharacterExamineSlotContainerMapTests`, `CharacterLootUtilityTests`, `SearchInteractionTests`

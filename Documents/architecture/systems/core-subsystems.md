@@ -9,7 +9,7 @@
 
 Base actor/subsystem pattern and runtime service locator. All gameplay domains expose a `*SubSystem` registered via `SubSystems.Get<T>()`. `NetworkSubSystem` extends FishNet `NetworkActor` for networked subsystems.
 
-Process-wide services: `SystemsBootstrap` (DDOL). World/session networked systems: `NetworkSystemsHub` Resources prefab (spawned Online). Boot/Game do not place per-system SubSystem GameObjects ([session-world-lifecycle](../2026-07_session-world-lifecycle.md)).
+Process-wide services: `SystemsBootstrap` (DDOL). World/session networked systems: `NetworkSystemsHub` Resources prefab (spawned Online). Boot/Game do not place per-system SubSystem GameObjects ([session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)).
 
 ## Start here
 
@@ -33,13 +33,13 @@ Process-wide services: `SystemsBootstrap` (DDOL). World/session networked system
 
 - **Registration ≠ readiness.** Await `WorldReadyPhase` before round start / sim ticks that need flooded areas.
 - **Missing Get during Disconnecting / WaitingForServer is silent** — use `TryGet`.
-- **Game content prefabs may still host SubSystems** (PlayerCamera, Radial/Armed overlays, MapEditor) that register before hub Online — Phase 3 only stripped Boot/Game systems roots. Consumers must `TryGet` / lazy-resolve; relocating those components onto bootstrap/hub is residual cleanup ([session-world-lifecycle](../2026-07_session-world-lifecycle.md) post-ship note).
+- **Game content prefabs may still host SubSystems** (PlayerCamera, Radial/Armed overlays, MapEditor) that register before hub Online — Phase 3 only stripped Boot/Game systems roots. Consumers must `TryGet` / lazy-resolve; relocating those components onto bootstrap/hub is residual cleanup ([session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md) post-ship note).
 - **Do not AddComponent NetworkSubSystems at runtime** — edit-time on hub prefab only (FishNet behaviour list).
 - Hub despawn on disconnect unregisters via `OnDestroyed` — no extra teardown required.
 - **Coimbra `GetChecked` / `EventSystem` Editor GC:** PackageCache `ServiceLocator.GetChecked` interpolates assert strings every call; deep profiles also show `String.Format` paired with every `EventSystem.Invoke`. Prefer caching `IEventService` and `SubSystems` refs on hot loops we own; do not edit PackageCache. Tracked in [TECH_DEBT.md](../TECH_DEBT.md) §2.
 
 ## Related docs
 
-- [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
+- [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
 - [INDEX.md](../INDEX.md)

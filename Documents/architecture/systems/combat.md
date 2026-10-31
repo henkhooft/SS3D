@@ -101,9 +101,9 @@ stamina drain), projectile/thrown.
 
 ## Related docs
 
-- Effort: [2026-07_interaction-controller-decomposition](../2026-07_interaction-controller-decomposition.md) — Harm RPCs moved to `CombatInteractionNetwork`
+- Effort: [2026-07_interaction-controller-decomposition](../../archive/architecture/2026-07_interaction-controller-decomposition.md) — Harm RPCs moved to `CombatInteractionNetwork`
 - Design: [Documents/design/combat.md](../../design/combat.md), [Documents/design/armor.md](../../design/armor.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md) (Phase 3, Phase 5 shipped)
 - Feel pass (M1p subset): Cursor plan `ranged_combat_feel` — muzzle/audio/anims/two-hand/holes/`rangeddebug` shipped; aim IK cancelled
-- Clothing world form: [clothing_world_presentation.plan.md](../../plans/clothing_world_presentation.plan.md), [inventory](inventory.md)
+- Clothing world form: [clothing_world_presentation.plan.md](../../archive/plans/clothing_world_presentation.plan.md), [inventory](inventory.md)
 - [entities](entities.md), [health](health.md), [inventory](inventory.md), [INDEX.md](../INDEX.md)

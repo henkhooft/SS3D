@@ -66,4 +66,4 @@ separate efforts.
 
 - Policy: [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 - Map: [systems/ui-shell.md](systems/ui-shell.md), [systems/interactions-runtime.md](systems/interactions-runtime.md), [systems/inputs.md](systems/inputs.md)
-- Sibling wedge: [2026-07_mi-path-catalog.md](2026-07_mi-path-catalog.md)
+- Sibling wedge: [2026-07_mi-path-catalog.md](../archive/architecture/2026-07_mi-path-catalog.md)

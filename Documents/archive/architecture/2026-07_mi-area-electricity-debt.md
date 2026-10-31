@@ -18,5 +18,5 @@ Close authenticity and performance debt introduced with machine interface and ar
 
 ## Related
 
-- System maps: [machine-interface](systems/machine-interface.md), [electricity](systems/electricity.md), [area](systems/area.md)
+- System maps: [machine-interface](../../architecture/systems/machine-interface.md), [electricity](../../architecture/systems/electricity.md), [area](../../architecture/systems/area.md)
 - Prior: [2026-07_machine-interface-phase3-smes-generalization](2026-07_machine-interface-phase3-smes-generalization.md), [2026-07_area-foundation](2026-07_area-foundation.md)
