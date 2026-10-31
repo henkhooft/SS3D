@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: c07530a34 — 2026-10-31
+> Verified: f04093919 — 2026-10-31
 
 # Chat / audio / screens
 

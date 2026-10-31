@@ -1,82 +1,57 @@
-> Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud); Assets/Scripts/SS3D/UI/Lobby/ (Modal shell in progress)
-> Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog, LobbyUiSubSystem
+> Code paths: Assets/Scripts/SS3D/UI/Shell/
+> Entry points: UiShellSubSystem, UiLayer, IUiSurface, UiShellAssetCatalog
 > Status: partial
-> Verified: 473f62eea — 2026-08-13
+> Verified: f04093919 — 2026-10-31
 
 # UI shell
 
 ## Overview
 
-Composition root for player-facing UI Toolkit surfaces. Layers: **HUD** (persistent), **overlay** (radial, armed,
-examine, reticle), **diegetic/modal** (machine panels), **debug** (console). `UiShellSubSystem` owns one shared
-`UIDocument` and builds one child `VisualElement` per `UiLayer`, applying the global token stylesheets once at the
-root. Surfaces attach into a layer via `SubSystems.Get<UiShellSubSystem>().GetLayer(UiLayer.X)` instead of each
-owning a private document. Policy: [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md).
-Effort doc: [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md).
+Composition root for player-facing UI Toolkit surfaces. `UiShellSubSystem` self-bootstraps one shared `UIDocument`, builds one child `VisualElement` per `UiLayer` (`Hud`, `Overlay`, `Diegetic`, `Modal`, `Debug`) and applies the global token stylesheets once at the root. Surfaces attach into a layer instead of owning a private document. Policy: [agent-first composition](../2026-07_agent-first-composition.md). Effort: [ui-shell-consolidation](../2026-07_ui-shell-consolidation.md), whose non-goals list the later migration phases.
 
-**Migrated onto `UiShellSubSystem`:** radial interaction menu, armed overlay (`Assets/Scripts/SS3D/Systems/Interactions/`),
-the full examine overlay — generic hover/detail *and* character paperdoll — via `ExamineOverlaySubSystem`
-(`Assets/Scripts/SS3D/UI/Examine/` — see [examine](examine.md); this is also the redesign that deleted the
-condemned uGUI `ExamineUI`, not just a character-only addition). Its `ExamineOverlayAssetCatalog` is a lighter
-one-off catalog (no `PanelSettings`/document of its own, since it attaches into the shared document) rather than
-a full `UiAssetCatalogBase` derivative — reconcile the two if more self-bootstrapping overlay-only surfaces show up.
-**Lobby shell (Phase A/B + E1):** `LobbyUiSubSystem` / `LobbyShellView` + `CharacterCreatorView` +
-`CharacterPreviewBooth` on `UiLayer.Modal`
-([2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)) — live RT preview + local draft; networking later.
+**On the shell today:**
 
-**Not yet migrated (still own their own path-catalog wedge — duplicated pattern):**
+| Surface | Layer | Owner map |
+|---|---|---|
+| Radial interaction menu, armed overlay | Overlay | [interactions-runtime](interactions-runtime.md) |
+| Examine overlay (hover/detail + character paperdoll) | Overlay | [examine](examine.md) |
+| Local-speech chips/compose (`LocalSpeechBubbleController`) | Overlay | [chat-audio-screens](chat-audio-screens.md) |
+| Comms feed (`CommsFeedController`) | Hud | [chat-audio-screens](chat-audio-screens.md) |
+| Lobby shell + Character Creator (`LobbyUiSubSystem`) | Modal | [rounds-lobby](rounds-lobby.md) |
 
-| Surface | Paths + SO | Rebuild menu | Map |
-|---|---|---|---|
-| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [machine-interface](machine-interface.md), [mi-path-catalog](../../archive/architecture/2026-07_mi-path-catalog.md) |
-| Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
-| Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [inventory](inventory.md) |
-| UI Shell | `UiShellAssetPaths` / `UiShellAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | this map |
-| Lobby | `LobbyAssetPaths` / `LobbyAssetCatalog` | **SS3D → Data → Rebuild All UI Catalogs** | [rounds-lobby](rounds-lobby.md) |
+**Not migrated yet.** Each still has its own `UIDocument` and path catalog, all rebuilt by **SS3D → Data → Rebuild All UI Catalogs**:
 
-Migrating MI and Main HUD onto `UiShellSubSystem` + `UiAssetCatalogBase` is later, separate work (Main HUD next,
-MI last since it's shipped and most load-bearing) — not part of the Phase 0-1 wedge this doc currently reflects.
+| Surface | Paths + SO | Owner map |
+|---|---|---|
+| Machine UI | `MachineUiAssetPaths` / `MachineUiAssetCatalog` | [machine-interface](machine-interface.md) |
+| Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | [inventory](inventory.md) |
+| Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | [inventory](inventory.md) |
+
+The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lobby's (`LobbyAssetPaths` / `LobbyAssetCatalog`) use the same rebuild. `ExamineOverlayAssetCatalog` is a lighter one-off: no `PanelSettings` or document of its own, not a `UiAssetCatalogBase` derivative.
 
 ## Start here
 
-- Policy: [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md)
-- Effort doc: [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md)
-- Shared shell: `Assets/Scripts/SS3D/UI/Shell/UiShellSubSystem.cs`, `UiLayer.cs`
-- Shared catalog base: `Assets/Scripts/SS3D/UI/Shell/Catalog/UiAssetCatalogBase.cs`, `UiCatalogRuntimeLoader.cs`
-- Shared panel animation: `Assets/Scripts/SS3D/UI/Shell/Animation/PanelAnimator.cs`
-- Shared binder base (scaffolded, not yet consumed): `Assets/Scripts/SS3D/UI/Shell/Binding/`
-- First wedge (MI path catalog): [2026-07_mi-path-catalog.md](../../archive/architecture/2026-07_mi-path-catalog.md)
-- Interim MI: `Assets/Content/Systems/UI/MachineInterface/Resources/MachineUiAssetCatalog.asset`
-- Interim Main HUD: `Assets/Content/Systems/UI/MainHud/Resources/MainHudAssetCatalog.asset`
+- `Assets/Scripts/SS3D/UI/Shell/UiShellSubSystem.cs` — `TryGetLayer(UiLayer, out VisualElement)` (preferred) / `GetLayer`
+- `Assets/Scripts/SS3D/UI/Shell/UiLayer.cs`, `IUiSurface.cs` — layer enum; surface contract implemented by the radial, armed, examine and lobby views
+- `Assets/Scripts/SS3D/UI/Shell/Catalog/UiAssetCatalogBase.cs`, `UiCatalogRuntimeLoader.cs` — shared catalog base
+- `Assets/Scripts/SS3D/UI/Shell/Animation/PanelAnimator.cs` — shared panel animation
+- `Assets/Scripts/SS3D/UI/Shell/Binding/UiBinderBase.cs` — scaffolded binder base with no consumers yet
 - Tokens: `Assets/Content/Systems/UI/Tokens/`, `Assets/Content/Systems/UI/MachineInterface/Tokens/`
 
 ## Extension points
 
-- New UI: UITK only. Attach into an existing `UiShellSubSystem` layer (see `2026-07_ui-shell-consolidation.md`
-  agent checklist) rather than a private `UIDocument`. For a surface that still needs its own asset catalog,
-  derive from `UiAssetCatalogBase` and use `UiCatalogBuilderKit` + the umbrella **SS3D → Data → Rebuild All UI Catalogs** instead of
-  hand-copying another per-surface rebuild MenuItem ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)).
-- Do not place new `UIDocument` hosts in Boot/Game scenes; `UiShellSubSystem` self-bootstraps the one document new
-  surfaces should attach into.
-
-## Future work
-
-- Migrate Machine Interface, Main HUD, and Storage Panel onto `UiShellSubSystem` + `UiAssetCatalogBase` (each its
-  own later phase — see [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md) non-goals).
-- Migrate MI binders onto `UiBinderBase<TViewModel>`.
-- Drag/drop abstraction (Storage Panel / Main HUD pointer-capture drag).
-- Localization/tooltip wiring (still zero UI Toolkit ↔ `LocalizedTextService` call sites).
-- Addressables migration remains explicitly out of scope.
+- New UI is UITK only. Resolve the shell with `SubSystems.Get<UiShellSubSystem>()`, attach via `TryGetLayer`, and implement `IUiSurface`. The effort doc's agent checklist covers the steps.
+- A surface that needs its own asset catalog derives from `UiAssetCatalogBase` and registers with `UiCatalogBuilderKit` and the umbrella rebuild menu ([editor-tooling-tiers](../2026-07_editor-tooling-tiers.md)), not a per-surface MenuItem.
+- `UiShellSubSystem` creates the document itself, so Boot and Game scenes need no `UIDocument` host.
 
 ## Depends on / Used by
 
 - **Depends on:** [inputs](inputs.md) (`InputInterface` document registration)
-- **Owns:** radial interaction menu, armed overlay, examine overlay (generic hover/detail + character paperdoll); local-speech chips/compose (`LocalSpeechBubbleController` on Overlay); comms feed (`CommsFeedController` on Hud); lobby shell + Character Creator Phase A/B/E1 (`LobbyUiSubSystem` on Modal — live booth preview + local draft)
-- **Will own:** [machine-interface](machine-interface.md), main HUD ([inventory](inventory.md)), console (as redesigns land); lobby networking + Character Creator (Phases B–E)
+- **Used by:** every surface in the tables above; [machine-interface](machine-interface.md) and the Main HUD once migrated
 
 ## Related docs
 
-- [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md)
 - [2026-07_ui-shell-consolidation.md](../2026-07_ui-shell-consolidation.md)
-- [2026-07_mi-path-catalog.md](../../archive/architecture/2026-07_mi-path-catalog.md)
-- Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
+- [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md)
+- [mi-path-catalog](../../archive/architecture/2026-07_mi-path-catalog.md) (archived) — the first path-catalog wedge
+- Design (read-only): [main-hud.md](../../design/main-hud.md), [lobby.md](../../design/lobby.md)

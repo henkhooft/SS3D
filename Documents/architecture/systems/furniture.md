@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: 754c932ab — 2026-07-29 (airlock NetworkAnimator removed; SyncVar drives Animator)
+> Verified: f04093919 — 2026-10-31
 
 # Furniture / world objects
 

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/MachineInterface/, Assets/Content/Systems/UI/MachineInterface/
 > Entry points: MachineInterfaceSubSystem, MachineInterfaceHost, MachineInterfaceRegistry, MachineUiAssetCatalog
 > Status: shipped
-> Verified: f1c9476af — 2026-07-25
+> Verified: f04093919 — 2026-10-31
 
 # Machine interface UI
 

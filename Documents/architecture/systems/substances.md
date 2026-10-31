@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Substances/
 > Entry points: SubstancesSubSystem, SubstanceContainer, ReactionResolver, TransferSubstanceInteraction, PourSubstanceInteraction
 > Status: partial
-> Verified: 3a8a57f65 — 2026-07-28
+> Verified: f04093919 — 2026-10-31
 
 # Substances
 

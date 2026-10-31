@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 1f4d12833 — 2026-07-28
+> Verified: f04093919 — 2026-10-31
 
 # Inventory
 
@@ -100,6 +100,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
 - **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
 - **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right). Hotkey debug panels in general are [TECH_DEBT.md](../TECH_DEBT.md) § 1.13 — prefer `alertstack` / console commands over new F-keys.
+- **Worn clothing ignores body sliders:** a new `sharedMesh` starts with zero shape-key weights, so the clothes no longer fit the customized body and nothing logs it. `ClothesDisplayer` calls `Human.ReapplyBodyMorphs()` after every swap.
+- **Late join fails after an earlier round:** `ContainerViewedCondition` could still list a destroyed `NetworkObject` (a previous body) and threw mid observer rebuild, aborting the spawn. Skip null entries in observer conditions.
 - **`SyncList.Clear` callbacks carry default items:** FishNet raises one `Clear` change with `default` old/new values, so `oldItem.Item` is null. `AttachedContainer.HandleStoredItemsChanged` dereferenced it, throwing on the server each time a body with containers was despawned (`Purge` on round stop, seen with a remote client's body). Null-check items in every `SyncListOperation` branch.
 
 ## Depends on / Used by

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 290aa4e1c — 2026-07-28 (chunked station load; CCR Linux fonts)
+> Verified: f04093919 — 2026-10-31
 
 # Networking (session)
 
@@ -37,6 +37,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - **Station template boot load freezes the same way:** `LoadMostRecentStationTemplate` used to place sync; use `LoadStationTemplateAsync` / `TileMap.LoadRoutine` (Play start + Map Editor Load). Hit 2026-07-28.
 - **Disconnect must not reload Boot after first Online.** CCR arms Empty; Automation must not restore Boot offline after reconnect.
 - **Late connections timed out before their first packet (FishNet).** `NetworkConnection.Initialize` seeded `PacketTick` with `SetLastRemoteTick`, which `EstimatedTick.Update` rejects for remote tick 0, so `LocalTick` stayed 0 and `CheckClientTimeout` kicked a connection opened 60s+ after server start (`Id [n] has timed out`, Host reconnect → CCR Retry/Quit). Local `SS3D patch` uses `SetRemoteTick`; re-apply on FishNet upgrades. Hit 2026-10-30.
+- **Stopped dedicated server never starts again:** no client connection finishes its disconnect, so the session sat in `Disconnecting` and `CanStart` refused the next session (PlayMode tests restarting between cases). `ClientConnectionRecovery` sets `Cold` directly when `NetworkType` is `DedicatedServer`.
 - **Intro auto-join is Cold-only** (`IntroUIHelper` checks `SessionState.Cold`).
 - **`SubSystems.Get` during Disconnecting / WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`. Suppress starts on Disconnecting so hub/device `OnDestroy` during `StopConnection` does not Error before WaitingForServer.
 - **OnGUI recovery when Empty offline:** NetworkSession is DDOL — CCR shows OnGUI when Intro/Boot/Launcher are not loaded (not when NetworkSession is missing).
