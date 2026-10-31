@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SS3D.Systems.Rounds;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SS3D.UI.Lobby
@@ -45,12 +46,16 @@ namespace SS3D.UI.Lobby
         private string[] _serverMaps = Array.Empty<string>();
         private bool _hasServerSettings;
         private string _serverSettingsStatus = "Loading server settings…";
+        private const float PendingServerTextSeconds = 5f;
+        private readonly Dictionary<ServerSetting, (string Value, float Expires)> _pendingServerText = new();
+        private readonly HashSet<VisualElement> _editingFields = new();
         public event Action<ServerSetting, ServerSettings> ServerSettingsChanged;
         public event Action<RoundAdminAction> RoundAdminRequested;
 
         public void SetServerSettings(ServerSettings settings, string[] maps, string status)
         {
             _serverSettings = settings;
+            ApplyPendingServerText();
             _serverMaps = maps ?? Array.Empty<string>();
             _hasServerSettings = true;
             if (!string.IsNullOrEmpty(status)) _serverSettingsStatus = status;
@@ -60,6 +65,7 @@ namespace SS3D.UI.Lobby
 
         private void BuildServerSettingsTab(VisualElement parent)
         {
+            _editingFields.Clear();
             ScrollView scroll = new() { name = "server-settings-scroll" };
             scroll.AddToClassList("lobby-shell__server-settings-scroll");
             parent.Add(scroll);
@@ -184,6 +190,7 @@ namespace SS3D.UI.Lobby
             input.RegisterValueChangedCallback(e => { update(e.newValue); SaveServerSettings(field); });
             input.RegisterCallback<FocusInEvent>(_ => _textEntry.Enter());
             input.RegisterCallback<FocusOutEvent>(_ => _textEntry.Exit());
+            TrackEditing(input);
             column.Add(input);
             parent.Add(column);
         }
@@ -192,14 +199,64 @@ namespace SS3D.UI.Lobby
         private void AddServerText(VisualElement parent, string label, string name, ServerSetting field, int maxLength,
             bool multiline, Action<string> update)
         {
-            TextField input = new(label) { name = name, maxLength = maxLength, multiline = multiline, isDelayed = true };
+            // Not isDelayed: multiline delayed fields do not reliably commit on blur, so commit explicitly.
+            TextField input = new(label) { name = name, maxLength = maxLength, multiline = multiline };
             input.AddToClassList("lobby-shell__server-text");
             input.AddToClassList("font-body");
             input.EnableInClassList("lobby-shell__server-text--multiline", multiline);
-            input.RegisterValueChangedCallback(e => { update(e.newValue); SaveServerSettings(field); });
+            input.RegisterCallback<FocusOutEvent>(_ =>
+            {
+                if (!_hasServerSettings || input.value == ServerTextValue(_serverSettings, field)) return;
+                _pendingServerText[field] = (input.value, Time.unscaledTime + PendingServerTextSeconds);
+                update(input.value);
+                SaveServerSettings(field);
+            });
+            if (!multiline)
+            {
+                input.RegisterCallback<KeyDownEvent>(e =>
+                {
+                    if (e.keyCode is KeyCode.Return or KeyCode.KeypadEnter) input.Blur();
+                }, TrickleDown.TrickleDown);
+            }
             StyleDarkTextField(input);
             HoldTextEntry(input);
+            TrackEditing(input);
             parent.Add(input);
+        }
+
+        /// <summary>
+        /// Marks a field as being edited between focus in/out (both bubble from the inner text input), so
+        /// the per-frame refresh never rewrites text under the caret. focusController.focusedElement was
+        /// not reliable for this: rewriting mid-typing reset the text and broke the caret index.
+        /// </summary>
+        private void TrackEditing(VisualElement field)
+        {
+            field.RegisterCallback<FocusInEvent>(_ => _editingFields.Add(field));
+            field.RegisterCallback<FocusOutEvent>(_ => _editingFields.Remove(field));
+        }
+
+        private static string ServerTextValue(ServerSettings settings, ServerSetting field) =>
+            field == ServerSetting.ServerName ? settings.ServerName : settings.Motd;
+
+        /// <summary>
+        /// Keeps a committed name/MOTD over the periodic admin snapshot until the server echoes it,
+        /// so a reply that was already in flight does not snap the field back to the old text.
+        /// </summary>
+        private void ApplyPendingServerText()
+        {
+            foreach (ServerSetting field in _pendingServerText.Keys.ToArray())
+            {
+                (string value, float expires) = _pendingServerText[field];
+                string sanitized = field == ServerSetting.ServerName
+                    ? ServerInfoText.SanitizeName(value) : ServerInfoText.SanitizeMotd(value);
+                if (ServerTextValue(_serverSettings, field) == sanitized || Time.unscaledTime > expires)
+                {
+                    _pendingServerText.Remove(field);
+                    continue;
+                }
+                if (field == ServerSetting.ServerName) _serverSettings.ServerName = value;
+                else _serverSettings.Motd = value;
+            }
         }
 
         private static Toggle ServerRule(string text, string name, bool supported, string reason)
@@ -252,9 +309,9 @@ namespace SS3D.UI.Lobby
             IntegerField cap = form.Q<IntegerField>("server-player-cap");
             IntegerField length = form.Q<IntegerField>("server-round-length");
             // Do not replace text while an admin is typing in a delayed field.
-            if (cap.panel?.focusController.focusedElement is not VisualElement focus || !cap.Contains(focus))
+            if (!_editingFields.Contains(cap))
                 cap.SetValueWithoutNotify(_serverSettings.PlayerCap);
-            if (length.panel?.focusController.focusedElement is not VisualElement lengthFocus || !length.Contains(lengthFocus))
+            if (!_editingFields.Contains(length))
                 length.SetValueWithoutNotify(_serverSettings.RoundLengthMinutes);
             cap.SetEnabled(idle && _hasServerSettings);
             length.SetEnabled(idle && _hasServerSettings);
@@ -262,7 +319,7 @@ namespace SS3D.UI.Lobby
             {
                 TextField text = form.Q<TextField>(name);
                 // Same rule as the number fields: never replace text the admin is editing.
-                if (text.panel?.focusController.focusedElement is not VisualElement textFocus || !text.Contains(textFocus))
+                if (!_editingFields.Contains(text))
                     text.SetValueWithoutNotify(value ?? "");
                 text.SetEnabled(_hasServerSettings);
             }

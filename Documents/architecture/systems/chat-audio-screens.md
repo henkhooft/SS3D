@@ -12,7 +12,8 @@ controllers. Audio has its own map — [audio](audio.md). Camera pose is still m
 [camera ownership](../2026-07_camera-ownership.md).
 
 **Comms hub:** `CommsSubSystem` owns local speech (proximity ObserversRpc) and non-positional radio /
-announcements (global `CommsMessage` broadcast). Legacy `ChatSubSystem` / `Engine.Chat` purged;
+announcements (`CommsMessage` broadcast; radio to all clients, announcements only to connections
+with a spawned crew body, so lobby clients never get the round-start welcome). Legacy `ChatSubSystem` / `Engine.Chat` purged;
 channel SOs live under `Assets/Content/Data/Comms/Channels/` (`CommsChannel` / `CommsChannels`).
 
 Local speech: weighted chips + T-compose (Enter speak / Shift+Enter whisper / Ctrl+Enter shout).

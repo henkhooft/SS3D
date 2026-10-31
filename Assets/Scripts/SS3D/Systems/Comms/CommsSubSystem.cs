@@ -383,6 +383,30 @@ namespace SS3D.Systems.Comms
             }
 
             AppendServerLog(message);
+
+            // Station announcements are in-world: only crew with a spawned body hear them, not lobby clients.
+            if (message.Kind == CommsChannelKind.Announcement)
+            {
+                HashSet<NetworkConnection> crew = new();
+                if (SubSystems.TryGet(out EntitySubSystem entities))
+                {
+                    foreach (NetworkConnection client in InstanceFinder.ServerManager.Clients.Values)
+                    {
+                        if (entities.TryGetSpawnedEntity(client, out _))
+                        {
+                            crew.Add(client);
+                        }
+                    }
+                }
+
+                if (crew.Count > 0)
+                {
+                    InstanceFinder.ServerManager.Broadcast(crew, message);
+                }
+
+                return;
+            }
+
             InstanceFinder.ServerManager.Broadcast(message);
         }
 

@@ -65,6 +65,7 @@ namespace SS3D.Editor.Automation
         private const string PilotMotd = "Line one\n\nLine <b>two</b>";
         private static string _originalServerName;
         private static string _originalMotd;
+        private static double _typingUntil;
         private const float PilotHeight = 0.9f;
         private const float PilotFat = 0.7f;
         private static System.Diagnostics.Process _client;
@@ -410,17 +411,41 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Edit server name and MOTD during an active round",
+                Name = "MOTD text being typed survives admin settings refreshes",
                 Enter = () =>
                 {
                     _originalServerName = Rounds().ServerName;
                     _originalMotd = Rounds().Motd;
-                    Shell().Q<TextField>("server-name").value = PilotServerName;
-                    Shell().Q<TextField>("server-motd").value = "Line one\n\nLine <b>two</b>";
+                    TextField motd = Shell().Q<TextField>("server-motd");
+                    motd.Focus();
+                    motd.value = PilotMotd;
+                    // The lobby re-reads admin settings every second; stay focused across several refreshes.
+                    _typingUntil = EditorApplication.timeSinceStartup + 2.5;
+                },
+                Until = () => EditorApplication.timeSinceStartup >= _typingUntil,
+                Verify = () =>
+                {
+                    Require(Shell().Q<TextField>("server-motd").value == PilotMotd, "Uncommitted MOTD text is not overwritten while focused");
+                    Require(Rounds().Motd == _originalMotd, "MOTD is not committed before focus loss");
+                },
+            },
+            new Step
+            {
+                Name = "Edit server name and MOTD during an active round",
+                Enter = () =>
+                {
+                    // Name/MOTD commit on focus loss, and the field must keep the new text while the periodic
+                    // admin snapshot is still the old value.
+                    Shell().Q<TextField>("server-motd").Blur();
+                    TextField name = Shell().Q<TextField>("server-name");
+                    name.Focus();
+                    name.value = PilotServerName;
+                    name.Blur();
                 },
                 Until = () => Rounds().ServerName == PilotServerName && Rounds().Motd == PilotMotd,
                 Verify = () =>
                 {
+                    Require(Shell().Q<TextField>("server-motd").value == PilotMotd, "MOTD field keeps the committed text");
                     Require(LocalStorage.TryReadRaw(PersistencePaths.ServerInfo, out string saved)
                         && saved.Contains(PilotServerName) && saved.Contains("Line <b>two</b>"), "Server info is saved server-side");
                     Require(Rounds().PublicMode == "Extended", "Players see the configured mode");
