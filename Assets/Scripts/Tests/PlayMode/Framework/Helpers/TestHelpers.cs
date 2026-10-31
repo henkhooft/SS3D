@@ -7,6 +7,7 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.Rounds;
 using SS3D.UI.Buttons;
 using System.Collections;
 using System.Linq;
@@ -26,10 +27,6 @@ namespace SS3D.Tests
         private const string VerticalAxis = "Vertical";
         private const string CancelButton = "Cancel";
         private const string ReadyButtonName = "Ready";
-        private const string EmbarkButtonName = "Embark";
-
-        private const string ServerSettingsTabName = "Server Settings";
-        private const string StartRoundButtonName = "Start Round";
         #endregion
 
         /// <summary>
@@ -45,52 +42,40 @@ namespace SS3D.Tests
             return result;
         }
 
+        // Round flow goes through the server (ServerHelpers), not lobby buttons: these tests cover
+        // gameplay, and the lobby UI has its own pilots (Testing/ui).
+
+        /// <summary>Starts a round, waits until it is Ongoing, then embarks the local player after <paramref name="delay"/>.</summary>
         public static IEnumerator StartAndEnterRound(float delay = 0f)
         {
             yield return StartRound();
+            yield return ServerHelpers.WaitForRoundState(RoundState.Ongoing, 60f);
             yield return new WaitForSeconds(delay);
-            yield return PressButtonWhenAvailable(EmbarkButtonName);
+            yield return Embark();
         }
 
-        /// <summary>
-        /// This method simulates the user in the lobby switching to the "Server Settings" tab, and clicking "Start Round".
-        /// </summary>
-        /// <param name="delay">Time delay between actions.</param>
-        /// <returns>IEnumerator for yielding in UnityTest.</returns>
+        /// <summary>Requests a round start, as an administrator's Start Round would.</summary>
         public static IEnumerator StartRound(float delay = 0.5f)
         {
-            SetTabActive(ServerSettingsTabName);
-
-            yield return new WaitForSeconds(delay);
-            PressButton(StartRoundButtonName);
-
+            ServerHelpers.ChangeRoundState(true);
             yield return new WaitForSeconds(delay);
         }
 
+        /// <summary>Starts a round without readying up, then joins it late.</summary>
         public static IEnumerator LateJoinRound()
         {
-            // Fire up the game
-            SetTabActive(ServerSettingsTabName);
-
-            yield return new WaitForSeconds(1f);
-            PressButton(StartRoundButtonName);
-
-            yield return new WaitForSeconds(1f);
-
-            // Give a few moments pause before we try and late join
+            ServerHelpers.SetPlayerReadiness(ServerHelpers.LocalCkey, false);
+            yield return StartRound();
+            yield return ServerHelpers.WaitForRoundState(RoundState.Ongoing, 60f);
             yield return new WaitForSeconds(5f);
-
-            // Now we join.
-            PressButton(EmbarkButtonName);
-
-            yield return new WaitForSeconds(3f);
-
+            yield return Embark();
         }
 
+        /// <summary>Joins the Ongoing round as the local player (no-op if already spawned), then lets the body settle.</summary>
         public static IEnumerator Embark()
         {
-            PressButton(EmbarkButtonName);
-
+            yield return ServerHelpers.EmbarkPlayer(ServerHelpers.LocalCkey);
+            // A fresh body drops onto the floor after spawning; movement tests measure positions.
             yield return new WaitForSeconds(3f);
         }
 
@@ -121,30 +106,11 @@ namespace SS3D.Tests
         }
 
         /// <summary>
-        /// Stops an active round when lobby UI is available. Safe to call from TearDown after a failed SetUp.
+        /// Stops an active round and waits until it is Stopped. Safe to call from TearDown after a failed SetUp.
         /// </summary>
         public static IEnumerator TryFinishAndExitRound()
         {
-            yield return null;
-
-            if (GameObject.Find(ServerSettingsTabName) == null)
-            {
-                yield break;
-            }
-
-            SetTabActive(ServerSettingsTabName);
-
-            yield return new WaitForSeconds(1f);
-
-            if (GetButton(StartRoundButtonName) == null)
-            {
-                yield break;
-            }
-
-            PressButton(StartRoundButtonName);
-
-            yield return new WaitForSeconds(1f);
-            yield return new WaitForSeconds(4f);
+            yield return ServerHelpers.StopRound();
         }
 
         public static void PressButton(string buttonName)
