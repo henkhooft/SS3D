@@ -21,8 +21,8 @@ Central input layer wrapping the Unity Input System. Two responsibilities:
    the field. Callers include interaction click gates and selection hover clearing (examine/outlines).
 
 **Default key layout** (Caps sprint, Shift examine, F intent, Backspace cancel, E = Use only):
-[2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md). See that doc before adding
-bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arbitration.md).
+[2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md). See that doc before adding
+bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/architecture/2026-07_input-arbitration.md).
 
 ## Start here
 
@@ -57,7 +57,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arb
   `LocalSpeechBubbleController`). Legacy objectives `Other/Fade` Tab binding is erased at startup.
   Unused `Other/Attack` + `Show Owner` (both were F) are also erased so `ToggleIntent` owns F.
 
-## Conventions
+### Conventions
 
 - Never call `InputAction.Enable/Disable` directly; go through a context or suppression handle.
 - A handle must be owned by exactly one object and disposed once; disposing is idempotent and
@@ -84,7 +84,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arb
 - **Escape owners:** `Other/Toggle Menu` = in-round lobby menu (`LobbyUiSubSystem`, `Menu` context);
   `UiCancel` = machine panel; armed interactions poll the key and win (the lobby menu skips while armed).
 - **Regenerating `Controls.cs`:** re-apply Caps / Backspace / F6 (and startup erasures) if the generator
-  restores old paths — asset + generated wrapper must match [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
+  restores old paths — asset + generated wrapper must match [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 
 ## Tests
 
@@ -100,6 +100,6 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arb
 
 ## Related docs
 
-- [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md)
-- [2026-07_input-arbitration.md](../2026-07_input-arbitration.md)
+- [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md)
+- [2026-07_input-arbitration.md](../../archive/architecture/2026-07_input-arbitration.md)
 - [INDEX.md](../INDEX.md)

@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/ScreenEffects/
 > Entry points: ScreenEffectsSubSystem
-> Status: partial (health + turf temp/fire wired via HealthSnapshot.Environment)
+> Status: partial
 > Verified: be4ea6eea — 2026-07-25
 
 # Screen-space effects
@@ -47,5 +47,5 @@ Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it
 
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md) §5
 - Plan: [health_implementation_plan.md](../../plans/health_implementation_plan.md) (Phase 6 screen feedback shipped; vitals cluster still open)
-- Effort: [2026-07_screen-space-effects.md](../2026-07_screen-space-effects.md); turf temp/fire via [2026-07_health-env-feel.md](../2026-07_health-env-feel.md)
+- Effort: [2026-07_screen-space-effects.md](../../archive/architecture/2026-07_screen-space-effects.md); turf temp/fire via [2026-07_health-env-feel.md](../../archive/architecture/2026-07_health-env-feel.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)

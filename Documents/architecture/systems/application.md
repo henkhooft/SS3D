@@ -32,5 +32,5 @@ App bootstrap and startup initialization. `ApplicationInitializerSubSystem` is D
 ## Related docs
 
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
-- [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
+- [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [INDEX.md](../INDEX.md)

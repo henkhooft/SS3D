@@ -1,13 +1,15 @@
-> Implements: Documents/architecture/2026-07_headless-dedicated-server.md#testing-gap-no-multiplayer-test-harness
+> Implements: Documents/archive/architecture/2026-07_headless-dedicated-server.md#testing-gap-no-multiplayer-test-harness
 > Touches systems: networking-session, rounds-lobby, permissions, ingame-console, logging
-> Status: shipped (partial — see Known gaps)
+> Status: shipped
+
+**Progress:** Partial — see Known gaps.
 
 # Multiplayer test harness (Jul 2026)
 
 ## Goal
 
 Close the testing gap the headless dedicated-server effort surfaced
-([2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)): every bug found
+([2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)): every bug found
 there (a network session port race, several `[Server]`-path NREs, broken selection outline and
 drop interaction against a real remote client) was found by hand — build server, build client,
 launch both, play, read two log files, repeat. EditMode tests can't reach any of it (no FishNet
@@ -234,7 +236,7 @@ a real merge gate.
 
 ## Related docs
 
-- [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md) — the effort and
+- [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) — the effort and
   testing gap this closes
 - [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) — why
   `AutomationSubSystem` self-bootstraps instead of living in `Boot.unity`

@@ -77,12 +77,12 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 ## Related docs
 
-- Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
+- Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
-- Architecture effort: [2026-07_area-foundation](../2026-07_area-foundation.md)
-- Architecture effort: [2026-07_mi-area-electricity-debt](../2026-07_mi-area-electricity-debt.md)
+- Architecture effort: [2026-07_area-foundation](../../archive/architecture/2026-07_area-foundation.md)
+- Architecture effort: [2026-07_mi-area-electricity-debt](../../archive/architecture/2026-07_mi-area-electricity-debt.md)
 - Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md) (Phase 2 ambience track sync)
-- Effort: [2026-07_tile-overlay-replacement](../2026-07_tile-overlay-replacement.md)
-- Effort: [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
+- Effort: [2026-07_tile-overlay-replacement](../../archive/architecture/2026-07_tile-overlay-replacement.md)
+- Effort: [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - Related docs: [structural-destruction](structural-destruction.md)
 - Design (read-only): [Documents/design/area.md](../../design/area.md)

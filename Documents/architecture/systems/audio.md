@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
-> Status: partial (personal heartbeat/breathing/alert clips registered; health hit one-shots wired)
+> Status: partial
 > Verified: ee090d4f3 — 2026-07-26
 
 # Audio
@@ -18,118 +18,22 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool entry point: `PlayAudioSource` /
-  `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` et al. (observers); pool
-  sizing (`Min/MaxSfxAudioSources`, `Min/MaxMusicAudioSources`), periodic purge
-- `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — per-pooled-source client-local occlusion
-  (audio.md §3, the seventh `SS3D.Utils.LineOfSight` consumer); added at runtime to every Sfx/Music
-  pool `AudioSource` by `AudioSubSystem.CreateNewAudioSource`, primed by `PrepareForPlayback` right
-  before each `Play()`
-- `Assets/Scripts/SS3D/Systems/Audio/AudioOcclusionState.cs` — pure cutoff/volume lerp math, kept
-  separate from the `MonoBehaviour` so it's unit-testable without a scene
-  (`Assets/Scripts/Tests/EditMode/AudioOcclusionStateTests.cs`)
-- `Assets/Scripts/SS3D/Systems/Audio/Boombox.cs`, `NoisyCollision.cs`, `ChangeMusicInteraction.cs`,
-  `ListenerPosition.cs`, `AudioType.cs` — diegetic jukebox (§5), server-triggered collision SFX (§3
-  example, gains occlusion for free), music-swap interaction, local-player `AudioListener` follow,
-  `Sfx`/`Music`/`Ambient` enum
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceHandler.cs` — **legacy, superseded, do not extend.**
-  Manual per-scene `_air`/`_windiness`/`_power` knobs + global mixer lowpass predating Area/electricity.
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — **Phase 2**, `AmbienceHandler`'s
-  replacement: client-local per-Area ambience crossfade (§2). Self-bootstrapped (same pattern as
-  `ScreenEffectsSubSystem`), not scene/prefab-placed. Polls the local player's position every 0.5s via
-  `AreaSubSystem.TryResolveAreaIdForWorldPosition`; crossfades two non-positional `AudioSource`s
-  between the old/new `AreaSubSystem.TryGetAmbienceTrackId` clip. No occlusion (non-positional, §2 vs §3).
-- `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — **Phase 3**: personal, internal
-  audio (§4) — heartbeat + heavy breathing, non-positional, no occlusion, owner-only.
-  Self-bootstrapped like `AmbienceSubSystem`; owns playback only. Breathing takes
-  `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Heartbeat via
-  `SetHeartbeatIntensity`. Alert ding via `PlayAlertCue`.
-- `Assets/Scripts/SS3D/Systems/Health/HealthPersonalAudioMapper.cs`,
-  `Assets/Scripts/SS3D/Systems/Stamina/StaminaPersonalAudioMapper.cs` — `HealthSnapshot`/stamina
-  ratio → heartbeat + labored breathing intensity, unit-tested. Called from each domain's existing local-owner
-  hook (`HumanHealthController.ApplyScreenEffectsFromSnapshot`/`ClearScreenEffectsIfDriving` alongside
-  `HealthScreenEffectMapper`; `StaminaController.SyncCurrentStamina`'s `IsOwner` gate) — not a new
-  subscription. Health also drives positional gasp/choke/scream/flesh-hit via `AudioSubSystem`
-  (`HealthAudioTrackIds`, `CombatAudioTrackIds.FleshHit`).
-- `Assets/Scripts/SS3D/Systems/Audio/AudioTrackIds.cs` — fixed personal-audio clip ids
-  (`Heartbeat`/`HeavyBreathing`/`AlertCue`) — Unity audio GUIDs once registered in `Sounds.asset`.
-  FreeSound heartbeat/heavy breathing + SS14 beep1.
-- `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — **Phase 4** (§6): pure
-  `HasNewAlert(previous, current)` diff over `AlertStackState` — true only when a hazard goes
-  None → any severity, not on an escalation already showing. Unit-tested
-  (`AlertStackAudioMapperTests`). `MainHudSubSystem.PushAlertState` is the single funnel every
-  `AlertStackState` push goes through (health-driven, debug override, or clear) and calls
-  `PersonalAudioSubSystem.PlayAlertCue()` (one-shot, cooldown-debounced) on a new alert.
-- `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs`, `FootstepAudioTrackIds.cs` — footwear
-  footsteps (§3): Socks / Shoes / Boots under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`.
-  **Client-local** `AudioSource` loop (not the networked pool) — host `Move(default)` clears server
-  locomotion every tick, so a server-pooled loop never stayed audible. Owner uses predicted
-  locomotion velocity; remotes use transform delta. Skips while `BodyAnimationSnapshot.IsFloating`
-  (space coast). Runtime-added from `HumanoidPredictedMovement`.
-- `Assets/Scripts/SS3D/Systems/Audio/VendorAudioTrackIds.cs` — vending dispense clip id
-  (`VendingMachine.wav` from SS3D-Art); `VendingMachineController.PlayVendSound` uses it (replacing
-  the old Can1 placeholder).
-- `Assets/Scripts/SS3D/Systems/Furniture/AirlockAudioTrackIds.cs` — airlock deny clip id
-  (`AirlockDeny.ogg` from SS14 Machines); `AirLockOpener.ServerPlayAccessDenied` plays it. Open/close
-  still use generated `Sounds.AirlockOpen` / `Sounds.AirlockClose`.
-- `Assets/Scripts/SS3D/Systems/Comms/CommsAudioTrackIds.cs` — announcement chimes
-  (`Announce.ogg` always first; optional `Welcome.ogg` follow-up with the banner); `CommsFeedController`
-  plays `StationAnnounce`, then reveals the ALL-STATION banner and any `CommsMessage.SoundId`
-  follow-up in parallel. Third-party credits:
-  [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
-- `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups exist; `Personal`
-  group + per-group exposed Volume are Phase 0/5 work. `AmbienceSubSystem`/`PersonalAudioSubSystem`
-  output to Master for now (no runtime-loadable `AudioMixerGroup` reference for a prefab-less
-  subsystem) — route them once Phase 0 lands.
-- `Assets/Content/Systems/Audio/SFXAudioSource.prefab`, `MusicAudioSource.prefab` — pool prefabs,
-  routed to the `SFX`/`Music` mixer groups respectively
-- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AreaAmbienceCommand.cs` — `areaambience`
-  dev console command, the thin authoring surface for `AreaSubSystem.SetAreaAmbienceTrackId`
+- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); pool sizing and periodic purge
+- `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Replaces legacy `AmbienceHandler.cs`.
+- `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — Phase 3 owner-only heartbeat, breathing and alert ding (§4), non-positional. Driven by `HealthPersonalAudioMapper` / `StaminaPersonalAudioMapper` from each domain's existing local-owner hook.
+- `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
+- `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs` — footwear footsteps on a **client-local** loop, not the pool (host `Move(default)` clears server locomotion every tick); skips while floating
+- `Boombox.cs`, `NoisyCollision.cs`, `ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs` — jukebox, collision SFX, music swap, listener follow, `Sfx`/`Music`/`Ambient` enum
+- `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups; `Personal` group and exposed volumes are Phase 0/5, so ambience and personal audio output to Master for now. Pool prefabs: `SFXAudioSource.prefab`, `MusicAudioSource.prefab`.
+- Clips, track ids and registration: child map [audio-content](audio-content.md)
 
 ## Extension points
 
-- Play a positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId,
-  position, parent, ...)` (server-only). Do not `Instantiate`/`AudioSource.Play` ad hoc for anything
-  that should occlude — route it through the pool so `AudioSourceOcclusion` applies.
-- Sound clips resolve via `Assets.Get<AudioClip>(AssetDatabases.Sounds, id)` — the single clip-lookup
-  path; don't add a second loader.
-- **Finding/adding clips:** check `Documents/art-asset-index.md` → `art-available-for-import.json`
-  first (SS3D-Art has hundreds of unimported sounds, and some imported ones aren't yet registered in
-  `Assets/Content/Data/Databases/Sounds.asset`). Registering a new clip: create an
-  `ObjectAssetReference` asset under `Assets/Content/Data/ObjectAssetReferences/` with
-  `Id = <clip's own asset GUID>`, `Database = AssetDatabases.Sounds`'s `DatabaseID`, then add a
-  matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000,
-  guid: <clip guid>, type: 3}`). `CombatAudioTrackIds` (per-domain, mirrors `AudioTrackIds`) is the
-  pattern for naming registered ids in code rather than inlining raw GUID strings. Third-party
-  imports: add a row to [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md).
-- Ad-hoc `AudioSource` users outside the pool (`AirlockStateMachine`, `StructuralIntegrityPresenter`,
-  `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`,
-  `CommsFeedController` non-diegetic announce/welcome) bypass occlusion today — consolidating
-  positional ones onto `PlayAudioSource` is content-roster work ([audio-foundation](../2026-07_audio-foundation.md),
-  deferred). UI chimes stay client-local / non-spatial.
-- Author an area's ambience track: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server,
-  thin — no Map Editor UI yet). Reachable in-game via the `areaambience (trackId|clear)` dev console
-  command (`AreaAmbienceCommand`), which always targets the calling player's own current area (same
-  "no mouse to click a tile with" reasoning as `AtmosDebugCommand`). Syncs to observers via
-  `RpcSyncAreaAmbience` (BufferLast), same pattern as the departmental-tint snapshot.
-- **31 ambience/collision clips registered, content-availability only (no default assignment):**
-  `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant`, `WindHeavy/Light/Violent`, `PowerHum` (all
-  candidate `areaambience` track ids — content decides which area gets which, per audio.md §2/§10);
-  `MetalHit1-2`/`GrilleHit`/`Rod1`/`Tap`/`TrayHit1-2`/`WoodHit1` (more `NoisyCollision` variety — **no
-  prefab uses `NoisyCollision` yet**, so these are registered for whenever one does, not wired to
-  anything today).
-- **Footwear footsteps (Socks/Shoes/Boots)** are registered *and* wired via `FootstepAudio` — not the
-  availability-only pattern above.
-- Personal cue seam: call `PersonalAudioSubSystem.SetHeartbeatIntensity` /
-  `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge) for systemic cues
-  (virology's symptomatic-stage cue is this same category, per audio.md §4) rather than building a
-  parallel non-positional playback path. Do not call a single shared `SetBreathingIntensity` — stamina
-  and health would overwrite each other.
-- **Not yet built:** power-gating power-dependent ambience tracks off `AreaLightingState` (needs a
-  per-track "requires power" data field — deferred, see Pitfalls), PDA notification cues (no PDA
-  notification chip system exists yet to hook — same gap [chat-audio-screens](chat-audio-screens.md)
-  already records for the non-diegetic feed), lobby music + volume-slider settings (Phase 5). See
-  [audio-foundation](../2026-07_audio-foundation.md).
+- Positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId, position, parent, ...)` (server-only). Route anything that should occlude through the pool.
+- Area ambience: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server). In game, the `areaambience (trackId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
+- Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
+- Not built yet: power-gated ambience, PDA notification cues, lobby music and volume settings (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
 
 ## Pitfalls
 
@@ -190,10 +94,10 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md) (shared domain until fully split); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); [furniture](furniture.md) (airlock open/close/deny + boombox; structural-destruction ad-hoc emitters are consolidation candidates)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); [furniture](furniture.md) (airlock open/close/deny + boombox; structural-destruction ad-hoc emitters are consolidation candidates)
 
 ## Related docs
 
 - Design (read-only): [Documents/design/audio.md](../../design/audio.md)
-- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../2026-07_health-env-feel.md)
-- Precedent: [2026-07_screen-space-effects](../2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)
+- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../../archive/architecture/2026-07_health-env-feel.md)
+- Precedent: [2026-07_screen-space-effects](../../archive/architecture/2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)

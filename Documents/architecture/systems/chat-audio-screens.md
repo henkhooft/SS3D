@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: c07530a34 — 2026-10-31
+> Verified: f04093919 — 2026-10-31
 
 # Chat / audio / screens
 
@@ -44,6 +44,15 @@ HUD feed yet.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
+## Extension points
+
+- Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
+- OOC/LOOC lines in the in-round `CommsFeedView` (§7 typography); mute/ban moderation; persistent history.
+- PDA log / history ([comms.md](../../design/comms.md) §9).
+- Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
+- More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +
+  `AvailableInCompose` / announcement writability flags.
+
 ## Pitfalls
 
 - **Local speech on UiShell Overlay:** do not attach bubbles/compose to the hub UIDocument —
@@ -84,15 +93,6 @@ HUD feed yet.
 - **OOC sender identity:** never trust a client-supplied name. The server resolves the ckey from the connection. Chat labels set `enableRichText = false`.
 - **OOC history replay** may arrive after live lines. `OocChatHistory.Add` inserts by id and dedupes, so don't append blindly.
 
-## Extension points
-
-- Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
-- OOC/LOOC lines in the in-round `CommsFeedView` (§7 typography); mute/ban moderation; persistent history.
-- PDA log / history ([comms.md](../../design/comms.md) §9).
-- Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
-- More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +
-  `AvailableInCompose` / announcement writability flags.
-
 ## Depends on / Used by
 
 - **Depends on:** [player-control](player-control.md), [inputs](inputs.md), [ui-shell](ui-shell.md)
@@ -102,8 +102,8 @@ HUD feed yet.
 ## Related docs
 
 - Design: [Documents/design/comms.md](../../design/comms.md)
-- Effort: [2026-07_comms-non-diegetic-feed.md](../2026-07_comms-non-diegetic-feed.md)
-- Plan: [comms_non_diegetic_feed.plan.md](../../plans/comms_non_diegetic_feed.plan.md)
+- Effort: [2026-07_comms-non-diegetic-feed.md](../../archive/architecture/2026-07_comms-non-diegetic-feed.md)
+- Plan: [comms_non_diegetic_feed.plan.md](../../archive/plans/comms_non_diegetic_feed.plan.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md)
-- [2026-07_input-arbitration](../2026-07_input-arbitration.md)
+- [2026-07_input-arbitration](../../archive/architecture/2026-07_input-arbitration.md)
 - [2026-07_camera-ownership.md](../2026-07_camera-ownership.md)

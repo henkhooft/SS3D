@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/MachineInterface/, Assets/Content/Systems/UI/MachineInterface/
 > Entry points: MachineInterfaceSubSystem, MachineInterfaceHost, MachineInterfaceRegistry, MachineUiAssetCatalog
 > Status: shipped
-> Verified: f1c9476af — 2026-07-25
+> Verified: f04093919 — 2026-10-31
 
 # Machine interface UI
 
@@ -44,7 +44,7 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 
 ## Pitfalls
 
-- **Missing catalog in builds:** host loads `Resources/MachineUiAssetCatalog`. If the asset was never rebuilt/committed, Play Mode and builds fail at awake with an explicit error — not a silent null at panel open (that was the old `EnsureEditorAssets` trap). Main HUD now has the same trap/fix class (`MainHudAssetCatalog`); do not grow a third copy — see [ui-shell](ui-shell.md) § Future work.
+- **Missing catalog in builds:** host loads `Resources/MachineUiAssetCatalog`. If the asset was never rebuilt/committed, Play Mode and builds fail at awake with an explicit error — not a silent null at panel open (that was the old `EnsureEditorAssets` trap). Main HUD now has the same trap/fix class (`MainHudAssetCatalog`); do not grow a third copy — see [ui-shell-consolidation](../2026-07_ui-shell-consolidation.md) § Explicit non-goals.
 - **New UXML without rebuild:** adding paths in C# without running **SS3D → Data → Rebuild All UI Catalogs** leaves the committed SO stale; Editor Play Mode uses the SO, not `AssetDatabase` path strings.
 - **Editor asmdef:** builders live in `SS3D.Editor` and must reference the UI assemblies for catalog types. Do not add another per-surface rebuild MenuItem.
 - **No UITK backdrop-filter:** USS cannot blur the 3D world behind a panel. Diegetic focus uses a dark overlay scrim plus Dual Kawase fullscreen blur (`UiBackdropBlurRendererFeature` via [screen-effects](screen-effects.md) `SetUiBackdropBlur`); the Screen Space Overlay chassis stays sharp on top. URP Gaussian DoF is too weak for this — do not reintroduce DoF for UI focus.
@@ -60,7 +60,7 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 
 ## Related docs
 
-- Architecture efforts: [phase 1](../2026-07_machine-interface-phase1-foundation.md), [phase 2](../2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../2026-07_machine-interface-phase3-smes-generalization.md), [diegetic screen UI](../2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity debt](../2026-07_mi-area-electricity-debt.md), [area foundation](../2026-07_area-foundation.md), [agent-first composition](../2026-07_agent-first-composition.md), [mi path catalog](../2026-07_mi-path-catalog.md)
+- Architecture efforts: [phase 1](../../archive/architecture/2026-07_machine-interface-phase1-foundation.md), [phase 2](../../archive/architecture/2026-07_machine-interface-phase2-apc-networking.md), [phase 3](../../archive/architecture/2026-07_machine-interface-phase3-smes-generalization.md), [diegetic screen UI](../../archive/architecture/2026-07_diegetic-screen-ui-framework.md), [mi-area-electricity debt](../../archive/architecture/2026-07_mi-area-electricity-debt.md), [area foundation](../../archive/architecture/2026-07_area-foundation.md), [agent-first composition](../2026-07_agent-first-composition.md), [mi path catalog](../../archive/architecture/2026-07_mi-path-catalog.md)
 - Target shell: [ui-shell](ui-shell.md)
-- Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
+- Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md)
 - Design (read-only): [Documents/design/id-access.md](../../design/id-access.md), [Documents/design/main-hud.md](../../design/main-hud.md)

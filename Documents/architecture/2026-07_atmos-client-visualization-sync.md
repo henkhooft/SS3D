@@ -1,6 +1,8 @@
 > Implements: Documents/design/atmospherics.md §10 (gas rendering — client visibility)
 > Touches systems: atmospherics, rendering, networking-session
-> Status: shipped (Phase 1: dirty-chunk sync; AOI, bandwidth caps, and late-join bootstrap deferred to Phase 2)
+> Status: shipped
+
+**Progress:** Phase 1: dirty-chunk sync; AOI, bandwidth caps, and late-join bootstrap deferred to Phase 2.
 
 # Atmospherics Client Visualization Sync
 
@@ -65,7 +67,7 @@ Thin sync layer on top of existing types — no renderer rewrite.
 | 0 | Effort doc + system-map gap noted (this doc) | done |
 | 1 | Dirty-chunk tracking on server; client bridge applies patches; visuals work in dedicated-server + client | done |
 | 2 | AOI-scoped sends, bandwidth cap, late-join bootstrap | planned (partial: host-only skips patch broadcast; dirty scan = active cells only; patch buffer reuse) |
-| 3 | Optional: active-region-only atlas bounds, delta encoding | **partial** — host AOI atlas bounds shipped in [2026-07_metastation-scale-perf.md](2026-07_metastation-scale-perf.md); delta encoding still open |
+| 3 | Optional: active-region-only atlas bounds, delta encoding | **partial** — host AOI atlas bounds shipped in [2026-07_metastation-scale-perf.md](../archive/architecture/2026-07_metastation-scale-perf.md); delta encoding still open |
 
 ## Out of scope
 
@@ -94,7 +96,7 @@ Thin sync layer on top of existing types — no renderer rewrite.
 ## Related docs
 
 - System map: [atmospherics.md](systems/atmospherics.md)
-- Prior effort: [2026-07_atmos-ecs-foundation.md](2026-07_atmos-ecs-foundation.md)
+- Prior effort: [2026-07_atmos-ecs-foundation.md](../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Design (read-only): [atmospherics.md](../design/atmospherics.md) §10
 - [rendering.md](systems/rendering.md) — `AtmosRenderContext` / `AtmosRendererFeature`
 - [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — headless

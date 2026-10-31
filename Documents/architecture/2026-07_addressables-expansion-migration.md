@@ -1,6 +1,8 @@
-> Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells #1
+> Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15 #1
 > Touches systems: data-codegen, ui-shell, networking-session, machine-interface, inventory
-> Status: in-progress (Phases 1–3 done; 4–6 open)
+> Status: in-progress
+
+**Progress:** Phases 1–3 done; 4–6 open.
 
 # Addressables expansion & migration
 
@@ -33,7 +35,7 @@ This fork has the identical root cause today, independently of upstream's PR. In
 - **Orphaned cruft removed (Phase 1):** `Assets/AddressableAssetsData/` deleted; single settings root
   is `Assets/Content/Addressables/`.
 - **Already-acknowledged debt pointing at this gap:**
-  [data-codegen.md](systems/data-codegen.md) § Architecture smells,
+  [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15,
   [ui-shell.md](systems/ui-shell.md) / [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
   (MI/Main HUD/Storage still `Resources.Load`), [TECH_DEBT.md](TECH_DEBT.md) § 1.5 / § 1.15.
 
@@ -121,7 +123,7 @@ like upstream — not the diff.
    it until Play Mode or a build. With Addressables addressing there is no second catalog to go stale;
    the Addressables group config *is* the source of truth, and a missing/renamed address fails loudly
    (`LoadAssetAsync` throws/logs "key not found") at the point of use instead of silently no-op'ing.
-   Migrate MI first (best-understood surface, see [2026-07_mi-path-catalog.md](2026-07_mi-path-catalog.md)),
+   Migrate MI first (best-understood surface, see [2026-07_mi-path-catalog.md](../archive/architecture/2026-07_mi-path-catalog.md)),
    then Main HUD, then Storage Panel; delete each `*AssetCatalog` SO + Editor rebuild menu once its
    surface is migrated.
 
@@ -159,9 +161,9 @@ like upstream — not the diff.
 
 ## Related docs
 
-- [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells
+- [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15
 - [systems/ui-shell.md](systems/ui-shell.md), [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
 - [systems/networking-session.md](systems/networking-session.md)
 - [TECH_DEBT.md](TECH_DEBT.md) § 1.4, § 1.5, § 1.15
-- [2026-07_subsystem-bootstrap.md](2026-07_subsystem-bootstrap.md) — sibling effort for TECH_DEBT § 1.7 (self-initializing subsystems); unrelated root cause, do not conflate
+- [TECH_DEBT.md](TECH_DEBT.md) § 6 (resolved 1.7: self-initializing subsystems) — unrelated root cause, do not conflate
 - Upstream: [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494), [RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500)

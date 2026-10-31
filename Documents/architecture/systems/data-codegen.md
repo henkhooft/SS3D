@@ -31,11 +31,6 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 - New interaction icons: drop PNGs under `Assets/Art/Graphics/UI/Interactions/InteractionIcons/`, then **SS3D → Interactions → Rebuild Interaction Icon Sprites**. Output sprites register into the Addressables group; InteractionIcons DB is `AddressablesAsync` (no eager SO dict). Prefer migrating other DBs onto `LoadMode = AddressablesAsync` + `AssetKeys` rather than growing eager dictionaries.
 - New UI path-catalog surface: extend `UiCatalogBuilderKit` / register in `UiCatalogRebuildAll` — do **not** add another `SS3D/.../Rebuild Asset Catalog` MenuItem ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)).
 
-## Architecture smells
-
-1. **Catalog rebuild still not one shared pipeline.** PrefabUtility one-shot MenuItems were thinned (tier B aggregators / tier C deleted), but UI path catalogs + InteractionIcons still rely on Editor rebuild scripts with GUID hacks and “did anyone run the menu?” drift — same pattern under [ui-shell](ui-shell.md). Target: one shared import → Addressables → codegen path; delete per-feature rebuild scripts as categories migrate onto it. Do not add another one-shot importer without updating this smell.
-2. **Addressables async loading is partial.** InteractionIcons uses `AssetDatabaseLoadMode.AddressablesAsync` + `AssetProvider` warm preload; Items/Materials/Sounds/ParticlesEffects/WorldSpaceUI still eager-load via serialized `Assets` dict. No FishNet preload barrier yet (Phase 4). Migration: [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md).
-
 ## Pitfalls
 
 - **Built players need CWD `Config/` + `Data/Tilemaps/` beside the binary.** `Paths.GetPath` uses process CWD (`BuiltGameFilePath` empty; Editor uses `/Builds/Game`). Unity does not pack those trees — missing them → no `permissions.txt`, host log `No station templates found to load`. CI seeds from tracked `Builds/Game/` in [develop-release](../2026-07_ci-develop-release-pipeline.md); never ship `Data/ServerMeta/`.
@@ -50,6 +45,8 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 
 ## Related docs
 
+- Structural debt: [TECH_DEBT.md](../TECH_DEBT.md) §1.4 / §1.5 (catalog rebuild pipeline), §1.15 (Addressables partial)
+
 - [INDEX.md](../INDEX.md)
-- Related catalog debt: [ui-shell](ui-shell.md) § Future work (shared path-catalog helper); [2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)
+- Related catalog debt: [ui-shell-consolidation](../2026-07_ui-shell-consolidation.md) § Explicit non-goals (shared path-catalog helper); [2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)
 - [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md) — Phases 1–3 done; 4–6 open

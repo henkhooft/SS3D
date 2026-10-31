@@ -47,9 +47,9 @@ Treat as secondary unless they dominate **and** the scenario is explicitly rende
 
 ## Related maps
 
-- [TECH_DEBT.md](../../Documents/architecture/TECH_DEBT.md) § Hot-path GC
-- [atmospherics.md](../../Documents/architecture/systems/atmospherics.md)
-- [tile.md](../../Documents/architecture/systems/tile.md)
-- [substances.md](../../Documents/architecture/systems/substances.md)
-- [rendering.md](../../Documents/architecture/systems/rendering.md)
-- [networking-session.md](../../Documents/architecture/systems/networking-session.md)
+- [TECH_DEBT.md](../../../Documents/architecture/TECH_DEBT.md) § Hot-path GC
+- [atmospherics.md](../../../Documents/architecture/systems/atmospherics.md)
+- [tile.md](../../../Documents/architecture/systems/tile.md)
+- [substances.md](../../../Documents/architecture/systems/substances.md)
+- [rendering.md](../../../Documents/architecture/systems/rendering.md)
+- [networking-session.md](../../../Documents/architecture/systems/networking-session.md)

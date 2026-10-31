@@ -1,6 +1,14 @@
 > Implements: none (infrastructure — CI/test tooling, not a gameplay domain)
 > Touches systems: networking-session, electricity, area, ingame-console, logging
-> Status: in-progress (Phase 0 TomNAS-unity online; EditMode + develop-release prefer TomNAS with GitHub fallback; warm smoke proof pending; Phases 1–2 open)
+> Status: in-progress
+
+**Progress:** Phase 0 runner online; EditMode and develop-release prefer TomNAS with GitHub fallback. Todos (folded in from the archived [self_hosted_ci_smoke plan](../archive/plans/self_hosted_ci_smoke.plan.md)):
+
+- [x] Register the runner, Library stash, pull the Unity image
+- [x] `multiplayer-smoke-test.yml` on self-hosted + Library stash + nightly
+- [ ] `workflow_dispatch` smoke on TomNAS; confirm a warm second run
+- [ ] Phase 1: harness SIGKILL + DSL + server-kill scenarios
+- [ ] Phase 2: `lightdebug` / `lightclientstatus` + light-sync scenarios
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 
@@ -134,7 +142,7 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
   box, screenshot on a `Test signal`, and assert UI-presence / pixel state. Only path to the
   **machine-UI-leak-to-host** bug as a visual fact, and it simultaneously reopens the three
   gaps the harness doc lists as unported: mouse/screen-space **drop-pickup**, **selection
-  outline** ([2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)
+  outline** ([2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)
   Known issues), and *visual* light sync. Materially heavier (real display, OS input
   injection, screenshot diffing) — its own architecture effort.
 - **Phase 4 — 24/7 soak server.** Long-lived dedicated server + scripted bot clients running
@@ -187,5 +195,5 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 
 - [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — the harness Phases 1–2 extend
 - [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md) — the workflows Phase 0 moves onto the runner
-- [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md) — the deferred visual regressions Phase 3 would reopen
+- [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) — the deferred visual regressions Phase 3 would reopen
 - [networking-session.md](systems/networking-session.md), [electricity.md](systems/electricity.md), [area.md](systems/area.md)

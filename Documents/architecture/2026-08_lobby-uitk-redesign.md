@@ -1,6 +1,8 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: shipped 2026-10-31 (Phases A–F; E2 for Human only). Deferred beyond this effort: non-Human species models, a gamemode consumer for antag opt-ins, OOC/LOOC in the in-round feed, chat moderation/history, runtime application of player Settings, per-server banner art
+> Status: shipped
+
+**Progress:** Phases A–F; E2 for Human only. Deferred beyond this effort: non-Human species models, a gamemode consumer for antag opt-ins, OOC/LOOC in the in-round feed, chat moderation/history, runtime application of player Settings, per-server banner art.
 
 # Lobby UITK redesign
 
@@ -134,7 +136,7 @@ of the same meshes after Save → other character → New Character → saved ch
 
 ## Visual QA
 
-The [MCP lobby pilot](2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
+The [MCP lobby pilot](../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
 Review, name/body edits, preview rotation, Save/Return, character switching and
 New Character reset, plus all player tabs and Settings interactions. See [Testing/ui/README.md](../../Testing/ui/README.md)
 for commands and evidence. It does not establish physical-input or multiplayer correctness.

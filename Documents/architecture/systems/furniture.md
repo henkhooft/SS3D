@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: 754c932ab — 2026-07-29 (airlock NetworkAnimator removed; SyncVar drives Animator)
+> Verified: f04093919 — 2026-10-31
 
 # Furniture / world objects
 
@@ -50,6 +50,6 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 
 - [disposal](disposal.md) — disposal item network
 - [machine-interface](machine-interface.md) — vending UI and diegetic shell
-- Effort: [2026-07_metastation-scale-perf.md](../2026-07_metastation-scale-perf.md) — airlock proximity invert + Map Editor sim suspend
-- Plan: [areas_implementation_plan_c0639343.plan.md](../../plans/areas_implementation_plan_c0639343.plan.md)
+- Effort: [2026-07_metastation-scale-perf.md](../../archive/architecture/2026-07_metastation-scale-perf.md) — airlock proximity invert + Map Editor sim suspend
+- Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md)
 - [INDEX.md](../INDEX.md)

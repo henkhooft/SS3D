@@ -47,7 +47,7 @@ isProject: false
 - Player meta — blocked on auth
 - **Map Editor UI** (`feature/map-editor-replacement`, not merged) will replace TileMap Creator — update entry points when that branch merges
 
-**Phase 2 prerequisites unchanged:** [electricity kWh foundation](electricity_kwh_foundation_917ccdbc.plan.md), [atmos ECS foundation](../architecture/2026-07_atmos-ecs-foundation.md), [id-access](../architecture/systems/id-access.md), [inventory-storage.md](Documents/design/inventory-storage.md).
+**Phase 2 prerequisites unchanged:** [electricity kWh foundation](../archive/plans/electricity_kwh_foundation_917ccdbc.plan.md), [atmos ECS foundation](../archive/architecture/2026-07_atmos-ecs-foundation.md), [id-access](../architecture/systems/id-access.md), [inventory-storage.md](Documents/design/inventory-storage.md).
 
 ---
 
@@ -366,7 +366,7 @@ Deferred until accounts/auth exist, but design for it now:
 
 | Phase | Blocked? | Prerequisite |
 | ----- | -------- | ------------ |
-| **Phase 1a** | No — start now | [Areas plan](areas_implementation_plan_c0639343.plan.md) complete |
+| **Phase 1a** | No — start now | [Areas plan](../archive/plans/areas_implementation_plan_c0639343.plan.md) complete |
 | **Phase 1b** | Yes | Round-config feature (pool UI + draw logic) — design in [`round-config.md`](Documents/design/round-config.md), no C# yet |
 | **Player meta** | Yes | Real authentication (ckey currently client-trusted) |
 | **Phase 2** | Partially | Inventory/entity serialization maturity; atmos/electricity foundations already shipped |
@@ -402,7 +402,7 @@ Deferred until accounts/auth exist, but design for it now:
 - Add `Documents/architecture/systems/persistence.md` system map
 - Update [`rounds-lobby.md`](Documents/architecture/systems/rounds-lobby.md) with persistence hooks (round-start template load, round-end history append)
 - Register persistence in [`INDEX.md`](Documents/architecture/INDEX.md)
-- Already done (area-foundation effort): [`tile.md`](Documents/architecture/systems/tile.md), [`area.md`](Documents/architecture/systems/area.md), [`2026-07_area-foundation.md`](Documents/architecture/2026-07_area-foundation.md)
+- Already done (area-foundation effort): [`tile.md`](Documents/architecture/systems/tile.md), [`area.md`](Documents/architecture/systems/area.md), [`2026-07_area-foundation.md`](../archive/architecture/2026-07_area-foundation.md)
 
 ---
 
@@ -411,10 +411,10 @@ Deferred until accounts/auth exist, but design for it now:
 | Doc | Relevance |
 | --- | --------- |
 | [persistence-save.md](../design/persistence-save.md) | Design spec (new) — four-layer model (station templates, server meta, player meta, round snapshots) this plan implements; Phase 2 is that doc's §6 |
-| [areas_implementation_plan_c0639343.plan.md](areas_implementation_plan_c0639343.plan.md) | Complete — Phase 1a prerequisite |
-| [electricity_kwh_foundation_917ccdbc.plan.md](electricity_kwh_foundation_917ccdbc.plan.md) | Shipped — Phase 2 electricity contributor uses kWh model |
-| [2026-07_atmos-ecs-foundation.md](../architecture/2026-07_atmos-ecs-foundation.md) | Shipped — Phase 2 atmospherics contributor source |
-| [2026-07_diegetic-screen-ui-framework.md](../architecture/2026-07_diegetic-screen-ui-framework.md) | Shipped — confirms UI snapshots are not persisted |
+| [areas_implementation_plan_c0639343.plan.md](../archive/plans/areas_implementation_plan_c0639343.plan.md) | Complete — Phase 1a prerequisite |
+| [electricity_kwh_foundation_917ccdbc.plan.md](../archive/plans/electricity_kwh_foundation_917ccdbc.plan.md) | Shipped — Phase 2 electricity contributor uses kWh model |
+| [2026-07_atmos-ecs-foundation.md](../archive/architecture/2026-07_atmos-ecs-foundation.md) | Shipped — Phase 2 atmospherics contributor source |
+| [2026-07_diegetic-screen-ui-framework.md](../archive/architecture/2026-07_diegetic-screen-ui-framework.md) | Shipped — confirms UI snapshots are not persisted |
 | [id-access.md](../architecture/systems/id-access.md) | Shipped — area `defaultRequiredAccessBits` in save DTO; Phase 1a must preserve on APC-present loads |
 | [round-config.md](Documents/design/round-config.md) | Design only — blocks Phase 1b map pool + history |
 | [inventory-storage.md](Documents/design/inventory-storage.md) | Defers container persistence to cross-cutting infra (Phase 2) |

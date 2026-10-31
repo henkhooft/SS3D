@@ -47,5 +47,5 @@ Model: [`HumanPrefabRecipes`](../../Assets/Scripts/SS3D/Systems/Entities/Editor/
 
 - [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 - [TECH_DEBT.md](TECH_DEBT.md) §1.5
-- [data-codegen.md](systems/data-codegen.md) § Architecture smells
+- [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15
 - [entities.md](systems/entities.md) (Human recipe registry)

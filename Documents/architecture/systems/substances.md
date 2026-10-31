@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Substances/
 > Entry points: SubstancesSubSystem, SubstanceContainer, ReactionResolver, TransferSubstanceInteraction, PourSubstanceInteraction
 > Status: partial
-> Verified: 3a8a57f65 — 2026-07-28
+> Verified: f04093919 — 2026-10-31
 
 # Substances
 
 ## Overview
 
-Volume-first liquid vessels with networked mixture entries, pour-triggered fixed-ratio reactions, and container temperature. Clean-slate rewrite per [substances-foundation](../2026-07_substances-foundation.md). Chemistry gameplay (analyzer knowledge, bloodstream, machines) is deferred to MVP2.
+Volume-first liquid vessels with networked mixture entries, pour-triggered fixed-ratio reactions, and container temperature. Clean-slate rewrite per [substances-foundation](../../archive/architecture/2026-07_substances-foundation.md). Chemistry gameplay (analyzer knowledge, bloodstream, machines) is deferred to MVP2.
 
 ## Start here
 
@@ -40,6 +40,6 @@ Volume-first liquid vessels with networked mixture entries, pour-triggered fixed
 
 ## Related docs
 
-- Effort: [2026-07_substances-foundation.md](../2026-07_substances-foundation.md) — shipped
-- Plan: [substances_foundation_implementation.plan.md](../../plans/substances_foundation_implementation.plan.md)
+- Effort: [2026-07_substances-foundation.md](../../archive/architecture/2026-07_substances-foundation.md) — shipped
+- Plan: [substances_foundation_implementation.plan.md](../../archive/plans/substances_foundation_implementation.plan.md)
 - Design (read-only): [Documents/design/chemistry.md](../../design/chemistry.md)

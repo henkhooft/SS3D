@@ -1,7 +1,7 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
+> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: c07530a34 — 2026-10-31
+> Verified: f04093919 — 2026-10-31
 
 # Rounds / lobby
 
@@ -13,7 +13,7 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
 Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility (plus Escape as an in-round menu overlay, `InputContext.Menu`) and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard/eyebrows + skin/eye/style colors) is sent to the server and applied to the spawned body (E2 slice); Human is the only available species; other dropdown entries are disabled until models exist. Saved character slots and the last saved selection now persist locally across application restarts. The Chat tab carries networked OOC/LOOC/Admin chat (see [chat-audio-screens](chat-audio-screens.md)). Server Info shows the admin-editable server name/MOTD (persisted server-side), configured mode, server build/uptime and a git-generated change log. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings now matches the reference controls with session-local values; runtime settings/input application remains unwired.
 
-Rendered verification: [Unity MCP lobby pilot](../2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
+Rendered verification: [Unity MCP lobby pilot](../../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
 **Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
@@ -123,8 +123,8 @@ The waiting card says Manual start: there is no population autostart policy yet.
 
 - Design (read-only): [Documents/design/lobby.md](../../design/lobby.md), [round-config.md](../../design/round-config.md)
 - Effort: [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)
-- [2026-07_session-world-lifecycle](../2026-07_session-world-lifecycle.md)
-- [2026-07_comms-non-diegetic-feed](../2026-07_comms-non-diegetic-feed.md)
+- [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
+- [2026-07_comms-non-diegetic-feed](../../archive/architecture/2026-07_comms-non-diegetic-feed.md)
 - [INDEX.md](../INDEX.md)
 
 - **Preview framing:** authored skinned-renderer bounds include animation padding; empty equipment slots can report large bounds despite having no mesh. Fit the shared lobby/creator camera to baked visible geometry after evaluating the initial pose, skipping inactive renderers and null meshes. Keep framing fixed during morph edits so Height remains visible; padding leaves room for shoes and walking.

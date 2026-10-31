@@ -1,6 +1,8 @@
 > Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: in-progress (Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring)
+> Status: in-progress
+
+**Progress:** Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring.
 
 # Human.prefab decomposition
 
@@ -80,7 +82,7 @@ copy-pasted organ from landing on `Human.prefab` in review.
   keeps doing that as part of its own redesign touching entity wiring (existing policy), this effort
   only makes sure a recipe tool exists when they do.
 - Body presentation ownership (collapse/death/ragdoll) — that's
-  [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), out of scope here
+  [2026-07_body-presentation-authority.md](../archive/architecture/2026-07_body-presentation-authority.md), out of scope here
   by that doc's own "Out of scope" note.
 
 ## Phased plan

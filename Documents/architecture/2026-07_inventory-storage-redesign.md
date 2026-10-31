@@ -1,6 +1,8 @@
 > Implements: Documents/design/inventory-storage.md (all sections), Documents/design/main-hud.md §8, Documents/design/stamina.md (Phase 7a core)
 > Touches systems: inventory, main-hud, ui-shell, id-access, stamina, health
-> Status: in-progress (clean-slate code shipped; Play Mode / Editor verification pending)
+> Status: in-progress
+
+**Progress:** Clean-slate code shipped; Play Mode / Editor verification pending.
 
 # Inventory & storage redesign
 

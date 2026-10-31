@@ -13,7 +13,8 @@ Read this before writing or editing anything in `Documents/`.
 | `Documents/architecture/INDEX.md` | Navigation hub for agents; project-wide coverage table (what's designed, what's architected, what's mapped) | Agents via `update-system-docs` |
 | `Documents/architecture/systems/` | WHERE in code (one map per domain) | Agents via `update-system-docs` |
 | `Documents/milestones/` | What to focus on next; dependency trees toward a playable goal | Agents + owner — update slice status when child work ships; refresh hub current focus |
-| `Documents/FORK_STATUS.md` | Upstream divergence log | Owner periodically — agents do not touch |
+| `Documents/archive/` | WHY something was built that way: shipped efforts, completed plans | Agents move docs here on ship (see [Archive](#archive-documentsarchive)); never maintained afterwards |
+| `Documents/FORK_STATUS.md` | Upstream divergence log | Owner + agents — keep it a log of divergences, not a changelog |
 
 This table is canonical. `AGENTS.md` inlines only the hard prohibitions drawn from it; it does not restate the table, so the two cannot drift.
 
@@ -36,12 +37,27 @@ Temporary implementation plans — typically Cursor plan files (`*.plan.md`) wit
 
 - Update todos (`completed` / `cancelled`) when work ships.
 - Add an **Implementation notes** section at the bottom if the shipped result diverged.
-- Link finished plans from affected system maps.
-- Do not delete plan files; keep them as historical record.
+- When every todo is `completed` or `cancelled`, archive the plan (see [Archive](#archive-documentsarchive)).
 
 ### Architecture efforts (`Documents/architecture/YYYY-MM_*.md`)
 
 Implementation plans for a specific effort (can span multiple systems). Named `YYYY-MM_short-description.md`.
+
+**One HOW doc per piece of work.** Use an effort for multi-system work and a plan for a smaller piece, never both. If a Cursor plan grows into an effort, fold its todos into the effort and archive the plan.
+
+**Status is one word** (`planned | in-progress | shipped | abandoned`). Phase-level progress goes in a `**Progress:**` line directly under the header block, and nowhere else: INDEX, maps and milestones carry the one-word status and link here.
+
+### Archive (`Documents/archive/`)
+
+Shipped efforts and completed plans move to `Documents/archive/architecture/` or `Documents/archive/plans/` with `git mv`, rewriting relative links in both directions. The root `.ignore` hides the folder from default searches, so active docs stay the only ones search finds. Archived docs are never edited again, and their links may go stale.
+
+**Harvest before archiving.** Move the doc's still-live content to where it belongs:
+
+- known issues → the owning map's **Pitfalls**, or [TECH_DEBT.md](architecture/TECH_DEBT.md)
+- deferred phases or follow-ups → the milestone slice, or a new effort or plan
+- deviations from design → the owning system map
+
+**Exception: standing reference.** A shipped doc stays active while code comments, CI workflows, tests, skills or governance docs (`AGENTS.md`, `CLAUDE.md`, this file) cite it by path. Examples are policies like agent-first composition and reference docs like the CI pipeline. The INDEX lists these as `shipped (reference)` or `shipped (standing policy)`.
 
 ### Milestones (`Documents/milestones/`)
 
@@ -71,7 +87,9 @@ Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates).
 
 Navigation docs: entry points, key files, dependencies. One file per domain (kebab-case, e.g. `tile.md`). Status reflects code navigation coverage, not upstream divergence (that stays in `FORK_STATUS.md`).
 
-**Status values:** `shipped | partial | stub | condemned`.
+**Status values:** `shipped | partial | stub | condemned`, one word with no parenthetical. What is and isn't built goes in **Overview**.
+
+**Child maps.** When one part of a domain needs its own page (an anatomy contract, an extension-hook list, or a section that pushes the parent past ~80 lines), split it into `systems/<domain>-<part>.md`. Its header is `> Parent map: [<domain>.md](<domain>.md)`, then `Status` and `Verified`. The parent links to the child from **Start here**, and the child follows the same section order.
 
 - `shipped` / `partial` / `stub` — live code navigation coverage.
 - `condemned` — do not extend; scheduled for replace-and-purge per [2026-07_agent-first-composition.md](architecture/2026-07_agent-first-composition.md). A map may stay `partial` or `shipped` overall while carrying a **Condemned UI** and/or **Prefab composition debt** subsection when domain logic still lives but presentation or prefab wiring must not grow.
@@ -121,7 +139,7 @@ Every **system map** starts with:
 
 Every **milestone** doc starts with the header template under [Milestones](#milestones-documentsmilestones) above.
 
-System map body sections (fixed order): **Overview**, **Start here**, **Extension points**, **Pitfalls** (optional — include only when there are real silent-failure landmines), **Depends on / Used by**, **Related docs**.
+System map body sections (fixed order): **Overview**, **Start here**, **Extension points**, **Pitfalls** (optional — include only when there are real silent-failure landmines), **Tests** (optional — which suites and loops cover this domain), **Depends on / Used by**, **Related docs**. Other headings fold into these: unit models and player flows into Overview, conventions into Extension points, architecture smells into [TECH_DEBT.md](architecture/TECH_DEBT.md), future work into the effort doc or milestone.
 
 Design doc body sections (fixed order): unnumbered opening — what this doc formalizes and why it exists — then **Design philosophy**, doc-specific numbered sections, **Worked examples**, **Integration notes**, **Out of scope for this pass**. Nothing follows "Out of scope." No prototyping section, no status field beyond the one above.
 
@@ -165,4 +183,4 @@ A domain sitting at "none yet / none yet" in INDEX.md's coverage table goes from
 
 ## After implementing a feature (agents)
 
-Run the `update-system-docs` skill (`.cursor/skills/update-system-docs/SKILL.md`) to sync INDEX, affected system maps (status, `Verified` stamp, new **Pitfalls**), linked plans, architecture effort status, and any [milestones](milestones/) slice status / hub current focus the work advanced. Never edit `Documents/design/` or `Documents/FORK_STATUS.md` unless the owner explicitly asks.
+Run the `update-system-docs` skill (`.cursor/skills/update-system-docs/SKILL.md`) to sync INDEX, affected system maps (status, `Verified` stamp, new **Pitfalls**), linked plans, architecture effort status, archiving of what shipped, and any [milestones](milestones/) slice status / hub current focus the work advanced. Never edit `Documents/design/` unless the owner explicitly asks.

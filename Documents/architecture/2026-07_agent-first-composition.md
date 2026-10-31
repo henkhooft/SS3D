@@ -1,6 +1,8 @@
 > Implements: infrastructure — supports main-hud, lobby, comms, inventory-storage, health, entities, and all UITK surfaces
 > Touches systems: application, core-subsystems, scene-management, entities, machine-interface, inputs, inventory, chat-audio-screens, rounds-lobby, crafting, tile, screen-effects, examine, ingame-console, health
-> Status: shipped (policy); code deferred — see Follow-on efforts
+> Status: shipped
+
+**Progress:** Policy; code deferred — see Follow-on efforts.
 
 # Agent-first composition
 
@@ -13,7 +15,7 @@ Agents excel at C#, UXML/USS, and docs. They fail at Unity-owned object graphs: 
 Pressure already in-tree:
 
 - UiShell / MainHud / StoragePanel still self-bootstrap via `RuntimeInitializeOnLoadMethod` until follow-on **(b)**
-- `MachineInterfaceHost.EnsureEditorAssets` papers over scene SerializeField debt (Editor-only; fails in builds) — **mitigated for MI** by [2026-07_mi-path-catalog.md](2026-07_mi-path-catalog.md)
+- `MachineInterfaceHost.EnsureEditorAssets` papers over scene SerializeField debt (Editor-only; fails in builds) — **mitigated for MI** by [2026-07_mi-path-catalog.md](../archive/architecture/2026-07_mi-path-catalog.md)
 - [`Human.prefab`](../../Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab) (~15k lines, ~120 `m_Script` refs) — health, inventory, movement, interactions, and body parts piled onto one graph agents cannot safely edit
 
 ## Scene composition policy
@@ -53,7 +55,7 @@ Do not extend or restyle. Replace per design + Phase 0 purge.
 | Surface | Replaced by |
 |---|---|
 | Inventory / hands / intent uGUI | **Phase 0 purged** — [inventory.md](systems/inventory.md) confirms uGUI fully removed, not just disabled |
-| Chat window (always-on box) | **Phase 0 purged** — `ChatSubSystem` also purged; feed/PDA via [comms.md](../design/comms.md) + [2026-07_comms-non-diegetic-feed.md](2026-07_comms-non-diegetic-feed.md) |
+| Chat window (always-on box) | **Phase 0 purged** — `ChatSubSystem` also purged; feed/PDA via [comms.md](../design/comms.md) + [2026-07_comms-non-diegetic-feed.md](../archive/architecture/2026-07_comms-non-diegetic-feed.md) |
 | Lobby job-select UI | [lobby.md](../design/lobby.md) |
 | Crafting menu uGUI | **Phase 0 purged** (TECH_DEBT 1.6) — redesign per [crafting.md](../design/crafting.md) |
 | TileMap creator uGUI | creative-mode / construction redesign (editor) |
@@ -76,8 +78,8 @@ Named only — separate architecture efforts when scheduled:
 
 | Effort | Intent |
 |---|---|
-| (a) Subsystem bootstrap + `NetworkSystemsHub` | **Shipped:** [2026-07_session-world-lifecycle.md](2026-07_session-world-lifecycle.md) — Boot/Game emptied of SubSystem GOs; `SystemsBootstrap` + hub prefab |
-| (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](2026-07_mi-path-catalog.md)), Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)), and shared scaffolding + radial/armed migration ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md)). **Still deferred:** migrating MI/Main HUD/Storage Panel onto the shared `UiShellSubSystem` + `UiAssetCatalogBase` ([ui-shell](systems/ui-shell.md) § Future work) |
+| (a) Subsystem bootstrap + `NetworkSystemsHub` | **Shipped:** [2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) — Boot/Game emptied of SubSystem GOs; `SystemsBootstrap` + hub prefab |
+| (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](../archive/architecture/2026-07_mi-path-catalog.md)), Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)), and shared scaffolding + radial/armed migration ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md)). **Still deferred:** migrating MI/Main HUD/Storage Panel onto the shared `UiShellSubSystem` + `UiAssetCatalogBase` ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md) § Explicit non-goals) |
 | (c) Main-HUD UITK slice | **Partial:** player overlay (`MainHudSubSystem` — hands, gear, equipment, intent) + `MainHudAssetCatalog` Resources load; vitals/alerts/self-examine and Phase 0 uGUI purge still open — see [inventory](systems/inventory.md) |
 | (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits — scheduled: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md) (planned) |
 

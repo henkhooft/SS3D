@@ -68,9 +68,9 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 ## Related docs
 
 - Design (read-only): [Documents/design/atmospherics.md](../../design/atmospherics.md)
-- Effort: [2026-07_atmos-ecs-foundation.md](../2026-07_atmos-ecs-foundation.md)
-- Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../2026-07_metastation-scale-perf.md)
-- Effort: [2026-07_session-world-lifecycle.md](../2026-07_session-world-lifecycle.md)
+- Effort: [2026-07_atmos-ecs-foundation.md](../../archive/architecture/2026-07_atmos-ecs-foundation.md)
+- Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md)
+- Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring
 - [furniture](furniture.md) — airlock `IDynamicTileOccupant` for door passability
