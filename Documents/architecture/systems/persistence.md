@@ -54,4 +54,4 @@ Layered contributor-based disk persistence for station templates and server meta
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md), [spawn_point_authoring.plan.md](../../archive/plans/spawn_point_authoring.plan.md)
 - Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)
 - Effort: [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
-- Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor); [creative-mode.md](../../design/creative-mode.md) §8–§9
+- Design (read-only): [persistence-save.md](../../design/persistence-save.md) (the four-layer spec this system implements); [round-config.md](../../design/round-config.md) (blocks map pool contributor); [creative-mode.md](../../design/creative-mode.md) §9

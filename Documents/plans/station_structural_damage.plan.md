@@ -32,9 +32,9 @@ isProject: false
 
 | Spec | Role |
 |------|------|
-| [explosives-destruction.md](Documents/design/explosives-destruction.md) | Primary: Intact → Damaged → Cracked/venting → Destroyed; blast BFS; one Apply path; Area/atmos consequences |
+| [explosives-destruction.md](Documents/design/explosives-destruction.md) | Primary: Intact → Damaged → Cracked → Destroyed; blast BFS; one Apply path; atmos consequences (areas unchanged on breach) |
 | [construction.md](Documents/design/construction.md) | Repair meets damage **only at Intact/Sealed**; freeform stack is a **prerequisite for Phase 6**; full Framed/Plated ladder and deconstruction stay separate |
-| [area.md](Documents/design/area.md) §3 | Local flood-fill recompute on geometry change (today stubbed) |
+| [area.md](Documents/design/area.md) §3 | Areas don't change during a round: a breach connects air, not departments (revised 2026-10; the shipped full reflood now deviates — see [REVIEW_2026-10](Documents/design/REVIEW_2026-10.md) Known delta) |
 | [combat.md](Documents/design/combat.md) / [health.md](Documents/design/health.md) | Melee as a damage *source*; blast crew damage reuses limb brute |
 
 **Scope for this effort:** Turf-layer structural objects only (`TileObjectGenericType.Wall` / `Door`, including windows via existing `IsWindow`). Furniture/tables/machines are out.

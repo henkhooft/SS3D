@@ -1,4 +1,4 @@
-> Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (Area/atmos on Destroyed), §5 (crew brute), §1/§7 (world presentation)
+> Implements: Documents/design/explosives-destruction.md §2 (blast BFS), §3 (structural stages), §4 (atmos on Destroyed; areas unchanged since the 2026-10 review), §5 (crew brute), §1/§7 (world presentation)
 > Touches systems: structural-destruction, tile, area, atmospherics, health, examine, screen-effects
 > Status: in-progress
 

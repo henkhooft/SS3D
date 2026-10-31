@@ -21,7 +21,7 @@ An **authoring** gate, separate from the operational [test-server.md](test-serve
 
 A tester-built Nuke Ops station adopted into the release is the closing proof (A6), and becomes MVP1 M0's test-station map.
 
-Uses the **admin Map Editor on a local host session**, not the creative-mode gamemode ([creative-mode.md](../design/creative-mode.md) §10 pool entry / Builder role are deferred until round-config exists). Maps are the same station templates every round loads ([creative-mode.md](../design/creative-mode.md) §1, §7).
+Uses the **admin Map Editor on a local host session** ([creative-mode.md](../design/creative-mode.md) §1, §2); a Builder gamemode is a later pass (§15). Maps are the same station templates every round loads (§9), with areas painted in the editor (§7).
 
 ## Dependency tree
 
@@ -60,7 +60,7 @@ flowchart TB
 
 - **Admin Map Editor in a build (shipped foundation)** — `MapEditorSubSystem`, admin-gated via `AdminMapEditorAuthorizer`; templates save to `Data/StationTemplates/<name>.json` next to the binary; Start restores the selected template ([tile](../architecture/systems/tile.md); [map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md); [rounds-lobby](../architecture/systems/rounds-lobby.md); [persistence](../architecture/systems/persistence.md)). Spawn Placements shipped ([2026-07_spawn-point-authoring.md](../archive/architecture/2026-07_spawn-point-authoring.md)). Air at start: `AtmosSimulation.InitCell` ([atmospherics](../architecture/systems/atmospherics.md)).
 - **Loadable local build** — host loopback fix + re-cut is shared with [test-server.md](test-server.md) T1. `develop-release.yml` packages only `Data/Tilemaps/`, so `Builds/Game/Data/StationTemplates/` (including the default `ministation`) never reaches a zip ([2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md)).
-- **Area tool** — `MapEditorTool.Area` is reserved but has no UI ([map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md)). `AreaSubSystem.RenameArea` / `SetParentTag` / `SetDefaultRequiredAccess` exist and persist, but only tests call them; default access derives from the department tag (`AreaAccessDefaults`) ([area](../architecture/systems/area.md); [id-access](../architecture/systems/id-access.md)). Room-level config only: an area is not a single placed object, so this stays within [creative-mode.md](../design/creative-mode.md) §2. `AirLockAccessGate`'s per-door override field is never set and stays unauthored.
+- **Area tool** — `MapEditorTool.Area` is reserved but has no UI ([map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md)). `AreaSubSystem.RenameArea` / `SetParentTag` / `SetDefaultRequiredAccess` exist and persist, but only tests call them; default access derives from the department tag (`AreaAccessDefaults`) ([area](../architecture/systems/area.md); [id-access](../architecture/systems/id-access.md)). Room-level config only: an area is not a single placed object, so this stays within [creative-mode.md](../design/creative-mode.md) §3 (areas are set by editor fields). `AirLockAccessGate`'s per-door override field is never set and stays unauthored.
 - **Map validator** — warn on save, block Start with a list on hard failures for the selected gamemode ([creative-mode.md](../design/creative-mode.md) §8: no silent failure reaches a round).
 - **Edit loop** — Start always reloads from disk, so unsaved edits are lost silently today; Start prompts Save and start / Discard / Cancel. Stop (or opening the editor after a round) reloads the saved template so round damage is never saved into it ([rounds-lobby](../architecture/systems/rounds-lobby.md)).
 - **Portability + bug intake** — one `.json` per map: an **Open maps folder** button in Map Selection, import = drop a file in. `TESTERS.md` (extends the shipped `Builds/README.txt`) covers the flow, log location (`Game/Logs/`) and attaching the map file; the `map-authoring` label on `.github/ISSUE_TEMPLATE/Bug.yml`. Adoption checklist: validator clean, loads on the current schema, committed to `Builds/Game/Data/StationTemplates/`.
@@ -83,8 +83,8 @@ Order: A1 → A2 → A2.5 → A3, A4, A5 in parallel → A6.
 
 ## Explicitly deferred
 
-- Creative-mode gamemode pool entry, Builder role, instant-placement session ([creative-mode.md](../design/creative-mode.md) §10) — waits on round-config.
-- Per-door access override, and doing it through a diegetic airlock-electronics interface rather than an editor field ([creative-mode.md](../design/creative-mode.md) §2).
+- Builder gamemode with a single Builder role ([creative-mode.md](../design/creative-mode.md) §15).
+- Per-door access override, and doing it through a diegetic airlock-electronics interface rather than an editor field ([creative-mode.md](../design/creative-mode.md) §3).
 - Uploading maps to the test server (needs accounts; [test-server.md](test-server.md) defers them).
 - Native Export/Import file dialogs (Unity players have none; would need a plugin).
 - In-game authoring help / tutorial.

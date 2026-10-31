@@ -160,7 +160,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
   (atmospherics client sync and the remaining health systemic-pool wiring are both still open
   per `INDEX.md`); building the seal now means inventing that pipeline too, outside combat's
   scope. Revisit once atmos exposure lands.
-- Retune combat damage numbers once mitigation exists ([combat.md](../design/combat.md) §6) —
+- Retune combat damage numbers once mitigation exists ([armor.md](../design/armor.md) §2) —
   only new armor absorption defaults were picked (interim, same spirit as existing weapon
   numbers); no rebalance of shipped weapon damage this pass.
 
@@ -172,7 +172,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
 ### Phase 7 — Hardening
 
 - EditMode tests for damage-into-health and (later) accuracy cone; PlayMode for melee
-  skirmish and disarm when those phases land ([combat.md](../design/combat.md) §7).
+  skirmish and disarm when those phases land ([combat.md](../design/combat.md) §9).
 - Run `update-system-docs`: combat map condemned → partial/shipped; INDEX coverage sync.
 
 ## Explicitly out of Phase 0–1
@@ -180,7 +180,7 @@ Single primary path per [combat.md](../design/combat.md) §2:
 - Armor, ranged, disarm/grab, combat stamina drains
 - Atmos → `HealthSimulation.LungIntake` (health/atmos follow-up)
 - Body-presentation-authority rewrite; vitals HUD
-- Skill/training accuracy modifiers ([combat.md](../design/combat.md) §6 / §8)
+- Skill/training accuracy modifiers ([combat.md](../design/combat.md) §8)
 
 ## Open questions (surfaced, not decided here)
 
