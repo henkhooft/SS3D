@@ -42,6 +42,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: admin-tools (action logging, two-way Admin help)
 - Design (read-only): [admin-tools.md](../../design/admin-tools.md) — permission tiers, ahelp, stealth observation, world intervention, moderation this system will eventually need to expose
 - [id-access](id-access.md)
 - [screen-effects](screen-effects.md)

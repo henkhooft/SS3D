@@ -61,6 +61,7 @@ FishNet session management — host/join, network type and port settings. Distin
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: networking (full-server reason)
 - [INDEX.md](../INDEX.md)
 - [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md) — headless
   server build, runtime guards, known issues, testing-harness gap

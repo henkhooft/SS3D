@@ -31,4 +31,5 @@ Admin permission checks for server-gated actions (e.g. TileMap Creator RPCs). Pe
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: admin-tools (action logging, `Restricted` role)
 - [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)

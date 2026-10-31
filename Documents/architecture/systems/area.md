@@ -77,6 +77,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: area (authored areas, breach reflood)
 - Plan: [areas_implementation_plan_c0639343.plan.md](../../archive/plans/areas_implementation_plan_c0639343.plan.md)
 - Plan: [persistence_architecture_design_2fe61864.plan.md](../../plans/persistence_architecture_design_2fe61864.plan.md)
 - Architecture effort: [2026-07_area-foundation](../../archive/architecture/2026-07_area-foundation.md)

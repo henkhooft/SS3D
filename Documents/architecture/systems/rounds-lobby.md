@@ -121,6 +121,7 @@ The waiting card says Manual start: there is no population autostart policy yet.
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: lobby, round-end, round-config (autostart loop, opt-in list, Secret leak, fallback, `fallbackMap` bug)
 - Design (read-only): [Documents/design/lobby.md](../../design/lobby.md), [round-config.md](../../design/round-config.md)
 - Effort: [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)
 - [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)

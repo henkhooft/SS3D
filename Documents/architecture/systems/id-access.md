@@ -39,5 +39,6 @@ Server-side crew identity rail and shared access checks per `Documents/design/id
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: id-access (presented-ID rule, auth logs)
 - Design (read-only): [Documents/design/id-access.md](../../design/id-access.md)
 - Tests: `Assets/Scripts/Tests/EditMode/IdAccessTests/`

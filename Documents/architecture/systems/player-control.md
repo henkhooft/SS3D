@@ -46,6 +46,7 @@ Connect/disconnect lifecycle, server-side:
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: networking (full-server reason), observer (Observe button)
 - Design (read-only): [Documents/design/networking.md](../../design/networking.md) — the connection-lifecycle spec this domain now implements (partially — see Extension points)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
 - Observer/ghost reconnection (a different mechanism, for death not network disconnect): [Documents/design/observer.md](../../design/observer.md) §6
