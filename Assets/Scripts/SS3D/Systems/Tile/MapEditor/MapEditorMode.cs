@@ -44,5 +44,6 @@ namespace SS3D.Systems.Tile.MapEditor
 
         Uncategorized,
         Overlays = 19,
+        Rooms = 20,
     }
 }

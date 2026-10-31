@@ -93,6 +93,29 @@ namespace EditorTests
             Assert.AreEqual("Area 1", cache.GetAreaName(1));
         }
 
+        [Test]
+        public void ScriptsAndRoomsTabsControlTheirLayers()
+        {
+            MapEditorViewModel model = new();
+            model.EnsureLayerDefaults();
+            Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            model.SetMode(MapEditorMode.Scripting);
+            Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
+            model.SetSubcategory(MapEditorSubcategory.Rooms);
+            Assert.AreEqual(MapEditorTool.Area, model.CurrentTool);
+            Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
+            model.SetSubcategory(MapEditorSubcategory.SpawnPlacements);
+            Assert.AreEqual(MapEditorTool.Edit, model.CurrentTool);
+            Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
+            Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            model.SetMode(MapEditorMode.Upper);
+            Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
+            CollectionAssert.Contains(MapEditorCatalog.GetSubcategories(MapEditorMode.Scripting), MapEditorSubcategory.Rooms);
+            Assert.IsFalse(MapEditorCatalog.IsUnavailableScriptingSubcategory(MapEditorSubcategory.Rooms));
+        }
+
         private static void Submit(Button button)
         {
             using NavigationSubmitEvent evt = NavigationSubmitEvent.GetPooled();

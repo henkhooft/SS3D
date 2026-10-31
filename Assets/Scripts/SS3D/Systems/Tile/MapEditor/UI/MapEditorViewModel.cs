@@ -42,12 +42,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
             {
                 if (!_layerCategoryVisibility.ContainsKey(category))
-                    _layerCategoryVisibility[category] = category != TileLayerCategory.Areas;
+                    _layerCategoryVisibility[category] = category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
             }
         }
 
         public bool IsLayerCategoryVisible(TileLayerCategory category) =>
-            _layerCategoryVisibility.TryGetValue(category, out bool visible) ? visible : category != TileLayerCategory.Areas;
+            _layerCategoryVisibility.TryGetValue(category, out bool visible) ? visible : category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
 
         public void SetLayerCategoryVisible(TileLayerCategory category, bool visible)
         {
@@ -70,14 +70,26 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             CurrentMode = mode;
             MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(mode);
             CurrentSubcategory = subs.Length > 0 ? subs[0] : MapEditorSubcategory.Uncategorized;
+            _layerCategoryVisibility[TileLayerCategory.Scripts] = mode == MapEditorMode.Scripting;
+            UpdateCategoryTool();
+            UpdateHint();
             NotifyChanged();
         }
 
         public void SetSubcategory(MapEditorSubcategory subcategory)
         {
             CurrentSubcategory = subcategory;
+            UpdateCategoryTool();
             UpdateHint();
             NotifyChanged();
+        }
+
+        private void UpdateCategoryTool()
+        {
+            bool rooms = CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
+            if (rooms) CurrentTool = MapEditorTool.Area;
+            else if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
+            _layerCategoryVisibility[TileLayerCategory.Areas] = rooms;
         }
 
         public void SelectEntry(MapEditorCatalogEntry entry, GenericObjectSo asset)

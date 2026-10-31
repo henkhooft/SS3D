@@ -114,7 +114,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorTool.Move => Resolve(_move, Paths.Move),
                 MapEditorTool.Dropper => Resolve(_dropper, Paths.Dropper),
                 MapEditorTool.Delete => Resolve(_delete, Paths.Delete),
-                MapEditorTool.Area => Resolve(_subFlooring, Paths.SubFlooring),
+
                 _ => null,
             };
 
@@ -150,6 +150,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorSubcategory.SpawnPlacements => Resolve(_subSpawnPlacements, Paths.SubSpawnPlacements),
                 MapEditorSubcategory.RandomSpawners => Resolve(_subRandomSpawners, Paths.SubRandomSpawners),
                 MapEditorSubcategory.Triggers => Resolve(_subTriggers, Paths.SubTriggers),
+                MapEditorSubcategory.Rooms => Resolve(_subFlooring, Paths.SubFlooring),
                 _ => null,
             };
 

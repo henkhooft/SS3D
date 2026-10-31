@@ -1,7 +1,7 @@
 > Parent map: [tile.md](tile.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/MapEditor/, Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/
 > Status: partial
-> Verified: 5ea76a6be — 2026-10-31
+> Verified: a7f2b862f — 2026-10-31
 
 # Map Editor — creative mode extension hooks
 
@@ -19,7 +19,7 @@ Spawn Placements authoring:
 - Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)
 - Still stubbed: RandomSpawners, Triggers, Atmospherics Scripting rails
 
-Area metadata: `MapEditorArea.cs` adds admin-checked inspect/apply RPCs and server undo/redo; `UI/MapEditorAreaView.cs` edits the clicked APC-defined room. Names, department tags and explicit access masks persist through the existing area contributor. `MapEditorAreaOverlay` renders the synced area membership with the gizmo color palette (one mesh per chunk; Resources shader). Areas is off by default in Layer View Mode, enabled by the room tool and hidden on other tools/editor close. Department mode previews read-only access bits and retains the custom override. Areas also shows UI Toolkit room-name labels anchored on a tile near each room center; names sync through a buffered snapshot and refresh on rename/undo. Painted boundaries remain unimplemented (creative-mode §7 / area §3 divergence). Manual playtest is pending.
+Area metadata: `MapEditorArea.cs` adds admin-checked inspect/apply RPCs and server undo/redo; `UI/MapEditorAreaView.cs` edits the clicked APC-defined room. Names, department tags and explicit access masks persist through the existing area contributor. Room editing is selected through **Scripts → Rooms**, not the toolbar. Scripts markers default off and follow entry/exit of the Scripts category. `MapEditorAreaOverlay` renders the synced area membership with the gizmo color palette (one mesh per chunk; Resources shader). Areas is off by default in Layer View Mode, enabled by Scripts → Rooms and hidden on other tabs/tools/editor close. Department mode previews read-only access bits and retains the custom override. Areas also shows UI Toolkit room-name labels anchored on a tile near each room center; names sync through a buffered snapshot and refresh on rename/undo. Painted boundaries remain unimplemented (creative-mode §7 / area §3 divergence). Manual playtest is pending.
 
 ## Extension points
 
@@ -44,7 +44,7 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 
 ## Tests
 
-- `MapEditorAreaViewTests`: room drafts survive toast/undo-state refresh; department defaults and explicit access submit distinct masks; read-only department previews preserve custom overrides; Areas follows tool selection; overlay meshes preserve tile positions and gizmo colors. Compile + EditMode passed (`artifacts/ui/validate-20261031-132500/summary.md`: 2132 passed, one skipped); manual playtest remains pending.
+- `MapEditorAreaViewTests`: room drafts survive toast/undo-state refresh; department defaults and explicit access submit distinct masks; read-only department previews preserve custom overrides; Areas follows tool selection; overlay meshes preserve tile positions and gizmo colors. Compile + EditMode passed (`artifacts/ui/validate-20261031-133132/summary.md`: 2133 passed, one skipped); manual playtest remains pending.
 
 ## Related docs
 

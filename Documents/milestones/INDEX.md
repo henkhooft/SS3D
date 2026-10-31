@@ -19,7 +19,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 **Authoring track** — [map-authoring.md](map-authoring.md) (expect many gaps: map authoring in a build is largely untested):
 
 - **A1** — Loadable local build: shares test-server T1 re-cut; verify newly packaged `Data/StationTemplates/` on that cut
-- **A2** — Area tool metadata implemented (room name, department, access); manual playtest pending; boundaries still APC-defined
+- **A2** — Room metadata manually checked (Scripts → Rooms); painted boundaries still unbuilt
 - **A2.5** — Internal dogfood build of the Nuke Ops station before testers see it
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):

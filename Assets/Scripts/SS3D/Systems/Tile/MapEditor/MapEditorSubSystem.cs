@@ -300,7 +300,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 _session.Enter(_playerCamera, entry);
 
                 _hologramManager.enabled = true;
-                _viewModel.SetTool(MapEditorTool.Edit);
+                OnToolSelected(_viewModel.CurrentMode == MapEditorMode.Scripting &&
+                    _viewModel.CurrentSubcategory == MapEditorSubcategory.Rooms ? MapEditorTool.Area : MapEditorTool.Edit);
                 OnCameraSettingsChanged(_viewModel.CameraFov, _viewModel.CameraZoomSpeed, _viewModel.CameraRotationSpeed);
                 _lighting.Apply();
                 SetMouseOverUI(false);
@@ -876,12 +877,16 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnModeSelected(MapEditorMode mode)
         {
             _viewModel.SetMode(mode);
+            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts,
+                _viewModel.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
 
         private void OnSubcategorySelected(MapEditorSubcategory sub)
         {
             _viewModel.SetSubcategory(sub);
+            OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
 

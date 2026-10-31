@@ -161,8 +161,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             AddToolButton(_leftToolbar, MapEditorTool.Select, "Select [2]");
             AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper [3]");
             AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete [4]");
-            AddToolButton(_leftToolbar, MapEditorTool.Area, "Room properties");
-            _toolButtons[MapEditorTool.Area].name = "area-tool";
             AddSeparator(_leftToolbar, vertical: true);
 
             Button undo = CreateIconButton(_icons?.Undo, null, () => UndoRequested?.Invoke());
@@ -483,6 +481,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _grid.Clear();
+
+            if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
+            {
+                Label help = new("Click a room in the map to edit its name, department and access.");
+                help.AddToClassList("map-editor-stub-message");
+                help.AddToClassList("font-body");
+                _grid.Add(help);
+                return;
+            }
 
             if (_vm.CurrentMode == MapEditorMode.Scripting &&
                 MapEditorCatalog.IsUnavailableScriptingSubcategory(_vm.CurrentSubcategory))

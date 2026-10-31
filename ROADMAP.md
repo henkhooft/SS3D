@@ -45,7 +45,7 @@ What already works, system by system, is listed in
 |---|---|---|
 | ✅ | A0 | The in-game Map Editor works in a local build: walls, floors, spawns, air |
 | 🟡 | A1 | The downloaded build loads, including the station templates |
-| 🟡 | A2 | Mark out rooms: name, department and who has access (fields implemented; manual playtest pending) |
+| 🟡 | A2 | Mark out rooms: name, department and who has access (room fields work; painted boundaries pending) |
 | ⬜ | A2.5 | A developer builds the Nuke Ops station first and fixes what breaks |
 | ⬜ | A3 | The editor warns you about broken maps before you start a round |
 | ⬜ | A4 | Switching between editing and playing doesn't lose your work |

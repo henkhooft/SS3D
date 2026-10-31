@@ -168,7 +168,8 @@ namespace SS3D.Systems.Tile.MapEditor
             subcategory is MapEditorSubcategory.Atmospherics
                 or MapEditorSubcategory.SpawnPlacements
                 or MapEditorSubcategory.RandomSpawners
-                or MapEditorSubcategory.Triggers;
+                or MapEditorSubcategory.Triggers
+                or MapEditorSubcategory.Rooms;
 
         /// <summary>
         /// Scripting rails that still show the stub message (spawn placements are live).
@@ -202,7 +203,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorMode.Scripting => new[]
                 {
                     MapEditorSubcategory.Atmospherics, MapEditorSubcategory.SpawnPlacements,
-                    MapEditorSubcategory.RandomSpawners, MapEditorSubcategory.Triggers,
+                    MapEditorSubcategory.RandomSpawners, MapEditorSubcategory.Triggers, MapEditorSubcategory.Rooms,
                 },
                 _ => Array.Empty<MapEditorSubcategory>(),
             };
@@ -213,7 +214,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorMode.Upper => "Upper",
                 MapEditorMode.Lower => "Lower",
                 MapEditorMode.Items => "Items",
-                MapEditorMode.Scripting => "Scripting",
+                MapEditorMode.Scripting => "Scripts",
                 _ => mode.ToString(),
             };
 
@@ -239,6 +240,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorSubcategory.SpawnPlacements => "Spawn Placements",
                 MapEditorSubcategory.RandomSpawners => "Random Item Spawners",
                 MapEditorSubcategory.Triggers => "Triggers",
+                MapEditorSubcategory.Rooms => "Rooms",
                 MapEditorSubcategory.Uncategorized => "Uncategorized",
                 _ => subcategory.ToString(),
             };
