@@ -48,7 +48,7 @@ One command validates UI/session work in the open editor, unattended:
 
 ```bash
 Testing/ui/validate.sh            # --quick (default): preflight, compile, EditMode, visual, lifecycle
-Testing/ui/validate.sh --full     # + client build if stale + remote client pilot
+Testing/ui/validate.sh --full     # + PlayMode tests, client build if stale, remote client pilot
 Testing/ui/validate.sh --steps compile,visual   # any subset, in order
 Testing/ui/compile.sh             # = --steps compile
 ```
@@ -63,6 +63,7 @@ failure, prints a summary table with report paths and the screenshots to review,
 | preflight | `AutomationPreflight.Check()`: no dirty open scene, no leaked runtime root objects (`Chunk [`, `CharacterPreviewDummy`, `CharacterPreviewStaging`). Never saves or discards. |
 | compile | Refreshes, requests compilation, waits for `artifacts/ui/compile-result.json` (written by `AutomationCompileReport` from `CompilationPipeline`) newer than the request. Lists every compiler and analyzer error (`CS*`, `COIMBRA*`, `RCS*`) with file:line, plus `scriptCompilationFailed`. |
 | editmode | All EditMode tests via MCP `run_tests`; `editmode.json` in the validate folder. Then waits for the Test Runner to restore the scene setup and fails if tests left a dirty/polluted scene. |
+| playmode | `--full` only. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Skipped when `Builds/Game/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/client-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
@@ -89,6 +90,19 @@ Two editor behaviours the tooling works around:
   Play Mode) through `execute_code`.
 - An idle, unfocused editor can leave `EditorApplication.delayCall` unprocessed indefinitely while
   `EditorApplication.update` keeps ticking. Automation schedules one-shot `update` callbacks.
+
+### PlayMode step
+
+`playmode` (in `--full`, not `--quick`) runs every PlayMode test through MCP `run_tests` (~6.5 min on
+tomnas) and writes `validate-*/playmode.json`. Failures are checked against
+[`playmode-known-issues.txt`](playmode-known-issues.txt), which lists expected failures:
+- a listed test that fails is reported and does not fail the step;
+- a listed test that passes is flagged, so its entry can be removed;
+- any unlisted failure fails the step.
+
+Known-issue fixtures (`Assets/Scripts/Tests/KnownIssueReproduction/`) are reported separately from
+regular tests, in `playmode-known-issues.md` and in the summary. Keep the list's comments current: each
+entry should say why it fails.
 
 ## Evidence and scope
 
