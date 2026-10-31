@@ -19,11 +19,13 @@ Two rules fall out of this:
 
 ## 2. The ordering console
 
-A station-placed device in cargo bay. Its screen is a diegetic device screen, same pattern as the FDU and fabricator (`hacking-interface.md` §2) — rendered in-world when approached and used, not a full-screen takeover.
+A station-placed device in cargo bay with a machine screen (`main-hud.md` §4).
+
+**First pass: orders arrive on a cargo pad.** In this pass there's no cargo shuttle. An approved order arrives, after a delay, as a crate on a **cargo pad** in the cargo bay. Selling goods back out (§7) needs the shuttle, so exports are a later pass, along with the shuttle round trip (§5, §6) and approval notifications on a PDA (§3).
 
 **Catalog, not stock.** Unlike a vending machine's finite stock count, the console lists supply packs as standing orders from an off-station supplier — always available, gated by credits rather than availability. Each entry shows a name, its manifest (what's actually in the crate), and a cost.
 
-**Placing an order deducts its cost immediately** from the shared station budget — visible on screen before confirming, no hidden approval roll. The order enters a queue for the next shuttle run (§5).
+**The cost is deducted when the order is approved** (§3) — or at once, for an order under the approval threshold — from the shared station budget, visible on screen before confirming. A denied order costs nothing. The approved order then arrives on the cargo pad (first pass) or rides the next shuttle run (§5, later).
 
 ## 3. Approval gating
 
@@ -31,7 +33,7 @@ Below a configurable credit threshold, an order ships automatically once queued.
 
 **Approval requires the console.** Consistent with this project's pattern of keeping authority actions physically located (the AI's upload console, round config's admin screen), granting or denying approval happens at the ordering console itself, not remotely.
 
-**But the notification doesn't have to wait for someone to walk by.** This is the bounded version of the hook `pda.md` §10 flagged and deliberately didn't build: an order entering pending-approval state sends a momentary notification chip to the relevant approver's PDA, reusing the alert-stack-style chip pattern already defined there (`pda.md` §6). The PDA gets a nudge, not an ordering tab — the actual approve/deny action still only exists at the console.
+**Telling the approver.** In the first pass the console announces a pending order on the cargo radio channel (`comms.md` §6). Once the PDA exists (`pda.md`, deferred), it can also show a notification chip. Either way the approve/deny action only exists at the console.
 
 ## 4. The budget ledger
 
@@ -43,11 +45,11 @@ A history tab on the console — same "real, inspectable data" instinct round co
 
 ## 5. Crates — physical goods
 
-Every order ships inside a real crate item — its own collision, moved by hand or a hand truck the same way any heavy object already gets moved, not teleported into a player's hands.
+Every order ships inside a real crate item — its own collision, pulled across the floor by a player who grabs it (`main-hud.md` §7), not teleported into anyone's hands. A hand truck is a later pass.
 
 **The manifest is printed on the crate**, visible via examine without opening it (`examine.md` §5, §7) — "Contents: 5× Advanced Medkit." World-carries-the-information, same rule armor wear and wound state already follow; no separate UI popup needed to know roughly what's inside.
 
-**Opening is a real action** — crowbar pry for a standard crate, matching the tool-possession-as-gate convention already used everywhere (`surgery.md` §7). Some crates (weapons, restricted chemistry) are ID-locked instead. That lock isn't a new mechanic: an ID-locked crate is simply another entry in the FDU's existing device taxonomy (`hacking-interface.md` §3) — crew see "locked," a hacker sees the raw access bitmask, the same reuse the AI core and cyborg chassis already got (`ai-cyborgs.md` §5) rather than a bespoke crate-lock system.
+**Opening is a real action** — crowbar pry for a standard crate, matching the tool-possession-as-gate convention already used everywhere (`surgery.md` §7). Some crates (weapons, restricted chemistry) are ID-locked instead: present an ID with the right access to open one (`id-access.md` §3, §6), the same lock as any locker (`inventory-storage.md` §8).
 
 ## 6. The cargo shuttle
 
@@ -65,7 +67,7 @@ Reuses the shuttle framework wholesale (`shuttles.md`) — this doc doesn't touc
 
 A designated export bay/pad — a physical Area in or near cargo bay — is where outbound crates get staged. Crew loads salvage, excess material, processed ore, or anything else the game currently treats as sellable into an empty or export-flagged crate and places it on the pad before the shuttle's next departure.
 
-Appraisal happens at the trade dock (§5's return leg) and produces one ledger line per crate: "Sold: [manifest] for [amount]." Exact appraisal values come from a price table this doc doesn't author (§10).
+Appraisal happens at the trade dock (§6's return leg) and produces one ledger line per crate: "Sold: [manifest] for [amount]." Exact appraisal values come from a price table this doc doesn't author (§10).
 
 ## 8. Mining — the natural hook, not designed here
 
@@ -86,13 +88,14 @@ No new permanent chrome.
 
 | Cargo element | Touches existing / needed system |
 |---|---|
-| Ordering console screen | Diegetic device-screen pattern (`hacking-interface.md` §2) |
-| Order approval gate | Existing ID/access system (`hacking-interface.md` §3) |
-| Approval-pending notification | PDA notification chip (`pda.md` §6) — resolves that doc's §10 deferred hook, in bounded form |
+| Ordering console screen | Machine screen (`main-hud.md` §4) |
+| First-pass delivery | Cargo pad in the cargo bay (§2) |
+| Order approval gate | ID/access check (`id-access.md` §6) |
+| Approval-pending notification | Cargo radio channel (`comms.md` §6); later a PDA chip (`pda.md`) |
 | Budget ledger | Same real-inspectable-transaction discipline as round config's admin log (`round-config.md` §5) and the AI's audit trail (`ai-cyborgs.md` §4) |
 | Crate as physical object | Existing heavy-object move convention; tool-possession-as-gate for prying (`surgery.md` §7) |
 | Crate manifest | Examine system (`examine.md` §5, §7) |
-| ID-locked crate | FDU device taxonomy, reused wholesale (`hacking-interface.md` §3), same pattern as AI core/cyborg chassis (`ai-cyborgs.md` §5) |
+| ID-locked crate | ID/access check (`id-access.md` §6), same lock as lockers (`inventory-storage.md` §8) |
 | Cargo shuttle | Shuttle framework (`shuttles.md` §10) — new roster entry, that doc now points back here |
 | Manual shuttle hijack | Existing helm/collision model (`shuttles.md` §6, §9) |
 | Export appraisal / pricing | To-be-authored price table (balancing pass, not designed here) |

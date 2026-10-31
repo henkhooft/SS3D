@@ -38,5 +38,6 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: area, creative-mode (area fields, per-gamemode fit check, item placement)
 - Parent: [tile](tile.md)
 - Design (read-only): [creative-mode.md](../../design/creative-mode.md)

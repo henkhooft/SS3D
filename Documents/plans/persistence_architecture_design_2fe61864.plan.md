@@ -91,7 +91,7 @@ flowchart LR
 - **`LightingSwitchOn` not persisted** — wall light switch state resets to default on every load
 - Area restore depends on `OnMapLoaded` firing after tiles **and** APC NetworkObjects exist — contributor load order must guarantee this (see below)
 - No integration with [`RoundSubSystem`](Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs) — server boot always loads "most recent" map, not round-selected map
-- Design docs ([`lobby.md`](Documents/design/lobby.md) §11, [`round-config.md`](Documents/design/round-config.md) §5, [`inventory-storage.md`](Documents/design/inventory-storage.md)) assume a **Persistence & accounts** layer that does not exist
+- Design docs ([`lobby.md`](Documents/design/lobby.md) §11, [`round-config.md`](Documents/design/round-config.md) §2, [`inventory-storage.md`](Documents/design/inventory-storage.md)) assume a **Persistence & accounts** layer that does not exist
 
 ---
 

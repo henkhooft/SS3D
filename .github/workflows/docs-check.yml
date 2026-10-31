@@ -1,0 +1,28 @@
+# Fails when ROADMAP.md or the README roadmap block is out of date with Documents/milestones/.
+# Fix locally with: python3 Tools/generate_roadmap.py
+name: Docs check
+on:
+  push:
+    branches: [develop]
+    paths:
+      - Documents/milestones/**
+      - ROADMAP.md
+      - README.md
+      - Tools/generate_roadmap.py
+      - .github/workflows/docs-check.yml
+  pull_request:
+    paths:
+      - Documents/milestones/**
+      - ROADMAP.md
+      - README.md
+      - Tools/generate_roadmap.py
+      - .github/workflows/docs-check.yml
+permissions:
+  contents: read
+jobs:
+  roadmap:
+    name: Roadmap up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 Tools/generate_roadmap.py --check

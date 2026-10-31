@@ -1,6 +1,15 @@
 # Construction — design document
 
-> Status: active
+> Status: deferred
+
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- Areas don't change during a round (`area.md` §3): building or sealing walls never re-zones areas or re-derives door access (§4, §5 here).
+- Cracked walls no longer leak room-to-room (`explosives-destruction.md` §3), so "leaks same as Cracked/venting" (§2) no longer means a leak.
+- There is one cable type (`electricity.md` §3); there is no thick cable or required SMES path (§3 here).
+- The Tier 3 combine grammar is gone; items move by plain drag (`inventory-storage.md` §6).
+- Repair returns a damaged wall straight to Intact (`explosives-destruction.md` §3).
+- **Believable first pass:** rebuild a Destroyed wall, door or window in a few timed tool steps (girder → plate → weld); no deck-plating expansion; the tile keeps its painted area.
 
 Resolves two things this project has been carrying as open items since early docs. First, Area's own flagged-but-unconfirmed question about whether live geometry changes should recompute area boundaries (`area.md` §3) — explosives already answered that from the destructive direction (`explosives-destruction.md` §4); this doc answers it from the constructive direction, and the two meet at the same technique. Second, crafting's deliberately deferred deconstruction item (`crafting.md` §9: "plausible future hook, not designed here"). Builds on the Tier 3 freeform combine grammar already established for cable-laying and pipe-laying (`electricity.md` §3, `disposal.md` §3), the four-stage structural model explosives already established for damage (`explosives-destruction.md` §3), and the shared access-check function doors already call automatically (`id-access.md` §6).
 

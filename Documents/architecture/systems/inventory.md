@@ -112,6 +112,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: inventory (stripping rule), main-hud (zone selection in every intent)
 - Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
 - [2026-07_inventory-storage-redesign](../2026-07_inventory-storage-redesign.md)
 - [clothing_world_presentation.plan.md](../../archive/plans/clothing_world_presentation.plan.md)

@@ -2,6 +2,7 @@
 > Status: planned
 > Depends on: [mvp1-nuke-ops.md](mvp1-nuke-ops.md)
 > Current focus: blocked on MVP1
+> Roadmap: Station round — Play a short, bare-bones SS13 shift with jobs and antagonists
 
 # MVP2 — Bare-bones station round
 
@@ -82,16 +83,16 @@ Hidden blockers this sketch makes explicit (each its own future pass):
 
 ## Slices
 
-| Id | Name | Status | Links |
-|----|------|--------|-------|
-| S1 | Job system (bare roster) | pending — job-select UI unblocked (UITK lobby H/M/L/N prefs + one-pass resolution shipped, legacy uGUI purged); roster is still two roles (Security, Assistant) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) |
-| S2 | Station loop felt | pending — builds on MVP1 M8 env exposure + alarms; Area-id merge still out | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M8; id-access doors |
-| S3 | Medical shift thin | pending — defib (shipped) is the thin save path; cloning rides crafting rewrite | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) §3, §5; [crafting](../architecture/systems/crafting.md) (fabricator); reuses MVP1 death spine |
-| S4 | Comms radio | partial — feed + Tab/slash compose + announce SFX + Chat purge shipped; OOC/LOOC/Admin chat shipped in the lobby/Escape shell (no in-round HUD feed yet); headset gating / PDA log / radial still open | [comms.md](../design/comms.md) §6; [2026-07_comms-non-diegetic-feed.md](../archive/architecture/2026-07_comms-non-diegetic-feed.md) |
-| S5 | Traitor / Extended + objectives | pending — Extended is the cheap first path; Traitor needs deferred uplink | [antagonist-content.md](../design/antagonist-content.md) §2–§4; [objectives.md](../design/objectives.md); [round-config.md](../design/round-config.md) |
-| S6 | Evac end path | pending — **blocked on unbuilt shuttle framework** | [round-end.md](../design/round-end.md) §3; [shuttles.md](../design/shuttles.md) (evac only) |
-| S7 | Eng / cargo minimum | pending | electricity repair already partial; [cargo.md](../design/cargo.md) thin or mapped supply |
-| S8 | MVP2 playable close | pending | depends S1–S7 + MVP1 |
+| Id | Name | Status | Links | Player view |
+|----|------|--------|-------|-------------|
+| S1 | Job system (bare roster) | pending — job-select UI unblocked (UITK lobby H/M/L/N prefs + one-pass resolution shipped, legacy uGUI purged); roster is still two roles (Security, Assistant) | [lobby.md](../design/lobby.md); [id-access.md](../design/id-access.md) §5; roles ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)) | A real job list to pick from (only Security and Assistant today) |
+| S2 | Station loop felt | pending — builds on MVP1 M8 env exposure + alarms; Area-id merge still out | [area.md](../design/area.md); [electricity.md](../design/electricity.md); [atmospherics.md](../design/atmospherics.md); [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M8; id-access doors | The station runs: power, air and doors matter during a shift |
+| S3 | Medical shift thin | pending — defib (shipped) is the thin save path; cloning rides crafting rewrite | [health.md](../design/health.md); [death-cloning-respawn.md](../design/death-cloning-respawn.md) §3, §5; [crafting](../architecture/systems/crafting.md) (fabricator); reuses MVP1 death spine | Medical can save people (defibrillators work) |
+| S4 | Comms radio | partial — feed + Tab/slash compose + announce SFX + Chat purge shipped; OOC/LOOC/Admin chat shipped in the lobby/Escape shell (no in-round HUD feed yet); headset gating / PDA log / radial still open | [comms.md](../design/comms.md) §6; [2026-07_comms-non-diegetic-feed.md](../archive/architecture/2026-07_comms-non-diegetic-feed.md) | Radio and chat (radio feed and out-of-character chat work; headsets don't gate it yet) |
+| S5 | Traitor / Extended + objectives | pending — Extended is the cheap first path; Traitor needs deferred uplink | [antagonist-content.md](../design/antagonist-content.md) §2–§4; [objectives.md](../design/objectives.md); [round-config.md](../design/round-config.md) | Traitors or a calm Extended round, with objectives |
+| S6 | Evac end path | blocked — unbuilt shuttle framework | [round-end.md](../design/round-end.md) §3; [shuttles.md](../design/shuttles.md) (evac only) | The round can end by evacuation shuttle (no shuttles yet) |
+| S7 | Eng / cargo minimum | pending | electricity repair already partial; [cargo.md](../design/cargo.md) thin or mapped supply | Minimal engineering and cargo jobs |
+| S8 | MVP2 playable close | pending | depends S1–S7 + MVP1 | Finish line: all of the above, on top of a working Nuke Ops round |
 
 ## Explicitly deferred
 

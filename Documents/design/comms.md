@@ -11,9 +11,9 @@ Same split already used for vitals: hearing is momentary and diegetic, history i
 ## 2. What's being cut, and why
 
 - **The always-on scrolling chat box.** It exists because BYOND's client has no other way to surface dialogue — everything funnels through one text stream regardless of who's talking or where. It works, but it means players spend a surprising amount of a round reading a corner of the screen instead of looking at the world.
-- **Typed radio prefixes** (`;`, `:h`, `:c`, etc.). Functional, but keyboard-driven and effectively wiki-only knowledge for new players. Replaced by a visual channel selector (§6).
+- **Cryptic radio prefixes** (`;`, `:h`, `:c`, etc.). Functional, but effectively wiki-only knowledge for new players. Replaced by a visible channel in the compose box that **Tab** cycles through, plus readable slash words (`/ooc`, `/eng`) for players who like typing (§5).
 
-The text itself isn't being cut — SS13 players use chat for exact quotes, coordination, and investigation, and none of that goes away. It's demoted from the primary interface to the history interface (§9).
+The text itself isn't being cut — SS13 players use chat for exact quotes, coordination, and investigation, and none of that goes away. It's demoted from the primary interface to a collapsible feed and its history (§9).
 
 ## 3. Local speech
 
@@ -50,17 +50,22 @@ Everything above is display. Input stays symmetric with how intent works (`main-
 
 A small mode pip inside the box shows which one's about to fire, with the same fading-hint treatment as the intent modifiers — labeled for new players, fades to a minimal tick once each has been used a few times.
 
-**Radio** piggybacks on the channel radial (§6): hold the comms key, pick a channel, the compose box opens pre-tagged to send there instead of locally.
+**Choosing a channel.** The compose box shows which channel the message will go to — local speech by default. **Tab** cycles through the channels you can use (local, your radio channels, OOC, LOOC, Admin help); the box's channel tag updates as you go. A **slash word** at the start of a message (`/ooc`, `/looc`, `/eng`) sends that one message to that channel without changing the selection. Both are visible: you always see where a message is going before you send it.
 
 ## 6. Radio & other non-positional channels
 
 A bubble means "this is happening at this physical point" — radio isn't a physical point relative to the listener, so it never renders as one. Radio, department broadcasts, and similar channels render instead as a screen-space line in the comms feed (bottom-left of the main HUD), tagged with a channel icon and department, e.g. a small chip reading `[eng] Bob: plasma leak in engineering`.
 
-**Channel selection** reuses the project's existing radial grammar rather than introducing a new widget type: hold the comms key, a radial shows available channels, release on one to select — same interaction language as the object radial and the disarm/grab modifier reuse, not a new pattern to learn. The persistent channel chip in the main HUD is what that selection updates.
+**Channel selection** happens in the compose box (§5). Which radio channels you can use depends on the headset you wear and the access it was issued for (`id-access.md`).
 
 ## 7. Non-diegetic channels
 
-OOC, LOOC, dead chat, and admin/system messages have no in-world speaker to anchor a bubble to — a ghost has no body, and OOC isn't happening in-character at all. These fall back to the same screen-space feed used for radio, with distinct typography per channel (e.g. bracketed/italic for OOC) so it's visually obvious "this isn't happening in the world," not just differently colored text.
+OOC, LOOC, dead chat, and admin messages have no in-world speaker to anchor a bubble to — a ghost has no body, and OOC isn't happening in-character at all. They appear in the **same feed** as radio, during the round and in the lobby alike, with distinct typography per channel (e.g. bracketed/italic for OOC) so it's visually obvious "this isn't happening in the world," not just differently coloured text. Each channel can be **filtered** out of the feed by a player who'd rather not see it. The same channels also live in the **Chat tab** of the lobby and the Escape menu, for longer reading.
+
+- **OOC** — out of character, server-wide. **Rate-limited**: a player can't post more than a few messages in a short window, so a playtest's OOC stays readable.
+- **LOOC** — local out of character: reaches players within about **10 m** of the speaker. For "sorry, lagged" and "how do I open this?" without breaking the scene for the whole server.
+- **Dead chat** — ghosts only (`observer.md` §4).
+- **Admin help** — a two-way conversation between one player and the admins (`admin-tools.md` §3). Admins also have an admin-only channel among themselves.
 
 ## 8. Communication modes
 
@@ -70,11 +75,11 @@ Shape, size, position, and icon carry the distinction between modes, not color a
 - **Whisper** — privacy-preserving, not just quieter. No muffled tier: within a tight clear range (~1.5m) the listener reads it in full, outside that range they get nothing — the whole point of whispering is that content stays private. But fully invisible communication is exploitable (two people coordinating right next to a third with zero tell), so bystanders within a slightly wider notice range see a presence-only cue — a small ellipsis-style icon over the speakers, no text, enough to know something private is being said, never what.
 - **Shout** — does double duty. Within an extended clear range, full text, same as speak but further out. Beyond that range, players still get a non-verbal directional ping (screen-edge indicator, no words) — the mechanical equivalent of hearing someone yell without catching the words, useful for calling for help across distance. Shouts also get priority in the crowd cap (§4): if the room's at capacity and someone shouts, it bumps a normal speaker rather than competing on proximity alone, since the entire point of shouting is not getting lost in noise.
 - **Radio** — screen-space chip with a consistent channel icon, regardless of which department channel.
-- **Station/AI announcements** — reserved for genuinely urgent messages (red alert, emergencies): a large, centered, hard-to-miss banner. Routine announcements (shift change, cargo's arrived) use the regular comms feed as a tagged line, same treatment as radio. If everything gets the banner, the banner stops meaning anything — same restraint the alerts stack already follows. Everything still gets logged either way.
+- **Station announcements** — a tagged line in the feed that every player receives, wherever they are, with its own sound so it's noticed. Announcements are rare enough in this pass (a nuclear device armed, `antagonist-content.md` §6; a round ending) that one treatment serves all of them. Separating urgent banners from routine notices is a later pass.
 
 ## 9. History / log
 
-Everything heard gets logged, including muffled lines the player only partially caught — flagged as "(partially heard)" rather than silently dropped, the way a real half-caught sentence would stick with you. Whisper content a player wasn't in range for is not backfilled into their log (they didn't hear it; the presence-only cue is what they get). Opened on-demand through the PDA, not a permanent on-screen box. Full transcript, timestamped, filterable by channel, with a rough location tag on local-speech entries — this is where the exact-quote, investigation, and coordination use cases that made SS13's chat box valuable actually live.
+Everything heard gets logged, including muffled lines the player only partially caught — flagged as "(partially heard)" rather than silently dropped, the way a real half-caught sentence would stick with you. Whisper content a player wasn't in range for is not backfilled into their log (they didn't hear it; the presence-only cue is what they get). The history is the **feed's own scrollback**: expand the feed and scroll back through the round, timestamped and filterable by channel, with a rough location tag on local-speech entries — this is where the exact-quote, investigation, and coordination use cases that made SS13's chat box valuable actually live. Once the PDA exists (`pda.md`, deferred) it can offer the same history as a tab.
 
 ## 10. Voice compatibility
 
@@ -87,9 +92,11 @@ Nothing here assumes audio exists. If voice chat gets added later, it runs as an
 | Local speech, occlusion | Character positions, wall/collision geometry for the raycast |
 | Crowd cap | Same restraint pattern as the alerts stack |
 | Compose input | Intent module's modifier-chording and fading-hint pattern |
-| Radio & channels | Radio/channel system, ID/access for channel permissions, radial menu grammar |
-| Log | PDA (main HUD gear strip), timestamped storage keyed to the chat/message backend |
-| PDA-to-PDA messaging | New address mode on this doc's message/log backend, not a new channel type (`pda.md` §4) |
+| Radio & channels | Headset and its issued access (`id-access.md`) |
+| Admin help | `admin-tools.md` §3 |
+| Dead chat | `observer.md` §4 |
+| Announcements | `antagonist-content.md` §6, `round-end.md` |
+| History | The feed's scrollback; later a PDA tab (`pda.md`) |
 
 ## 12. Worked examples
 
@@ -116,4 +123,6 @@ Nothing here assumes audio exists. If voice chat gets added later, it runs as an
 - Full physical speech propagation (pressure, vents, open doors modulating range) — flagged as a later hook, not v1
 - Material-aware occlusion (glass vs. metal vs. vents transmitting differently) — v1 treats all solid geometry the same
 - Lip sync, head-turning, voice portraits, or other animation-driven "who's speaking" cues
+- Separate urgent banners and routine notices for announcements (§8)
+- Comms history on the PDA (§9)
 

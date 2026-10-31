@@ -46,7 +46,8 @@ Connect/disconnect lifecycle, server-side:
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: networking (full-server reason), observer (Observe button)
 - Design (read-only): [Documents/design/networking.md](../../design/networking.md) — the connection-lifecycle spec this domain now implements (partially — see Extension points)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
-- Observer/ghost reconnection (a different mechanism, for death not network disconnect): [Documents/design/observer.md](../../design/observer.md) §6
+- Coming back after death (a different mechanism from network disconnect): ghosts never return to their old body by defib ([observer.md](../../design/observer.md) §6); the ways back are cloning and the respawn setting ([death-cloning-respawn.md](../../design/death-cloning-respawn.md) §5, §6)
 - Regression coverage for the disconnect/reconnect ownership flow: `Testing/multiplayer/scenarios/reconnect{,-client}.txt`, see [2026-07_multiplayer-test-harness.md](../2026-07_multiplayer-test-harness.md)

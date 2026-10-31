@@ -103,7 +103,8 @@ If the shipped work advances a slice under [Documents/milestones/](../../../Docu
    (e.g. `mvp1-nuke-ops.md`)
 2. Update the gate header `> Current focus:` to the deepest unfinished critical leaves
 3. Mirror **Current focus** on [Documents/milestones/INDEX.md](../../../Documents/milestones/INDEX.md)
-4. If a whole gate ships, set its header `Status: shipped` and retarget hub focus to the next gate
+4. When the gate's first slice ships, set its header `Status: in-progress`; when the whole gate ships, set `Status: shipped` and retarget hub focus to the next gate
+5. Update the slice's **Player view** so it matches the new status (what now works goes in parentheses), then run `python3 Tools/generate_roadmap.py` to regenerate `ROADMAP.md` and the README block. Done when `python3 Tools/generate_roadmap.py --check` passes
 
 Do not restate design rules or implementation HOW in milestone docs — cite only.
 

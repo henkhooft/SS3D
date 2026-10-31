@@ -1,6 +1,13 @@
 # Diagnostic & hacking interface — design document
 
-> Status: active
+> Status: deferred
+
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- Only secure devices keep an auth log, per round and capped (`id-access.md` §6); not every device has a "last-auth log" (§3 here).
+- There is no separate data network, only one cable layer (`electricity.md` §3).
+- Forgery (`id-access.md` §8) and lock bypass (`inventory-storage.md` §8) wait on this doc.
+- **Believable first pass:** a multitool with two tiers (crew and engineer) that shows a device's power, status and access requirement; the hacker tier comes later.
 
 ## 1. Design philosophy
 

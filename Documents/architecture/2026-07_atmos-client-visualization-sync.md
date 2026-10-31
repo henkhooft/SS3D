@@ -1,4 +1,4 @@
-> Implements: Documents/design/atmospherics.md §10 (gas rendering — client visibility)
+> Implements: Documents/design/atmospherics.md §9 (what you see — client visibility)
 > Touches systems: atmospherics, rendering, networking-session
 > Status: shipped
 
@@ -97,7 +97,7 @@ Thin sync layer on top of existing types — no renderer rewrite.
 
 - System map: [atmospherics.md](systems/atmospherics.md)
 - Prior effort: [2026-07_atmos-ecs-foundation.md](../archive/architecture/2026-07_atmos-ecs-foundation.md)
-- Design (read-only): [atmospherics.md](../design/atmospherics.md) §10
+- Design (read-only): [atmospherics.md](../design/atmospherics.md) §9
 - [rendering.md](systems/rendering.md) — `AtmosRenderContext` / `AtmosRendererFeature`
 - [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — headless
   server+client regression coverage (`atmos-client-sync` scenario)

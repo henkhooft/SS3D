@@ -2,7 +2,7 @@
 
 > Status: active
 
-Builds on two systems that already exist in the implementation: per-part colliders on the character rig (already load-bearing for zone targeting and combat, see `main-hud.md` §6 and `combat.md`) and organs. This doc doesn't redesign either — it defines how they plug into a damage/critical/death/treatment model, and where that model shows up in the HUD.
+Defines the body's damage, critical, death and treatment model, and where it shows up in the HUD. It builds on the seven body zones that zone targeting already uses (`main-hud.md` §6, `combat.md`) and on a set of organs that regulate the bloodstream.
 
 ## 1. Design philosophy
 
@@ -10,7 +10,7 @@ Same thread as every other doc in this project: failure should trace to somethin
 
 Two tiers fall out of this:
 
-- **Physical damage is local.** A wound happens *to* a limb. This is already what the colliders are for.
+- **Physical damage is local.** A wound happens *to* a limb.
 - **Systemic damage is regulated, not local.** Toxin and oxygen aren't properties of an arm — they're properties of a bloodstream, and organs are the mechanism that governs them.
 
 Same diegetic-first principle as vitals (§5 of the main HUD doc): wounds render on the actual character model, screen-space feedback communicates systemic state, panels are on-demand backup, not the primary way a player learns they're hurt.
@@ -19,13 +19,23 @@ Same diegetic-first principle as vitals (§5 of the main HUD doc): wounds render
 
 ### Physical (per-limb)
 
-Brute and burn, tracked per zone — reuses the existing seven-zone collider rig unchanged. Crossing thresholds within a limb produces escalating local effects: bruising → an open wound → a fracture or severe burn → the limb disabled → severed at the extreme end. Function degrades along the way, not just at the end — a damaged leg limps and slows before it stops working, a damaged arm loses grip/aim precision before it goes fully unusable. This is a refinement of, not a departure from, the "body itself is the doll" rule already established: these effects are exactly what should be rendering on the model.
+Brute and burn, tracked per zone across the seven body zones. Crossing thresholds within a limb produces escalating local effects: bruising → an open wound → a fracture or severe burn → the limb disabled. Severing is not simply the next threshold — see §5. Function degrades along the way, not just at the end — a damaged leg limps and slows before it stops working, a damaged arm loses grip/aim precision before it goes fully unusable. This is a refinement of, not a departure from, the "body itself is the doll" rule already established: these effects are exactly what should be rendering on the model.
 
 ### Systemic (whole-body, organ-regulated)
 
 - **Toxin** — poison concentration in the bloodstream. Liver and kidneys clear it over time; damage to either slows clearance, and losing both means it doesn't clear on its own at all.
 - **Oxy** — blood oxygen deficit. Lungs handle intake, heart handles delivery. Damage to either raises oxy debt even in a perfectly breathable atmosphere — this is what makes it possible to be suffocating while standing in clean air.
 - **Blood volume** — drained by open wounds. Low blood volume degrades oxygen delivery independent of lung/heart health (there's simply less of it to carry oxygen) and degrades organ function generally through poor perfusion.
+
+### Environment
+
+The environment damages the body directly, without a weapon:
+
+- **Heat and cold** — burn on every exposed zone while you stand in it, reduced by the environmental protection of what you wear (`armor.md` §1, §3).
+- **Low pressure** — oxy debt (nothing to breathe) plus damage to the lungs themselves.
+- **Toxic gas** — toxin, through the lungs.
+
+A sealed suit blocks the pressure and gas effects entirely (`armor.md` §3).
 
 ### What connects the two tiers
 
@@ -34,7 +44,7 @@ Brute and burn, tracked per zone — reuses the existing seven-zone collider rig
 
 ## 3. Organs — integration, not redesign
 
-Framed generically since the organ system already exists: whatever set of organs you're tracking (heart, lungs, liver, kidneys, brain, and any others), this is what their function state should drive:
+Each organ's function state drives one part of the systemic model:
 
 - **Heart** — circulation. Failing heart function means oxygen doesn't reach tissue even with healthy lungs and full blood volume. Zero function is cardiac arrest — see §4.
 - **Lungs** — intake. Failing lung function raises oxy debt accumulation even in breathable air; destroyed lungs can't process air regardless of atmosphere.
@@ -44,9 +54,13 @@ Framed generically since the organ system already exists: whatever set of organs
 
 ## 4. Critical and death
 
-**Critical** triggers when any systemic value crosses its own threshold — blood volume critically low, oxy debt too high, toxin concentration too high — or when brain function drops below a consciousness threshold. Not one aggregate number: several independent, real thresholds, any one of which is dangerous on its own. Recoverable with treatment (§6).
+**Critical** triggers when any systemic value crosses its own threshold — blood volume critically low, oxy debt too high, toxin concentration too high — or when brain function drops below a consciousness threshold. Not one aggregate number: several independent, real thresholds, any one of which is dangerous on its own. Recoverable with treatment (§6) — but **critical is a countdown, not a resting state**. Left untreated, a critical patient's heart weakens until it stops, which starts the cardiac-arrest window below. Someone in critical will die if nobody helps them; that is what makes a medic's arrival matter.
 
 **Death** has exactly one canonical trigger: brain function reaching zero. Cardiac arrest doesn't equal death — it's the fast track toward it, since a stopped heart cuts off the brain's oxygen and its function starts dropping quickly. That's what gives a defibrillator something real to interrupt: a genuine physical window between the heart stopping and brain death finalizing, not a hidden countdown. Blood loss, suffocation, and poisoning all become real paths that lead to the same single, physical endpoint, rather than each needing its own separate "you're dead" rule.
+
+**Decapitation is death.** A head separated from its body has no circulation, so the brain stops — the same single trigger, reached instantly. The brain itself can be recovered from the head afterwards, which is what later revival paths (`death-cloning-respawn.md`) work from. A talking severed head is not part of this design.
+
+On death the player becomes a ghost (`observer.md`).
 
 ## 5. Wounds & bleeding
 
@@ -58,7 +72,9 @@ Wound severity is a function of accumulated brute/burn on a given zone, rendered
 | Wound | Visible laceration or burn | Bleeding starts, some function loss |
 | Severe | Deep wound / bad burn | Faster bleeding, significant function loss |
 | Disabled | Limb unusable | No further local input from that limb |
-| Severed | Limb gone | Heavy bleeding until treated, function gone until prosthetic/reattachment |
+| Severed | Limb gone | Heavy bleeding until treated, function gone for the rest of the round in this pass |
+
+**Severing needs both damage and an edge.** A limb can only be cut off once it's already Disabled, and only by a sharp weapon (a blade, an axe). Blunt trauma breaks a limb but never removes it. Severing the head is decapitation (§4).
 
 Bleeding rate scales with wound severity and stacks across multiple wounds. This is the acute, actionable version of the systemic story — see §7 for how it surfaces separately from the passive systemic bars.
 
@@ -79,22 +95,20 @@ Organized by tier, and by how immediate the fix is — field treatment anyone ca
 
 ### Surgical treatment (medbay-grade)
 - Internal repair for severe wounds and internal bleeding
-- Organ repair or replacement (transplant / cybernetic) for organs at critical or zero function
-- Limb reattachment or prosthetics for severed limbs
 
-The actual surgical procedure — steps, tools, failure states — isn't spec'd here; flagged in §9 as a natural follow-up, the same way armor got deferred out of the combat doc. What's defined here is what surgery *accomplishes*, since the health model needs that to be coherent even before the procedure itself is designed.
+Organ transplants, cybernetics, prosthetics and limb reattachment are out of scope for this pass (§9). The surgical procedure itself is `surgery.md`'s job.
 
 ### Revival
 - **Defibrillator** — restarts a stopped heart within the physical window described in §4, before brain death finalizes. This is the concrete mechanical payoff of the critical/death model above.
 
 ## 7. HUD touchpoints
 
-Not a redesign of the main HUD doc's vitals cluster (§5) — a note on what its existing bars now mean, and one small addition:
+Not a redesign of the main HUD doc's vitals cluster (§5) — a note on what its bars mean:
 
-- The brute/burn bars now read as the *worst-affected limb*, not a whole-body sum — matches the existing "only draws the eye when something's actually wrong" rule better than an averaged number would.
-- The toxin/oxy bars now genuinely mean what they look like they mean — true systemic values sourced from organ function and blood state, not a fourth per-limb stat.
-- The existing on-demand per-limb readout (hold examine-self) gains a paired organ-status view alongside it — same interaction, more revealed, no new permanent chrome.
-- The existing "Bleeding" alert chip is the acute, actionable surface for active blood loss, separate from the passive systemic bars — consistent with the alerts stack's existing job of surfacing only what's actionable right now.
+- The brute/burn bars read as the *worst-affected limb*, not a whole-body sum — matches the "only draws the eye when something's actually wrong" rule better than an averaged number would.
+- The toxin/oxy bars are true systemic values sourced from organ function and blood state, not per-limb stats.
+- **Self-examine** (`examine.md` §7) describes your condition in plain sentences ("your left arm is badly bruised", "you feel light-headed"). A per-limb and organ readout is a later pass.
+- **Alerts** (`main-hud.md` §9) surface what's acute and actionable: **Bleeding** for active blood loss and **Cardiac arrest** for a stopped heart, each with a warning and a critical severity.
 
 ## 8. Worked example
 
@@ -106,14 +120,15 @@ Not a redesign of the main HUD doc's vitals cluster (§5) — a note on what its
 | 4 | Blood volume keeps dropping | Oxy debt starts rising even though lungs and heart are both fine — there's simply less blood to carry oxygen |
 | 5 | Another player applies a bandage | Bleeding stops; blood volume itself is still low until a transfusion |
 | 6 | Left untreated long enough instead | Oxy debt crosses the critical threshold; player enters critical state |
-| 7 | No one intervenes | Heart eventually fails; brain function starts dropping fast — the defib window opens |
+| 7 | No one intervenes | Critical counts down until the heart fails; brain function starts dropping fast — the defib window opens and the Cardiac arrest alert fires |
 | 8 | A defibrillator is used in time | Heart restarts before brain function reaches zero — recovery, not death |
 
 ## 9. Out of scope for this pass
 
 - Disease/infection — designed in `virology.md`, which builds directly on this doc's organ/systemic-pool model
-- The surgical procedure itself — what it accomplishes is defined in §6, the mechanic isn't
+- The surgical procedure itself (`surgery.md`)
+- Organ transplants, cybernetics, prosthetics and limb reattachment
+- A per-limb and organ readout on self-examine (sentences only in this pass)
 - Genetic/DNA or radiation damage, if that exists as a separate type — not assumed here
-- Cybernetic/prosthetic depth beyond "this is a treatment option for severed limbs and failed organs"
 - Nutrition/hunger specifics — already an existing alert, untouched here
 

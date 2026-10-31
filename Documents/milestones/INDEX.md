@@ -7,7 +7,7 @@ vs built) stays in [architecture/INDEX.md](../architecture/INDEX.md); structural
 
 ## Current focus
 
-Two tracks run in parallel — an **operational** one that makes multiplayer playtests trustworthy, and the **gameplay** gate:
+Three tracks run in parallel — an **operational** one that makes multiplayer playtests trustworthy, an **authoring** one that lets testers build maps, and the **gameplay** gate:
 
 **Near-term operational push** — [test-server.md](test-server.md):
 
@@ -15,6 +15,12 @@ Two tracks run in parallel — an **operational** one that makes multiplayer pla
 - **T2** — Zero-setup remote join (stop hardcoding `127.0.0.1`)
 - **T3** — Session stability: doors under MP, remote drop/selection, remaining admin wedge tools (round controls + stop-cancels-start shipped), Nuke Ops happy-path smoke, test-station perf floor. Local `validate.sh --full` covers PlayMode/server build/smoke, but **CI smoke hasn't passed since 2026-10-01** (runner offline)
 - **T4** — End-game screen + restart (**shared with M5**); latejoin without softlock shipped, including after an earlier round
+
+**Authoring track** — [map-authoring.md](map-authoring.md) (expect many gaps: map authoring in a build is largely untested):
+
+- **A1** — Loadable local build: shares test-server T1 re-cut; CI must also package `Data/StationTemplates/`
+- **A2** — Area tool (room name, department, access) — a locked vault can't be authored today
+- **A2.5** — Internal dogfood build of the Nuke Ops station before testers see it
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 
@@ -34,8 +40,9 @@ The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) shipped 2026-10-31 
 
 | Gate | Status | Depends on | Doc |
 |------|--------|------------|-----|
-| Test server — hop-on/off playtest | planned | — (parallel; reuses MVP1 M5 loop) | [test-server.md](test-server.md) |
-| MVP1 — Nuclear Operatives round | planned | — | [mvp1-nuke-ops.md](mvp1-nuke-ops.md) |
+| Test server — hop-on/off playtest | in-progress | — (parallel; reuses MVP1 M5 loop) | [test-server.md](test-server.md) |
+| Map authoring — tester-built maps | in-progress | test-server T1 | [map-authoring.md](map-authoring.md) |
+| MVP1 — Nuclear Operatives round | in-progress | — | [mvp1-nuke-ops.md](mvp1-nuke-ops.md) |
 | MVP2 — Bare-bones station round | planned | MVP1 | [mvp2-station-round.md](mvp2-station-round.md) |
 
 ## How to use

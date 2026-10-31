@@ -1,6 +1,13 @@
 # Virology — design document
 
-> Status: active
+> Status: deferred
+
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- Gas flows tile by tile and doesn't care about areas (`area.md` §4, `atmospherics.md` §2); airborne spread can't rely on Area co-location (§3 here).
+- Masks and seals protect through environmental protection, separate from combat armor's zone coverage (`armor.md` §1, §3).
+- Self-examine is plain sentences, with no organ readout to extend (`health.md` §7).
+- **Believable first pass:** one or two contact-spread diseases, a scanner, and a cure made through chemistry.
 
 Resolves an item four other docs deliberately punted on: `health.md` §9 flags "disease/infection" as a natural future system given organs already exist, `chemistry.md` §13 defers "disease/infection interactions," `surgery.md` §11 defers "disease/infection risk from surgery," and `examine.md` §11 flags "a medical scanner tool for exact organ/vitals function values... a plausible future item, not designed here." This doc is that system, and that item. Builds on the organ/systemic-pool model (`health.md` §2–3), the reagent/bloodstream/delivery model (`chemistry.md`), the diegetic device-screen and discovery-tier pattern (`hacking-interface.md` §2–4, `chemistry.md` §7), Area as the current stand-in for co-location (`area.md` §2), armor's zone-coverage check (`armor.md` §2), and the crew identity record DNA already rides (`death-cloning-respawn.md` §4).
 

@@ -1,6 +1,15 @@
 # PDA — design document
 
-> Status: active
+> Status: deferred
+
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- There is one combined ID slot that holds either a bare ID or a PDA with a card inside it (`id-access.md` §3). The PDA has no slot of its own.
+- Admin help is a two-way channel in the Chat tab (`admin-tools.md` §3); the PDA only mirrors it.
+- Comms history is the feed's scrollback (`comms.md` §9); a PDA tab only mirrors it.
+- Objectives live in a spawn briefing plus an Escape-menu Notes panel (`objectives.md` §8); a PDA tab only mirrors them.
+- The Traitor uplink is a later pass (`antagonist-content.md` §3, §4).
+- **Believable first pass:** a handheld screen with three tabs: ID summary, objectives mirror, and feed history.
 
 Formalizes a role the PDA has already been accreting by convention across three other docs without ever being specified itself: the gear-strip slot (`main-hud.md` §8), the comms history log (`comms.md` §9), and the crafting construction guide (`crafting.md` §2, §6). This doc consolidates that into one canonical spec, and resolves what those docs left open: whether PDA-to-PDA private messaging exists, and what future tabs (crew manifest, ID summary, ahelp) should look like when their own systems come up for design.
 

@@ -40,4 +40,5 @@ Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: antagonist-content, objectives (crew win, legacy objectives, briefing), round-config (opt-in minimum)
 - [INDEX.md](../INDEX.md)

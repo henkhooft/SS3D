@@ -134,6 +134,7 @@ WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: area, creative-mode (area fields, per-gamemode fit check)
 - Design (read-only): [Documents/design/area.md](../../design/area.md), [Documents/design/creative-mode.md](../../design/creative-mode.md)
 - Architecture effort: [2026-07_map-editor-replacement](../../archive/architecture/2026-07_map-editor-replacement.md), [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md), [2026-07_ss13-map-import](../../archive/architecture/2026-07_ss13-map-import.md), [2026-07_ss13-map-import-infrastructure](../../archive/architecture/2026-07_ss13-map-import-infrastructure.md), [2026-07_metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md), [2026-07_srp-batcher-gpu-instancing](../2026-07_srp-batcher-gpu-instancing.md); planned camera manager: [2026-07_camera-ownership](../2026-07_camera-ownership.md)
 - Plan: [ss13_map_import_infrastructure.plan.md](../../archive/plans/ss13_map_import_infrastructure.plan.md)

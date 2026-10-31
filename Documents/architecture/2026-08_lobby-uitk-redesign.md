@@ -396,9 +396,10 @@ Emergency (existing implementation). Unsupported Traitor/Deathmatch are omitted.
 Events, Friendly Fire policy and Cloning are visible disabled controls with explanations.
 Manual start replaces the prototype's unimplemented autostart threshold caption.
 
-This is the attached prototype's direct-selection UI, not the weighted pool editor in
-[round-config.md](../design/round-config.md) §5. Weighted pools, history UI, spawn-coverage
-checks, autostart and disk persistence remain deferred. No design spec was edited.
+This is the attached prototype's direct-selection UI. The 2026-10 design review adopted it as
+the first pass ([round-config.md](../design/round-config.md) §2); weighted pools are its later
+pass (§7). History UI, the map-fits-mode check (§5), autostart and disk persistence remain
+deferred.
 
 Harness: lifecycle pilot covers authorized snapshots, edits, validation, waiting/countdown/rules
 screenshots, saved-map restore, extension, cancellation, Force Start, an Extended round with

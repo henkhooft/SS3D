@@ -1,6 +1,13 @@
 # Surgery — design document
 
-> Status: active
+> Status: deferred
+
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- Organ transplants, cybernetics, prosthetics and limb reattachment are out of scope (`health.md` §6, §9), which removes two of §3's three procedures.
+- Decapitation is death, and the brain can be recovered afterwards (`health.md` §4).
+- The radial Tier 2/3 grammar is gone.
+- **Believable first pass:** Incise → Clamp → Repair → Close, for internal bleeding only.
 
 Resolves the deferred procedure flagged in `health.md` (§6, §9): that doc defined what surgery *accomplishes* — internal repair, organ repair/replacement, limb reattachment/prosthetics — without designing the mechanic itself. This doc is the mechanic. It doesn't introduce a new interaction system; it assembles one from pieces this project has already built: the seven-zone targeting system (`main-hud.md` §6), the Tier 2/Tier 3 radial grammar (targeted tool actions and combine/use-with), the interruptible-timed-step pattern from freeform crafting (`crafting.md` §2), and health's own bleeding/blood-volume model.
 

@@ -101,6 +101,7 @@ HUD feed yet.
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: comms (OOC/LOOC in the in-round feed), admin-tools (two-way Admin help)
 - Design: [Documents/design/comms.md](../../design/comms.md)
 - Effort: [2026-07_comms-non-diegetic-feed.md](../../archive/architecture/2026-07_comms-non-diegetic-feed.md)
 - Plan: [comms_non_diegetic_feed.plan.md](../../archive/plans/comms_non_diegetic_feed.plan.md)

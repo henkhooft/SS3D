@@ -101,6 +101,7 @@ stamina drain), projectile/thrown.
 
 ## Related docs
 
+- Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: armor (environmental protection, layering)
 - Effort: [2026-07_interaction-controller-decomposition](../../archive/architecture/2026-07_interaction-controller-decomposition.md) — Harm RPCs moved to `CombatInteractionNetwork`
 - Design: [Documents/design/combat.md](../../design/combat.md), [Documents/design/armor.md](../../design/armor.md)
 - Plan: [combat_implementation_plan.md](../../plans/combat_implementation_plan.md) (Phase 3, Phase 5 shipped)

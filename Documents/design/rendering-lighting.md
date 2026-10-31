@@ -57,7 +57,7 @@ Each Area's lighting sits in one of three states, driven directly by its APC's p
 
 ## 5. Occlusion — a fourth consumer of the shared raycast
 
-Comms occlusion, the hacking device's wireless-scan range, and combat cover already share one raycast/occlusion system rather than each maintaining its own (`combat.md` §3 makes this explicit: "one raycast system, three consumers, no parallel implementation"). Light occlusion — what's actually lit by a given fixture versus what's in its shadow — is a natural fourth consumer of that same system rather than a separate light-occlusion query. A wall blocks a fixture's light exactly the same way it blocks a subtitle bubble or a wireless scan.
+Comms occlusion, the hacking device's wireless-scan range, and combat cover already share one raycast/occlusion system rather than each maintaining its own (`combat.md` §3, `comms.md` §3). Light occlusion — what's actually lit by a given fixture versus what's in its shadow — is a natural fourth consumer of that same system rather than a separate light-occlusion query. A wall blocks a fixture's light exactly the same way it blocks a subtitle bubble or a wireless scan.
 
 ## 6. Departmental color, as an authored extension of Area
 
