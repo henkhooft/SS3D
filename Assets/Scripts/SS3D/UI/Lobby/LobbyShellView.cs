@@ -60,6 +60,7 @@ namespace SS3D.UI.Lobby
         private Vector2Int _currentResolution;
         private bool _stpSupported = true;
         private bool _confirmingDisplayReset;
+        private bool _raisingDisplayIntent;
         private VisualElement _displayPrompt;
         private Label _displayPromptText;
         // PlayerSettingsSubSystem's live audio values; the view only reads them and raises intents.
@@ -118,7 +119,8 @@ namespace SS3D.UI.Lobby
             _resolutions = resolutions ?? Array.Empty<Vector2Int>();
             _currentResolution = current;
             _stpSupported = stpSupported;
-            if (_activeTab == TabSettings && _settingsSubTab == "display" && _tabContent != null)
+            // Skip the echo of a live UI Scale drag: rebuilding the tab would drop the drag.
+            if (!_raisingDisplayIntent && _activeTab == TabSettings && _settingsSubTab == "display" && _tabContent != null)
                 ShowTab(TabSettings);
         }
 
@@ -1538,21 +1540,14 @@ namespace SS3D.UI.Lobby
             return field;
         }
 
-        /// <summary>UI Scale applies on release (Decision 8): rescaling the panel mid-drag would move the slider away.</summary>
-        private VisualElement UiScaleSlider()
+        /// <summary>UI Scale applies live, one 1 % step at a time (owner's call, overriding Decision 8's apply-on-release).</summary>
+        private VisualElement UiScaleSlider() => SettingsSlider("uiScale", "UI Scale", true, true, _display.UiScale, value =>
         {
-            VisualElement field = SettingsSlider("uiScale", "UI Scale", true, true, _display.UiScale, _ => { },
-                PlayerDisplaySettings.MinUiScale, PlayerDisplaySettings.MaxUiScale);
-            Slider slider = field.Q<Slider>("settings-uiScale");
-            void Commit()
-            {
-                float snapped = PlayerDisplaySettings.SnapUiScale(slider.value);
-                if (!Mathf.Approximately(snapped, _display.UiScale)) UiScaleChanged?.Invoke(snapped);
-            }
-            slider.RegisterCallback<PointerCaptureOutEvent>(_ => Commit());
-            slider.RegisterCallback<FocusOutEvent>(_ => Commit());
-            return field;
-        }
+            if (Mathf.Approximately(value, _display.UiScale)) return;
+            _raisingDisplayIntent = true;
+            try { UiScaleChanged?.Invoke(value); }
+            finally { _raisingDisplayIntent = false; }
+        }, PlayerDisplaySettings.MinUiScale, PlayerDisplaySettings.MaxUiScale, PlayerDisplaySettings.UiScaleStep);
 
         private Button DisplayResetButton() => ResetButton("settings-reset-display", _confirmingDisplayReset,
             () => _confirmingDisplayReset = true, () =>
@@ -1622,7 +1617,7 @@ namespace SS3D.UI.Lobby
         }
 
         private VisualElement SettingsSlider(string key, string title, bool percentage, bool enabled, float value,
-            Action<float> changed, float min = 0f, float max = 1f)
+            Action<float> changed, float min = 0f, float max = 1f, float step = 0f)
         {
             VisualElement field = new();
             field.AddToClassList("lobby-shell__settings-slider-field");
@@ -1642,9 +1637,15 @@ namespace SS3D.UI.Lobby
             number.AddToClassList("lobby-shell__settings-number");
             slider.RegisterValueChangedCallback(evt =>
             {
-                changed(evt.newValue);
-                number.text = Display(evt.newValue);
-                fill.style.width = Length.Percent((evt.newValue - min) / (max - min) * 100f);
+                float value = evt.newValue;
+                if (step > 0f)
+                {
+                    value = Mathf.Clamp((float)Math.Round(Mathf.Round(value / step) * step, 2), min, max);
+                    slider.SetValueWithoutNotify(value);
+                }
+                changed(value);
+                number.text = Display(value);
+                fill.style.width = Length.Percent((value - min) / (max - min) * 100f);
             });
             slider.SetEnabled(enabled);
             row.Add(slider);

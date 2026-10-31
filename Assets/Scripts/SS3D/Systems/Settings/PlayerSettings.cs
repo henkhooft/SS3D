@@ -107,7 +107,7 @@ namespace SS3D.Systems.Settings
 
         public const float MinUiScale = 0.75f;
         public const float MaxUiScale = 1.5f;
-        public const float UiScaleStep = 0.05f;
+        public const float UiScaleStep = 0.01f;
 
         public int ResolutionWidth;
         public int ResolutionHeight;

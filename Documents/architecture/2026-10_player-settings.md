@@ -2,7 +2,7 @@
 > Touches systems: rounds-lobby, ui-shell, audio, main-hud (panel scale), rendering (URP quality assets), input
 > Status: in-progress
 
-**Progress:** Phase 1 shipped 2026-10-31 (model + store, boot apply, mixer routing, Sound tab). Phase 2 code-complete 2026-10-31, EditMode-green, awaiting manual play test. Phases 3–4 not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
+**Progress:** Phase 1 shipped 2026-10-31 (model + store, boot apply, mixer routing, Sound tab). Phase 2 shipped 2026-10-31 (display, quality tiers, upscaling, UI Scale; resolution verified in a build). T6 done. Phases 3–4 not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
 
 # Player settings: display, audio, controls (Oct 2026)
 
@@ -68,7 +68,7 @@ Shipped notes (2026-10-31):
 - Sound tab: five sliders, Mute All, mute-when-unfocused. Convert linear values to dB, with 0 mapped to −80.
 - Move `LobbyShellView`'s settings state into the model.
 
-### Phase 2 — Display, quality, upscaling *(T6)* — **code-complete, awaiting manual test**
+### Phase 2 — Display, quality, upscaling *(T6)* — **shipped**
 
 Implementation notes (2026-10-31):
 
@@ -76,6 +76,7 @@ Implementation notes (2026-10-31):
 - Quality: four levels, each its own `SS3D_URPAsset_<Tier>.asset` (the old asset is Ultra, GUID kept). Tiers vary shadow distance (40/80/150/450 m), cascades (1/2/4/4), main shadow map (1024/2048/2048/4096), soft shadows (off/Low/Medium/High) and additional-light shadows (off/1024/2048/4096); the old Low/Medium/High/Ultra levels' LOD, mip and anisotropic fields carry over. The per-object light limit is set (2/4/8/8) but Forward+ ignores it.
 - An unconfirmed resolution/window change is never written to disk: saves while the prompt is pending store the last confirmed values. In the editor, `Screen.SetResolution` is skipped (the Game view owns its size).
 - UI Scale: the screen-space hosts register their `PanelSettings` with `PlayerSettingsSubSystem.RegisterUiPanel`. **Divergence from Decision 8:** the lobby shell, HUD, storage and radial overlays all share `HudOverlayPanelSettings.asset` (not `Assets/UI Toolkit/PanelSettings.asset`, which only the launcher uses), and the machine interface panel is screen-space overlay (no target texture), so it is scaled too. `CommsOverlayPanelSettings.asset` is referenced by nothing.
+- **Divergence from Decision 8 (owner's call, 2026-10-31):** UI Scale applies live while dragging, in 1 % steps (not 5 %), instead of on release. The view skips rebuilding the tab for its own UI Scale echo so the drag survives.
 - Frame cap is disabled while VSync is on (VSync paces frames). Sub-tabs are now labelled Display / Audio / Controls (Decision 1).
 
 - Replace the six quality levels with four, each with its own URP asset; default High.

@@ -176,5 +176,13 @@ namespace EditorTests
             Assert.That(display.Upscaler, Is.EqualTo(PlayerUpscaler.Stp));
             Assert.That(display.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Smaa));
         }
+
+        [TestCase(1.234f, 1.23f)]
+        [TestCase(0.5f, 0.75f)]
+        [TestCase(2f, 1.5f)]
+        public void UiScaleMovesInOnePercentStepsWithinRange(float value, float snapped)
+        {
+            Assert.That(PlayerDisplaySettings.SnapUiScale(value), Is.EqualTo(snapped).Within(0.0001f));
+        }
     }
 }
