@@ -67,6 +67,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
+- **Server-only events subscribed in `OnStartClient`:** `GenericToggleInteractionTarget.OnToggle` is raised on the server. `FuelPowerGenerator` and `SolarTrackingBeacon` subscribed in `OnStartClient`, which a dedicated server never runs — the toggle animated but the PACman never produced power. Subscribe server handlers in `OnStartServer`. Host play hides this. Hit 2026-10-31.
 - **Early lobby character appears black:** the orphan-light sweep in `AreaSubSystem.CompleteSetup` runs after the preview booth can be created. Exempt `CharacterPreviewBooth`-owned lights as well as `LightPower`; enabling `Light.enabled` alone cannot restore a deactivated light GameObject.
 
 - **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). **Also:** `AreaRegistry.GetAllAreas()` must not allocate a fresh List each tick (cache until Register/Unregister); `FillActiveConsumers` must take `IReadOnlyList` + index — foreach over `IEnumerable` boxes List's enumerator (~40 B/APC). Hit 2026-07-28 / 2026-07-29.
