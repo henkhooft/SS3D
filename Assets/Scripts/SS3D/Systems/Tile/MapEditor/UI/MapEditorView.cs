@@ -14,7 +14,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     /// <summary>
     /// UI Toolkit view for the full-screen map editor.
     /// </summary>
-    public sealed class MapEditorView
+    public sealed partial class MapEditorView
     {
         /// <summary>Object library panel heights (px) for the three resize states.</summary>
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
@@ -53,6 +53,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private readonly InputTextEntryScope _textEntry = new();
         private Label _windowTitle;
         private Label _toast;
+        private Label _hint;
         private VisualElement _leftPopoverAnchor;
         private VisualElement _rightPopoverAnchor;
         private VisualElement _cameraPopoverAnchor;
@@ -95,8 +96,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public event Action<string> DeleteMapRequested;
         public event Action ResetViewRequested;
         public event Action ShowUIRequested;
-        public event Action<bool> GridSnapChanged;
         public event Action<bool> DebugOverlayChanged;
+        public event Action<bool> AlwaysPowerLightsChanged;
+        public event Action<bool> InvincibleChanged;
         public event Action<float, float, float> CameraSettingsChanged;
         public event Action<int> CameraRotateRequested;
         public event Action<int> CameraZoomRequested;
@@ -135,6 +137,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _toast.AddToClassList("map-editor-toast");
             _toast.style.display = DisplayStyle.None;
             _root.Add(_toast);
+
+            _hint = new Label { name = "placement-hint", pickingMode = PickingMode.Ignore };
+            _hint.AddToClassList("map-editor-hint");
+            _hudLayer.Add(_hint);
 
             _root.Add(_hudLayer);
             parent.Add(_root);
@@ -439,6 +445,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
             redoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.RedoDepth <= 0);
 
+            RefreshHint();
+
             if (!string.IsNullOrEmpty(_vm.ToastMessage))
             {
                 _toast.text = _vm.ToastMessage;
@@ -449,7 +457,20 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 _toast.style.display = DisplayStyle.None;
             }
 
-            RefreshPopover();
+            // Keep unsaved room fields intact when toasts/undo state refresh the chrome.
+            if (_vm.OpenPopover != "area" || _activePopover == null)
+                RefreshPopover();
+        }
+
+        /// <summary>Update only the tool hint bar (cheap; called on hover feedback).</summary>
+        public void RefreshHint()
+        {
+            if (_hint == null)
+                return;
+
+            string text = _vm.SelectedObjectHint;
+            _hint.text = text ?? string.Empty;
+            _hint.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void RebuildSubcategories()
@@ -479,6 +500,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _grid.Clear();
+
+            if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
+            {
+                BuildAreaPalette(_grid);
+                return;
+            }
 
             if (_vm.CurrentMode == MapEditorMode.Scripting &&
                 MapEditorCatalog.IsUnavailableScriptingSubcategory(_vm.CurrentSubcategory))
@@ -643,7 +670,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _vm.NotifyChanged();
         }
 
-        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu";
+        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area";
 
         private void RefreshPopover()
         {
@@ -656,7 +683,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement anchor = _vm.OpenPopover switch
             {
-                "maps" or "saveMenu" => _leftPopoverAnchor,
+                "maps" or "saveMenu" or "area" => _leftPopoverAnchor,
                 "camera" => _cameraPopoverAnchor,
                 _ => _rightPopoverAnchor,
             };
@@ -666,7 +693,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
                 ? "map-editor-popover--anchor-right"
                 : "map-editor-popover--anchor-left");
-            if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
+            if (_vm.OpenPopover is "maps" or "saveMenu" or "area")
                 popover.AddToClassList("map-editor-popover--wide");
 
             VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
@@ -703,6 +730,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static string GetPopoverTitle(string key) =>
             key switch
             {
+                "area" => "Room properties",
                 "maps" => "Map Selection",
                 "saveMenu" => "Save Map",
                 "layers" => "Layer View Mode",
@@ -715,6 +743,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             switch (key)
             {
+                case "area":
+                    BuildAreaPopover(container);
+                    break;
                 case "maps":
                     BuildMapsPopover(container);
                     break;
@@ -749,10 +780,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     });
                     break;
                 case "settings":
-                    AddSwitchRow(container, "Grid Snap", _vm.GridSnap, v =>
+                    AddSwitchRow(container, "Always Power Lights", _vm.AlwaysPowerLights, v =>
                     {
-                        _vm.GridSnap = v;
-                        GridSnapChanged?.Invoke(v);
+                        _vm.AlwaysPowerLights = v;
+                        AlwaysPowerLightsChanged?.Invoke(v);
+                    });
+                    AddSwitchRow(container, "Player Invincible", _vm.Invincible, v =>
+                    {
+                        _vm.Invincible = v;
+                        InvincibleChanged?.Invoke(v);
                     });
                     AddSwitchRow(container, "Debug Overlay", _vm.DebugOverlay, v =>
                     {
@@ -1075,32 +1111,52 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return window;
         }
 
-        private static void AddSwitchRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        public sealed class SwitchRow : VisualElement
         {
-            VisualElement row = new() { pickingMode = PickingMode.Position };
-            row.AddToClassList("map-editor-switch-row");
-
-            Label labelElement = new(label) { pickingMode = PickingMode.Ignore };
-            labelElement.AddToClassList("map-editor-switch-row__label");
-
-            VisualElement track = new() { pickingMode = PickingMode.Position };
-            track.AddToClassList("map-editor-switch");
-            track.EnableInClassList("map-editor-switch--on", value);
-
-            VisualElement thumb = new() { pickingMode = PickingMode.Ignore };
-            thumb.AddToClassList("map-editor-switch__thumb");
-            track.Add(thumb);
-
-            track.RegisterCallback<ClickEvent>(_ =>
+            private readonly VisualElement _track;
+            private bool _value;
+            public event Action<bool> ValueChanged;
+            public bool Value
             {
-                bool next = !track.ClassListContains("map-editor-switch--on");
-                track.EnableInClassList("map-editor-switch--on", next);
-                onChanged(next);
-            });
+                get => _value;
+                set { if (_value == value) return; SetValueWithoutNotify(value); ValueChanged?.Invoke(value); }
+            }
 
-            row.Add(labelElement);
-            row.Add(track);
+            public SwitchRow(string label, bool value)
+            {
+                pickingMode = PickingMode.Position;
+                AddToClassList("map-editor-switch-row");
+                Label caption = new(label) { pickingMode = PickingMode.Ignore };
+                caption.AddToClassList("map-editor-switch-row__label");
+                _track = new VisualElement { pickingMode = PickingMode.Position, focusable = true };
+                _track.AddToClassList("map-editor-switch");
+                VisualElement thumb = new() { pickingMode = PickingMode.Ignore };
+                thumb.AddToClassList("map-editor-switch__thumb");
+                _track.Add(thumb);
+                _track.RegisterCallback<ClickEvent>(_ => { if (enabledInHierarchy) Value = !Value; });
+                _track.RegisterCallback<KeyDownEvent>(evt =>
+                {
+                    if (enabledInHierarchy && (evt.keyCode == KeyCode.Space || evt.keyCode == KeyCode.Return))
+                    { Value = !Value; evt.StopPropagation(); }
+                });
+                Add(caption);
+                Add(_track);
+                SetValueWithoutNotify(value);
+            }
+
+            public void SetValueWithoutNotify(bool value)
+            {
+                _value = value;
+                _track.EnableInClassList("map-editor-switch--on", value);
+            }
+        }
+
+        private static SwitchRow AddSwitchRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        {
+            SwitchRow row = new(label, value);
+            row.ValueChanged += onChanged;
             parent.Add(row);
+            return row;
         }
 
         private void RaiseCameraSettingsChanged() =>

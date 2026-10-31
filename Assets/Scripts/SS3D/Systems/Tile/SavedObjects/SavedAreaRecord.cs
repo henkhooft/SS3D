@@ -6,6 +6,9 @@ namespace SS3D.Systems.Tile
     [Serializable]
     public class SavedAreaRecord
     {
+        // Legacy maps omit these flags and keep APC-generated defaults.
+        public bool authored;
+        public bool noApc;
         public ushort id;
         public string displayName;
         public string parentTag;

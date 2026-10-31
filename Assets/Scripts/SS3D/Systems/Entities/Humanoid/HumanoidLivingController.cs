@@ -109,7 +109,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportFor(this, transform.position);
             if (support == HumanoidSupportState.Unknown)
             {
                 // Map/AOI not authoritative yet — never leave a stale Floating SyncVar packed.
@@ -141,7 +141,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             bool predictedOwnsLoco = _predictedMovement != null && _predictedMovement.enabled;
-            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportFor(this, transform.position);
             bool coasting = ShouldCoast(support);
             // Avoid publishing walk Speed the same frame we enter space float (clears Floating via gait).
             ProcessPlayerInput(publishSpeed: !predictedOwnsLoco && !coasting);
@@ -157,7 +157,11 @@ namespace SS3D.Systems.Entities.Humanoid
                 return;
             }
 
-            _characterController.Move(Physics.gravity);
+            // Invincible (map editor setting) walks on open space instead of falling through.
+            if (!EntityInvincibility.IsInvincible(this) || HasPhysicalFloorUnderfoot())
+            {
+                _characterController.Move(Physics.gravity);
+            }
 
             float gaitSpeed = FilterSpeed();
             if (Input.magnitude != 0)

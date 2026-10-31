@@ -41,7 +41,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         }
 
         public static bool IsGroupVisible(TileLayerCategory category) =>
-            !GroupVisibility.TryGetValue(category, out bool visible) || visible;
+            GroupVisibility.TryGetValue(category, out bool visible) ? visible : category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
 
         public static void SetGroupVisible(TileLayerCategory category, bool visible)
         {
@@ -81,7 +81,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private static void EnsureDefaultVisibility()
         {
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
-                GroupVisibility[category] = true;
+                GroupVisibility[category] = category is not (TileLayerCategory.Areas or TileLayerCategory.Scripts);
         }
 
         private static void ApplyAllGroups()
@@ -92,6 +92,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private static void ApplyGroup(TileLayerCategory category)
         {
+            if (category == TileLayerCategory.Areas) return; // Authoring overlay owns rendering.
             bool visible = IsGroupVisible(category);
 
             if (TileLayerCategoryMapping.IsItemsCategory(category))
@@ -146,7 +147,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             foreach (Renderer renderer in renderers)
             {
-                if (renderer == null)
+                if (renderer == null || SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(renderer))
                     continue;
 
                 if (visible)

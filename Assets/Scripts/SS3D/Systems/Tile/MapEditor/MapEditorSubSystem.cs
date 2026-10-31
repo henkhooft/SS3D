@@ -31,7 +31,7 @@ namespace SS3D.Systems.Tile.MapEditor
     /// Full-screen in-game map editor replacing the legacy TileMap Creator UI.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public sealed class MapEditorSubSystem : NetworkSubSystem, IMapEditorHost
+    public sealed partial class MapEditorSubSystem : NetworkSubSystem, IMapEditorHost
     {
         [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _styleSheet;
@@ -45,6 +45,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private readonly MapEditorSession _session = new();
         private readonly MapEditorCommandService _commandService = new();
         private readonly MapEditorLighting _lighting = new();
+        private readonly MapEditorAreaOverlay _areaOverlay = new();
 
         private MapEditorView _view;
         private IMapEditorPersistence _persistence;
@@ -91,9 +92,9 @@ namespace SS3D.Systems.Tile.MapEditor
         public bool IsDeleting => _viewModel.CurrentTool == MapEditorTool.Delete ||
             (_viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit);
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
+        public bool IsRoomCategory => _viewModel.IsRoomCategory;
         public MapEditorMode CurrentMode => _viewModel.CurrentMode;
         public MapEditorSubcategory CurrentSubcategory => _viewModel.CurrentSubcategory;
-        public bool GridSnapEnabled => _viewModel.GridSnap;
 
         /// <summary>Client-local toast (placement blocked, delete miss, etc.).</summary>
         public void ShowLocalToast(string message)
@@ -111,7 +112,17 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _viewModel.SelectedObjectHint = hint;
-            _viewModel.NotifyChanged();
+            // Hover feedback changes often; update the hint bar only, not the whole chrome.
+            _view?.RefreshHint();
+        }
+
+        /// <summary>Drop a transient hover message and show the tool/asset default hint again.</summary>
+        public void RestoreDefaultPlacementHint()
+        {
+            string previous = _viewModel.SelectedObjectHint;
+            _viewModel.RefreshHint();
+            if (_viewModel.SelectedObjectHint != previous)
+                _view?.RefreshHint();
         }
         public Camera PickCamera => _playerCamera != null ? _playerCamera : Camera.main;
 
@@ -178,6 +189,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _gameplayHud?.SetVisible(true);
             _mapEditorHandle?.Dispose();
             _mapEditorHandle = null;
+            _areaOverlay.Dispose();
             TeardownView();
             UnregisterDocument();
             if (_document != null)
@@ -230,6 +242,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private void WireViewEvents()
         {
             _view.ToolSelected += OnToolSelected;
+            _view.AreaApplyRequested += OnAreaApplyRequested;
+            _view.RoomPaletteSelected += OnRoomPaletteSelected;
             _view.UndoRequested += OnUndoRequested;
             _view.RedoRequested += OnRedoRequested;
             _view.SaveAsRequested += OnSaveAsRequested;
@@ -239,8 +253,9 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.MapListRefreshRequested += RefreshMapList;
             _view.ResetViewRequested += OnResetViewRequested;
             _view.ShowUIRequested += OnShowUiRequested;
-            _view.GridSnapChanged += OnGridSnapChanged;
             _view.DebugOverlayChanged += OnDebugOverlayChanged;
+            _view.AlwaysPowerLightsChanged += OnAlwaysPowerLightsChanged;
+            _view.InvincibleChanged += OnInvincibleChanged;
             _view.CameraSettingsChanged += OnCameraSettingsChanged;
             _view.CameraRotateRequested += OnCameraRotateRequested;
             _view.CameraZoomRequested += OnCameraZoomRequested;
@@ -297,7 +312,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 _session.Enter(_playerCamera, entry);
 
                 _hologramManager.enabled = true;
-                _viewModel.SetTool(MapEditorTool.Edit);
+                OnToolSelected(MapEditorTool.Edit);
                 OnCameraSettingsChanged(_viewModel.CameraFov, _viewModel.CameraZoomSpeed, _viewModel.CameraRotationSpeed);
                 _lighting.Apply();
                 SetMouseOverUI(false);
@@ -307,6 +322,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 RefreshTileHostVisibility();
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
+                ApplySessionSettingsOnOpen();
             }
             else
             {
@@ -316,6 +332,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = false;
                 _session.Exit();
                 _lighting.Restore();
+                CancelAreaStroke();
+                _areaOverlay.SetVisible(false);
                 MapEditorLayerVisibility.Deactivate();
                 SetGameplayInputBlocked(false);
                 _mapEditorHandle?.Dispose();
@@ -425,6 +443,11 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!_active)
                 return;
 
+            bool showAreas = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Areas);
+            _areaOverlay.SetVisible(showAreas);
+            SubSystems.TryGet(out AreaSubSystem labelAreas);
+            _view?.UpdateAreaLabels(_areaOverlay.LabelPositions, labelAreas?.FloorVisualCache, PickCamera, showAreas);
+
             if (_session.IsActive)
                 _session.Update(updateEvent.DeltaTime);
 
@@ -433,17 +456,21 @@ namespace SS3D.Systems.Tile.MapEditor
             {
                 UpdateMouseOverUI();
 
-                if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                if (IsRoomCategory)
+                    HandleAreaInput();
+
+                if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
                     HandleSelectClick();
 
-                if (_viewModel.CurrentTool == MapEditorTool.Dropper && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Dropper && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
                     HandleDropperClick();
 
-                if (_viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
+                if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
                     HandleMoveInput();
             }
             else
             {
+                CancelAreaStroke();
                 SetMouseOverUI(false);
             }
             if (Keyboard.current != null)
@@ -638,6 +665,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _view.ToolSelected -= OnToolSelected;
+            _view.AreaApplyRequested -= OnAreaApplyRequested;
+            _view.RoomPaletteSelected -= OnRoomPaletteSelected;
             _view.UndoRequested -= OnUndoRequested;
             _view.RedoRequested -= OnRedoRequested;
             _view.SaveAsRequested -= OnSaveAsRequested;
@@ -647,8 +676,9 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.MapListRefreshRequested -= RefreshMapList;
             _view.ResetViewRequested -= OnResetViewRequested;
             _view.ShowUIRequested -= OnShowUiRequested;
-            _view.GridSnapChanged -= OnGridSnapChanged;
             _view.DebugOverlayChanged -= OnDebugOverlayChanged;
+            _view.AlwaysPowerLightsChanged -= OnAlwaysPowerLightsChanged;
+            _view.InvincibleChanged -= OnInvincibleChanged;
             _view.CameraSettingsChanged -= OnCameraSettingsChanged;
             _view.CameraRotateRequested -= OnCameraRotateRequested;
             _view.CameraZoomRequested -= OnCameraZoomRequested;
@@ -661,7 +691,14 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnToolSelected(MapEditorTool tool)
         {
+            _view.CloseAreaProperties();
+            CancelAreaStroke();
             _viewModel.SetTool(tool);
+            if (IsRoomCategory)
+            {
+                _hologramManager.ClearSelection();
+                return;
+            }
 
             switch (tool)
             {
@@ -774,6 +811,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnLoadMapRequested(string name)
         {
+            ClearAreaSelection();
             RememberQuickSaveName(name);
             // Immediate local feedback — TargetToast only runs if the ServerRpc auth path succeeds.
             _viewModel.ShowToast($"Loading {name}…");
@@ -807,6 +845,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnNewMapRequested()
         {
+            ClearAreaSelection();
             _lastQuickSaveName = null;
             _viewModel.SaveMapName = "Untitled Map";
             RpcNewMap(LocalConnection);
@@ -824,7 +863,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.NotifyChanged();
         }
 
-        private void OnGridSnapChanged(bool value) => _viewModel.GridSnap = value;
 
         private void OnCameraSettingsChanged(float fov, float zoomSpeed, float rotationSpeed)
         {
@@ -861,12 +899,16 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnModeSelected(MapEditorMode mode)
         {
             _viewModel.SetMode(mode);
+            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts,
+                _viewModel.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
 
         private void OnSubcategorySelected(MapEditorSubcategory sub)
         {
             _viewModel.SetSubcategory(sub);
+            OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
 
@@ -876,6 +918,7 @@ namespace SS3D.Systems.Tile.MapEditor
         /// </summary>
         private void SyncHologramToLibrarySelection()
         {
+            if (IsRoomCategory) { _hologramManager.ClearSelection(); return; }
             if (IsDeleting)
             {
                 _hologramManager.RefreshDeletePreview();
@@ -1046,6 +1089,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _commandService.Undo();
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetRefreshAreaProperties(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -1056,6 +1100,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _commandService.Redo();
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetRefreshAreaProperties(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]

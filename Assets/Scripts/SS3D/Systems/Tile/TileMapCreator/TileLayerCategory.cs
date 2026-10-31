@@ -16,6 +16,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         FloorDecals,
         Items,
         Scripts,
+        Areas,
     }
 
     /// <summary>
@@ -37,6 +38,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 TileLayerCategory.FloorDecals => "Floor decals",
                 TileLayerCategory.Items => "Items",
                 TileLayerCategory.Scripts => "Scripts",
+                TileLayerCategory.Areas => "Areas",
                 _ => category.ToString(),
             };
 

@@ -4,6 +4,7 @@ using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Tile;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SS3D.Systems.Furniture
 {
@@ -16,11 +17,10 @@ namespace SS3D.Systems.Furniture
         [SerializeField]
         private bool _requireAccess = true;
 
+        // Old prefab masks described the door skin (civilian/security), not an authored exception.
+        [FormerlySerializedAs("_overrideRequiredAccessBits")]
         [SerializeField]
-        private bool _useAreaDefault = true;
-
-        [SerializeField]
-        private ulong _overrideRequiredAccessBits;
+        private ulong _fallbackRequiredAccessBits;
 
         private AuthLogDeviceBehaviour _authLogDevice;
 
@@ -38,26 +38,19 @@ namespace SS3D.Systems.Furniture
                 return AccessMask.None;
             }
 
-            if (_overrideRequiredAccessBits != 0)
-            {
-                return new AccessMask(_overrideRequiredAccessBits);
-            }
+            TryGetAreaRecord(out AreaRecord record);
+            return ResolveAreaRequiredAccess(record, new AccessMask(_fallbackRequiredAccessBits));
+        }
 
-            if (_useAreaDefault && TryGetAreaRecord(out AreaRecord record))
-            {
-                if (!record.DefaultRequiredAccess.IsNone)
-                {
-                    return record.DefaultRequiredAccess;
-                }
+        /// <summary>Assigned room metadata overrides legacy door-skin defaults, including public rooms.</summary>
+        public static AccessMask ResolveAreaRequiredAccess(AreaRecord record, AccessMask fallback)
+        {
+            if (record == null)
+                return fallback;
 
-                AccessMask fromTag = AreaAccessDefaults.FromParentTag(record.ParentTag);
-                if (!fromTag.IsNone)
-                {
-                    return fromTag;
-                }
-            }
-
-            return AccessMask.None;
+            return !record.DefaultRequiredAccess.IsNone
+                ? record.DefaultRequiredAccess
+                : AreaAccessDefaults.FromParentTag(record.ParentTag);
         }
 
         public bool TryAuthorizeCollider(Collider other, out HumanInventory inventory, out AccessCheckResult result)

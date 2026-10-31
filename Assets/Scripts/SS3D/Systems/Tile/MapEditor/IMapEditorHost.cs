@@ -12,7 +12,6 @@ namespace SS3D.Systems.Tile.MapEditor
         bool IsDeleting { get; }
         bool IsOrbiting { get; }
         MapEditorTool CurrentTool { get; }
-        bool GridSnapEnabled { get; }
 
         /// <summary>Camera used for placement picks while the editor is open.</summary>
         Camera PickCamera { get; }

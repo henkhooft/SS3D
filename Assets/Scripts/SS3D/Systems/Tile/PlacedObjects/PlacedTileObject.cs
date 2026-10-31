@@ -378,7 +378,7 @@ namespace SS3D.Systems.Tile
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
-                if (renderers[i] != null)
+                if (renderers[i] != null && !SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(renderers[i]))
                     renderers[i].enabled = true;
             }
         }

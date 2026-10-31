@@ -18,8 +18,8 @@ still build-from-source in the Editor.
 
 | Goal | Progress |
 |------|----------|
-| **Test server**: Download a release, click join, play with others on a live server | ✅🟡🟡🟡⬜⬜ |
-| **Map authoring**: Build your own station in a release build and hand it in | ✅🟡⬜⬜⬜⬜⬜⬜ |
+| **Test server**: Download a release, click join, play with others on a live server | ✅✅🟡🟡🟡⬜ |
+| **Map authoring**: Build your own station in a release build and hand it in | ✅✅🟡⬜⬜⬜⬜⬜ |
 | **Nuclear Operatives round**: Play a full Nuke Ops round from spawn to end screen | ✅✅🟡🟡🟡🟡⬜⬜⬜⬜ |
 | **Station round**: Play a short, bare-bones SS13 shift with jobs and antagonists | 🟡⬜⬜⬜⬜⬜⛔ |
 
@@ -32,6 +32,7 @@ Each square is one slice of the goal: ✅ done · 🟡 partly there · ⬜ not s
 | Where the game is at, in plain language | [ROADMAP.md](ROADMAP.md) |
 | What diverged from upstream | [Documents/FORK_STATUS.md](Documents/FORK_STATUS.md) |
 | What to build next (playable gates) | [Documents/milestones/](Documents/milestones/) |
+| Install/update a release build | [Tools/updater/README.md](Tools/updater/README.md) |
 | Find code by system | [Documents/architecture/INDEX.md](Documents/architecture/INDEX.md) |
 | Gameplay what/why | [Documents/design/](Documents/design/) |
 | Doc authoring rules | [Documents/SKILL.md](Documents/SKILL.md) |

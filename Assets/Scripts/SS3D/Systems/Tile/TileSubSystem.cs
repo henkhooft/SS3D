@@ -462,6 +462,12 @@ namespace SS3D.Systems.Tile
                 IEnumerator load = _currentMap.LoadRoutine(mapSave, invokeMapLoadedEvent: true, yieldFrames: timeSlice);
                 while (load.MoveNext())
                     yield return load.Current;
+                if ((mapSave.hasAuthoredAreas || mapSave.savedAreas is { Length: > 0 }) &&
+                    SubSystems.TryGet(out AreaSubSystem restoredAreas))
+                {
+                    restoredAreas.BeginTemplateRestore(mapSave.savedAreas);
+                    restoredAreas.RestoreFromSave(mapSave.savedAreas, mapSave.hasAuthoredAreas);
+                }
             }
             finally
             {

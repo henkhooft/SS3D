@@ -33,6 +33,7 @@ namespace SS3D.Systems.Persistence
             AreaSubSystem areaSubSystem = _areaSubSystemProvider();
             return new SavedAreaChunkPayload
             {
+                authored = areaSubSystem.HasAuthoredAreas,
                 records = areaSubSystem.BuildSavedAreaRecords(),
             };
         }
@@ -46,17 +47,19 @@ namespace SS3D.Systems.Persistence
                 _ => null,
             };
 
-            if (records == null || records.Length == 0)
+            bool authored = data is SavedAreaChunkPayload chunk && chunk.authored;
+            if ((records == null || records.Length == 0) && !authored)
             {
                 return;
             }
 
             TileSubSystem tileSubSystem = _tileSubSystemProvider();
+            records ??= Array.Empty<SavedAreaRecord>();
             tileSubSystem.CurrentMap.SetLoadedAreaRecords(records);
 
             AreaSubSystem areaSubSystem = _areaSubSystemProvider();
             areaSubSystem.BeginTemplateRestore(records);
-            areaSubSystem.RestoreFromSave(records);
+            areaSubSystem.RestoreFromSave(records, authored);
         }
     }
 }

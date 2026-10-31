@@ -664,6 +664,8 @@ namespace SS3D.Systems.Tile
 
         public void Clear()
         {
+            if (SubSystems.TryGet(out TileSubSystem owner) && owner.CurrentMap == this &&
+                SubSystems.TryGet(out Area.AreaSubSystem areas)) areas.ResetForMapClear();
             foreach (TileChunk chunk in _chunks.Values)
             {
                 chunk.Clear();
@@ -714,6 +716,7 @@ namespace SS3D.Systems.Tile
             return new SavedTileMap
             {
                 mapName = _mapName,
+                hasAuthoredAreas = SubSystems.TryGet(out Area.AreaSubSystem areas) && areas.HasAuthoredAreas,
                 savedChunkList = chunkObjectSaveList.ToArray(),
                 savedItemList = itemSaveList.ToArray(),
                 savedAreas = BuildSavedAreas(),

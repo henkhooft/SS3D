@@ -135,7 +135,16 @@ namespace SS3D.Utils
 
             if (source.HasProperty(ColorId))
             {
-                destination.SetColor(ColorId, source.GetColor(ColorId));
+                Color color = source.GetColor(ColorId);
+
+                // ObjectIcon outputs texture alpha * _Color.a, but opaque world shaders ignore _Color.a.
+                // Several floor materials (TileGrey, TileWhite) ship with a: 0 and rendered as blank icons.
+                if (source.renderQueue <= (int)UnityEngine.Rendering.RenderQueue.GeometryLast)
+                {
+                    color.a = 1f;
+                }
+
+                destination.SetColor(ColorId, color);
             }
 
             if (source.HasProperty(ColIntenseId))
