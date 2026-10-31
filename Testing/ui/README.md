@@ -291,6 +291,10 @@ Before building, make sure `Game.unity` is not dirty: `BuildPlayer` opens a bloc
 - Validation step timed out: read the watchdog lines in the output. `busy: …` is a progress
   window; `DIALOG: …` names a modal and its PNG. Dismiss it deliberately (never Save `Game.unity`
   blindly; look for leaked `Chunk [x,z]` objects first).
+- Shell width check on the first visual run: a slow first Play Mode can report a laid-out
+  but not yet final shell. The pilot now waits up to 15 s, from the shell's first layout, for the
+  reference geometry (panel = screen, 1180px window, 280px sidebar) before measuring. A real
+  regression still fails, with the measured width in the message.
 - No final report: the external driver times out after 180 seconds; the in-editor
   scenario times out after 120 seconds once Play Mode has started. Inspect the logs
   and exit Play Mode before retrying. A compiler-blocked editor cannot run the pilot.

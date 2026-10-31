@@ -25,6 +25,7 @@ namespace SS3D.Editor.Automation
         private static int _shellCheckStep;
         private static int[] _initialOutfitMeshes;
         private static double _next;
+        private static double _layoutDeadline;
         private static double _deadline;
         private static string _pendingImage;
         private static bool _running;
@@ -74,6 +75,7 @@ namespace SS3D.Editor.Automation
                 _pendingImage = null;
                 _running = true;
                 _deadline = EditorApplication.timeSinceStartup + 120;
+                _layoutDeadline = 0;
                 _next = EditorApplication.timeSinceStartup + 3;
                 Application.logMessageReceived += OnLog;
                 EditorApplication.update += Tick;
@@ -246,13 +248,26 @@ namespace SS3D.Editor.Automation
             }).ToArray();
         }
 
+        private const double LayoutSettleSeconds = 15;
+
+        private static bool ShellLayoutResolved(VisualElement shell)
+        {
+            Rect panel = shell.panel.visualTree.layout;
+            Rect window = shell.Q("lobby-shell-window").worldBound;
+            Rect sidebar = shell.Q(className: "lobby-shell__sidebar").worldBound;
+            return Mathf.Approximately(panel.width, Screen.width) && Mathf.Approximately(panel.height, Screen.height)
+                && Mathf.Abs(window.width - 1180f) < 1f && Mathf.Abs(sidebar.width - 280f) < 1f;
+        }
+
         private static bool CheckShell(VisualElement shell)
         {
             switch (_shellCheckStep++)
             {
                 case 0:
-                    Require(Mathf.Abs(shell.Q("lobby-shell-window").worldBound.width - 1180f) < 1f, $"Shell matches reference maximum width (got {shell.Q("lobby-shell-window").worldBound.width}, screen {Screen.width}x{Screen.height})");
-                    Require(Mathf.Abs(shell.Q(className: "lobby-shell__sidebar").worldBound.width - 280f) < 1f, "Shell has 280px sidebar");
+                    float windowWidth = shell.Q("lobby-shell-window").worldBound.width;
+                    float sidebarWidth = shell.Q(className: "lobby-shell__sidebar").worldBound.width;
+                    Require(Mathf.Abs(windowWidth - 1180f) < 1f, $"Shell matches reference maximum width (got {windowWidth}, screen {Screen.width}x{Screen.height})");
+                    Require(Mathf.Abs(sidebarWidth - 280f) < 1f, $"Shell has 280px sidebar (got {sidebarWidth})");
                     Require(shell.Q(className: "lobby-shell__preview-image").resolvedStyle.backgroundImage.renderTexture != null,
                         "Lobby starts with a live character preview");
                     Light[] previewLights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None)
@@ -363,6 +378,14 @@ namespace SS3D.Editor.Automation
                     case 0:
                         // The shell appears once the host session is online; wait for its layout.
                         if (shell == null || shell.Q("lobby-shell-window")?.worldBound.width < 1f)
+                        {
+                            _step--;
+                            break;
+                        }
+                        // A slow first Play Mode can report a laid-out but not yet final shell; measure once
+                        // the reference geometry resolves, or after LayoutSettleSeconds so a real regression fails.
+                        if (_layoutDeadline == 0) _layoutDeadline = now + LayoutSettleSeconds;
+                        if (!ShellLayoutResolved(shell) && now < _layoutDeadline)
                         {
                             _step--;
                             break;
