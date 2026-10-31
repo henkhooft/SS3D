@@ -40,6 +40,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 
 ## Pitfalls
 
+- **Borderless below native resolution offsets the mouse:** `Screen.SetResolution` in `FullScreenWindow` at a smaller size stretches the swapchain to the desktop, but Linux/X11 still reports pointer coordinates in desktop pixels, so map editor and diegetic UI clicks land off-target. `PlayerDisplayApplier.ApplyWindow` always uses native size in Borderless; the saved resolution only applies to Fullscreen/Windowed. Hit 2026-10-31.
 - **One URP asset per quality tier.** `QualitySettings` has four levels (Low/Medium/High/Ultra, default High), each pointing at its own `Assets/Settings/URP/SS3D_URPAsset_<Tier>.asset`; `GraphicsSettings` keeps Ultra as the fallback. A pipeline-wide change (renderer features, GPU Resident Drawer, HDR) must go into all four. Render scale and upscaler are written at runtime by `PlayerSettingsSubSystem` onto whichever asset is active ([2026-10_player-settings](../2026-10_player-settings.md)); in the editor it restores them when play stops, so don't treat play-mode values in the inspector as saved.
 - **Player camera AA is overridden at runtime.** `PlayerCamera.prefab` serializes TAA, but the player's Anti-Aliasing setting is applied to every game camera without a target texture on `beginCameraRendering`. Render-texture cameras (preview booth, icon generator) keep their own AA.
 
