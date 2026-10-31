@@ -22,6 +22,8 @@ namespace SS3D.Systems.Electricity
         struct EmissiveSlot
         {
             public Renderer Renderer;
+            /// <summary>Submesh/material index — each material keeps its own powered values.</summary>
+            public int MaterialIndex;
             public float PoweredLumin;
             public Color PoweredEmission;
             public bool HasLumin;
@@ -134,12 +136,8 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                float lumin = 0f;
-                Color emission = Color.black;
-                bool hasLumin = false;
-                bool hasEmission = false;
-                bool hasAnyEmissive = false;
-
+                // One slot per material: a renderer-wide block forced the first material's values
+                // (e.g. Palette: black emission) onto PaletteEmission, so machines never glowed.
                 Material[] sharedMaterials = renderer.sharedMaterials;
                 for (int i = 0; i < sharedMaterials.Length; i++)
                 {
@@ -149,34 +147,19 @@ namespace SS3D.Systems.Electricity
                         continue;
                     }
 
-                    if (sharedMaterial.HasProperty(LuminId))
+                    bool hasLumin = sharedMaterial.HasProperty(LuminId);
+                    bool hasEmission = sharedMaterial.HasProperty(EmissionColorId);
+                    if (!hasLumin && !hasEmission)
                     {
-                        hasAnyEmissive = true;
-                        if (!hasLumin)
-                        {
-                            lumin = sharedMaterial.GetFloat(LuminId);
-                            hasLumin = true;
-                        }
+                        continue;
                     }
 
-                    if (sharedMaterial.HasProperty(EmissionColorId))
-                    {
-                        hasAnyEmissive = true;
-                        if (!hasEmission)
-                        {
-                            emission = sharedMaterial.GetColor(EmissionColorId);
-                            hasEmission = true;
-                        }
-                    }
-                }
-
-                if (hasAnyEmissive)
-                {
                     _emissiveSlots.Add(new EmissiveSlot
                     {
                         Renderer = renderer,
-                        PoweredLumin = lumin,
-                        PoweredEmission = emission,
+                        MaterialIndex = i,
+                        PoweredLumin = hasLumin ? sharedMaterial.GetFloat(LuminId) : 0f,
+                        PoweredEmission = hasEmission ? sharedMaterial.GetColor(EmissionColorId) : Color.black,
                         HasLumin = hasLumin,
                         HasEmission = hasEmission,
                     });
@@ -314,7 +297,7 @@ namespace SS3D.Systems.Electricity
                 }
 
                 Renderer renderer = slot.Renderer;
-                renderer.GetPropertyBlock(_emissivePropertyBlock);
+                renderer.GetPropertyBlock(_emissivePropertyBlock, slot.MaterialIndex);
 
                 if (slot.HasLumin)
                 {
@@ -326,7 +309,7 @@ namespace SS3D.Systems.Electricity
                     _emissivePropertyBlock.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
                 }
 
-                renderer.SetPropertyBlock(_emissivePropertyBlock);
+                renderer.SetPropertyBlock(_emissivePropertyBlock, slot.MaterialIndex);
             }
         }
 
@@ -350,9 +333,9 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                slot.Renderer.GetPropertyBlock(_panelPropertyBlock);
+                slot.Renderer.GetPropertyBlock(_panelPropertyBlock, slot.MaterialIndex);
                 _panelPropertyBlock.SetColor(slot.ColorPropertyId, powered ? slot.PoweredColor : Color.black);
-                slot.Renderer.SetPropertyBlock(_panelPropertyBlock);
+                slot.Renderer.SetPropertyBlock(_panelPropertyBlock, slot.MaterialIndex);
             }
         }
 

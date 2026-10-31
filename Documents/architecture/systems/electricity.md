@@ -67,6 +67,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
+- **Powered machines never glowed (host and client):** the July MPB conversion of `ConsumerPowerVisual` kept one renderer-wide block seeded from the *first* emissive material. Multi-material machines (vendors, jukebox: `Palette` + `PaletteEmission`) got `Palette`'s black emission written onto the glow submesh. Use per-material blocks (`SetPropertyBlock(block, materialIndex)`) with each material's own powered values. `LightSwitchController` / `AirAlarmController` / `LightPower` still cache a single lumin/emission per object — suspect them on multi-material models. Hit 2026-10-31.
 - **Server-only events subscribed in `OnStartClient`:** `GenericToggleInteractionTarget.OnToggle` is raised on the server. `FuelPowerGenerator` and `SolarTrackingBeacon` subscribed in `OnStartClient`, which a dedicated server never runs — the toggle animated but the PACman never produced power. Subscribe server handlers in `OnStartServer`. Host play hides this. Hit 2026-10-31.
 - **Early lobby character appears black:** the orphan-light sweep in `AreaSubSystem.CompleteSetup` runs after the preview booth can be created. Exempt `CharacterPreviewBooth`-owned lights as well as `LightPower`; enabling `Light.enabled` alone cannot restore a deactivated light GameObject.
 
