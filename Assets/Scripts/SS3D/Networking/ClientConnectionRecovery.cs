@@ -144,6 +144,12 @@ namespace SS3D.Networking
                     {
                         SetState(SessionState.WaitingForServer);
                     }
+                    else if (ScriptableSettings.GetOrFind<NetworkSettings>().NetworkType == NetworkType.DedicatedServer)
+                    {
+                        // No client connection will finish this disconnect; without this a stopped
+                        // dedicated server stays Disconnecting and CanStart refuses the next session.
+                        SetState(SessionState.Cold);
+                    }
 
                     break;
             }

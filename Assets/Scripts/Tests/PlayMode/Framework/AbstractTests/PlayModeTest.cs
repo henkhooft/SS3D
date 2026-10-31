@@ -214,6 +214,18 @@ namespace SS3D.Tests
             setUpOnce = false;
             yield return null;
             yield return new WaitForSeconds(1f);
+
+            // A previous test's session must finish disconnecting before the next one can start.
+            float startTime = Time.time;
+            while (ClientConnectionRecovery.Instance != null && !ClientConnectionRecovery.Instance.CanStart)
+            {
+                if (Time.time - startTime > 15f)
+                {
+                    throw new Exception($"Previous network session still {ClientConnectionRecovery.Instance.State} after 15 seconds.");
+                }
+
+                yield return null;
+            }
         }
 
         protected void CloseActiveNetworkSession()
@@ -284,6 +296,16 @@ namespace SS3D.Tests
             // Start up the game.
             lobbySceneLoaded = false;
             SceneManager.sceneLoaded += ClientSceneLoaded;
+
+            // SystemsBootstrap cold-starts the application once per Play session: reloading Boot
+            // does not run Boot -> Intro -> session again. Later tests in the same session restart
+            // the network session directly, as Intro would.
+            if (InstanceFinder.NetworkManager != null && SubSystems.TryGet(out NetworkSessionSubSystem session))
+            {
+                session.StartNetworkSession();
+                return;
+            }
+
             SceneManager.LoadScene("Boot", LoadSceneMode.Single);
         }
 
