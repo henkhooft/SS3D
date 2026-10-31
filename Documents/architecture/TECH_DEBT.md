@@ -139,7 +139,7 @@ and HUD/MI visibility in one class with **no** decomposition plan — remains op
 
 ### 1.10 Play Mode / multiplayer verification is optional in practice
 
-**Blast radius: high — trend: improving (smoke nightly; PlayMode runs locally, not in CI)**
+**Blast radius: high — trend: mixed (local loop much stronger; CI smoke not running)**
 
 There is no CLI build/test flow ([CLAUDE.md](../../CLAUDE.md) says so directly) — everything runs
 through the Unity Editor, and CI ([editmodetestrunner.yml](../../.github/workflows/editmodetestrunner.yml))
@@ -153,8 +153,9 @@ outline and drop interaction break against a real client) that has shipped for m
 because nothing in CI would catch it. This isn't one bug — it's a structural gap where "the tests
 pass" and "a human pressed Play once" are different, unenforced bars.
 
-**Progress (2026-10-31):** the multiplayer smoke harness runs nightly and on labelled PRs
-(`multiplayer-smoke-test.yml`); the PlayMode suite was repaired and extended (#73–#83); and
+**Progress (2026-10-31):** `multiplayer-smoke-test.yml` is scheduled nightly on the self-hosted
+runner, but no run has passed since 2026-10-01: 10-05 and 10-06 failed, 10-07 to 10-19 were
+cancelled after 24h waiting for the runner, and nothing has been scheduled since. The PlayMode suite was repaired and extended (#73–#83); and
 `Testing/ui/validate.sh --full` runs compile, EditMode, PlayMode, a server build and smoke in one
 command. Still open: PlayMode is not in CI, and nothing requires the local loop before merge.
 

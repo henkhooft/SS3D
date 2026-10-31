@@ -219,7 +219,8 @@ on outline/discover and atmos tick). Architecture:
 Upstream runs EditMode tests only. This fork adds (PRs #73–#84):
 
 - **Multiplayer smoke harness** (`Testing/multiplayer/`): real dedicated server + client processes
-  driven by a script DSL; runs nightly on a self-hosted runner and on labelled PRs
+  driven by a script DSL; scheduled nightly on a self-hosted runner and on labelled PRs (no
+  passing scheduled run since 2026-10-01, see [TECH_DEBT.md](architecture/TECH_DEBT.md) §1.10)
 - **PlayMode suite** repaired and extended, with server-side helpers and passing known-issue repros
   promoted into the regular suite
 - **One-command validation** (`Testing/ui/validate.sh`): compile check, EditMode, rendered UI pilots
