@@ -193,7 +193,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
-            if (_mapEditor == null || !_mapEditor.IsActive || !IsActiveTool(_mapEditor.CurrentTool))
+            if (_mapEditor == null || !_mapEditor.IsActive || _mapEditor.IsRoomCategory || !IsActiveTool(_mapEditor.CurrentTool))
             {
                 if (_placePressActive || _isDragging)
                     CancelPlacementGesture(resetHolograms: _selectedObject != null || _selectedFloorDecal != null ||

@@ -4,6 +4,7 @@ using SS3D.Core;
 using SS3D.Systems.Area;
 using SS3D.Systems.IdAccess;
 using SS3D.Systems.Tile.MapEditor.Commands;
+using SS3D.Systems.Tile.MapEditor.UI;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.MapEditor
@@ -12,35 +13,49 @@ namespace SS3D.Systems.Tile.MapEditor
     {
         private readonly System.Collections.Generic.Dictionary<NetworkConnection, AreaRecord> _inspectedRooms = new();
 
-        private Vector3? _selectedAreaPosition;
+        private ushort _selectedPaintAreaId;
 
         [TargetRpc]
         private void TargetRefreshAreaProperties(NetworkConnection conn)
         {
-            if (_active && CurrentTool == MapEditorTool.Area && _selectedAreaPosition.HasValue)
-                RpcInspectArea(_selectedAreaPosition.Value, LocalConnection);
+            if (_active && IsRoomCategory && _selectedPaintAreaId != 0)
+                RpcInspectSelectedArea(_selectedPaintAreaId, _viewModel.OpenPopover == "area", LocalConnection);
         }
 
         private void OnAreaApplyRequested(Vector3 position, string roomName, string department, ulong access) =>
-            RpcApplyArea(position, roomName, department, access, LocalConnection);
+            RpcApplyArea(_selectedPaintAreaId, roomName, department, access, LocalConnection);
 
         [ServerRpc(RequireOwnership = false)]
-        private void RpcInspectArea(Vector3 position, NetworkConnection conn = null)
+        private void RpcInspectArea(Vector3 position, bool showEditor, bool useConstruct, NetworkConnection conn = null)
         {
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
             if (!SubSystems.TryGet(out AreaSubSystem areas) ||
                 !areas.TryGetAreaForWorldPosition(position, out AreaRecord room))
             {
-                TargetToast(conn, "No room here. Enclose the room and place an APC facing into it first.");
+                TargetToast(conn, "No room here. Create a room and paint its tiles, or select an existing room.");
                 return;
             }
             _inspectedRooms[conn] = room;
-            TargetAreaProperties(conn, position, room.DisplayName, room.ParentTag, room.DefaultRequiredAccess.Value);
+            TargetAreaProperties(conn, room.Id.Value, position, room.DisplayName, room.ParentTag, room.DefaultRequiredAccess.Value, showEditor, useConstruct);
         }
 
         [ServerRpc(RequireOwnership = false)]
-        private void RpcApplyArea(Vector3 position, string roomName, string department, ulong access,
+        private void RpcInspectSelectedArea(ushort areaId, bool showEditor, NetworkConnection conn = null)
+        {
+            if (!MapEditorPermissions.TryAuthorize(conn)) return;
+            if (!SubSystems.TryGet(out AreaSubSystem areas) || !areas.TryGetArea(new AreaId(areaId), out AreaRecord room))
+            {
+                _inspectedRooms.Remove(conn);
+                TargetClearAreaSelection(conn);
+                return;
+            }
+            _inspectedRooms[conn] = room;
+            TargetAreaProperties(conn, room.Id.Value, Vector3.zero, room.DisplayName, room.ParentTag, room.DefaultRequiredAccess.Value, showEditor);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void RpcApplyArea(ushort areaId, string roomName, string department, ulong access,
             NetworkConnection conn = null)
         {
             if (!MapEditorPermissions.TryAuthorize(conn))
@@ -60,7 +75,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
             }
             if (!SubSystems.TryGet(out AreaSubSystem areas) ||
-                !areas.TryGetAreaForWorldPosition(position, out AreaRecord room) ||
+                !areas.TryGetArea(new AreaId(areaId), out AreaRecord room) ||
                 !_inspectedRooms.TryGetValue(conn, out AreaRecord inspected) || !ReferenceEquals(room, inspected))
             {
                 TargetToast(conn, "Room changed. Select it again.");
@@ -72,18 +87,35 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
             TargetToast(conn, "Room properties applied. Save the map to keep them.");
-            TargetAreaProperties(conn, position, room.DisplayName, room.ParentTag, room.DefaultRequiredAccess.Value);
+            TargetAreaProperties(conn, room.Id.Value, Vector3.zero, room.DisplayName, room.ParentTag, room.DefaultRequiredAccess.Value);
         }
 
         [TargetRpc]
-        private void TargetAreaProperties(NetworkConnection conn, Vector3 position, string roomName,
-            string department, ulong access)
+        private void TargetAreaProperties(NetworkConnection conn, ushort areaId, Vector3 position, string roomName,
+            string department, ulong access, bool showEditor = true, bool useConstruct = false)
         {
-            if (_active && CurrentTool == MapEditorTool.Area)
+            if (_active && IsRoomCategory)
             {
-                _selectedAreaPosition = position;
-                _view.ShowAreaProperties(position, roomName, department, access);
+                _selectedPaintAreaId = areaId;
+                _viewModel.AreaRoomName = roomName;
+                _viewModel.AreaRoomId = areaId;
+                if (useConstruct) OnToolSelected(MapEditorTool.Edit);
+                if (showEditor) _view.ShowAreaProperties(position, roomName, department, access);
+                else _viewModel.NotifyChanged();
             }
+        }
+
+        [TargetRpc]
+        private void TargetClearAreaSelection(NetworkConnection conn) => ClearAreaSelection();
+
+        private void ClearAreaSelection()
+        {
+            CancelAreaStroke();
+            _selectedPaintAreaId = 0;
+            _viewModel.AreaRoomName = "New room";
+            _viewModel.AreaRoomId = 0;
+            _view?.CloseAreaProperties();
+            _viewModel.NotifyChanged();
         }
 
         // Commands stay on the server; target the original APC rather than a recyclable area id.
@@ -113,7 +145,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             private void Set(string name, string department, ulong access)
             {
-                if (!_areas.TryGetArea(_room.Id, out AreaRecord current) || current.Apc != _room.Apc)
+                if (!_areas.TryGetArea(_room.Id, out AreaRecord current) || !ReferenceEquals(current, _room))
                     return;
                 _areas.RenameArea(current.Id, name);
                 _areas.SetParentTag(current.Id, department);

@@ -16,6 +16,54 @@ namespace SS3D.Systems.Tile.MapEditor
         private Material _material;
         private readonly List<Mesh> _meshes = new();
         private bool _dirty = true;
+        private GameObject _paintPreview;
+        private Mesh _paintPreviewMesh;
+
+        public void ClearPaintPreview()
+        {
+            if (_paintPreview != null) _paintPreview.SetActive(false);
+            if (_paintPreviewMesh != null) UnityEngine.Object.Destroy(_paintPreviewMesh);
+            _paintPreviewMesh = null;
+        }
+
+        public void ShowPaintPreview(IReadOnlyList<Vector2Int> tiles, ushort areaId, bool erasing = false)
+        {
+            ClearPaintPreview();
+            if (tiles == null || tiles.Count == 0 || _material == null) return;
+            if (_paintPreview == null)
+            {
+                _paintPreview = new GameObject("AreaPaintPreview") { hideFlags = HideFlags.DontSave };
+                _paintPreview.AddComponent<MeshFilter>();
+                MeshRenderer renderer = _paintPreview.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = _material;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+            List<Vector3> vertices = new();
+            List<Color> colors = new();
+            List<int> triangles = new();
+            Color color = erasing ? new Color(1f, 0.2f, 0.2f, 0.8f) :
+                areaId == 0 ? new Color(0.2f, 0.85f, 0.45f, 0.8f) : AreaDevSettings.GetColorForArea(areaId);
+            color.a = 0.8f;
+            foreach (Vector2Int tile in tiles)
+            {
+                int start = vertices.Count;
+                vertices.Add(new Vector3(tile.x - 0.48f, 0.25f, tile.y - 0.48f));
+                vertices.Add(new Vector3(tile.x + 0.48f, 0.25f, tile.y - 0.48f));
+                vertices.Add(new Vector3(tile.x - 0.48f, 0.25f, tile.y + 0.48f));
+                vertices.Add(new Vector3(tile.x + 0.48f, 0.25f, tile.y + 0.48f));
+                for (int v = 0; v < 4; v++) colors.Add(color);
+                triangles.Add(start); triangles.Add(start + 2); triangles.Add(start + 1);
+                triangles.Add(start + 2); triangles.Add(start + 3); triangles.Add(start + 1);
+            }
+            _paintPreviewMesh = new Mesh { name = "AreaPaintPreview" };
+            _paintPreviewMesh.SetVertices(vertices);
+            _paintPreviewMesh.SetColors(colors);
+            _paintPreviewMesh.SetTriangles(triangles, 0);
+            _paintPreviewMesh.RecalculateBounds();
+            _paintPreview.GetComponent<MeshFilter>().sharedMesh = _paintPreviewMesh;
+            _paintPreview.SetActive(true);
+        }
         public Dictionary<ushort, Vector3> LabelPositions { get; } = new();
 
         public void SetVisible(bool visible)
@@ -128,6 +176,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public void Dispose()
         {
+            ClearPaintPreview();
+            if (_paintPreview != null) _paintPreview.Dispose(true);
             if (_cache != null) _cache.OnDirty -= MarkDirty;
             _cache = null;
             foreach (Mesh mesh in _meshes) UnityEngine.Object.Destroy(mesh);

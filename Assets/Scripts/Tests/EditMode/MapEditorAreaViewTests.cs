@@ -14,15 +14,21 @@ namespace EditorTests
     public class MapEditorAreaViewTests
     {
         [Test]
-        public void AreaLayerStartsHiddenAndFollowsToolSelection()
+        public void AreaLayerStartsHiddenAndStaysVisibleForRoomTools()
         {
             MapEditorViewModel model = new();
             Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
             model.EnsureLayerDefaults();
             Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
-            model.SetTool(MapEditorTool.Area);
-            Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
-            model.SetTool(MapEditorTool.Edit);
+            model.SetMode(MapEditorMode.Scripting);
+            model.SetSubcategory(MapEditorSubcategory.Rooms);
+            foreach (MapEditorTool tool in new[] { MapEditorTool.Edit, MapEditorTool.Select, MapEditorTool.Dropper, MapEditorTool.Delete })
+            {
+                model.SetTool(tool);
+                Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
+                Assert.AreEqual(tool, model.CurrentTool);
+            }
+            model.SetSubcategory(MapEditorSubcategory.SpawnPlacements);
             Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
         }
 
@@ -55,20 +61,20 @@ namespace EditorTests
             {
                 view.Build(window.rootVisualElement);
                 view.ShowAreaProperties(Vector3.zero, "Vault", "Command", (ulong)AccessLevel.Armory);
-                Toggle defaults = view.Root.Q<Toggle>("area-default-access");
-                Toggle command = view.Root.Q<Toggle>("area-access-Command");
-                Toggle security = view.Root.Q<Toggle>("area-access-Security");
-                Toggle armory = view.Root.Q<Toggle>("area-access-Armory");
-                defaults.value = true;
-                Assert.IsTrue(command.value);
+                MapEditorView.SwitchRow defaults = view.Root.Q<MapEditorView.SwitchRow>("area-default-access");
+                MapEditorView.SwitchRow command = view.Root.Q<MapEditorView.SwitchRow>("area-access-Command");
+                MapEditorView.SwitchRow security = view.Root.Q<MapEditorView.SwitchRow>("area-access-Security");
+                MapEditorView.SwitchRow armory = view.Root.Q<MapEditorView.SwitchRow>("area-access-Armory");
+                defaults.Value = true;
+                Assert.IsTrue(command.Value);
                 Assert.IsFalse(command.enabledSelf);
                 view.Root.Q<DropdownField>("area-department").value = "Security";
-                Assert.IsFalse(command.value);
-                Assert.IsTrue(security.value);
+                Assert.IsFalse(command.Value);
+                Assert.IsTrue(security.Value);
                 Assert.IsFalse(security.enabledSelf);
-                defaults.value = false;
-                Assert.IsTrue(armory.value);
-                Assert.IsFalse(security.value);
+                defaults.Value = false;
+                Assert.IsTrue(armory.Value);
+                Assert.IsFalse(security.Value);
                 Assert.IsTrue(armory.enabledSelf);
             }
             finally { view.Destroy(); window.Close(); }
@@ -103,7 +109,7 @@ namespace EditorTests
             Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Scripts));
             Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
             model.SetSubcategory(MapEditorSubcategory.Rooms);
-            Assert.AreEqual(MapEditorTool.Area, model.CurrentTool);
+            Assert.AreEqual(MapEditorTool.Edit, model.CurrentTool);
             Assert.IsTrue(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
             model.SetSubcategory(MapEditorSubcategory.SpawnPlacements);
             Assert.AreEqual(MapEditorTool.Edit, model.CurrentTool);
@@ -114,6 +120,30 @@ namespace EditorTests
             Assert.IsFalse(model.IsLayerCategoryVisible(TileLayerCategory.Areas));
             CollectionAssert.Contains(MapEditorCatalog.GetSubcategories(MapEditorMode.Scripting), MapEditorSubcategory.Rooms);
             Assert.IsFalse(MapEditorCatalog.IsUnavailableScriptingSubcategory(MapEditorSubcategory.Rooms));
+        }
+
+        [Test]
+        public void RoomSwitchesReuseLayerComponentAndPaletteHasNoParallelTools()
+        {
+            MapEditorViewModel model = new();
+            MapEditorView view = new(null, null, model, new MapEditorCatalog(), null);
+            try
+            {
+                view.Build(new VisualElement());
+                model.SetMode(MapEditorMode.Scripting);
+                model.SetSubcategory(MapEditorSubcategory.Rooms);
+                Assert.IsNotNull(view.Root.Q<Button>("room-palette-0"));
+                Assert.AreEqual(1, view.Root.Query<Button>(className: "map-editor-slot").ToList().Count);
+                view.OpenPopover("layers");
+                Assert.Greater(view.Root.Query<MapEditorView.SwitchRow>().ToList().Count, 0);
+                view.ShowAreaProperties(Vector3.zero, "Vault", "Command", 0);
+                MapEditorView.SwitchRow control = view.Root.Q<MapEditorView.SwitchRow>("area-default-access");
+                Assert.IsNotNull(control);
+                Assert.IsTrue(control.ClassListContains("map-editor-switch-row"));
+                Assert.IsNotNull(control.Q(className: "map-editor-switch"));
+                Assert.IsNull(view.Root.Q<Toggle>("area-default-access"));
+            }
+            finally { view.Destroy(); }
         }
 
         private static void Submit(Button button)
@@ -157,7 +187,7 @@ namespace EditorTests
                 view.ShowAreaProperties(Vector3.zero, "Vault", "Command", (ulong)AccessLevel.Armory);
                 Submit(view.Root.Q<Button>("area-apply"));
                 Assert.AreEqual((ulong)AccessLevel.Armory, submitted);
-                view.Root.Q<Toggle>("area-default-access").value = true;
+                view.Root.Q<MapEditorView.SwitchRow>("area-default-access").Value = true;
                 Submit(view.Root.Q<Button>("area-apply"));
                 Assert.AreEqual(0UL, submitted);
             }

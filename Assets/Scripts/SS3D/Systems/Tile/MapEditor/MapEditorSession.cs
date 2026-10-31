@@ -83,6 +83,13 @@ namespace SS3D.Systems.Tile.MapEditor
             _camera = null;
         }
 
+        public void CenterOn(Vector3 position)
+        {
+            if (!_active || _camera == null) return;
+            _focus = new Vector3(position.x, 0f, position.z);
+            ApplyCamera();
+        }
+
         public void ResetPosition()
         {
             _focus = _entryFocus;

@@ -15,6 +15,8 @@ namespace SS3D.Systems.Area
 
         private readonly Dictionary<ushort, string> _names = new();
 
+        public IReadOnlyDictionary<ushort, string> AreaNames => _names;
+
         public string GetAreaName(ushort id) => _names.TryGetValue(id, out string name) && !string.IsNullOrWhiteSpace(name) ? name : $"Area {id}";
 
         public void ReplaceNames(ushort[] ids, string[] names)

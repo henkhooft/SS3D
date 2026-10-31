@@ -982,30 +982,6 @@
     color: var(--ss3d-text-primary);
 }
 
-.map-editor-area-toggle {
-    flex-direction: row-reverse;
-    align-items: center;
-    min-height: 28px;
-    flex-shrink: 0;
-    margin: 0;
-}
-
-.map-editor-area-toggle > .unity-base-field__label {
-    min-width: 0;
-    flex-grow: 1;
-    flex-shrink: 1;
-    margin: 0 0 0 6px;
-}
-
-.map-editor-area-toggle > .unity-toggle__input {
-    flex-grow: 0;
-    flex-shrink: 0;
-    width: 20px;
-    min-width: 20px;
-    max-width: 20px;
-    margin-left: 0;
-}
-
 .map-editor-area-access {
     height: 200px;
     flex-shrink: 0;
@@ -1015,11 +991,6 @@
     background-color: var(--ss3d-surface-inset);
 }
 
-
-/* Leave room for both the checkbox and the vertical scroller. */
-.map-editor-area-form .unity-toggle__input {
-    margin-right: 8px;
-}
 
 .map-editor-area-access .unity-scroll-view__content-container {
     padding-right: 12px;
@@ -1038,4 +1009,13 @@
     max-width: 240px;
     white-space: normal;
     -unity-text-align: middle-center;
+}
+
+
+
+/* Room fields use the exact layer switch component and its existing styles. */
+.map-editor-area-form .map-editor-switch-row__label {
+    margin: 0;
+    min-width: 0;
+    flex-shrink: 1;
 }

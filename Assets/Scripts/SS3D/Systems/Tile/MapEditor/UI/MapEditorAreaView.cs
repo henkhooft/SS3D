@@ -14,6 +14,55 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private string _areaName, _areaDepartment;
         private ulong _areaAccess;
         public event Action<Vector3, string, string, ulong> AreaApplyRequested;
+        public event Action<ushort> RoomPaletteSelected;
+        private readonly Dictionary<ushort, string> _roomPaletteNames = new();
+
+        private void BuildAreaPalette(VisualElement container)
+        {
+            int columns = GetMaxGridColumns();
+            if (columns <= 0) columns = int.MaxValue;
+            VisualElement row = null;
+            void AddRoom(ushort id, string caption)
+            {
+                Button slot = new(() => RoomPaletteSelected?.Invoke(id)) { name = $"room-palette-{id}", tooltip = caption };
+                slot.AddToClassList("map-editor-slot");
+                slot.EnableInClassList("map-editor-slot--active", id == _vm.AreaRoomId);
+                VisualElement frame = new();
+                frame.AddToClassList("map-editor-slot__icon-frame");
+                VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(MapEditorSubcategory.Rooms));
+                icon.AddToClassList("map-editor-slot__icon");
+                if (id != 0) icon.style.unityBackgroundImageTintColor = AreaDevSettings.GetColorForArea(id);
+                frame.Add(icon);
+                Label label = new(caption) { pickingMode = PickingMode.Ignore };
+                label.AddToClassList("map-editor-slot__label");
+                label.AddToClassList("font-body");
+                slot.Add(frame);
+                slot.Add(label);
+                if (row == null || row.childCount >= columns)
+                {
+                    row = new VisualElement();
+                    row.AddToClassList("map-editor-grid-row");
+                    container.Add(row);
+                }
+                row.Add(slot);
+            }
+            AddRoom(0, "New room");
+            foreach (KeyValuePair<ushort, string> room in _roomPaletteNames) AddRoom(room.Key, room.Value);
+        }
+
+        private void SyncRoomPalette(AreaFloorVisualCache cache)
+        {
+            if (cache == null) return;
+            bool changed = _roomPaletteNames.Count != cache.AreaNames.Count;
+            if (!changed)
+                foreach (KeyValuePair<ushort, string> room in cache.AreaNames)
+                    if (!_roomPaletteNames.TryGetValue(room.Key, out string old) || old != cache.GetAreaName(room.Key)) { changed = true; break; }
+            if (!changed) return;
+            _roomPaletteNames.Clear();
+            foreach (KeyValuePair<ushort, string> room in cache.AreaNames)
+                _roomPaletteNames[room.Key] = cache.GetAreaName(room.Key);
+            if (_vm.IsRoomCategory) RebuildGrid();
+        }
 
         public void ShowAreaProperties(Vector3 position, string roomName, string department, ulong access)
         {
@@ -36,6 +85,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             AreaFloorVisualCache cache, Camera camera, bool visible)
         {
             if (_root == null) return;
+            SyncRoomPalette(cache);
             if (_areaLabelsLayer == null)
             {
                 _areaLabelsLayer = new VisualElement { name = "area-name-labels", pickingMode = PickingMode.Ignore };
@@ -70,7 +120,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private void BuildAreaPopover(VisualElement container)
         {
             container.AddToClassList("map-editor-area-form");
-            Label help = new("Edits the existing APC-defined room. Save the map after applying.");
+            Label help = new("Set room properties, then paint its tiles. Save the map to keep your changes.");
             help.style.whiteSpace = WhiteSpace.Normal;
             container.Add(help);
             container.Add(new Label("Room name"));
@@ -85,9 +135,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             DropdownField department = new(departments, Math.Max(0, departments.IndexOf(_areaDepartment ?? ""))) { name = "area-department" };
             department.AddToClassList("map-editor-area-field");
             container.Add(department);
-            Toggle useDefault = new("Use department access") { name = "area-default-access", value = _areaAccess == 0 };
-            useDefault.AddToClassList("map-editor-area-toggle");
-            container.Add(useDefault);
+            SwitchRow useDefault = AddSwitchRow(container, "Use department access", _areaAccess == 0, null);
+            useDefault.name = "area-default-access";
             Label hint = new("All selected access levels are required. Department access applies when no override is selected.");
             hint.style.whiteSpace = WhiteSpace.Normal;
             container.Add(hint);
@@ -95,42 +144,42 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             ScrollView levels = new() { name = "area-access-levels" };
             levels.AddToClassList("map-editor-area-access");
             ulong bits = _areaAccess;
-            Dictionary<AccessLevel, Toggle> accessToggles = new();
+            Dictionary<AccessLevel, SwitchRow> accessToggles = new();
             foreach (AccessLevel level in Enum.GetValues(typeof(AccessLevel)))
             {
                 if (level == AccessLevel.None) continue;
                 ulong flag = (ulong)level;
-                Toggle toggle = new(level.ToString()) { name = $"area-access-{level}", value = (bits & flag) != 0 };
+                SwitchRow toggle = AddSwitchRow(levels, level.ToString(), (bits & flag) != 0,
+                    value => bits = value ? bits | flag : bits & ~flag);
+                toggle.name = $"area-access-{level}";
                 accessToggles[level] = toggle;
-                toggle.AddToClassList("map-editor-area-toggle");
-                toggle.RegisterValueChangedCallback(e => bits = e.newValue ? bits | flag : bits & ~flag);
-                levels.Add(toggle);
             }
             void RefreshAccessPreview()
             {
-                ulong shown = useDefault.value ? AreaAccessDefaults.FromParentTag(department.value).Value : bits;
-                foreach (KeyValuePair<AccessLevel, Toggle> pair in accessToggles)
+                ulong shown = useDefault.Value ? AreaAccessDefaults.FromParentTag(department.value).Value : bits;
+                foreach (KeyValuePair<AccessLevel, SwitchRow> pair in accessToggles)
                 {
                     pair.Value.SetValueWithoutNotify((shown & (ulong)pair.Key) != 0);
-                    pair.Value.SetEnabled(!useDefault.value);
+                    pair.Value.SetEnabled(!useDefault.Value);
                 }
             }
-            useDefault.RegisterValueChangedCallback(_ => RefreshAccessPreview());
+            useDefault.ValueChanged += _ => RefreshAccessPreview();
             department.RegisterValueChangedCallback(_ => RefreshAccessPreview());
             RefreshAccessPreview();
             container.Add(levels);
             Button apply = new(() =>
             {
-                if (!useDefault.value && bits == 0)
+                if (!useDefault.Value && bits == 0)
                 {
                     hint.text = "Select at least one access level, or use department access.";
                     return;
                 }
-                AreaApplyRequested?.Invoke(_areaPosition, name.value, department.value, useDefault.value ? 0 : bits);
+                AreaApplyRequested?.Invoke(_areaPosition, name.value, department.value, useDefault.Value ? 0 : bits);
             }) { text = "Apply room properties", name = "area-apply" };
             apply.AddToClassList("map-editor-action-btn");
             apply.AddToClassList("map-editor-action-btn--primary");
             container.Add(apply);
+
         }
     }
 }

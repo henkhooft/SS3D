@@ -484,10 +484,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
             {
-                Label help = new("Click a room in the map to edit its name, department and access.");
-                help.AddToClassList("map-editor-stub-message");
-                help.AddToClassList("font-body");
-                _grid.Add(help);
+                BuildAreaPalette(_grid);
                 return;
             }
 
@@ -1090,32 +1087,52 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return window;
         }
 
-        private static void AddSwitchRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        public sealed class SwitchRow : VisualElement
         {
-            VisualElement row = new() { pickingMode = PickingMode.Position };
-            row.AddToClassList("map-editor-switch-row");
-
-            Label labelElement = new(label) { pickingMode = PickingMode.Ignore };
-            labelElement.AddToClassList("map-editor-switch-row__label");
-
-            VisualElement track = new() { pickingMode = PickingMode.Position };
-            track.AddToClassList("map-editor-switch");
-            track.EnableInClassList("map-editor-switch--on", value);
-
-            VisualElement thumb = new() { pickingMode = PickingMode.Ignore };
-            thumb.AddToClassList("map-editor-switch__thumb");
-            track.Add(thumb);
-
-            track.RegisterCallback<ClickEvent>(_ =>
+            private readonly VisualElement _track;
+            private bool _value;
+            public event Action<bool> ValueChanged;
+            public bool Value
             {
-                bool next = !track.ClassListContains("map-editor-switch--on");
-                track.EnableInClassList("map-editor-switch--on", next);
-                onChanged(next);
-            });
+                get => _value;
+                set { if (_value == value) return; SetValueWithoutNotify(value); ValueChanged?.Invoke(value); }
+            }
 
-            row.Add(labelElement);
-            row.Add(track);
+            public SwitchRow(string label, bool value)
+            {
+                pickingMode = PickingMode.Position;
+                AddToClassList("map-editor-switch-row");
+                Label caption = new(label) { pickingMode = PickingMode.Ignore };
+                caption.AddToClassList("map-editor-switch-row__label");
+                _track = new VisualElement { pickingMode = PickingMode.Position, focusable = true };
+                _track.AddToClassList("map-editor-switch");
+                VisualElement thumb = new() { pickingMode = PickingMode.Ignore };
+                thumb.AddToClassList("map-editor-switch__thumb");
+                _track.Add(thumb);
+                _track.RegisterCallback<ClickEvent>(_ => { if (enabledInHierarchy) Value = !Value; });
+                _track.RegisterCallback<KeyDownEvent>(evt =>
+                {
+                    if (enabledInHierarchy && (evt.keyCode == KeyCode.Space || evt.keyCode == KeyCode.Return))
+                    { Value = !Value; evt.StopPropagation(); }
+                });
+                Add(caption);
+                Add(_track);
+                SetValueWithoutNotify(value);
+            }
+
+            public void SetValueWithoutNotify(bool value)
+            {
+                _value = value;
+                _track.EnableInClassList("map-editor-switch--on", value);
+            }
+        }
+
+        private static SwitchRow AddSwitchRow(VisualElement parent, string label, bool value, Action<bool> onChanged)
+        {
+            SwitchRow row = new(label, value);
+            row.ValueChanged += onChanged;
             parent.Add(row);
+            return row;
         }
 
         private void RaiseCameraSettingsChanged() =>

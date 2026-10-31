@@ -17,7 +17,7 @@ namespace SS3D.Systems.Area
     /// <summary>
     /// APC-seeded area flood-fill and per-tile area-id registry.
     /// </summary>
-    public sealed class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource, IWorldReady
+    public sealed partial class AreaSubSystem : NetworkSubSystem, ITileMutationObserver, IAreaLightingStateSource, IWorldReady
     {
         public event Action WhenReady;
 
@@ -87,6 +87,7 @@ namespace SS3D.Systems.Area
                 tileSubSystem.OnMapCreated -= HandleTileMapCreated;
 
             FloorVisualCache.OnDirty -= HandleFloorVisualCacheDirty;
+            if (_painting != null) _painting.Changed -= HandleAuthoredAreasChanged;
             UnsubscribeElectricityTicks();
             SubSystems.Get<TileSubSystem>()?.UnregisterTileMutationObserver(this);
             base.OnDestroyed();
@@ -111,6 +112,8 @@ namespace SS3D.Systems.Area
             _map = tileSubSystem.CurrentMap;
             _query = tileSubSystem.QueryService;
             _floodFill = new AreaFloodFillService(_map, _query);
+            _painting = new AreaPaintingService(_map, _query, _registry, _registeredApcs);
+            _painting.Changed += HandleAuthoredAreasChanged;
 
             tileSubSystem.RegisterTileMutationObserver(this);
 
@@ -392,7 +395,11 @@ namespace SS3D.Systems.Area
                         }
                     }
 
-                    if (anyLinked)
+                    if (HasAuthoredAreas)
+                    {
+                        // Membership is loaded; refreshed below, without geometric flood fill.
+                    }
+                    else if (anyLinked)
                     {
                         RefloodAllAreaTilesPreservingMetadata();
                     }
@@ -403,6 +410,7 @@ namespace SS3D.Systems.Area
                 }
             }
 
+            if (HasAuthoredAreas) _painting.NotifyChanged();
             MarkAreasReady();
         }
 
@@ -453,6 +461,12 @@ namespace SS3D.Systems.Area
                 return;
             }
 
+            if (HasAuthoredAreas)
+            {
+                _painting.NotifyChanged();
+                return;
+            }
+
             if (_registry.TryGetApcArea(apc, out AreaId existingArea))
             {
                 _floodFill.ClearAreaTiles(existingArea);
@@ -484,6 +498,13 @@ namespace SS3D.Systems.Area
             if (apc == null || !_registeredApcs.Remove(apc))
                 return;
 
+            if (HasAuthoredAreas)
+            {
+                apc.SetMultipleApcsInArea(false);
+                _painting.NotifyChanged();
+                return;
+            }
+
             if (!_registry.TryGetApcArea(apc, out AreaId areaId))
                 return;
 
@@ -501,6 +522,7 @@ namespace SS3D.Systems.Area
         [Server]
         public void RebuildAllAreasFromApcs()
         {
+            if (HasAuthoredAreas) { _painting.NotifyChanged(); return; }
             _map.ClearAllAreaIds();
             _registry.Clear();
             _overlapFlaggedApcs.Clear();
@@ -538,6 +560,7 @@ namespace SS3D.Systems.Area
         [Server]
         public void RebuildAreaFromApc(IAreaApcOrigin apc)
         {
+            if (HasAuthoredAreas) { _painting.NotifyChanged(); return; }
             if (apc == null)
                 return;
 
@@ -572,6 +595,7 @@ namespace SS3D.Systems.Area
         [Server]
         public void RefloodAllAreaTilesPreservingMetadata()
         {
+            if (HasAuthoredAreas) { _painting.NotifyChanged(); return; }
             if (_floodFill == null || _map == null)
             {
                 return;
@@ -716,30 +740,7 @@ namespace SS3D.Systems.Area
                 NotifyAreaVisualsChanged();
         }
 
-        public SavedAreaRecord[] BuildSavedAreaRecords()
-        {
-            var saved = new List<SavedAreaRecord>();
-            foreach (AreaRecord record in _registry.GetAllAreas())
-            {
-                if (record.Apc == null)
-                    continue;
-
-                Vector3 world = _query.TileToWorld(record.Apc.OriginTile);
-                saved.Add(new SavedAreaRecord
-                {
-                    id = record.Id.Value,
-                    displayName = record.DisplayName,
-                    parentTag = record.ParentTag,
-                    apcWorldPosition = world,
-                    hasDepartmentalLightTint = record.HasDepartmentalLightTint,
-                    departmentalLightTint = record.DepartmentalLightTint,
-                    defaultRequiredAccessBits = record.DefaultRequiredAccess.Value,
-                    lightingSwitchOn = record.LightingSwitchOn,
-                });
-            }
-
-            return saved.ToArray();
-        }
+        public SavedAreaRecord[] BuildSavedAreaRecords() => _painting?.CaptureRecords() ?? Array.Empty<SavedAreaRecord>();
 
         public void OnTilePlaced(ITileOccupant occupant, TileCoord coord)
         {
@@ -812,19 +813,19 @@ namespace SS3D.Systems.Area
 
             foreach (SavedAreaRecord saved in savedAreas)
             {
-                _pendingSavedByApcPosition[saved.apcWorldPosition] = saved;
+                if (!saved.noApc) _pendingSavedByApcPosition[saved.apcWorldPosition] = saved;
             }
         }
 
         [Server]
-        public void RestoreFromSave(IReadOnlyList<SavedAreaRecord> savedAreas)
+        public void RestoreFromSave(IReadOnlyList<SavedAreaRecord> savedAreas, bool authored = false)
         {
-            if (savedAreas == null || savedAreas.Count == 0)
+            if ((savedAreas == null || savedAreas.Count == 0) && !authored)
             {
                 return;
             }
 
-            RestoreRegistryFromSave(savedAreas);
+            RestoreRegistryFromSave(savedAreas ?? Array.Empty<SavedAreaRecord>(), authored);
             LinkRegisteredApcsDuringTemplateRestore();
             UpdateAreaLightingStates();
             TryCompleteTemplateRestore();
@@ -898,30 +899,11 @@ namespace SS3D.Systems.Area
             EndTemplateRestore();
         }
 
-        private void RestoreRegistryFromSave(IReadOnlyList<SavedAreaRecord> savedAreas)
+        private void RestoreRegistryFromSave(IReadOnlyList<SavedAreaRecord> savedAreas, bool authored)
         {
-            _registry.Clear();
-            ushort highestId = 0;
-
-            foreach (SavedAreaRecord saved in savedAreas)
-            {
-                highestId = Math.Max(highestId, saved.id);
-                _registry.Register(new AreaRecord
-                {
-                    Id = new AreaId(saved.id),
-                    DisplayName = saved.displayName,
-                    ParentTag = saved.parentTag,
-                    Apc = null,
-                    HasDepartmentalLightTint = saved.hasDepartmentalLightTint,
-                    DepartmentalLightTint = saved.departmentalLightTint,
-                    DefaultRequiredAccess = new IdAccess.AccessMask(saved.defaultRequiredAccessBits),
-                    LightingSwitchOn = saved.lightingSwitchOn,
-                });
-
-                _lightingSwitchOn[new AreaId(saved.id)] = saved.lightingSwitchOn;
-            }
-
-            _registry.EnsureNextIdAbove(highestId);
+            _painting.RestoreRecords(savedAreas, authored);
+            _lightingSwitchOn.Clear();
+            foreach (AreaRecord room in _registry.GetAllAreas()) _lightingSwitchOn[room.Id] = room.LightingSwitchOn;
         }
 
         private HashSet<TileCoord> BuildClaimedTilesExcluding(AreaId excludeAreaId)
@@ -1031,6 +1013,7 @@ namespace SS3D.Systems.Area
             {
                 if (record.Apc is not IApcChannelSource areaApc || record.Apc is not IElectricDevice)
                 {
+                    if (HasAuthoredAreas && ApplyLightingStateChange(record.Id, AreaLightingState.Dark)) anyChanged = true;
                     continue;
                 }
 

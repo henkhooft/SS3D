@@ -7,7 +7,7 @@
 
 ## Overview
 
-Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure, area metadata, and authored spawn markers; server meta currently covers admin permissions (with legacy `permissions.txt` import), append-only round history JSONL and the lobby server name/MOTD (`ServerMeta/server-info`, owned by `RoundSubSystem`). Round-config map pools and round snapshots are planned.
+Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure, area metadata (including authored and APC-less flags), and authored spawn markers; server meta currently covers admin permissions (with legacy `permissions.txt` import), append-only round history JSONL and the lobby server name/MOTD (`ServerMeta/server-info`, owned by `RoundSubSystem`). Round-config map pools and round snapshots are planned.
 
 ## Start here
 
@@ -29,6 +29,8 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/Tests/EditMode/ServerMetaPersistenceTests.cs` — permissions migration and round-history append
 
 ## Extension points
+
+- Authored areas: tile chunk `areaIds` are restored as saved when area records carry `authored`; APC-less records carry `noApc`. The area payload also stores a map-level `authored` flag so deleting all rooms does not regenerate them on load; legacy flat saves carry `hasAuthoredAreas` through migration. Missing flags keep legacy APC flood defaults. See [area-authoring](area-authoring.md).
 
 - New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup; add a `DeserializePayload` arm for the DTO type.
 - Station template save/load: `SaveStationTemplate` / `LoadStationTemplate` / `LoadMostRecentStationTemplate`.

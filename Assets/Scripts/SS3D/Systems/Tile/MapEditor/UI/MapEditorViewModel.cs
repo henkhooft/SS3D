@@ -10,6 +10,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     /// </summary>
     public sealed class MapEditorViewModel
     {
+        public string AreaRoomName { get; set; } = "New room";
+        public ushort AreaRoomId { get; set; }
+        public bool IsRoomCategory => CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
         public MapEditorTool CurrentTool { get; set; } = MapEditorTool.Edit;
         public MapEditorMode CurrentMode { get; set; } = MapEditorMode.Upper;
         public MapEditorSubcategory CurrentSubcategory { get; set; } = MapEditorSubcategory.Flooring;
@@ -60,7 +63,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetTool(MapEditorTool tool)
         {
             CurrentTool = tool;
-            _layerCategoryVisibility[TileLayerCategory.Areas] = tool == MapEditorTool.Area;
+            _layerCategoryVisibility[TileLayerCategory.Areas] = IsRoomCategory;
             UpdateHint();
             NotifyChanged();
         }
@@ -87,8 +90,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private void UpdateCategoryTool()
         {
             bool rooms = CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
-            if (rooms) CurrentTool = MapEditorTool.Area;
-            else if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
+            if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
             _layerCategoryVisibility[TileLayerCategory.Areas] = rooms;
         }
 
@@ -131,6 +133,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private void UpdateHint()
         {
+            if (IsRoomCategory)
+            {
+                SelectedObjectHint = CurrentTool switch
+                {
+                    MapEditorTool.Edit => $"Construct: {AreaRoomName} — drag a line; Shift-drag a rectangle",
+                    MapEditorTool.Select => "Select a room to edit its properties",
+                    MapEditorTool.Dropper => "Pick a room to paint with",
+                    MapEditorTool.Delete => "Delete room assignments — drag a line; Shift-drag a rectangle",
+                    _ => "Choose Construct, Select, Dropper or Delete for rooms",
+                };
+                return;
+            }
             if ((IsEraserSelected && CurrentTool == MapEditorTool.Edit) || CurrentTool == MapEditorTool.Delete)
             {
                 string label = MapEditorCatalog.GetSubcategoryLabel(CurrentSubcategory);
@@ -143,12 +157,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
                 SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to place";
-                return;
-            }
-
-            if (CurrentTool == MapEditorTool.Area)
-            {
-                SelectedObjectHint = "Area tool — click an APC-defined room to edit its properties";
                 return;
             }
 

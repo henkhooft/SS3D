@@ -1,19 +1,21 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Area/
 > Entry points: AreaSubSystem, AreaFloodFillService, AreaBoundaryEvaluator
 > Status: partial
-> Verified: be79cc8ad — 2026-07-29 (GetAllAreas cache; sticky resolve)
+> Verified: c161137b2 — 2026-10-31
 
 # Area
 
 ## Overview
 
-APC-seeded area flood-fill: each APC owns one `AreaRecord` and claims reachable floor tiles with a per-chunk `ushort[]` area-id layer. Walls and doors block expansion; unclaimed tiles stay `AreaId.None`. Live boundary recompute on tile mutation is deferred — rebuild runs on map load and APC place/remove only. Area metadata persists via [persistence](persistence.md) `AreaPersistenceContributor`; template restore uses `BeginTemplateRestore` / `RestoreFromSave` / `EndTemplateRestore` so saved display names, tints, access bits, and `lightingSwitchOn` survive when APCs are already placed.
+Area records and a per-chunk `ushort[]` membership layer. Unauthored maps get APC-seeded defaults (walls and doors bound the flood; unclaimed tiles stay `AreaId.None`). **Scripts → Rooms** can create APC-less rooms and paint/erase membership with undo. Once authored, boundaries survive geometry changes, APC changes and template reload; APCs relink to their painted room. Details: [area-authoring](area-authoring.md). Existing chunk IDs persist membership; `AreaPersistenceContributor` persists room records, including authored/APC-less flags. Legacy files without those flags retain APC default generation.
 
 Per-consumer power gating and **area-scoped APC cell drain** via [electricity](electricity.md) `AreaApcPowerDistribution`: devices in an assigned area use their area APC's channels and cell, not circuit-wide OR or equal battery split. `AreaLightingState` (Normal/Emergency/Dark) is derived each electricity tick from the area APC's circuit stats and `AreaRecord.LightingSwitchOn`; a disabled lighting channel forces Dark regardless of cell charge. Transitions fire `OnAreaLightingStateChanged` and sync to clients via a **BufferLast full lighting snapshot** (`RpcSyncAreaLighting`) — not per-area RPCs (those only retain the last area for late joiners). Wall `LightSwitchController` toggles `LightingSwitchOn` for its area. `LightPower` consumes area state for fixture on/off/emergency visuals; optional `DepartmentalLightTint` on `AreaRecord` tints normal-mode emission **and** drives client floor-corner stripes via `AreaFloorStripeView` (area-id grids + tint snapshot synced to observers). Pure clients have no flood-fill registry: fixture/switch code resolves area ids via `TryResolveAreaIdForDevice` → `AreaFloorVisualCache`.
 
-**Fork deviations from** [area.md](../../design/area.md): areas are APC-seeded (not generic auto-detection); unclaimed tiles have no fallback area; all doors block expansion regardless of open/closed state. Wall-mounted APCs seed flood fill from the walkable tile **in front of** `FacingDirection`, not from every cardinal neighbor. Live boundary recompute on structural Turf place/clear is **queued** (next Update) then full `RefloodAllAreaTilesPreservingMetadata` — not yet a true local-region flood ([structural-destruction](structural-destruction.md)).
+**Legacy default behavior:** APC flood starts from the walkable tile in front of wall-mounted APCs. All doors bound the flood, regardless of open/closed state. Unauthored maps still queue a full metadata-preserving reflood on structural edits; authored maps retain their partition instead ([area.md](../../design/area.md) §3).
 
 ## Start here
+
+- [area-authoring](area-authoring.md) — painting, APC ownership, persistence flags, editor controls and tests
 
 - `Assets/Scripts/SS3D/Systems/Area/AreaSubSystem.cs` — registry, APC lifecycle, rebuild; `IWorldReady`; notifies `AreasFlooded` after deferred flood; `TryResolveAreaIdForDevice` / lighting snapshot sync
 - `Assets/Scripts/SS3D/Systems/Area/AreaFloodFillService.cs` — BFS from APC seeds, door-tile post-pass
@@ -43,7 +45,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Resolve area record by id: `AreaSubSystem.TryGetArea`.
 - Client / no-registry area id: `TryResolveAreaIdForDevice` — server/host with live map uses `TryGetAreaForDevice` only (sticky None); pure clients use `FloorVisualCache`.
 - Register APC origins: implement `IAreaApcOrigin` (see `ApcController`).
-- Server room metadata APIs: `AreaSubSystem.RenameArea`, `SetParentTag`, `SetDefaultRequiredAccess`; Map Editor Scripts → Rooms tab selects APC-defined rooms and edits these via admin-checked RPCs (`MapEditorArea.cs`; runtime validation pending).
+- Server room metadata APIs: `AreaSubSystem.RenameArea`, `SetParentTag`, `SetDefaultRequiredAccess`; Map Editor Scripts → Rooms tab selects or creates rooms and edits these via admin-checked RPCs (`MapEditorArea.cs`; painting acceptance pending).
 - Resolve effective APC for a device: `AreaSubSystem.TryGetEffectiveApcForDevice`.
 - Area rebuild / APC lifecycle invalidates electricity's per-APC consumer index and atmos's area→port index via `InvalidateAreaMembershipIndexes`.
 - Query lighting by tile: `IAreaLightingStateSource.TryGetLightingStateForTile`.
