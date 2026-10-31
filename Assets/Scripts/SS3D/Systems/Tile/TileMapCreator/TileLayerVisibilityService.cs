@@ -1,4 +1,5 @@
 using SS3D.Core;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Tile.SpawnPoints;
 using System.Collections.Generic;
 using UnityEngine;
@@ -137,6 +138,17 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
             foreach (PlacedItemObject placedItem in map.PlacedItems)
                 ApplyToRenderers(placedItem.gameObject, visible);
+
+            // Pure clients never track PlacedItems (PlacedItemObject is added server-side at runtime,
+            // so it is not networked). Fall back to every loose world item.
+            if (FishNet.InstanceFinder.IsServer)
+                return;
+
+            foreach (Item item in Object.FindObjectsByType<Item>(FindObjectsSortMode.None))
+            {
+                if (!item.IsInContainer())
+                    ApplyToRenderers(item.gameObject, visible);
+            }
         }
 
         private static void ApplyToRenderers(GameObject root, bool visible)
