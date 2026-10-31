@@ -48,7 +48,7 @@ One command validates UI/session work in the open editor, unattended:
 
 ```bash
 Testing/ui/validate.sh            # --quick (default): preflight, compile, EditMode, visual, lifecycle
-Testing/ui/validate.sh --full     # + PlayMode tests, client build if stale, remote client pilot
+Testing/ui/validate.sh --full     # + PlayMode tests, client+server build if stale, remote client pilot
 Testing/ui/validate.sh --steps compile,visual   # any subset, in order
 Testing/ui/compile.sh             # = --steps compile
 ```
@@ -65,7 +65,7 @@ failure, prints a summary table with report paths and the screenshots to review,
 | editmode | All EditMode tests via MCP `run_tests`; `editmode.json` in the validate folder. Then waits for the Test Runner to restore the scene setup and fails if tests left a dirty/polluted scene. |
 | playmode | `--full` only. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
-| build | Skipped when `Builds/Game/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/client-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. |
+| build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
 
 Each step has an expected duration and a timeout. Past the expected duration,

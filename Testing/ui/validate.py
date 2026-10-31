@@ -1,6 +1,7 @@
 """One-command validation for UI/session work. Use Testing/ui/validate.sh or compile.sh.
 
-Steps: preflight → compile → editmode → playmode → visual → lifecycle → build (if stale) → remote.
+Steps: preflight → compile → editmode → playmode → visual → lifecycle → build (client and dedicated
+server, each if stale) → remote.
 --quick skips playmode and stops after lifecycle. PlayMode failures in KnownIssueReproduction fixtures are reported
 separately against Testing/ui/playmode-known-issues.txt (expected failures), so known bugs neither
 fail the loop nor hide new failures. Every step has an expected duration and a timeout: past the
@@ -26,7 +27,7 @@ MCP_URL = os.environ.get("SS3D_MCP_URL", "http://127.0.0.1:8080")
 UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
-BUILD_RESULT = UI / "client-build-result.json"
+BUILD_RESULTS = {"client": UI / "client-build-result.json", "server": UI / "server-build-result.json"}
 LOG_ERROR = re.compile(r"(: error [A-Za-z]+\d+:|error CS\d+)")
 ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "build", "remote"]
 QUICK = ["preflight", "compile", "editmode", "visual", "lifecycle"]  # PlayMode is --full only (minutes)
@@ -344,18 +345,21 @@ async def step_lifecycle(editor, ctx):
     return await run_pilot(editor, "SS3D/Testing/Run Lobby Lifecycle Pilot", "lifecycle-*/status.json", 150, 420)
 
 
-async def step_build(editor, ctx):
+async def build_target(editor, target):
+    """Rebuild the client or dedicated server when its source stamp is stale; returns a short note."""
+    method = target.capitalize()
     await editor.wait_ready()
-    stale = await editor.execute('return SS3D.Editor.Automation.AutomationBuild.ClientStaleReason() ?? "";')
+    stale = await editor.execute(f'return SS3D.Editor.Automation.AutomationBuild.{method}StaleReason() ?? "";')
     if not stale:
-        return Done("client build current (skipped)")
-    print(f"  {stale}; rebuilding (warm ~25 s, cold ~13 min; the editor is blocked meanwhile)", flush=True)
+        return f"{target} current"
+    print(f"  {stale}; rebuilding (warm ~1-2 min, cold ~15-20 min; the editor is blocked meanwhile)", flush=True)
     requested = datetime.now(timezone.utc)
-    await editor.execute("SS3D.Editor.Automation.AutomationBuild.BuildClient(); return \"scheduled\";")
+    await editor.execute(f"SS3D.Editor.Automation.AutomationBuild.Build{method}(); return \"scheduled\";")
+    result_file = BUILD_RESULTS[target]
 
     async def finished():
         try:
-            result = json.loads(BUILD_RESULT.read_text())
+            result = json.loads(result_file.read_text())
         except (OSError, json.JSONDecodeError):
             return None
         started = datetime.fromisoformat(result.get("startedUtc", "1970-01-01T00:00:00+00:00").replace("Z", "+00:00"))
@@ -365,10 +369,15 @@ async def step_build(editor, ctx):
             return None
         return result
 
-    result = await wait_for(finished, 120, 1800, "client build")
+    result = await wait_for(finished, 120, 2400, f"{target} build")
     if result["status"] != "succeeded":
-        raise StepFailed(f"Client build failed: {result.get('error')}", rel(BUILD_RESULT))
-    return Done(f"rebuilt {result['sourceHash']} in {result['seconds']:.0f}s", rel(BUILD_RESULT))
+        raise StepFailed(f"{method} build failed: {result.get('error')}", rel(result_file))
+    return f"{target} rebuilt {result['sourceHash']} in {result['seconds']:.0f}s"
+
+
+async def step_build(editor, ctx):
+    notes = [await build_target(editor, "client"), await build_target(editor, "server")]
+    return Done("; ".join(notes), rel(BUILD_RESULTS["client"]))
 
 
 async def step_remote(editor, ctx):
@@ -382,7 +391,7 @@ async def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--quick", action="store_true", help="preflight → lifecycle without playmode (default)")
-    mode.add_argument("--full", action="store_true", help="all steps, including client build and remote pilot")
+    mode.add_argument("--full", action="store_true", help="all steps: PlayMode, client+server build, remote pilot")
     mode.add_argument("--steps", help="comma-separated subset, e.g. compile or visual,remote")
     args = parser.parse_args()
     steps = args.steps.split(",") if args.steps else ORDER if args.full else QUICK
