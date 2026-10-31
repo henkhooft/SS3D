@@ -7,6 +7,7 @@ using SS3D.Logging;
 using SS3D.Systems.Comms;
 using SS3D.Systems.Gamemodes;
 using SS3D.Systems.Persistence;
+using SS3D.Systems.Tile.Validation;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.WorldReadiness;
 using System;
@@ -73,6 +74,12 @@ namespace SS3D.Systems.Rounds
                 if (!loaded)
                 {
                     FailStationLoad("Station could not be loaded. Select another saved map.");
+                    return;
+                }
+                MapValidationReport validation = MapValidationService.Validate(tiles, _serverSettings.Mode);
+                if (!validation.CanStart)
+                {
+                    FailStationLoad(validation.Describe(_serverSettings.Map, _serverSettings.Mode, saved: false));
                     return;
                 }
                 tiles.SyncFloorDecalsToClients();

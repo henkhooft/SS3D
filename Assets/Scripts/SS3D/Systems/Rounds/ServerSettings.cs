@@ -176,7 +176,7 @@ namespace SS3D.Systems.Rounds
         {
             AdminSettings = settings;
             AdminMaps = maps;
-            if (!string.IsNullOrEmpty(status) || !HasAdminSettings) AdminSettingsStatus = status;
+            AdminSettingsStatus = status;
             HasAdminSettings = true;
         }
     }

@@ -17,6 +17,8 @@ using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.SpawnPoints;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -58,6 +60,7 @@ namespace SS3D.Editor.Automation
         private static string _savedName;
         private static bool _sawStationLoading;
         private static string _alternateStation;
+        private static string _validationStation;
         private static uint _previousStationEpoch;
 
         private const string PilotCharacterName = "Lifecycle Pilot";
@@ -145,6 +148,7 @@ namespace SS3D.Editor.Automation
                 _osInputsDone = 0;
                 _sawStationLoading = false;
                 _alternateStation = null;
+                _validationStation = null;
                 _clientWindow = null;
                 _running = true;
                 Application.logMessageReceived += OnLog;
@@ -236,6 +240,7 @@ namespace SS3D.Editor.Automation
                     Require(SubSystems.Get<SS3D.Systems.Tile.TileSubSystem>().CurrentMap.ChunkCount == 0, "Lobby boots without station chunks");
                     Require(Rounds().CurrentStationLoadState == StationLoadState.NotLoaded
                         && Shell().Q<Label>("lobby-map-load-status").text == "No map loaded", "Lobby reports no map loaded");
+                    CreateValidationStation(valid: false);
                     _savedName = CharacterName();
                 },
             },
@@ -312,9 +317,26 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Select a real saved station",
-                Enter = () => Shell().Q<DropdownField>("server-map").value = "ministation",
-                Until = () => Rounds().SettingsForServer.Map == "ministation" && Rounds().AdminSettings.Map == "ministation",
-                Verify = () => Require(Shell().Q<DropdownField>("server-map").choices.Contains("ministation"), "Selected map is a saved template offered by the server"),
+                Enter = () => Shell().Q<DropdownField>("server-map").value = _validationStation,
+                Until = () => Rounds().SettingsForServer.Map == _validationStation && Rounds().AdminSettings.Map == _validationStation,
+                Verify = () => Require(Shell().Q<DropdownField>("server-map").choices.Contains(_validationStation), "Selected map is a saved template offered by the server"),
+            },
+            new Step
+            {
+                Name = "Invalid saved map blocks countdown with the full job list",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Rounds().CurrentStationLoadState == StationLoadState.Failed
+                    && Rounds().AdminSettingsStatus.Contains("Missing job spawn"),
+                Verify = () =>
+                {
+                    Require(Rounds().CurrentRoundState == RoundState.Stopped && Rounds().CurrentTimerSeconds == 0
+                        && !Spawned(), "Invalid map never reaches countdown or spawns players");
+                    foreach (JobSlotInfo job in SubSystems.Get<RoleSubSystem>().Jobs)
+                        Require(Rounds().AdminSettingsStatus.Contains(job.Name), $"Validation explains missing {job.Name} spawn");
+                    Shell().Q<ScrollView>("server-settings-scroll").ScrollTo(Shell().Q("server-settings-status"));
+                    Capture("server-settings-validation");
+                    CreateValidationStation(valid: true);
+                },
             },
             new Step
             {
@@ -373,7 +395,7 @@ namespace SS3D.Editor.Automation
                     Shell().Q<DropdownField>("server-map").value = _alternateStation;
                 },
                 Until = () => Rounds().SettingsForServer.Map == _alternateStation,
-                Verify = () => Require(Rounds().StationName == "ministation", "Changing selection does not silently replace the loaded station"),
+                Verify = () => Require(Rounds().StationName == _validationStation, "Changing selection does not silently replace the loaded station"),
             },
             new Step
             {
@@ -405,7 +427,12 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Reject configuration changes during an active round",
-                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Enter = () =>
+                {
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
+                },
                 Until = () => Rounds().AdminSettingsStatus.Contains("rejected"),
                 Verify = () => Require(Rounds().SettingsForServer.RoundLengthMinutes == 1 && !Rounds().AllowLateJoin, "Active round configuration cannot change"),
             },
@@ -463,7 +490,12 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Restore server defaults before lifecycle",
-                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Enter = () =>
+                {
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
+                },
                 Until = () => Rounds().SettingsForServer.PlayerCap == 32 && Rounds().AllowLateJoin
                     && Shell().Q<Toggle>("server-late-join").value && Shell().Q<IntegerField>("server-round-length").value == 90,
             },
@@ -849,6 +881,10 @@ namespace SS3D.Editor.Automation
                 Verify = () =>
                 {
                     Require(AdminButton().enabledInHierarchy, "Host owner has Admin enabled");
+                    CreateValidationStation(valid: true);
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
                     Require(!SubSystems.Get<PermissionSubSystem>().IsAtLeast(RemoteCkey, ServerRoleTypes.Administrator), $"'{RemoteCkey}' has no Administrator permission");
                 },
             },
@@ -1311,6 +1347,42 @@ namespace SS3D.Editor.Automation
             public string scope;
         }
 
+        // Own the fixture: the shipped ministation currently has no authored spawns.
+        // Never overwrite a tester's station merely to make the lifecycle smoke pass.
+        private static void CreateValidationStation(bool valid)
+        {
+            EnvelopePersistenceStore store = new();
+            Require(store.TryLoad(PersistencePaths.StationTemplates + "/ministation", out PersistenceEnvelope envelope),
+                "Loaded base station for temporary validation fixture");
+            _validationStation ??= "validation-pilot-" + Guid.NewGuid().ToString("N");
+            envelope.chunks.RemoveAll(chunk => chunk.contributorId == "spawn-points");
+            List<SavedSpawnPointRecord> records = new();
+            if (valid)
+            {
+                TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+                SavedTileMap map = JsonUtility.FromJson<SavedTileMap>(envelope.chunks.Single(chunk => chunk.contributorId == "tilemap").payloadJson);
+                Vector3[] floors = map.savedChunkList.SelectMany(chunk => chunk.savedTiles
+                    .Where(tile => tile != null && tile.GetPlacedObjects().Any(placed =>
+                        tiles.GetAsset(placed.tileObjectSOName) is TileObjectSo asset && asset.layer == TileLayer.Plenum))
+                    .Select(tile => chunk.originPosition + new Vector3(tile.Location.x, 0, tile.Location.y)))
+                    .Distinct().ToArray();
+                Require(floors.Length > SubSystems.Get<RoleSubSystem>().Jobs.Count,
+                    "Fixture has enough floor cells for every job and the operative marker");
+                int index = 0;
+                foreach (JobSlotInfo job in SubSystems.Get<RoleSubSystem>().Jobs)
+                    records.Add(SavedSpawnPointRecord.FromRecord(SpawnPointRecord.ForJob(job.Name, floors[index++], Direction.North)));
+                records.Add(SavedSpawnPointRecord.FromRecord(SpawnPointRecord.ForAntagonist(
+                    AntagonistSpawnCategory.NuclearOperatives, floors[index], Direction.North)));
+            }
+            envelope.chunks.Add(new PersistenceChunk
+            {
+                contributorId = "spawn-points",
+                payloadJson = JsonUtility.ToJson(new SavedSpawnPointChunkPayload { records = records.ToArray() }),
+            });
+            Require(store.TrySave(PersistencePaths.StationTemplates + "/" + _validationStation, envelope, true),
+                "Saved temporary validation fixture");
+        }
+
         private static void Finish(string failure, bool stopPlay)
         {
             _running = false;
@@ -1321,6 +1393,11 @@ namespace SS3D.Editor.Automation
             {
                 SS3D.Data.Management.LocalStorage.DeleteFile(SS3D.Data.Persistence.PersistencePaths.StationTemplates + "/" + _alternateStation);
                 _alternateStation = null;
+            }
+            if (!string.IsNullOrEmpty(_validationStation))
+            {
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _validationStation);
+                _validationStation = null;
             }
             Report report = new()
             {
