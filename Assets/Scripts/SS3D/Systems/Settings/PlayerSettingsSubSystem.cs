@@ -6,6 +6,7 @@ using SS3D.Systems.Audio;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace SS3D.Systems.Settings
 {
@@ -23,6 +24,30 @@ namespace SS3D.Systems.Settings
         private bool _active;
         private bool _focused = true;
         private float _saveDueTime = -1f;
+        private readonly PlayerDisplayApplier _display = new();
+        private readonly DisplayChangeConfirmation<WindowState> _windowConfirmation = new();
+
+        /// <summary>Resolution and window mode as last confirmed; what a revert restores.</summary>
+        private readonly struct WindowState
+        {
+            public readonly int Width;
+            public readonly int Height;
+            public readonly PlayerWindowMode Mode;
+
+            public WindowState(PlayerDisplaySettings display)
+            {
+                Width = display.ResolutionWidth;
+                Height = display.ResolutionHeight;
+                Mode = display.WindowMode;
+            }
+
+            public void WriteTo(PlayerDisplaySettings display)
+            {
+                display.ResolutionWidth = Width;
+                display.ResolutionHeight = Height;
+                display.WindowMode = Mode;
+            }
+        }
 
         /// <summary>Current values. Read-only for callers: change them through the Set methods.</summary>
         public PlayerSettings Settings { get; private set; } = new();
@@ -47,6 +72,8 @@ namespace SS3D.Systems.Settings
             _focused = UnityEngine.Application.isFocused;
             UnityEngine.Application.focusChanged += HandleFocusChanged;
             AddHandle(UpdateEvent.AddListener(HandleUpdate));
+            _display.Enable();
+            _display.ApplyAll(Settings.Display);
         }
 
         protected override void OnStart()
@@ -59,7 +86,9 @@ namespace SS3D.Systems.Settings
         protected override void OnDestroyed()
         {
             UnityEngine.Application.focusChanged -= HandleFocusChanged;
+            if (_active && _windowConfirmation.IsPending) RevertDisplayChange();
             if (_saveDueTime >= 0f) SaveNow();
+            if (_active) _display.Disable();
             base.OnDestroyed();
         }
 
@@ -88,11 +117,116 @@ namespace SS3D.Systems.Settings
             CommitAudio();
         }
 
+        /// <summary>Seconds left on the "Keep these settings?" prompt, or 0 when nothing awaits confirmation.</summary>
+        public float DisplayConfirmationSecondsLeft => _windowConfirmation.SecondsLeft(Time.unscaledTime);
+
+        public bool DisplayConfirmationPending => _windowConfirmation.IsPending;
+
+        /// <summary>Sizes the Resolution dropdown offers, largest first.</summary>
+        public Vector2Int[] ResolutionChoices => PlayerDisplayApplier.ResolutionChoices();
+
+        /// <summary>The resolution in effect: the saved one if the display offers it, else native.</summary>
+        public Vector2Int CurrentResolution => PlayerDisplayApplier.CurrentResolution(Settings.Display);
+
+        public bool StpSupported => PlayerDisplayApplier.StpSupported;
+
+        public void SetResolution(Vector2Int size) => ChangeWindow(d =>
+        {
+            d.ResolutionWidth = size.x;
+            d.ResolutionHeight = size.y;
+        });
+
+        public void SetWindowMode(PlayerWindowMode mode) => ChangeWindow(d => d.WindowMode = mode);
+
+        /// <summary>Keeps a resolution/window change; without this it reverts after 15 s (Decision 3).</summary>
+        public void ConfirmDisplayChange()
+        {
+            _windowConfirmation.Confirm();
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        public void RevertDisplayChange()
+        {
+            if (!_windowConfirmation.IsPending) return;
+            _windowConfirmation.Previous.WriteTo(Settings.Display);
+            _windowConfirmation.Confirm();
+            _display.ApplyWindow(Settings.Display);
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        public void SetVSync(bool on) => ChangeQuality(d => d.VSync = on);
+
+        public void SetFrameCap(int cap) => ChangeQuality(d => d.FrameCap = cap);
+
+        public void SetQuality(PlayerQualityTier tier) => ChangeQuality(d => d.Quality = tier);
+
+        public void SetRenderScale(float scale) => ChangeQuality(d => d.RenderScale = scale);
+
+        public void SetUpscaler(PlayerUpscaler upscaler) => ChangeQuality(d => d.Upscaler = upscaler);
+
+        public void SetAntiAliasing(PlayerAntiAliasing antiAliasing) => ChangeQuality(d => d.AntiAliasing = antiAliasing);
+
+        /// <summary>Called on slider release, not per drag step (Decision 8).</summary>
+        public void SetUiScale(float scale)
+        {
+            Settings.Display.UiScale = PlayerDisplaySettings.SnapUiScale(scale);
+            _display.ApplyUiScale(Settings.Display.UiScale);
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        /// <summary>The Display tab's Reset to defaults. A changed resolution or window mode still asks to be kept.</summary>
+        public void ResetDisplay()
+        {
+            WindowState before = new(Settings.Display);
+            Settings.Display = new PlayerDisplaySettings();
+            if (!before.Equals(new WindowState(Settings.Display))) _windowConfirmation.Begin(before, Time.unscaledTime);
+            _display.ApplyAll(Settings.Display);
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        /// <summary>
+        /// Screen-space UI panels register here so UI Scale reaches them (Decision 8). Shared assets are scaled once.
+        /// </summary>
+        public void RegisterUiPanel(PanelSettings panel)
+        {
+            if (_active) _display.RegisterPanel(panel);
+        }
+
+        private void ChangeWindow(Action<PlayerDisplaySettings> change)
+        {
+            WindowState before = new(Settings.Display);
+            change(Settings.Display);
+            Settings.Display.Sanitize();
+            if (before.Equals(new WindowState(Settings.Display))) return;
+            _windowConfirmation.Begin(before, Time.unscaledTime);
+            _display.ApplyWindow(Settings.Display);
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        private void ChangeQuality(Action<PlayerDisplaySettings> change)
+        {
+            change(Settings.Display);
+            Settings.Display.Sanitize();
+            _display.ApplyQuality(Settings.Display);
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
         /// <summary>Writes pending changes now instead of after the debounce (quit, pilots).</summary>
         public bool SaveNow()
         {
             _saveDueTime = -1f;
-            return _store != null && _store.Save(Settings);
+            if (_store == null) return false;
+            if (!_windowConfirmation.IsPending) return _store.Save(Settings);
+            // An unconfirmed resolution must not survive a crash: write the last confirmed one instead.
+            PlayerSettings onDisk = JsonUtility.FromJson<PlayerSettings>(JsonUtility.ToJson(Settings));
+            _windowConfirmation.Previous.WriteTo(onDisk.Display);
+            return _store.Save(onDisk);
         }
 
         private void CommitAudio()
@@ -135,6 +269,7 @@ namespace SS3D.Systems.Settings
 
         private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
         {
+            if (_windowConfirmation.ShouldRevert(Time.unscaledTime)) RevertDisplayChange();
             if (_saveDueTime >= 0f && Time.unscaledTime >= _saveDueTime) SaveNow();
         }
     }

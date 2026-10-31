@@ -53,14 +53,15 @@ namespace SS3D.UI.Lobby
         private bool _chatAdmin;
         private ScrollView _chatLog;
         private string _openPlayerId;
-        private string _resolution = "1920x1080";
-        private bool _fullscreen = true;
         private string _rebindingKey;
-        // Display mockup values until Phase 2 of 2026-10_player-settings moves them into PlayerSettings.
-        private readonly Dictionary<string, float> _settingsValues = new()
-        {
-            ["uiScale"] = 0.5f, ["brightness"] = 0.6f,
-        };
+        // PlayerSettingsSubSystem's live display values and what the machine offers.
+        private PlayerDisplaySettings _display = new();
+        private Vector2Int[] _resolutions = Array.Empty<Vector2Int>();
+        private Vector2Int _currentResolution;
+        private bool _stpSupported = true;
+        private bool _confirmingDisplayReset;
+        private VisualElement _displayPrompt;
+        private Label _displayPromptText;
         // PlayerSettingsSubSystem's live audio values; the view only reads them and raises intents.
         private PlayerAudioSettings _audio = new();
         private bool _raisingAudioIntent;
@@ -97,6 +98,37 @@ namespace SS3D.UI.Lobby
         public event Action<bool> MuteAllChanged;
         public event Action<bool> MuteWhenUnfocusedChanged;
         public event Action AudioResetRequested;
+        public event Action<Vector2Int> ResolutionChanged;
+        public event Action<PlayerWindowMode> WindowModeChanged;
+        public event Action<bool> VSyncChanged;
+        public event Action<int> FrameCapChanged;
+        public event Action<PlayerQualityTier> QualityChanged;
+        public event Action<float> RenderScaleChanged;
+        public event Action<PlayerUpscaler> UpscalerChanged;
+        public event Action<PlayerAntiAliasing> AntiAliasingChanged;
+        public event Action<float> UiScaleChanged;
+        public event Action DisplayResetRequested;
+        public event Action DisplayChangeKept;
+        public event Action DisplayChangeReverted;
+
+        /// <summary>Supplies the display settings and the machine's choices; rebuilds an open Display tab.</summary>
+        public void SetDisplaySettings(PlayerDisplaySettings display, Vector2Int[] resolutions, Vector2Int current, bool stpSupported)
+        {
+            _display = display ?? new PlayerDisplaySettings();
+            _resolutions = resolutions ?? Array.Empty<Vector2Int>();
+            _currentResolution = current;
+            _stpSupported = stpSupported;
+            if (_activeTab == TabSettings && _settingsSubTab == "display" && _tabContent != null)
+                ShowTab(TabSettings);
+        }
+
+        /// <summary>Shows or hides the "Keep these settings?" prompt (Decision 3); called every refresh while pending.</summary>
+        public void SetDisplayConfirmation(bool pending, int secondsLeft)
+        {
+            if (_displayPrompt == null) return;
+            _displayPrompt.style.display = pending ? DisplayStyle.Flex : DisplayStyle.None;
+            if (pending) _displayPromptText.text = $"Keep these display settings? Reverting in {secondsLeft} s.";
+        }
 
         /// <summary>
         /// Supplies the audio settings to show. Rebuilds an open Sound tab, except for the echo of the view's own
@@ -221,6 +253,7 @@ namespace SS3D.UI.Lobby
             _root.Add(window);
 
             BuildChrome(window);
+            _root.Add(BuildDisplayPrompt());
             layerRoot.Add(_root);
             RefreshTabs();
             ShowTab(_activeTab);
@@ -238,6 +271,20 @@ namespace SS3D.UI.Lobby
             MuteAllChanged = null;
             MuteWhenUnfocusedChanged = null;
             AudioResetRequested = null;
+            ResolutionChanged = null;
+            WindowModeChanged = null;
+            VSyncChanged = null;
+            FrameCapChanged = null;
+            QualityChanged = null;
+            RenderScaleChanged = null;
+            UpscalerChanged = null;
+            AntiAliasingChanged = null;
+            UiScaleChanged = null;
+            DisplayResetRequested = null;
+            DisplayChangeKept = null;
+            DisplayChangeReverted = null;
+            _displayPrompt = null;
+            _displayPromptText = null;
             RoundAdminRequested = null;
             JobPreferencesChanged = null;
             _tabBar = null;
@@ -1353,8 +1400,8 @@ namespace SS3D.UI.Lobby
             VisualElement subTabs = new();
             subTabs.AddToClassList("lobby-shell__settings-tabs");
             AddSettingsSubTab(subTabs, "display", "Display");
-            AddSettingsSubTab(subTabs, "sound", "Sound");
-            AddSettingsSubTab(subTabs, "keyboard", "Keyboard");
+            AddSettingsSubTab(subTabs, "sound", "Audio");
+            AddSettingsSubTab(subTabs, "keyboard", "Controls");
             parent.Add(subTabs);
 
             ScrollView scroll = new(ScrollViewMode.Vertical);
@@ -1413,24 +1460,7 @@ namespace SS3D.UI.Lobby
                 }
                 default:
                 {
-                    form.Add(SettingsLabel("Resolution"));
-                    DropdownField resolution = new(new List<string>
-                    {
-                        "1280x720", "1600x900", "1920x1080", "2560x1440",
-                    }, _resolution)
-                    {
-                        name = "settings-resolution",
-                    };
-                    resolution.AddToClassList("lobby-shell__settings-dropdown");
-                    resolution.AddToClassList("font-body");
-                    resolution.RegisterValueChangedCallback(evt => _resolution = evt.newValue);
-                    StyleDarkTextField(resolution);
-                    form.Add(resolution);
-                    form.Add(SettingsToggle("fullscreen", "Fullscreen", _fullscreen, value => _fullscreen = value));
-                    form.Add(SettingsSlider("uiScale", "UI Scale", false, true, _settingsValues["uiScale"],
-                        value => _settingsValues["uiScale"] = value));
-                    form.Add(SettingsSlider("brightness", "Brightness", false, true, _settingsValues["brightness"],
-                        value => _settingsValues["brightness"] = value));
+                    BuildDisplayForm(form);
                     break;
                 }
             }
@@ -1452,45 +1482,158 @@ namespace SS3D.UI.Lobby
             return toggle;
         }
 
-        /// <summary>Reset to defaults asks once more before acting (Decision 13).</summary>
-        private Button AudioResetButton()
+        private static readonly string[] WindowModeLabels = { "Fullscreen", "Borderless", "Windowed" };
+        private static readonly string[] QualityLabels = { "Low", "Medium", "High", "Ultra" };
+        private static readonly string[] UpscalerLabels = { "STP", "FSR 1", "Bilinear" };
+        private static readonly string[] AntiAliasingLabels = { "Off", "FXAA", "SMAA", "TAA" };
+
+        private void BuildDisplayForm(VisualElement form)
         {
-            Button reset = null;
-            reset = new Button(() =>
+            Vector2Int[] resolutions = _resolutions.Length > 0 ? _resolutions : new Vector2Int[] { _currentResolution };
+            form.Add(SettingsDropdown("resolution", "Resolution", resolutions.Select(r => $"{r.x} × {r.y}").ToList(),
+                Array.IndexOf(resolutions, _currentResolution), i => ResolutionChanged?.Invoke(resolutions[i])));
+            form.Add(SettingsDropdown("windowMode", "Window Mode", WindowModeLabels.ToList(), (int)_display.WindowMode,
+                i => WindowModeChanged?.Invoke((PlayerWindowMode)i)));
+            form.Add(SettingsToggle("vsync", "VSync", _display.VSync, value => VSyncChanged?.Invoke(value)));
+            int[] caps = PlayerDisplaySettings.FrameCaps;
+            form.Add(SettingsDropdown("frameCap", "Frame Cap", caps.Select(c => c == 0 ? "Off" : c.ToString()).ToList(),
+                Array.IndexOf(caps, _display.FrameCap), i => FrameCapChanged?.Invoke(caps[i]), enabled: !_display.VSync,
+                tooltip: _display.VSync ? "VSync paces frames while it is on." : null));
+            form.Add(SettingsDropdown("quality", "Quality", QualityLabels.ToList(), (int)_display.Quality,
+                i => QualityChanged?.Invoke((PlayerQualityTier)i)));
+            float[] scales = PlayerDisplaySettings.RenderScales;
+            form.Add(SettingsDropdown("renderScale", "Render Scale", scales.Select(f => $"{Mathf.RoundToInt(f * 100f)} %").ToList(),
+                Array.IndexOf(scales, _display.RenderScale), i => RenderScaleChanged?.Invoke(scales[i])));
+            RenderPlan plan = PlayerDisplayPlan.Resolve(_display, _stpSupported);
+            bool upscaling = _display.RenderScale < 1f;
+            string upscalerHint = null;
+            if (!upscaling) upscalerHint = "Upscaling applies below 100 % render scale.";
+            else if (_display.Upscaler == PlayerUpscaler.Stp && !_stpSupported) upscalerHint = "STP is not supported on this GPU; FSR 1 is used.";
+            form.Add(SettingsDropdown("upscaler", "Upscaler", UpscalerLabels.ToList(), (int)_display.Upscaler,
+                i => UpscalerChanged?.Invoke((PlayerUpscaler)i), enabled: upscaling, tooltip: upscalerHint));
+            form.Add(SettingsDropdown("antiAliasing", "Anti-Aliasing", AntiAliasingLabels.ToList(),
+                (int)(plan.AntiAliasingLocked ? plan.AntiAliasing : _display.AntiAliasing),
+                i => AntiAliasingChanged?.Invoke((PlayerAntiAliasing)i), enabled: !plan.AntiAliasingLocked,
+                tooltip: plan.AntiAliasingLocked ? "STP upscaling requires TAA." : null));
+            form.Add(UiScaleSlider());
+            form.Add(DisplayResetButton());
+        }
+
+        private VisualElement SettingsDropdown(string key, string title, List<string> choices, int index, Action<int> changed,
+            bool enabled = true, string tooltip = null)
+        {
+            VisualElement field = new();
+            field.Add(SettingsLabel(title));
+            DropdownField dropdown = new(choices, Mathf.Clamp(index, 0, choices.Count - 1)) { name = "settings-" + key };
+            dropdown.AddToClassList("lobby-shell__settings-dropdown");
+            dropdown.AddToClassList("font-body");
+            dropdown.RegisterValueChangedCallback(_ =>
             {
-                if (!_confirmingAudioReset)
-                {
-                    _confirmingAudioReset = true;
-                    reset.text = "CONFIRM RESET";
-                    return;
-                }
+                if (dropdown.index >= 0) changed(dropdown.index);
+            });
+            StyleDarkTextField(dropdown);
+            dropdown.SetEnabled(enabled);
+            if (tooltip != null) field.tooltip = tooltip;
+            field.Add(dropdown);
+            return field;
+        }
+
+        /// <summary>UI Scale applies on release (Decision 8): rescaling the panel mid-drag would move the slider away.</summary>
+        private VisualElement UiScaleSlider()
+        {
+            VisualElement field = SettingsSlider("uiScale", "UI Scale", true, true, _display.UiScale, _ => { },
+                PlayerDisplaySettings.MinUiScale, PlayerDisplaySettings.MaxUiScale);
+            Slider slider = field.Q<Slider>("settings-uiScale");
+            void Commit()
+            {
+                float snapped = PlayerDisplaySettings.SnapUiScale(slider.value);
+                if (!Mathf.Approximately(snapped, _display.UiScale)) UiScaleChanged?.Invoke(snapped);
+            }
+            slider.RegisterCallback<PointerCaptureOutEvent>(_ => Commit());
+            slider.RegisterCallback<FocusOutEvent>(_ => Commit());
+            return field;
+        }
+
+        private Button DisplayResetButton() => ResetButton("settings-reset-display", _confirmingDisplayReset,
+            () => _confirmingDisplayReset = true, () =>
+            {
+                _confirmingDisplayReset = false;
+                DisplayResetRequested?.Invoke();
+            });
+
+        private VisualElement BuildDisplayPrompt()
+        {
+            _displayPrompt = new VisualElement { name = "settings-display-prompt" };
+            _displayPrompt.AddToClassList("lobby-shell__display-prompt");
+            _displayPrompt.style.display = DisplayStyle.None;
+            VisualElement card = new();
+            card.AddToClassList("lobby-shell__display-prompt-card");
+            _displayPromptText = MakeLabel("", "font-body");
+            _displayPromptText.AddToClassList("lobby-shell__display-prompt-text");
+            card.Add(_displayPromptText);
+            VisualElement row = new();
+            row.AddToClassList("lobby-shell__actions-row");
+            Button keep = new(() => DisplayChangeKept?.Invoke()) { name = "settings-display-keep", text = "KEEP" };
+            keep.AddToClassList("lobby-shell__btn");
+            keep.AddToClassList("lobby-shell__btn--prompt-keep");
+            keep.AddToClassList("font-titling");
+            Button revert = new(() => DisplayChangeReverted?.Invoke()) { name = "settings-display-revert", text = "REVERT" };
+            revert.AddToClassList("lobby-shell__btn");
+            revert.AddToClassList("lobby-shell__btn--observe");
+            revert.AddToClassList("font-titling");
+            row.Add(keep);
+            row.Add(revert);
+            card.Add(row);
+            _displayPrompt.Add(card);
+            return _displayPrompt;
+        }
+
+        /// <summary>Reset to defaults asks once more before acting (Decision 13).</summary>
+        private Button AudioResetButton() => ResetButton("settings-reset-audio", _confirmingAudioReset,
+            () => _confirmingAudioReset = true, () =>
+            {
                 _confirmingAudioReset = false;
                 AudioResetRequested?.Invoke();
+            });
+
+        private Button ResetButton(string name, bool confirming, Action arm, Action reset)
+        {
+            Button button = null;
+            button = new Button(() =>
+            {
+                if (!confirming)
+                {
+                    arm();
+                    confirming = true;
+                    button.text = "CONFIRM RESET";
+                    return;
+                }
+                reset();
                 ShowTab(TabSettings);
             })
             {
-                name = "settings-reset-audio",
-                text = _confirmingAudioReset ? "CONFIRM RESET" : "RESET TO DEFAULTS",
+                name = name,
+                text = confirming ? "CONFIRM RESET" : "RESET TO DEFAULTS",
             };
-            reset.AddToClassList("lobby-shell__btn");
-            reset.AddToClassList("lobby-shell__btn--settings-reset");
-            reset.AddToClassList("font-titling");
-            return reset;
+            button.AddToClassList("lobby-shell__btn");
+            button.AddToClassList("lobby-shell__btn--settings-reset");
+            button.AddToClassList("font-titling");
+            return button;
         }
 
         private VisualElement SettingsSlider(string key, string title, bool percentage, bool enabled, float value,
-            Action<float> changed)
+            Action<float> changed, float min = 0f, float max = 1f)
         {
             VisualElement field = new();
             field.AddToClassList("lobby-shell__settings-slider-field");
             field.Add(SettingsLabel(title));
             VisualElement row = new();
             row.AddToClassList("lobby-shell__settings-slider-row");
-            Slider slider = new(0f, 1f) { name = "settings-" + key, value = value };
+            Slider slider = new(min, max) { name = "settings-" + key, value = value };
             slider.AddToClassList("lobby-shell__settings-slider");
             VisualElement fill = new() { pickingMode = PickingMode.Ignore };
             fill.AddToClassList("lobby-shell__settings-slider-fill");
-            fill.style.width = Length.Percent(slider.value * 100f);
+            fill.style.width = Length.Percent((slider.value - min) / (max - min) * 100f);
             slider.Q(className: "unity-base-slider__tracker").Add(fill);
             string Display(float value) => percentage ? Mathf.RoundToInt(value * 100f).ToString()
                 : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
@@ -1501,7 +1644,7 @@ namespace SS3D.UI.Lobby
             {
                 changed(evt.newValue);
                 number.text = Display(evt.newValue);
-                fill.style.width = Length.Percent(evt.newValue * 100f);
+                fill.style.width = Length.Percent((evt.newValue - min) / (max - min) * 100f);
             });
             slider.SetEnabled(enabled);
             row.Add(slider);
@@ -1529,6 +1672,7 @@ namespace SS3D.UI.Lobby
             {
                 _rebindingKey = null;
                 _confirmingAudioReset = false;
+                _confirmingDisplayReset = false;
                 _settingsSubTab = key;
                 ShowTab(TabSettings);
             })

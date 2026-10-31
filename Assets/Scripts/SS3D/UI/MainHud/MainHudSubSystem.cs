@@ -1,3 +1,4 @@
+using SS3D.Systems.Settings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -189,6 +190,7 @@ namespace SS3D.UI.MainHud
             {
                 _document.panelSettings = panelSettings;
             }
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(_document.panelSettings);
 
             // Stays below the radial menu / armed-interaction reticle (both on the same shared panel
             // settings), so those transient overlays still draw on top of the persistent HUD.

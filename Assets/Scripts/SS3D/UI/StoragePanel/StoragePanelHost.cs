@@ -1,3 +1,4 @@
+using SS3D.Systems.Settings;
 using System.Collections.Generic;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -161,6 +162,7 @@ namespace SS3D.UI.StoragePanel
             {
                 _document.panelSettings = panelSettings;
             }
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(_document.panelSettings);
 
             // Above the persistent Main HUD (-10) so panels read as on top of it, same relative
             // ordering rule as the radial/armed overlays.

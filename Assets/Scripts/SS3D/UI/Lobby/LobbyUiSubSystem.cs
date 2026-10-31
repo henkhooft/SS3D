@@ -102,6 +102,7 @@ namespace SS3D.UI.Lobby
         {
             if (!_attached) TryAttachShell();
             if (_shellView != null) RefreshSession();
+            RefreshDisplayConfirmation();
             if (_portraitDirty) TryCapturePortrait();
         }
 
@@ -120,6 +121,8 @@ namespace SS3D.UI.Lobby
             }
 
             _attached = true;
+            // The shell's panel settings are shared with the HUD, storage and radial overlays: UI Scale reaches all of them.
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(uiShell.Document.panelSettings);
             InputInterface.RegisterDocument(uiShell.Document);
 
             _profileStore = new CharacterProfileStore(CharacterProfileStore.DefaultPath);
@@ -181,11 +184,38 @@ namespace SS3D.UI.Lobby
             _shellView.MuteAllChanged += settings.SetMuteAll;
             _shellView.MuteWhenUnfocusedChanged += settings.SetMuteWhenUnfocused;
             _shellView.AudioResetRequested += settings.ResetAudio;
+            _shellView.ResolutionChanged += settings.SetResolution;
+            _shellView.WindowModeChanged += settings.SetWindowMode;
+            _shellView.VSyncChanged += settings.SetVSync;
+            _shellView.FrameCapChanged += settings.SetFrameCap;
+            _shellView.QualityChanged += settings.SetQuality;
+            _shellView.RenderScaleChanged += settings.SetRenderScale;
+            _shellView.UpscalerChanged += settings.SetUpscaler;
+            _shellView.AntiAliasingChanged += settings.SetAntiAliasing;
+            _shellView.UiScaleChanged += settings.SetUiScale;
+            _shellView.DisplayResetRequested += settings.ResetDisplay;
+            _shellView.DisplayChangeKept += settings.ConfirmDisplayChange;
+            _shellView.DisplayChangeReverted += settings.RevertDisplayChange;
             settings.Changed += HandlePlayerSettingsChanged;
             HandlePlayerSettingsChanged();
         }
 
-        private void HandlePlayerSettingsChanged() => _shellView?.SetAudioSettings(_playerSettings.Settings.Audio);
+        private void HandlePlayerSettingsChanged()
+        {
+            if (_shellView == null) return;
+            _shellView.SetAudioSettings(_playerSettings.Settings.Audio);
+            _shellView.SetDisplaySettings(_playerSettings.Settings.Display, _playerSettings.ResolutionChoices,
+                _playerSettings.CurrentResolution, _playerSettings.StpSupported);
+            RefreshDisplayConfirmation();
+        }
+
+        /// <summary>Countdown text for the "Keep these settings?" prompt; cheap enough to run every frame.</summary>
+        private void RefreshDisplayConfirmation()
+        {
+            if (_shellView == null || _playerSettings == null) return;
+            _shellView.SetDisplayConfirmation(_playerSettings.DisplayConfirmationPending,
+                Mathf.CeilToInt(_playerSettings.DisplayConfirmationSecondsLeft));
+        }
 
         private float _nextSessionRefresh;
         private bool _inWorld;

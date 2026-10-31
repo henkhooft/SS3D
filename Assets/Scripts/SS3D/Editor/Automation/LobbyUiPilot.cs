@@ -329,14 +329,16 @@ namespace SS3D.Editor.Automation
                 case 7: Submit(shell, "SETTINGS"); break;
                 case 8:
                     Require(shell.Query(className: "lobby-shell__settings-tab").ToList().Count == 3, "Settings has three underlined subtabs");
-                    Require(shell.Q<DropdownField>("settings-resolution") != null, "Resolution is a dropdown");
-                    shell.Q<DropdownField>("settings-resolution").value = "1600x900";
-                    shell.Q<Toggle>("settings-fullscreen").value = false;
-                    shell.Q<Slider>("settings-uiScale").value = 0.75f;
-                    shell.Q<Slider>("settings-brightness").value = 0.7f;
+                    foreach (string dropdown in new[] { "resolution", "windowMode", "frameCap", "quality", "renderScale", "upscaler", "antiAliasing" })
+                        Require(shell.Q<DropdownField>("settings-" + dropdown) != null, $"Display has a {dropdown} dropdown");
+                    Require(shell.Q<Slider>("settings-brightness") == null, "Brightness is gone (darkness keeps its gameplay meaning)");
+                    shell.Q<DropdownField>("settings-quality").index = 0;
                     Capture("00-settings-display");
                     break;
-                case 9: Submit(shell, "SOUND"); break;
+                case 9:
+                    Require(QualitySettings.GetQualityLevel() == 0, "Quality dropdown switches the quality level");
+                    Submit(shell, "AUDIO");
+                    break;
                 case 10:
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().Count == 5,
                         "Sound has Master, Music, SFX, Ambience and Personal sliders");
@@ -366,7 +368,7 @@ namespace SS3D.Editor.Automation
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().All(s => s.enabledInHierarchy), "Unmute restores volume controls");
                     Capture("00-settings-sound");
                     break;
-                case 14: Submit(shell, "KEYBOARD"); break;
+                case 14: Submit(shell, "CONTROLS"); break;
                 case 15:
                     Require(shell.Query<Button>(className: "lobby-shell__binding-button").ToList().Count == 8, "Keyboard has eight binding buttons");
                     Capture("00-settings-keyboard");
@@ -384,10 +386,7 @@ namespace SS3D.Editor.Automation
                     Submit(shell, "DISPLAY");
                     break;
                 case 18:
-                    Require(shell.Q<DropdownField>("settings-resolution").value == "1600x900"
-                        && !shell.Q<Toggle>("settings-fullscreen").value, "Display choices persist across subtabs");
-                    Require(Mathf.Approximately(shell.Q<Slider>("settings-uiScale").value, 0.75f)
-                        && Mathf.Approximately(shell.Q<Slider>("settings-brightness").value, 0.7f), "Display sliders persist across subtabs");
+                    Require(shell.Q<DropdownField>("settings-quality").value == "Low", "Display choices persist across subtabs");
                     Submit(shell, "SERVER INFO");
                     break;
                 default: return true;

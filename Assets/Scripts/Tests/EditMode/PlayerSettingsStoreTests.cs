@@ -114,5 +114,67 @@ namespace EditorTests
             Assert.That(loaded.Master, Is.EqualTo(1f));
             Assert.That(loaded.Music, Is.EqualTo(0f));
         }
+
+        [Test]
+        public void SavedDisplaySettingsSurviveARestart()
+        {
+            PlayerSettings settings = new();
+            settings.Display.ResolutionWidth = 1600;
+            settings.Display.ResolutionHeight = 900;
+            settings.Display.WindowMode = PlayerWindowMode.Windowed;
+            settings.Display.VSync = false;
+            settings.Display.FrameCap = 144;
+            settings.Display.Quality = PlayerQualityTier.Low;
+            settings.Display.RenderScale = 0.67f;
+            settings.Display.Upscaler = PlayerUpscaler.Fsr1;
+            settings.Display.AntiAliasing = PlayerAntiAliasing.Taa;
+            settings.Display.UiScale = 1.25f;
+            new PlayerSettingsStore(SettingsPath).Save(settings);
+
+            PlayerDisplaySettings loaded = new PlayerSettingsStore(SettingsPath).Load().Display;
+            Assert.That((loaded.ResolutionWidth, loaded.ResolutionHeight), Is.EqualTo((1600, 900)));
+            Assert.That(loaded.WindowMode, Is.EqualTo(PlayerWindowMode.Windowed));
+            Assert.That(loaded.VSync, Is.False);
+            Assert.That(loaded.FrameCap, Is.EqualTo(144));
+            Assert.That(loaded.Quality, Is.EqualTo(PlayerQualityTier.Low));
+            Assert.That(loaded.RenderScale, Is.EqualTo(0.67f));
+            Assert.That(loaded.Upscaler, Is.EqualTo(PlayerUpscaler.Fsr1));
+            Assert.That(loaded.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Taa));
+            Assert.That(loaded.UiScale, Is.EqualTo(1.25f));
+        }
+
+        [Test]
+        public void FirstLaunchDisplayDefaultsFollowDecision14()
+        {
+            PlayerDisplaySettings display = new PlayerSettingsStore(SettingsPath).Load().Display;
+
+            Assert.That((display.ResolutionWidth, display.ResolutionHeight), Is.EqualTo((0, 0)), "0x0 means native");
+            Assert.That(display.WindowMode, Is.EqualTo(PlayerWindowMode.Borderless));
+            Assert.That(display.VSync, Is.True);
+            Assert.That(display.FrameCap, Is.EqualTo(0));
+            Assert.That(display.Quality, Is.EqualTo(PlayerQualityTier.High));
+            Assert.That(display.RenderScale, Is.EqualTo(1f));
+            Assert.That(display.Upscaler, Is.EqualTo(PlayerUpscaler.Stp));
+            Assert.That(display.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Smaa));
+            Assert.That(display.UiScale, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void HandEditedDisplayValuesSnapToTheOfferedChoices()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(SettingsPath, "{\"Version\":1,\"Display\":{\"FrameCap\":100,\"RenderScale\":0.7," +
+                "\"UiScale\":1.93,\"Quality\":9,\"WindowMode\":-1,\"Upscaler\":7,\"AntiAliasing\":12}}");
+
+            PlayerDisplaySettings display = new PlayerSettingsStore(SettingsPath).Load().Display;
+
+            Assert.That(display.FrameCap, Is.EqualTo(120), "nearest of Off/30/60/120/144/240");
+            Assert.That(display.RenderScale, Is.EqualTo(0.67f), "nearest of 100/77/67/50 %");
+            Assert.That(display.UiScale, Is.EqualTo(1.5f), "75-150 %");
+            Assert.That(display.Quality, Is.EqualTo(PlayerQualityTier.High));
+            Assert.That(display.WindowMode, Is.EqualTo(PlayerWindowMode.Borderless));
+            Assert.That(display.Upscaler, Is.EqualTo(PlayerUpscaler.Stp));
+            Assert.That(display.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Smaa));
+        }
     }
 }

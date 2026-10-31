@@ -16,12 +16,15 @@ namespace SS3D.Systems.Settings
         /// <summary>File format version (Decision 2). Bump with a migration when a field changes meaning.</summary>
         public int Version = CurrentVersion;
         public PlayerAudioSettings Audio = new();
+        public PlayerDisplaySettings Display = new();
 
         /// <summary>Pulls hand-edited or stale values back into range after a load.</summary>
         public void Sanitize()
         {
             Audio ??= new PlayerAudioSettings();
             Audio.Sanitize();
+            Display ??= new PlayerDisplaySettings();
+            Display.Sanitize();
         }
     }
 
@@ -82,5 +85,77 @@ namespace SS3D.Systems.Settings
         private static float Volume(float value) => float.IsNaN(value) ? DefaultVolume : Mathf.Clamp01(value);
 
         private const float DefaultVolume = 0.8f;
+    }
+
+    public enum PlayerWindowMode { Fullscreen, Borderless, Windowed }
+
+    public enum PlayerQualityTier { Low, Medium, High, Ultra }
+
+    public enum PlayerUpscaler { Stp, Fsr1, Bilinear }
+
+    public enum PlayerAntiAliasing { Off, Fxaa, Smaa, Taa }
+
+    /// <summary>Display tab values (Decisions 5–8). 0×0 resolution means the display's native size.</summary>
+    [Serializable]
+    public sealed class PlayerDisplaySettings
+    {
+        /// <summary>Frame cap choices; 0 is Off.</summary>
+        public static readonly int[] FrameCaps = { 0, 30, 60, 120, 144, 240 };
+
+        /// <summary>Render scale choices, 100 / 77 / 67 / 50 % (Decision 7).</summary>
+        public static readonly float[] RenderScales = { 1f, 0.77f, 0.67f, 0.5f };
+
+        public const float MinUiScale = 0.75f;
+        public const float MaxUiScale = 1.5f;
+        public const float UiScaleStep = 0.05f;
+
+        public int ResolutionWidth;
+        public int ResolutionHeight;
+        public PlayerWindowMode WindowMode = PlayerWindowMode.Borderless;
+        public bool VSync = true;
+        public int FrameCap;
+        public PlayerQualityTier Quality = PlayerQualityTier.High;
+        public float RenderScale = 1f;
+        public PlayerUpscaler Upscaler = PlayerUpscaler.Stp;
+        public PlayerAntiAliasing AntiAliasing = PlayerAntiAliasing.Smaa;
+        public float UiScale = 1f;
+
+        public static float SnapUiScale(float value)
+        {
+            if (float.IsNaN(value)) return 1f;
+            float snapped = Mathf.Round(Mathf.Clamp(value, MinUiScale, MaxUiScale) / UiScaleStep) * UiScaleStep;
+            return (float)Math.Round(snapped, 2);
+        }
+
+        internal void Sanitize()
+        {
+            if (ResolutionWidth <= 0 || ResolutionHeight <= 0) ResolutionWidth = ResolutionHeight = 0;
+            WindowMode = Defined(WindowMode, PlayerWindowMode.Borderless);
+            Quality = Defined(Quality, PlayerQualityTier.High);
+            Upscaler = Defined(Upscaler, PlayerUpscaler.Stp);
+            AntiAliasing = Defined(AntiAliasing, PlayerAntiAliasing.Smaa);
+            FrameCap = Nearest(FrameCaps, FrameCap);
+            RenderScale = float.IsNaN(RenderScale) ? 1f : Nearest(RenderScales, RenderScale);
+            UiScale = SnapUiScale(UiScale);
+        }
+
+        private static T Defined<T>(T value, T fallback) where T : struct, Enum =>
+            Enum.IsDefined(typeof(T), value) ? value : fallback;
+
+        private static int Nearest(int[] choices, int value)
+        {
+            int best = choices[0];
+            foreach (int choice in choices)
+                if (Math.Abs(choice - value) < Math.Abs(best - value)) best = choice;
+            return best;
+        }
+
+        private static float Nearest(float[] choices, float value)
+        {
+            float best = choices[0];
+            foreach (float choice in choices)
+                if (Math.Abs(choice - value) < Math.Abs(best - value)) best = choice;
+            return best;
+        }
     }
 }
