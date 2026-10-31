@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Interactions/
 > Entry points: InteractionController, InteractionDiscovery, InteractionDispatch, RadialInteractionSubSystem, ArmedInteractionSubSystem
 > Status: shipped
-> Verified: f58c3b9fa — 2026-07-28 (outline LateUpdate GC)
+> Verified: 73a838a3b — 2026-11-01
 
 # Interactions (runtime)
 
@@ -82,6 +82,8 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
   [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
 - **Radial shows icons but petal clicks no-op after first close:** `Disappear` unsubscribes `InteractionSelected`/`CloseRequested` (avoids double-fire during hide). The UiShell-backed menu view is reused, so `ShowInteractionsMenu` must call `BindMenuViewHandlers` every open — otherwise the second hold-RMB session looks fine (icons populate) but petals never route. Not Addressables-related.
+- **Hover outline and examine tooltip flicker at some angles:** the outline hull used to draw at `Geometry-1` with `ZWrite On`. The selection pick pass reuses scene depth after opaques, so where the expanded hull poked in front of the object's own surface the object failed its own pick, lost hover, hid the outline and regained hover next frame. `InteractionOutline.shader` now draws at `Geometry+1` with `ZWrite Off`; keep it from writing depth. Fixed 2026-11-01.
+- **New interaction icons:** drop the PNG in `Assets/Art/Graphics/UI/Interactions/InteractionIcons/`, run **SS3D → Interactions → Rebuild Interaction Icon Sprites** (or `InteractionIconSpriteBuilder.RebuildOne` + register) to get the sprite asset, Addressables entry and `InteractionIcons` constant. The radial background is 55 % opaque (`RadialInteractionMenu.uss`).
 
 ## Depends on / Used by
 

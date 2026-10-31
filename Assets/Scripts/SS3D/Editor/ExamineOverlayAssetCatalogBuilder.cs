@@ -44,9 +44,8 @@ namespace SS3D.Editor
                 Ears = LoadRequiredSprite("Ears", missing),
                 Suit = LoadRequiredSprite("Suit", missing),
                 Shirt = LoadRequiredSprite("Shirt", missing),
-                // No dedicated glove silhouette ships today — Main HUD's equipment doll reuses the
-                // hand icon for the same reason (EquipmentGrid.CreateSlot(Slot.GloveLeft, ..., icons.HandLeft)).
-                Gloves = LoadRequiredSprite("HandLeft", missing),
+                // Same pair-of-hands silhouette as the Main HUD equipment doll's Gloves slot.
+                Gloves = LoadRequiredSprite("Hands", missing),
                 Back = LoadRequiredSprite("BeepBack", missing),
                 Feet = LoadRequiredSprite("Feet", missing),
                 Belt = LoadRequiredSprite("Waist", missing),

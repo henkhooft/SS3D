@@ -16,6 +16,7 @@ namespace SS3D.UI.MainHud
         public Sprite Ears;
         public Sprite HandLeft;
         public Sprite HandRight;
+        public Sprite Gloves;
         public Sprite Shirt;
         public Sprite Feet;
         public Sprite Belt;

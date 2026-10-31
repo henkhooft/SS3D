@@ -104,7 +104,6 @@ namespace SS3D.UI.Lobby
         public static readonly LoadoutDef[] Loadouts =
         {
             new("marcus-voss", "Marcus Voss", "PnSecurity"),
-            new("r-oyelaran", "R. Oyelaran", "PnJanitor"),
         };
 
         public static IReadOnlyList<StyleOptionDef> StyleOptionsFor(string tabKey) => tabKey switch

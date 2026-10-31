@@ -91,7 +91,7 @@
     right: 0;
     bottom: 0;
     border-radius: 120px;
-    background-color: var(--ss3d-surface-panel-raised);
+    background-color: rgba(35, 38, 43, 0.55);
     border-width: 2px;
     border-color: var(--ss3d-border-default);
 }
