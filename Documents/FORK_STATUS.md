@@ -8,7 +8,7 @@ current review capacity supports.
 This document is the plain-language divergence log. It is updated periodically — not per-commit.
 For doc authoring conventions see [SKILL.md](SKILL.md).
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-10-31
 
 ---
 
@@ -21,8 +21,8 @@ For doc authoring conventions see [SKILL.md](SKILL.md).
 | Render pipeline | Built-in | **URP 17** |
 | Release channel | Tagged releases on GitHub | **Manual + nightly prereleases** via `develop-release.yml` (Windows zip + bats by default; nightly Windows+Linux → `develop-nightly`; Linux / EditMode / smoke opt-in on dispatch) — day-to-day still build-from-source |
 | Documentation | GitBook ([ss3d.gitbook.io](https://ss3d.gitbook.io/dev-guide/)) | `Documents/design/` + `Documents/architecture/` + system maps + [milestones](milestones/INDEX.md) |
-| Commits ahead of upstream | — | **~936** (0 behind as of 2026-07-28 refetch) |
-| Files changed vs upstream | — | ~15.7k files, +1.62M / −164k lines |
+| Commits ahead of upstream | — | **~1056** (1 behind as of 2026-10-31: upstream #1491 "Port Vision System") |
+| Files changed vs upstream | — | ~16.1k files, +1.65M / −322k lines |
 
 ### Shipped gameplay
 
@@ -54,6 +54,7 @@ Coverage means how much of the design intent is playable today, not “code exis
 | [Tilemap / construction](#tilemap-and-adjacency-engine) | shipped | Adjacency engine, construction service, AOI tile sync, layer visibility |
 | [Map Editor](#map-editor-replacement) | partial | Full-screen UITK Map Editor + spawn-point authoring/persistence; Builder / instant place / round-config pool / runtime spawn pick deferred |
 | [Rounds](#game-lifecycle-hardening) | shipped | Single-flight round state machine (join/start/end races hardened) |
+| [Lobby](#lobby-ui-toolkit-redesign) | partial | UITK lobby shell + Character Creator (Human; saved slots), job/antag prefs with one-pass resolution, networked OOC/LOOC/Admin chat, Server Settings + live Server Info; legacy uGUI lobby purged |
 | [Session / world lifecycle](#session-world-lifecycle) | shipped | Session FSM + world readiness graph + `NetworkSystemsHub`; Boot disconnect storm fixed; host loopback / client spawn polish |
 
 Details and deferred work for each row live under [Shipped on `develop`](#shipped-on-develop).
@@ -71,23 +72,10 @@ Details and deferred work for each row live under [Shipped on `develop`](#shippe
 
 ### Documentation structure
 
-Independent of upstream's GitBook:
-
-| Path | Purpose |
-|---|---|
-| [SKILL.md](SKILL.md) | Conventions for all documentation layers |
-| [architecture/INDEX.md](architecture/INDEX.md) | Navigation hub — find code by system; project-wide coverage table |
-| [architecture/systems/](architecture/systems/) | Per-domain system maps (entry points, key files) |
-| [milestones/](milestones/) | Playable gates + dependency trees (current focus: **test-server** operational track + MVP1 Nuke Ops — M0/M1p/M3–M5/M7–M9) |
-| [design/](design/) | Gameplay design specs — **what** and **why** (owner-maintained) |
-| [architecture/](architecture/) | Dated implementation efforts — **how** and **in what order** |
-| [plans/](plans/) | Temporary implementation plans (updated when work ships) |
-| [AGENTS.md](../AGENTS.md) | AI agent instructions (docs-first navigation) |
-| [CLAUDE.md](../CLAUDE.md) | Condensed repo/navigation guidance for Claude Code |
-| [FORK_STATUS.md](FORK_STATUS.md) | This divergence log |
-
-Upstream's dev guide may still help with generic Unity and FishNet concepts, but project direction,
-milestones, and gameplay specs for this fork live in `Documents/`.
+Independent of upstream's GitBook. The layers (design specs, architecture efforts, system maps,
+plans, milestones, and the `Documents/archive/` for shipped efforts and completed plans) and their
+rules live in [SKILL.md](SKILL.md); agents start at [AGENTS.md](../AGENTS.md). Upstream's dev guide
+still helps with generic Unity and FishNet concepts.
 
 ### GitHub automation
 
@@ -225,6 +213,21 @@ PR #28 adds ranked Profiler markdown export + the analyze-unity-perf skill, and 
 interaction-outline discovery GC (batched raycasts, no per-frame `Color[]` churn; `ProfilerMarker`s
 on outline/discover and atmos tick). Architecture:
 [2026-07_unity-perf-ai-tooling.md](architecture/2026-07_unity-perf-ai-tooling.md).
+
+### Testing and agent validation loop
+
+Upstream runs EditMode tests only. This fork adds (PRs #73–#84):
+
+- **Multiplayer smoke harness** (`Testing/multiplayer/`): real dedicated server + client processes
+  driven by a script DSL; runs nightly on a self-hosted runner and on labelled PRs
+- **PlayMode suite** repaired and extended, with server-side helpers and passing known-issue repros
+  promoted into the regular suite
+- **One-command validation** (`Testing/ui/validate.sh`): compile check, EditMode, rendered UI pilots
+  through Unity MCP with real OS input, and with `--full` also PlayMode, a server build and smoke.
+  See [Testing/ui/README.md](../Testing/ui/README.md)
+
+Architecture: [2026-07_multiplayer-test-harness.md](architecture/2026-07_multiplayer-test-harness.md),
+[2026-07_multiplayer-testing-self-hosted-ci.md](architecture/2026-07_multiplayer-testing-self-hosted-ci.md).
 
 ---
 
@@ -1001,6 +1004,26 @@ System map: [networking-session.md](architecture/systems/networking-session.md).
 Main HUD SyncList icon refresh, airlock ClosestPoint, hand-grip facing, clothing re-equip /
 rejoin lobby fixes.
 
+### Lobby (UI Toolkit redesign)
+
+**Paths:** `SS3D.UI.Lobby`, `SS3D.Systems.Rounds`
+
+Replaces upstream's uGUI lobby and character customizer with a UI Toolkit shell on the shared
+`UiShellSubSystem` Modal layer (PR #84, Phases A–F):
+
+- **Character Creator**: guided steps with a live preview booth; name, body, hair/beard/brow colours,
+  skin and eyes for Human (other species disabled); local character slots persist across restarts
+  and are applied to the spawned body
+- **Jobs and antagonists**: per-job preferences resolved in one pass at round start, plus latejoin;
+  antagonist opt-ins are stored but no gamemode consumes them yet
+- **Lobby chat**: networked OOC / LOOC / Admin channels with server-side identity and rate limits
+- **Server Settings / Server Info**: admin map/mode selection and round controls; live server name,
+  MOTD, build, uptime and git change log
+- **Legacy purge**: the uGUI lobby, old customizer canvas and `GameScreens` system are deleted
+
+Architecture: [2026-08_lobby-uitk-redesign.md](architecture/2026-08_lobby-uitk-redesign.md).
+System map: [rounds-lobby.md](architecture/systems/rounds-lobby.md).
+
 ### Agent-first composition, UiShell, and UI path catalogs
 
 Policy + first catalog wedges so agents can ship UI without scene/prefab YAML edits:
@@ -1041,157 +1064,12 @@ recorded on the atmospherics / tile / substances / vision system maps.
 
 ## Design specs (future direction)
 
-These files in [design/](design/) define **gameplay direction** (`Status: active` / `draft`).
-Many systems they describe are still unbuilt on `develop`; where a foundation has shipped, the
-paragraph after the table notes what landed and what remains. Implementation should follow the
-specs or document explicit deviations.
+[design/](design/) holds the owner-authored gameplay direction. Which specs are built, partly built
+or still unbuilt is tracked in one place: the coverage table in
+[architecture/INDEX.md](architecture/INDEX.md). What to build next is in
+[milestones/INDEX.md](milestones/INDEX.md).
 
-| Doc | Summary |
-|---|---|
-| [health.md](design/health.md) | Two-tier damage: per-limb physical + organ-regulated systemic (toxin/oxy/blood volume) |
-| [combat.md](design/combat.md) | Deterministic melee + weapon-intrinsic ranged accuracy; windup/recovery, blocking |
-| [stamina.md](design/stamina.md) | Fast stamina pool as front-end of oxy-debt; pushing past empty draws real debt |
-| [armor.md](design/armor.md) | Per-zone flat absorption; binary environmental seals hooking into organ model |
-| [area.md](design/area.md) | Per-tile area partition (flood-fill + manual override) for power, access, cameras, comms |
-| [comms.md](design/comms.md) | Diegetic speech subtitles with distance/occlusion; visual radio channel selector |
-| [main-hud.md](design/main-hud.md) | Minimal chrome HUD — 3D body vitals, cut targeting doll, intent chording |
-| [hacking-interface.md](design/hacking-interface.md) | Field diagnostic unit (FDU) — diegetic 7-panel tool; discovery by physical access |
-| [objectives.md](design/objectives.md) | Steal/assassinate/escape resolved against real system state (possession, death, Area occupancy) — no hidden roll |
-| [round-end.md](design/round-end.md) | Reveal, summary, and transition; evac shuttle call/countdown/point-of-no-return |
-| [creative-mode.md](design/creative-mode.md) | In-game map editor: object placement, utility routing, bulk tools, undo, spawn-point authoring |
-| [persistence-save.md](design/persistence-save.md) | Four-layer save model — station templates, server meta, player meta, automatic round-snapshot recovery |
-| [admin-tools.md](design/admin-tools.md) | Permission tiers, ahelp, stealth observation, world intervention, moderation — every action logged |
-| [cryogenics.md](design/cryogenics.md) | Physical cryo pod as a real pause mechanic for logged-off characters, distinct from death/respawn |
-| [disposal.md](design/disposal.md) | Physical BFS-routed pipe network replacing instant off-map transit; Cargo export hook |
-| [inventory-storage.md](design/inventory-storage.md) | One Container primitive for backpacks/crates/lockers — weight, size-class fit, stacking, locks |
-| [networking.md](design/networking.md) | Connection lifecycle — disconnect, reconnect, capacity (PR #21) |
-| [audio.md](design/audio.md) | Diegetic SFX, per-area ambience, personal cues (PR #21) |
-| [player-accounts.md](design/player-accounts.md) | Delegated identity model closing deferred account gaps (PR #21) |
-| [antagonist-content.md](design/antagonist-content.md) | Traitor uplink, Malf-AI, Nuclear Operatives MVP team gamemode (PR #21) |
-
-Machine interfaces, the radial interaction menu, screen-space overlays, and the Main HUD overlay
-partially implement [main-hud.md](design/main-hud.md) (tiered interactions, intent, diegetic machine
-control, Volume-based screen feedback incl. turf temp/fire, gear/hands strip + melee/ranged reticle +
-health/atmos alert stack — drag-combine Tier 3 and vitals cluster still pending). **Area
-foundation** partially implements [area.md](design/area.md) (APC-seeded flood-fill, area-scoped
-power/lighting, air-alarm area device discovery — live mutation recompute and editor merge/split
-still pending). **ID / access foundation** partially implements [id-access.md](design/id-access.md)
-(crew records, door and machine UI gates, ID console — auth logs and broader design coverage still
-pending). **Health rewrite** partially implements [health.md](design/health.md) (Phases 1–5b + alert
-stack + body-presentation + env-feel + examine Tier 0/1; Phase 6 vitals UITK remainder deferred).
-**Combat** partially implements [combat.md](design/combat.md) (Phases 0–1 melee, 3 ranged, 4 fire
-stamina, 5 armor + M1p feel; Phases 2/6–7 and seal pending — MVP1 focus). **Structural destruction**
-partially implements [explosives-destruction.md](design/explosives-destruction.md) (integrity + blast
-Phases 1–4). **Player body animation** implements stance/locomotion plus injured limp polish;
-collapsed/dead/critical presentation is owned by Ragdoll. **Vision FOV** has no dedicated design doc
-— it is a rendering feature under [rendering-lighting.md](design/rendering-lighting.md) territory.
-**URP lighting Phase 1** partially implements that same lighting look (plus client fixture SyncVar);
-plate polish remains open. **Persistence foundation** partially implements
-[persistence-save.md](design/persistence-save.md) (station templates, server meta, and spawn-point
-chunks shipped; player meta and automatic round-snapshot crash-recovery still pending). **Comms**
-partially implements [comms.md](design/comms.md) (local speech + non-diegetic feed + Tab/slash compose;
-headset gating, PDA log, design channel radial still open). **Audio** partially implements
-[audio.md](design/audio.md) (Phases 1–4; music/volume categories pending). **Disposal** partially
-implements [disposal.md](design/disposal.md) (BFS pipe routing and transit shipped; pipe placement now
-has a real path via [creative-mode.md](design/creative-mode.md) §4, but the Cargo export hook and
-Phase 2 player transit remain). **Inventory and storage redesign** partially implements
-[inventory-storage.md](design/inventory-storage.md) (Container primitive, on-demand panel, Main HUD
-wiring, clothing folded presentation, stamina bridge shipped; Play Mode verification pending).
-**Examine** partially implements [examine.md](design/examine.md) (UITK hover/Shift + character
-paperdoll Search; obscured-slot / restrained loot open). **Map Editor** partially implements
-[creative-mode.md](design/creative-mode.md) (admin full-screen authoring + spawn-point authoring
-shipped; Builder role, instant place, round-config pool, and runtime spawn pick deferred).
-**Atmospherics** partially implements [atmospherics.md](design/atmospherics.md) (ECS turf + equal-P
-diffusion + pipes + Phase 1 client VFX sync; Phase 2 AOI/late-join and liquids/valves still open).
-**Electricity** partially implements [electricity.md](design/electricity.md) (kWh + solar panels/
-tracker; reactor deferred). **Networking** session/reconnect partially implements
-[networking.md](design/networking.md) (session FSM, hub bootstrap, disconnect storm fix, reconnect
-harness, nightly/TomNAS CI — capacity/accounts still design-only). **Crafting** runtime was purged
-(TECH_DEBT 1.6); redesign still design-only / [crafting.md](design/crafting.md). **Substances**
-clean-slate foundation is planned
-([2026-07_substances-foundation.md](archive/architecture/2026-07_substances-foundation.md)). Playable
-sequencing for Nuke Ops / station round / test-server lives in [milestones/](milestones/). The rest of
-these specs remain design-only.
-
----
-
-## In progress on feature branches
-
-Work that has **not** merged to `develop` yet. Branches drift from `develop` quickly — rebase
-before assuming commit counts.
-
-| Branch | Ahead / behind `develop` | System | Notes |
-|---|---|---|---|
-| `claude/vitals-scan-result-alt-ui-ez50ba` | 2 / 505 | Health / Main HUD | Health scanner machine interface (alternate vitals-scan-result UI) |
-| `feature/character-creator` | 3 / 682 | Character customizer | Layout + URP preview polish |
-| `cursor/comms-non-diegetic-feed` | 0 / 96 | Comms | **Superseded** — shipped via PRs #59 / #60; safe to abandon |
-| `cursor/host-loopback-address` | 0 / 112 | Networking / builds | **Superseded** — shipped via PR #58; safe to abandon |
-
-Merged and retired from this table since the prior refresh: `cursor/structural-damage-plan` (PR #46),
-`claude/crafting-system-plan-uyc4of` (purge on `develop` via PR #39; rebuild branch gone),
-`feature/map-editor-replacement` / `feature/tilemap-overlay` / `feature/inventory-storage` /
-`feature/urp-lighting-phase1` (superseded earlier), plus PRs #45–#69 feature branches listed under
-Archived merges below. Earlier retirees through PR #44 remain as previously logged.
-
----
-
-## Archived branches merged into `develop`
-
-These `archive/*` branches were feature-complete enough to merge and are kept for history.
-Do not develop on them — use `develop` or a new feature branch.
-
-| Branch | Merged | Primary deliverable |
-|---|---|---|
-| `archive/develop-unity6` | 2026-07 | Unity 6 upgrade umbrella |
-| `archive/feature-urp-migration` | (via develop-unity6) | URP 17 pipeline |
-| `archive/feature-1387-selection-api` | (via develop-unity6) | Shader selection API |
-| `archive/feature-1394-detailed-examine` | (via develop-unity6) | Detailed examine UI |
-| `archive/feature-tilemap-system-refactor` | (via develop-unity6) | Adjacency engine + construction |
-| `archive/feature-game-lifecycle-hardening` | (via develop-unity6) | Round state machine |
-| `archive/fix-selection-camera-picking` | (via develop-unity6) | Cursor picking alignment |
-| `archive/machine-ui` | 2026-07 | Machine interface UI (APC/SMES) |
-| `archive/feature-diegetic-screen-ui-framework` | 2026-07-11 | Diegetic device shell, component library, vending machine UI |
-| `archive/feature-examine-localization` | 2026-07-09 | Unified Examine localization + `LocalizedTextService` |
-| `archive/feature-interaction-system-hardening` | 2026-07-09 | Interaction RPC hardening, pipeline, outlines, radial menu |
-| `archive/feature-radial-menu-redesign` | (via interaction-system-hardening) | UI Toolkit three-tier radial menu + armed overlay |
-| `archive/areas-foundation` | 2026-07-12 | APC-seeded areas, kWh power model, area lighting + consumer visuals |
-| `archive/feature-atmos-ecs` | 2026-07-12 | ECS turf gas sim, plasma combustion, GPU fog/fire visuals |
-| `archive/feature-interactions` | 2026-07-12 | Post-hardening interaction/radial polish + FastScriptReload removal |
-| `atmos-pipes` | 2026-07-14 | Gas pipe networks, port devices, atmos machine UIs, APC/SMES diegetic redesign |
-| `archive/tilemap-layer-visibility` | 2026-07-14 | Client-only tilemap build-menu layer visibility toggles |
-| `archive/feature-id-access-foundation` | 2026-07-14 | Crew records, credential resolver, door/machine ID access gates |
-| `archive/feature-persistence-framework` | 2026-07-14 | Contributor-based persistence: station templates + server meta |
-
-Recent `develop` merges that did **not** use an `archive/*` branch rename (GitHub PRs / direct
-feature merge): EditMode test race (#1), docs structure redesign (#2), Unity license CI cleanup (#3),
-vending polish (#4), selection/outline flicker (#5), screen-space effects (#6), Simple Toon palette
-emission (#7), input arbitration (#8 / #9), Main HUD UITK (#10), vision FOV hard mask (#11), health
-rewrite + early combat melee + screen-effect health wiring (#12), hot-path performance (#13), player
-body animation (`feature/animation-system`), headless dedicated server tooling, agent-first
-composition policy, machine UI / Main HUD path catalogs, diegetic UI backdrop blur (#14),
-multiplayer test harness (#15), inventory and storage redesign (#16), airlock/APC +
-selection/interaction bugfix batch (#17), design/implementation alignment audit (#18), disposal
-item-network (#19), comms local-speech and crowd-cap (#20), design-docs integration —
-antagonists/audio/networking/accounts (#21), animation polish / injured limp (#22), combat Phase
-0–1 clean-slate melee (#23), URP lighting Phase 1 (#24), TECH_DEBT tracker (#25), Map Editor
-replacement (#26), Main HUD alert icon stack (#27), Profiler export + Vision/interaction hot-path
-(#28), spawn-point authoring (#29), asset/file structure taxonomy (#30), Human.prefab Phase 0 +
-recipe tools (#31), UiShell scaffolding + radial/armed migration (#32), Addressables effort scope
-(#33), atmos client VFX sync Phase 1 (#34), player disconnect/reconnect + harness (#35), client
-light fixtures + MI host echo + disconnect storm (#36), session/world lifecycle docs (#37) + FSM /
-readiness / NetworkSystemsHub (#38), crafting runtime purge (#39), Phase 1 icon consolidation
-(#40), Addressables Phases 1–3 (#41), body presentation authority (#42), milestones layer (#43),
-interaction Discover contract (#44), test-server milestone + MVP1 round-end spine (#45), structural
-destruction Phases 1–4 (#46), ranged hitscan docs sync (#47), blast plenum-hop fix (#48),
-self-hosted multiplayer CI architecture (#49), combat armor Phase 5 + clothing world presentation
-(#50), combat stamina drains + winded feedback (#51), EditMode SyncVar / smoke SubstanceContainer
-fixes (#52), MVP1 Nuke Ops milestone retarget (#53), audio foundation Phases 1–4 (#54), nightly
-develop-release + TomNAS-prefer CI (#55), Windows release Config/Tilemaps packaging (#56), Editor
-menu A/B/C hygiene (#57), host loopback + player outline fix (#58), non-diegetic comms feed (#59 /
-#60), equal-pressure turf gas diffusion (#61), health env-feel / critical ragdoll (#62), ranged M1p
-feel (#63), item world rest orientation (#64), bright ObjectIcon inventory icons (#65), client spawn
-/ HUD / airlock / hand-grip fixes (#66), solar panels + tracker (#67), examine UITK character
-paperdoll (#68), InteractionController decomposition (#69).
+Feature branches not yet on `develop`: `git branch -r --no-merged origin/develop`.
 
 ---
 
@@ -1202,8 +1080,8 @@ paperdoll (#68), InteractionController decomposition (#69).
 - GitBook documentation and devblogs
 - Active milestone/project board automation
 - Discord CI notifications
-- Whatever lands on `upstream/develop` after our fork point (currently **0** commits behind as of
-  2026-07-28)
+- Whatever lands on `upstream/develop` after our fork point (currently **1** commit behind as of
+  2026-10-31)
 
 When pulling from upstream, expect conflicts in: ProjectSettings, materials/shaders, render
 pipeline config, tilemap/construction code, interaction/selection code, and any system listed
@@ -1223,12 +1101,12 @@ as incremental slices rather than one mega-PR.
 
 ## Maintaining this document
 
+This is a divergence log, not a changelog: describe how the fork differs from upstream, per system.
 Update when:
 
-- A feature branch merges to `develop` (move it from "In progress" to "Shipped")
-- A new design spec or architecture doc lands
-- Unity/toolchain versions change
-- GitHub automation or repo presentation changes
-- Significant divergence from upstream develops (re-fetch `upstream` and update commit counts)
+- A system ships on `develop` that upstream lacks (add or update its section and its row under
+  **Shipped gameplay**)
+- Unity, toolchain, CI or repo presentation changes
+- Upstream moves: `git fetch upstream`, then refresh the counts in **At a glance**
 
-After updating, bump the **Last updated** date at the top.
+Agents may update this file. Bump **Last updated** at the top.
