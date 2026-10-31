@@ -21,8 +21,6 @@ namespace SS3D.Systems.Electricity
             Emergency = 2,
         }
 
-        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-        static readonly int LuminId = Shader.PropertyToID("_Lumin");
 
         [SerializeField]
         private BasicPowerConsumer _consumer;
@@ -56,14 +54,8 @@ namespace SS3D.Systems.Electricity
         private float _poweredRange;
         private float _poweredFillRange;
         private Color _poweredLightColor = Color.white;
-        private float _poweredLumin;
-        private Color _poweredEmission;
         private readonly List<Renderer> _emissiveRenderersToUpdate = new();
-        private MaterialPropertyBlock _emissivePropertyBlock;
-        private bool _hasLumin;
-        private bool _hasEmission;
-        private float _lastEmissiveLumin = float.NaN;
-        private Color _lastEmissiveEmissionColor = Color.clear;
+        private EmissiveMaterialSlots _emissiveSlots;
         private AreaId _areaId;
         private bool _hasArea;
         private bool _areaLightingSubscribed;
@@ -137,10 +129,6 @@ namespace SS3D.Systems.Electricity
         private void CacheEmissiveMaterials()
         {
             _emissiveRenderersToUpdate.Clear();
-            _hasLumin = false;
-            _hasEmission = false;
-            _poweredLumin = 0f;
-            _poweredEmission = Color.black;
 
             if (_emissiveRenderers == null || _emissiveRenderers.Length == 0)
             {
@@ -166,51 +154,8 @@ namespace SS3D.Systems.Electricity
                 }
             }
 
-            if (_emissiveRenderersToUpdate.Count == 0)
-            {
-                return;
-            }
-
-            // Read baseline emissive values from shared materials to avoid creating new material instances.
-            foreach (Renderer renderer in _emissiveRenderersToUpdate)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                Material[] sharedMaterials = renderer.sharedMaterials;
-                for (int i = 0; i < sharedMaterials.Length; i++)
-                {
-                    Material sharedMaterial = sharedMaterials[i];
-                    if (sharedMaterial == null)
-                    {
-                        continue;
-                    }
-
-                    if (!_hasLumin && sharedMaterial.HasProperty(LuminId))
-                    {
-                        _poweredLumin = sharedMaterial.GetFloat(LuminId);
-                        _hasLumin = true;
-                    }
-
-                    if (!_hasEmission && sharedMaterial.HasProperty(EmissionColorId))
-                    {
-                        _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
-                        _hasEmission = true;
-                    }
-
-                    if (_hasLumin && _hasEmission)
-                    {
-                        break;
-                    }
-                }
-
-                if (_hasLumin && _hasEmission)
-                {
-                    break;
-                }
-            }
+            _emissiveSlots ??= new EmissiveMaterialSlots();
+            _emissiveSlots.Cache(_emissiveRenderersToUpdate);
         }
 
         private void SubscribeServerDrivers()
@@ -491,19 +436,19 @@ namespace SS3D.Systems.Electricity
 
         private void TurnLightOnNormal()
         {
-            Color emission = _poweredEmission;
+            Color emissionTint = Color.white;
             if (_applyDepartmentalLightTint
                 && _hasArea
                 && SubSystems.TryGet(out AreaSubSystem areaSubSystem)
                 && areaSubSystem.TryGetDepartmentalLightTint(_areaId, out Color tint))
             {
-                emission = MultiplyColor(_poweredEmission, tint);
+                emissionTint = tint;
             }
 
             ApplyLightState(_light, _poweredIntensity, _poweredRange, _poweredLightColor);
             ApplyLightState(_fillLight, _poweredFillIntensity, _poweredFillRange, _poweredLightColor);
 
-            SetEmissiveState(_poweredLumin, emission);
+            SetEmissiveState(1f, emissionTint);
         }
 
         private void TurnLightOnEmergency()
@@ -513,7 +458,7 @@ namespace SS3D.Systems.Electricity
             ApplyLightState(_light, emergencyIntensity, emergencyRange, _emergencyTint);
             ApplyLightState(_fillLight, 0f, _poweredFillRange, _emergencyTint, enabled: false);
 
-            SetEmissiveState(_poweredLumin * _emergencyIntensityMultiplier, MultiplyColor(_poweredEmission, _emergencyTint));
+            SetEmissiveState(_emergencyIntensityMultiplier, _emergencyTint);
         }
 
         private void TurnLightOff()
@@ -537,44 +482,13 @@ namespace SS3D.Systems.Electricity
             light.enabled = enabled && intensity > 0f;
         }
 
-        private static Color MultiplyColor(Color left, Color right)
+        /// <summary>Each emissive material's own powered values, lumin scaled and emission tinted.</summary>
+        private void SetEmissiveState(float luminScale, Color emissionTint)
         {
-            return new Color(left.r * right.r, left.g * right.g, left.b * right.b, left.a * right.a);
-        }
+            if (_emissiveSlots == null)
+                CacheEmissiveMaterials();
 
-        private void SetEmissiveState(float lumin, Color emissionColor)
-        {
-            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
-                && _lastEmissiveEmissionColor == emissionColor)
-            {
-                return;
-            }
-
-            _lastEmissiveLumin = lumin;
-            _lastEmissiveEmissionColor = emissionColor;
-
-            foreach (Renderer renderer in _emissiveRenderersToUpdate)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                _emissivePropertyBlock ??= new MaterialPropertyBlock();
-                renderer.GetPropertyBlock(_emissivePropertyBlock);
-
-                if (_hasLumin)
-                {
-                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
-                }
-
-                if (_hasEmission)
-                {
-                    _emissivePropertyBlock.SetColor(EmissionColorId, emissionColor);
-                }
-
-                renderer.SetPropertyBlock(_emissivePropertyBlock);
-            }
+            _emissiveSlots.Apply(luminScale, emissionTint);
         }
     }
 }
