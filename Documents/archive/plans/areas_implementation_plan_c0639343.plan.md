@@ -58,8 +58,8 @@ isProject: false
 
 **Related plans:**
 
-- [urp_lighting_look_plan_d42c32f5.plan.md](/home/rutger/.cursor/plans/urp_lighting_look_plan_d42c32f5.plan.md) — Phase 3 (Area lighting states) is blocked on this work; we ship the data contract it needs
-- [dynamic_tile_state_doors_3d083894.plan.md](/home/rutger/.cursor/plans/dynamic_tile_state_doors_3d083894.plan.md) — door open/closed for vision/occlusion; **not required for Area boundaries** (see Phase 0 note below)
+- [urp_lighting_look_plan_d42c32f5.plan.md](../../plans/urp_lighting_look_plan_d42c32f5.plan.md) — Phase 3 (Area lighting states) is blocked on this work; we ship the data contract it needs
+- `dynamic_tile_state_doors_3d083894.plan.md` (local Cursor plan, not in repo) — door open/closed for vision/occlusion; **not required for Area boundaries** (see Phase 0 note below)
 
 **Current codebase:** No Area subsystem exists. Tilemap stores placed objects per `TileLayer`, not scalar metadata ([tile.md](Documents/architecture/systems/tile.md)). Electricity uses cable-adjacency circuits with circuit-wide APC channel OR ([electricity.md](Documents/architecture/systems/electricity.md)); devices have no area/APC derivation.
 
@@ -370,7 +370,7 @@ Extend `Assets/Scripts/Tests/EditMode/ElectricityTests/`:
 
 ## Phase 4 — Lighting foundation (data only)
 
-Ship types the [URP lighting plan](/home/rutger/.cursor/plans/urp_lighting_look_plan_d42c32f5.plan.md) Phase 3 will consume:
+Ship types the [URP lighting plan](../../plans/urp_lighting_look_plan_d42c32f5.plan.md) Phase 3 will consume:
 
 
 | Artifact                                 | Purpose                                                                         |

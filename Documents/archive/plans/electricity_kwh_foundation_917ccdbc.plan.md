@@ -36,7 +36,7 @@ isProject: false
 
 ## Verdict: architecture is right, units and balance are wrong
 
-Your design doc (`[ss3d_electricity_design.md](/home/rutger/Downloads/ss3d_electricity_design.md)`) describes the correct **topology and cascade**:
+Your design doc (`ss3d_electricity_design.md` (local draft; now [electricity.md](../../design/electricity.md))) describes the correct **topology and cascade**:
 
 ```mermaid
 flowchart LR

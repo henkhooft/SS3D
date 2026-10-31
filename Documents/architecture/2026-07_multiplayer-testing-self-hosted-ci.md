@@ -2,7 +2,13 @@
 > Touches systems: networking-session, electricity, area, ingame-console, logging
 > Status: in-progress
 
-**Progress:** Phase 0 TomNAS-unity online; EditMode + develop-release prefer TomNAS with GitHub fallback; warm smoke proof pending; Phases 1–2 open.
+**Progress:** Phase 0 runner online; EditMode and develop-release prefer TomNAS with GitHub fallback. Todos (folded in from the archived [self_hosted_ci_smoke plan](../archive/plans/self_hosted_ci_smoke.plan.md)):
+
+- [x] Register the runner, Library stash, pull the Unity image
+- [x] `multiplayer-smoke-test.yml` on self-hosted + Library stash + nightly
+- [ ] `workflow_dispatch` smoke on TomNAS; confirm a warm second run
+- [ ] Phase 1: harness SIGKILL + DSL + server-kill scenarios
+- [ ] Phase 2: `lightdebug` / `lightclientstatus` + light-sync scenarios
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 

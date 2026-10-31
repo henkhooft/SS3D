@@ -27,7 +27,7 @@ isProject: false
 
 ## Context
 
-The mockup (`[RadialMenuMockup.dc.html](/home/rutger/Downloads/Radial%20menu%20interaction%20mockup.zip)`) defines a redesigned radial menu with three interaction tiers:
+The mockup (`RadialMenuMockup.dc.html` (local design mockup, not in repo)) defines a redesigned radial menu with three interaction tiers:
 
 
 | Tier       | Behavior                                                                               | Mockup example               |

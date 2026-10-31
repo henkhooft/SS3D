@@ -94,4 +94,4 @@ Use `--refresh-cache` to force a new fetch from GitHub.
 ## Related
 
 - [SS3D art guide](https://ss3d.gitbook.io/art-guide/) — contribution workflow
-- [AGENTS.md](../../AGENTS.md) — agent navigation
+- [AGENTS.md](../AGENTS.md) — agent navigation

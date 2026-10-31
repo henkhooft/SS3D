@@ -165,5 +165,5 @@ like upstream — not the diff.
 - [systems/ui-shell.md](systems/ui-shell.md), [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
 - [systems/networking-session.md](systems/networking-session.md)
 - [TECH_DEBT.md](TECH_DEBT.md) § 1.4, § 1.5, § 1.15
-- [2026-07_subsystem-bootstrap.md](2026-07_subsystem-bootstrap.md) — sibling effort for TECH_DEBT § 1.7 (self-initializing subsystems); unrelated root cause, do not conflate
+- [TECH_DEBT.md](TECH_DEBT.md) § 6 (resolved 1.7: self-initializing subsystems) — unrelated root cause, do not conflate
 - Upstream: [RE-SS3D/SS3D#1494](https://github.com/RE-SS3D/SS3D/issues/1494), [RE-SS3D/SS3D#1500](https://github.com/RE-SS3D/SS3D/pull/1500)

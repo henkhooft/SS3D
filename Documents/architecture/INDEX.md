@@ -137,7 +137,6 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [inventory_storage_redesign_9c3f21a4.plan](../plans/inventory_storage_redesign_9c3f21a4.plan.md) | in-progress |
 | [persistence_architecture_design_2fe61864.plan](../plans/persistence_architecture_design_2fe61864.plan.md) | in-progress |
 | [radial_menu_implementation_5a83bdf9.plan](../plans/radial_menu_implementation_5a83bdf9.plan.md) | in-progress |
-| [self_hosted_ci_smoke.plan](../plans/self_hosted_ci_smoke.plan.md) | in-progress |
 | [shuttle_system_design_a3dd2e04.plan](../plans/shuttle_system_design_a3dd2e04.plan.md) | planned |
 | [station_structural_damage.plan](../plans/station_structural_damage.plan.md) | in-progress |
 | [urp_lighting_look_plan_d42c32f5.plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md) | planned |

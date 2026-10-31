@@ -1,4 +1,4 @@
-> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/Systems/Lobby/, Assets/Scripts/SS3D/UI/Lobby/
+> Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
 > Verified: c07530a34 — 2026-10-31

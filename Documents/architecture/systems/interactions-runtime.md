@@ -97,4 +97,4 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - Plan: [radial_menu_implementation_5a83bdf9.plan.md](../../plans/radial_menu_implementation_5a83bdf9.plan.md)
 - Plan: [interaction_system_improvements_9e14ae22.plan.md](../../archive/plans/interaction_system_improvements_9e14ae22.plan.md)
 - Design (read-only): [Documents/design/main-hud.md](../../design/main-hud.md)
-- Tests: EditMode `InteractionPipelineTests` / `InteractionDispatchTests`; PlayMode `InteractionPlayModeTests` / `ClientGameActions.PlayerCanDropAndPickUpItem`
+- Tests: EditMode `InteractionPipelineTests` / `InteractionDispatchTests`; PlayMode template `PlaymodeTestRepository.PlayerCanDropAndPickUpItem` (no fixture runs it; `InteractionPlayModeTests` was deleted with the old harness)

@@ -1,5 +1,6 @@
 > Parent map: [health.md](health.md)
 > Status: partial
+> Verified: a675935e6 — 2026-10-31
 
 # Health anatomy map
 

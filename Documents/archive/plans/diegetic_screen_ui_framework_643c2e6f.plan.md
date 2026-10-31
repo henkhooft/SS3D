@@ -48,7 +48,7 @@ flowchart TB
 
 **Constraint:** Keep existing APC/SMES templates and binders untouched. New work lives alongside them.
 
-**Pilot:** Vending machine from [Vending Machine Unit.dc.html](file:///home/rutger/Downloads/Field%20diagnostic%20device%20prototype.zip) — tray flow, stubbed ID Reader.
+**Pilot:** Vending machine from Vending Machine Unit.dc.html (local mockup, not in repo; was file:///~/Downloads/Field%20diagnostic%20device%20prototype.zip) — tray flow, stubbed ID Reader.
 
 ---
 

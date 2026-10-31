@@ -1,28 +1,36 @@
 > Code paths: Assets/Scripts/SS3D/Logging/
 > Entry points: Log, Logs, LogManager, LogSettings
 > Status: shipped
+> Verified: a675935e6 — 2026-10-31
 
 # Logging
 
 ## Overview
 
-Serilog-based structured logging with mandatory sender + context enum, namespace-level filtering via `LogSettings` ScriptableObject, Unity console + file sinks, and client-ID enrichment for multiplayer.
+Serilog-based structured logging with a mandatory sender and a `Logs` category, namespace-level filtering via the `LogSettings` ScriptableObject, Unity console and file sinks, and client-ID enrichment for multiplayer.
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Logging/Log.cs` — primary logging API
-- `Assets/Scripts/SS3D/Logging/LogManager.cs` — Serilog pipeline setup
-- `Assets/Scripts/SS3D/Logging/LogSettings/LogSettings.cs` — namespace filter configuration
+- `Assets/Scripts/SS3D/Logging/Log.cs` — primary API: `Verbose` / `Debug` / `Information` / `Warning` / `Error` / `Fatal`
+- `Assets/Scripts/SS3D/Logging/Logs.cs` — category enum (`Generic`, `Important`, `ServerOnly`, `ClientOnly`, `Physics`, `UI`, `Testing`, …)
+- `Assets/Scripts/SS3D/Logging/LogManager.cs` — Serilog pipeline setup, file sink format choice
+- `Assets/Scripts/SS3D/Logging/LogSettings/LogSettings.cs` — namespace filters, `UseCompactJsonFormatter`
 - `Assets/Scripts/SS3D/Logging/ClientIdEnricher.cs` — multiplayer client ID enrichment
 
 ## Extension points
 
-- Use `Log.Info(sender, context, message)` with `LogType` context enum — avoid `Debug.Log`.
+- Call `Log.Information(this, "Template {Value}", Logs.Generic, value)`: sender first, a message template with named holes, an optional `Logs` category, then the values. Use this instead of `Debug.Log`.
+- New category: add a value to `Logs`. `LogType.cs` is a legacy duplicate of the first five values and has no users.
+
+## Pitfalls
+
+- **Harness waits forever on `LogServer.json`:** the multiplayer harness tails compact-JSON logs. Player builds and any `-testscript=` run always write JSON (`LogManager`). In Editor Play Mode the format follows `LogSettings.UseCompactJsonFormatter`, whose C# default is `true` because Unity re-serializes the asset on open and a `false` default silently reverted it.
 
 ## Depends on / Used by
 
-- **Used by:** All systems
+- **Used by:** all systems; `Testing/multiplayer/` reads the JSON logs.
 
 ## Related docs
 
 - [FORK_STATUS.md](../../FORK_STATUS.md) § Structured logging
+- [networking-session](networking-session.md) — multiplayer harness

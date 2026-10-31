@@ -25,7 +25,7 @@ isProject: false
 
 # Self-hosted CI + multiplayer harness (Phases 0–2)
 
-Implements [Documents/architecture/2026-07_multiplayer-testing-self-hosted-ci.md](../architecture/2026-07_multiplayer-testing-self-hosted-ci.md).
+Implements [Documents/architecture/2026-07_multiplayer-testing-self-hosted-ci.md](../../architecture/2026-07_multiplayer-testing-self-hosted-ci.md).
 
 ## Phase 0 status (2026-07-24)
 
