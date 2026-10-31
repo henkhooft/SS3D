@@ -48,7 +48,7 @@ One command validates UI/session work in the open editor, unattended:
 
 ```bash
 Testing/ui/validate.sh            # --quick (default): preflight, compile, EditMode, visual, lifecycle
-Testing/ui/validate.sh --full     # + PlayMode tests, client+server build if stale, remote client pilot
+Testing/ui/validate.sh --full     # + PlayMode, client+server build if stale, remote pilot, multiplayer smoke
 Testing/ui/validate.sh --steps compile,visual   # any subset, in order
 Testing/ui/compile.sh             # = --steps compile
 ```
@@ -67,6 +67,7 @@ failure, prints a summary table with report paths and the screenshots to review,
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
+| smoke | `--full` only. `Testing/multiplayer/run_smoketest.sh` for basic-round, late-join (2 clients), reconnect and atmos-client-sync, the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
 
 Each step has an expected duration and a timeout. Past the expected duration,
 `Testing/ui/watch-dialogs.sh` runs every 30 s; a modal dialog fails the step at once. On

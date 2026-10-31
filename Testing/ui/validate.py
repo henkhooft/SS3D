@@ -1,7 +1,7 @@
 """One-command validation for UI/session work. Use Testing/ui/validate.sh or compile.sh.
 
 Steps: preflight → compile → editmode → playmode → visual → lifecycle → build (client and dedicated
-server, each if stale) → remote.
+server, each if stale) → remote → smoke (Testing/multiplayer scenarios against both builds).
 --quick skips playmode and stops after lifecycle. PlayMode failures in KnownIssueReproduction fixtures are reported
 separately against Testing/ui/playmode-known-issues.txt (expected failures), so known bugs neither
 fail the loop nor hide new failures. Every step has an expected duration and a timeout: past the
@@ -14,6 +14,7 @@ import asyncio
 import json
 import os
 import re
+import signal
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -28,8 +29,10 @@ UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
 BUILD_RESULTS = {"client": UI / "client-build-result.json", "server": UI / "server-build-result.json"}
+# Same scenarios and client counts as .github/workflows/multiplayer-smoke-test.yml.
+SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1)]
 LOG_ERROR = re.compile(r"(: error [A-Za-z]+\d+:|error CS\d+)")
-ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "build", "remote"]
+ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "build", "remote", "smoke"]
 QUICK = ["preflight", "compile", "editmode", "visual", "lifecycle"]  # PlayMode is --full only (minutes)
 KNOWN_ISSUE_DIR = ROOT / "Assets/Scripts/Tests/KnownIssueReproduction"
 KNOWN_ISSUE_LIST = ROOT / "Testing/ui/playmode-known-issues.txt"
@@ -384,6 +387,42 @@ async def step_remote(editor, ctx):
     return await run_pilot(editor, "SS3D/Testing/Run Lobby Remote Client Pilot", "remote-*/status.json", 120, 420)
 
 
+async def step_smoke(editor, ctx):
+    """Real headless dedicated server + clients (no editor involvement) per scenario."""
+    for target in ("client", "server"):
+        stale = await editor.execute(
+            f'return SS3D.Editor.Automation.AutomationBuild.{target.capitalize()}StaleReason() ?? "";')
+        if stale:
+            raise StepFailed(f"{stale}; run the build step first")
+    script = ROOT / "Testing/multiplayer/run_smoketest.sh"
+    results, failed = [], []
+    for scenario, clients in SMOKE_SCENARIOS:
+        log = ctx["out"] / f"smoke-{scenario}.log"
+        started = time.monotonic()
+        proc = await asyncio.create_subprocess_exec(
+            "bash", str(script), scenario, str(clients), cwd=ROOT,
+            stdout=log.open("w"), stderr=asyncio.subprocess.STDOUT, start_new_session=True)
+        try:
+            code = await asyncio.wait_for(proc.wait(), 600)
+        except asyncio.TimeoutError:
+            os.killpg(proc.pid, signal.SIGKILL)  # the script and every server/client player it started
+            await proc.wait()
+            code = "timeout"
+        seconds = time.monotonic() - started
+        text = log.read_text(errors="replace")
+        verdict = "passed" if code == 0 else f"FAILED ({code})"
+        results.append(f"{scenario}×{clients} {verdict} {seconds:.0f}s")
+        print(f"   {scenario} ({clients} client{'s' if clients > 1 else ''}): {verdict} in {seconds:.0f}s", flush=True)
+        if code != 0:
+            errors = [line for line in text.splitlines() if line.startswith(("error:", "FAIL", "Client ", "Server "))]
+            failed.append(f"{scenario}: {rel(log)}\n    " + "\n    ".join(errors[:8]))
+    lines = ["## Multiplayer smoke", "", *[f"- {r}" for r in results], ""]
+    ctx["sections"].append("\n".join(lines))
+    if failed:
+        raise StepFailed(f"Multiplayer smoke: {len(failed)}/{len(SMOKE_SCENARIOS)} scenarios failed\n  " + "\n  ".join(failed))
+    return Done(", ".join(results))
+
+
 STEPS = {name: globals()["step_" + name] for name in ORDER}
 
 
@@ -391,7 +430,7 @@ async def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--quick", action="store_true", help="preflight → lifecycle without playmode (default)")
-    mode.add_argument("--full", action="store_true", help="all steps: PlayMode, client+server build, remote pilot")
+    mode.add_argument("--full", action="store_true", help="all steps: PlayMode, client+server build, remote pilot, multiplayer smoke")
     mode.add_argument("--steps", help="comma-separated subset, e.g. compile or visual,remote")
     args = parser.parse_args()
     steps = args.steps.split(",") if args.steps else ORDER if args.full else QUICK
