@@ -50,7 +50,7 @@ namespace SS3D.Systems.Tile
                 }
             }
 
-            placedGameObject.transform.SetPositionAndRotation(worldPosition, rotation);
+            SS3D.Systems.Inventory.Items.ItemUtility.SetWorldPose(placedGameObject.transform, worldPosition, rotation);
 
             PlacedItemObject placedObject = placedGameObject.GetComponent<PlacedItemObject>();
             if (placedObject == null)
@@ -112,7 +112,7 @@ namespace SS3D.Systems.Tile
         {
             _worldPosition = worldPosition;
             _rotation = rotation;
-            transform.SetPositionAndRotation(worldPosition, rotation);
+            SS3D.Systems.Inventory.Items.ItemUtility.SetWorldPose(transform, worldPosition, rotation);
         }
 
         /// <summary>

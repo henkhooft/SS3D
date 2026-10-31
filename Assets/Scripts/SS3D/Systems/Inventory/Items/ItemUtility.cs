@@ -34,6 +34,23 @@ namespace SS3D.Systems.Inventory.Items
                     itemTransform.position = position + new Vector3(0f, lift, 0f);
                 }
             }
+
+            SetWorldPose(itemTransform, itemTransform.position, itemTransform.rotation);
+        }
+
+        /// <summary>
+        /// Moves an item and its Rigidbody together. An interpolated Rigidbody that is moved only through
+        /// its Transform in the frame it was created snaps back to its creation pose (soda cans landed at
+        /// the world origin after map-editor placement), so the body pose is written as well.
+        /// </summary>
+        public static void SetWorldPose(Transform itemTransform, Vector3 position, Quaternion rotation)
+        {
+            itemTransform.SetPositionAndRotation(position, rotation);
+            if (itemTransform.TryGetComponent(out Rigidbody body))
+            {
+                body.position = position;
+                body.rotation = rotation;
+            }
         }
 
         private static bool TryGetColliderBounds(Item item, out Bounds bounds)
