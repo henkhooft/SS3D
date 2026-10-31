@@ -39,13 +39,10 @@ namespace SS3D.Tests
 
             if (useProgrammaticRoundControl)
             {
-                ServerHelpers.ChangeRoundState(false);
-                yield return new WaitForSeconds(8f);
+                yield return ServerHelpers.StopRound();
 
-                ServerHelpers.SetPlayerReadiness("john", true);
-                ServerHelpers.ChangeRoundState(true);
-                yield return new WaitForSeconds(8f);
-                yield return TestHelpers.Embark();
+                ServerHelpers.SetPlayerReadiness(ServerHelpers.LocalCkey, true);
+                yield return TestHelpers.StartAndEnterRound();
             }
             else
             {

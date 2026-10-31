@@ -7,8 +7,3 @@
 # Intermittent: failed once with "Host should not be spawned before attempting a late embark" when run
 # right after the dedicated-server fixture; passes in the full suite.
 SS3D.Tests.RoundLifecycle_EmbarkDuringEnding_HostPerspective.LateEmbarkRejectedDuringEndingState
-
-# Not a known issue: TestHelpers presses the uGUI "Embark" / "Start Round" LabelButtons, which
-# lobby Phase F removed. Port TestHelpers to the UITK lobby (or to server-side round helpers),
-# then remove this entry.
-SS3D.Tests.HostGameActions
