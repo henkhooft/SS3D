@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
-> Status: partial (personal heartbeat/breathing/alert clips registered; health hit one-shots wired)
+> Status: partial
 > Verified: ee090d4f3 — 2026-07-26
 
 # Audio

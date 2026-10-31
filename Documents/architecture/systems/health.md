@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
-> Status: partial (Phase 5b severing + turf env→health + feel SFX shipped; examine Tier 0/1 shipped; vitals UITK Phase 6 remainder; armor seal deferred)
+> Status: partial
 > Verified: a403d978f — 2026-07-29 (DepthNormals stays when SSAO off — Decal Layers)
 
 # Health

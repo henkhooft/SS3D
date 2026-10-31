@@ -1,5 +1,5 @@
 > Parent map: [health.md](health.md)
-> Status: partial (Phase 5b — limb severing)
+> Status: partial
 
 # Health anatomy map
 

@@ -1,6 +1,8 @@
 > Implements: Documents/architecture/2026-07_agent-first-composition.md follow-on (b) — UiShell scaffolding + Phase 1 wedge
 > Touches systems: ui-shell, interactions-runtime, inputs
-> Status: shipped (Phase 0-1: scaffolding + radial/armed migration)
+> Status: shipped
+
+**Progress:** Phase 0-1: scaffolding + radial/armed migration.
 
 # UI shell consolidation
 

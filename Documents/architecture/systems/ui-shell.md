@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/ (shared); Assets/Scripts/SS3D/UI/ (per-surface, not yet migrated: MachineInterface, MainHud); Assets/Scripts/SS3D/UI/Lobby/ (Modal shell in progress)
 > Entry points: UiShellSubSystem, UiLayer, UiShellAssetCatalog, LobbyUiSubSystem
-> Status: partial (Phase 0-1 shipped: scaffolding + radial/armed migration; lobby Phase A/B + E1 on Modal)
+> Status: partial
 > Verified: 473f62eea — 2026-08-13
 
 # UI shell

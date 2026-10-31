@@ -1,6 +1,8 @@
 > Implements: none (infrastructure — CI/test tooling, not a gameplay domain)
 > Touches systems: networking-session, electricity, area, ingame-console, logging
-> Status: in-progress (Phase 0 TomNAS-unity online; EditMode + develop-release prefer TomNAS with GitHub fallback; warm smoke proof pending; Phases 1–2 open)
+> Status: in-progress
+
+**Progress:** Phase 0 TomNAS-unity online; EditMode + develop-release prefer TomNAS with GitHub fallback; warm smoke proof pending; Phases 1–2 open.
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 

@@ -1,6 +1,6 @@
 > Code paths: Assets/Scripts/SS3D/Systems/ScreenEffects/
 > Entry points: ScreenEffectsSubSystem
-> Status: partial (health + turf temp/fire wired via HealthSnapshot.Environment)
+> Status: partial
 > Verified: be4ea6eea — 2026-07-25
 
 # Screen-space effects

@@ -1,6 +1,8 @@
-> Implements: Documents/architecture/2026-07_headless-dedicated-server.md#testing-gap-no-multiplayer-test-harness
+> Implements: Documents/archive/architecture/2026-07_headless-dedicated-server.md#testing-gap-no-multiplayer-test-harness
 > Touches systems: networking-session, rounds-lobby, permissions, ingame-console, logging
-> Status: shipped (partial — see Known gaps)
+> Status: shipped
+
+**Progress:** Partial — see Known gaps.
 
 # Multiplayer test harness (Jul 2026)
 

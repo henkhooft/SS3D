@@ -1,6 +1,8 @@
 > Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: in-progress (Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring)
+> Status: in-progress
+
+**Progress:** Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring.
 
 # Human.prefab decomposition
 

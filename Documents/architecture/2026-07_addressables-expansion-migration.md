@@ -1,6 +1,8 @@
 > Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells #1
 > Touches systems: data-codegen, ui-shell, networking-session, machine-interface, inventory
-> Status: in-progress (Phases 1–3 done; 4–6 open)
+> Status: in-progress
+
+**Progress:** Phases 1–3 done; 4–6 open.
 
 # Addressables expansion & migration
 

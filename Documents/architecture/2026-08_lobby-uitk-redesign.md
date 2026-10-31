@@ -1,6 +1,8 @@
 > Implements: Documents/design/lobby.md
 > Touches systems: rounds-lobby, ui-shell, electricity (preview light ownership), inventory (read-only worn-mesh sources)
-> Status: shipped 2026-10-31 (Phases A–F; E2 for Human only). Deferred beyond this effort: non-Human species models, a gamemode consumer for antag opt-ins, OOC/LOOC in the in-round feed, chat moderation/history, runtime application of player Settings, per-server banner art
+> Status: shipped
+
+**Progress:** Phases A–F; E2 for Human only. Deferred beyond this effort: non-Human species models, a gamemode consumer for antag opt-ins, OOC/LOOC in the in-round feed, chat moderation/history, runtime application of player Settings, per-server banner art.
 
 # Lobby UITK redesign
 

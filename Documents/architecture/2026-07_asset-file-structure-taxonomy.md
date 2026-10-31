@@ -1,6 +1,6 @@
 > Implements: (infra tooling — no design-doc section)
 > Touches systems: data-codegen, ui-shell, entities, core-subsystems, and every Content/Systems/* UI surface
-> Status: partial
+> Status: in-progress
 
 # Asset & file structure taxonomy (Jul 2026)
 

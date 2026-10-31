@@ -1,6 +1,8 @@
 > Implements: Documents/design/atmospherics.md §10 (gas rendering — client visibility)
 > Touches systems: atmospherics, rendering, networking-session
-> Status: shipped (Phase 1: dirty-chunk sync; AOI, bandwidth caps, and late-join bootstrap deferred to Phase 2)
+> Status: shipped
+
+**Progress:** Phase 1: dirty-chunk sync; AOI, bandwidth caps, and late-join bootstrap deferred to Phase 2.
 
 # Atmospherics Client Visualization Sync
 

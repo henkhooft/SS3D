@@ -1,6 +1,8 @@
 > Implements: Documents/design/audio.md §2 (ambience), §3 (diegetic SFX + occlusion), §4 (personal audio), §5 (music), §6 (alerts), §7 (volume categories)
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
-> Status: in-progress (Phase 1–4 shipped; Phase 0, 5 pending)
+> Status: in-progress
+
+**Progress:** Phase 1–4 shipped; Phase 0, 5 pending.
 
 # Audio foundation (Jul 2026)
 

@@ -1,4 +1,4 @@
-> Implements: Documents/architecture/2026-07_multiplayer-test-harness.md (CI), Documents/architecture/2026-07_headless-dedicated-server.md
+> Implements: Documents/architecture/2026-07_multiplayer-test-harness.md (CI), Documents/archive/architecture/2026-07_headless-dedicated-server.md
 > Touches systems: networking-session
 > Status: shipped
 

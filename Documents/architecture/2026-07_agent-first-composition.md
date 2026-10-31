@@ -1,6 +1,8 @@
 > Implements: infrastructure — supports main-hud, lobby, comms, inventory-storage, health, entities, and all UITK surfaces
 > Touches systems: application, core-subsystems, scene-management, entities, machine-interface, inputs, inventory, chat-audio-screens, rounds-lobby, crafting, tile, screen-effects, examine, ingame-console, health
-> Status: shipped (policy); code deferred — see Follow-on efforts
+> Status: shipped
+
+**Progress:** Policy; code deferred — see Follow-on efforts.
 
 # Agent-first composition
 
