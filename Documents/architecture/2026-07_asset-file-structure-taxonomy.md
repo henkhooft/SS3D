@@ -200,7 +200,7 @@ not just a file move — enumerate call sites before each move in this phase.
 
 - [AGENTS.md](../../AGENTS.md) § Finding art assets / Finding UI icons
 - [art-asset-index.md](../art-asset-index.md), [icon-index.md](../icon-index.md)
-- [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells — same root cause (one-off Editor
+- [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15 — same root cause (one-off Editor
   rebuild menus) as the icon-catalog scatter documented here
 - [systems/asset-organization.md](systems/asset-organization.md) — this effort's navigation counterpart
 - [TECH_DEBT.md](TECH_DEBT.md)

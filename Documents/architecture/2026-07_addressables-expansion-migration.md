@@ -1,4 +1,4 @@
-> Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells #1
+> Implements: infrastructure — no dedicated design doc; would let MI/Main HUD/Storage Panel migrate their catalogs onto [systems/ui-shell.md](systems/ui-shell.md)'s shipped `UiAssetCatalogBase` instead of `Resources.Load`, and closes [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15 #1
 > Touches systems: data-codegen, ui-shell, networking-session, machine-interface, inventory
 > Status: in-progress
 
@@ -35,7 +35,7 @@ This fork has the identical root cause today, independently of upstream's PR. In
 - **Orphaned cruft removed (Phase 1):** `Assets/AddressableAssetsData/` deleted; single settings root
   is `Assets/Content/Addressables/`.
 - **Already-acknowledged debt pointing at this gap:**
-  [data-codegen.md](systems/data-codegen.md) § Architecture smells,
+  [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15,
   [ui-shell.md](systems/ui-shell.md) / [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
   (MI/Main HUD/Storage still `Resources.Load`), [TECH_DEBT.md](TECH_DEBT.md) § 1.5 / § 1.15.
 
@@ -161,7 +161,7 @@ like upstream — not the diff.
 
 ## Related docs
 
-- [systems/data-codegen.md](systems/data-codegen.md) § Architecture smells
+- [TECH_DEBT.md](TECH_DEBT.md) §1.4–1.5, §1.15
 - [systems/ui-shell.md](systems/ui-shell.md), [2026-07_ui-shell-consolidation.md](2026-07_ui-shell-consolidation.md)
 - [systems/networking-session.md](systems/networking-session.md)
 - [TECH_DEBT.md](TECH_DEBT.md) § 1.4, § 1.5, § 1.15

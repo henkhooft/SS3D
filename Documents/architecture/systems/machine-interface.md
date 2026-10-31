@@ -44,7 +44,7 @@ Dev harness: `MachineInterfaceDevHarness.cs`; editor previews via `SS3D → Mach
 
 ## Pitfalls
 
-- **Missing catalog in builds:** host loads `Resources/MachineUiAssetCatalog`. If the asset was never rebuilt/committed, Play Mode and builds fail at awake with an explicit error — not a silent null at panel open (that was the old `EnsureEditorAssets` trap). Main HUD now has the same trap/fix class (`MainHudAssetCatalog`); do not grow a third copy — see [ui-shell](ui-shell.md) § Future work.
+- **Missing catalog in builds:** host loads `Resources/MachineUiAssetCatalog`. If the asset was never rebuilt/committed, Play Mode and builds fail at awake with an explicit error — not a silent null at panel open (that was the old `EnsureEditorAssets` trap). Main HUD now has the same trap/fix class (`MainHudAssetCatalog`); do not grow a third copy — see [ui-shell-consolidation](../2026-07_ui-shell-consolidation.md) § Explicit non-goals.
 - **New UXML without rebuild:** adding paths in C# without running **SS3D → Data → Rebuild All UI Catalogs** leaves the committed SO stale; Editor Play Mode uses the SO, not `AssetDatabase` path strings.
 - **Editor asmdef:** builders live in `SS3D.Editor` and must reference the UI assemblies for catalog types. Do not add another per-surface rebuild MenuItem.
 - **No UITK backdrop-filter:** USS cannot blur the 3D world behind a panel. Diegetic focus uses a dark overlay scrim plus Dual Kawase fullscreen blur (`UiBackdropBlurRendererFeature` via [screen-effects](screen-effects.md) `SetUiBackdropBlur`); the Screen Space Overlay chassis stays sharp on top. URP Gaussian DoF is too weak for this — do not reintroduce DoF for UI focus.

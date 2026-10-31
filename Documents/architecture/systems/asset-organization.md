@@ -64,7 +64,7 @@ doc, then re-run `generate_art_index.py` / `generate_icon_index.py` so the gener
 ## Depends on / Used by
 
 - Shares its root cause (one-off Editor rebuild menus producing per-feature asset catalogs) with
-  [data-codegen.md](data-codegen.md) § Architecture smells.
+  [TECH_DEBT.md](../TECH_DEBT.md) §1.4–1.5, §1.15.
 - Consumed by every domain that adds art, icons, or ScriptableObject data — i.e. all of `Content/Systems/*`.
 
 ## Related docs

@@ -48,5 +48,5 @@ ScriptableObject asset catalogs, codegen writers producing typed references (`Ge
 - Structural debt: [TECH_DEBT.md](../TECH_DEBT.md) §1.4 / §1.5 (catalog rebuild pipeline), §1.15 (Addressables partial)
 
 - [INDEX.md](../INDEX.md)
-- Related catalog debt: [ui-shell](ui-shell.md) § Future work (shared path-catalog helper); [2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)
+- Related catalog debt: [ui-shell-consolidation](../2026-07_ui-shell-consolidation.md) § Explicit non-goals (shared path-catalog helper); [2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md)
 - [2026-07_addressables-expansion-migration](../2026-07_addressables-expansion-migration.md) — Phases 1–3 done; 4–6 open
