@@ -1,7 +1,11 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
+<<<<<<< HEAD
 > Verified: 5fe7dbb57 — 2026-10-31
+=======
+> Verified: 73a838a3b — 2026-11-01
+>>>>>>> origin/develop
 
 # Rounds / lobby
 
@@ -16,6 +20,14 @@ Ready/late-join, replicated player readiness/counts, round timer/state, admin st
 Rendered verification: [Unity MCP lobby pilot](../../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
 **Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+
+**Round end (Stopped)** despawns the crew (`EntitySubSystem`) and then `RoundSubSystem.UnloadStation`
+clears the station (`TileMap.Clear`, load state `NotLoaded`); the next Start restores the template.
+The lobby blurs the world (`SetMenuBlur`) whenever it is visible, not only as the Escape menu.
+The sidebar has a two-click **Quit Game** button (`QuitRequested`). The Server Info **Change Log**
+lists first-parent changes (merged PRs by title, `#N` links) grouped under the `v*` release tag that
+shipped them ("In development" before a tag) and links to the GitHub releases page. One starter
+character ships (`CharacterCreatorMockData.Loadouts`).
 
 Server Settings now has the reference state card, countdown actions, map/mode selectors,
 player cap/round-length inputs and rule checkboxes. `ServerSettings.cs` extends the existing
@@ -116,6 +128,7 @@ An empty job configuration or unsupported mode fails closed. Missing/unreadable 
 - **Catalog rebuild over MCP:** SS3D → Data → Rebuild All UI Catalogs ends in a modal "UI Catalogs" OK dialog that blocks MCP and ignores xdotool under XWayland; prefer `LobbyAssetCatalogBuilder.RebuildCatalogBatch` via `execute_code`.
 - **Pilot assembly stays reference-free:** adding `SS3D.Core`/`SS3D.Systems` to `SS3D.Editor.Automation.asmdef` turns on the project's Roslynator rules as errors for the whole pilot (≈25 RCS errors in `LobbyUiPilot.cs`). Reach runtime state through Unity APIs (`Resources.Load`, the pilot's output files) or reflection, as the Sound-tab settings checks do.
 - **Players persist offline:** `PlayerSubSystem.GetPlayer(ckey)` still returns a disconnected player. Use the online count or the connection, not a null record, to detect a remote leaving.
+- **Unloading the station is server-only and after despawn:** `UnloadStation` runs in `StopRound` after `RoundState = Stopped`, whose SyncVar callback already despawned players. Map editor sessions close themselves once the round leaves `Ongoing` ([tile](tile.md)), so no editor camera is left over a cleared map.
 
 ## Tests
 

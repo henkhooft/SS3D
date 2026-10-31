@@ -12,8 +12,15 @@ Shader "Custom/InteractionOutline"
         {
             "RenderType" = "Opaque"
             "RenderPipeline" = "UniversalPipeline"
-            "Queue" = "Geometry-1"
+            "Queue" = "Geometry+1"
         }
+
+        // Drawn after opaques and never writes depth. The selection pick pass reuses the scene
+        // depth buffer after opaques; a depth-writing hull (it used to be Geometry-1 / ZWrite On)
+        // poked in front of the hovered object's own surface at concave parts and grazing angles,
+        // so the object failed its own pick, lost hover, dropped the outline and regained hover the
+        // next frame: outline and examine tooltip flickered. Without depth writes the hull can only
+        // show where nothing nearer was drawn, and the pick pass never sees it.
 
         Pass
         {
@@ -21,7 +28,7 @@ Shader "Custom/InteractionOutline"
             Tags { "LightMode" = "SRPDefaultUnlit" }
 
             Cull Front
-            ZWrite On
+            ZWrite Off
             ZTest LEqual
             Offset 1, 1
             Blend Off

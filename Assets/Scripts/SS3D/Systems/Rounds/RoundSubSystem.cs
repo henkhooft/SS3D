@@ -239,8 +239,26 @@ namespace SS3D.Systems.Rounds
 
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
+            UnloadStation();
 
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
+        }
+
+        /// <summary>
+        /// Wipes the finished round's station once its crew is despawned (Stopped), so the lobby sits
+        /// over an empty world instead of a frozen view of the old station. The next Start restores
+        /// the selected template from disk anyway, so nothing a new round needs is lost.
+        /// </summary>
+        [Server]
+        private void UnloadStation()
+        {
+            if (SubSystems.TryGet(out Tile.TileSubSystem tiles) && tiles.CurrentMap != null)
+            {
+                tiles.CurrentMap.Clear();
+                tiles.SyncFloorDecalsToClients();
+            }
+
+            _stationLoadState = StationLoadState.NotLoaded;
         }
 
 #if UNITY_EDITOR

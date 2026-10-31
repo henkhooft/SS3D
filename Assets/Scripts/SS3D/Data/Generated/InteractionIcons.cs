@@ -30,6 +30,7 @@ namespace SS3D.Data.Generated
         public const string Ignite = "d8d176ba8f0ce04a7818ba353ae84692";
         public const string Inject = "75cb3ffa05ac5d24c9ff03ac98037623";
         public const string Listen = "0589f5b6fea9c1a0f831027ec17bb465";
+        public const string Lock = "8f71d6a06adc5ea8693a8058b6c25525";
         public const string Lockpick = "1b5877ddbd49fa6bfaed38a4b2ec4ea9";
         public const string Look = "a01e76e5eafa6c722a0a581525d04454";
         public const string MachineInterface = "414a2f97366700c87a781ce50d615c24";
@@ -52,6 +53,7 @@ namespace SS3D.Data.Generated
         public const string Throw = "9facb3ac14f69a504bb0331157d483ee";
         public const string Transfer = "a977c4e9c8a42093891cff47122e1cf3";
         public const string Type = "670d671722a2d2874b8756293b9db534";
+        public const string Unlock = "787463b79e983e9cd9703802613f05ac";
         public const string ValveClose = "d204b49839769f0cbb4ed5de553da943";
         public const string ValveOpen = "be8b3796d5619e69fbc1cff03c93ee6b";
     }
