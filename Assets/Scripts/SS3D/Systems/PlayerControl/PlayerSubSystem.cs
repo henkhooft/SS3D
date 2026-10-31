@@ -86,7 +86,10 @@ namespace SS3D.Systems.PlayerControl
         {
             ChangeType changeType;
 
-            if (key == null)
+            // A late-joining client can receive the dictionary entry before the referenced
+            // Player NetworkObject is spawned, so value is briefly null. Skip it; the real
+            // value arrives through a later sync operation.
+            if (key == null || value == null)
             {
                 return;
             }
@@ -112,6 +115,14 @@ namespace SS3D.Systems.PlayerControl
         {
             foreach (Player player in _onlinePlayers.Values)
             {
+                // Initial SyncDictionary replication can expose a null Player before its
+                // NetworkObject is spawned on a late-joining client (seen with 8 clients
+                // connecting at once); skip it and let the later sync deliver the value.
+                if (player == null)
+                {
+                    continue;
+                }
+
                 HandleSyncOnlinePlayers(SyncDictionaryOperation.Add, player.Ckey, player, false);
             }
         }
@@ -119,6 +130,11 @@ namespace SS3D.Systems.PlayerControl
         private void HandleSyncServerPlayersChanged(SyncDictionaryOperation op, string key, Player value, bool asServer)
         {
             ChangeType changeType;
+
+            if (key == null || value == null)
+            {
+                return;
+            }
 
             switch (op)
             {
@@ -141,6 +157,11 @@ namespace SS3D.Systems.PlayerControl
         {
             foreach (Player player in _serverPlayers.Values)
             {
+                if (player == null)
+                {
+                    continue;
+                }
+
                 HandleSyncServerPlayersChanged(SyncDictionaryOperation.Add, player.Ckey, player, false);
             }
         }
