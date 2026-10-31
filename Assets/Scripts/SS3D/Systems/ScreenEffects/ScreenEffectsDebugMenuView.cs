@@ -1,3 +1,4 @@
+using SS3D.Core.Debugging;
 using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
@@ -46,20 +47,19 @@ namespace SS3D.Systems.ScreenEffects
         {
             base.OnAwake();
 
-            AddHandle(UpdateEvent.AddListener(HandleUpdate));
+            DebugTool tool = DebugTools.Get(DebugToolNames.ScreenEffects);
+            tool.Invoked += Toggle;
+            tool.IsOn = () => _panel != null && _panel.activeSelf;
         }
 
-        private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
+        protected override void OnDestroyed()
         {
-            if (InputInterface.IsCapturingText)
-            {
-                return;
-            }
+            DebugTools.Get(DebugToolNames.ScreenEffects).Invoked -= Toggle;
+            base.OnDestroyed();
+        }
 
-            if (Keyboard.current == null || !Keyboard.current[Key.F2].wasPressedThisFrame)
-            {
-                return;
-            }
+        private void Toggle()
+        {
 
             // Built lazily on first use rather than in OnAwake, which - since this view bootstraps itself very
             // early via RuntimeInitializeOnLoadMethod - can run before the real scene's own EventSystem exists,
@@ -127,10 +127,11 @@ namespace SS3D.Systems.ScreenEffects
             _panel.transform.SetParent(canvasHost.transform, false);
 
             RectTransform panelRect = _panel.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(1f, 1f);
-            panelRect.anchorMax = new Vector2(1f, 1f);
-            panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.anchoredPosition = new Vector2(-16f, -16f);
+            // Top-left: the F1 debug window owns the top-right corner.
+            panelRect.anchorMin = new Vector2(0f, 1f);
+            panelRect.anchorMax = new Vector2(0f, 1f);
+            panelRect.pivot = new Vector2(0f, 1f);
+            panelRect.anchoredPosition = new Vector2(16f, -16f);
             panelRect.sizeDelta = new Vector2(380f, 0f);
 
             Image background = _panel.AddComponent<Image>();

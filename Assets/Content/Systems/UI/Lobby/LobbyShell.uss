@@ -1385,6 +1385,19 @@
     font-size: 11px;
 }
 .lobby-shell__binding-button--listening { background-color: var(--lobby-btn-blue); }
+.lobby-shell__binding-button:disabled { opacity: 0.45; }
+.lobby-shell__toast {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    translate: -50% 0;
+    padding: 12px 20px;
+    background-color: #1e1e22;
+    border-width: 1px;
+    border-color: var(--lobby-btn-amber);
+    color: #ffffff;
+    font-size: 15px;
+}
 .lobby-shell__server-card { background-color: var(--lobby-surface-inset); flex-shrink: 0; }
 .lobby-shell__server-information { padding: 18px 20px 20px 20px; }
 .lobby-shell__server-title { font-size: 26px; }

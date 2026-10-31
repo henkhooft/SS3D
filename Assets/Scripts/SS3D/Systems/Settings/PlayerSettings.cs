@@ -17,6 +17,7 @@ namespace SS3D.Systems.Settings
         public int Version = CurrentVersion;
         public PlayerAudioSettings Audio = new();
         public PlayerDisplaySettings Display = new();
+        public PlayerControlsSettings Controls = new();
 
         /// <summary>Pulls hand-edited or stale values back into range after a load.</summary>
         public void Sanitize()
@@ -25,6 +26,8 @@ namespace SS3D.Systems.Settings
             Audio.Sanitize();
             Display ??= new PlayerDisplaySettings();
             Display.Sanitize();
+            Controls ??= new PlayerControlsSettings();
+            Controls.Sanitize();
         }
     }
 
@@ -156,6 +159,23 @@ namespace SS3D.Systems.Settings
             foreach (float choice in choices)
                 if (Math.Abs(choice - value) < Math.Abs(best - value)) best = choice;
             return best;
+        }
+    }
+
+    /// <summary>
+    /// Controls tab values (Decisions 2, 9–11). Overrides are <c>SaveBindingOverridesAsJson</c> output: one string for
+    /// the generated Controls asset, one for InputSubSystem's code-defined System map. Empty means defaults.
+    /// </summary>
+    [Serializable]
+    public sealed class PlayerControlsSettings
+    {
+        public string BindingOverrides = string.Empty;
+        public string SystemBindingOverrides = string.Empty;
+
+        internal void Sanitize()
+        {
+            BindingOverrides ??= string.Empty;
+            SystemBindingOverrides ??= string.Empty;
         }
     }
 }

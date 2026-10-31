@@ -39,6 +39,12 @@ namespace SS3D.Systems.Inputs
             });
         }
 
+        /// <summary>Raised after a context is pushed or released.</summary>
+        public event System.Action ContextsChanged;
+
+        /// <summary>True while any live handle holds this context, whether or not it is the active one.</summary>
+        public bool IsPushed(InputContext context) => _requests.Any(r => r.IsContext && r.Context == context);
+
         /// <summary>Suppresses the given actions while the handle is live.</summary>
         public IInputHandle SuppressActions(IEnumerable<InputAction> actions)
         {
@@ -61,6 +67,7 @@ namespace SS3D.Systems.Inputs
         {
             _requests.Add(request);
             Recompute();
+            if (request.IsContext) ContextsChanged?.Invoke();
             return new Handle(this, request);
         }
 
@@ -74,6 +81,7 @@ namespace SS3D.Systems.Inputs
             request.Alive = false;
             _requests.Remove(request);
             Recompute();
+            if (request.IsContext) ContextsChanged?.Invoke();
         }
 
         private void Recompute()

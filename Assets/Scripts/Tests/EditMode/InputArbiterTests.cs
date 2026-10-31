@@ -149,5 +149,21 @@ namespace EditorTests
             Assert.DoesNotThrow(() => suppress.Dispose());
             Assert.IsTrue(_a1.enabled);
         }
+
+        [Test]
+        public void PushedContextIsReportedEvenUnderAHigherOne()
+        {
+            InputArbiter arbiter = NewArbiter();
+            int changes = 0;
+            arbiter.ContextsChanged += () => changes++;
+
+            IInputHandle gameplay = arbiter.PushContext(InputContext.Gameplay);
+            arbiter.PushContext(InputContext.MachineUI);
+
+            Assert.That(arbiter.IsPushed(InputContext.Gameplay), Is.True, "still pushed while MachineUI is active");
+            gameplay.Dispose();
+            Assert.That(arbiter.IsPushed(InputContext.Gameplay), Is.False);
+            Assert.That(changes, Is.EqualTo(3));
+        }
     }
 }

@@ -184,5 +184,19 @@ namespace EditorTests
         {
             Assert.That(PlayerDisplaySettings.SnapUiScale(value), Is.EqualTo(snapped).Within(0.0001f));
         }
+
+        [Test]
+        public void SavedControlsSurviveARestart()
+        {
+            PlayerSettings settings = new();
+            settings.Controls.BindingOverrides = "{\"bindings\":[{\"action\":\"Hotkeys/Use\",\"path\":\"<Keyboard>/g\"}]}";
+            settings.Controls.SystemBindingOverrides = "{\"bindings\":[]}";
+            new PlayerSettingsStore(SettingsPath).Save(settings);
+
+            PlayerControlsSettings loaded = new PlayerSettingsStore(SettingsPath).Load().Controls;
+
+            Assert.That(loaded.BindingOverrides, Is.EqualTo(settings.Controls.BindingOverrides));
+            Assert.That(loaded.SystemBindingOverrides, Is.EqualTo("{\"bindings\":[]}"));
+        }
     }
 }

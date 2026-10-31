@@ -1,4 +1,5 @@
-﻿using SS3D.Core;
+﻿using SS3D.Core.Debugging;
+using SS3D.Core;
 using SS3D.Logging;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
@@ -14,15 +15,15 @@ namespace SS3D.Hacks
     {
         public void Start()
         {
-            SubSystems.Get<InputSubSystem>().Inputs.Other.SeeContainerContents.performed += SeeContents;
+            DebugTools.Get(DebugToolNames.ListContainerContents).Invoked += SeeContents;
         }
 
         private void OnDestroy()
         {
-            SubSystems.Get<InputSubSystem>().Inputs.Other.SeeContainerContents.performed -= SeeContents;
+            DebugTools.Get(DebugToolNames.ListContainerContents).Invoked -= SeeContents;
         }
 
-        private void SeeContents(InputAction.CallbackContext callbackContext)
+        private void SeeContents()
         {
             Log.Debug(this, "Listing contents of all containers");
             AttachedContainer[] containers = FindObjectsOfType<AttachedContainer>();

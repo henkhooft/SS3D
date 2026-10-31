@@ -370,22 +370,29 @@ namespace SS3D.Editor.Automation
                     break;
                 case 14: Submit(shell, "CONTROLS"); break;
                 case 15:
-                    Require(shell.Query<Button>(className: "lobby-shell__binding-button").ToList().Count == 8, "Keyboard has eight binding buttons");
-                    Capture("00-settings-keyboard");
+                {
+                    List<Button> bindings = shell.Query<Button>(className: "lobby-shell__binding-button").ToList();
+                    Require(bindings.Count >= 25, "Controls lists the player-visible actions from Controls.inputactions");
+                    Require(bindings.Any(b => b.text == "Ctrl + Q" && b.enabledSelf), "Modifier chords show their fixed prefix and stay rebindable");
+                    Require(bindings.Any(b => b.text == "Escape" && !b.enabledSelf), "Menu (Escape) is read-only");
+                    Capture("00-settings-controls");
                     break;
-                case 16:
-                    Submit(shell, "W");
-                    using (KeyDownEvent evt = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.K }))
-                    {
-                        evt.target = shell;
-                        shell.SendEvent(evt);
-                    }
-                    break;
+                }
+                case 16: Submit(shell, "E"); break;
                 case 17:
-                    Require(shell.Q<Button>("bind-moveForward").text == "K", "Keyboard accepts a local rebind");
+                {
+                    Button listening = shell.Q<Button>(className: "lobby-shell__binding-button--listening");
+                    Require(listening != null && listening.text.StartsWith("Press a key"), "Clicking a binding starts key capture");
+                    Submit(shell, listening.text);
+                    break;
+                }
+                case 18:
+                    Require(shell.Q<Button>(className: "lobby-shell__binding-button--listening") == null
+                        && shell.Query<Button>(className: "lobby-shell__binding-button").ToList().Any(b => b.text == "E"),
+                        "Clicking the listening binding cancels capture and keeps the key");
                     Submit(shell, "DISPLAY");
                     break;
-                case 18:
+                case 19:
                     Require(shell.Q<DropdownField>("settings-quality").value == "Low", "Display choices persist across subtabs");
                     Submit(shell, "SERVER INFO");
                     break;

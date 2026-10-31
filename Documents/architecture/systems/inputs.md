@@ -36,6 +36,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
 - `Assets/Scripts/SS3D/Systems/Inputs/InputContext.cs` — the context enum (value = priority).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputInterface.cs` — unified pointer query + document registry.
 - `Assets/Scripts/SS3D/Systems/Inputs/InputTextEntryScope.cs` — shared focus helper for text fields.
+- `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.Keybinds.cs` — player rebinding ([2026-10_player-settings](../2026-10_player-settings.md) Phase 3): `BuildKeybindRows` (the Controls tab's fixed visible list; every other live binding becomes a hidden read-only row, so it is reserved), `Rebind`, override save/load/reset, `CaptureNextButton`, `SetMouseSensitivity`. Pure conflict/swap rules: `KeybindRules.cs` (`KeybindRulesTests`).
 
 ## Extension points
 
@@ -65,6 +66,14 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
 - Do not bind debug views to gameplay letters (E/C/F/Q/X). Check the default scheme doc first.
 
 ## Pitfalls
+
+- **"Is the Escape menu open?" is `IsContextPushed(InputContext.Menu)`**, with `ContextsChanged` to react. Ask whether a context is *pushed*, not whether it is active: a higher context (TextEntry while typing in the menu's chat) would otherwise flip the answer. Main HUD and the storage panel hide on it.
+- **Debug tools get no key.** Register with `DebugTools.Get(DebugToolNames.X)` (`Invoked += …`, `IsOn = …` for a toggle) and the F1 debug window lists it (editor/dev builds only). A per-tool key would be reserved away from players and was the reason the old H/P/I/L/M/Y/F2–F6 keys were removed.
+- **Key capture must keep its mask until the key is released.** `onAnyButtonPress` runs inside the press's own event; dropping the TextEntry context there re-enables actions in time for that same press to fire them (Escape closed the menu).
+- **Rebind conflicts come from the context table.** Two rows conflict when some `InputContextDefinition` enables both (a bit per context in `KeybindRow.ContextMask`). Adding an action to a context therefore changes which keys players may share; Tile Creator conflicts with Movement/Camera (TileMenu runs them together) but not with Hotkeys/Interactions.
+- **A new bound action is reserved automatically.** Anything not in `BuildKeybindRows`' visible list but with a binding (console, debug toggles, hacks) blocks players from taking its key. To make it rebindable, add it to the list; to free the key, unbind the action.
+- **Key capture uses `InputSystem.onAnyButtonPress` under `InputContext.TextEntry`, not `PerformInteractiveRebinding`.** The latter needs the action disabled, which the arbiter would undo on its next recompute. Accepted: keyboard keys and mouse middle/forward/back; Escape cancels.
+- **One key per action:** rebinding overrides the action's other plain bindings to empty (`ApplyBindingOverride(i, "")`), e.g. Square Drag loses right Shift.
 
 - **`EventSystem.IsPointerOverGameObject()` + UI Toolkit:** the UITK `PanelRaycaster` reports the whole
   `UIDocument` as a hit, including `PickingMode.Ignore` layout roots. Fullscreen shells (map editor)

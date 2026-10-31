@@ -1,3 +1,4 @@
+using SS3D.Core.Debugging;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Atmospherics.ECS;
@@ -27,7 +28,7 @@ namespace SS3D.Systems.Atmospherics
     }
 
     /// <summary>
-    /// Runtime atmospherics debug overlay. Toggle with P (Other/Toggle Atmos Debug).
+    /// Runtime atmospherics debug overlay. Toggled from the F1 debug window.
     /// Server/host only — reads and mutates the authoritative sim.
     /// </summary>
     public sealed class AtmosDebugController : Actor
@@ -36,8 +37,6 @@ namespace SS3D.Systems.Atmospherics
         private const float ReferencePressureKpa = 101.325f;
         private const float DebugGasMoles = 50f;
 
-        private InputSubSystem _inputSystem;
-        private InputAction _toggleAction;
         private AtmosSubSystem _atmos;
         private TileSubSystem _tileSubSystem;
         private Camera _camera;
@@ -57,36 +56,18 @@ namespace SS3D.Systems.Atmospherics
 
         protected override void OnStart()
         {
-            _inputSystem = SubSystems.Get<InputSubSystem>();
             _atmos = SubSystems.Get<AtmosSubSystem>();
             _tileSubSystem = SubSystems.Get<TileSubSystem>();
             _camera = Camera.main;
 
-            if (_inputSystem != null)
-            {
-                _toggleAction = _inputSystem.Inputs.FindAction("Other/Toggle Atmos Debug", throwIfNotFound: false);
-                if (_toggleAction != null)
-                    _toggleAction.performed += OnToggle;
-            }
+            DebugTool tool = DebugTools.Get(DebugToolNames.Atmospherics);
+            tool.Invoked += OnToggle;
+            tool.IsOn = () => _open;
         }
 
         protected override void OnDestroyed()
         {
-            if (_toggleAction != null)
-                _toggleAction.performed -= OnToggle;
-        }
-
-        private void Update()
-        {
-            if (InputInterface.IsCapturingText)
-            {
-                return;
-            }
-
-            if (_toggleAction == null && Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
-            {
-                _open = !_open;
-            }
+            DebugTools.Get(DebugToolNames.Atmospherics).Invoked -= OnToggle;
         }
 
         private void LateUpdate()
@@ -107,16 +88,11 @@ namespace SS3D.Systems.Atmospherics
                 GetInstanceID(),
                 _panelRect,
                 DrawPanel,
-                "Atmospherics Debug (P)");
+                "Atmospherics Debug");
         }
 
-        private void OnToggle(InputAction.CallbackContext context)
+        private void OnToggle()
         {
-            if (!context.performed || InputInterface.IsCapturingText)
-            {
-                return;
-            }
-
             _open = !_open;
             if (_open && _camera == null)
             {

@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core.Behaviours;
+using SS3D.Core;
 using SS3D.Systems.Audio;
+using SS3D.Systems.Inputs;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Rendering;
@@ -80,12 +83,17 @@ namespace SS3D.Systems.Settings
         {
             base.OnStart();
             // AudioMixer.SetFloat is ignored when called from Awake, so the first apply waits for Start.
-            if (_active) ApplyAudio();
+            if (!_active) return;
+            ApplyAudio();
+            // InputSubSystem is created after this one in SystemsBootstrap; by Start it exists.
+            ApplyControls();
         }
 
         protected override void OnDestroyed()
         {
             UnityEngine.Application.focusChanged -= HandleFocusChanged;
+            _capture?.Dispose();
+            _capture = null;
             if (_active && _windowConfirmation.IsPending) RevertDisplayChange();
             if (_saveDueTime >= 0f) SaveNow();
             if (_active) _display.Disable();
@@ -215,6 +223,79 @@ namespace SS3D.Systems.Settings
             _display.ApplyQuality(Settings.Display);
             ScheduleSave();
             Changed?.Invoke();
+        }
+
+        private IDisposable _capture;
+
+        /// <summary>Row id waiting for its next key, or null.</summary>
+        public string CapturingRowId { get; private set; }
+
+        /// <summary>The last rebind outcome worth telling the player ("Use is now Q"), or null.</summary>
+        public string ControlsNotice { get; private set; }
+
+        /// <summary>Bumps with every new <see cref="ControlsNotice"/>, so a view shows each one once.</summary>
+        public int ControlsNoticeVersion { get; private set; }
+
+        /// <summary>The Controls tab's rows; empty before InputSubSystem exists.</summary>
+        public IReadOnlyList<KeybindRow> KeybindRows =>
+            SubSystems.TryGet(out InputSubSystem input) ? input.BuildKeybindRows() : Array.Empty<KeybindRow>();
+
+        /// <summary>Starts listening for the row's new key; Escape (or <see cref="CancelKeyCapture"/>) cancels.</summary>
+        public void BeginKeyCapture(string rowId)
+        {
+            if (!_active || !SubSystems.TryGet(out InputSubSystem input)) return;
+            _capture?.Dispose();
+            CapturingRowId = rowId;
+            ControlsNotice = null;
+            _capture = input.CaptureNextButton(path =>
+            {
+                _capture = null;
+                CapturingRowId = null;
+                KeybindResult result = input.Rebind(rowId, path);
+                ControlsNotice = result.Notice;
+                if (result.Notice != null) ControlsNoticeVersion++;
+                if (result.Accepted) StoreBindings(input);
+                Changed?.Invoke();
+            }, () =>
+            {
+                _capture = null;
+                CapturingRowId = null;
+                Changed?.Invoke();
+            });
+            Changed?.Invoke();
+        }
+
+        public void CancelKeyCapture()
+        {
+            if (_capture == null) return;
+            _capture.Dispose();
+            _capture = null;
+            CapturingRowId = null;
+            Changed?.Invoke();
+        }
+
+        /// <summary>The Controls tab's Reset to defaults: every binding.</summary>
+        public void ResetControls()
+        {
+            CancelKeyCapture();
+            Settings.Controls = new PlayerControlsSettings();
+            ControlsNotice = null;
+            ApplyControls();
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
+        private void ApplyControls()
+        {
+            if (!_active || !SubSystems.TryGet(out InputSubSystem input)) return;
+            input.LoadBindingOverrides(Settings.Controls.BindingOverrides, Settings.Controls.SystemBindingOverrides);
+        }
+
+        private void StoreBindings(InputSubSystem input)
+        {
+            Settings.Controls.BindingOverrides = input.SaveBindingOverrides();
+            Settings.Controls.SystemBindingOverrides = input.SaveSystemBindingOverrides();
+            ScheduleSave();
         }
 
         /// <summary>Writes pending changes now instead of after the debounce (quit, pilots).</summary>

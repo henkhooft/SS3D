@@ -1,3 +1,4 @@
+using SS3D.Core.Debugging;
 using Coimbra.Services.Events;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -12,12 +13,10 @@ using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
 namespace SS3D.Systems.Health
 {
     /// <summary>
-    /// Runtime health debug overlay. Toggle with H (or Other/Toggle Health Debug when bound).
+    /// Runtime health debug overlay. Toggled from the F1 debug window.
     /// </summary>
     public sealed class HealthDebugController : Actor
     {
-        private InputSubSystem _inputSystem;
-        private InputAction _toggleAction;
         private EntitySubSystem _entitySubSystem;
 
         private bool _open;
@@ -29,17 +28,11 @@ namespace SS3D.Systems.Health
 
         protected override void OnStart()
         {
-            _inputSystem = SubSystems.Get<InputSubSystem>();
             _entitySubSystem = SubSystems.Get<EntitySubSystem>();
 
-            if (_inputSystem != null)
-            {
-                _toggleAction = _inputSystem.Inputs.FindAction("Other/Toggle Health Debug", throwIfNotFound: false);
-                if (_toggleAction != null)
-                {
-                    _toggleAction.performed += OnToggle;
-                }
-            }
+            DebugTool tool = DebugTools.Get(DebugToolNames.Health);
+            tool.Invoked += OnToggle;
+            tool.IsOn = () => _open;
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandleLocalPlayerObjectChanged));
             RefreshTargets();
@@ -47,38 +40,11 @@ namespace SS3D.Systems.Health
 
         protected override void OnDestroyed()
         {
-            if (_toggleAction != null)
-            {
-                _toggleAction.performed -= OnToggle;
-            }
+            DebugTools.Get(DebugToolNames.Health).Invoked -= OnToggle;
         }
 
-        private void Update()
+        private void OnToggle()
         {
-            // Keyboard fallback when Other/Toggle Health Debug is unbound — must respect text capture
-            // (compose / focused fields) the same way arbitrated actions do via TextEntry.
-            if (InputInterface.IsCapturingText)
-            {
-                return;
-            }
-
-            if (_toggleAction == null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
-            {
-                _open = !_open;
-                if (_open)
-                {
-                    RefreshTargets();
-                }
-            }
-        }
-
-        private void OnToggle(InputAction.CallbackContext context)
-        {
-            if (!context.performed || InputInterface.IsCapturingText)
-            {
-                return;
-            }
-
             _open = !_open;
             if (_open)
             {
@@ -97,7 +63,7 @@ namespace SS3D.Systems.Health
                 GetInstanceID(),
                 _panelRect,
                 DrawPanel,
-                "Health Debug (H)");
+                "Health Debug");
         }
 
         private void HandleLocalPlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)

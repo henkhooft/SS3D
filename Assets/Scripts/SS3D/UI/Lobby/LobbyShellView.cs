@@ -53,7 +53,16 @@ namespace SS3D.UI.Lobby
         private bool _chatAdmin;
         private ScrollView _chatLog;
         private string _openPlayerId;
-        private string _rebindingKey;
+        // PlayerSettingsSubSystem's Controls state; the capture itself runs in InputSubSystem.
+        private IReadOnlyList<KeybindRow> _keybindRows = Array.Empty<KeybindRow>();
+        private string _capturingRowId;
+        private int _controlsNoticeVersion;
+        private Label _toast;
+        private IVisualElementScheduledItem _toastHide;
+        // The Settings scroll view is rebuilt with the tab; keep the reader's place within one sub-tab.
+        private ScrollView _settingsScroll;
+        private string _settingsScrollSubTab;
+        private bool _confirmingControlsReset;
         // PlayerSettingsSubSystem's live display values and what the machine offers.
         private PlayerDisplaySettings _display = new();
         private Vector2Int[] _resolutions = Array.Empty<Vector2Int>();
@@ -75,14 +84,6 @@ namespace SS3D.UI.Lobby
             (PlayerVolume.Ambience, "ambienceVolume", "Ambience Volume"),
             (PlayerVolume.Personal, "personalVolume", "Personal Volume"),
         };
-        private static readonly (string Key, string Action, string Binding)[] KeybindDefinitions =
-        {
-            ("moveForward", "Move Forward", "W"), ("moveBackward", "Move Backward", "S"),
-            ("moveLeft", "Move Left", "A"), ("moveRight", "Move Right", "D"),
-            ("interact", "Interact", "E"), ("jump", "Jump", "Space"),
-            ("inventory", "Open Inventory", "Tab"), ("toggleChat", "Toggle Chat", "T"),
-        };
-        private readonly Dictionary<string, string> _keybinds = new();
 
         // Missing jobs are Never: an empty list is the explicit "no preference" (lobby.md §3).
         private readonly Dictionary<string, JobPriority> _priorities = new();
@@ -111,6 +112,38 @@ namespace SS3D.UI.Lobby
         public event Action DisplayResetRequested;
         public event Action DisplayChangeKept;
         public event Action DisplayChangeReverted;
+        public event Action<string> KeyCaptureRequested;
+        public event Action KeyCaptureCancelled;
+        public event Action ControlsResetRequested;
+
+        /// <summary>Supplies the Controls tab's rows and state; rebuilds an open Controls tab.</summary>
+        public void SetControls(IReadOnlyList<KeybindRow> rows, string capturingRowId, string notice, int noticeVersion)
+        {
+            _keybindRows = rows ?? Array.Empty<KeybindRow>();
+            _capturingRowId = capturingRowId;
+            if (noticeVersion != _controlsNoticeVersion)
+            {
+                _controlsNoticeVersion = noticeVersion;
+                if (!string.IsNullOrEmpty(notice)) ShowToast(notice);
+            }
+            if (_activeTab == TabSettings && _settingsSubTab == "keyboard" && _tabContent != null)
+                ShowTab(TabSettings);
+        }
+
+        /// <summary>A short message over the shell that fades on its own ("Use is now Q").</summary>
+        private void ShowToast(string text)
+        {
+            if (_toast == null) return;
+            _toast.text = text;
+            _toast.style.display = DisplayStyle.Flex;
+            _toastHide?.Pause();
+            _toastHide = _toast.schedule.Execute(() => _toast.style.display = DisplayStyle.None).StartingIn(3500);
+        }
+
+        private void CancelKeyCapture()
+        {
+            if (_capturingRowId != null) KeyCaptureCancelled?.Invoke();
+        }
 
         /// <summary>Supplies the display settings and the machine's choices; rebuilds an open Display tab.</summary>
         public void SetDisplaySettings(PlayerDisplaySettings display, Vector2Int[] resolutions, Vector2Int current, bool stpSupported)
@@ -156,7 +189,7 @@ namespace SS3D.UI.Lobby
         private bool _inRound;
 
         /// <summary>True while a keybind button waits for its next key (Escape cancels it).</summary>
-        public bool IsCapturingKey => _rebindingKey != null;
+        public bool IsCapturingKey => _capturingRowId != null;
 
         /// <param name="inRound">The local player has a body; the shell is open as the Escape menu.</param>
         public void SetSession(RoundState state, int seconds, bool ready, bool canAct,
@@ -230,8 +263,6 @@ namespace SS3D.UI.Lobby
         public LobbyShellView(LobbyAssetCatalog catalog)
         {
             _catalog = catalog;
-            foreach ((string key, string _, string binding) in KeybindDefinitions)
-                _keybinds[key] = binding;
         }
 
         public bool IsVisible => _root != null && _root.resolvedStyle.display != DisplayStyle.None;
@@ -242,7 +273,6 @@ namespace SS3D.UI.Lobby
             _root.AddToClassList("lobby-shell");
             _root.pickingMode = PickingMode.Position;
             _root.focusable = true;
-            _root.RegisterCallback<KeyDownEvent>(HandleRebindKey);
 
             if (_catalog != null && _catalog.LobbyStyle != null)
             {
@@ -256,6 +286,11 @@ namespace SS3D.UI.Lobby
 
             BuildChrome(window);
             _root.Add(BuildDisplayPrompt());
+            _toast = new Label { name = "lobby-toast", pickingMode = PickingMode.Ignore };
+            _toast.AddToClassList("lobby-shell__toast");
+            _toast.AddToClassList("font-body");
+            _toast.style.display = DisplayStyle.None;
+            _root.Add(_toast);
             layerRoot.Add(_root);
             RefreshTabs();
             ShowTab(_activeTab);
@@ -285,8 +320,13 @@ namespace SS3D.UI.Lobby
             DisplayResetRequested = null;
             DisplayChangeKept = null;
             DisplayChangeReverted = null;
+            KeyCaptureRequested = null;
+            KeyCaptureCancelled = null;
+            ControlsResetRequested = null;
             _displayPrompt = null;
             _displayPromptText = null;
+            _toast = null;
+            _settingsScroll = null;
             RoundAdminRequested = null;
             JobPreferencesChanged = null;
             _tabBar = null;
@@ -313,7 +353,7 @@ namespace SS3D.UI.Lobby
                 return;
             }
 
-            _rebindingKey = null;
+            CancelKeyCapture();
             if (!visible) _textEntry.Exit();
             _root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             _root.pickingMode = visible ? PickingMode.Position : PickingMode.Ignore;
@@ -577,7 +617,7 @@ namespace SS3D.UI.Lobby
 
         private void SelectTab(string key)
         {
-            _rebindingKey = null;
+            CancelKeyCapture();
             _activeTab = key;
             RefreshTabs();
             ShowTab(key);
@@ -1408,6 +1448,14 @@ namespace SS3D.UI.Lobby
 
             ScrollView scroll = new(ScrollViewMode.Vertical);
             scroll.AddToClassList("lobby-shell__settings-scroll");
+            if (_settingsScroll != null && _settingsScrollSubTab == _settingsSubTab)
+            {
+                Vector2 offset = _settingsScroll.scrollOffset;
+                // The new content has no layout yet; restore once it does, or the offset clamps to zero.
+                scroll.RegisterCallbackOnce<GeometryChangedEvent>(_ => scroll.scrollOffset = offset);
+            }
+            _settingsScroll = scroll;
+            _settingsScrollSubTab = _settingsSubTab;
             parent.Add(scroll);
             VisualElement form = new();
             form.AddToClassList("lobby-shell__settings-form");
@@ -1434,30 +1482,7 @@ namespace SS3D.UI.Lobby
                 }
                 case "keyboard":
                 {
-                    foreach ((string key, string action, string _) in KeybindDefinitions)
-                    {
-                        VisualElement row = new();
-                        row.AddToClassList("lobby-shell__binding-row");
-                        Label label = MakeLabel(action, "font-body");
-                        label.AddToClassList("lobby-shell__binding-label");
-                        row.Add(label);
-                        string bindingKey = key;
-                        Button binding = new(() =>
-                        {
-                            _rebindingKey = bindingKey;
-                            ShowTab(TabSettings);
-                            _root.Focus();
-                        })
-                        {
-                            name = "bind-" + key,
-                            text = _rebindingKey == key ? "Press a key…" : _keybinds[key],
-                        };
-                        binding.AddToClassList("lobby-shell__binding-button");
-                        binding.AddToClassList("font-terminal");
-                        binding.EnableInClassList("lobby-shell__binding-button--listening", _rebindingKey == key);
-                        row.Add(binding);
-                        form.Add(row);
-                    }
+                    BuildControlsForm(form);
                     break;
                 }
                 default:
@@ -1548,6 +1573,54 @@ namespace SS3D.UI.Lobby
             try { UiScaleChanged?.Invoke(value); }
             finally { _raisingDisplayIntent = false; }
         }, PlayerDisplaySettings.MinUiScale, PlayerDisplaySettings.MaxUiScale, PlayerDisplaySettings.UiScaleStep);
+
+        /// <summary>
+        /// Controls tab (Decisions 9–13): one heading per group in row order, a button per binding (read-only rows
+        /// disabled) and Reset to defaults; rebind notices show as a toast.
+        /// </summary>
+        private void BuildControlsForm(VisualElement form)
+        {
+            string group = null;
+            foreach (KeybindRow keybind in _keybindRows)
+            {
+                if (keybind.Group == null) continue;
+                if (keybind.Group != group)
+                {
+                    group = keybind.Group;
+                    form.Add(SettingsLabel(group));
+                }
+
+                VisualElement row = new();
+                row.AddToClassList("lobby-shell__binding-row");
+                Label label = MakeLabel(keybind.Label, "font-body");
+                label.AddToClassList("lobby-shell__binding-label");
+                row.Add(label);
+                string rowId = keybind.Id;
+                bool listening = _capturingRowId == rowId;
+                Button binding = new(() =>
+                {
+                    if (_capturingRowId == rowId) KeyCaptureCancelled?.Invoke();
+                    else KeyCaptureRequested?.Invoke(rowId);
+                })
+                {
+                    name = "bind-" + rowId,
+                    text = listening ? "Press a key… (Esc cancels)" : KeybindRules.DisplayName(keybind.Path, keybind.ModifierPath),
+                };
+                binding.AddToClassList("lobby-shell__binding-button");
+                binding.AddToClassList("font-terminal");
+                binding.EnableInClassList("lobby-shell__binding-button--listening", listening);
+                binding.SetEnabled(!keybind.ReadOnly);
+                if (keybind.ReadOnly) binding.tooltip = "This binding is fixed.";
+                row.Add(binding);
+                form.Add(row);
+            }
+
+            form.Add(ResetButton("settings-reset-controls", _confirmingControlsReset, () => _confirmingControlsReset = true, () =>
+            {
+                _confirmingControlsReset = false;
+                ControlsResetRequested?.Invoke();
+            }));
+        }
 
         private Button DisplayResetButton() => ResetButton("settings-reset-display", _confirmingDisplayReset,
             () => _confirmingDisplayReset = true, () =>
@@ -1654,26 +1727,14 @@ namespace SS3D.UI.Lobby
             return field;
         }
 
-        private void HandleRebindKey(KeyDownEvent evt)
-        {
-            if (_rebindingKey == null) return;
-            if (evt.keyCode != KeyCode.Escape)
-            {
-                if (evt.keyCode == KeyCode.None) return;
-                _keybinds[_rebindingKey] = evt.keyCode.ToString();
-            }
-            _rebindingKey = null;
-            evt.StopImmediatePropagation();
-            ShowTab(TabSettings);
-        }
-
         private void AddSettingsSubTab(VisualElement parent, string key, string label)
         {
             Button btn = new(() =>
             {
-                _rebindingKey = null;
+                CancelKeyCapture();
                 _confirmingAudioReset = false;
                 _confirmingDisplayReset = false;
+                _confirmingControlsReset = false;
                 _settingsSubTab = key;
                 ShowTab(TabSettings);
             })

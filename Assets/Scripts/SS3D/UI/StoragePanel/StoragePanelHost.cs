@@ -100,17 +100,20 @@ namespace SS3D.UI.StoragePanel
         {
             base.OnStart();
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
         }
 
         private void Update()
         {
             // MI may bootstrap after this host — keep trying until subscribed (same as MainHudSubSystem).
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
         }
 
         protected override void OnDestroyed()
         {
             UnsubscribeMachineUi();
+            UnsubscribeMenu();
             InputInterface.UnregisterDocument(_document);
             base.OnDestroyed();
         }
@@ -183,6 +186,48 @@ namespace SS3D.UI.StoragePanel
             ApplyMachineUiVisibility();
         }
 
+        private InputSubSystem _menuInput;
+        private bool _menuOpen;
+
+        /// <summary>
+        /// The in-round (Escape) menu hides this like a machine panel does. Its signal is the Menu input context
+        /// being pushed, so typing in the menu's chat (TextEntry on top) keeps it hidden.
+        /// </summary>
+        private void EnsureMenuSubscription()
+        {
+            if (_menuInput != null || !SubSystems.TryGet(out InputSubSystem input))
+            {
+                return;
+            }
+
+            _menuInput = input;
+            _menuInput.ContextsChanged += HandleInputContextsChanged;
+            HandleInputContextsChanged();
+        }
+
+        private void UnsubscribeMenu()
+        {
+            if (_menuInput == null)
+            {
+                return;
+            }
+
+            _menuInput.ContextsChanged -= HandleInputContextsChanged;
+            _menuInput = null;
+        }
+
+        private void HandleInputContextsChanged()
+        {
+            bool open = _menuInput != null && _menuInput.IsContextPushed(InputContext.Menu);
+            if (open == _menuOpen)
+            {
+                return;
+            }
+
+            _menuOpen = open;
+            ApplyMachineUiVisibility();
+        }
+
         private void EnsureMachineUiSubscription()
         {
             if (_subscribedToMachineUi)
@@ -240,7 +285,7 @@ namespace SS3D.UI.StoragePanel
                 return;
             }
 
-            _root.style.display = _machineUiOpen ? DisplayStyle.None : DisplayStyle.Flex;
+            _root.style.display = _machineUiOpen || _menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private ContainerViewer _boundViewer;
@@ -255,6 +300,7 @@ namespace SS3D.UI.StoragePanel
         public void BindContainerViewer(ContainerViewer viewer)
         {
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
 
             if (_boundViewer == viewer)
             {

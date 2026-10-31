@@ -1,4 +1,5 @@
-﻿using FishNet.Connection;
+﻿using SS3D.Core.Debugging;
+using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Humanoid;
@@ -20,8 +21,6 @@ namespace SS3D.Hacks
         [SerializeField]
         private float _timeRagdolled;
 
-        private Controls.OtherActions _controls;
-
         public override void OnOwnershipClient(NetworkConnection prevOwner)
         {
             base.OnOwnershipClient(prevOwner);
@@ -33,18 +32,6 @@ namespace SS3D.Hacks
             else if (prevOwner.Equals(LocalConnection))
             {
                 UnsubscribeFromInput();
-            }
-        }
-
-        protected override void OnAwake()
-        {
-            base.OnAwake();
-
-            InputSubSystem inputSubSystem = SubSystems.Get<InputSubSystem>();
-
-            if (inputSubSystem)
-            {
-                _controls = inputSubSystem.Inputs.Other;
             }
         }
 
@@ -70,7 +57,7 @@ namespace SS3D.Hacks
 
         private void SubscribeToInput()
         {
-            _controls.Ragdoll.performed += HandleKnockdown;
+            DebugTools.Get(DebugToolNames.KnockDown).Invoked += HandleKnockdown;
         }
 
         /// <summary>
@@ -78,10 +65,10 @@ namespace SS3D.Hacks
         /// </summary>
         private void UnsubscribeFromInput()
         {
-            _controls.Ragdoll.performed -= HandleKnockdown;
+            DebugTools.Get(DebugToolNames.KnockDown).Invoked -= HandleKnockdown;
         }
 
-        private void HandleKnockdown(InputAction.CallbackContext context)
+        private void HandleKnockdown()
         {
             _ragdoll.Knockdown(_timeRagdolled);
         }

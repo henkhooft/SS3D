@@ -2,7 +2,7 @@
 > Touches systems: rounds-lobby, ui-shell, audio, main-hud (panel scale), rendering (URP quality assets), input
 > Status: in-progress
 
-**Progress:** Phase 1 shipped 2026-10-31 (model + store, boot apply, mixer routing, Sound tab). Phase 2 shipped 2026-10-31 (display, quality tiers, upscaling, UI Scale; resolution verified in a build). T6 done. Phases 3–4 not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
+**Progress:** Phase 1 shipped 2026-10-31 (model + store, boot apply, mixer routing, Sound tab). Phase 2 shipped 2026-10-31 (display, quality tiers, upscaling, UI Scale; resolution verified in a build). T6 done. Phase 3 shipped 2026-10-31 (Controls rebinding, F1 debug window, in-round menu blur + HUD hide). Phase 4 not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
 
 # Player settings: display, audio, controls (Oct 2026)
 
@@ -36,7 +36,7 @@ This effort **absorbs** [2026-07_audio-foundation](2026-07_audio-foundation.md) 
 | 9 | Controls are **keyboard and mouse only**. Rebindable: Movement (four rows: Forward/Back/Left/Right), Toggle Run, Camera, Hotkeys, Interactions, chat and Attack, plus a **Map Editor** group (Tile Creator). Debug and Console actions are hidden. Headings follow the action map names. |
 | 10 | Read-only rows: the `main-hud.md` §7 intent modifiers (Ctrl/Alt/Shift; their hints print literal key names), Toggle Menu (Escape), and Primary/Secondary Click. For modifier+key bindings only the key is rebindable; the modifier shows as a fixed prefix. |
 | 11 | One key per action, no alternate slot and no unbinding. A conflict within maps that can be active together **swaps** the two bindings and shows a "Use is now Q" notice. Maps that are never active together (Tile Creator vs gameplay) may share keys. Escape cancels capture. Mouse buttons 3–5 can be bound. |
-| 12 | Mouse **sensitivity** and **invert vertical** are processor overrides on the Camera actions. Zoom speed is parked. |
+| 12 | ~~Mouse **sensitivity** and **invert vertical** are processor overrides on the Camera actions.~~ Dropped in Phase 3 (no mouse-look; see Phase 3 notes). Zoom speed is parked. |
 | 13 | Each tab gets a **Reset to defaults** button with confirmation. There is no per-row reset. |
 | 14 | First-launch defaults: native resolution, Borderless, VSync on, **High**, 100 % render scale, SMAA, all volumes 80 %, mute-when-unfocused on. Volume values are placeholders; balancing them is out of scope (audio.md §10). |
 | 15 | No Settings entry in the launcher yet. Boot-time apply means saved settings are already in effect before the player connects. |
@@ -83,7 +83,19 @@ Implementation notes (2026-10-31):
 - Display tab per Decisions 5–8: resolution list, window mode with revert prompt, VSync and frame cap re-applied after tier changes, render scale + upscaler + AA with the STP lock and fallback, UI Scale on the screen-space panels.
 - Remove the Brightness slider.
 
-### Phase 3 — Controls *(outside the gates)*
+### Phase 3 — Controls *(outside the gates)* — **shipped**
+
+Implementation notes (2026-10-31):
+
+- Rows: `InputSubSystem.BuildKeybindRows` (map headings Movement, Camera, Hotkeys, Interactions, plus **General** for the code-defined System actions and **Map Editor** for Tile Creator). Rebindable: the four Movement parts, Toggle Run, camera rotate/snap (Ctrl prefix fixed) and tilt, Swap Hands/Use/Drop, Cancel Interaction, Toggle Help/Harm (the "Attack" of Decision 9: `Other/Attack` is erased at boot and F is `ToggleIntent`), Local Chat (T), Build Menu, Rotate, Replace, Square Drag. Read-only: Menu (Escape), Primary/Secondary Click, Examine (Shift), Disarm/Grab (Ctrl/Alt + click), Mouse Rotation (middle drag), Zoom, plus **Interact / Interaction Menu and Place / Delete**, which are left/right click like Primary/Secondary. `SendChatMessage` (Enter) is unused and hidden; Toggle Internal Clothing has no binding and is hidden.
+- Conflicts: co-activity is derived from the `InputContextDefinition` table, not hard-coded. Swaps move every row holding the key (Ctrl+Q holds both Rotate Left and Snap Left). Taking a read-only or hidden-but-live key (Shift, Ctrl, Alt, Escape, Enter, F12 console, F1 debug window) is refused with a toast.
+- Capture: `InputSystem.onAnyButtonPress` under `InputContext.TextEntry` instead of `PerformInteractiveRebinding` (see the inputs map Pitfalls). Keyboard and mouse buttons 3–5; Escape or clicking the listening button cancels. The TextEntry context masks Escape's Toggle Menu, so the lobby stays open during capture.
+- **Decision 12 dropped (owner's call, 2026-10-31): no mouse sensitivity or invert-Y.** The game has no mouse-look; the cursor is the OS cursor, whose speed the game does not own. The only mouse-to-camera path is middle-drag rotation, and `Mouse Rotation` is a Button action on `delta/x`, so `CameraFollow` gets roughly one delta per drag start and nearly always snaps 90°: a sensitivity slider had nothing smooth to scale. Middle-drag stays as it was. Revisit only if mouse-look or smooth drag rotation is designed.
+- Rebind outcomes ("Use is now Q", refusals) show as a toast over the shell; rebuilding the tab keeps the Settings scroll position.
+- The capture keeps its key mask until the pressed key is released: `onAnyButtonPress` fires inside the press's own event, so releasing at once let Escape close the menu (and would let a captured B open the build menu).
+- **Debug window (owner's call, 2026-10-31):** the scattered debug keys (H health, P atmos, F2 screen effects, F3 speech test line, F4 alert stack, F6 selection buffer, I runtime editor, Y knock-down, L container listing; M swap-minds was already dead) moved into an F1 window (`SS3D.UI.MainHud.Dev.DebugMenuView`) over a named-tool registry (`SS3D.Core.Debugging.DebugTools`, `DebugToolsTests`). Editor and development builds only; F12 stays the console. Their Controls-asset bindings are erased at boot, freeing those letters for players.
+- The in-round (Escape) menu blurs the world behind it with the machine interface's backdrop blur (`ScreenEffectsSubSystem.SetUiBackdropBlur`, 0.7), set by `LobbyUiSubSystem` on open/close only. Like a machine panel it also hides the Main HUD and the storage panel: both watch `InputSubSystem.IsContextPushed(InputContext.Menu)` (pushed, not active, so typing in the menu's chat keeps them hidden).
+- Overrides persist as two `SaveBindingOverridesAsJson` strings (`Controls` asset and the code-defined System map) and load at boot in `PlayerSettingsSubSystem.OnStart`.
 
 - Controls tab generated from `Controls.inputactions`, using the visible map and action list from Decisions 9–10.
 - Interactive rebinding (`PerformInteractiveRebinding`, Escape cancels), conflict swap and notice, overrides saved to the model, sensitivity and invert-Y processors.

@@ -201,6 +201,7 @@ namespace SS3D.UI.MainHud
         {
             base.OnStart();
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
             EnsureMapEditorSubscription();
             TryBindExistingLocalPlayer();
         }
@@ -209,6 +210,7 @@ namespace SS3D.UI.MainHud
         {
             MeleeConnectFeedback.LocalConnectHitLanded -= HandleMeleeConnectHitLanded;
             UnsubscribeMachineUi();
+            UnsubscribeMenu();
             UnsubscribeMapEditor();
             UnbindLocalPlayer();
             _view?.Detach();
@@ -219,6 +221,7 @@ namespace SS3D.UI.MainHud
         private void Update()
         {
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
             EnsureMapEditorSubscription();
 
             // Late-joining clients can miss one-shot spawn events (SyncList Complete is ignored in
@@ -248,6 +251,7 @@ namespace SS3D.UI.MainHud
             bool visible = _localPlayer != null
                 && IsRoundInGame()
                 && !_machineUiOpen
+                && !_menuOpen
                 && _intentProvider != null
                 && _intentProvider.CurrentIntent == IntentType.Harm
                 && !(SubSystems.TryGet(out ArmedInteractionSubSystem armed) && armed.IsArmed);
@@ -696,6 +700,48 @@ namespace SS3D.UI.MainHud
             RefreshAlerts();
         }
 
+        private InputSubSystem _menuInput;
+        private bool _menuOpen;
+
+        /// <summary>
+        /// The in-round (Escape) menu hides this like a machine panel does. Its signal is the Menu input context
+        /// being pushed, so typing in the menu's chat (TextEntry on top) keeps it hidden.
+        /// </summary>
+        private void EnsureMenuSubscription()
+        {
+            if (_menuInput != null || !SubSystems.TryGet(out InputSubSystem input))
+            {
+                return;
+            }
+
+            _menuInput = input;
+            _menuInput.ContextsChanged += HandleInputContextsChanged;
+            HandleInputContextsChanged();
+        }
+
+        private void UnsubscribeMenu()
+        {
+            if (_menuInput == null)
+            {
+                return;
+            }
+
+            _menuInput.ContextsChanged -= HandleInputContextsChanged;
+            _menuInput = null;
+        }
+
+        private void HandleInputContextsChanged()
+        {
+            bool open = _menuInput != null && _menuInput.IsContextPushed(InputContext.Menu);
+            if (open == _menuOpen)
+            {
+                return;
+            }
+
+            _menuOpen = open;
+            ApplyVisibility();
+        }
+
         private void EnsureMachineUiSubscription()
         {
             if (_subscribedToMachineUi)
@@ -787,12 +833,12 @@ namespace SS3D.UI.MainHud
         }
 
         /// <summary>
-        /// Single visibility gate: spawn/round eligibility and modal suppress (machine UI / map editor).
+        /// Single visibility gate: spawn/round eligibility and modal suppress (machine UI / map editor / Escape menu).
         /// Call instead of bare show so catch-up cannot re-show chrome over an open panel.
         /// </summary>
         private void ApplyVisibility()
         {
-            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen;
+            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen && !_menuOpen;
             _view?.SetVisible(shouldShow);
         }
 
