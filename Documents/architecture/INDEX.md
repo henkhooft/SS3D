@@ -132,6 +132,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) | planned |
 | [2026-08_lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) | shipped (reference) |
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
+| [2026-10_player-settings](2026-10_player-settings.md) | planned |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [combat_implementation_plan](../plans/combat_implementation_plan.md) | in-progress |
 | [health_implementation_plan](../plans/health_implementation_plan.md) | in-progress |

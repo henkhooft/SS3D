@@ -2,7 +2,7 @@
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
 > Status: in-progress
 
-**Progress:** Phase 1–4 shipped; Phase 0, 5 pending.
+**Progress:** Phase 1–4 shipped; Phase 5 (lobby music bed) pending. Phase 0 and Phase 5's volume sliders moved to [2026-10_player-settings](2026-10_player-settings.md) Phase 1.
 
 # Audio foundation (Jul 2026)
 
@@ -49,7 +49,7 @@ is content, §10 / this doc's Deferred).
 
 ## Phases
 
-### Phase 0 — Foundation & mixer
+### Phase 0 — Foundation & mixer — **moved to [2026-10_player-settings](2026-10_player-settings.md) Phase 1**
 
 - Establish four exposed mixer groups on `Assets/Content/Systems/Audio/MainMixer.mixer` matching §7's
   categories: **Ambience**, **SFX**, **Personal**, **Music** — each independently volume-adjustable.
@@ -167,8 +167,9 @@ SFX at once.
 - **Lobby/menu non-diegetic bed** — the one place a 2D score is allowed (`lobby.md` §1's existing meta
   carve-out): plays on lobby/menu scenes only, stops at round start. Enforce "no global in-round score" —
   in-round music is Boombox-sourced only (§5, already true).
-- Bind four settings sliders to the Phase 0 mixer groups (Ambience / SFX / Personal / Music). Default
-  values and mix balance are a balancing pass (§10), not decided here.
+- ~~Bind four settings sliders to the Phase 0 mixer groups~~ — moved to
+  [2026-10_player-settings](2026-10_player-settings.md) Phase 1. Default values and mix balance stay a
+  balancing pass (§10).
 
 ## Deferred (content / balancing, per audio.md §10)
 
