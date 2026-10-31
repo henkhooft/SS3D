@@ -383,3 +383,19 @@ Review verification: `validate-20261030-211254` passed preflight, compile, all 2
 tests (including renderer setup identity/recovery mapping), 122 visual checks, 110 lifecycle
 checks (including portrait target preservation and Escape/focus behavior), client rebuild and
 21 remote checks. Selector portrait and in-round menu captures were visually reviewed.
+
+
+## A3 map validation coverage
+
+The lifecycle pilot now creates a temporary ministation copy with no spawn markers, starts it,
+and checks that the complete missing-job list appears while the round remains stopped, with
+no timer or spawned player. It writes `server-settings-validation.png`, repairs the same saved
+file with offered-job and operative markers, then retries through the normal countdown flow.
+The remote pilot uses a valid temporary copy too. Original station templates are never overwritten;
+temporary copies are removed on completion. The shipped ministation currently has an empty
+spawn chunk and correctly fails validation until its markers are authored.
+
+`MapValidationTests` covers Extended versus nuclear/Secret requirements, each missing nuclear
+requirement, all-job coverage, incorrect tags, warning-only maps, repair, configuration failure,
+and the scrollable literal-text save report. These additions have not been run in the cloud
+workspace: the required MCP venv and Unity editor are unavailable.

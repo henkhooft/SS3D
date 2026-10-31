@@ -1,7 +1,7 @@
 > Parent map: [tile.md](tile.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/MapEditor/, Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/
 > Status: partial
-> Verified: a7f2b862f — 2026-10-31
+> Verified: 5fe7dbb57 — 2026-10-31
 
 # Map Editor — creative mode extension hooks
 
@@ -20,6 +20,11 @@ Spawn Placements authoring:
 - Still stubbed: RandomSpawners, Triggers, Atmospherics Scripting rails
 
 Area metadata: `MapEditorArea.cs` adds admin-checked inspect/apply RPCs and server undo/redo; `UI/MapEditorAreaView.cs` edits the selected room. Names, department tags and explicit access masks persist through the existing area contributor. Room editing is selected through **Scripts → Rooms**. Its palette uses the standard Construct/Select/Dropper/Delete toolbar; New room is a distinct + palette entry, with numbered room names and creation/first stroke grouped in undo. Scripts markers default off and follow entry/exit of the Scripts category. `MapEditorAreaOverlay` renders the synced area membership with the gizmo color palette (one mesh per chunk; Resources shader). Areas is off by default in Layer View Mode, enabled by Scripts → Rooms across its existing toolbar tools and hidden on other tabs/editor close. Room and layer controls reuse `MapEditorView.SwitchRow`. Department mode previews read-only access bits and retains the custom override. Areas also shows UI Toolkit room-name labels anchored on a tile near each room center; names sync through a buffered snapshot and refresh on rename/undo. Painted boundaries, APC-less room creation and reversible line/rectangle strokes are implemented and manually accepted by the owner in the editor ([area-authoring](area-authoring.md)); release dogfood remains A2.5.
+
+Save validation uses `Tile/Validation/MapValidationService` for the server's selected mode after saving.
+Incomplete maps remain saveable; errors and soft warnings open an author-only scrollable Map validation popover
+(with no timed dismissal). Unknown job markers and markers without plenum flooring are soft warnings.
+The same policy blocks round Start; see [rounds-lobby](rounds-lobby.md). Validation does not implement job-to-spawn assignment.
 
 ## Extension points
 
@@ -43,6 +48,8 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 - **Room form shows blank labels / default white controls:** runtime panels do not inherit the Editor theme; the room form needs an explicit font, text colors and field/input styles in `MapEditor.uss`. Use stacked labels and bounded scrolling; toolbar tools need baked icon references.
 
 ## Tests
+
+- `MapValidationTests`: shared requirements, nonblocking warnings, repair and scrollable literal-text save report. Unity execution/render review remains pending in this cloud environment.
 
 - `MapEditorAreaViewTests`: room drafts survive toast/undo-state refresh; department defaults and explicit access submit distinct masks; read-only department previews preserve custom overrides; Areas follows the Rooms category across its standard tools; overlay meshes preserve tile positions and gizmo colors. Compile + EditMode passed (`artifacts/ui/validate-20261031-145101/summary.md`: succeeded; all 2149 tests completed); owner manual editor acceptance confirmed; release dogfood remains A2.5.
 

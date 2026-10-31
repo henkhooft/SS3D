@@ -1031,9 +1031,27 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            _persistence.Save(mapName, overwrite);
-            TargetToast(conn, $"Saved {mapName}.");
+            if (!_persistence.Save(mapName, overwrite))
+            {
+                TargetToast(conn, $"Could not save {mapName}.");
+                return;
+            }
+            string mode = SubSystems.Get<SS3D.Systems.Rounds.RoundSubSystem>().SettingsForServer.Mode;
+            Validation.MapValidationReport report = Validation.MapValidationService.Validate(_tileSystem, mode);
+            TargetSaveValidation(conn, report.HasIssues ? report.Describe(mapName, mode, saved: true) : "");
+            TargetToast(conn, report.HasIssues ? $"Saved {mapName} with validation warnings." : $"Saved {mapName}.");
             TargetRefreshMapList(conn);
+        }
+
+        [TargetRpc]
+        private void TargetSaveValidation(NetworkConnection conn, string report)
+        {
+            _viewModel.ValidationReport = report;
+            if (!string.IsNullOrEmpty(report))
+                _viewModel.OpenPopover = "validation";
+            else if (_viewModel.OpenPopover == "validation")
+                _viewModel.OpenPopover = null;
+            _viewModel.NotifyChanged();
         }
 
         [ServerRpc(RequireOwnership = false)]

@@ -1,7 +1,11 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
+<<<<<<< HEAD
+> Verified: 5fe7dbb57 — 2026-10-31
+=======
 > Verified: 73a838a3b — 2026-11-01
+>>>>>>> origin/develop
 
 # Rounds / lobby
 
@@ -39,6 +43,10 @@ Secret resolves to the sole available antagonist mode; Extended suppresses objec
 Nuclear Emergency uses the existing mode. Random Events, Friendly Fire and Cloning controls
 are disabled with explanations because their configurable gameplay consumers do not exist.
 The waiting card says Manual start: there is no population autostart policy yet.
+Start validates the restored template before world readiness/countdown: every offered job needs an authored marker;
+Secret (currently the nuclear mode) and Nuclear Emergency also need an operative marker, placed `Nuke` and placed `NukeCard`.
+Failures return to Stopped/Failed with the complete actionable list in the admin settings status; all start paths share the gate.
+An empty job configuration or unsupported mode fails closed. Missing/unreadable templates retain the existing load-failure path.
 
 ## Start here
 
@@ -52,6 +60,7 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
+- `Assets/Scripts/SS3D/Systems/Tile/Validation/` — shared map requirements/report and tracked-map content adapter
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerInfo.cs` — public name/MOTD/mode/build/start-time SyncVars, `ServerInfoText` sanitizers, `ServerMeta/server-info` load/save
 - `Assets/Scripts/SS3D/Systems/Rounds/BuildInfo.cs` / `Assets/Scripts/SS3D/Editor/BuildInfoGenerator.cs` — game version + git commit + change log resource (gitignored, generated on editor load and pre-build; stamps the player version). `GameVersion.cs` formats versions — rules in [2026-10_game-versioning](../2026-10_game-versioning.md). Use `BuildInfo.Version`, not `Application.version` (an `0.0.0-editor` placeholder outside player builds)
@@ -120,6 +129,12 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - **Pilot assembly stays reference-free:** adding `SS3D.Core`/`SS3D.Systems` to `SS3D.Editor.Automation.asmdef` turns on the project's Roslynator rules as errors for the whole pilot (≈25 RCS errors in `LobbyUiPilot.cs`). Reach runtime state through Unity APIs (`Resources.Load`, the pilot's output files) or reflection, as the Sound-tab settings checks do.
 - **Players persist offline:** `PlayerSubSystem.GetPlayer(ckey)` still returns a disconnected player. Use the online count or the connection, not a null record, to detect a remote leaving.
 - **Unloading the station is server-only and after despawn:** `UnloadStation` runs in `StopRound` after `RoundState = Stopped`, whose SyncVar callback already despawned players. Map editor sessions close themselves once the round leaves `Ongoing` ([tile](tile.md)), so no editor camera is left over a cleared map.
+
+## Tests
+
+- `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
+- The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
+- A3 verification in the cloud environment is pending: `Testing/ui/validate.sh --full` cannot start without `artifacts/unity-mcp/venv/bin/python`; no Unity editor is available here.
 
 ## Depends on / Used by
 

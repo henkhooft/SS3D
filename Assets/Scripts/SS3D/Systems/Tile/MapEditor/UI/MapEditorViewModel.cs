@@ -32,6 +32,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public int UndoDepth { get; set; }
         public int RedoDepth { get; set; }
         public string SelectedObjectHint { get; set; } = "Select the Edit tool to place this object";
+        public string ValidationReport { get; set; }
         public string ToastMessage { get; set; }
         public string OpenPopover { get; set; }
         public string SaveMapName { get; set; } = "Untitled Map";
