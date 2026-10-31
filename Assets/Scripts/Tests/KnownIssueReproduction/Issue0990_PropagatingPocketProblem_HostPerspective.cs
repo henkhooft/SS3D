@@ -13,10 +13,8 @@ namespace SS3D.Tests
         {
             LogAssert.ignoreFailingMessages = true;
             yield return LoadAndSetInLobby(NetworkType.Host);
-            ServerHelpers.SetPlayerReadiness("john", true);
-            ServerHelpers.ChangeRoundState(true);
-            yield return new WaitForSeconds(8f);
-            yield return TestHelpers.Embark();
+            ServerHelpers.SetPlayerReadiness(ServerHelpers.LocalCkey, true);
+            yield return TestHelpers.StartAndEnterRound();
             yield return GetHumanoidController();
             yield return GetInteractionController();
             yield return new WaitForSeconds(1f);
@@ -26,7 +24,6 @@ namespace SS3D.Tests
         public IEnumerator UnityTearDown()
         {
             LogAssert.ignoreFailingMessages = true;
-            ServerHelpers.ChangeRoundState(false);
             yield return TestHelpers.TryFinishAndExitRound();
             yield return PrepareNetworkTestEnvironment();
         }

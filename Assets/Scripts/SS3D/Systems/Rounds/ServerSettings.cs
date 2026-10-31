@@ -149,6 +149,17 @@ namespace SS3D.Systems.Rounds
             }
         }
 
+        /// <summary>Also clears a station load the cancelled start left in progress, so the lobby can start again.</summary>
+        [Server]
+        protected override void CancelCountdown()
+        {
+            base.CancelCountdown();
+            if (_stationLoadState is StationLoadState.Loading or StationLoadState.Initializing)
+            {
+                _stationLoadState = StationLoadState.NotLoaded;
+            }
+        }
+
         [Server]
         private void SendServerSettings(NetworkConnection sender, string status)
         {

@@ -55,7 +55,8 @@ namespace SS3D.Tests
 
         public static IEnumerator LateEmbarkRejectedDuringEndingState()
         {
-            ServerHelpers.SetPlayerReadiness("john", true);
+            // Not ready: the host must not get a body at round start, so the late embark is the only way in.
+            ServerHelpers.SetPlayerReadiness(ServerHelpers.LocalCkey, false);
             ServerHelpers.ChangeRoundState(true);
             yield return RoundLifecycleTestHelpers.WaitForRoundState(RoundState.Ongoing, 20f);
 

@@ -3,7 +3,10 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
+using System.Collections;
 using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
 
 namespace SS3D.Tests
 {
@@ -16,6 +19,57 @@ namespace SS3D.Tests
     /// </summary>
     public static class ServerHelpers
     {
+        /// <summary>Ckey of the local player in single-process PlayMode tests (see PlayModeTest.SetApplicationSettings).</summary>
+        public const string LocalCkey = "john";
+
+        public static RoundState CurrentRoundState => SubSystems.Get<RoundSubSystem>().CurrentRoundState;
+
+        /// <summary>Polls the server's round state (no event observer needed).</summary>
+        public static IEnumerator WaitForRoundState(RoundState target, float timeout = 30f)
+        {
+            float startTime = Time.time;
+            while (CurrentRoundState != target)
+            {
+                Assert.IsTrue(Time.time - startTime < timeout, $"Expected round state {target} but was {CurrentRoundState} after {timeout} seconds.");
+                yield return null;
+            }
+        }
+
+        public static bool IsPlayerSpawned(string ckey)
+        {
+            Player player = SubSystems.Get<PlayerSubSystem>().GetPlayer(ckey);
+            return player != null && SubSystems.Get<EntitySubSystem>().IsPlayerSpawned(player);
+        }
+
+        /// <summary>Joins the Ongoing round as <paramref name="ckey"/> unless already spawned, and waits for the body.</summary>
+        public static IEnumerator EmbarkPlayer(string ckey, float timeout = 15f)
+        {
+            yield return WaitForRoundState(RoundState.Ongoing, timeout);
+            if (!IsPlayerSpawned(ckey))
+            {
+                SpawnLatePlayer(ckey);
+            }
+
+            float startTime = Time.time;
+            while (!IsPlayerSpawned(ckey))
+            {
+                Assert.IsTrue(Time.time - startTime < timeout, $"{ckey} was not spawned within {timeout} seconds of embarking.");
+                yield return null;
+            }
+        }
+
+        /// <summary>Stops a running or starting round and waits until it is Stopped. Safe when no round runs.</summary>
+        public static IEnumerator StopRound(float timeout = 30f)
+        {
+            if (!SubSystems.TryGet(out RoundSubSystem rounds) || rounds.CurrentRoundState == RoundState.Stopped)
+            {
+                yield break;
+            }
+
+            ChangeRoundState(false);
+            yield return WaitForRoundState(RoundState.Stopped, timeout);
+        }
+
         /// <summary>
         /// Sets all players ready.
         /// </summary>
