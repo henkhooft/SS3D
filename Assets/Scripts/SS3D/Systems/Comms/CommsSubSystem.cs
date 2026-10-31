@@ -18,7 +18,7 @@ namespace SS3D.Systems.Comms
     /// Hub for local speech (proximity ObserversRpc) and non-positional radio/announcements
     /// (global FishNet broadcast). See Documents/design/comms.md §3–§8.
     /// </summary>
-    public class CommsSubSystem : NetworkSubSystem
+    public partial class CommsSubSystem : NetworkSubSystem
     {
         private const int MaxMessageLength = 256;
         private const string CommsLogFolderName = "Comms";
@@ -54,6 +54,7 @@ namespace SS3D.Systems.Comms
 
             InstanceFinder.ClientManager.RegisterBroadcast<CommsMessage>(OnClientReceiveCommsMessage);
             InstanceFinder.ServerManager.RegisterBroadcast<CommsMessage>(OnServerReceiveCommsMessage);
+            RegisterOocBroadcasts();
         }
 
         private void EnsureChannelRegistry()
@@ -187,6 +188,7 @@ namespace SS3D.Systems.Comms
 
         public override void OnStopNetwork()
         {
+            UnregisterOocBroadcasts();
             if (InstanceFinder.ClientManager != null)
             {
                 InstanceFinder.ClientManager.UnregisterBroadcast<CommsMessage>(OnClientReceiveCommsMessage);
@@ -276,7 +278,7 @@ namespace SS3D.Systems.Comms
             BroadcastCommsMessage(new CommsMessage
             {
                 ChannelId = channel.name,
-                Sender = player.Ckey,
+                Sender = entity.Mind.DisplayName,
                 Text = text,
                 Kind = CommsChannelKind.Radio,
             });
@@ -331,7 +333,7 @@ namespace SS3D.Systems.Comms
             BroadcastCommsMessage(new CommsMessage
             {
                 ChannelId = channel.name,
-                Sender = player.Ckey,
+                Sender = entity.Mind.DisplayName,
                 Text = text,
                 Kind = CommsChannelKind.Announcement,
             });
@@ -381,6 +383,30 @@ namespace SS3D.Systems.Comms
             }
 
             AppendServerLog(message);
+
+            // Station announcements are in-world: only crew with a spawned body hear them, not lobby clients.
+            if (message.Kind == CommsChannelKind.Announcement)
+            {
+                HashSet<NetworkConnection> crew = new();
+                if (SubSystems.TryGet(out EntitySubSystem entities))
+                {
+                    foreach (NetworkConnection client in InstanceFinder.ServerManager.Clients.Values)
+                    {
+                        if (entities.TryGetSpawnedEntity(client, out _))
+                        {
+                            crew.Add(client);
+                        }
+                    }
+                }
+
+                if (crew.Count > 0)
+                {
+                    InstanceFinder.ServerManager.Broadcast(crew, message);
+                }
+
+                return;
+            }
+
             InstanceFinder.ServerManager.Broadcast(message);
         }
 
@@ -396,10 +422,15 @@ namespace SS3D.Systems.Comms
 
         private void AppendServerLog(CommsMessage msg)
         {
+            AppendServerLogLine($"[{msg.Kind}] [{msg.ChannelId}] [{msg.Sender}] {msg.Text}");
+        }
+
+        private void AppendServerLogLine(string line)
+        {
             try
             {
                 using StreamWriter writer = new StreamWriter(_commsLogPath, true);
-                writer.WriteLine($"[{msg.Kind}] [{msg.ChannelId}] [{msg.Sender}] {msg.Text}");
+                writer.WriteLine(line);
             }
             catch (Exception e)
             {

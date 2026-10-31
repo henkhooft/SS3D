@@ -75,6 +75,7 @@ public static class RuntimePreviewGenerator
 		}
 	}
 
+	// SS3D: CharacterPreviewBooth uses layer 23 at its own origin; keep the two isolated.
 	private const int PREVIEW_LAYER = 22;
 	private static Vector3 PREVIEW_POSITION = new Vector3( -250f, -250f, -250f );
 

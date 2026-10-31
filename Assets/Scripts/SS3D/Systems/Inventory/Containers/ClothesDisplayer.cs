@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using SS3D.Core.Behaviours;
 using SS3D.Logging;
+using SS3D.Systems.Entities;
 using SS3D.Systems.Inventory.Items;
 using UnityEngine;
 using FishNet.Object.Synchronizing;
@@ -81,6 +82,11 @@ namespace SS3D.Systems.Inventory.Containers
 
                     newClothedBodyPart.gameObject.SetActive(true);
                     meshRenderer.sharedMesh = newCloth.GetClothMesh(newClothedBodyPart.Type);
+                    // A new sharedMesh starts with zero shape-key weights; keep it fitted to the body.
+                    if (TryGetComponent(out Human human))
+                    {
+                        human.ReapplyBodyMorphs();
+                    }
 
                     break;
 

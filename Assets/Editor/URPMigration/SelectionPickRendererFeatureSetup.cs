@@ -17,10 +17,7 @@ namespace SS3D.Editor.URPMigration
             EditorApplication.delayCall += () =>
             {
                 if (EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode)
-                {
                     return;
-                }
-
                 WireIfNeeded(silent: true);
             };
         }
@@ -28,97 +25,101 @@ namespace SS3D.Editor.URPMigration
         public static void WireFromMenu()
         {
             if (WireIfNeeded(silent: false))
-            {
                 Debug.Log("Selection pick renderer feature wired on SS3D_ForwardPlusRenderer.");
-            }
         }
 
-        public static void EnsureWired()
-        {
-            WireIfNeeded(silent: true);
-        }
+        public static void EnsureWired() => WireIfNeeded(silent: true);
 
         static bool WireIfNeeded(bool silent)
         {
-            var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
+            UniversalRendererData renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
             if (renderer == null)
             {
-                if (!silent)
-                {
-                    Debug.LogError($"Could not load renderer at {RendererPath}");
-                }
-
+                if (!silent) Debug.LogError($"Could not load renderer at {RendererPath}");
                 return false;
             }
 
-            RemoveBrokenFeatures(renderer);
-
-            foreach (var feature in renderer.rendererFeatures)
+            bool changed = RemoveBrokenFeatures(renderer);
+            SelectionPickRendererFeature pick = null;
+            foreach (ScriptableRendererFeature feature in renderer.rendererFeatures)
             {
                 if (feature is SelectionPickRendererFeature existing)
                 {
-                    AssignShader(existing);
-                    EditorUtility.SetDirty(renderer);
-                    AssetDatabase.SaveAssets();
-                    return false;
+                    pick = existing;
+                    break;
                 }
             }
 
-            var pickFeature = ScriptableObject.CreateInstance<SelectionPickRendererFeature>();
-            pickFeature.name = "SelectionPickRendererFeature";
-            AssignShader(pickFeature);
+            if (pick == null)
+            {
+                pick = ScriptableObject.CreateInstance<SelectionPickRendererFeature>();
+                pick.name = "SelectionPickRendererFeature";
+                AssetDatabase.AddObjectToAsset(pick, renderer);
+                renderer.rendererFeatures.Add(pick);
+                changed = true;
+            }
 
-            AssetDatabase.AddObjectToAsset(pickFeature, renderer);
-            renderer.rendererFeatures.Add(pickFeature);
+            changed |= AssignShader(pick);
+            changed |= SynchronizeFeatureMap(renderer);
+            if (!changed) return false;
 
-            EditorUtility.SetDirty(pickFeature);
             EditorUtility.SetDirty(renderer);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.ImportAsset(RendererPath, ImportAssetOptions.ForceUpdate);
+            // Do not flush unrelated dynamic font atlases or runtime catalog caches on reload.
+            AssetDatabase.SaveAssetIfDirty(renderer);
             return true;
         }
 
-        static void RemoveBrokenFeatures(UniversalRendererData renderer)
+        static bool RemoveBrokenFeatures(UniversalRendererData renderer)
         {
-            for (var i = renderer.rendererFeatures.Count - 1; i >= 0; i--)
+            bool changed = false;
+            for (int i = renderer.rendererFeatures.Count - 1; i >= 0; i--)
             {
-                var feature = renderer.rendererFeatures[i];
-                if (feature == null || feature is SelectionPickRendererFeature)
-                {
-                    renderer.rendererFeatures.RemoveAt(i);
-                }
+                if (renderer.rendererFeatures[i] != null) continue;
+                renderer.rendererFeatures.RemoveAt(i);
+                changed = true;
             }
 
-            var path = AssetDatabase.GetAssetPath(renderer);
-            foreach (var subAsset in AssetDatabase.LoadAllAssetsAtPath(path))
+            string path = AssetDatabase.GetAssetPath(renderer);
+            foreach (Object subAsset in AssetDatabase.LoadAllAssetsAtPath(path))
             {
-                if (subAsset == null || subAsset == renderer)
-                {
+                // A valid selection feature must survive reloads, retaining its local file ID.
+                if (subAsset == null || subAsset == renderer || subAsset is SelectionPickRendererFeature)
                     continue;
-                }
-
-                if (subAsset is SelectionPickRendererFeature)
-                {
-                    Object.DestroyImmediate(subAsset, true);
-                }
-                else if (subAsset.name == "SelectionPickRendererFeature")
-                {
-                    Object.DestroyImmediate(subAsset, true);
-                }
+                if (subAsset.name != "SelectionPickRendererFeature") continue;
+                Object.DestroyImmediate(subAsset, true);
+                changed = true;
             }
+            return changed;
         }
 
-        static void AssignShader(SelectionPickRendererFeature feature)
+        static bool AssignShader(SelectionPickRendererFeature feature)
         {
-            var shader = AssetDatabase.LoadAssetAtPath<Shader>(SelectionShaderPath);
-            if (shader == null)
-            {
-                shader = Shader.Find("Custom/Selection");
-            }
+            Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(SelectionShaderPath) ?? Shader.Find("Custom/Selection");
+            SerializedObject serializedFeature = new(feature);
+            SerializedProperty property = serializedFeature.FindProperty("_selectionShader");
+            if (property.objectReferenceValue == shader) return false;
+            property.objectReferenceValue = shader;
+            return serializedFeature.ApplyModifiedPropertiesWithoutUndo();
+        }
 
-            var serializedFeature = new SerializedObject(feature);
-            serializedFeature.FindProperty("_selectionShader").objectReferenceValue = shader;
-            serializedFeature.ApplyModifiedPropertiesWithoutUndo();
+        static bool SynchronizeFeatureMap(UniversalRendererData renderer)
+        {
+            SerializedObject serializedRenderer = new(renderer);
+            SerializedProperty map = serializedRenderer.FindProperty("m_RendererFeatureMap");
+            if (map == null) return false;
+            bool changed = map.arraySize != renderer.rendererFeatures.Count;
+            map.arraySize = renderer.rendererFeatures.Count;
+            for (int i = 0; i < renderer.rendererFeatures.Count; i++)
+            {
+                if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(renderer.rendererFeatures[i], out string _, out long id))
+                    continue;
+                SerializedProperty entry = map.GetArrayElementAtIndex(i);
+                if (entry.longValue == id) continue;
+                entry.longValue = id;
+                changed = true;
+            }
+            if (changed) serializedRenderer.ApplyModifiedPropertiesWithoutUndo();
+            return changed;
         }
     }
 }

@@ -45,6 +45,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "UNITY_RENDER_PIPELINE_UNIVERSAL"
+        }
+    ],
     "noEngineReferences": false
 }

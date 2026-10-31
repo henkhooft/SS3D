@@ -21,10 +21,10 @@ namespace SS3D.Editor
                 return;
             }
 
-            Debug.Log("Rebuilt Machine UI, Main HUD, UI Shell, and Storage Panel asset catalogs.");
+            Debug.Log("Rebuilt Machine UI, Main HUD, UI Shell, Storage Panel, and Lobby asset catalogs.");
             EditorUtility.DisplayDialog(
                 "UI Catalogs",
-                "Rebuilt Machine UI, Main HUD, UI Shell, and Storage Panel asset catalogs.",
+                "Rebuilt Machine UI, Main HUD, UI Shell, Storage Panel, and Lobby asset catalogs.",
                 "OK");
         }
 
@@ -67,6 +67,11 @@ namespace SS3D.Editor
             }
 
             if (!StoragePanelAssetCatalogBuilder.TryRebuildCatalog(out error))
+            {
+                return false;
+            }
+
+            if (!LobbyAssetCatalogBuilder.TryRebuildCatalog(out error))
             {
                 return false;
             }

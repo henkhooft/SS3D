@@ -15,33 +15,55 @@ using SS3D.Data;
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Inventory.Items.Generic;
 using SS3D.Systems.IdAccess;
+using SS3D.Systems.Roles.Messages;
+using SS3D.Systems.Rounds;
+using FishNet.Connection;
+using FishNet.Object.Synchronizing;
+using System;
+using RoundStateUpdated = SS3D.Systems.Rounds.Events.RoundStateUpdated;
 
 namespace SS3D.Systems.Roles
 {
+    /// <summary>
+    /// Job slots, lobby job/antagonist preferences and job assignment (lobby.md §3–5). Round start
+    /// resolves every spawning player in one pass; latejoiners take their highest ranked open job.
+    /// </summary>
     public class RoleSubSystem : NetworkSubSystem
     {
         [SerializeField] private RolesAvailable _rolesAvailable;
-        private List<RoleCounter> _roleCounters = new List<RoleCounter>();
-        private Dictionary<Player, RoleData> _rolePlayers = new Dictionary<Player, RoleData>();
+        [SerializeField] private string _fallbackRole = "Assistant";
+
+        [SyncObject] private readonly SyncList<JobSlotInfo> _jobs = new();
+
+        private readonly Dictionary<string, RoleData> _roleData = new();
+        private readonly Dictionary<string, Dictionary<string, JobPriority>> _preferences = new();
+        private readonly Dictionary<string, HashSet<string>> _antagonistOptIns = new();
+        private readonly Dictionary<Player, RoleData> _rolePlayers = new();
+        private readonly System.Random _random = new();
+
+        /// <summary>Replicated job list in authoring order.</summary>
+        public IReadOnlyList<JobSlotInfo> Jobs => _jobs;
 
         #region Setup
-        protected override void OnStart()
+        public override void OnStartServer()
         {
-            base.OnStart();
-            Setup();
-        }
+            base.OnStartServer();
 
-        [Server]
-        private void Setup()
-        {
+            ServerManager.RegisterBroadcast<JobPreferencesMessage>(HandleJobPreferences);
             AddHandle(OnlinePlayersChanged.AddListener(HandleOnlinePlayersChanged));
+            AddHandle(RoundStateUpdated.AddListener(HandleRoundStateUpdated));
 
             GetAvailableRoles();
         }
 
+        public override void OnStopServer()
+        {
+            base.OnStopServer();
+            ServerManager.UnregisterBroadcast<JobPreferencesMessage>(HandleJobPreferences);
+        }
+
         /// <summary>
-        /// Get all roles in the current AvailableRoles class and sets up
-        /// the Role Counters for them
+        /// Builds the replicated job list from the available roles.
         /// </summary>
         [Server]
         private void GetAvailableRoles()
@@ -52,14 +74,78 @@ namespace SS3D.Systems.Roles
                 return;
             }
 
+            _jobs.Clear();
+            _roleData.Clear();
             foreach (RolesData role in _rolesAvailable.Roles)
             {
-                RoleCounter roleCounter = new RoleCounter();
-                roleCounter.Role = role.Data;
-                roleCounter.AvailableRoles = role.AvailableRoles;
+                if (role.Data == null || _roleData.ContainsKey(role.Data.Name))
+                {
+                    continue;
+                }
 
-                _roleCounters.Add(roleCounter);
+                _roleData[role.Data.Name] = role.Data;
+                _jobs.Add(new JobSlotInfo
+                {
+                    Name = role.Data.Name,
+                    Department = (byte)IdAccessSubSystem.DepartmentForRole(role.Data.Name),
+                    Slots = role.AvailableRoles,
+                });
             }
+
+            if (!_roleData.ContainsKey(_fallbackRole))
+            {
+                Log.Error(this, "Fallback role {role} is not in the available roles", Logs.ServerOnly, _fallbackRole);
+            }
+        }
+        #endregion
+
+        #region Preferences
+        [Server]
+        private void HandleJobPreferences(NetworkConnection sender, JobPreferencesMessage message)
+        {
+            Player player = SubSystems.Get<PlayerSubSystem>().GetPlayer(sender);
+            if (player == null)
+            {
+                return;
+            }
+
+            Dictionary<string, JobPriority> priorities = new();
+            int count = Mathf.Min(message.Jobs?.Length ?? 0, message.Priorities?.Length ?? 0);
+            for (int i = 0; i < count; i++)
+            {
+                string job = message.Jobs[i];
+                byte priority = message.Priorities[i];
+                if (job != null && _roleData.ContainsKey(job) && priority <= (byte)JobPriority.High)
+                {
+                    priorities[job] = (JobPriority)priority;
+                }
+            }
+
+            HashSet<string> antagonists = new();
+            foreach (string key in message.AntagonistOptIns ?? Array.Empty<string>())
+            {
+                if (AntagonistCategories.IsKnown(key))
+                {
+                    antagonists.Add(key);
+                }
+            }
+
+            _preferences[player.Ckey] = priorities;
+            _antagonistOptIns[player.Ckey] = antagonists;
+            RefreshJobCounts();
+        }
+
+        /// <summary>
+        /// Whether the player opted into consideration for an antagonist category. Gamemodes
+        /// choose among opted-in players; opting in guarantees nothing.
+        /// </summary>
+        public bool IsAntagonistOptedIn(string ckey, string category) =>
+            ckey != null && _antagonistOptIns.TryGetValue(ckey, out HashSet<string> set) && set.Contains(category);
+
+        public bool TryGetRole(Player player, out RoleData role)
+        {
+            role = null;
+            return player != null && _rolePlayers.TryGetValue(player, out role);
         }
         #endregion
 
@@ -72,93 +158,137 @@ namespace SS3D.Systems.Roles
                 return;
             }
 
-            if (e.ChangeType == ChangeType.Addition)
+            RefreshJobCounts();
+        }
+
+        [Server]
+        private void HandleRoundStateUpdated(ref EventContext context, in RoundStateUpdated e)
+        {
+            if (e.RoundState != RoundState.Stopped)
             {
-                HandlePlayerJoined(e.ChangedPlayer);
-            } else 
-            if (e.ChangeType == ChangeType.Removal)
+                return;
+            }
+
+            _rolePlayers.Clear();
+            RefreshJobCounts();
+        }
+        #endregion
+
+        #region Assignment
+        /// <summary>
+        /// One resolution pass over the players spawning at round start. Replaces earlier assignments.
+        /// </summary>
+        [Server]
+        public void ResolveRoundStartRoles(IReadOnlyList<Player> players)
+        {
+            _rolePlayers.Clear();
+            RefreshJobCounts();
+
+            Dictionary<string, Player> byCkey = new();
+            foreach (Player player in players)
             {
-                HandlePlayerLeft(e.ChangedPlayer);
+                if (player != null)
+                {
+                    byCkey[player.Ckey] = player;
+                }
+            }
+
+            Dictionary<string, IReadOnlyDictionary<string, JobPriority>> preferences = new();
+            foreach (string ckey in byCkey.Keys)
+            {
+                if (_preferences.TryGetValue(ckey, out Dictionary<string, JobPriority> priorities))
+                {
+                    preferences[ckey] = priorities;
+                }
+            }
+
+            Dictionary<string, string> assignments =
+                JobResolver.Resolve(byCkey.Keys.ToList(), preferences, _jobs, _fallbackRole, _random);
+            foreach (KeyValuePair<string, string> assignment in assignments)
+            {
+                Assign(byCkey[assignment.Key], assignment.Value);
+            }
+
+            RefreshJobCounts();
+        }
+
+        [Server]
+        private void AssignLateJoinRole(Player player)
+        {
+            _preferences.TryGetValue(player.Ckey, out Dictionary<string, JobPriority> priorities);
+            Assign(player, JobResolver.ResolveLateJoin(priorities, _jobs, _fallbackRole, _random));
+            RefreshJobCounts();
+        }
+
+        [Server]
+        private void Assign(Player player, string job)
+        {
+            if (_roleData.TryGetValue(job, out RoleData role))
+            {
+                _rolePlayers[player] = role;
+                Log.Information(this, "{ckey} assigned job {job}", Logs.ServerOnly, player.Ckey, job);
             }
         }
 
+        /// <summary>
+        /// Recomputes replicated assigned/interested counts; only changed rows are resent.
+        /// </summary>
         [Server]
-        private void HandlePlayerJoined(Player player)
+        private void RefreshJobCounts()
         {
-            AssignPlayerRole(player);
-        }
+            HashSet<string> online = new(SubSystems.Get<PlayerSubSystem>().OnlinePlayers
+                .Where(player => player != null)
+                .Select(player => player.Ckey));
 
-        [Server]
-        private void HandlePlayerLeft(Player player)
-        {
-            RemovePlayerFromCounters(player);
+            for (int i = 0; i < _jobs.Count; i++)
+            {
+                JobSlotInfo job = _jobs[i];
+                int assigned = _rolePlayers.Values.Count(role => role.Name == job.Name);
+                int interested = _preferences.Count(entry => online.Contains(entry.Key)
+                    && entry.Value.TryGetValue(job.Name, out JobPriority priority)
+                    && priority != JobPriority.Never);
+
+                if (assigned == job.Assigned && interested == job.Interested)
+                {
+                    continue;
+                }
+
+                job.Assigned = assigned;
+                job.Interested = interested;
+                _jobs[i] = job;
+            }
         }
         #endregion
 
         /// <summary>
-        /// Assign a role to the player after joining the server
-        /// </summary>
-        /// <param name="player</param>
-        private void AssignPlayerRole(Player player)
-        {
-            if (player == null || _rolePlayers.ContainsKey(player))
-            {
-                return;
-            }
-
-            RoleCounter assistantRole = _roleCounters.FirstOrDefault(rc => rc.Role.Name == "Assistant");
-            RoleCounter securityRole = _roleCounters.FirstOrDefault(rc => rc.Role.Name == "Security");
-
-            if (securityRole == null || securityRole.CurrentRoles == securityRole.AvailableRoles)
-            {
-                assistantRole.AddPlayer(player);
-                _rolePlayers.Add(player, assistantRole.Role);
-            }
-            else
-            {
-                securityRole.AddPlayer(player);
-                _rolePlayers.Add(player, securityRole.Role);
-            }
-        }
-
-        /// <summary>
-        /// Remove players from the Role Counters if he quit before embarking
-        /// </summary>
-        /// <param name="player</param>
-        private void RemovePlayerFromCounters(Player player)
-        {
-            if (player == null || !_rolePlayers.TryGetValue(player, out RoleData roleData))
-            {
-                return;
-            }
-
-            RoleCounter roleCounter = _roleCounters.FirstOrDefault(rc => rc.Role == roleData);
-
-            roleCounter?.RemovePlayer(player);
-            _rolePlayers.Remove(player);
-        }
-
-        /// <summary>
-        /// Checks the role of the player and spawns his items
+        /// Gives the spawned player the items of their job, assigning one first for latejoiners.
         /// </summary>
         /// <param name="entity">The player that will receive the items</param>
-        [ServerRpc(RequireOwnership = false)]
+        [Server]
         public void GiveRoleLoadoutToPlayer(Entity entity)
         {
-            KeyValuePair<Player, RoleData>? rolePlayer =
-                _rolePlayers.FirstOrDefault(rp => rp.Key == entity.Mind.player);
-
-            if (rolePlayer != null)
+            Player player = entity.Mind?.player;
+            if (player == null)
             {
-                RoleData roleData = rolePlayer.Value.Value;
+                return;
+            }
 
-                Log.Information(this, entity.Ckey + " embarked with role " + roleData.Name);
-                SpawnIdentificationItems(entity, roleData);
+            if (!_rolePlayers.ContainsKey(player))
+            {
+                AssignLateJoinRole(player);
+            }
 
-                if (roleData.Loadout != null)
-                {
-                    SpawnLoadoutItems(entity, roleData.Loadout);
-                }
+            if (!_rolePlayers.TryGetValue(player, out RoleData roleData))
+            {
+                return;
+            }
+
+            Log.Information(this, entity.Ckey + " embarked with role " + roleData.Name);
+            SpawnIdentificationItems(entity, roleData);
+
+            if (roleData.Loadout != null)
+            {
+                SpawnLoadoutItems(entity, roleData.Loadout);
             }
         }
 
@@ -179,7 +309,7 @@ namespace SS3D.Systems.Roles
             IDCard idCard = (IDCard)idCardItem;
 
             CrewRecord crewRecord = idAccess.CreateCrewRecord(
-                entity.Ckey,
+                entity.Mind.DisplayName,
                 role.Name,
                 IdAccessSubSystem.DepartmentForRole(role.Name),
                 role.StartingAccess);

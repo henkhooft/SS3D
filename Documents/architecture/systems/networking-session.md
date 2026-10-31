@@ -27,6 +27,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - Boot.unity `DefaultScene._offlineScene` stays Boot for cold start; CCR arms Empty after first Online.
 - Prefer `SessionState` / `ClientConnectionRecovery.Instance` over inferring session status from subsystem presence.
 - New networked SubSystem: add to hub rebuild (**SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab**) — never hand-edit Game.unity.
+- Harness scripts: `wait_timeout <s>` sets later waits; windowed clients can probe UITK with `ui_wait <#name|.class> visible|hidden|enabled|disabled|absent`, `ui_text <selector> <substring>`, `ui_submit <selector>` (NavigationSubmit, not OS input) and `screenshot <name>` (to `SS3D_AUTOMATION_OUTPUT_DIR`, else `persistentDataPath`). Example: `Testing/multiplayer/scenarios/lobby-remote-client.txt`.
 
 ## Pitfalls
 
@@ -35,6 +36,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - **DMM MetaStation import can drop Host session:** a synchronous full-map `PlaceTileObject` loop blocks the main thread long enough that FishNet/LiteNetLib heartbeats fail → CCR Retry/Quit. Import window applies via `MapImportApplier.ApplyRoutine` (yield every 64 placements). Hit 2026-07-28.
 - **Station template boot load freezes the same way:** `LoadMostRecentStationTemplate` used to place sync; use `LoadStationTemplateAsync` / `TileMap.LoadRoutine` (Play start + Map Editor Load). Hit 2026-07-28.
 - **Disconnect must not reload Boot after first Online.** CCR arms Empty; Automation must not restore Boot offline after reconnect.
+- **Late connections timed out before their first packet (FishNet).** `NetworkConnection.Initialize` seeded `PacketTick` with `SetLastRemoteTick`, which `EstimatedTick.Update` rejects for remote tick 0, so `LocalTick` stayed 0 and `CheckClientTimeout` kicked a connection opened 60s+ after server start (`Id [n] has timed out`, Host reconnect → CCR Retry/Quit). Local `SS3D patch` uses `SetRemoteTick`; re-apply on FishNet upgrades. Hit 2026-10-30.
 - **Intro auto-join is Cold-only** (`IntroUIHelper` checks `SessionState.Cold`).
 - **`SubSystems.Get` during Disconnecting / WaitingForServer** is silent (`SetSuppressMissingErrors`) — prefer `TryGet`. Suppress starts on Disconnecting so hub/device `OnDestroy` during `StopConnection` does not Error before WaitingForServer.
 - **OnGUI recovery when Empty offline:** NetworkSession is DDOL — CCR shows OnGUI when Intro/Boot/Launcher are not loaded (not when NetworkSession is missing).
@@ -47,6 +49,8 @@ FishNet session management — host/join, network type and port settings. Distin
 - **Disconnect / failed join must not reload Boot as offline after a successful session.** FishNet `DefaultScene` offline is Boot for cold start so Intro works; after the first Started connection, `ClientConnectionRecovery` arms offline=`Empty.unity`. Otherwise `StopConnection` → `LoadScene(Boot)` while NetworkManager is DDOL re-ran Intro/`SkipIntro`/`StartNetworkSession` hundreds of times (`Failed to start the client connection… already starting/started`) plus DOTween missing-target noise. `StartNetworkSession` also skips when the client is still Starting/Started/Stopping. Mid-game drop uses `ClientConnectionRecovery` OnGUI (Boot is gone); Intro fail uses `ServerConnectionView` Retry → `StartNetworkSession`. Harness still calls `RedirectOfflineSceneToEmpty` before disconnect as a belt-and-suspenders.
 - **`-testscript=` clients: `IntroUIHelper` must not auto-`StartNetworkSession`.** SkipIntro would otherwise race Automation's owned join/reconnect. Automation starts the first client session from `HandleApplicationInitializing`.
 - **Client teardown must not call `ServerManager.Despawn`.** `PlacedItemObject.DestroySelf` on pure clients after `StopConnection` used to spam `Cannot despawn object because server nor client are active`; dispose the GameObject locally instead.
+- **Windowed clients may not exit after `ScriptComplete`.** In a graphical Linux player `Environment.Exit(0)` can stall in subsystem teardown; the harness and the lobby remote pilot treat the `ScriptComplete` signal as success and kill leftovers. Don't key a pass on process exit.
+- **UI opcodes need a graphical client.** The lobby UITK host skips bootstrap under `-batchmode`/Null GFX, so `ui_*` and `screenshot` instructions time out in the headless smoke harness by design.
 
 ## Depends on / Used by
 

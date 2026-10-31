@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using SS3D.Core.Behaviours;
 using Coimbra.Services.Events;
 using FishNet.Connection;
@@ -24,7 +24,6 @@ namespace SS3D.Systems.Gamemodes
         /// <summary>
         /// The gamemode that is being used.
         /// </summary>
-        [SyncVar] 
         [SerializeField]
         private Gamemode _gamemode;
 
@@ -33,7 +32,15 @@ namespace SS3D.Systems.Gamemodes
         /// </summary>
         public List<string> Antagonists => _gamemode.RoundAntagonists;
 
-        public string CurrentGamemodeName => _gamemode != null ? _gamemode.name : "unknown";
+        public string CurrentGamemodeName
+        {
+            get
+            {
+                if (IsServer && SubSystems.TryGet(out RoundSubSystem rounds)
+                    && rounds.SettingsForServer.Mode == "Extended") return "Extended";
+                return _gamemode != null ? _gamemode.name : "unknown";
+            }
+        }
 
         protected override void OnStart()
         {
@@ -65,6 +72,8 @@ namespace SS3D.Systems.Gamemodes
         [Server]
         private void InitializeGamemode()
         {
+            if (SubSystems.Get<RoundSubSystem>().SettingsForServer.Mode == "Extended") return;
+            // Secret currently resolves to the sole available antagonist mode.
             // Creates an instance of the SO, to avoid using the file. 
             _gamemode = Instantiate(_gamemode);
 
@@ -110,7 +119,7 @@ namespace SS3D.Systems.Gamemodes
         [Server]
         private void FinalizeGamemode()
         {
-            if (_gamemode == null)
+            if (_gamemode == null || !_gamemode.IsInitialized)
             {
                 return;
             }
@@ -206,7 +215,7 @@ namespace SS3D.Systems.Gamemodes
         private void HandleSpawnedPlayersChanged(ref EventContext context, in SpawnedPlayersUpdated e)
         {
             // Exit early if the gamemode has not yet been initialized.
-            if (!_gamemode.IsInitialized)
+            if (_gamemode == null || !_gamemode.IsInitialized)
             {
                 return;
             }

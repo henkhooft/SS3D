@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/, Assets/Content/Systems/Input/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: 0e6278889 — 2026-07-27
+> Verified: ebf05fdfb — 2026-10-30
 
 # Inputs
 
@@ -78,6 +78,11 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arb
   flip with `y = Screen.height - y` (or use `InputInterface.ScreenToPanel`). Skipping the flip maps the
   top of the screen onto bottom chrome (map editor Object Library) — an invisible full-width block in the
   upper half, while the lower UI appears click-through.
+- **Every UITK `TextField` needs `InputTextEntryScope`:** `Global` always enables `TileCreator/ToggleMenu`
+  (B = map editor) and `Other` (Escape), so an unscoped field types straight into keybinds. Also `Exit` when the
+  view rebuilds or hides: a focused field removed from the panel gets no `FocusOut` (lobby shell/creator do both).
+- **Escape owners:** `Other/Toggle Menu` = in-round lobby menu (`LobbyUiSubSystem`, `Menu` context);
+  `UiCancel` = machine panel; armed interactions poll the key and win (the lobby menu skips while armed).
 - **Regenerating `Controls.cs`:** re-apply Caps / Backspace / F6 (and startup erasures) if the generator
   restores old paths — asset + generated wrapper must match [2026-07_default-input-scheme.md](../2026-07_default-input-scheme.md).
 
@@ -91,7 +96,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../2026-07_input-arb
 - **Used by:** [player-control](player-control.md), [interactions-runtime](interactions-runtime.md),
   [machine-interface](machine-interface.md), [chat-audio-screens](chat-audio-screens.md),
   [tile](tile.md), [examine](examine.md), [ingame-console](ingame-console.md), [inventory](inventory.md),
-  [entities](entities.md) (intent toggle)
+  [entities](entities.md) (intent toggle), [rounds-lobby](rounds-lobby.md) (Escape menu, `Menu` context)
 
 ## Related docs
 

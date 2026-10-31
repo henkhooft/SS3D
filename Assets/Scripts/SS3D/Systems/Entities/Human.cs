@@ -1,5 +1,8 @@
 ﻿using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Stamina;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
@@ -18,6 +21,82 @@ namespace SS3D.Systems.Entities
 		public GameObject Ghost;
 		private GameObject _spawnedGhost;
         private bool _killStarted;
+
+        [SyncVar(OnChange = nameof(SyncAppearance))]
+        private CharacterAppearance _appearance;
+
+        /// <summary>
+        /// Applies the player's lobby character. Server sets it once after spawn; observers apply
+        /// morphs and styles locally. The server applies height too so its bone hit colliders match.
+        /// </summary>
+        [Server]
+        public void SetAppearance(CharacterAppearance appearance)
+        {
+            _appearance = appearance;
+        }
+
+        /// <summary>Re-applies body morphs after a worn mesh swap (clothes share the body's shape keys).</summary>
+        public void ReapplyBodyMorphs()
+        {
+            if (!_appearance.IsSet)
+            {
+                return;
+            }
+
+            HumanoidRigReferences rig = GetComponent<HumanoidRigReferences>();
+            HumanoidMorphApplier.Apply(
+                gameObject,
+                _appearance.Female,
+                _appearance.Breasts,
+                _appearance.Fat,
+                _appearance.Muscle,
+                _appearance.Jaw,
+                _appearance.Height,
+                rig != null ? rig.ArmatureRoot : null);
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (!IsServer)
+            {
+                ApplyAppearance();
+            }
+        }
+
+        private void SyncAppearance(CharacterAppearance oldAppearance, CharacterAppearance newAppearance, bool asServer)
+        {
+            // Host: the server pass already applied it to this shared instance.
+            if (!asServer && IsServer)
+            {
+                return;
+            }
+
+            ApplyAppearance();
+        }
+
+        private void ApplyAppearance()
+        {
+            if (!_appearance.IsSet)
+            {
+                return;
+            }
+
+            ReapplyBodyMorphs();
+
+            IHumanoidStyleSource styles = HumanoidStyleSource.Current;
+            HumanoidStyleApplier.ApplyFace(gameObject, _appearance.SkinColor, _appearance.EyeColor,
+                styles?.GetEyebrowStyle(_appearance.EyebrowStyle), _appearance.EyebrowColor);
+            if (styles == null) return;
+
+            HumanoidStyleApplier.Apply(
+                gameObject,
+                styles.GetHairStyle(_appearance.HairStyle),
+                styles.GetBeardStyle(_appearance.BeardStyle),
+                _appearance.HairColor,
+                _appearance.BeardColor);
+        }
 
         /// <summary>
 		/// On death, the player should become a ghost.

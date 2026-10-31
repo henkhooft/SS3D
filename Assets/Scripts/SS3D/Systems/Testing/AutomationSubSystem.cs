@@ -20,6 +20,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 using RoundStateUpdated = SS3D.Systems.Rounds.Events.RoundStateUpdated;
 
 namespace SS3D.Systems.Testing
@@ -28,10 +29,16 @@ namespace SS3D.Systems.Testing
     /// Drives a headless client/host/dedicated-server process through a scripted sequence of real
     /// gameplay actions for the multiplayer test harness (Testing/multiplayer/), using the same
     /// client-&gt;server broadcast/RPC APIs the UI calls
-    /// (SS3D.Systems.Lobby.UI.LobbyReadyView, SS3D.Systems.Lobby.UI.ChangeRoundStateView) - never
+    /// (SS3D.UI.Lobby.LobbyUiSubSystem) - never
     /// simulated input, never the Editor-only stub broadcasts on
     /// <see cref="ReadyPlayersSubSystem"/>/<see cref="RoundSubSystem"/>, since those don't compile
     /// into a real built player/server.
+    /// <para>
+    /// Graphical (non-batchmode) clients can also probe and drive the UI Toolkit lobby with
+    /// <c>ui_wait</c>/<c>ui_text</c>/<c>ui_submit</c>/<c>screenshot</c> - synthetic UI events, not OS input.
+    /// <c>os_click</c>/<c>os_type</c>/<c>os_key</c> only emit a request signal (with screen pixels for a click);
+    /// the driving harness performs the real OS input on this window (uinput), so they need one.
+    /// </para>
     /// <para>
     /// Bootstrapped by <see cref="SS3D.Systems.Bootstrap.SystemsBootstrap"/> — a no-op unless
     /// <see cref="ApplicationSettings.TestScriptPath"/> is set (the "-testscript=" CLI arg), so this
@@ -41,6 +48,8 @@ namespace SS3D.Systems.Testing
     public sealed class AutomationSubSystem : SubSystem
     {
         private const float DefaultWaitTimeoutSeconds = 30f;
+
+        private float _waitTimeoutSeconds = DefaultWaitTimeoutSeconds;
 
         private RoundState _currentRoundState = RoundState.Stopped;
         private bool _clientConnected;
@@ -230,7 +239,7 @@ namespace SS3D.Systems.Testing
             switch (instruction.Opcode)
             {
                 case "wait_connected":
-                    yield return WaitUntil(IsConnected, DefaultWaitTimeoutSeconds, "wait_connected");
+                    yield return WaitUntil(IsConnected, _waitTimeoutSeconds, "wait_connected");
 
                     // FishNet marks the client Connected before Game loads additively and before
                     // UnauthorizedPlayer auth finishes. Lobby actions need a Player with a ckey
@@ -238,7 +247,7 @@ namespace SS3D.Systems.Testing
                     // with a null ckey and the round never starts.
                     if (!IsServerRole())
                     {
-                        yield return WaitUntil(IsLobbyReady, DefaultWaitTimeoutSeconds, "wait_lobby");
+                        yield return WaitUntil(IsLobbyReady, _waitTimeoutSeconds, "wait_lobby");
                     }
 
                     TestSignal.Emit(this, IsServerRole() ? "ServerReady" : "ClientConnected");
@@ -248,13 +257,29 @@ namespace SS3D.Systems.Testing
                     SendReady(true);
                     break;
 
+                case "probe_server_settings_permissions":
+                    RoundSubSystem settingsRounds = SubSystems.Get<RoundSubSystem>();
+                    settingsRounds.CmdReadServerSettings();
+                    ServerSettings unauthorized = ServerSettings.Default;
+                    unauthorized.PlayerCap = 1;
+                    unauthorized.AllowLateJoin = false;
+                    settingsRounds.CmdSaveServerSettings(unauthorized);
+                    settingsRounds.CmdUpdateServerSetting(ServerSetting.PlayerCap, unauthorized);
+                    foreach (RoundAdminAction action in Enum.GetValues(typeof(RoundAdminAction)))
+                        settingsRounds.CmdRoundAdminAction(action);
+                    yield return new WaitForSeconds(2);
+                    if (settingsRounds.HasAdminSettings || settingsRounds.CurrentRoundState != RoundState.Stopped)
+                        throw new InvalidOperationException("Non-admin gained server settings access.");
+                    TestSignal.Emit(this, "ServerSettingsPermissionVerified");
+                    break;
+
                 case "start_round":
                     InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(true));
                     break;
 
                 case "wait_round":
                     RoundState target = Enum.Parse<RoundState>(instruction.Args[0], ignoreCase: true);
-                    yield return WaitUntil(() => IsRoundState(target), DefaultWaitTimeoutSeconds, "wait_round");
+                    yield return WaitUntil(() => IsRoundState(target), _waitTimeoutSeconds, "wait_round");
                     TestSignal.Emit(this, "RoundStateChanged", target.ToString());
                     break;
 
@@ -269,7 +294,7 @@ namespace SS3D.Systems.Testing
                     // "reconnect" to verify EntitySubSystem.TryReclaimEntity actually handed
                     // control of the pre-existing body back to this connection, not just that the
                     // connection itself re-authorized.
-                    yield return WaitUntil(IsEmbarked, DefaultWaitTimeoutSeconds, "assert_embarked");
+                    yield return WaitUntil(IsEmbarked, _waitTimeoutSeconds, "assert_embarked");
                     TestSignal.Emit(this, "EmbarkVerified");
                     break;
 
@@ -289,8 +314,57 @@ namespace SS3D.Systems.Testing
                     yield return new WaitForSeconds(float.Parse(instruction.Args[0]));
                     break;
 
+                // Applies to every later wait; use when another process (or a person) drives the next step.
+                case "wait_timeout":
+                    _waitTimeoutSeconds = float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+
                 case "disconnect":
                     Disconnect();
+                    break;
+
+                // UI Toolkit probes for graphical clients (not -batchmode). Selectors are
+                // "#element-name" or ".uss-class"; the first match across UIDocuments is used.
+                case "ui_wait":
+                    string state = instruction.Args[1].ToLowerInvariant();
+                    yield return WaitUntil(() => IsUiState(instruction.Args[0], state), _waitTimeoutSeconds, $"ui_wait {instruction.ArgsJoined}");
+                    TestSignal.Emit(this, "UiState", instruction.ArgsJoined);
+                    break;
+
+                case "ui_text":
+                    string expected = string.Join(" ", instruction.Args, 1, instruction.Args.Length - 1);
+                    yield return WaitUntil(() => UiTextContains(instruction.Args[0], expected), _waitTimeoutSeconds, $"ui_text {instruction.ArgsJoined}");
+                    TestSignal.Emit(this, "UiText", instruction.ArgsJoined);
+                    break;
+
+                case "ui_submit":
+                    SubmitUi(instruction.Args[0]);
+                    TestSignal.Emit(this, "UiSubmitted", instruction.Args[0]);
+                    break;
+
+                // Real OS input, performed by the harness from these signals; the next ui_* line checks the effect.
+                case "os_click":
+                    // A just-shown element has no layout until the next panel update (worldBound is NaN).
+                    yield return WaitUntil(() => IsUiState(instruction.Args[0], "enabled") && FindUi(instruction.Args[0]).worldBound.width > 0,
+                        _waitTimeoutSeconds, $"os_click {instruction.Args[0]}");
+                    Vector2Int pixel = ToWindowPixels(FindUi(instruction.Args[0]));
+                    TestSignal.Emit(this, "OsClick", $"{pixel.x} {pixel.y} {instruction.Args[0]}");
+                    break;
+
+                case "os_type":
+                    TestSignal.Emit(this, "OsType", instruction.ArgsJoined);
+                    break;
+
+                case "os_key":
+                    TestSignal.Emit(this, "OsKey", instruction.Args[0]);
+                    break;
+
+                case "screenshot":
+                    string screenshotPath = ResolveOutputPath(instruction.Args[0] + ".png");
+                    ScreenCapture.CaptureScreenshot(screenshotPath);
+                    yield return null;
+                    yield return null;
+                    TestSignal.Emit(this, "Screenshot", screenshotPath);
                     break;
 
                 default:
@@ -351,14 +425,14 @@ namespace SS3D.Systems.Testing
 
             // Disconnect is async (Stopping → Stopped). Starting while still Stopping makes
             // ClientManager.StartConnection return false and spam NetworkSession errors.
-            yield return WaitUntil(IsClientFullyStopped, DefaultWaitTimeoutSeconds, "reconnect_stopped");
+            yield return WaitUntil(IsClientFullyStopped, _waitTimeoutSeconds, "reconnect_stopped");
 
             // NetworkSessionSubSystem lives on Boot and is gone after the first online load
             // (and after Empty offline). Re-join with the same CLI-resolved NetworkSettings.
             // Keep Empty offline — never restore Boot (that re-arms the Intro storm).
             StartClientConnectionFromSettings();
 
-            yield return WaitUntil(() => _clientConnected, DefaultWaitTimeoutSeconds, "reconnect_started");
+            yield return WaitUntil(() => _clientConnected, _waitTimeoutSeconds, "reconnect_started");
         }
 
         private void RunConsoleCommand(string commandLine)
@@ -437,6 +511,113 @@ namespace SS3D.Systems.Testing
             {
                 defaultScene.SetOfflineScene(Scenes.EmptyPath);
             }
+        }
+
+        private static VisualElement FindUi(string selector)
+        {
+            foreach (UIDocument document in FindObjectsByType<UIDocument>(FindObjectsSortMode.None))
+            {
+                VisualElement root = document.rootVisualElement;
+                VisualElement match = root == null ? null
+                    : selector.StartsWith("#") ? root.Q(selector.Substring(1))
+                    : selector.StartsWith(".") ? root.Q(className: selector.Substring(1))
+                    : throw new ArgumentException($"UI selector '{selector}' must start with '#' or '.'");
+
+                if (match != null)
+                {
+                    return match;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsUiShown(VisualElement element)
+        {
+            if (element?.panel == null)
+            {
+                return false;
+            }
+
+            for (VisualElement current = element; current != null; current = current.parent)
+            {
+                if (current.resolvedStyle.display == DisplayStyle.None || current.resolvedStyle.visibility == Visibility.Hidden)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsUiState(string selector, string state)
+        {
+            VisualElement element = FindUi(selector);
+
+            return state switch
+            {
+                "visible" => IsUiShown(element),
+                "hidden" => !IsUiShown(element),
+                "enabled" => IsUiShown(element) && element.enabledInHierarchy,
+                "disabled" => element != null && !element.enabledInHierarchy,
+                "absent" => element == null,
+                _ => throw new ArgumentException($"Unknown ui_wait state '{state}' (visible|hidden|enabled|disabled|absent)"),
+            };
+        }
+
+        private static bool UiTextContains(string selector, string expected) =>
+            FindUi(selector) is TextElement text && text.text != null
+            && text.text.IndexOf(expected, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        // Window-relative pixels (X11 origin top-left, like panel space) of the element's center.
+        // Scales by the highest laid-out ancestor: the runtime panel's visualTree itself has no size.
+        private static Vector2Int ToWindowPixels(VisualElement element)
+        {
+            VisualElement top = element;
+            for (VisualElement current = element.parent; current != null; current = current.parent)
+            {
+                if (current.worldBound.width > 0 && current.worldBound.height > 0)
+                {
+                    top = current;
+                }
+            }
+
+            Rect panel = top.worldBound;
+            Vector2 center = element.worldBound.center;
+
+            return new Vector2Int(
+                Mathf.RoundToInt(center.x * Screen.width / panel.width),
+                Mathf.RoundToInt(center.y * Screen.height / panel.height));
+        }
+
+        // Button.clicked ignores synthetic ClickEvents (its Clickable listens to pointer/submit).
+        private static void SubmitUi(string selector)
+        {
+            VisualElement element = FindUi(selector);
+
+            if (!IsUiShown(element) || !element.enabledInHierarchy)
+            {
+                throw new InvalidOperationException($"ui_submit target '{selector}' is missing, hidden or disabled.");
+            }
+
+            element.Focus();
+            using NavigationSubmitEvent submit = NavigationSubmitEvent.GetPooled();
+            submit.target = element;
+            element.SendEvent(submit);
+        }
+
+        // SS3D_AUTOMATION_OUTPUT_DIR lets the harness collect artifacts per run.
+        private static string ResolveOutputPath(string fileName)
+        {
+            string directory = Environment.GetEnvironmentVariable("SS3D_AUTOMATION_OUTPUT_DIR");
+
+            if (string.IsNullOrEmpty(directory))
+            {
+                directory = UnityEngine.Application.persistentDataPath;
+            }
+
+            System.IO.Directory.CreateDirectory(directory);
+            return System.IO.Path.Combine(directory, fileName);
         }
 
         private IEnumerator WaitUntil(Func<bool> condition, float timeoutSeconds, string label)

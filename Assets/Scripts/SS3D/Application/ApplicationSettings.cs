@@ -36,6 +36,13 @@ namespace SS3D.Application
         public string TestScriptPath;
 
         /// <summary>
+        /// Editor-only station template loaded at boot instead of the most recently saved one.
+        /// Empty keeps the most-recent behaviour; built executables always ignore it.
+        /// </summary>
+        [Tooltip("Editor only: station template file name (without .json) loaded at boot, e.g. a small map for fast playtests. Empty loads the most recently saved template.")]
+        public string EditorStationTemplate;
+
+        /// <summary>
         /// Resets our settings if we are ona built executable.
         /// </summary>
         public static void ResetOnBuiltApplication()
@@ -46,6 +53,7 @@ namespace SS3D.Application
             applicationSettings.EnableDiscord = false;
             applicationSettings.ForceLauncher = false;
             applicationSettings.TestScriptPath = string.Empty;
+            applicationSettings.EditorStationTemplate = string.Empty;
         }
     }
 }

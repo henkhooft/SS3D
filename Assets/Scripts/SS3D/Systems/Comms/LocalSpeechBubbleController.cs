@@ -764,9 +764,9 @@ namespace SS3D.Systems.Comms
         private static string ResolveSpeakerName(Entity speaker)
         {
             Mind mind = speaker.Mind;
-            if (mind != null && mind != Mind.Empty && mind.player != null && !string.IsNullOrEmpty(mind.player.Ckey))
+            if (mind != null && mind != Mind.Empty && !string.IsNullOrEmpty(mind.DisplayName))
             {
-                return mind.player.Ckey;
+                return mind.DisplayName;
             }
 
             return "Someone";

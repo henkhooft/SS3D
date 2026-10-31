@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/PlayerControl/
 > Entry points: PlayerSubSystem
 > Status: partial
-> Verified: 5676d2a2 — 2026-07-18
+> Verified: 2fcfc9fa8 — 2026-10-30
 
 # Player control
 
@@ -15,7 +15,7 @@ Connect/disconnect lifecycle, server-side:
 
 1. `ServerManager.OnRemoteConnectionState` fires nothing on connect; `SceneManager.OnClientLoadedStartScenes` → `HandleClientLoadedStartScenes` → `ProcessPlayerJoin` spawns a temporary `UnauthorizedPlayer` for the new connection.
 2. The client's `UnauthorizedPlayer.Setup()` immediately broadcasts `UserAuthorizationMessage` with its ckey (no real login — see TODO in `ProcessAuthorizePlayer`).
-3. `ProcessAuthorizePlayer` finds-or-creates the `_serverPlayers[ckey]` `Player` object, gives the connection ownership of it, adds it to `_onlinePlayers`, **reconnects it to any existing body** via `EntitySubSystem.TryReclaimEntity` if `IsPlayerSpawned(player)` is true (i.e. they disconnected mid-round and are rejoining), then despawns the `UnauthorizedPlayer`.
+3. `ProcessAuthorizePlayer` rejects a new online identity when the configured Server Settings player cap is reached, then finds-or-creates the `_serverPlayers[ckey]` `Player` object, gives the connection ownership of it, adds it to `_onlinePlayers`, **reconnects it to any existing body** via `EntitySubSystem.TryReclaimEntity` if `IsPlayerSpawned(player)` is true (i.e. they disconnected mid-round and are rejoining), then despawns the `UnauthorizedPlayer`.
 4. `ServerManager.OnRemoteConnectionState` → `Stopped` → `ProcessPlayerDisconnect` calls `RemoveOwnership()` on every `NetworkObject` the connection owns (the `Player`, and separately the controlled `Entity`/body if one was spawned) and removes the ckey from `_onlinePlayers`. The body itself is **not** despawned here — it's left ownerless in the world until either the owning player reconnects (step 3) or the round ends (`EntitySubSystem.DestroySpawnedPlayers`).
 
 ## Start here
@@ -35,7 +35,7 @@ Connect/disconnect lifecycle, server-side:
 
 ## Pitfalls
 
-- **Rejoin shows lobby + HUD:** `TryReclaimEntity` restores ownership without mutating `SpawnedPlayers` / Mind SyncVar. HUD binds via `Mind.player.IsLocalConnection`; lobby used to leave only on `SpawnedPlayersUpdated` with Owner match. Fire `LocalPlayerObjectChanged` from `Entity.OnOwnershipClient` and have `GameScreensController` call `GivePlayerAccessToGame` on that event. Hit 2026-07-26.
+- **Rejoin shows lobby + HUD:** `TryReclaimEntity` restores ownership without mutating `SpawnedPlayers` / Mind SyncVar. HUD binds via `Mind.player.IsLocalConnection`; lobby used to leave only on `SpawnedPlayersUpdated` with Owner match. Fire `LocalPlayerObjectChanged` from `Entity.OnOwnershipClient` (HUD). `GameScreensController` was deleted with the legacy lobby (Phase F); the UITK lobby polls `EntitySubSystem.IsPlayerSpawned(connection)`, which matches a reclaimed body via `Mind.player.Owner`. Hit 2026-07-26.
 - **`OnClientLoadedStartScenes` must gate on `asServer`:** host also fires the client-side (`asServer=false`) callback before `LoadedStartScenes(true)` is set. Spawning there warns and can create a duplicate UnauthorizedPlayer that later fails despawn ("already deinitializing"). Match FishNet `PlayerSpawner`.
 - **Despawn UnauthorizedPlayer carefully:** snapshot `conn.Objects.ToArray()` and skip non-spawned objects before `ServerManager.Despawn` (`IsDeinitializing` is FishNet-internal).
 

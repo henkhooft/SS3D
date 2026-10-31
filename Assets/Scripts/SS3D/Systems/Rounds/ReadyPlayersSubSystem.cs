@@ -105,7 +105,7 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
-            Player player = SubSystems.Get<PlayerSubSystem>().GetPlayer(m.Ckey);
+            Player player = SubSystems.Get<PlayerSubSystem>().GetPlayer(sender);
             if (player == null)
             {
                 return;
@@ -141,6 +141,8 @@ namespace SS3D.Systems.Rounds
         }
 
         public int Count => _readyPlayers.Count;
+
+        public bool IsReady(Player player) => player != null && _readyPlayers.Contains(player);
 
 #if UNITY_EDITOR
         /// <summary>

@@ -27,6 +27,10 @@ namespace SS3D.Systems.Inputs
         /// <summary>A machine interface panel is open (movement/camera captured by the panel).</summary>
         MachineUI = 30,
 
+        /// <summary>The lobby shell is open over a spawned body (Escape). Only Other stays live so
+        /// Escape closes it; movement, camera and world interactions are off.</summary>
+        Menu = 35,
+
         /// <summary>The in-game debug console is open.</summary>
         Console = 40,
 

@@ -1,6 +1,8 @@
-﻿using Cysharp.Threading.Tasks;
+using Coimbra;
+using Cysharp.Threading.Tasks;
 using FishNet.Connection;
 using FishNet.Object;
+using SS3D.Application;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Data.AssetDatabases;
@@ -59,31 +61,15 @@ namespace SS3D.Systems.Tile
         }
 
         [ServerOrClient]
-        private async UniTask WaitForResourcesLoad()
+        private void Setup()
         {
-	        await UniTask.WaitUntil(() => Loader.IsInitialized);
-
-            await LoadAsync();
-        }
-
-        [ServerOrClient]
-        private async void Setup()
-        {
-	        Loader = GetComponent<TileResourceLoader>();
-
-	        // Both peers hold a map instance. On a remote client it starts empty and is populated by
-	        // replicated placed objects; only the server loads persisted tiles from disk.
-	        CreateMap(unnamedMapName);
-	        FlushPendingClientPlaced();
-
-	        if (!IsServer)
-	        {
-		        return;
-	        }
-
-	        await WaitForResourcesLoad();
-
-            Log.Debug(this, "All tiles loaded successfully");
+            Loader = GetComponent<TileResourceLoader>();
+            // Keep an empty map container for authoring and client AOI registration. A station is
+            // restored only by Start Round (or an explicit Map Editor load), never by session boot.
+            CreateMap(unnamedMapName);
+            FlushPendingClientPlaced();
+            if (IsServer && SubSystems.TryGet(out WorldReadiness.WorldReadinessSubSystem readiness))
+                readiness.NotifyStationTemplateRestoreBeginning();
         }
 
         [ServerOrClient]
@@ -366,10 +352,26 @@ namespace SS3D.Systems.Tile
         [Server]
         public async UniTask LoadAsync()
         {
-            Log.Debug(this, "Loading most recent station template");
+            string editorTemplate = UnityEngine.Application.isEditor
+                ? ScriptableSettings.GetOrFind<ApplicationSettings>().EditorStationTemplate?.Trim()
+                : null;
 
             if (SubSystems.TryGet(out PersistenceSubSystem persistenceSubSystem))
             {
+                // Editor playtests can pin a small template; a missing one falls back to most recent.
+                if (!string.IsNullOrEmpty(editorTemplate))
+                {
+                    Log.Debug(this, $"Loading editor station template {editorTemplate}");
+                    if (await persistenceSubSystem.LoadStationTemplateAsync(editorTemplate))
+                    {
+                        SyncFloorDecalsToClients();
+                        return;
+                    }
+
+                    Log.Warning(this, $"Editor station template '{editorTemplate}' not found; loading most recent");
+                }
+
+                Log.Debug(this, "Loading most recent station template");
                 if (!await persistenceSubSystem.LoadMostRecentStationTemplateAsync())
                 {
                     NotifyEmptyMapReady();

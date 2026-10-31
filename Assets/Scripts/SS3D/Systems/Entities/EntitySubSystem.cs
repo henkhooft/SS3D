@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Coimbra;
@@ -11,8 +11,10 @@ using SS3D.Core.Behaviours;
 using SS3D.Core.Settings;
 using SS3D.Logging;
 using SS3D.Systems.Comms;
+using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Health;
+using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
@@ -53,6 +55,9 @@ namespace SS3D.Systems.Entities
         /// </summary>
         [SyncObject]
         private readonly SyncList<Entity> _spawnedPlayers = new();
+
+        /// <summary>Server-only: latest lobby character per ckey.</summary>
+        private readonly Dictionary<string, CharacterAppearance> _appearances = new();
 
         /// <summary>
         /// If the system already spawned all the players that were ready when the round started
@@ -148,7 +153,30 @@ namespace SS3D.Systems.Entities
         {
             base.OnStartServer();
 
+            ServerManager.RegisterBroadcast<CharacterAppearanceMessage>(HandleCharacterAppearance);
             ServerAddEventListeners();
+        }
+
+        public override void OnStopServer()
+        {
+            base.OnStopServer();
+            ServerManager.UnregisterBroadcast<CharacterAppearanceMessage>(HandleCharacterAppearance);
+        }
+
+        /// <summary>
+        /// Keeps the sender's latest lobby character per ckey for this server session; applied at
+        /// their next spawn, never to a body that already exists.
+        /// </summary>
+        [Server]
+        private void HandleCharacterAppearance(NetworkConnection sender, CharacterAppearanceMessage message)
+        {
+            Player player = SubSystems.Get<PlayerSubSystem>().GetPlayer(sender);
+            if (player == null)
+            {
+                return;
+            }
+
+            _appearances[player.Ckey] = message.Appearance.Sanitized();
         }
 
         private void ServerAddEventListeners()
@@ -165,6 +193,7 @@ namespace SS3D.Systems.Entities
         [ServerRpc(RequireOwnership = false)]
         public void CmdSpawnLatePlayer(Player player, NetworkConnection networkConnection = null)
         {
+            if (player == null || player.Owner != networkConnection) return;
             SpawnLatePlayer(player);
         }
 
@@ -244,18 +273,21 @@ namespace SS3D.Systems.Entities
         [Server]
         private void SpawnLatePlayer(Player player)
         {
-            if (SubSystems.Get<RoundSubSystem>().CurrentRoundState != RoundState.Ongoing)
+            if (SubSystems.Get<RoundSubSystem>().CurrentRoundState != RoundState.Ongoing
+                || !SubSystems.Get<RoundSubSystem>().AllowLateJoin)
             {
                 return;
             }
 
             if (!IsPlayerSpawned(player) && _hasSpawnedInitialPlayers)
             {
-                SpawnPlayer(player);
+                Entity entity = SpawnPlayer(player);
 
-                // TODO: replace with character name and role
+                string job = SubSystems.Get<RoleSubSystem>().TryGetRole(player, out RoleData role)
+                    ? role.Name.ToLowerInvariant()
+                    : "crew";
                 SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
-                    $"{player.Ckey}, assistant, has joined the ship");
+                    $"{entity.Mind.DisplayName}, {job}, has joined the ship");
             }
         }
 
@@ -264,7 +296,7 @@ namespace SS3D.Systems.Entities
         /// </summary>
         /// <param name="playerUnique user object</param>
         [Server]
-        private void SpawnPlayer(Player player)
+        private Entity SpawnPlayer(Player player)
         {
             MindSubSystem mindSystem = SubSystems.Get<MindSubSystem>();
             mindSystem.TryCreateMind(player, out Mind createdMind);
@@ -274,6 +306,15 @@ namespace SS3D.Systems.Entities
             ServerManager.Spawn(entity.NetworkObject, player.Owner);
 
             createdMind.SetPlayer(player);
+            if (_appearances.TryGetValue(player.Ckey, out CharacterAppearance appearance))
+            {
+                createdMind.CharacterName = appearance.Name;
+                if (entity is Human human)
+                {
+                    human.SetAppearance(appearance);
+                }
+            }
+
             entity.SetMind(createdMind);
 
             player.Owner.SetFirstObject(entity.NetworkObject);
@@ -286,6 +327,7 @@ namespace SS3D.Systems.Entities
             RpcInvokeClientSpawned(entity.Owner);
 
             Log.Information(this, "Spawning mind {createdMind} on {entity}", Logs.ServerOnly, createdMind.name, entity.name);
+            return entity;
         }
 
         [Server]
@@ -349,6 +391,8 @@ namespace SS3D.Systems.Entities
             {
                 Log.Information(this, "No players to spawn", Logs.ServerOnly);
             }
+
+            SubSystems.Get<RoleSubSystem>().ResolveRoundStartRoles(players);
 
             foreach (Player ckey in players)
             {

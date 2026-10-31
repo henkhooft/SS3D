@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Electricity/
 > Entry points: ElectricitySubSystem
 > Status: partial
-> Verified: be79cc8ad — 2026-07-29 (CircuitsTick GC: GetAllAreas cache + IReadOnlyList FillActive)
+> Verified: 441c9d2ba — 2026-10-30 (preview light ownership guard)
 
 # Electricity
 
@@ -41,6 +41,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/ApcStatusDeriver.cs` — APC power/battery state derivation
 - `Assets/Scripts/SS3D/Systems/Electricity/ElectricCableConnectivity.cs` — HV cable links only grid backbone devices
 - `Assets/Scripts/SS3D/Systems/Electricity/Circuit.cs` — cable-grid power distribution; per-consumer channel resolver
+- `Assets/Scripts/SS3D/Systems/Electricity/GameplayLightGuard.cs` — station startup disables orphan lights; preserves `LightPower` fixtures and isolated `CharacterPreviewBooth` lights
 - `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state; client path uses floor-cache area id + lighting snapshot
 - `Assets/Scripts/SS3D/Systems/Electricity/ConsumerPowerVisual.cs` — emissive/panel dimming for generic consumers
 - `Assets/Scripts/SS3D/Systems/Electricity/BasicPowerConsumer.cs` — constant-load consumer
@@ -66,6 +67,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Pitfalls
 
+- **Early lobby character appears black:** the orphan-light sweep in `AreaSubSystem.CompleteSetup` runs after the preview booth can be created. Exempt `CharacterPreviewBooth`-owned lights as well as `LightPower`; enabling `Light.enabled` alone cannot restore a deactivated light GameObject.
+
 - **`CircuitsTick` GC at SS13 scale:** per-tick `new List<>` / LINQ `ToList` in area APC power and `Circuit` cable distribute (~25 MB / 76 ticks on Metastation). Hot path must reuse scratch buffers: `FillActiveConsumers` / `AllocateUnderBudget(..., results)` / `PowerAreaConsumers(..., poweredScratch, poweredSetScratch)` and `Circuit` instance scratches. Do not restore allocating helpers on the 0.2 s tick — including `TryGetApcCircuitStats` (MI path). **Also:** `AreaRegistry.GetAllAreas()` must not allocate a fresh List each tick (cache until Register/Unregister); `FillActiveConsumers` must take `IReadOnlyList` + index — foreach over `IEnumerable` boxes List's enumerator (~40 B/APC). Hit 2026-07-28 / 2026-07-29.
 - **`TryGetCircuitForDevice` must stay O(1):** scanning `_circuits` × `ContainsDevice` was ~507 membership tests per APC lookup × two calls/area/tick on Metastation. Rebuild `_circuitByDevice` in `UpdateAllCircuitsTopology`; do not reintroduce linear scans on the tick or MI stats path. Hit 2026-07-29 (deep profile).
 - **Cable filter must not re-resolve area each consumer:** `FillActiveConsumers` used to call `IsAreaScopedConsumer` + channel resolver (each → `TryGetEffectiveApcForDevice`) per consumer per tick. Rebuild `_areaScopedConsumers` / `_apcByConsumer` in `RebuildApcConsumerIndex` and use those in the circuit lambdas. Hit 2026-07-29.
@@ -84,7 +87,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 ## Depends on / Used by
 
-- **Depends on:** [tile](tile.md), [area](area.md) (channel gating + lighting state)
+- **Depends on:** [tile](tile.md), [area](area.md) (channel gating + lighting state), [rounds-lobby](rounds-lobby.md) (preview-booth light ownership)
 - **Used by:** [machine-interface](machine-interface.md); [area](area.md) (`LightSwitchController` lighting-channel consumer)
 
 ## Related docs

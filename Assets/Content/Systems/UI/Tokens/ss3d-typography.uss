@@ -4,6 +4,12 @@
     -unity-font-style: normal;
 }
 
+.font-display {
+    -unity-font-definition: url("project://database/Assets/Art/Font/Fonts/SquareDeal.ttf");
+    color: var(--ss3d-text-primary);
+    -unity-font-style: normal;
+}
+
 .font-terminal {
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
     color: var(--ss3d-text-terminal);

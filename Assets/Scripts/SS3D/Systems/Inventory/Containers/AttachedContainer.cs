@@ -341,7 +341,8 @@ namespace SS3D.Systems.Inventory.Containers
                  networkTransform.SetSynchronizeRotation(false);
             }
 
-            if (changeType == ContainerChangeType.Remove && oldItem.Item.TryGetComponent(out NetworkTransform networkTransform2))
+            // SyncList.Clear reports a single change with default items, so oldItem.Item is null there.
+            if (changeType == ContainerChangeType.Remove && oldItem.Item != null && oldItem.Item.TryGetComponent(out NetworkTransform networkTransform2))
             {
                 networkTransform2.SetSynchronizePosition(true);
                 networkTransform2.SetSynchronizeRotation(true);

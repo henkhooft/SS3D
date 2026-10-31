@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FishNet.Connection;
 using FishNet.Object;
@@ -167,6 +167,13 @@ namespace SS3D.Systems.PlayerControl
         [Server]
         private void ProcessAuthorizePlayer(NetworkConnection conn, UserAuthorizationMessage userAuthorizationMessage)
         {
+            if (SubSystems.TryGet(out SS3D.Systems.Rounds.RoundSubSystem rounds)
+                && _onlinePlayers.Count >= rounds.PlayerCap
+                && !_onlinePlayers.ContainsKey(userAuthorizationMessage.Ckey))
+            {
+                conn.Disconnect(true);
+                return;
+            }
             string ckey = userAuthorizationMessage.Ckey;
             bool playedHasConnectedAlready = _serverPlayers.TryGetValue(ckey, out Player player);
 

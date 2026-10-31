@@ -190,6 +190,11 @@ namespace SS3D.Systems.Inputs
                     new[] { hotkeys, interactions },
                     new[] { _uiCancel }),
 
+                // In-round lobby overlay: Other keeps Escape (ToggleMenu) live to close it.
+                [InputContext.Menu] = new InputContextDefinition(
+                    new[] { other },
+                    System.Array.Empty<InputAction>()),
+
                 [InputContext.Console] = new InputContextDefinition(
                     new[] { console },
                     System.Array.Empty<InputAction>()),

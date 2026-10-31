@@ -1,0 +1,127 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fae0d5b5d14683e70a7fffdee7b85b9d, type: 3}
+  m_Name: LobbyAssetCatalog
+  m_EditorClassIdentifier: SS3D.UI.Lobby::SS3D.UI.Lobby.LobbyAssetCatalog
+  _lobbyStyle: {fileID: 7433441132597879392, guid: 2bfe9922cb974e49aca2466dd348187d, type: 3}
+  _previewPlaceholder: {fileID: 21300000, guid: 75ead553c05c482fae442fad6748b24a, type: 3}
+  _serverInfoBanner: {fileID: 21300000, guid: 97eb5bc2a8f94653941b8defb224a3a7, type: 3}
+  _chevronDown: {fileID: 2800000, guid: b503f0cc149527347bf81823be9e52fa, type: 3}
+  _previewHumanPrefab: {fileID: 6415765038646171405, guid: 1c3eed1ea37ecc1448e41270cdc63486, type: 3}
+  _jobIcons:
+  - Id: Bartender
+    Sprite: {fileID: 21300000, guid: 6d5342d85e1a400b89f765c3930f40f3, type: 3}
+  - Id: Captain
+    Sprite: {fileID: 21300000, guid: e49944c69eee4ba1831b835f53ed2a7a, type: 3}
+  - Id: CargoTechnician
+    Sprite: {fileID: 21300000, guid: c2b81dc842a547468fea8c39a1b52c33, type: 3}
+  - Id: Chef
+    Sprite: {fileID: 21300000, guid: b6d503824e9d4f77b2adff84de2d06e5, type: 3}
+  - Id: Chemist
+    Sprite: {fileID: 21300000, guid: 0f3658c8460a4183a7c3f847a8fdff7a, type: 3}
+  - Id: ChiefEngineer
+    Sprite: {fileID: 21300000, guid: 354e89734ce645f784797ab1a02e2294, type: 3}
+  - Id: Doctor
+    Sprite: {fileID: 21300000, guid: b55cb3a68cdc40a4829d43adec53f331, type: 3}
+  - Id: Engineer
+    Sprite: {fileID: 21300000, guid: 845639f0fa16480cb8c60ef326c1e12c, type: 3}
+  - Id: Janitor
+    Sprite: {fileID: 21300000, guid: 67c82237d5534df7a367ee8aef354bf0, type: 3}
+  - Id: Miner
+    Sprite: {fileID: 21300000, guid: 975d64691cca4f8dab70fa54f17a14b4, type: 3}
+  - Id: Plumber
+    Sprite: {fileID: 21300000, guid: 08d8dfe092494d38b29bde864284f0e3, type: 3}
+  - Id: Roboticist
+    Sprite: {fileID: 21300000, guid: 5ab44c41128f404a8cf11b81185acfc4, type: 3}
+  - Id: SecurityOfficer
+    Sprite: {fileID: 21300000, guid: 2d1647a28e974e0093d9fe959b15740f, type: 3}
+  - Id: Warden
+    Sprite: {fileID: 21300000, guid: 693ee013412b45a88a832ce17b0fb096, type: 3}
+  _departmentIcons:
+  - Id: command
+    Texture: {fileID: 2800000, guid: 313bf655852b8d94abe6336caa161d4c, type: 3}
+  - Id: security
+    Texture: {fileID: 2800000, guid: 999d37f454fe45b42acaf47935ba37dc, type: 3}
+  - Id: engineering
+    Texture: {fileID: 2800000, guid: 826ed57d18f5733488130a90866d52e1, type: 3}
+  - Id: medical
+    Texture: {fileID: 2800000, guid: 63eb5b29ab261d546877b72ce2c8f21f, type: 3}
+  - Id: science
+    Texture: {fileID: 2800000, guid: 1deff6dc039deee4ca3c20fc4306041f, type: 3}
+  - Id: cargo
+    Texture: {fileID: 2800000, guid: a4a125d636696b94f8fa6e31d2172414, type: 3}
+  - Id: service
+    Texture: {fileID: 2800000, guid: 5cab647fe28f9404bbeeaa4deda0e4c3, type: 3}
+  - Id: civilian
+    Texture: {fileID: 2800000, guid: e21eabc818f98c34aae4cc1fbd2ca565, type: 3}
+  _loadoutThumbs:
+  - Id: PnSecurity
+    Sprite: {fileID: 21300000, guid: 75ead553c05c482fae442fad6748b24a, type: 3}
+  - Id: PnJanitor
+    Sprite: {fileID: 21300000, guid: 0c4c46a799be4c079d3544a17242efb4, type: 3}
+  _hairStyles:
+  - Id: none
+    Prefab: {fileID: 0}
+  - Id: humanhairanime
+    Prefab: {fileID: 5774385816057912484, guid: 0ee0ca265f940c142ac7275101586730, type: 3}
+  - Id: humanhairbeep
+    Prefab: {fileID: 5774385816057912484, guid: 55d79b8cdc40d5a4ea61ec53a77ee40d, type: 3}
+  - Id: humanhairfry
+    Prefab: {fileID: 5774385816057912484, guid: af9ab580a04337e4ca9b51a7e5162ea9, type: 3}
+  _beardStyles:
+  - Id: none
+    Prefab: {fileID: 0}
+  - Id: humanfacehairdanishfull
+    Prefab: {fileID: 5774385816057912484, guid: 2e0dd555bfcda7c4aa2d9bb994a9e2f2, type: 3}
+  _eyebrowStyles:
+  - Id: humaneyebrowsbold
+    Prefab: {fileID: 5774385816057912484, guid: d22873970c77411469da85a704dccedd, type: 3}
+  - Id: humaneyebrowscircle
+    Prefab: {fileID: 5774385816057912484, guid: ebe5adc53ee5f1244a2f4194d14b270a, type: 3}
+  - Id: humaneyebrowsclassic
+    Prefab: {fileID: 5774385816057912484, guid: 8136890d5e74b804b904a595d9b8a967, type: 3}
+  - Id: humaneyebrowsdainty
+    Prefab: {fileID: 5774385816057912484, guid: b97162ddf78852c4b9ce6da43f1640c3, type: 3}
+  - Id: humaneyebrowsdefault
+    Prefab: {fileID: 5774385816057912484, guid: 8325b1a0a1718674bbce7405540336fd, type: 3}
+  _hairColors:
+  - {r: 0.07, g: 0.07, b: 0.07, a: 1}
+  - {r: 0.25, g: 0.13, b: 0.07, a: 1}
+  - {r: 0.47, g: 0.26, b: 0.13, a: 1}
+  - {r: 0.55, g: 0.2, b: 0.09, a: 1}
+  - {r: 0.62, g: 0.42, b: 0.22, a: 1}
+  - {r: 0.72, g: 0.57, b: 0.26, a: 1}
+  - {r: 0.93, g: 0.82, b: 0.49, a: 1}
+  - {r: 0.96, g: 0.96, b: 0.92, a: 1}
+  - {r: 0.55, g: 0.55, b: 0.55, a: 1}
+  - {r: 0.95, g: 0.95, b: 0.95, a: 1}
+  - {r: 0.72, g: 0.15, b: 0.08, a: 1}
+  - {r: 0.87, g: 0.39, b: 0.1, a: 1}
+  - {r: 0.96, g: 0.64, b: 0.5, a: 1}
+  - {r: 0.97, g: 0.63, b: 0.74, a: 1}
+  - {r: 0.5, g: 0.17, b: 0.72, a: 1}
+  - {r: 0.14, g: 0.32, b: 0.87, a: 1}
+  - {r: 0.1, g: 0.6, b: 0.25, a: 1}
+  - {r: 0.08, g: 0.62, b: 0.62, a: 1}
+  _previewOutfits:
+  - Id: civilian
+    Jumpsuit: {fileID: 624365323667193292, guid: 236b51ddc6f9aa94ca92579082370c06, type: 3}
+    Shoes: {fileID: 930591319891399865, guid: 81faf4debf00a0a478b924176f48d011, type: 3}
+  - Id: engineering
+    Jumpsuit: {fileID: 4245634344425516727, guid: 7436f4976849b994aaee40df1bca7d89, type: 3}
+    Shoes: {fileID: 2653363475000095017, guid: 535ed7c02b5cbdc43ae2b234a963c5cc, type: 3}
+  - Id: botany
+    Jumpsuit: {fileID: 8312388220934557560, guid: be3fcf1a74268ad49bfedb1edd9f5318, type: 3}
+    Shoes: {fileID: 930591319891399865, guid: 81faf4debf00a0a478b924176f48d011, type: 3}
+  - Id: security
+    Jumpsuit: {fileID: 6330158209413936013, guid: 93ad90421a3b2f64e8fdb9e95a42ba90, type: 3}
+    Shoes: {fileID: 2653363475000095017, guid: 535ed7c02b5cbdc43ae2b234a963c5cc, type: 3}
