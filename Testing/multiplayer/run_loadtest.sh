@@ -173,21 +173,42 @@ done
 
 echo "Load reached: $CLIENTS clients embarked; soaking for ${DURATION}s"
 
-printf 'utc,elapsed_s,rss_kb,cpu_pct,threads,embarked\n' > "$METRICS"
+printf 'utc,elapsed_s,rss_kb,cpu_pct,threads,embarked,lo_rx_bytes,lo_tx_bytes,lo_rx_mbps,lo_tx_mbps\n' > "$METRICS"
 (
     started="$(date +%s)"
+    prev_rx=""
+    prev_tx=""
+    prev_net_time=""
     while true; do
         now="$(date +%s)"
         elapsed=$((now - started))
         read -r rss pcpu threads <<< "$(ps -o rss=,pcpu=,nlwp= -p "$SERVER_PID" 2>/dev/null | awk '{$1=$1; print}')"
         [[ -n "${rss:-}" && -n "${pcpu:-}" && -n "${threads:-}" ]] || break
+
+        read -r lo_rx lo_tx <<< "$(awk '/^ *lo:/ {gsub(/^ *lo: */, \"\"); print $1, $9}' /proc/net/dev 2>/dev/null)"
+        lo_rx="${lo_rx:-0}"
+        lo_tx="${lo_tx:-0}"
+        rx_mbps=0
+        tx_mbps=0
+        if [[ -n "$prev_rx" && -n "$prev_net_time" ]]; then
+            dt=$((now - prev_net_time))
+            ((dt < 1)) && dt=1
+            rx_mbps="$(awk -v d=$((lo_rx - prev_rx)) -v t="$dt" 'BEGIN { printf "%.3f", (d * 8) / t / 1000000 }')"
+            tx_mbps="$(awk -v d=$((lo_tx - prev_tx)) -v t="$dt" 'BEGIN { printf "%.3f", (d * 8) / t / 1000000 }')"
+        fi
+        prev_rx="$lo_rx"
+        prev_tx="$lo_tx"
+        prev_net_time="$now"
+
         embarked=0
         for log in "${CLIENT_JSON_LOGS[@]}"; do
             if [[ -f "$log" ]] && jq -e 'select(.signal == "EmbarkVerified")' "$log" >/dev/null 2>&1; then
                 embarked=$((embarked + 1))
             fi
         done
-        printf '%s,%s,%s,%s,%s,%s\n' "$(date -u +%FT%TZ)" "$elapsed" "$rss" "$pcpu" "$threads" "$embarked" >> "$METRICS"
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$(date -u +%FT%TZ)" "$elapsed" "$rss" "$pcpu" "$threads" "$embarked" \
+            "$lo_rx" "$lo_tx" "$rx_mbps" "$tx_mbps" >> "$METRICS"
         sleep 10
     done
 ) &
@@ -245,11 +266,16 @@ awk -F, 'NR > 1 {
     rss += $3; if ($3 > maxrss) maxrss = $3;
     cpu += $4; if ($4 > maxcpu) maxcpu = $4;
     if ($6 > maxembarked) maxembarked = $6;
+    rx_mbps += $9; if ($9 > max_rx_mbps) max_rx_mbps = $9;
+    tx_mbps += $10; if ($10 > max_tx_mbps) max_tx_mbps = $10;
+    rx_bytes = $7; tx_bytes = $8;
     n++;
 } END {
     if (n == 0) { print "no samples"; exit }
     printf "samples=%d avg_rss=%.1f MiB max_rss=%.1f MiB avg_cpu=%.1f%% max_cpu=%.1f%% max_embarked=%d\n",
         n, rss / n / 1024, maxrss / 1024, cpu / n, maxcpu, maxembarked;
+    printf "loopback avg_rx=%.3f Mbps max_rx=%.3f Mbps avg_tx=%.3f Mbps max_tx=%.3f Mbps total_rx=%.1f MiB total_tx=%.1f MiB\n",
+        rx_mbps / n, max_rx_mbps, tx_mbps / n, max_tx_mbps, rx_bytes / 1048576, tx_bytes / 1048576;
 }' "$METRICS"
 
 if ((FAILED)); then
