@@ -13,6 +13,7 @@ Read this before writing or editing anything in `Documents/`.
 | `Documents/architecture/INDEX.md` | Navigation hub for agents; project-wide coverage table (what's designed, what's architected, what's mapped) | Agents via `update-system-docs` |
 | `Documents/architecture/systems/` | WHERE in code (one map per domain) | Agents via `update-system-docs` |
 | `Documents/milestones/` | What to focus on next; dependency trees toward a playable goal | Agents + owner — update slice status when child work ships; refresh hub current focus |
+| `ROADMAP.md` + README roadmap block | Where the game is at, for players and visitors | Generated from `Documents/milestones/` by `python3 Tools/generate_roadmap.py`; never edit by hand |
 | `Documents/archive/` | WHY something was built that way: shipped efforts, completed plans | Agents move docs here on ship (see [Archive](#archive-documentsarchive)); never maintained afterwards |
 | `Documents/FORK_STATUS.md` | Upstream divergence log | Owner + agents — keep it a log of divergences, not a changelog |
 
@@ -71,6 +72,10 @@ Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates).
 - Milestone docs may link **down** to design / architecture / plans (same direction as architecture → design). Design docs still never link up to milestones.
 - Status on a milestone is about the **playable gate**, not “is the design active” or “did one PR ship.”
 - Do not invent a parallel `Documents/plans/*.plan.md` as a second source of truth for the same gate — day-to-day HOW stays in plans/efforts; the milestone tracks focus and tree status.
+- A gate is `planned` until one of its slices ships, then `in-progress` until the gate itself ships.
+- **Slice status** starts with one word: `shipped | partial | pending | blocked`, optionally followed by ` — <detail>`. Versioning and the roadmap generator both read that first word.
+- **Player view** (last Slices column) says what the slice means for a player, in plain language with no internal names: the outcome, then what already works in parentheses when `partial`. A closing slice that only checks the others together starts with `Finish line:` and is not counted as progress. Run `python3 Tools/generate_roadmap.py` after changing any slice status, Player view, or the `Goal`/`Roadmap` header; CI (`docs-check.yml`) fails when ROADMAP.md is stale.
+- Bugs live in GitHub Issues, not milestone docs. A slice may cite an issue that blocks it in its Links column.
 
 **Header template:**
 
@@ -79,9 +84,10 @@ Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates).
 > Status: planned | in-progress | shipped | abandoned
 > Depends on: <other milestone paths, if any>
 > Current focus: <slice id or “blocked on X” — also mirrored on milestones INDEX>
+> Roadmap: <Player-facing name> — <one-line summary of what players will be able to do>
 ```
 
-**Body sections (fixed order):** **Playable definition**, **Dependency tree** (mermaid and/or nested bullets; leaf nodes link to design§ / effort / plan — this is the primary artifact), **Slices** (status table for the same nodes), **Explicitly deferred**, **Maintenance**.
+**Body sections (fixed order):** **Playable definition**, **Dependency tree** (mermaid and/or nested bullets; leaf nodes link to design§ / effort / plan — this is the primary artifact), **Slices** (status table for the same nodes; columns `Id | Name | Status | Links | Player view`, Status third), **Explicitly deferred**, **Maintenance**.
 
 ### System maps (`Documents/architecture/systems/`)
 

@@ -40,9 +40,9 @@ The **lobby UITK redesign** ([lobby.md](../design/lobby.md)) shipped 2026-10-31 
 
 | Gate | Status | Depends on | Doc |
 |------|--------|------------|-----|
-| Test server — hop-on/off playtest | planned | — (parallel; reuses MVP1 M5 loop) | [test-server.md](test-server.md) |
-| Map authoring — tester-built maps | planned | test-server T1 | [map-authoring.md](map-authoring.md) |
-| MVP1 — Nuclear Operatives round | planned | — | [mvp1-nuke-ops.md](mvp1-nuke-ops.md) |
+| Test server — hop-on/off playtest | in-progress | — (parallel; reuses MVP1 M5 loop) | [test-server.md](test-server.md) |
+| Map authoring — tester-built maps | in-progress | test-server T1 | [map-authoring.md](map-authoring.md) |
+| MVP1 — Nuclear Operatives round | in-progress | — | [mvp1-nuke-ops.md](mvp1-nuke-ops.md) |
 | MVP2 — Bare-bones station round | planned | MVP1 | [mvp2-station-round.md](mvp2-station-round.md) |
 
 ## How to use

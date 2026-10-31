@@ -1,7 +1,8 @@
 > Goal: A tester downloads a release, authors a map in a locally hosted build, playtests it in the same session, and hands it over; adopted maps ship in every release
-> Status: planned
+> Status: in-progress
 > Depends on: [test-server.md](test-server.md) T1 only (loadable build); feeds [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 (the test station is this gate's acceptance map)
 > Current focus: A1 (host loopback re-cut + CI packages `StationTemplates/`), A2 (Area tool: room name, department, access)
+> Roadmap: Map authoring — Build your own station in a release build and hand it in
 
 # Map authoring — tester-built maps
 
@@ -62,21 +63,21 @@ flowchart TB
 - **Area tool** — `MapEditorTool.Area` is reserved but has no UI ([map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md)). `AreaSubSystem.RenameArea` / `SetParentTag` / `SetDefaultRequiredAccess` exist and persist, but only tests call them; default access derives from the department tag (`AreaAccessDefaults`) ([area](../architecture/systems/area.md); [id-access](../architecture/systems/id-access.md)). Room-level config only: an area is not a single placed object, so this stays within [creative-mode.md](../design/creative-mode.md) §2. `AirLockAccessGate`'s per-door override field is never set and stays unauthored.
 - **Map validator** — warn on save, block Start with a list on hard failures for the selected gamemode ([creative-mode.md](../design/creative-mode.md) §8: no silent failure reaches a round).
 - **Edit loop** — Start always reloads from disk, so unsaved edits are lost silently today; Start prompts Save and start / Discard / Cancel. Stop (or opening the editor after a round) reloads the saved template so round damage is never saved into it ([rounds-lobby](../architecture/systems/rounds-lobby.md)).
-- **Portability + bug intake** — one `.json` per map: an **Open maps folder** button in Map Selection, import = drop a file in. `TESTERS.md` (extends the shipped `Builds/README.txt`) covers the flow, log location (`Game/Logs/`) and attaching the map file; a "Map authoring" label on `.github/ISSUE_TEMPLATE/Bug.md`. Adoption checklist: validator clean, loads on the current schema, committed to `Builds/Game/Data/StationTemplates/`.
+- **Portability + bug intake** — one `.json` per map: an **Open maps folder** button in Map Selection, import = drop a file in. `TESTERS.md` (extends the shipped `Builds/README.txt`) covers the flow, log location (`Game/Logs/`) and attaching the map file; the `map-authoring` label on `.github/ISSUE_TEMPLATE/Bug.yml`. Adoption checklist: validator clean, loads on the current schema, committed to `Builds/Game/Data/StationTemplates/`.
 - **Load-loss summary** — unknown/removed tile SO names are skipped on load today with no tester-visible report ([tile](../architecture/systems/tile.md)); summarize drops on load. Schema migrations follow [2026-10_game-versioning.md](../architecture/2026-10_game-versioning.md).
 
 ## Slices
 
-| Id | Name | Status | Links |
-|----|------|--------|-------|
-| A0 | Admin Map Editor in a local host build; structure, spawns, air at start | shipped | [tile](../architecture/systems/tile.md); [map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md); [atmospherics](../architecture/systems/atmospherics.md) |
-| A1 | Loadable local build: host loopback re-cut (shared with test-server T1) + CI packages `Data/StationTemplates/` | partial — **focus** (Config/Tilemaps packaging verified on `059e3dd`) | [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md); [networking-session](../architecture/systems/networking-session.md); [test-server.md](test-server.md) T1 |
-| A2 | Area tool: room name, department tag, access override | pending — **focus** | [area](../architecture/systems/area.md); [id-access](../architecture/systems/id-access.md); [map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md) |
-| A2.5 | Internal dogfood: a dev builds the Nuke Ops station in a release build before testers do; triage gaps into slices / deferred | pending | this doc; [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 |
-| A3 | Map validator: warn on save, block Start on hard failures | pending | [creative-mode.md](../design/creative-mode.md) §8; [rounds-lobby](../architecture/systems/rounds-lobby.md); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) |
-| A4 | Edit loop: unsaved-changes prompt on Start; reload saved template on Stop | pending | [rounds-lobby](../architecture/systems/rounds-lobby.md); [tile](../architecture/systems/tile.md) |
-| A5 | Portability + intake: Open maps folder, load-loss summary, `TESTERS.md` in the zip, bug label, adoption checklist | pending | [persistence](../architecture/systems/persistence.md); [2026-10_game-versioning.md](../architecture/2026-10_game-versioning.md) |
-| A6 | Close: a tester builds the Nuke Ops station from a zip using only `TESTERS.md`; adopted as M0's map. Done = no blocker-severity issues open, not zero bugs | pending | depends A1–A5; [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 |
+| Id | Name | Status | Links | Player view |
+|----|------|--------|-------|-------------|
+| A0 | Admin Map Editor in a local host build; structure, spawns, air at start | shipped | [tile](../architecture/systems/tile.md); [map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md); [atmospherics](../architecture/systems/atmospherics.md) | The in-game Map Editor works in a local build: walls, floors, spawns, air |
+| A1 | Loadable local build: host loopback re-cut (shared with test-server T1) + CI packages `Data/StationTemplates/` | partial — **focus** (Config/Tilemaps packaging verified on `059e3dd`) | [2026-07_ci-develop-release-pipeline.md](../architecture/2026-07_ci-develop-release-pipeline.md); [networking-session](../architecture/systems/networking-session.md); [test-server.md](test-server.md) T1 | The downloaded build loads, including the station templates |
+| A2 | Area tool: room name, department tag, access override | pending — **focus** | [area](../architecture/systems/area.md); [id-access](../architecture/systems/id-access.md); [map-editor-creative-hooks](../architecture/systems/map-editor-creative-hooks.md) | Mark out rooms: name, department and who has access (so a locked vault is possible) |
+| A2.5 | Internal dogfood: a dev builds the Nuke Ops station in a release build before testers do; triage gaps into slices / deferred | pending | this doc; [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 | A developer builds the Nuke Ops station first and fixes what breaks |
+| A3 | Map validator: warn on save, block Start on hard failures | pending | [creative-mode.md](../design/creative-mode.md) §8; [rounds-lobby](../architecture/systems/rounds-lobby.md); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md) | The editor warns you about broken maps before you start a round |
+| A4 | Edit loop: unsaved-changes prompt on Start; reload saved template on Stop | pending | [rounds-lobby](../architecture/systems/rounds-lobby.md); [tile](../architecture/systems/tile.md) | Switching between editing and playing doesn't lose your work |
+| A5 | Portability + intake: Open maps folder, load-loss summary, `TESTERS.md` in the zip, bug label, adoption checklist | pending | [persistence](../architecture/systems/persistence.md); [2026-10_game-versioning.md](../architecture/2026-10_game-versioning.md) | Easy to find, share and hand in your map files, with a testers' guide in the download |
+| A6 | Close: a tester builds the Nuke Ops station from a zip using only `TESTERS.md`; adopted as M0's map. Done = no blocker-severity issues open, not zero bugs | pending | depends A1–A5; [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 | A tester builds the Nuke Ops station from the download using only the guide, and it becomes the official test map |
 
 Order: A1 → A2 → A2.5 → A3, A4, A5 in parallel → A6.
 
