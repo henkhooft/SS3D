@@ -67,7 +67,14 @@ namespace SS3D.Systems.Area
                 HashSet<ushort> used = new();
                 foreach (TileChunk chunk in _map.GetAllChunks())
                     for (int y = 0; y < TileConstants.ChunkSize; y++)
-                        for (int x = 0; x < TileConstants.ChunkSize; x++) used.Add(chunk.GetAreaId(x, y));
+                        for (int x = 0; x < TileConstants.ChunkSize; x++)
+                        {
+                            ushort id = chunk.GetAreaId(x, y);
+                            TileCoord coord = _query.WorldToTile(chunk.GetWorldPosition(x, y), _map.MapId);
+                            if (id != AreaId.None && AreaBoundaryEvaluator.IsTurfWall(_query, coord))
+                                chunk.SetAreaId(x, y, AreaId.None);
+                            else used.Add(id);
+                        }
                 foreach (AreaRecord room in _registry.GetAllAreas().ToArray())
                     if (!used.Contains(room.Id.Value)) _registry.Unregister(room.Id);
                 RefreshApcLinks();
@@ -132,12 +139,14 @@ namespace SS3D.Systems.Area
             return true;
         }
 
-        public TileCoord GetApcMembershipTile(IAreaApcOrigin apc)
+        public TileCoord GetApcMembershipTile(IAreaApcOrigin apc) => AreaDeviceTileResolver.GetApcRoomTile(apc, _query);
+
+        public string NextRoomName()
         {
-            TileCoord origin = apc.OriginTile;
-            if (AreaBoundaryEvaluator.IsWalkable(_query, origin)) return origin;
-            Vector2Int offset = TileHelper.CoordinateDifferenceInFrontFacingDirection(apc.FacingDirection);
-            return new TileCoord(origin.MapId, origin.Grid + offset);
+            HashSet<string> names = new(_registry.GetAllAreas().Select(room => room.DisplayName?.Trim() ?? ""), StringComparer.OrdinalIgnoreCase);
+            int number = 1;
+            while (names.Contains($"Room {number}")) number++;
+            return $"Room {number}";
         }
 
         public void RefreshApcLinks()

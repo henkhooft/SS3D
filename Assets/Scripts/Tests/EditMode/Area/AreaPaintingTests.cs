@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using SS3D.Systems.Area;
 using SS3D.Systems.IdAccess;
+using SS3D.Systems.Electricity;
 using SS3D.Systems.Persistence;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor;
@@ -214,6 +215,55 @@ namespace EditorTests
         }
 
         [Test]
+        public void CreatedRoomNamesAreNumberedAndAvoidExistingNames()
+        {
+            Assert.AreEqual("Room 1", _painting.NextRoomName());
+            _registry.Register(new AreaRecord { Id = new AreaId(3), DisplayName = "Room 1" });
+            Assert.AreEqual("Room 2", _painting.NextRoomName());
+            _registry.Register(new AreaRecord { Id = new AreaId(4), DisplayName = "room 2" });
+            Assert.AreEqual("Room 3", _painting.NextRoomName());
+        }
+
+        [Test]
+        public void WallMountedApcUsesFacingRoomEvenWithoutAWall()
+        {
+            TileObjectSo mount = TileMapTestUtilities.CreateTileSo(TileLayer.WallMountHigh, "MountedApcTest");
+            Assert.IsTrue(_context.Map.PlaceTileObject(mount, Vector3.zero, Direction.East,
+                skipBuildCheck: true, replaceExisting: false, skipAdjacency: true, out GameObject go));
+            TestApc apc = new()
+            {
+                OriginTile = new TileCoord(_context.Map.MapId, 0, 0), FacingDirection = Direction.East,
+                TileObject = go.GetComponent<PlacedTileObject>(),
+            };
+            _apcs.Add(apc);
+            _context.Map.TrySetAreaId(new TileCoord(_context.Map.MapId, 0, 0), 1);
+            _context.Map.TrySetAreaId(new TileCoord(_context.Map.MapId, 1, 0), 2);
+            _painting.RefreshApcLinks();
+            Assert.AreEqual(new TileCoord(_context.Map.MapId, 1, 0), _painting.GetApcMembershipTile(apc));
+            Assert.IsTrue(_registry.TryGetApcArea(apc, out AreaId room));
+            Assert.AreEqual(2, room.Value);
+            Assert.AreEqual(new TileCoord(_context.Map.MapId, 0, 0), apc.OriginTile,
+                "Wiring and persistence still use the physical origin.");
+        }
+
+        [Test]
+        public void LoadingOldAuthoredWallMembershipRemovesPhantomRoom()
+        {
+            TileMapTestUtilities.PlaceAirtightWall(_context, Vector3.zero);
+            _context.Map.TrySetAreaId(new TileCoord(_context.Map.MapId, 0, 0), 1);
+            _context.Map.TrySetAreaId(new TileCoord(_context.Map.MapId, 1, 0), 2);
+            _painting.RestoreRecords(new[]
+            {
+                new SavedAreaRecord { id = 1, authored = true, displayName = "APC wall only" },
+                new SavedAreaRecord { id = 2, authored = true, noApc = true, displayName = "Room 1" },
+            });
+            Assert.AreEqual(0, At(0));
+            Assert.AreEqual(2, At(1));
+            Assert.IsFalse(_registry.TryGet(new AreaId(1), out _));
+            Assert.IsTrue(_registry.TryGet(new AreaId(2), out _));
+        }
+
+        [Test]
         public void StrokeGeometryIncludesEndpointsAndRejectsOversizedRectangles()
         {
             CollectionAssert.AreEquivalent(new[] { new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(-1, 0), Vector2Int.zero },
@@ -224,10 +274,11 @@ namespace EditorTests
             Assert.IsEmpty(MapEditorSubSystem.BuildAreaStroke(Vector2Int.zero, new Vector2Int(1000, 1000), true));
         }
 
-        private sealed class TestApc : IAreaApcOrigin
+        private sealed class TestApc : IAreaApcOrigin, IElectricDevice
         {
             public TileCoord OriginTile { get; set; }
-            public Direction FacingDirection => Direction.North;
+            public Direction FacingDirection { get; set; } = Direction.North;
+            public PlacedTileObject TileObject { get; set; }
             public string DisplayName => "APC";
             public void SetMultipleApcsInArea(bool value) { }
         }

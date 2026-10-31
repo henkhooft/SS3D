@@ -1,4 +1,5 @@
 using SS3D.Systems.Tile;
+using SS3D.Systems.Electricity;
 using UnityEngine;
 
 namespace SS3D.Systems.Area
@@ -8,6 +9,18 @@ namespace SS3D.Systems.Area
     /// </summary>
     public static class AreaDeviceTileResolver
     {
+        public static TileCoord GetApcRoomTile(IAreaApcOrigin apc, ITileQueryService query)
+        {
+            // Actual wall mounts always use their facing tile, even while their wall is absent.
+            if (apc is IElectricDevice device && device.TileObject != null &&
+                device.TileObject.Layer is TileLayer.WallMountHigh or TileLayer.WallMountLow)
+                return GetTileInFront(device.TileObject);
+            TileCoord origin = apc.OriginTile;
+            if (AreaBoundaryEvaluator.IsWalkable(query, origin)) return origin;
+            Vector2Int offset = TileHelper.CoordinateDifferenceInFrontFacingDirection(apc.FacingDirection);
+            return new TileCoord(origin.MapId, origin.Grid + offset);
+        }
+
         public static TileCoord GetOriginTile(PlacedTileObject tileObject)
         {
             return new TileCoord(tileObject.MapId, tileObject.WorldOrigin);

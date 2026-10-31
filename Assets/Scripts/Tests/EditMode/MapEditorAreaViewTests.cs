@@ -132,7 +132,10 @@ namespace EditorTests
                 view.Build(new VisualElement());
                 model.SetMode(MapEditorMode.Scripting);
                 model.SetSubcategory(MapEditorSubcategory.Rooms);
-                Assert.IsNotNull(view.Root.Q<Button>("room-palette-0"));
+                Button create = view.Root.Q<Button>("room-palette-0");
+                Assert.IsNotNull(create);
+                Assert.IsTrue(create.ClassListContains("map-editor-slot--create"));
+                Assert.AreEqual("+", create.Q<Label>("room-create-indicator").text);
                 Assert.AreEqual(1, view.Root.Query<Button>(className: "map-editor-slot").ToList().Count);
                 view.OpenPopover("layers");
                 Assert.Greater(view.Root.Query<MapEditorView.SwitchRow>().ToList().Count, 0);

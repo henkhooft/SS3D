@@ -29,10 +29,21 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 slot.EnableInClassList("map-editor-slot--active", id == _vm.AreaRoomId);
                 VisualElement frame = new();
                 frame.AddToClassList("map-editor-slot__icon-frame");
-                VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(MapEditorSubcategory.Rooms));
-                icon.AddToClassList("map-editor-slot__icon");
-                if (id != 0) icon.style.unityBackgroundImageTintColor = AreaDevSettings.GetColorForArea(id);
-                frame.Add(icon);
+                if (id == 0)
+                {
+                    slot.AddToClassList("map-editor-slot--create");
+                    slot.tooltip = "Create a room — paint tiles to place it";
+                    Label add = new("+") { name = "room-create-indicator", pickingMode = PickingMode.Ignore };
+                    add.AddToClassList("map-editor-room-create-glyph");
+                    frame.Add(add);
+                }
+                else
+                {
+                    VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(MapEditorSubcategory.Rooms));
+                    icon.AddToClassList("map-editor-slot__icon");
+                    icon.style.unityBackgroundImageTintColor = AreaDevSettings.GetColorForArea(id);
+                    frame.Add(icon);
+                }
                 Label label = new(caption) { pickingMode = PickingMode.Ignore };
                 label.AddToClassList("map-editor-slot__label");
                 label.AddToClassList("font-body");

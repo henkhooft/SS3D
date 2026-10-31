@@ -10,10 +10,10 @@ namespace SS3D.Systems.Area
         public bool HasAuthoredAreas => _painting != null && _painting.HasAuthoredAreas;
 
         [Server]
-        public AreaRecord CreateAuthoredRoom(string name = "New room")
+        public AreaRecord CreateAuthoredRoom(string name = null)
         {
             if (_painting == null) return null;
-            AreaRecord room = new() { Id = _registry.AllocateId(), DisplayName = name, ParentTag = "" };
+            AreaRecord room = new() { Id = _registry.AllocateId(), DisplayName = string.IsNullOrWhiteSpace(name) ? _painting.NextRoomName() : name.Trim(), ParentTag = "" };
             _registry.Register(room);
             _painting.HasAuthoredAreas = true;
             _painting.NotifyChanged();

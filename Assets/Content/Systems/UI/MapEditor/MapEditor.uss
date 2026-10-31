@@ -1019,3 +1019,16 @@
     min-width: 0;
     flex-shrink: 1;
 }
+
+
+.map-editor-room-create-glyph {
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+    font-size: 40px;
+    color: var(--ss3d-text-primary);
+    -unity-text-align: middle-center;
+    flex-grow: 1;
+}
+
+.map-editor-slot--create .map-editor-slot__icon-frame {
+    background-color: var(--ss3d-surface-inset);
+}

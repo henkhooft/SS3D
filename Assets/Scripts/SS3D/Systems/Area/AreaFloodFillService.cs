@@ -28,7 +28,6 @@ namespace SS3D.Systems.Area
             if (apc == null || areaId.IsNone)
                 return;
 
-            TileCoord origin = apc.OriginTile;
             IReadOnlyList<TileCoord> seeds = CollectFloodSeeds(apc);
             if (seeds.Count == 0)
                 return;
@@ -69,7 +68,6 @@ namespace SS3D.Systems.Area
                 }
             }
 
-            AssignApcOriginTile(origin, areaId);
         }
 
         public void AssignDoorTileAreas()
@@ -116,31 +114,9 @@ namespace SS3D.Systems.Area
         private IReadOnlyList<TileCoord> CollectFloodSeeds(IAreaApcOrigin apc)
         {
             var seeds = new List<TileCoord>();
-            TileCoord origin = apc.OriginTile;
-
-            if (AreaBoundaryEvaluator.IsWalkable(_query, origin))
-            {
-                seeds.Add(origin);
-                return seeds;
-            }
-
-            Vector2Int offset = TileHelper.CoordinateDifferenceInFrontFacingDirection(apc.FacingDirection);
-            TileCoord inFront = new TileCoord(origin.MapId, origin.Grid.x + offset.x, origin.Grid.y + offset.y);
-            if (AreaBoundaryEvaluator.IsWalkable(_query, inFront))
-                seeds.Add(inFront);
-
+            TileCoord roomTile = AreaDeviceTileResolver.GetApcRoomTile(apc, _query);
+            if (AreaBoundaryEvaluator.IsWalkable(_query, roomTile)) seeds.Add(roomTile);
             return seeds;
-        }
-
-        private void AssignApcOriginTile(TileCoord origin, AreaId areaId)
-        {
-            if (!_map.TryGetAreaId(origin, out ushort originAreaId))
-                return;
-
-            if (originAreaId != AreaId.None && originAreaId != areaId.Value)
-                return;
-
-            _map.TrySetAreaId(origin, areaId.Value);
         }
 
         private bool TryGetFirstNeighbourAreaId(TileCoord coord, out ushort areaId)

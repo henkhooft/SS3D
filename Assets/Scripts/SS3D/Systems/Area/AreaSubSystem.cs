@@ -937,7 +937,7 @@ namespace SS3D.Systems.Area
                 if (!_registry.TryGetApcArea(apc, out AreaId areaId))
                     continue;
 
-                if (!_map.TryGetAreaId(apc.OriginTile, out ushort originAreaId) || originAreaId == AreaId.None)
+                if (!_map.TryGetAreaId(AreaDeviceTileResolver.GetApcRoomTile(apc, _query), out ushort originAreaId) || originAreaId == AreaId.None)
                     continue;
 
                 if (!apcsByArea.TryGetValue(originAreaId, out List<IAreaApcOrigin> list))
@@ -1231,9 +1231,20 @@ namespace SS3D.Systems.Area
         [Server]
         private void SyncAreaNames()
         {
-            var records = _registry.GetAllAreas();
-            ushort[] ids = new ushort[records.Count];
-            string[] names = new string[records.Count];
+            HashSet<ushort> spatial = new();
+            if (_map != null)
+                foreach (TileChunk chunk in _map.GetAllChunks())
+                    for (int y = 0; y < TileConstants.ChunkSize; y++)
+                        for (int x = 0; x < TileConstants.ChunkSize; x++)
+                        {
+                            ushort id = chunk.GetAreaId(x, y);
+                            if (id == AreaId.None || spatial.Contains(id)) continue;
+                            TileCoord coord = _query.WorldToTile(chunk.GetWorldPosition(x, y), _map.MapId);
+                            if (AreaBoundaryEvaluator.IsWalkable(_query, coord)) spatial.Add(id);
+                        }
+            var records = _registry.GetAllAreas().Where(room => spatial.Contains(room.Id.Value)).ToArray();
+            ushort[] ids = new ushort[records.Length];
+            string[] names = new string[records.Length];
             int i = 0;
             foreach (AreaRecord record in records)
             {
