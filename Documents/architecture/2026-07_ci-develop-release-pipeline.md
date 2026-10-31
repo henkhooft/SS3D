@@ -33,13 +33,16 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 | `run_editmode` | `false` | When true, EditMode job runs first and must pass before player builds. |
 | `run_smoke` | `false` | When true, after Linux builds run smoke scenarios (needs `build_linux`). |
 | `skip_release` | `false` | When true, skip Windows build and GitHub prerelease (Linux-only if `build_linux`). |
-| `tag_suffix` | _(empty)_ | Override tag suffix; full tag is `develop-<suffix>` (else short SHA). |
+| `version_bump` | `auto` | Release bump level; `auto` derives it from signals — see [2026-10_game-versioning](2026-10_game-versioning.md). |
+| `tag_suffix` | _(empty)_ | Unversioned test cut tagged `develop-<suffix>` instead of a `vX.Y.Z` release. |
 | `runner` | `auto` | `auto` / `tomnas` / `github` — TomNAS when online, else `ubuntu-latest`. |
 
 **Jobs:**
 
-1. **Prepare** — resolve schedule vs dispatch flags; probe whether `TomNAS-unity` is online
-   and set `runs_on` / `self_hosted` for build jobs.
+1. **Prepare** — resolve schedule vs dispatch flags; compute the game version with
+   `Tools/versioning/next_version.py` (full-history checkout; [2026-10_game-versioning](2026-10_game-versioning.md));
+   probe whether `TomNAS-unity` is online and set `runs_on` / `self_hosted` for build jobs.
+   Both builder steps pass `customParameters: -ss3dVersion <version>`.
 2. **EditMode** (opt-in) — same `game-ci/unity-test-runner@v4` / `6000.3.16f1` pattern as
    `editmodetestrunner.yml`, including secret preflight and `environment: unity_tests`.
    Skipped when `run_editmode` is false (always skipped on nightly).
@@ -58,8 +61,8 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
    `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime).
    Linux client/server zips get the same seed under each `StandaloneLinux64/` tree when
-   Linux was built. Tag `develop-nightly` (schedule) or `develop-<shortsha>` /
-   `tag_suffix`. `prerelease: true`.
+   Linux was built. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
+   (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.
 
 ### Related workflow changes
 
@@ -90,8 +93,9 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 - **License secrets live on the `unity_tests` Environment.** Jobs without
   `environment: unity_tests` see empty `UNITY_LICENSE` / `UNITY_SERIAL` even when EditMode is
   green (the old `main.yml` hit this before Environment was wired).
-- **Do not use `versioning: Semantic`** until tags are clean `X.Y.Z` — letter-suffix tags produce
-  `Failed to parse git describe output`.
+- **Keep game-ci `versioning: None`.** The version comes from `-ss3dVersion` + `BuildInfoGenerator`
+  ([2026-10_game-versioning](2026-10_game-versioning.md)); game-ci `Semantic` also trips on
+  upstream's letter-suffix tags (`Failed to parse git describe output`).
 - **Do not use `ClientBuildScript` for Windows** — it hardcodes `StandaloneLinux64`; Windows
   uses the default game-ci build method.
 - **Default manual prereleases are unproven by EditMode/smoke/Linux.** Trust PR/`develop`

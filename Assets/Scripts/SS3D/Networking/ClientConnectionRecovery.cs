@@ -197,7 +197,7 @@ namespace SS3D.Networking
                 return;
             }
 
-            _status = "Could not connect, or connection to the server was lost.";
+            _status = ProtocolVersionAuthenticator.LastRejection ?? "Could not connect, or connection to the server was lost.";
             _recoveryVisible = true;
             Log.Information(this, "{status}", Logs.Important, _status);
         }

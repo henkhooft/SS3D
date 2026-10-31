@@ -78,6 +78,7 @@ namespace SS3D.Networking
             }
 
             ClientConnectionRecovery.EnsureOn(networkManager);
+            ProtocolVersionAuthenticator.EnsureOn(networkManager);
 
             NetworkSettings networkSettings = ScriptableSettings.GetOrFind<NetworkSettings>();
             NetworkType = networkSettings.NetworkType;
