@@ -1,3 +1,4 @@
+using SS3D.Core.Debugging;
 using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core.Behaviours;
@@ -66,7 +67,13 @@ namespace SS3D.Systems.Comms
             base.OnAwake();
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
-            AddHandle(UpdateEvent.AddListener(HandleUpdate));
+            DebugTools.Get(DebugToolNames.LocalSpeechLine).Invoked += SpeakTestLine;
+        }
+
+        protected override void OnDestroyed()
+        {
+            DebugTools.Get(DebugToolNames.LocalSpeechLine).Invoked -= SpeakTestLine;
+            base.OnDestroyed();
         }
 
         private void HandlePlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
@@ -74,18 +81,8 @@ namespace SS3D.Systems.Comms
             _localEntity = e.PlayerHasObject ? e.PlayerObject.GetComponent<Entity>() : null;
         }
 
-        private void HandleUpdate(ref EventContext context, in UpdateEvent updateEvent)
+        private void SpeakTestLine()
         {
-            if (InputInterface.IsCapturingText)
-            {
-                return;
-            }
-
-            if (Keyboard.current == null || !Keyboard.current[Key.F3].wasPressedThisFrame)
-            {
-                return;
-            }
-
             if (_localEntity == null || !_localEntity.TryGetComponent(out LocalSpeechEmitter emitter))
             {
                 return;

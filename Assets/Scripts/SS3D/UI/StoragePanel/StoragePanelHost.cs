@@ -1,3 +1,4 @@
+using SS3D.Systems.Settings;
 using System.Collections.Generic;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -99,17 +100,20 @@ namespace SS3D.UI.StoragePanel
         {
             base.OnStart();
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
         }
 
         private void Update()
         {
             // MI may bootstrap after this host — keep trying until subscribed (same as MainHudSubSystem).
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
         }
 
         protected override void OnDestroyed()
         {
             UnsubscribeMachineUi();
+            UnsubscribeMenu();
             InputInterface.UnregisterDocument(_document);
             base.OnDestroyed();
         }
@@ -161,6 +165,7 @@ namespace SS3D.UI.StoragePanel
             {
                 _document.panelSettings = panelSettings;
             }
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(_document.panelSettings);
 
             // Above the persistent Main HUD (-10) so panels read as on top of it, same relative
             // ordering rule as the radial/armed overlays.
@@ -178,6 +183,48 @@ namespace SS3D.UI.StoragePanel
             _root.style.right = 0;
             _root.style.bottom = 0;
             _root.pickingMode = PickingMode.Ignore;
+            ApplyMachineUiVisibility();
+        }
+
+        private InputSubSystem _menuInput;
+        private bool _menuOpen;
+
+        /// <summary>
+        /// The in-round (Escape) menu hides this like a machine panel does. Its signal is the Menu input context
+        /// being pushed, so typing in the menu's chat (TextEntry on top) keeps it hidden.
+        /// </summary>
+        private void EnsureMenuSubscription()
+        {
+            if (_menuInput != null || !SubSystems.TryGet(out InputSubSystem input))
+            {
+                return;
+            }
+
+            _menuInput = input;
+            _menuInput.ContextsChanged += HandleInputContextsChanged;
+            HandleInputContextsChanged();
+        }
+
+        private void UnsubscribeMenu()
+        {
+            if (_menuInput == null)
+            {
+                return;
+            }
+
+            _menuInput.ContextsChanged -= HandleInputContextsChanged;
+            _menuInput = null;
+        }
+
+        private void HandleInputContextsChanged()
+        {
+            bool open = _menuInput != null && _menuInput.IsContextPushed(InputContext.Menu);
+            if (open == _menuOpen)
+            {
+                return;
+            }
+
+            _menuOpen = open;
             ApplyMachineUiVisibility();
         }
 
@@ -238,7 +285,7 @@ namespace SS3D.UI.StoragePanel
                 return;
             }
 
-            _root.style.display = _machineUiOpen ? DisplayStyle.None : DisplayStyle.Flex;
+            _root.style.display = _machineUiOpen || _menuOpen ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private ContainerViewer _boundViewer;
@@ -253,6 +300,7 @@ namespace SS3D.UI.StoragePanel
         public void BindContainerViewer(ContainerViewer viewer)
         {
             EnsureMachineUiSubscription();
+            EnsureMenuSubscription();
 
             if (_boundViewer == viewer)
             {

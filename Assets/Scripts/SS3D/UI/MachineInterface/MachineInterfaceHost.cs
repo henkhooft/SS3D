@@ -1,3 +1,4 @@
+using SS3D.Systems.Settings;
 using System;
 using DG.Tweening;
 using SS3D.Core;
@@ -209,6 +210,7 @@ namespace SS3D.UI.MachineInterface
             {
                 _document.panelSettings = _catalog.PanelSettings;
             }
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(_document?.panelSettings);
 
             MachineUiCatalog.RegisterAll(_catalog.ToCatalogAssets());
             ShutdownDocument();

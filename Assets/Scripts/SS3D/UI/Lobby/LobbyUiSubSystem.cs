@@ -10,6 +10,8 @@ using SS3D.Systems.Roles;
 using SS3D.Systems.Roles.Messages;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.ScreenEffects;
+using SS3D.Systems.Settings;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inventory.Containers;
@@ -63,9 +65,12 @@ namespace SS3D.UI.Lobby
         protected override void OnDestroyed()
         {
             BindToggleMenu(null);
+            SetMenuBlur(false);
             _menuHandle?.Dispose();
             _menuHandle = null;
             ReleasePortraits();
+            if (_playerSettings != null) _playerSettings.Changed -= HandlePlayerSettingsChanged;
+            _playerSettings = null;
             if (_shellView != null)
             {
                 _shellView.CharacterCreatorRequested -= HandleCharacterCreatorRequested;
@@ -99,6 +104,7 @@ namespace SS3D.UI.Lobby
         {
             if (!_attached) TryAttachShell();
             if (_shellView != null) RefreshSession();
+            RefreshDisplayConfirmation();
             if (_portraitDirty) TryCapturePortrait();
         }
 
@@ -117,6 +123,8 @@ namespace SS3D.UI.Lobby
             }
 
             _attached = true;
+            // The shell's panel settings are shared with the HUD, storage and radial overlays: UI Scale reaches all of them.
+            if (SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings)) playerSettings.RegisterUiPanel(uiShell.Document.panelSettings);
             InputInterface.RegisterDocument(uiShell.Document);
 
             _profileStore = new CharacterProfileStore(CharacterProfileStore.DefaultPath);
@@ -139,6 +147,7 @@ namespace SS3D.UI.Lobby
             };
             _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.ChatSubmitted += HandleChatSubmitted;
+            BindPlayerSettings();
             _shellView.SetCharacterName(_draft.Name);
 
             _creatorView = new CharacterCreatorView(_catalog, _draft, profile?.Characters);
@@ -164,6 +173,70 @@ namespace SS3D.UI.Lobby
             _shellView.SetVisible(true);
             _creatorView.SetVisible(false);
             Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + hair styles).");
+        }
+
+        private PlayerSettingsSubSystem _playerSettings;
+
+        /// <summary>Same strength as a diegetic machine panel (<c>MachineInterfaceHost.DiegeticBackdropBlur</c>).</summary>
+        private const float MenuBackdropBlur = 0.7f;
+        private bool _menuBlurred;
+
+        /// <summary>
+        /// Blurs the world behind the in-round (Escape) menu. Writes only on open/close so it never clears a blur a
+        /// machine panel set while the menu stayed shut.
+        /// </summary>
+        private void SetMenuBlur(bool open)
+        {
+            if (open == _menuBlurred || !SubSystems.TryGet(out ScreenEffectsSubSystem screenEffects)) return;
+            _menuBlurred = open;
+            screenEffects.SetUiBackdropBlur(open ? MenuBackdropBlur : 0f);
+        }
+
+        /// <summary>The Settings tab edits client-local player settings; no server round trip.</summary>
+        private void BindPlayerSettings()
+        {
+            if (!SubSystems.TryGet(out _playerSettings)) return;
+            PlayerSettingsSubSystem settings = _playerSettings;
+            _shellView.VolumeChanged += settings.SetVolume;
+            _shellView.MuteAllChanged += settings.SetMuteAll;
+            _shellView.MuteWhenUnfocusedChanged += settings.SetMuteWhenUnfocused;
+            _shellView.AudioResetRequested += settings.ResetAudio;
+            _shellView.ResolutionChanged += settings.SetResolution;
+            _shellView.WindowModeChanged += settings.SetWindowMode;
+            _shellView.VSyncChanged += settings.SetVSync;
+            _shellView.FrameCapChanged += settings.SetFrameCap;
+            _shellView.QualityChanged += settings.SetQuality;
+            _shellView.RenderScaleChanged += settings.SetRenderScale;
+            _shellView.UpscalerChanged += settings.SetUpscaler;
+            _shellView.AntiAliasingChanged += settings.SetAntiAliasing;
+            _shellView.UiScaleChanged += settings.SetUiScale;
+            _shellView.DisplayResetRequested += settings.ResetDisplay;
+            _shellView.DisplayChangeKept += settings.ConfirmDisplayChange;
+            _shellView.DisplayChangeReverted += settings.RevertDisplayChange;
+            _shellView.KeyCaptureRequested += settings.BeginKeyCapture;
+            _shellView.KeyCaptureCancelled += settings.CancelKeyCapture;
+            _shellView.ControlsResetRequested += settings.ResetControls;
+            settings.Changed += HandlePlayerSettingsChanged;
+            HandlePlayerSettingsChanged();
+        }
+
+        private void HandlePlayerSettingsChanged()
+        {
+            if (_shellView == null) return;
+            _shellView.SetAudioSettings(_playerSettings.Settings.Audio);
+            _shellView.SetDisplaySettings(_playerSettings.Settings.Display, _playerSettings.ResolutionChoices,
+                _playerSettings.CurrentResolution, _playerSettings.StpSupported);
+            _shellView.SetControls(_playerSettings.KeybindRows,
+                _playerSettings.CapturingRowId, _playerSettings.ControlsNotice, _playerSettings.ControlsNoticeVersion);
+            RefreshDisplayConfirmation();
+        }
+
+        /// <summary>Countdown text for the "Keep these settings?" prompt; cheap enough to run every frame.</summary>
+        private void RefreshDisplayConfirmation()
+        {
+            if (_shellView == null || _playerSettings == null) return;
+            _shellView.SetDisplayConfirmation(_playerSettings.DisplayConfirmationPending,
+                Mathf.CeilToInt(_playerSettings.DisplayConfirmationSecondsLeft));
         }
 
         private float _nextSessionRefresh;
@@ -206,6 +279,7 @@ namespace SS3D.UI.Lobby
             BindToggleMenu(SubSystems.TryGet(out InputSubSystem input) ? input : null);
             bool visible = connected && (!spawned || _menuOpen);
             bool holdMenu = visible && spawned;
+            SetMenuBlur(holdMenu);
             if (holdMenu && _menuHandle == null && _inputSystem != null) _menuHandle = _inputSystem.PushContext(InputContext.Menu);
             else if (!holdMenu && _menuHandle != null)
             {

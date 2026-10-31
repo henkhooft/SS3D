@@ -15,7 +15,7 @@ namespace SS3D.Systems.Inputs
     /// InputAction.enabled from the live request set, so dead keys, leaked input, and enabled/refcount
     /// desync are structurally impossible.
     /// </remarks>
-    public sealed class InputSubSystem : SubSystem
+    public sealed partial class InputSubSystem : SubSystem
     {
         public Controls Inputs { get; private set; }
 
@@ -34,20 +34,20 @@ namespace SS3D.Systems.Inputs
         public InputAction OpenLocalSpeechCompose => _openLocalSpeechCompose;
 
         /// <summary>
-        /// Toggle the Alert Icon Stack debug panel (F4). Bound in code like <see cref="UiCancel"/> —
-        /// avoid editing the generated <see cref="Controls"/> asset for one-off debug chords.
-        /// F3 is reserved for <c>LocalSpeechDebugTrigger</c> (local chat test lines).
+        /// Opens the F1 debug window, which lists every <c>DebugTool</c>. Unbound in release builds, so the
+        /// window cannot open there. Replaces the per-tool debug keys (H, P, I, M, Y, L, F2–F4, F6).
         /// </summary>
-        public InputAction ToggleAlertStackDebug => _toggleAlertStackDebug;
+        public InputAction ToggleDebugMenu => _toggleDebugMenu;
 
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
         private InputAction _toggleIntent;
         private InputAction _openLocalSpeechCompose;
-        private InputAction _toggleAlertStackDebug;
+        private InputAction _toggleDebugMenu;
 
         private InputArbiter _arbiter;
+        private Dictionary<InputContext, InputContextDefinition> _contexts;
 
         protected override void OnAwake()
         {
@@ -70,11 +70,19 @@ namespace SS3D.Systems.Inputs
             // Unused Other/Attack and Other/Show Owner both sat on F; F is ToggleIntent now.
             EraseAllBindings(Inputs.Other.Attack);
             EraseAllBindings(Inputs.Other.ShowOwner);
+            // Debug tools run from the F1 debug window now, which frees their letters for players to rebind.
+            EraseAllBindings(Inputs.Other.SwapMinds);
+            EraseAllBindings(Inputs.Other.ToggleRuntimeEditor);
+            EraseAllBindings(Inputs.Other.Ragdoll);
+            EraseAllBindings(Inputs.Other.SeeContainerContents);
+            EraseAllBindings(Inputs.Other.ToggleSelectionDebug);
+            EraseAllBindings(Inputs.Other.ToggleAtmosDebug);
 
             BuildSystemActions();
 
             List<InputAction> allActions = CollectAllActions();
-            _arbiter = new InputArbiter(allActions, BuildContexts());
+            _contexts = BuildContexts();
+            _arbiter = new InputArbiter(allActions, _contexts);
 
             // Always-on baseline; never released.
             _arbiter.PushContext(InputContext.Global);
@@ -95,6 +103,16 @@ namespace SS3D.Systems.Inputs
         /// context (highest priority wins). Dispose to pop it.
         /// </summary>
         public IInputHandle PushContext(InputContext context) => _arbiter.PushContext(context);
+
+        /// <summary>True while anything holds this context, even under a higher one (Menu under TextEntry).</summary>
+        public bool IsContextPushed(InputContext context) => _arbiter.IsPushed(context);
+
+        /// <summary>Raised after any context is pushed or released.</summary>
+        public event System.Action ContextsChanged
+        {
+            add => _arbiter.ContextsChanged += value;
+            remove => _arbiter.ContextsChanged -= value;
+        }
 
         /// <summary>Suppresses every action in a map while the handle is live.</summary>
         public IInputHandle SuppressMap(InputActionMap map) => _arbiter.SuppressActions(map.actions);
@@ -123,9 +141,10 @@ namespace SS3D.Systems.Inputs
             _toggleIntent = _systemMap.AddAction("ToggleIntent", InputActionType.Button, "<Keyboard>/f");
             _openLocalSpeechCompose = _systemMap.AddAction(
                 "OpenLocalSpeechCompose", InputActionType.Button, "<Keyboard>/t");
-            // F3 = LocalSpeechDebugTrigger; F2 = screen-effects debug (condemned uGUI).
-            _toggleAlertStackDebug = _systemMap.AddAction(
-                "ToggleAlertStackDebug", InputActionType.Button, "<Keyboard>/f4");
+            // Editor and development builds only (owner's call): release builds get no binding.
+            _toggleDebugMenu = Debug.isDebugBuild
+                ? _systemMap.AddAction("ToggleDebugMenu", InputActionType.Button, "<Keyboard>/f1")
+                : _systemMap.AddAction("ToggleDebugMenu", InputActionType.Button);
         }
 
         private List<InputAction> CollectAllActions()
@@ -163,20 +182,20 @@ namespace SS3D.Systems.Inputs
                 // plus code-defined debug toggles that share Other's availability.
                 [InputContext.Global] = new InputContextDefinition(
                     new[] { other },
-                    new[] { consoleOpen, tileToggle, _toggleAlertStackDebug }),
+                    new[] { consoleOpen, tileToggle, _toggleDebugMenu }),
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
                     new[]
                     {
                         consoleOpen, tileToggle, _detailedExamine, _toggleIntent,
-                        _openLocalSpeechCompose, _toggleAlertStackDebug,
+                        _openLocalSpeechCompose, _toggleDebugMenu,
                     }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(
                     new[] { movement, camera, tile, other },
-                    new[] { consoleOpen, _detailedExamine, _toggleAlertStackDebug }),
+                    new[] { consoleOpen, _detailedExamine, _toggleDebugMenu }),
 
                 // Map Editor: it polls Keyboard/Mouse directly for its own free-fly camera, so
                 // Movement/Camera must be masked here too (unlike TileMenu) to avoid the normal

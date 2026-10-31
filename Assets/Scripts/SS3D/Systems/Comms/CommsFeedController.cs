@@ -7,6 +7,7 @@ using SS3D.Systems.Inputs;
 using SS3D.UI.Shell;
 using System.Collections;
 using System.Collections.Generic;
+using SS3D.Systems.Audio;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -184,6 +185,8 @@ namespace SS3D.Systems.Comms
             _announceSource.loop = false;
             _announceSource.spatialBlend = 0f; // Non-diegetic UI chime — not positional.
             _announceSource.volume = 1f;
+            // Non-diegetic cue heard by this player only, like the alert ding: Personal, not SFX.
+            _announceSource.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.PersonalGroup);
         }
 
         private bool EnsureView()

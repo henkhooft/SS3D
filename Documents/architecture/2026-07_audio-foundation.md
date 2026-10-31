@@ -2,7 +2,7 @@
 > Touches systems: audio, area, electricity, health, stamina, main-hud, rounds-lobby, structural-destruction, furniture
 > Status: in-progress
 
-**Progress:** Phase 1–4 shipped; Phase 0, 5 pending.
+**Progress:** Phase 1–4 shipped; Phase 5 (lobby music bed) pending. Phase 0 and Phase 5's volume sliders moved to [2026-10_player-settings](2026-10_player-settings.md) Phase 1, which shipped them 2026-10-31.
 
 # Audio foundation (Jul 2026)
 
@@ -49,7 +49,7 @@ is content, §10 / this doc's Deferred).
 
 ## Phases
 
-### Phase 0 — Foundation & mixer
+### Phase 0 — Foundation & mixer — **moved to [2026-10_player-settings](2026-10_player-settings.md) Phase 1**
 
 - Establish four exposed mixer groups on `Assets/Content/Systems/Audio/MainMixer.mixer` matching §7's
   categories: **Ambience**, **SFX**, **Personal**, **Music** — each independently volume-adjustable.
@@ -113,10 +113,9 @@ SFX at once.
   `NoisyCollision` yet so they're unwired). Added `AreaAmbienceCommand` (`areaambience <trackId>`)
   as the actual dev-console authoring surface `SetAreaAmbienceTrackId` needed — always targets the
   calling player's own current area, same reasoning as `AtmosDebugCommand`.
-- **Known gap:** ambience `AudioSource`s output to Master, not the `Ambience` mixer group — a
-  self-bootstrapped subsystem has no Editor-assigned `OutputAudioMixerGroup` reference the way pool
-  prefabs do. Needs Phase 0's runtime-loadable mixer reference (or a small dedicated prefab) to route
-  correctly.
+- ~~**Known gap:** ambience `AudioSource`s output to Master~~ — closed by
+  [2026-10_player-settings](2026-10_player-settings.md) Phase 1: sources route to the `Ambience` group
+  via `MainAudioMixer` (mixer moved under `Resources/`).
 
 ### Phase 3 — Personal audio (§4) — **shipped**
 
@@ -141,8 +140,8 @@ SFX at once.
 - This is the reusable category virology's symptom cue (§4) later plugs into — the seam is
   `PersonalAudioSubSystem.SetHeartbeatIntensity`/`SetBreathingIntensity`, callable directly by any
   future domain mapper; virology content itself is out of scope here.
-- **Known gap (shared with Phase 2):** outputs to Master, not a `Personal` mixer group — same Phase 0
-  dependency as ambience.
+- ~~**Known gap (shared with Phase 2):** outputs to Master~~ — closed by
+  [2026-10_player-settings](2026-10_player-settings.md) Phase 1: routes to the new `Personal` group.
 
 ### Phase 4 — Alert cues (§6) — **shipped (alert stack; PDA deferred)**
 
@@ -167,8 +166,9 @@ SFX at once.
 - **Lobby/menu non-diegetic bed** — the one place a 2D score is allowed (`lobby.md` §1's existing meta
   carve-out): plays on lobby/menu scenes only, stops at round start. Enforce "no global in-round score" —
   in-round music is Boombox-sourced only (§5, already true).
-- Bind four settings sliders to the Phase 0 mixer groups (Ambience / SFX / Personal / Music). Default
-  values and mix balance are a balancing pass (§10), not decided here.
+- ~~Bind four settings sliders to the Phase 0 mixer groups~~ — moved to
+  [2026-10_player-settings](2026-10_player-settings.md) Phase 1. Default values and mix balance stay a
+  balancing pass (§10).
 
 ## Deferred (content / balancing, per audio.md §10)
 

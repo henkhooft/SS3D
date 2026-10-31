@@ -6,6 +6,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.UIElements;
 
 namespace SS3D.Editor.Automation
@@ -110,6 +111,30 @@ namespace SS3D.Editor.Automation
         // here, fail explicitly if it changes, and restore the user's selected size.
         private static EditorWindow GameView() => EditorWindow.GetWindow(
             typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView", true));
+
+        // Mirrors of PlayerSettings' file shape; this editor assembly does not reference the runtime ones.
+        [Serializable]
+        private sealed class SavedSettings
+        {
+            public SavedAudio Audio;
+        }
+
+        [Serializable]
+        private sealed class SavedAudio
+        {
+            public float Master;
+            public float Music;
+            public bool MuteAll;
+        }
+
+        /// <summary>Flushes PlayerSettingsSubSystem's debounced save so the pilot can read the file back.</summary>
+        private static bool SavePlayerSettingsNow()
+        {
+            foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+                if (behaviour.GetType().Name == "PlayerSettingsSubSystem")
+                    return (bool)behaviour.GetType().GetMethod("SaveNow").Invoke(behaviour, null);
+            return false;
+        }
 
         private static PropertyInfo GameViewSizeProperty() => GameView().GetType().GetProperty(
             "selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -304,51 +329,71 @@ namespace SS3D.Editor.Automation
                 case 7: Submit(shell, "SETTINGS"); break;
                 case 8:
                     Require(shell.Query(className: "lobby-shell__settings-tab").ToList().Count == 3, "Settings has three underlined subtabs");
-                    Require(shell.Q<DropdownField>("settings-resolution") != null, "Resolution is a dropdown");
-                    shell.Q<DropdownField>("settings-resolution").value = "1600x900";
-                    shell.Q<Toggle>("settings-fullscreen").value = false;
-                    shell.Q<Slider>("settings-uiScale").value = 0.75f;
-                    shell.Q<Slider>("settings-brightness").value = 0.7f;
+                    foreach (string dropdown in new[] { "resolution", "windowMode", "frameCap", "quality", "renderScale", "upscaler", "antiAliasing" })
+                        Require(shell.Q<DropdownField>("settings-" + dropdown) != null, $"Display has a {dropdown} dropdown");
+                    Require(shell.Q<Slider>("settings-brightness") == null, "Brightness is gone (darkness keeps its gameplay meaning)");
+                    shell.Q<DropdownField>("settings-quality").index = 0;
                     Capture("00-settings-display");
                     break;
-                case 9: Submit(shell, "SOUND"); break;
+                case 9:
+                    Require(QualitySettings.GetQualityLevel() == 0, "Quality dropdown switches the quality level");
+                    Submit(shell, "AUDIO");
+                    break;
                 case 10:
-                    Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().Count == 3, "Sound has three volume sliders");
+                    Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().Count == 5,
+                        "Sound has Master, Music, SFX, Ambience and Personal sliders");
+                    Require(shell.Q<Toggle>("settings-muteUnfocused") != null, "Sound has Mute When Unfocused");
                     shell.Q<Slider>("settings-masterVolume").value = 0.35f;
+                    shell.Q<Slider>("settings-musicVolume").value = 0.5f;
                     shell.Q<Toggle>("settings-muted").value = true;
                     break;
                 case 11:
+                {
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().All(s => !s.enabledInHierarchy), "Mute disables volume sliders");
                     Require(shell.Q<Label>("settings-value-masterVolume").text == "35", "Sound slider readout updates");
+                    AudioMixer mixer = Resources.Load<AudioMixer>("MainMixer");
+                    Require(mixer.GetFloat("MusicVolume", out float musicDb) && Mathf.Abs(musicDb - -6.02f) < 0.05f,
+                        "Music slider drives the mixer's MusicVolume");
+                    Require(mixer.GetFloat("MasterVolume", out float masterDb) && masterDb <= -80f, "Mute All silences MasterVolume");
+                    Require(SavePlayerSettingsNow(), "Player settings save");
+                    string settingsPath = Path.Combine(SessionState.GetString(OutputKey, ""), "settings.json");
+                    SavedAudio saved = JsonUtility.FromJson<SavedSettings>(File.ReadAllText(settingsPath)).Audio;
+                    Require(Mathf.Approximately(saved.Master, 0.35f) && Mathf.Approximately(saved.Music, 0.5f) && saved.MuteAll,
+                        "Audio settings persist to the pilot's settings.json");
                     Capture("00-settings-muted");
                     break;
+                }
                 case 12: shell.Q<Toggle>("settings-muted").value = false; break;
                 case 13:
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().All(s => s.enabledInHierarchy), "Unmute restores volume controls");
                     Capture("00-settings-sound");
                     break;
-                case 14: Submit(shell, "KEYBOARD"); break;
+                case 14: Submit(shell, "CONTROLS"); break;
                 case 15:
-                    Require(shell.Query<Button>(className: "lobby-shell__binding-button").ToList().Count == 8, "Keyboard has eight binding buttons");
-                    Capture("00-settings-keyboard");
+                {
+                    List<Button> bindings = shell.Query<Button>(className: "lobby-shell__binding-button").ToList();
+                    Require(bindings.Count >= 25, "Controls lists the player-visible actions from Controls.inputactions");
+                    Require(bindings.Any(b => b.text == "Ctrl + Q" && b.enabledSelf), "Modifier chords show their fixed prefix and stay rebindable");
+                    Require(bindings.Any(b => b.text == "Escape" && !b.enabledSelf), "Menu (Escape) is read-only");
+                    Capture("00-settings-controls");
                     break;
-                case 16:
-                    Submit(shell, "W");
-                    using (KeyDownEvent evt = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.K }))
-                    {
-                        evt.target = shell;
-                        shell.SendEvent(evt);
-                    }
-                    break;
+                }
+                case 16: Submit(shell, "E"); break;
                 case 17:
-                    Require(shell.Q<Button>("bind-moveForward").text == "K", "Keyboard accepts a local rebind");
+                {
+                    Button listening = shell.Q<Button>(className: "lobby-shell__binding-button--listening");
+                    Require(listening != null && listening.text.StartsWith("Press a key"), "Clicking a binding starts key capture");
+                    Submit(shell, listening.text);
+                    break;
+                }
+                case 18:
+                    Require(shell.Q<Button>(className: "lobby-shell__binding-button--listening") == null
+                        && shell.Query<Button>(className: "lobby-shell__binding-button").ToList().Any(b => b.text == "E"),
+                        "Clicking the listening binding cancels capture and keeps the key");
                     Submit(shell, "DISPLAY");
                     break;
-                case 18:
-                    Require(shell.Q<DropdownField>("settings-resolution").value == "1600x900"
-                        && !shell.Q<Toggle>("settings-fullscreen").value, "Display choices persist across subtabs");
-                    Require(Mathf.Approximately(shell.Q<Slider>("settings-uiScale").value, 0.75f)
-                        && Mathf.Approximately(shell.Q<Slider>("settings-brightness").value, 0.7f), "Display sliders persist across subtabs");
+                case 19:
+                    Require(shell.Q<DropdownField>("settings-quality").value == "Low", "Display choices persist across subtabs");
                     Submit(shell, "SERVER INFO");
                     break;
                 default: return true;

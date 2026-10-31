@@ -55,6 +55,7 @@ namespace SS3D.Systems.Audio
             _source.rolloffMode = AudioRolloffMode.Logarithmic;
             _source.dopplerLevel = 0f;
             _source.volume = Volume;
+            _source.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.SfxGroup);
         }
 
         private void OnEnable()

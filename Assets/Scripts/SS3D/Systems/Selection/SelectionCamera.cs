@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using SS3D.Core.Debugging;
+using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -41,11 +42,6 @@ namespace SS3D.Systems.Selection
 
             EnsureRenderTextureSize();
             GenerateReadbackTexture();
-            if (_inputSystem != null)
-            {
-                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
-            }
-
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
             RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
         }
@@ -53,22 +49,16 @@ namespace SS3D.Systems.Selection
         protected override void OnEnabled()
         {
             base.OnEnabled();
-            if (!SubSystems.TryGet(out _inputSystem))
-            {
-                return;
-            }
-
-            _inputSystem.Inputs.Other.ToggleSelectionDebug.performed += ToggleDebugMode;
+            DebugTool tool = DebugTools.Get(DebugToolNames.SelectionBuffer);
+            tool.Invoked += ToggleDebugMode;
+            tool.IsOn = () => _debugMode;
         }
 
         protected override void OnDisabled()
         {
             base.OnDisabled();
 
-            if (_inputSystem)
-            {
-                _inputSystem.Inputs.Other.ToggleSelectionDebug.performed -= ToggleDebugMode;
-            }
+            DebugTools.Get(DebugToolNames.SelectionBuffer).Invoked -= ToggleDebugMode;
 
             SelectionPickContext.ClearRequest();
         }
@@ -219,7 +209,7 @@ namespace SS3D.Systems.Selection
             return true;
         }
 
-        public void ToggleDebugMode(InputAction.CallbackContext callbackContext)
+        public void ToggleDebugMode()
         {
             _debugMode = !_debugMode;
         }
