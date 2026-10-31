@@ -31,7 +31,7 @@ namespace SS3D.Systems.Tile.MapEditor
     /// Full-screen in-game map editor replacing the legacy TileMap Creator UI.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public sealed class MapEditorSubSystem : NetworkSubSystem, IMapEditorHost
+    public sealed partial class MapEditorSubSystem : NetworkSubSystem, IMapEditorHost
     {
         [SerializeField] private UIDocument _document;
         [SerializeField] private StyleSheet _styleSheet;
@@ -45,6 +45,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private readonly MapEditorSession _session = new();
         private readonly MapEditorCommandService _commandService = new();
         private readonly MapEditorLighting _lighting = new();
+        private readonly MapEditorAreaOverlay _areaOverlay = new();
 
         private MapEditorView _view;
         private IMapEditorPersistence _persistence;
@@ -178,6 +179,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _gameplayHud?.SetVisible(true);
             _mapEditorHandle?.Dispose();
             _mapEditorHandle = null;
+            _areaOverlay.Dispose();
             TeardownView();
             UnregisterDocument();
             if (_document != null)
@@ -230,6 +232,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private void WireViewEvents()
         {
             _view.ToolSelected += OnToolSelected;
+            _view.AreaApplyRequested += OnAreaApplyRequested;
             _view.UndoRequested += OnUndoRequested;
             _view.RedoRequested += OnRedoRequested;
             _view.SaveAsRequested += OnSaveAsRequested;
@@ -316,6 +319,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 _hologramManager.enabled = false;
                 _session.Exit();
                 _lighting.Restore();
+                _areaOverlay.SetVisible(false);
                 MapEditorLayerVisibility.Deactivate();
                 SetGameplayInputBlocked(false);
                 _mapEditorHandle?.Dispose();
@@ -425,6 +429,11 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!_active)
                 return;
 
+            bool showAreas = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Areas);
+            _areaOverlay.SetVisible(showAreas);
+            SubSystems.TryGet(out AreaSubSystem labelAreas);
+            _view?.UpdateAreaLabels(_areaOverlay.LabelPositions, labelAreas?.FloorVisualCache, PickCamera, showAreas);
+
             if (_session.IsActive)
                 _session.Update(updateEvent.DeltaTime);
 
@@ -432,6 +441,9 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!_session.IsOrbiting)
             {
                 UpdateMouseOverUI();
+
+                if (_viewModel.CurrentTool == MapEditorTool.Area && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                    RpcInspectArea(TileHelper.GetPointedPosition(true, PickCamera), LocalConnection);
 
                 if (_viewModel.CurrentTool == MapEditorTool.Select && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
                     HandleSelectClick();
@@ -638,6 +650,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _view.ToolSelected -= OnToolSelected;
+            _view.AreaApplyRequested -= OnAreaApplyRequested;
             _view.UndoRequested -= OnUndoRequested;
             _view.RedoRequested -= OnRedoRequested;
             _view.SaveAsRequested -= OnSaveAsRequested;
@@ -661,6 +674,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void OnToolSelected(MapEditorTool tool)
         {
+            if (tool != MapEditorTool.Area)
+                _view.CloseAreaProperties();
             _viewModel.SetTool(tool);
 
             switch (tool)
@@ -1046,6 +1061,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _commandService.Undo();
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetRefreshAreaProperties(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -1056,6 +1072,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _commandService.Redo();
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetRefreshAreaProperties(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]

@@ -17,7 +17,7 @@ Server-side crew identity rail and shared access checks per `Documents/design/id
 - `Assets/Scripts/SS3D/Systems/IdAccess/AccessLevelCatalog.cs` — editable level list for ID console UI
 - `Assets/Scripts/SS3D/Systems/IdAccess/AuthLogDeviceBehaviour.cs` — per-device auth log adapter
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/Identification/IDCard.cs` — physical token; no independent access state
-- `Assets/Scripts/SS3D/Systems/Furniture/AirLockAccessGate.cs` — door access from area default or override
+- `Assets/Scripts/SS3D/Systems/Furniture/AirLockAccessGate.cs` — door access from room explicit/department requirements; legacy skin masks only outside assigned rooms
 - `Assets/Scripts/SS3D/UI/MachineInterface/AccessGatedMachineInterfaceBehaviour.cs` — server ID scan session for machine UIs
 - `Assets/Scripts/SS3D/UI/MachineInterface/IdConsoleController.cs` — Change ID gated editing
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/IdAccessCommands/` — dev `accesscheck`, `accessgrant`, `accessrevoke`, `accesspreset`

@@ -1,0 +1,136 @@
+using System;
+using System.Collections.Generic;
+using SS3D.Systems.IdAccess;
+using SS3D.Systems.Area;
+using SS3D.Systems.Inputs;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace SS3D.Systems.Tile.MapEditor.UI
+{
+    public sealed partial class MapEditorView
+    {
+        private Vector3 _areaPosition;
+        private string _areaName, _areaDepartment;
+        private ulong _areaAccess;
+        public event Action<Vector3, string, string, ulong> AreaApplyRequested;
+
+        public void ShowAreaProperties(Vector3 position, string roomName, string department, ulong access)
+        {
+            _areaPosition = position;
+            _areaName = roomName;
+            _areaDepartment = department;
+            _areaAccess = access;
+            OpenPopover("area");
+        }
+
+        public void CloseAreaProperties()
+        {
+            if (_vm.OpenPopover == "area") ClosePopover();
+        }
+
+        private VisualElement _areaLabelsLayer;
+        private readonly Dictionary<ushort, Label> _areaNameLabels = new();
+
+        public void UpdateAreaLabels(IReadOnlyDictionary<ushort, Vector3> anchors,
+            AreaFloorVisualCache cache, Camera camera, bool visible)
+        {
+            if (_root == null) return;
+            if (_areaLabelsLayer == null)
+            {
+                _areaLabelsLayer = new VisualElement { name = "area-name-labels", pickingMode = PickingMode.Ignore };
+                _areaLabelsLayer.style.position = Position.Absolute;
+                _areaLabelsLayer.style.left = _areaLabelsLayer.style.top = 0;
+                _areaLabelsLayer.style.right = _areaLabelsLayer.style.bottom = 0;
+                _root.Insert(0, _areaLabelsLayer);
+            }
+            _areaLabelsLayer.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible || camera == null || cache == null || _root.panel == null) return;
+            foreach (Label label in _areaNameLabels.Values) label.style.display = DisplayStyle.None;
+            foreach (KeyValuePair<ushort, Vector3> anchor in anchors)
+            {
+                Vector3 screen = camera.WorldToScreenPoint(anchor.Value);
+                if (screen.z <= 0 || !camera.pixelRect.Contains((Vector2)screen)) continue;
+                if (!_areaNameLabels.TryGetValue(anchor.Key, out Label label))
+                {
+                    label = new Label { pickingMode = PickingMode.Ignore };
+                    label.AddToClassList("map-editor-area-name");
+                    label.style.borderBottomColor = AreaDevSettings.GetColorForArea(anchor.Key);
+                    _areaNameLabels[anchor.Key] = label;
+                    _areaLabelsLayer.Add(label);
+                }
+                label.text = cache.GetAreaName(anchor.Key);
+                Vector2 point = InputInterface.ScreenToPanel(_root.panel, screen);
+                label.style.left = point.x;
+                label.style.top = point.y;
+                label.style.display = DisplayStyle.Flex;
+            }
+        }
+
+        private void BuildAreaPopover(VisualElement container)
+        {
+            container.AddToClassList("map-editor-area-form");
+            Label help = new("Edits the existing APC-defined room. Save the map after applying.");
+            help.style.whiteSpace = WhiteSpace.Normal;
+            container.Add(help);
+            container.Add(new Label("Room name"));
+            TextField name = new() { name = "area-name", value = _areaName ?? "", maxLength = 80 };
+            name.AddToClassList("map-editor-area-field");
+            WireTextEntryField(name);
+            container.Add(name);
+            List<string> departments = new() { "", "Command", "Security", "Engineering", "Medical", "Science", "Cargo", "Service", "Civilian" };
+            if (!departments.Contains(_areaDepartment ?? ""))
+                departments.Add(_areaDepartment);
+            container.Add(new Label("Department"));
+            DropdownField department = new(departments, Math.Max(0, departments.IndexOf(_areaDepartment ?? ""))) { name = "area-department" };
+            department.AddToClassList("map-editor-area-field");
+            container.Add(department);
+            Toggle useDefault = new("Use department access") { name = "area-default-access", value = _areaAccess == 0 };
+            useDefault.AddToClassList("map-editor-area-toggle");
+            container.Add(useDefault);
+            Label hint = new("All selected access levels are required. Department access applies when no override is selected.");
+            hint.style.whiteSpace = WhiteSpace.Normal;
+            container.Add(hint);
+            container.Add(new Label("Access override — scroll for all levels"));
+            ScrollView levels = new() { name = "area-access-levels" };
+            levels.AddToClassList("map-editor-area-access");
+            ulong bits = _areaAccess;
+            Dictionary<AccessLevel, Toggle> accessToggles = new();
+            foreach (AccessLevel level in Enum.GetValues(typeof(AccessLevel)))
+            {
+                if (level == AccessLevel.None) continue;
+                ulong flag = (ulong)level;
+                Toggle toggle = new(level.ToString()) { name = $"area-access-{level}", value = (bits & flag) != 0 };
+                accessToggles[level] = toggle;
+                toggle.AddToClassList("map-editor-area-toggle");
+                toggle.RegisterValueChangedCallback(e => bits = e.newValue ? bits | flag : bits & ~flag);
+                levels.Add(toggle);
+            }
+            void RefreshAccessPreview()
+            {
+                ulong shown = useDefault.value ? AreaAccessDefaults.FromParentTag(department.value).Value : bits;
+                foreach (KeyValuePair<AccessLevel, Toggle> pair in accessToggles)
+                {
+                    pair.Value.SetValueWithoutNotify((shown & (ulong)pair.Key) != 0);
+                    pair.Value.SetEnabled(!useDefault.value);
+                }
+            }
+            useDefault.RegisterValueChangedCallback(_ => RefreshAccessPreview());
+            department.RegisterValueChangedCallback(_ => RefreshAccessPreview());
+            RefreshAccessPreview();
+            container.Add(levels);
+            Button apply = new(() =>
+            {
+                if (!useDefault.value && bits == 0)
+                {
+                    hint.text = "Select at least one access level, or use department access.";
+                    return;
+                }
+                AreaApplyRequested?.Invoke(_areaPosition, name.value, department.value, useDefault.value ? 0 : bits);
+            }) { text = "Apply room properties", name = "area-apply" };
+            apply.AddToClassList("map-editor-action-btn");
+            apply.AddToClassList("map-editor-action-btn--primary");
+            container.Add(apply);
+        }
+    }
+}

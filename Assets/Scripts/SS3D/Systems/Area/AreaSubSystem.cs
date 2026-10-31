@@ -619,6 +619,7 @@ namespace SS3D.Systems.Area
                 return;
 
             record.DisplayName = displayName;
+            SyncAreaNames();
         }
 
         [Server]
@@ -1182,6 +1183,7 @@ namespace SS3D.Systems.Area
             if (_map == null)
                 return;
 
+            SyncAreaNames();
             var tintList = new List<(ushort areaId, bool hasTint, Color tint)>();
             foreach (AreaRecord record in _registry.GetAllAreas())
             {
@@ -1241,6 +1243,28 @@ namespace SS3D.Systems.Area
 
             FloorVisualCache.ReplaceAmbienceTrackIds(trackList);
             RpcSyncAreaAmbience(rpcAmbience.ToArray());
+        }
+
+        [Server]
+        private void SyncAreaNames()
+        {
+            var records = _registry.GetAllAreas();
+            ushort[] ids = new ushort[records.Count];
+            string[] names = new string[records.Count];
+            int i = 0;
+            foreach (AreaRecord record in records)
+            {
+                ids[i] = record.Id.Value;
+                names[i++] = record.DisplayName;
+            }
+            FloorVisualCache.ReplaceNames(ids, names);
+            RpcSyncAreaNames(ids, names);
+        }
+
+        [ObserversRpc(BufferLast = true)]
+        private void RpcSyncAreaNames(ushort[] ids, string[] names)
+        {
+            if (!IsServer) FloorVisualCache.ReplaceNames(ids, names);
         }
 
         [ObserversRpc(BufferLast = true)]

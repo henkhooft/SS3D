@@ -31,6 +31,9 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 
 ## Pitfalls
 
+- **Room access edits do not affect doors:** civilian/security skins serialized fixed masks and disabled area defaults. `AirLockAccessGate` now resolves assigned-room explicit access, then department defaults; legacy skin masks (migrated via `FormerlySerializedAs`) are only fallbacks for unassigned doors. Public assigned rooms stay public.
+
+
 - **SS13-scale airlock FixedUpdate:** hundreds of doors each calling `SpawnedPlayers.ToList()` + `GetComponent` every physics tick (~814× on Metastation). Proximity is owned by `AirLockProximityService` (HashGrid neighborhood of players only). Empty close passes use `_pendingEmptyPass` (doors with occupants), not a walk of all `_openerCells` — `EmptyPassSweep` must stay O(pending). Do not re-add per-door `FixedUpdate`. Hit 2026-07-28 (perf capture).
 - **Airlock proximity GC per tick:** do not prune `_deniedOccupants` with `RemoveWhere` capturing `_proximityScratch` (allocates a display class + delegate every call). Use a list prune. Do not `TryGet` MapEditor/EntitySubSystem inside each door — hoist in the service and pass `SpawnedPlayers`. Do not read `renderer.sharedMaterials` on door-light updates (new array every call); resolve color property once and set via MPB material index. Hit 2026-07-29.
 - **Airlock panel SMR vs bones:** `AirlockPanel` uses `SkinnedMeshRenderer` for blend shapes (`Confirm`/`On`), not skeletal bones. That path breaks SRP Batcher grouping vs `MeshRenderer`. Replacing with MeshRenderer + MPB/emissive is a content change, not a zero-cost swap. Hit 2026-07-29.

@@ -13,12 +13,25 @@ namespace SS3D.Systems.Area
     {
         public event Action OnDirty;
 
+        private readonly Dictionary<ushort, string> _names = new();
+
+        public string GetAreaName(ushort id) => _names.TryGetValue(id, out string name) && !string.IsNullOrWhiteSpace(name) ? name : $"Area {id}";
+
+        public void ReplaceNames(ushort[] ids, string[] names)
+        {
+            _names.Clear();
+            if (ids != null && names != null)
+                for (int i = 0; i < Math.Min(ids.Length, names.Length); i++) _names[ids[i]] = names[i];
+            OnDirty?.Invoke();
+        }
+
         private readonly Dictionary<ushort, Color> _tints = new();
         private readonly Dictionary<Vector2Int, ushort[]> _chunkAreaIds = new();
         private readonly Dictionary<ushort, string> _ambienceTrackIds = new();
 
         public void Clear()
         {
+            _names.Clear();
             _tints.Clear();
             _chunkAreaIds.Clear();
             _ambienceTrackIds.Clear();

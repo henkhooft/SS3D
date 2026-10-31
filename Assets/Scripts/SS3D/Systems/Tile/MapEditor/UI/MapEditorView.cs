@@ -14,7 +14,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     /// <summary>
     /// UI Toolkit view for the full-screen map editor.
     /// </summary>
-    public sealed class MapEditorView
+    public sealed partial class MapEditorView
     {
         /// <summary>Object library panel heights (px) for the three resize states.</summary>
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
@@ -161,6 +161,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             AddToolButton(_leftToolbar, MapEditorTool.Select, "Select [2]");
             AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper [3]");
             AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete [4]");
+            AddToolButton(_leftToolbar, MapEditorTool.Area, "Room properties");
+            _toolButtons[MapEditorTool.Area].name = "area-tool";
             AddSeparator(_leftToolbar, vertical: true);
 
             Button undo = CreateIconButton(_icons?.Undo, null, () => UndoRequested?.Invoke());
@@ -449,7 +451,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 _toast.style.display = DisplayStyle.None;
             }
 
-            RefreshPopover();
+            // Keep unsaved room fields intact when toasts/undo state refresh the chrome.
+            if (_vm.OpenPopover != "area" || _activePopover == null)
+                RefreshPopover();
         }
 
         private void RebuildSubcategories()
@@ -643,7 +647,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _vm.NotifyChanged();
         }
 
-        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu";
+        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area";
 
         private void RefreshPopover()
         {
@@ -656,7 +660,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement anchor = _vm.OpenPopover switch
             {
-                "maps" or "saveMenu" => _leftPopoverAnchor,
+                "maps" or "saveMenu" or "area" => _leftPopoverAnchor,
                 "camera" => _cameraPopoverAnchor,
                 _ => _rightPopoverAnchor,
             };
@@ -666,7 +670,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
                 ? "map-editor-popover--anchor-right"
                 : "map-editor-popover--anchor-left");
-            if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
+            if (_vm.OpenPopover is "maps" or "saveMenu" or "area")
                 popover.AddToClassList("map-editor-popover--wide");
 
             VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
@@ -703,6 +707,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static string GetPopoverTitle(string key) =>
             key switch
             {
+                "area" => "Room properties",
                 "maps" => "Map Selection",
                 "saveMenu" => "Save Map",
                 "layers" => "Layer View Mode",
@@ -715,6 +720,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             switch (key)
             {
+                case "area":
+                    BuildAreaPopover(container);
+                    break;
                 case "maps":
                     BuildMapsPopover(container);
                     break;

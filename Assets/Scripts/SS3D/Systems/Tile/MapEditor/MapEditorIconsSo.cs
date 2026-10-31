@@ -114,6 +114,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorTool.Move => Resolve(_move, Paths.Move),
                 MapEditorTool.Dropper => Resolve(_dropper, Paths.Dropper),
                 MapEditorTool.Delete => Resolve(_delete, Paths.Delete),
+                MapEditorTool.Area => Resolve(_subFlooring, Paths.SubFlooring),
                 _ => null,
             };
 

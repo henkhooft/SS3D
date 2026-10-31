@@ -521,9 +521,11 @@ jobs:
             test -f Builds/Game/Config/permissions.txt
             test -f Builds/Game/Config/network.json
             test -d Builds/Game/Data/Tilemaps
-            mkdir -p "${dest}/Config" "${dest}/Data/Tilemaps"
+            test -f Builds/Game/Data/StationTemplates/ministation.json
+            mkdir -p "${dest}/Config" "${dest}/Data/Tilemaps" "${dest}/Data/StationTemplates"
             cp -a Builds/Game/Config/. "${dest}/Config/"
             cp -a Builds/Game/Data/Tilemaps/. "${dest}/Data/Tilemaps/"
+            cp -a Builds/Game/Data/StationTemplates/. "${dest}/Data/StationTemplates/"
           }
 
           # --- Primary: Windows client + launch bats ---

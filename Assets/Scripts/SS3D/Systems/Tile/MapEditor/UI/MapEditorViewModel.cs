@@ -42,12 +42,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             foreach (TileLayerCategory category in TileLayerCategoryMapping.AllCategories)
             {
                 if (!_layerCategoryVisibility.ContainsKey(category))
-                    _layerCategoryVisibility[category] = true;
+                    _layerCategoryVisibility[category] = category != TileLayerCategory.Areas;
             }
         }
 
         public bool IsLayerCategoryVisible(TileLayerCategory category) =>
-            !_layerCategoryVisibility.TryGetValue(category, out bool visible) || visible;
+            _layerCategoryVisibility.TryGetValue(category, out bool visible) ? visible : category != TileLayerCategory.Areas;
 
         public void SetLayerCategoryVisible(TileLayerCategory category, bool visible)
         {
@@ -60,6 +60,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetTool(MapEditorTool tool)
         {
             CurrentTool = tool;
+            _layerCategoryVisibility[TileLayerCategory.Areas] = tool == MapEditorTool.Area;
             UpdateHint();
             NotifyChanged();
         }
@@ -130,6 +131,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
                 SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to place";
+                return;
+            }
+
+            if (CurrentTool == MapEditorTool.Area)
+            {
+                SelectedObjectHint = "Area tool — click an APC-defined room to edit its properties";
                 return;
             }
 

@@ -30,6 +30,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - `Assets/Scripts/SS3D/Systems/Area/AreaDeviceTileResolver.cs` — wall-mount front-tile + floor-cache area resolve
 - `Assets/Scripts/SS3D/Systems/Area/AreaDevSettings.cs` — dev toggle (`SS3D → Dev → Areas → Show Area Gizmos`)
 - `Assets/Scripts/SS3D/Systems/Area/AreaDebugGizmoDrawer.cs` — Scene-view tile overlay, APC labels (host/server map only)
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorAreaOverlay.cs` — release-build Areas layer: cached membership + shared gizmo colors, chunk meshes, no colliders; automatic with room tool and manually toggled in Layer View Mode; room-name labels use buffered `RpcSyncAreaNames` / `FloorVisualCache.GetAreaName`, updated by rename and membership snapshots
 - `Assets/Scripts/Tests/EditMode/AreaFloodFillTests.cs` — flood-fill and boundary edit-mode tests
 - `Assets/Scripts/Tests/EditMode/Area/AreaFloorVisualCacheTests.cs` — client cache world-grid lookup
 - `Assets/Scripts/Tests/EditMode/ElectricityTests/AreaLightFixturePolicyTests.cs` — fixture policy tests
@@ -42,7 +43,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Resolve area record by id: `AreaSubSystem.TryGetArea`.
 - Client / no-registry area id: `TryResolveAreaIdForDevice` — server/host with live map uses `TryGetAreaForDevice` only (sticky None); pure clients use `FloorVisualCache`.
 - Register APC origins: implement `IAreaApcOrigin` (see `ApcController`).
-- Server rename/tag API: `AreaSubSystem.RenameArea`, `SetParentTag` (no editor UI yet).
+- Server room metadata APIs: `AreaSubSystem.RenameArea`, `SetParentTag`, `SetDefaultRequiredAccess`; Map Editor Area tool selects APC-defined rooms and edits these via admin-checked RPCs (`MapEditorArea.cs`; runtime validation pending).
 - Resolve effective APC for a device: `AreaSubSystem.TryGetEffectiveApcForDevice`.
 - Area rebuild / APC lifecycle invalidates electricity's per-APC consumer index and atmos's area→port index via `InvalidateAreaMembershipIndexes`.
 - Query lighting by tile: `IAreaLightingStateSource.TryGetLightingStateForTile`.
