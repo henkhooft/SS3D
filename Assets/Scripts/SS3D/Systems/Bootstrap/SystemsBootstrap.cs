@@ -10,6 +10,7 @@ using SS3D.Systems.Vision;
 using SS3D.Systems.WorldReadiness;
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SS3D.Systems.Bootstrap
 {
@@ -28,9 +29,38 @@ namespace SS3D.Systems.Bootstrap
         private const string CommandLineArgsTypeName =
             "SS3D.CommandLine.CommandLineArgsSubSystem, SS3D.CommandLine";
 
+        /// <summary>Scene the Unity Test Runner enters Play Mode in (InitTestScene&lt;guid&gt;).</summary>
+        private const string TestRunnerScenePrefix = "InitTestScene";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            // Enter Play Mode runs without a domain reload, so a handler from an aborted run survives.
+            SceneManager.sceneLoaded -= StartAfterTestRunnerScene;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AfterSceneLoad()
         {
+            // PlayMode tests start in the Test Runner's scene and load Boot themselves. Cold-starting
+            // here would load Intro over the runner's scene and the run would never start a test.
+            if (SceneManager.GetActiveScene().name.StartsWith(TestRunnerScenePrefix, StringComparison.Ordinal))
+            {
+                SceneManager.sceneLoaded += StartAfterTestRunnerScene;
+                return;
+            }
+
+            EnsureProcessWideServices();
+        }
+
+        private static void StartAfterTestRunnerScene(UnityEngine.SceneManagement.Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name.StartsWith(TestRunnerScenePrefix, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            SceneManager.sceneLoaded -= StartAfterTestRunnerScene;
             EnsureProcessWideServices();
         }
 

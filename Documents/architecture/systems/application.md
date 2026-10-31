@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Application/, Assets/Scripts/SS3D/Systems/Bootstrap/
 > Entry points: ApplicationInitializerSubSystem, SystemsBootstrap
 > Status: stub
-> Verified: 84401b2fe — 2026-07-23
+> Verified: 66ba71066 — 2026-10-31
 
 # Application
 
@@ -21,6 +21,7 @@ App bootstrap and startup initialization. `ApplicationInitializerSubSystem` is D
 ## Pitfalls
 
 - **Boot storm if offline reloads Boot after Online.** Session owner arms Empty — see [networking-session](networking-session.md).
+- **PlayMode tests start in the Test Runner's `InitTestScene<guid>`.** `SystemsBootstrap` must not cold-start there: `SceneSubSystem` would load Intro over the runner's scene and no test starts. The bootstrap waits for the first other scene (the tests load Boot themselves). The MCP test runner enters Play Mode without a domain reload, so the handler is cleared on `SubsystemRegistration`.
 - **Listener order:** anything that subscribes to ApplicationInitializing must exist before ApplicationInitializer.OnStart — bootstrap creates ApplicationInitializer last in the AfterSceneLoad batch.
 
 ## Depends on / Used by
