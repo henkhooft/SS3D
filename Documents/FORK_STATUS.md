@@ -419,7 +419,10 @@ Round loop refactored to a **single-flight state machine** with generation-track
 `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. Join and round action ordering
 hardened across `EntitySubSystem`, `PlayerSubSystem`, and `GamemodeSubSystem`.
 
-Regression tests added under `Assets/Scripts/Tests/KnownIssueReproduction/RoundLifecycle_*`.
+Regression tests: `Assets/Scripts/Tests/PlayMode/RegressionTests/RoundLifecycle_*` (with
+`Issue0990_PropagatingPocketProblem_HostPerspective`), promoted from `KnownIssueReproduction/`
+on 2026-10-31 once the PlayMode suite ran again and they passed. `KnownIssueReproduction/`
+is kept, empty, for new repros.
 
 Merged from `archive/feature-game-lifecycle-hardening`.
 

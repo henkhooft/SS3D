@@ -155,8 +155,9 @@ Manual / partial:
   `LoadAndSetInLobby`, and `ServerHelpers.CreateClients`/`SetWindowPositions`/
   `WaitUntilClientsLoaded` — the process-spawning parts of the old harness.
   `PlayModeTest`/`ServerHelpers` now only support single-process Host / in-Editor
-  DedicatedServer roles, which is what the remaining `KnownIssueReproduction/RoundLifecycle_*`
-  and `GeneralTests/Host/HostGameActions.cs` tests actually use.
+  DedicatedServer roles, which is what the remaining `RoundLifecycle_*` tests (promoted from
+  `KnownIssueReproduction/` to `PlayMode/RegressionTests/` on 2026-10-31) and
+  `GeneralTests/Host/HostGameActions.cs` actually use.
 
 ## Known gaps
 
