@@ -16,6 +16,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Networking/NetworkSessionSubSystem.cs` — session host/join; gates on `ClientConnectionRecovery.CanStart`; UNITY_SERVER auto-starts on `ApplicationInitializing`
 - `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub NetworkObject (all Game NetworkSubSystems)
 - `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again
+- `Assets/Scripts/SS3D/Networking/ProtocolVersionAuthenticator.cs` + `ProtocolVersion.cs` — FishNet authenticator (installed at runtime in `StartNetworkSession`, no scene wiring); rejects clients whose `ProtocolVersion.Current` differs; `LastRejection` feeds the fail UIs. When to bump: [2026-10_game-versioning](../2026-10_game-versioning.md)
 - `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide (incl. NetworkSession via type name)
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — harness script runner (bootstrapped via SystemsBootstrap); Empty offline redirect never restores Boot
 - `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — **SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab** (tier A); Phase 3h strip helpers remain as `-executeMethod` statics only
@@ -24,6 +25,7 @@ FishNet session management — host/join, network type and port settings. Distin
 ## Extension points
 
 - Boot.unity's `ServerManager._startOnHeadless` must stay `0`.
+- Breaking wire change (NetworkBehaviour/SyncVar/RPC/broadcast shape, FishNet upgrade): bump `ProtocolVersion.Current`. Pre-auth broadcasts must register with `requireAuthentication: false`.
 - Boot.unity `DefaultScene._offlineScene` stays Boot for cold start; CCR arms Empty after first Online.
 - Prefer `SessionState` / `ClientConnectionRecovery.Instance` over inferring session status from subsystem presence.
 - New networked SubSystem: add to hub rebuild (**SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab**) — never hand-edit Game.unity.
