@@ -4,6 +4,4 @@
 # flagged so the entry can be removed. Any unlisted failure fails the step.
 # Triage 2026-10-31 (tomnas, cursor/lobby-uitk-phase-a):
 
-# Intermittent: failed once with "Host should not be spawned before attempting a late embark" when run
-# right after the dedicated-server fixture; passes in the full suite.
-SS3D.Tests.RoundLifecycle_EmbarkDuringEnding_HostPerspective.LateEmbarkRejectedDuringEndingState
+# (none: all PlayMode tests pass as of 2026-10-31)
