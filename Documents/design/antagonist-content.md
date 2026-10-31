@@ -85,6 +85,8 @@ isn't eligible this round, the same way any gamemode can fail its own preconditi
 
 ## 3. Traitor
 
+**Later pass.** Traitor's tools come through the uplink (§4), which lives on the PDA (`pda.md`, deferred), so Traitor isn't a playable mode until the PDA exists. Nuclear Operatives (§6) is this doc's first pass.
+
 **An ordinary crew member with a hidden objective set and an uplink.** No ID/access delta exists for
 this category — the same disclaimer `id-access.md` §5 already gave it by name. A traitor's job,
 department, and access levels are exactly what they'd be if they'd never been picked; the only
@@ -96,6 +98,8 @@ capability (§4).
 that actually assigns instances of the three that already exist.
 
 ## 4. The uplink
+
+**Later pass**, with the PDA (`pda.md`, deferred).
 
 **A hidden PDA tab, gated identically to the objectives tab.** Reuses `pda.md` §3's tab-bar pattern
 and `objectives.md` §8's exact hidden-tab precedent — present only while the PDA is being operated by
@@ -129,6 +133,8 @@ None of these needed a new mechanic except the forging tool, and that one was al
 outline by `id-access.md` §8 — this doc just gives it a place to be sold from.
 
 ## 5. Malfunctioning AI
+
+**Later pass.** Malf needs the AI role (`ai-cyborgs.md`, deferred).
 
 **The AI's baseline is unchanged** (`ai-cyborgs.md` §2–§4) — laws, subversion tiers, the driver
 interface all apply exactly as that doc already specifies. What Malf-AI adds is a small, named

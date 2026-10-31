@@ -2,13 +2,13 @@
 
 > Status: active
 
-Resolves the open item flagged in `combat.md` (§6, §8). Builds on the single death trigger and revival window already defined in `health.md` (§4, §6), and reuses three systems wholesale rather than inventing new ones: the fabricator job-state pattern from `crafting.md` §3, the per-zone armor coverage from `armor.md` §2, and Area's power derivation from `area.md` §5.
+Defines what comes after death: field revival, cloning, and respawn. Builds on the single death trigger and revival window already defined in `health.md` (§4, §6), and reuses the per-zone armor coverage from `armor.md` §2 and Area's power derivation from `area.md` §5.
 
 ## 1. Design philosophy
 
 Three reuses do most of the work in this doc:
 
-- **A cloning pod is a fabricator.** Same diegetic device screen, same material/power check before a job starts, same visible running state, same stall-on-interruption behavior already defined for the protolathe-equivalent in `crafting.md` §3 — just printing a body from a DNA record instead of an item from a blueprint. No new machine pattern to learn.
+- **A cloning pod is an ordinary machine.** A material and power check before a job starts, a visible running state, and a visible stall on interruption — printing a body from a DNA record. When a fabricator exists (`crafting.md`, deferred), it shares the same shape; cloning doesn't wait for it.
 - **Defibrillation reuses combat's zone/armor model.** Pad placement targets the chest zone like any other hit; armor covering that zone blocks contact the same way it blocks incoming damage. One coverage check, two consumers, not a device-specific special case.
 - **A DNA record is an identity record**, so it rides the same ID/access rail everything else already keys off, rather than becoming a second, parallel genetic database — the same "no parallel model" move Area made for permissions and the hacking interface made for ID/access.
 
@@ -19,7 +19,7 @@ This doc also draws a symmetric line to health's. Health defined the one canonic
 Not redefined here — brain function reaching zero remains the sole trigger (`health.md` §4). What this doc adds is what happens on either side of it:
 
 - The body becomes a corpse: a physical object in the world, carrying whatever wound and organ state it had at the moment of death, same rendering rules as a living character's damage (§5 of the main HUD doc).
-- The player's consciousness detaches into an observer. The full observer/ghost experience is out of scope here, same as it's flagged out of scope in `main-hud.md` §13 — this doc only adds one narrow exception (§5).
+- The player's consciousness detaches and they become a ghost where the body fell (`observer.md` §2).
 - Death is not automatically permanent. Cardiac arrest is the fast track toward it, not the event itself (health §4) — that's the real physical window defibrillation interrupts (§3). Separately, cloning offers a path back even after brain death has fully finalized (§5), as long as the state in §6 hasn't been reached.
 
 ## 3. Defibrillation — field revival
@@ -43,33 +43,35 @@ Not redefined here — brain function reaching zero remains the sole trigger (`h
 Tied to the same crew identity record the ID/access system already maintains — not a standalone genetics database. Two ways to capture one:
 
 - **Proactive:** a routine medical body scan while alive — fast, reliable, the kind of thing a standard medbay checkup already implies.
-- **Reactive:** extracted from a corpse after death, provided the remains are intact enough. A husked or sufficiently destroyed body can't be sourced this way — a real, visible, physical reason (nothing left to extract), not a percentage roll.
+- **Reactive:** extracted from a corpse after death, provided the remains are intact enough. A husked or sufficiently destroyed body can't be sourced this way — a real, visible, physical reason (nothing left to extract), not a percentage roll. **A recovered head or brain counts as remains** — decapitation is death (`health.md` §4), but the brain is still a source of DNA, and that's the revival path health promises.
 
 Records live on the genetics console / crew records as a real, breakable database — destructible in an explosion or sabotage like any other physical station system, not an always-available save file sitting outside the simulation. That's a deliberate stake, not an oversight: protecting the records matters precisely because they're physical.
 
 ## 5. Cloning
 
-**The pod is a fabricator (§1):** it needs a valid DNA record and sufficient biomass — the "material" input, drawn from the same kind of physical stock crafting already established (`crafting.md` §5) — plus power from its Area's APC. It does **not** need the actual corpse; once a record exists, the pod grows an entirely new body from biomass. The corpse only matters upstream, as a possible source for reactive record extraction (§4) if no proactive scan was ever taken.
+**The pod is a machine that grows a body.** It needs a valid DNA record and enough **biomass** — a stock loaded into the pod — plus power from its Area's APC. It does **not** need the actual corpse; once a record exists, the pod grows an entirely new body from biomass. The corpse (or a recovered head or brain) only matters upstream, as a source for a record (§4).
 
-**Running the job:** identical shape to a fabricator print (`crafting.md` §3) — material and power checked before the job starts, a real visible build-time while the body grows in the pod, a clean stall (visible, not silent) if power cuts or biomass runs out mid-grow, resuming from where it stalled once restored.
+**Running the job:** biomass and power are checked before it starts, the body visibly grows in the pod over a real build time, and the job stalls (visibly, not silently) if power cuts or biomass runs out, resuming from where it stalled once restored.
 
-**A real, visible cost to the process itself:** a cloned body wakes with brain function starting at a fixed, reduced value rather than the character's prior full state — a deterministic fidelity loss from the printing process, visible on the existing organ readout (`health.md` §7), recoverable through normal treatment. Not a hidden penalty; the number is just lower and the player can see why.
+**A real, visible cost to the process itself:** a cloned body wakes with brain function starting at a fixed, reduced value rather than the character's prior full state — a deterministic fidelity loss from the printing process, noticeable in how the character feels (`health.md` §7), recoverable through normal treatment. Not a hidden penalty; the number is just lower and the player can see why.
 
-**On completion:** the pod opens with the finished body, and the waiting observer gets a minimal, on-demand prompt — "Clone ready — enter?" This is the one narrow exception carved out of the deferred ghost/observer UI (`main-hud.md` §13); it's a single prompt, not a redesign of the observer experience.
+**On completion:** the pod opens with the finished body, and the waiting ghost gets a prompt — "Clone ready — enter?" — the reserved possession prompt `observer.md` §5 defines.
 
 ## 6. Permanent death & respawn
 
 **The one canonical unrecoverable state**, symmetric to health's single death trigger: no valid DNA record **and** no remains usable for reactive extraction — husked, destroyed, or missing entirely. Both halves are physical and inspectable; a husked corpse looks husked, the same "let the world carry the information" rule already governing everything else in this project. There's no ambiguity to roll against.
 
-**Respawn is a session mechanic, not a physical one, and this doc says so plainly** — the same honesty the comms doc already applies to OOC (§7): it's not happening in-fiction. Once the state above is reached, a real-world/round-time threshold passes and the player is offered the choice to respawn as a new crew member. This exists purely to avoid leaving a player dead for an entire round with nothing recoverable, not to simulate anything.
+**Respawn is a session mechanic, not a physical one, and this doc says so plainly** — the same honesty the comms doc already applies to OOC (§7): it's not happening in-fiction. **It's a server setting** (`round-config.md` §2), **off by default** as in SS13: a dead player watches the rest of the round as a ghost. A test server turns it on. When it's on, a ghost may, after a cooldown, **latejoin as a new character** through the lobby's ordinary latejoin (`lobby.md` §7).
 
 **Respawn is a new person**, not a resurrection — no claimed continuity with the previous character.
+
+**Respawn is not reconnecting.** A player who disconnected and comes back reclaims their own living body (`networking.md` §3); that's never a respawn and never needs the setting.
 
 ## 7. HUD & feedback touchpoints
 
 - **Critical/dying feedback** (heartbeat audio + synced pulse, `main-hud.md` §5) is unchanged and unextended here. The moment brain function hits zero, that feedback simply stops — the absence of the heartbeat is the tell, not a separate "you died" overlay stacked on top of it.
 - **Defib use:** a real diegetic shock effect, and the heartbeat audio (personal tier, `audio.md` §4) picking back up on success — or the clean "no response" readout on the unit (§3) if not.
-- **Cloning pod:** the same diegetic device-screen treatment as the fabricator (`hacking-interface.md` §2 pattern, reused via crafting §3) — record status, material/power check, running/stalled/complete states, identical visual language to the fabricator mockups already built.
+- **Cloning pod:** a machine screen (`main-hud.md` §4) — record status, biomass/power check, running/stalled/complete states.
 - **Clone-ready prompt:** the single narrow exception to the deferred ghost/observer UI, per §5.
 
 ## 8. Integration notes
@@ -82,9 +84,9 @@ Records live on the genetics console / crew records as a real, breakable databas
 | Defib blocked by armor | Per-zone coverage (`armor.md` §2) |
 | Defib charge/recharge | Area → APC derivation (`area.md` §5) |
 | DNA records | Existing ID/access identity rail (reused, not a parallel database) |
-| Cloning pod | Fabricator job-state pattern and material stock (`crafting.md` §3, §5), Area → APC power |
+| Cloning pod | Biomass stock, Area → APC power |
 | Cloning fidelity-loss penalty | Organ function readout (`health.md` §7) |
-| Clone-ready prompt | Narrow exception to deferred ghost/observer UI (`main-hud.md` §13) |
+| Clone-ready prompt | Reserved possession prompt (`observer.md` §5) |
 | Critical/dying feedback | Unchanged (`main-hud.md` §5) |
 
 ## 9. Worked examples
@@ -118,7 +120,7 @@ Records live on the genetics console / crew records as a real, breakable databas
 
 ## 10. Out of scope for this pass
 
-- Full observer/ghost UI/experience (deferred in `main-hud.md` §13; this doc only adds the single clone-ready prompt in §5)
+- The ghost experience itself (`observer.md`)
 - Exact numeric values — biomass cost, pod build time, defib charge capacity/recharge rate, cloning fidelity-loss amount, respawn time threshold (a balancing pass, not a design decision)
 - Antagonist- or gamemode-specific permadeath rules (server/gamemode policy, not a base mechanic)
 - Corpse decomposition over time (not modeled; husk/destruction is the only disqualifying condition, not elapsed time)

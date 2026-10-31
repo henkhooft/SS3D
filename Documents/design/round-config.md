@@ -24,6 +24,7 @@ A **Server Settings** screen, open to Administrators (`admin-tools.md` §2), hol
 - **Round length** — the hard time limit for a round (`round-end.md` §2). A server setting, the same for every mode in this pass; a gamemode may override it in a later pass.
 - **Player cap** — how many players can be connected at once (`networking.md` §5).
 - **Latejoin** — on or off (`lobby.md` §7).
+- **Respawn** — off by default; when on, a ghost may latejoin as a new character after a cooldown (`death-cloning-respawn.md` §6).
 
 ## 3. Choosing the mode at round start
 

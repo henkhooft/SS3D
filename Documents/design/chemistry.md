@@ -22,7 +22,7 @@ A reagent record: name, category (medicinal, toxic, industrial/precursor, cataly
 
 ## 3. Containers and transfer
 
-Beakers, bottles, syringes, patches, and pill casings are the physical vessels reagents live in — each with a capacity, holding one mixed volume of reagents rather than segregated compartments. Moving reagent between two containers, or dosing a patch/pill from a beaker, reuses the Tier 3 combine/use-with grammar unchanged: drag one container onto another, or arm it and click a target. No new interaction pattern — this is that grammar's job.
+Beakers, bottles, syringes, patches, and pill casings are the physical vessels reagents live in — each with a capacity, holding one mixed volume of reagents rather than segregated compartments. Moving reagent between two containers, or dosing a patch/pill from a beaker, is a plain interaction: drag one container onto another, or hold it and use it on a target.
 
 **A container is the reaction vessel.** When two incompatible or matching-recipe volumes end up sharing one container, resolution runs immediately per §4–§6. There's no separate "mix" button; pouring is the trigger.
 
@@ -61,10 +61,10 @@ The consequence is chosen by what's actually in the container, not a random roll
 | Consequence | What causes it | Where it plugs in |
 |---|---|---|
 | Corrosive foam | Certain incompatible pairs | Local area-of-effect; damages exposed limbs on contact using the existing brute/burn model |
-| Gas release | Volatile pairs, or an overheated condition-gated attempt | Changes local atmosphere composition — the existing atmospherics system Area already decoupled from itself (`area.md` §4), which feeds the health doc's toxin/oxy pools exactly the way a suit breach already does (`armor.md` §3) |
-| Ignition | Combustible reagents crossing their flash condition, including a correct exotherm's own container temperature crossing that same point (§5) | Existing burn damage type; propagation is whatever fire system exists elsewhere, not redesigned here |
-| Flash-freeze | The cold mirror of ignition — an endothermic near-miss, or a flagged-incompatible cold pair, dropping container temperature hard enough to burst into frost | Local area-of-effect; a visible ice/frost burst, cold exposure on contact — reuses whatever cold/environmental-exposure handling exists elsewhere in the health model, not a new damage type invented here |
-| Small blast | A narrow set of genuinely explosive combinations | A lightweight, local, container-centered effect (short-radius brute damage, knockback) — not a general blast-physics system, which isn't assumed to exist and isn't designed here |
+| Gas release | Volatile pairs, or an overheated condition-gated attempt — **only for reagents linked to a gas** in atmospherics' curated set (`atmospherics.md` §3) | Adds that gas to the tile's air (`atmospherics.md` §2), which reaches anyone breathing it the way any bad air does (`health.md` §2) |
+| Ignition | Combustible reagents crossing their flash condition, including a correct exotherm's own container temperature crossing that same point (§5) | Burn damage on contact; if the air around can burn, it's fire's job from there (`atmospherics.md` §5) |
+| Flash-freeze | The cold mirror of ignition — an endothermic near-miss, or a flagged-incompatible cold pair, dropping container temperature hard enough to burst into frost | Local area-of-effect; a visible ice/frost burst, cold exposure on contact — cold exposure per `health.md` §2, not a new damage type |
+| Small blast | A narrow set of genuinely explosive combinations | A small blast at the container's tile, through the general blast model (`explosives-destruction.md` §2) with a small yield |
 
 No separate "chemistry accident chance" stat exists anywhere — the mixture and its actual temperature (§5) are the only inputs, so a player (or a wiki) could in principle predict every bad mix from first principles, the same "reason about it, don't guess" standard the hacking interface's real schematics already set.
 
@@ -168,7 +168,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 - Exact reagent list, ratios, dose thresholds, and metabolism rates (a balancing pass, not a design decision)
 - Exact thermal numbers — reaction magnitudes, flash thresholds, ambient decay rate (§5) (a balancing pass, not a design decision)
 - Cryogenics as a player-facing system — designed in `cryogenics.md`, which uses the real container-temperature primitive §5 established here
-- General blast/explosion physics, if a dedicated system doesn't already exist elsewhere — chemistry's own explosive mixes assume a lightweight, local, container-centered effect rather than a redesign of blast mechanics generally
+- Blast physics itself — `explosives-destruction.md`
 - Gas diffusion/propagation specifics — assumed to already be atmospherics' domain (`area.md` §4), not redesigned here
 - Botany/plant growth and food preparation as reagent sources — the grinder assumes harvestable/cookable items already exist as objects, doesn't design where they come from
 - Gas and solid reagent states — this pass designs liquid only; a plausible future extension, not a hard limitation of the model

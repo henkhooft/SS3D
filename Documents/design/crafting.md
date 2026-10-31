@@ -2,6 +2,13 @@
 
 > Status: deferred
 
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- The Tier 3 combine/use-with radial grammar is gone; items move by plain drag (`inventory-storage.md` §6). Crafting needs its own simple "use item on item" action.
+- Laying cable and pipe no longer depends on this doc: `electricity.md` §3 and `disposal.md` §3 define it themselves.
+- The R&D tech web and the material silo that §3–§4 treat as existing don't exist.
+- **Believable first pass:** timed, tool-gated hand recipes (item on item), plus one lathe that takes inserted sheets with every design unlocked.
+
 Resolves the deferred "crafting" items flagged in `combat.md` (§8, weapon crafting/attachments) and `armor.md` (§8, armor crafting or modification). Builds on the Tier 3 combine/use-with grammar established for the radial menu (referenced in `main-hud.md` §8), the diegetic device-screen pattern from `hacking-interface.md` §2, and Area's power derivation (`area.md` §5).
 
 ## 1. Design philosophy

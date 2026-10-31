@@ -2,6 +2,15 @@
 
 > Status: deferred
 
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- The ghost is designed in `observer.md` (observer = the ghost you become on death); it is no longer "deferred UI".
+- Announcements have one treatment, a station-wide feed line (`comms.md` §8); there is no reserved AI banner channel.
+- Spoken "state your laws" queries can't be logged; only secure devices keep logs (`id-access.md` §6).
+- Malfunctioning AI (`antagonist-content.md` §5) waits on this doc.
+- Viewing any camera at any distance is a heavy networking cost.
+- **Believable first pass:** the AI as a static core with a list of doors and APCs it controls, plus announcements; no camera viewing and no cyborgs.
+
 Builds on more of this project's existing systems than any doc so far: Area's power/access/camera model (`area.md`) for what the AI actually controls, the hacking interface's three-tier device model (`hacking-interface.md`) for subversion, comms' existing announcement channel (`comms.md` §8) for how the AI speaks, the fabricator job-state pattern (`crafting.md` §3) for cyborg chassis and AI core fabrication, and the revival framework (`death-cloning-respawn.md` §5) for both AI and cyborg as mid-round paths back into a round. It also extends that last doc's permanent-death condition — see §7.
 
 ## 1. Design philosophy
