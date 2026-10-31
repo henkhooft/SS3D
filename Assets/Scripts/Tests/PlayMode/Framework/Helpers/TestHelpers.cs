@@ -221,12 +221,16 @@ namespace SS3D.Tests
             return null;
         }
 
+        /// <summary>The local player's InteractionController, or null until the owned entity is registered.</summary>
         public static InteractionController GetLocalInteractionController()
         {
             EntitySubSystem entitySystem = SubSystems.Get<EntitySubSystem>();
-            entitySystem.TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity);
+            if (!entitySystem.TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity))
+            {
+                return null;
+            }
 
-            return entity.gameObject.GetComponent<InteractionController>();
+            return entity.GetComponent<InteractionController>();
         }
 
         public static Vector3 GetLocalPlayerPosition()
