@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: -8800000000000000101}
   - component: {fileID: -8800000000000000102}
   - component: {fileID: -8800000000000000103}
+  - component: {fileID: 1891841370020574710}
   m_Layer: 0
   m_Name: LightSwitch
   m_TagString: Untagged
@@ -145,6 +146,7 @@ MonoBehaviour:
   - {fileID: -8800000000000000101}
   - {fileID: -8800000000000000102}
   - {fileID: -8800000000000000103}
+  - {fileID: 1891841370020574710}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -247,3 +249,30 @@ MonoBehaviour:
   _powerConsumer: {fileID: -8800000000000000101}
   _emissiveRenderers:
   - {fileID: 5408453921918118358}
+--- !u!114 &1891841370020574710
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4866668043303595546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: -7828078595381397262}
+  _networkObjectCache: {fileID: -7828078595381397262}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

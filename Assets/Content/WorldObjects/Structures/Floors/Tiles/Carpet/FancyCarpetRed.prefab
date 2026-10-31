@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 4968245899799697575}
   - component: {fileID: -708232349023746562}
   - component: {fileID: -5946523114121271559}
+  - component: {fileID: 2613450374221896848}
   m_Layer: 0
   m_Name: FancyCarpetRed
   m_TagString: Untagged
@@ -141,6 +142,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 3040907911380660968}
+  - {fileID: 2613450374221896848}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -167,6 +169,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 6999522401175031449}
   _networkObjectCache: {fileID: 6999522401175031449}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   advancedAdjacency:
     o: {fileID: 6313828114514605112, guid: 672e6a3c2617a374084ca41ab0f3b39d, type: 3}
     u: {fileID: 1428770310312528737, guid: 672e6a3c2617a374084ca41ab0f3b39d, type: 3}
@@ -240,3 +243,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &2613450374221896848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3591147544166670882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 6999522401175031449}
+  _networkObjectCache: {fileID: 6999522401175031449}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: -119891910764691591}
   - component: {fileID: -8646749916007236176}
   - component: {fileID: -7700000000000000003}
+  - component: {fileID: 3322770920855876901}
   m_Layer: 0
   m_Name: VendorRobustSoftdrinks
   m_TagString: Untagged
@@ -149,6 +150,7 @@ MonoBehaviour:
   - {fileID: 8905492951320375787}
   - {fileID: 2921440247678111929}
   - {fileID: -119891910764691591}
+  - {fileID: 3322770920855876901}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -178,19 +180,30 @@ MonoBehaviour:
   _productsToDispense:
   - Product: {fileID: 11400000, guid: dd302b5636b41bb48ba3a2cdc72cc64c, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: a49cca9d10e0a3146aae1906542ea50a, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: e450161ce63de9045b97061a364533b1, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: 5c76cb2799458404db16e87cc1606975, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: 6ccd0b8aea90f5a489d73c02ccab3a98, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: be837baab1848a14d944ab050bfebc15, type: 2}
     Stock: 10
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: f5c190c5bf049bc429ca90309c334105, type: 2}
     Stock: 10
+    RequiresId: 0
   _dispensingTransform: {fileID: 5160227759105755511}
+  _title: GALLEY VENDOMAT
+  _subtitle: "Crew Mess \u2014 Sundries Dispenser"
+  _modelLabel: "VND-7 \xB7 ration & sundries dispenser"
+  _connectionStatus: "WIRED \xB7 VEND BUS \xB7 PORT J1"
 --- !u!114 &3665146264900623842
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -282,6 +295,33 @@ MonoBehaviour:
   _renderers:
   - {fileID: 2658310835758749971}
   _panelIndicators: []
+--- !u!114 &3322770920855876901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2658310835758749969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: 1871071288925904272}
+  _networkObjectCache: {fileID: 1871071288925904272}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1 &3671711954327816294
 GameObject:
   m_ObjectHideFlags: 0

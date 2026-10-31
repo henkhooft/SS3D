@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: -3395956423447548270}
   - component: {fileID: 1715395010113731693}
   - component: {fileID: 6221302596290927323}
+  - component: {fileID: 6243372185191006807}
   m_Layer: 0
   m_Name: DisposalOutlet
   m_TagString: Untagged
@@ -147,6 +148,7 @@ MonoBehaviour:
   _networkBehaviours:
   - {fileID: -4327415787478915747}
   - {fileID: 6221302596290927323}
+  - {fileID: 6243372185191006807}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -274,6 +276,33 @@ MonoBehaviour:
   _interpolation: 2
   _clientAuthoritative: 0
   _sendToOwner: 0
+--- !u!114 &6243372185191006807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2658310835758749969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 2
+  _addedNetworkObject: {fileID: 1871071288925904272}
+  _networkObjectCache: {fileID: 1871071288925904272}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1 &4356345215162223831
 GameObject:
   m_ObjectHideFlags: 0

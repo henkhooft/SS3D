@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 3359982589328953207}
   - component: {fileID: 5321505427222609008}
   - component: {fileID: -3984408023617221754}
+  - component: {fileID: 5153824178114165238}
   m_Layer: 0
   m_Name: TableGlass
   m_TagString: Untagged
@@ -140,7 +141,9 @@ MonoBehaviour:
   <IsNested>k__BackingField: 0
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
-  _networkBehaviours: []
+  _networkBehaviours:
+  - {fileID: 2130642872359250283}
+  - {fileID: 5153824178114165238}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -163,10 +166,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef4340642b9b436498fe733f9329ac87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 6244957436306937818}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 6244957436306937818}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   advancedAdjacency:
     o: {fileID: -6474879442438147634, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
     u: {fileID: -7482589699367499308, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
@@ -240,3 +244,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &5153824178114165238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2839728781945606427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 6244957436306937818}
+  _networkObjectCache: {fileID: 6244957436306937818}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

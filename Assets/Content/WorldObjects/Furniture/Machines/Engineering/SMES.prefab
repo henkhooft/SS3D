@@ -17,6 +17,8 @@ GameObject:
   - component: {fileID: 4840393447774820463}
   - component: {fileID: 8822334455667788993}
   - component: {fileID: -8042033815713799156}
+  - component: {fileID: 6668858524289100644}
+  - component: {fileID: 3918526211917721676}
   m_Layer: 0
   m_Name: SMES
   m_TagString: Untagged
@@ -65,6 +67,7 @@ MonoBehaviour:
   - {fileID: 6345351447614513914}
   - {fileID: -7870356800615129184}
   - {fileID: 8822334455667788993}
+  - {fileID: 3918526211917721676}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -173,7 +176,14 @@ MonoBehaviour:
   _componentIndexCache: 2
   _addedNetworkObject: {fileID: -5414623717715724467}
   _networkObjectCache: {fileID: -5414623717715724467}
-  _title: SMES · ENERGY STORAGE
+  _accessGranted: 0
+  _accessScanning: 0
+  _accessDenied: 0
+  _title: "SMES \xB7 ENERGY STORAGE"
+  _inputEnabled: 1
+  _outputEnabled: 1
+  _inputMaxKw: 10
+  _outputMaxKw: 10
 --- !u!114 &-8042033815713799156
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -190,6 +200,47 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &6668858524289100644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918783493706165866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8f9a0b1d2e3f4a5b6c7d8e9f0a1b2c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.IdAccess.AuthLogDeviceBehaviour
+  _deviceId: SMES
+  _logCapacity: 32
+--- !u!114 &3918526211917721676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918783493706165866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: -5414623717715724467}
+  _networkObjectCache: {fileID: -5414623717715724467}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1 &4379219507269237858
 GameObject:
   m_ObjectHideFlags: 0

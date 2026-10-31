@@ -200,6 +200,7 @@ GameObject:
   - component: {fileID: -8276280714435593254}
   - component: {fileID: 8800000000000000051}
   - component: {fileID: 3208323893388892318}
+  - component: {fileID: 5670429820520980400}
   m_Layer: 0
   m_Name: LockerSecure
   m_TagString: Untagged
@@ -344,6 +345,7 @@ MonoBehaviour:
   - {fileID: 6169465375034151149}
   - {fileID: 3298710121668139635}
   - {fileID: 8800000000000000051}
+  - {fileID: 5670429820520980400}
   - {fileID: 8800000000000000034}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
@@ -457,6 +459,33 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5670429820520980400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5533951594911835035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: 3258417366846669140}
+  _networkObjectCache: {fileID: 3258417366846669140}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1 &8800000000000000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -501,7 +530,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25696236470760b41b375e9b6939444c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 3
+  _componentIndexCache: 4
   _addedNetworkObject: {fileID: 3258417366846669140}
   _networkObjectCache: {fileID: 3258417366846669140}
   _automaticContainerSetUp: 1

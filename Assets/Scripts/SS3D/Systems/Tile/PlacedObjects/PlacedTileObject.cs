@@ -46,6 +46,15 @@ namespace SS3D.Systems.Tile
             PlacedTileObject placedObject = placedGameObject.GetComponent<PlacedTileObject>();
             if (placedObject == null)
             {
+                // A NetworkBehaviour added after Instantiate is not part of the NetworkObject: pure
+                // clients never get it, so the tile is missing from their tilemap. Fix the prefab
+                // (TilePlacedObjectPrefabSetup.SetupAll); the fallback only keeps offline paths working.
+                if (placedGameObject.GetComponent<NetworkObject>() != null)
+                {
+                    Log.Warning(SubSystems.Get<TileSubSystem>(), "{prefab} lacks PlacedTileObject on the prefab; remote clients will not see it in their tilemap",
+                        Logs.Generic, tileObjectPrefab.name);
+                }
+
                 placedObject = placedGameObject.AddComponent<PlacedTileObject>();
             }
 
@@ -163,6 +172,19 @@ namespace SS3D.Systems.Tile
             }
         }
         public IAdjacencyConnector Connector => _connector;
+
+        /// <summary>
+        /// FishNet runs OnStartNetwork on every behaviour before any OnStartClient. Sibling connectors
+        /// (pipes, cables, plenum) read <see cref="GenericType"/> in their OnStartClient, and this component
+        /// may sit after them on the prefab, so a pure client must resolve its identity here first.
+        /// Server/host already set it in <see cref="Setup"/>.
+        /// </summary>
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            if (_tileObjectSo == null)
+                ApplySyncedIdentity();
+        }
 
         public override void OnStartClient()
         {

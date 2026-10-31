@@ -35,12 +35,21 @@ namespace SS3D.Systems.Electricity
         {
             base.OnStartServer();
             _onPowerProduction = _powerProduction;
+            // OnToggle is raised on the server only; subscribing in OnStartClient never ran on a dedicated server.
+            GetComponent<GenericToggleInteractionTarget>().OnToggle += HandleGeneratorToggle;
+        }
+
+        public override void OnStopServer()
+        {
+            if (TryGetComponent(out GenericToggleInteractionTarget toggle))
+                toggle.OnToggle -= HandleGeneratorToggle;
+
+            base.OnStopServer();
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
-            GetComponent<GenericToggleInteractionTarget>().OnToggle += HandleGeneratorToggle;
             _onPowerProduction = _powerProduction;
             HandlePowerGenerated(false);
         }
