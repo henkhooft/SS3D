@@ -1,5 +1,7 @@
 # Manual Windows prerelease (+ optional Linux / EditMode / smoke), plus nightly full cut.
-# Default dispatch: Windows client → GitHub prerelease. Linux, EditMode, and smoke are opt-in.
+# Default dispatch: Windows client → versioned GitHub release vX.Y.Z (bump worked out by
+# Tools/versioning/next_version.py — see Documents/architecture/2026-10_game-versioning.md).
+# Linux, EditMode, and smoke are opt-in. tag_suffix gives an unversioned develop-<suffix> test cut.
 # Nightly (05:00 UTC): Windows + Linux client + Linux dedicated server → floating develop-nightly.
 # Prefers TomNAS when online; falls back to ubuntu-latest. Not triggered on every develop merge.
 # See Documents/architecture/2026-07_ci-develop-release-pipeline.md.
@@ -26,8 +28,17 @@ on:
         description: Skip Windows build and GitHub prerelease (Linux-only when build_linux is on)
         type: boolean
         default: false
+      version_bump:
+        description: Release version bump (auto = from save/protocol/milestone/trailer signals; major is the owner's call)
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+        default: auto
       tag_suffix:
-        description: Override tag suffix (default short SHA). Full tag is develop-<suffix>
+        description: Unversioned test cut instead of a vX.Y.Z release — tag develop-<suffix>
         type: string
         default: ''
       runner:
@@ -60,7 +71,18 @@ jobs:
       run_editmode: ${{ steps.flags.outputs.run_editmode }}
       run_smoke: ${{ steps.flags.outputs.run_smoke }}
       tag_suffix: ${{ steps.flags.outputs.tag_suffix }}
+      version: ${{ steps.version.outputs.version }}
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      versioned: ${{ steps.version.outputs.versioned }}
+      bump: ${{ steps.version.outputs.bump }}
+      bump_reasons: ${{ steps.version.outputs.reasons }}
     steps:
+      - name: Checkout history for versioning
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          lfs: false
       - name: Resolve schedule vs dispatch flags
         id: flags
         run: |
@@ -88,6 +110,28 @@ jobs:
           echo "run_editmode=$(bool '${{ inputs.run_editmode }}')" >> "$GITHUB_OUTPUT"
           echo "run_smoke=$(bool '${{ inputs.run_smoke }}')" >> "$GITHUB_OUTPUT"
           echo "tag_suffix=${{ inputs.tag_suffix }}" >> "$GITHUB_OUTPUT"
+      - name: Resolve game version
+        id: version
+        env:
+          SKIP_RELEASE: ${{ steps.flags.outputs.skip_release }}
+          TAG_SUFFIX: ${{ steps.flags.outputs.tag_suffix }}
+          VERSION_BUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.version_bump || 'auto' }}
+        run: |
+          set -euo pipefail
+          # Nightly, tag_suffix test cuts and Linux-only runs are dev builds (0.1.1-dev.N+sha);
+          # a plain manual release gets the next vX.Y.Z.
+          if [ -n "$TAG_SUFFIX" ] || [ "$SKIP_RELEASE" = "true" ]; then
+            python3 Tools/versioning/next_version.py describe | tee -a "$GITHUB_OUTPUT"
+            echo "release_tag=develop-${TAG_SUFFIX}" >> "$GITHUB_OUTPUT"
+            echo "versioned=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          out="$(python3 Tools/versioning/next_version.py next --bump "$VERSION_BUMP")"
+          echo "$out" | tee -a "$GITHUB_OUTPUT"
+          version="$(echo "$out" | sed -n 's/^version=//p')"
+          echo "release_tag=v${version}" >> "$GITHUB_OUTPUT"
+          echo "versioned=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::Releasing v${version} ($(echo "$out" | sed -n 's/^bump=//p'): $(echo "$out" | sed -n 's/^reasons=//p')"
       - name: Prefer TomNAS when online
         id: pick
         env:
@@ -260,6 +304,7 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: SS3D.Editor.ClientAndServerBuildScript.BuildBothForCi
           versioning: None
+          customParameters: -ss3dVersion ${{ needs.prepare.outputs.version }}
           unityVersion: 6000.3.16f1
           runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
       - name: Verify server and client binaries
@@ -378,6 +423,7 @@ jobs:
           buildsPath: build/Game
           targetPlatform: StandaloneWindows64
           versioning: None
+          customParameters: -ss3dVersion ${{ needs.prepare.outputs.version }}
           unityVersion: 6000.3.16f1
           runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
       - name: Save Unity Library stash
@@ -410,7 +456,7 @@ jobs:
           retention-days: 7
 
   release:
-    name: GitHub prerelease
+    name: GitHub release
     needs: [prepare, build-linux, build-windows]
     # Same skip-cascade override; Linux may be skipped when build_linux is off.
     if: ${{ always() && needs.build-windows.result == 'success' && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && needs.prepare.outputs.skip_release != 'true' }}
@@ -428,20 +474,27 @@ jobs:
           sparse-checkout-cone-mode: true
       - name: Resolve release tag
         id: tag
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          VERSIONED: ${{ needs.prepare.outputs.versioned }}
+          BUMP: ${{ needs.prepare.outputs.bump }}
+          BUMP_REASONS: ${{ needs.prepare.outputs.bump_reasons }}
         run: |
-          suffix="${{ needs.prepare.outputs.tag_suffix }}"
-          if [ -z "$suffix" ]; then
-            suffix="${GITHUB_SHA:0:7}"
-          fi
-          echo "tag_name=develop-${suffix}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          echo "tag_name=${{ needs.prepare.outputs.release_tag }}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "is_nightly=true" >> "$GITHUB_OUTPUT"
-            echo "kind_line=**Nightly build** (floating develop-nightly tag — overwritten each night)." >> "$GITHUB_OUTPUT"
+            echo "title=Nightly ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "kind_line=**Nightly build** \`${VERSION}\` (floating develop-nightly tag — overwritten each night)." >> "$GITHUB_OUTPUT"
+          elif [ "$VERSIONED" = "true" ]; then
+            echo "title=SS3D v${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "kind_line=**Release v${VERSION}** (${BUMP} bump: ${BUMP_REASONS})." >> "$GITHUB_OUTPUT"
           else
-            echo "is_nightly=false" >> "$GITHUB_OUTPUT"
-            echo "kind_line=Manual dispatch." >> "$GITHUB_OUTPUT"
+            echo "title=Develop ${{ needs.prepare.outputs.release_tag }}" >> "$GITHUB_OUTPUT"
+            echo "kind_line=Manual test cut \`${VERSION}\` (unversioned)." >> "$GITHUB_OUTPUT"
           fi
+          # Pre-1.0 releases stay prereleases; 1.0 is the owner's call (Version-Bump: major / version_bump=major).
+          case "$VERSION" in 0.*|*-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;; *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;; esac
       - name: Download Linux player builds
         if: ${{ needs.prepare.outputs.build_linux == 'true' }}
         uses: actions/download-artifact@v4
@@ -511,11 +564,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag_name }}
-          name: Develop ${{ steps.tag.outputs.tag_name }}
-          prerelease: true
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.tag.outputs.title }}
+          prerelease: ${{ steps.tag.outputs.prerelease }}
           generate_release_notes: true
           body: |
-            Fork-internal prerelease from `${{ github.sha }}` (short `${{ steps.tag.outputs.short_sha }}`).
+            Built from `${{ github.sha }}` (short `${{ steps.tag.outputs.short_sha }}`).
             ${{ steps.tag.outputs.kind_line }}
 
             Not an official RE:SS3D build. Windows player built from this commit.

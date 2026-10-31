@@ -4,9 +4,10 @@ using UnityEngine;
 namespace SS3D.Systems.Rounds
 {
     /// <summary>
-    /// Commit id and recent commit subjects, generated from git into a Resources text asset by
-    /// the editor (on load and before player builds). The file is gitignored; without it the
-    /// build label falls back to <see cref="UnityEngine.Application.version"/> and the change log is empty.
+    /// Game version, commit id and recent commit subjects, generated from git into a Resources text
+    /// asset by the editor (on load and before player builds). The file is gitignored; without it the
+    /// label falls back to <see cref="UnityEngine.Application.version"/> and the change log is empty.
+    /// Versioning rules: Documents/architecture/2026-10_game-versioning.md.
     /// </summary>
     public static class BuildInfo
     {
@@ -23,6 +24,8 @@ namespace SS3D.Systems.Rounds
         [Serializable]
         public sealed class Data
         {
+            /// <summary>See <see cref="GameVersion"/>, e.g. "0.1.0" or "0.1.1-dev.12+5da58b9".</summary>
+            public string version;
             public string commit;
             public Entry[] entries = Array.Empty<Entry>();
         }
@@ -31,10 +34,16 @@ namespace SS3D.Systems.Rounds
 
         public static Data Current => _data ??= Load();
 
-        /// <summary>"0.1.0 · 007c4e9" style label for this process.</summary>
-        public static string Label => string.IsNullOrEmpty(Current.commit)
-            ? UnityEngine.Application.version
-            : $"{UnityEngine.Application.version} · {Current.commit}";
+        /// <summary>This process's game version; player builds also stamp it into <see cref="UnityEngine.Application.version"/>.</summary>
+        public static string Version => string.IsNullOrEmpty(Current.version) ? UnityEngine.Application.version : Current.version;
+
+        /// <summary>
+        /// "0.1.1-dev.12+007c4e9" for dev builds (the version already names the commit), "0.1.0 · 007c4e9"
+        /// for releases, or the bare version without generated build info.
+        /// </summary>
+        public static string Label => string.IsNullOrEmpty(Current.commit) || Version.Contains('+')
+            ? Version
+            : $"{Version} · {Current.commit}";
 
         public static Data Parse(string json)
         {

@@ -66,6 +66,8 @@ Run the **`update-system-docs`** skill (`.cursor/skills/update-system-docs/SKILL
 - Architecture effort doc status, if applicable, and archiving of the effort or plan once it ships (harvest its live items first; see [Documents/SKILL.md](Documents/SKILL.md) Archive)
 - Milestone slice status and hub current focus under `Documents/milestones/`, if the work advanced a playable gate
 
+**Versioning** — when a change breaks old saves or old clients, bump `PersistenceEnvelope.CurrentSchemaVersion` or `ProtocolVersion.Current`; when a commit completes a player-visible feature end to end, end its message with a `Version-Bump: minor` trailer. MAJOR stays the owner's call. Rules: [2026-10_game-versioning](Documents/architecture/2026-10_game-versioning.md).
+
 For UI/session work, run `Testing/ui/validate.sh` (`--full` when runtime/USS changed) with the editor open and review the listed screenshots; see [Testing/ui/README.md](Testing/ui/README.md).
 
 ## Composition, prefabs, and UI

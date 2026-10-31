@@ -46,7 +46,7 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerInfo.cs` — public name/MOTD/mode/build/start-time SyncVars, `ServerInfoText` sanitizers, `ServerMeta/server-info` load/save
-- `Assets/Scripts/SS3D/Systems/Rounds/BuildInfo.cs` / `Assets/Scripts/SS3D/Editor/BuildInfoGenerator.cs` — git commit + change log resource (gitignored, generated on editor load and pre-build)
+- `Assets/Scripts/SS3D/Systems/Rounds/BuildInfo.cs` / `Assets/Scripts/SS3D/Editor/BuildInfoGenerator.cs` — game version + git commit + change log resource (gitignored, generated on editor load and pre-build; stamps the player version). `GameVersion.cs` formats versions — rules in [2026-10_game-versioning](../2026-10_game-versioning.md). Use `BuildInfo.Version`, not `Application.version` (an `0.0.0-editor` placeholder outside player builds)
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
   `WaitUntilAsync(WorldReady)`; on Ongoing fires welcome via `CommsSubSystem.SendAnnouncement`
   (`StationWelcome` follow-up clip)
