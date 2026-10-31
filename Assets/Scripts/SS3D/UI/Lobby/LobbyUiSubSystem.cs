@@ -136,6 +136,7 @@ namespace SS3D.UI.Lobby
             _shellView.Attach(modalLayer);
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
+            _shellView.QuitRequested += HandleQuitRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
             _shellView.ServerSettingsChanged += (field, settings) =>
             {
@@ -182,8 +183,8 @@ namespace SS3D.UI.Lobby
         private bool _menuBlurred;
 
         /// <summary>
-        /// Blurs the world behind the in-round (Escape) menu. Writes only on open/close so it never clears a blur a
-        /// machine panel set while the menu stayed shut.
+        /// Blurs the world behind the lobby, both between rounds and as the in-round (Escape) menu. Writes only on
+        /// open/close so it never clears a blur a machine panel set while the menu stayed shut.
         /// </summary>
         private void SetMenuBlur(bool open)
         {
@@ -279,7 +280,8 @@ namespace SS3D.UI.Lobby
             BindToggleMenu(SubSystems.TryGet(out InputSubSystem input) ? input : null);
             bool visible = connected && (!spawned || _menuOpen);
             bool holdMenu = visible && spawned;
-            SetMenuBlur(holdMenu);
+            // Blur whatever world sits behind the lobby, in a round (Escape menu) or not.
+            SetMenuBlur(visible);
             if (holdMenu && _menuHandle == null && _inputSystem != null) _menuHandle = _inputSystem.PushContext(InputContext.Menu);
             else if (!holdMenu && _menuHandle != null)
             {
@@ -433,6 +435,15 @@ namespace SS3D.UI.Lobby
         {
             if (CanAdmin() && InstanceFinder.ClientManager.Started)
                 InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(start));
+        }
+
+        private static void HandleQuitRequested()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         private void HandleReadyRequested()

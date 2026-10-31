@@ -22,14 +22,25 @@ namespace SS3D.Systems.Furniture
 
         public string GetName(InteractionEvent interactionEvent)
         {
-            return !string.IsNullOrEmpty(Name) ? Name : "Open or Close Locker";
+            if (!string.IsNullOrEmpty(Name))
+            {
+                return Name;
+            }
+
+            return _locker.IsOpen ? "Close Locker" : "Open Locker";
         }
 
         public string GetGenericName() => "OpenLocker";
 
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
-            return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Open);
+            if (Icon)
+            {
+                return Icon;
+            }
+
+            string iconId = _locker.IsOpen ? InteractionIcons.Close : InteractionIcons.Open;
+            return Assets.Get<Sprite>(AssetDatabases.InteractionIcons, iconId);
         }
 
         public bool CanInteract(InteractionEvent interactionEvent)

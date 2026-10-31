@@ -25,6 +25,7 @@ MonoBehaviour:
   _iconEars: {fileID: 21300000, guid: e4cad8751dcb12b4cb03564aa9bf956c, type: 3}
   _iconHandLeft: {fileID: 21300000, guid: 049e06c80fc074b43b69bfd8afb881d6, type: 3}
   _iconHandRight: {fileID: 21300000, guid: c68bc06a6a4cc094492bc1ddc556084f, type: 3}
+  _iconGloves: {fileID: 21300000, guid: c58dc13327da85046b4979011054275d, type: 3}
   _iconShirt: {fileID: 21300000, guid: 3f845be2ffa4267479e20d9e4d40b265, type: 3}
   _iconFeet: {fileID: 21300000, guid: ce96537487f0c0a4eb0aabf2c26d919f, type: 3}
   _iconBelt: {fileID: 21300000, guid: b39932adf71ab734aabebaab0412954f, type: 3}

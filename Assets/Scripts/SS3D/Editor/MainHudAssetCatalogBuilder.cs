@@ -35,6 +35,7 @@ namespace SS3D.Editor
                 Ears = LoadRequiredSprite("Ears", missing),
                 HandLeft = LoadRequiredSprite("HandLeft", missing),
                 HandRight = LoadRequiredSprite("HandRight", missing),
+                Gloves = LoadRequiredSprite("Hands", missing),
                 Shirt = LoadRequiredSprite("Shirt", missing),
                 Feet = LoadRequiredSprite("Feet", missing),
                 Belt = LoadRequiredSprite("Waist", missing),

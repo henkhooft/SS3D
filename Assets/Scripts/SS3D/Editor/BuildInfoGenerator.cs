@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,7 +13,7 @@ using Debug = UnityEngine.Debug;
 namespace SS3D.Editor
 {
     /// <summary>
-    /// Writes <see cref="BuildInfo"/> (game version, commit id, recent commit subjects) from git into a
+    /// Writes <see cref="BuildInfo"/> (game version, commit id, release-grouped change log) from git into a
     /// gitignored Resources file: on editor load when it changed, and before every player build.
     /// Player builds also get the version as <see cref="PlayerSettings.bundleVersion"/> (restored
     /// right after, so ProjectSettings never churns). CI passes <c>-ss3dVersion X.Y.Z</c> to stamp
@@ -24,8 +25,10 @@ namespace SS3D.Editor
     {
         public const string AssetPath = "Assets/Content/Systems/UI/Lobby/Resources/" + BuildInfo.ResourceName + ".json";
         public const string VersionArgument = "-ss3dVersion";
-        private const int EntryCount = 6;
+        private const int EntryCount = 12;
+        private const int ReleaseCount = 4;
         private const char Separator = '\u001f';
+        private const char RecordSeparator = '\u001e';
 
         static BuildInfoGenerator() => EditorApplication.delayCall += () => Generate();
 
@@ -50,22 +53,66 @@ namespace SS3D.Editor
         /// <summary>Regenerates the file; returns the version, or null when git is unavailable.</summary>
         public static string Generate()
         {
-            if (!TryGit($"log -{EntryCount} --format=%h{Separator}%cs{Separator}%s", out string log)) return null;
-
-            BuildInfo.Entry[] entries = log.Split('\n')
-                .Select(line => line.Split(Separator))
-                .Where(parts => parts.Length == 3)
-                .Select(parts => new BuildInfo.Entry { hash = parts[0], date = parts[1], subject = parts[2] })
-                .ToArray();
-            if (entries.Length == 0) return null;
+            if (!TryGit("rev-parse --short=7 HEAD", out string commit)) return null;
 
             string version = ComputeVersion();
-            string json = JsonUtility.ToJson(new BuildInfo.Data { version = version, commit = entries[0].hash, entries = entries }, true);
+            BuildInfo.Entry[] entries = ChangelogEntries(version);
+            string repository = TryGit("remote get-url origin", out string remote) ? BuildInfo.RepositoryWebUrl(remote) : null;
+            string json = JsonUtility.ToJson(new BuildInfo.Data
+            {
+                version = version,
+                commit = commit,
+                repository = repository ?? string.Empty,
+                entries = entries,
+            }, true);
             if (File.Exists(AssetPath) && File.ReadAllText(AssetPath) == json) return version;
             Directory.CreateDirectory(Path.GetDirectoryName(AssetPath)!);
             File.WriteAllText(AssetPath, json);
             AssetDatabase.ImportAsset(AssetPath);
             return version;
+        }
+
+        /// <summary>
+        /// The newest <see cref="EntryCount"/> first-parent changes, each labelled with the release tag
+        /// that first contains it. Changes after the newest tag are unreleased, unless this build is
+        /// itself a release (CI stamps the version before the tag exists), in which case they carry it.
+        /// </summary>
+        private static BuildInfo.Entry[] ChangelogEntries(string version)
+        {
+            List<string> tags = TryGit($"tag --list \"{GameVersion.TagGlob}\" --merged HEAD --sort=-v:refname", out string tagList)
+                ? tagList.Split('\n').Select(tag => tag.Trim()).Where(tag => tag.Length > 0).Take(ReleaseCount).ToList()
+                : new List<string>();
+
+            string pending = !string.IsNullOrEmpty(version) && !version.Contains('-') && !version.Contains('+')
+                && !tags.Contains("v" + version)
+                ? version
+                : string.Empty;
+
+            List<(string release, string range)> groups = new() { (pending, tags.Count > 0 ? $"{tags[0]}..HEAD" : "HEAD") };
+            for (int i = 0; i < tags.Count; i++)
+            {
+                groups.Add((tags[i].TrimStart('v'), i + 1 < tags.Count ? $"{tags[i + 1]}..{tags[i]}" : tags[i]));
+            }
+
+            List<BuildInfo.Entry> entries = new();
+            foreach ((string release, string range) in groups)
+            {
+                int remaining = EntryCount - entries.Count;
+                if (remaining <= 0) break;
+
+                // Over-fetch: branch-sync merges are dropped by BuildInfo.FromCommit.
+                string format = $"%h{Separator}%cs{Separator}%s{Separator}%b{RecordSeparator}";
+                if (!TryGit($"log --first-parent -{remaining * 2} --format={format} {range}", out string log)) continue;
+
+                entries.AddRange(log.Split(RecordSeparator)
+                    .Select(record => record.Trim('\n', '\r').Split(Separator))
+                    .Where(parts => parts.Length == 4)
+                    .Select(parts => BuildInfo.FromCommit(parts[0], parts[1], parts[2], parts[3], release))
+                    .Where(entry => entry != null)
+                    .Take(remaining));
+            }
+
+            return entries.ToArray();
         }
 
         private static string ArgumentVersion()

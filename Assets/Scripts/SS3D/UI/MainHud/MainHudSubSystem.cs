@@ -1153,9 +1153,8 @@ namespace SS3D.UI.MainHud
             EquipmentGrid.Slot.Eyes => ContainerType.Glasses,
             EquipmentGrid.Slot.Face => ContainerType.Mask,
             EquipmentGrid.Slot.Ears => ContainerType.EarLeft,
-            EquipmentGrid.Slot.GloveLeft => ContainerType.GloveLeft,
+            EquipmentGrid.Slot.Gloves => ContainerType.GloveLeft,
             EquipmentGrid.Slot.Shirt => ContainerType.Jumpsuit,
-            EquipmentGrid.Slot.GloveRight => ContainerType.GloveRight,
             EquipmentGrid.Slot.Feet => ContainerType.ShoeLeft,
             _ => ContainerType.None,
         };
@@ -1177,6 +1176,11 @@ namespace SS3D.UI.MainHud
             if (slot == EquipmentGrid.Slot.Ears)
             {
                 return _inventory.TryGetTypeContainer(ContainerType.EarRight, 0, out container);
+            }
+
+            if (slot == EquipmentGrid.Slot.Gloves)
+            {
+                return _inventory.TryGetTypeContainer(ContainerType.GloveRight, 0, out container);
             }
 
             if (slot == EquipmentGrid.Slot.Feet)
@@ -1228,9 +1232,11 @@ namespace SS3D.UI.MainHud
                 EquipmentGrid.Slot.Ears,
                 ContainerType.EarLeft,
                 ContainerType.EarRight);
-            SetEquipment(EquipmentGrid.Slot.GloveLeft, ContainerType.GloveLeft);
+            SetEquipmentAlternate(
+                EquipmentGrid.Slot.Gloves,
+                ContainerType.GloveLeft,
+                ContainerType.GloveRight);
             SetEquipment(EquipmentGrid.Slot.Shirt, ContainerType.Jumpsuit);
-            SetEquipment(EquipmentGrid.Slot.GloveRight, ContainerType.GloveRight);
             SetEquipmentAlternate(
                 EquipmentGrid.Slot.Feet,
                 ContainerType.ShoeLeft,
@@ -1470,6 +1476,7 @@ namespace SS3D.UI.MainHud
                     Ears = LoadSprite("Ears"),
                     HandLeft = LoadSprite("HandLeft"),
                     HandRight = LoadSprite("HandRight"),
+                    Gloves = LoadSprite("Hands"),
                     Shirt = LoadSprite("Shirt"),
                     Feet = LoadSprite("Feet"),
                     Belt = LoadSprite("Waist"),
