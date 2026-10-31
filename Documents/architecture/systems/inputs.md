@@ -57,7 +57,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
   `LocalSpeechBubbleController`). Legacy objectives `Other/Fade` Tab binding is erased at startup.
   Unused `Other/Attack` + `Show Owner` (both were F) are also erased so `ToggleIntent` owns F.
 
-## Conventions
+### Conventions
 
 - Never call `InputAction.Enable/Disable` directly; go through a context or suppression handle.
 - A handle must be owned by exactly one object and disposed once; disposing is idempotent and

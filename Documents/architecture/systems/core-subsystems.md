@@ -38,6 +38,10 @@ Process-wide services: `SystemsBootstrap` (DDOL). World/session networked system
 - Hub despawn on disconnect unregisters via `OnDestroyed` — no extra teardown required.
 - **Coimbra `GetChecked` / `EventSystem` Editor GC:** PackageCache `ServiceLocator.GetChecked` interpolates assert strings every call; deep profiles also show `String.Format` paired with every `EventSystem.Invoke`. Prefer caching `IEventService` and `SubSystems` refs on hot loops we own; do not edit PackageCache. Tracked in [TECH_DEBT.md](../TECH_DEBT.md) §2.
 
+## Depends on / Used by
+
+- **Used by:** every domain SubSystem (`SubSystems.Get<T>()`); bootstrap order is consumed by [application](application.md), [networking-session](networking-session.md) and [scene-management](scene-management.md)
+
 ## Related docs
 
 - [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)

@@ -9,8 +9,17 @@
 
 Reserved extension points shipped with map editor v1 for [creative-mode.md](../../design/creative-mode.md) Phase 2. The enum values below exist in code but nothing in v1 selects them.
 
-## Extension points
+## Start here
 
+Spawn Placements is the one hook with shipped authoring:
+
+- Catalog: `spawn:job:{RoleName}` / `spawn:antag:{Category}` under Scripting → Spawn Placements
+- Registry: `TileSubSystem.SpawnPoints` (`SpawnPointRegistry`); one marker per tile
+- Persist: `SpawnPointPersistenceContributor` (`spawn-points` station-template chunk)
+- Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)
+- Still stubbed: RandomSpawners, Triggers, Atmospherics Scripting rails
+
+## Extension points
 
 | Hook | Location | v1 default | Phase 2 use |
 |------|----------|------------|-------------|
@@ -27,10 +36,7 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 2. `MapEditorCommandService` with `PlacementMode.CreativeInstant`
 3. Save via `IMapEditorPersistence` (`MapEditor/Persistence/MapEditorPersistence.cs`) targeting round-config map pool (blocked on persistence Phase 1b)
 
-## Start here: Spawn Placements (shipped authoring)
+## Related docs
 
-- Catalog: `spawn:job:{RoleName}` / `spawn:antag:{Category}` under Scripting → Spawn Placements
-- Registry: `TileSubSystem.SpawnPoints` (`SpawnPointRegistry`); one marker per tile
-- Persist: `SpawnPointPersistenceContributor` (`spawn-points` station-template chunk)
-- Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)
-- Still stubbed: RandomSpawners, Triggers, Atmospherics Scripting rails
+- Parent: [tile](tile.md)
+- Design (read-only): [creative-mode.md](../../design/creative-mode.md)

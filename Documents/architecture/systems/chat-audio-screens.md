@@ -44,6 +44,15 @@ HUD feed yet.
 - Channel settings: `Assets/Settings/CommsChannelsSettings.asset`.
 - Screens: `PlayerCameraSubSystem`, `CameraSubSystem`, `CameraFollow` (guard `isActiveAndEnabled`).
 
+## Extension points
+
+- Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
+- OOC/LOOC lines in the in-round `CommsFeedView` (§7 typography); mute/ban moderation; persistent history.
+- PDA log / history ([comms.md](../../design/comms.md) §9).
+- Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
+- More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +
+  `AvailableInCompose` / announcement writability flags.
+
 ## Pitfalls
 
 - **Local speech on UiShell Overlay:** do not attach bubbles/compose to the hub UIDocument —
@@ -83,15 +92,6 @@ HUD feed yet.
 
 - **OOC sender identity:** never trust a client-supplied name. The server resolves the ckey from the connection. Chat labels set `enableRichText = false`.
 - **OOC history replay** may arrive after live lines. `OocChatHistory.Add` inserts by id and dedupes, so don't append blindly.
-
-## Extension points
-
-- Mode-pip fading hints (comms.md §5); whisper presence-while-typing for other viewers.
-- OOC/LOOC lines in the in-round `CommsFeedView` (§7 typography); mute/ban moderation; persistent history.
-- PDA log / history ([comms.md](../../design/comms.md) §9).
-- Channel radial; headset/ID gating (MVP2 S4) — replaces interim Tab + slash prefixes.
-- More compose prefixes: set `CommsChannel.ComposePrefix` (or Radio Abbreviation fallback) +
-  `AvailableInCompose` / announcement writability flags.
 
 ## Depends on / Used by
 

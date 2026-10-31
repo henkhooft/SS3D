@@ -9,14 +9,14 @@
 
 Power circuit simulation, APC channel gating, SMES storage, and tile-linked electric devices under namespace `SS3D.Systems.Electricity`. Implements `ITileMutationObserver` for [tile](tile.md) placement reactions. Machine UI in [machine-interface](machine-interface.md). **Area-scoped power:** devices in an assigned area draw from that area's APC without a cable path to each device; the APC still connects to the station grid via cables. Channel gating and load accounting use [area](area.md) `TryGetEffectiveApcForDevice`. Per-tick APC consumer membership is indexed on `ElectricitySubSystem` (invalidated on device add/remove and area rebuild). Furniture/visuals gate power via `PowerGate`. **Solar:** `SolarPanel` producers on the HV cable grid with aim × stub `SolarCycle` output; `SolarTrackingBeacon` auto-aims nearby panels (world Toggle, no MI).
 
-## Unit model
+### Unit model
 
 - **Flow** (generators, consumers, UI): **kW** — instantaneous demand/supply per tick.
 - **Storage** (SMES, APC cell): **kWh** — energy reservoir.
 - **Tick interval:** `ElectricitySubSystem._tickRate` (default **0.2 s**). Conversions live in `ElectricityUnits.cs`.
 - Per tick: `energy_kWh = power_kW × tickSeconds / 3600`.
 
-## Power distribution
+### Power distribution
 
 1. **Cable phase** — `Circuit.UpdateCableDistributionOnly`: producers feed cable-distributed consumers; surplus stored in `_pendingProducerSurplus`; SMES discharges on deficit.
 2. **Area phase** — `AreaApcPowerDistribution.PowerAreaConsumers`: each APC draws grid headroom (`GetAvailableGridSupplyForArea`), then its cell covers remaining deficit (consumers from per-APC index).

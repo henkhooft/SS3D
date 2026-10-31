@@ -13,6 +13,36 @@ Client-side interaction routing: discovers available interactions from the curre
 
 Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay layer (see [ui-shell](ui-shell.md)) instead of owning a private `UIDocument` — `RadialInteractionSubSystem`/`ArmedInteractionSubSystem` no longer require `[RequireComponent(typeof(UIDocument))]`; `RadialInteractionMenuView`'s open/close tween runs through the shared `PanelAnimator`.
 
+### Player flow
+
+1. `SelectionSubSystem` resolves hovered `Selectable`.
+2. `InteractionController` builds viable list via `InteractionPipeline` + active hand/tool source.
+3. Primary click: **Shift+Click** on another character → `TryRunSearchOnCharacterSelection` (Search petal path). Else Harm → `CombatInteractionNetwork.TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
+4. Targeted radial choices arm the cursor via `TryRouteRadialInteraction`; second click resolves the matching `InteractionEntry` by `GetGenericName()` and dispatches RPC.
+5. Server re-validates gates (intent, stamina, ownership, permissions) then `InteractionSource.Interact`.
+6. Observers run client FX; rejections use `TargetRejectInteraction` to roll back optimistic UI.
+
+### Outline feedback
+
+| Color | Meaning |
+|-------|---------|
+| Green | Target-bound interaction viable now (in range, intent, gates) |
+| Yellow | Target-bound interaction discovered but not currently viable (e.g. out of range) |
+| Blue (pending) | Instant interaction awaiting server confirm |
+| Hidden | No hover, entity target, no source, or only source-only entries (e.g. Drop while holding) |
+
+Entities (`Human`, ghosts) are excluded from hover outlines; medical targeting will use dedicated UI.
+
+Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.IsSourceOnly` / `SourceOnly()`). Those always appear while an item is held and must not outline every `Selectable` under the cursor. Prefer `TryEvaluateOutlineInteractability` (skips source discovery); `FilterForOutline` for list-based filters.
+
+Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../../archive/architecture/2026-07_interaction-discover-contract.md).
+
+### Cancellation
+
+- **Cancel Interaction** (`<Keyboard>/backspace`) — `CmdCancelInteraction` for in-progress delayed interactions.
+- **Intent toggle** is **F**, not Cancel — see [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
+- Movement — `DelayedInteraction` auto-cancel via `CharacterMoveCheck` (melee uses entity root).
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionController.cs` — thin router: primary-click policy, radial/armed, intent SyncVar, world/inventory/examine RPCs, delayed tracking
@@ -27,29 +57,15 @@ Radial menu and armed overlay attach into `UiShellSubSystem`'s shared overlay la
 - `Assets/Scripts/SS3D/Systems/Interactions/ArmedTargetEvaluation.cs` — armed target filtering
 - `Assets/Art/Graphics/InteractionOutline.shader` — inverted-hull outline material for availability feedback
 
-## Player flow
+## Extension points
 
-1. `SelectionSubSystem` resolves hovered `Selectable`.
-2. `InteractionController` builds viable list via `InteractionPipeline` + active hand/tool source.
-3. Primary click: **Shift+Click** on another character → `TryRunSearchOnCharacterSelection` (Search petal path). Else Harm → `CombatInteractionNetwork.TryRunRangedFirePrimary` (held firearm) else `TryRunMeleeSwingPrimary` / then **return** (no Drop/Open fallback); Help → highest-priority unrestricted / Help-tagged interaction.
-4. Targeted radial choices arm the cursor via `TryRouteRadialInteraction`; second click resolves the matching `InteractionEntry` by `GetGenericName()` and dispatches RPC.
-5. Server re-validates gates (intent, stamina, ownership, permissions) then `InteractionSource.Interact`.
-6. Observers run client FX; rejections use `TargetRejectInteraction` to roll back optimistic UI.
-
-## Outline feedback
-
-| Color | Meaning |
-|-------|---------|
-| Green | Target-bound interaction viable now (in range, intent, gates) |
-| Yellow | Target-bound interaction discovered but not currently viable (e.g. out of range) |
-| Blue (pending) | Instant interaction awaiting server confirm |
-| Hidden | No hover, entity target, no source, or only source-only entries (e.g. Drop while holding) |
-
-Entities (`Human`, ghosts) are excluded from hover outlines; medical targeting will use dedicated UI.
-
-Hover outlines ignore source-only discoveries such as `Drop` (`InteractionEntry.IsSourceOnly` / `SourceOnly()`). Those always appear while an item is held and must not outline every `Selectable` under the cursor. Prefer `TryEvaluateOutlineInteractability` (skips source discovery); `FilterForOutline` for list-based filters.
-
-Discover / `HasPoint` contract: [interactions-framework](interactions-framework.md) Overview + [2026-07_interaction-discover-contract](../../archive/architecture/2026-07_interaction-discover-contract.md).
+- New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
+- Shared discover/resolve logic: extend `InteractionDiscovery` / `InteractionDispatch` — do not grow `InteractionController` for list building or RPC match helpers.
+- Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
+- Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
+- Character paperdoll open: `SearchInteraction` via `HandSearchExtension` (Discover/`CmdRunInteraction`); Shift+Click is only a shortcut — do not re-add overlay click bypasses.
+- UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
+- Harm primary combat: `CombatInteractionNetwork` on Human — see [combat](combat.md).
 
 ## Pitfalls
 
@@ -66,22 +82,6 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
   [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 - **Harm must not fall through to world verbs:** `HandleRunPrimary` always returns after the melee attempt in Harm — never resume the Help path when recovery blocks the swing. Unrestricted interactions are Help-default in `MatchesIntent`; Drop hotkey also checks Help.
 - **Radial shows icons but petal clicks no-op after first close:** `Disappear` unsubscribes `InteractionSelected`/`CloseRequested` (avoids double-fire during hide). The UiShell-backed menu view is reused, so `ShowInteractionsMenu` must call `BindMenuViewHandlers` every open — otherwise the second hold-RMB session looks fine (icons populate) but petals never route. Not Addressables-related.
-
-## Cancellation
-
-- **Cancel Interaction** (`<Keyboard>/backspace`) — `CmdCancelInteraction` for in-progress delayed interactions.
-- **Intent toggle** is **F**, not Cancel — see [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
-- Movement — `DelayedInteraction` auto-cancel via `CharacterMoveCheck` (melee uses entity root).
-
-## Extension points
-
-- New world interactions: implement in domain system via framework contracts; they appear automatically when source/target resolution succeeds.
-- Shared discover/resolve logic: extend `InteractionDiscovery` / `InteractionDispatch` — do not grow `InteractionController` for list building or RPC match helpers.
-- Radial menu tiers: implement `IInteractionTierProvider` on sources/targets.
-- Armed mode: extend `ArmedTargetEvaluation` for new armed interaction categories.
-- Character paperdoll open: `SearchInteraction` via `HandSearchExtension` (Discover/`CmdRunInteraction`); Shift+Click is only a shortcut — do not re-add overlay click bypasses.
-- UI-started delayed takes (character examine): `InteractionController.RequestTakeFromCharacter` — do not force paperdoll slots through Discover/`CmdRunInteraction`.
-- Harm primary combat: `CombatInteractionNetwork` on Human — see [combat](combat.md).
 
 ## Depends on / Used by
 

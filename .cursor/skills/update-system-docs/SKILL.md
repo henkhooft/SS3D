@@ -87,7 +87,7 @@ If work completed a dated effort in `Documents/architecture/YYYY-MM_*.md`:
 
 - Set header `> Status: shipped` (or `abandoned` with explanation). One word; put phase detail in the effort's `**Progress:**` line.
 
-Then archive every effort and plan that is now `shipped` or fully completed, per [Documents/SKILL.md](../../../../Documents/SKILL.md) Archive:
+Then archive every effort and plan that is now `shipped` or fully completed, per [Documents/SKILL.md](../../../Documents/SKILL.md) Archive:
 
 1. **Harvest**: move known issues to the map's Pitfalls or TECH_DEBT, deferred phases to the milestone slice, and design deviations to the map.
 2. Skip docs still cited by path from code, CI, tests, skills or governance. They stay active as reference.

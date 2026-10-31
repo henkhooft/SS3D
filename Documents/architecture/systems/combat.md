@@ -57,19 +57,6 @@ stamina drain), projectile/thrown.
 - Stance: `HumanoidBodyStateBridge.ResolveCombatStance` prefers the extension component.
 - Shared LOS: call `LineOfSight.HasLineOfSight` / `TryGetFirstHit` — do not fork parallel raycasts.
 
-## Testing
-
-1. Host admin: `spawndummy`; Harm + empty hand — melee as before.
-2. Spawn/give M4 (left active is fine if right is empty — auto-routes to right and selects it); Harm — Ranged stance settles on Rifle Aim Idle (no weird Hold Weapon pose); LMB fires; zone damage at range; reticle blooms with movement/recoil; hit flash sits on the reticle dot; muzzle flash pops at the barrel tip (visible to other clients too); wall/floor impacts leave bullet-hole shreds. Left hand well shows a reserved badge and cannot be selected or receive items while the M4 is held. Optional: `rangeddebug on` for gold/grey impact spheres.
-3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
-4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
-5. Help + M4 must not swing/fire; Harm must not Drop.
-6. `spawndummy` equips `JumpsuitSecurity` automatically; Harm-melee/ranged covered zones
-   (chest/limbs) take reduced brute, head (uncovered) takes full damage; enough hits deplete
-   integrity and damage reverts to unmitigated. Unequip/drop keeps the same Item (armor SyncVar)
-   and restores folded world form. Equipment-doll HUD icons use the worn-shaped mesh; hands show folded.
-7. Fire/swing repeatedly until stamina is low — ranged spread should visibly widen and melee windup/recovery should visibly slow versus a fresh attack at full stamina.
-
 ## Pitfalls
 
 - **`CombatEditorAssembly` needs `SS3D.Core`:** editor recipes that `AddComponent<CombatInteractionNetwork>()` (extends `NetworkActor`) fail CS0012/UNT0014 unless `CombatEditorAssembly.asmdef` references `SS3D.Core` — referencing `SS3D.Systems` alone is not enough to see the base type.
@@ -93,6 +80,19 @@ stamina drain), projectile/thrown.
 - **M4 gun audio is the SS14 rifle set** — `GunFire` = `Rifle`/`Rifle2`; empty = `Empty`; reload start = `LtRifleMagOut`; reload complete = `LtRifleMagIn` + `LtRifleCock` (server `TryCompleteReloadIfDue`). Legacy SS3D-Art `Gun Firing1-2` / AR-15 folder / Pump Shotgun remain on disk but unwired. Surface impacts: `SurfaceHit` (`BulletHit` + `Ric1`–`Ric5`).
 - **Two-hand M4 is right-only** — `RangedWeaponProfile.RequiresBothHands` + `RequiredHand=Right`. Equip/transfer gates live in `AttachedContainer.CanContainItem` via `TwoHandedWeaponRules` (also Pickup/TakeFirst). Do not only gate `PickupInteraction` — HUD drag must fail too. **Auto-route:** `TryResolveHandForItem` / `Hand.Pickup` / HUD drop redirect put the rifle in the required hand when the off-hand is active; `Hands` selects that grip on attach. **Reserved HUD:** `MainHudSubSystem.RefreshHandReservedState` → `inventory-slot--reserved` ban badge on the off-hand well. **No hand-switch onto reserved:** `Hands.CanSelectHand` / `CmdSetActiveHand` / swap / HUD click ignore a reserved off-hand. Fire/reload/bloom/stance use `TryGetWieldedRangedWeapon` (right-held rifle), not bare `SelectedHand`. `MirrorUpperBody` must stay false while the rifle is wielded.
 - **M4 drop ignores gravity on pure client:** item `NetworkTransform` must stay server-authoritative — see [inventory](inventory.md) pitfall (client-auth NT + kinematic client RB). Hit 2026-07-26.
+
+## Tests
+
+1. Host admin: `spawndummy`; Harm + empty hand — melee as before.
+2. Spawn/give M4 (left active is fine if right is empty — auto-routes to right and selects it); Harm — Ranged stance settles on Rifle Aim Idle (no weird Hold Weapon pose); LMB fires; zone damage at range; reticle blooms with movement/recoil; hit flash sits on the reticle dot; muzzle flash pops at the barrel tip (visible to other clients too); wall/floor impacts leave bullet-hole shreds. Left hand well shows a reserved badge and cannot be selected or receive items while the M4 is held. Optional: `rangeddebug on` for gold/grey impact spheres.
+3. Wall between you and dummy — shot blocked (no limb damage); wall may take structural force.
+4. Empty mag or **E** — timed reload, then fire again. Help does not fire.
+5. Help + M4 must not swing/fire; Harm must not Drop.
+6. `spawndummy` equips `JumpsuitSecurity` automatically; Harm-melee/ranged covered zones
+   (chest/limbs) take reduced brute, head (uncovered) takes full damage; enough hits deplete
+   integrity and damage reverts to unmitigated. Unequip/drop keeps the same Item (armor SyncVar)
+   and restores folded world form. Equipment-doll HUD icons use the worn-shaped mesh; hands show folded.
+7. Fire/swing repeatedly until stamina is low — ranged spread should visibly widen and melee windup/recovery should visibly slow versus a fresh attack at full stamina.
 
 ## Depends on / Used by
 

@@ -68,7 +68,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [area](systems/area.md) | partial | APC flood-fill areas, lighting snapshot |
 | [asset-organization](systems/asset-organization.md) | partial | Art/Content/Data folder taxonomy, icon placement |
 | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim, client VFX sync, host AOI |
-| [audio](systems/audio.md) | partial | SFX pool, occlusion, ambience, personal audio cues |
+| [audio](systems/audio.md) | partial | SFX pool, occlusion, ambience, personal audio cues; child map [audio-content](systems/audio-content.md) for clips |
 | [chat-audio-screens](systems/chat-audio-screens.md) | partial | Comms hub: local speech, radio/announce feed, compose |
 | [combat](systems/combat.md) | partial | Melee, ranged hitscan, armor absorption, combat feel |
 | [core-subsystems](systems/core-subsystems.md) | partial | `SubSystems.Get<T>()`, bootstrap, world-readiness graph |

@@ -42,14 +42,9 @@ RPCs identify interactions with `InteractionIdentifier` (`genericName` + `target
 - Replicated state changes in `Start()` must go through networked components (`NetworkedOpenable.SetOpenState`, `SyncVar` toggles), not local-only animator writes.
 - Source extensions: gate target-bound Adds (structural and/or `CanInteract`); never unconditional Add for every hover. Source-only verbs: `InteractionEntry.SourceOnly` once per Discover. Prefer `context.WithTarget(target)` so `HasPoint` is preserved.
 
-## Architecture smells
-
-1. **Pickable ≠ rangeable** (owned with [selection](selection.md)): shader pick works without colliders; range/drop need a resolved point from colliders. Missing colliders on `Selectable` wall mounts still force `HasPoint == false` and transform fallback — ship a `BoxCollider` for selection rays.
-
-Resolved by [2026-07_interaction-discover-contract](../../archive/architecture/2026-07_interaction-discover-contract.md): Discover semantics / source-only typing / `HasPoint` (former smells #1–3).
-
 ## Pitfalls
 
+- **Pickable ≠ rangeable** (shared with [selection](selection.md)): shader pick works without colliders, but range checks and drop need a point resolved from colliders. A `Selectable` wall mount without a collider silently gets `HasPoint == false` and falls back to its transform. Ship a `BoxCollider` for selection rays.
 - **Source-only vs outline:** Drop is `IsSourceOnly`. Outline LateUpdate must use `TryEvaluateOutlineInteractability` (skips source discovery) or `FilterForOutline` — never treat full Discover as “available on this hover.”
 - **Unresolved point:** build events with the two-arg ctor (`HasPoint = false`), not `Point = Vector3.zero`. World-origin hits use the four-arg ctor with `Point = zero` and `HasPoint = true`.
 - **Unconditional source `Add` pollutes Discover:** any extension that adds for every target lights yellow outlines / menus on every hover when that source is active. Gate at discover time. Historical example: empty-hand `Craft` → `OpenCraftingMenu` (purged with [crafting](crafting.md) / TECH_DEBT 1.6).

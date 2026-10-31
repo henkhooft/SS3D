@@ -1,12 +1,15 @@
 > Parent map: [health.md](health.md)
+> Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Status: partial
 > Verified: a675935e6 — 2026-10-31
 
 # Health anatomy map
 
-Human.fbx / Human.prefab anatomy contract for the greenfield health rewrite. Design authority: [Documents/design/health.md](../../design/health.md).
+## Overview
 
-## Body-part tree (Human.prefab)
+The `Human.fbx` / `Human.prefab` anatomy contract for the health rewrite: which body parts, zones and organs exist and how severing works. Design authority: [health.md](../../design/health.md).
+
+### Body-part tree (Human.prefab)
 
 | Prefab | Anatomy role | Detachable | Maps to zone(s) |
 |--------|--------------|------------|-----------------|
@@ -21,7 +24,7 @@ Human.fbx / Human.prefab anatomy contract for the greenfield health rewrite. Des
 
 Each body-part prefab carries **`AnatomyNode`** (replaces legacy `HumanBodypart` scripts). Phase 5b: severance hides the nested subtree on the character and spawns a world **`Item`** copy via `HumanAnatomyController` + `ItemSubSystem`.
 
-## Severance (Phase 5b)
+### Severance (Phase 5b)
 
 | Zone | Anatomy root | World drop item |
 |------|--------------|-----------------|
@@ -33,7 +36,7 @@ Chest and Groin are not severable. Reattachment deferred to Phase 7c surgery.
 
 Trigger: zone at **Disabled** + sharp melee (`CanSever` on `MeleeDamagePacket`) or admin `sever` / `destroybodypart` commands.
 
-## Skeleton colliders → `BodyZone`
+### Skeleton colliders → `BodyZone`
 
 Armature colliders in Human.prefab carry **`ZoneTargetCollider`**:
 
@@ -50,7 +53,7 @@ Armature colliders in Human.prefab carry **`ZoneTargetCollider`**:
 
 Physics layer: **`BodyParts`** (name-based via `HealthLayers`; index may differ per project) for combat/medical raycast.
 
-## Organs
+### Organs
 
 | Organ | FBX mesh | Prefab | Phase | Gameplay role |
 |-------|----------|--------|-------|---------------|
@@ -67,15 +70,7 @@ Each wired organ prefab carries **`OrganInstance`** (replaces legacy `Heart`/`Lu
 
 Surgical access: chest (heart, lungs, liver); head (brain) per [surgery.md](../../design/surgery.md) §2.
 
-## Asset gaps
-
-| Gap | V1 approach |
-|-----|-------------|
-| Kidneys missing from FBX | `clearance = liverFn × 0.5` interim in `HealthSimulation.LiverClearance` |
-| Ears not wired in Human.prefab | Out of scope v1 |
-| Wound blendshapes on FBX | Bleed particles + material tint first; art pass later |
-
-## Code entry points (Phase 0)
+## Start here
 
 | File | Role |
 |------|------|
@@ -88,6 +83,17 @@ Surgical access: chest (heart, lungs, liver); head (brain) per [surgery.md](../.
 | `WoundVfx.cs` | Bleed VFX: bone anchors; intensity/cadence from snapshot bleed rates |
 
 Stamina relocated to `Assets/Scripts/SS3D/Systems/Stamina/` — health bridge ships Phase 7a.
+
+## Extension points
+
+
+### Asset gaps
+
+| Gap | V1 approach |
+|-----|-------------|
+| Kidneys missing from FBX | `clearance = liverFn × 0.5` interim in `HealthSimulation.LiverClearance` |
+| Ears not wired in Human.prefab | Out of scope v1 |
+| Wound blendshapes on FBX | Bleed particles + material tint first; art pass later |
 
 ## Related docs
 
