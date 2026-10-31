@@ -53,6 +53,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private readonly InputTextEntryScope _textEntry = new();
         private Label _windowTitle;
         private Label _toast;
+        private Label _hint;
         private VisualElement _leftPopoverAnchor;
         private VisualElement _rightPopoverAnchor;
         private VisualElement _cameraPopoverAnchor;
@@ -95,8 +96,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public event Action<string> DeleteMapRequested;
         public event Action ResetViewRequested;
         public event Action ShowUIRequested;
-        public event Action<bool> GridSnapChanged;
         public event Action<bool> DebugOverlayChanged;
+        public event Action<bool> AlwaysPowerLightsChanged;
+        public event Action<bool> InvincibleChanged;
         public event Action<float, float, float> CameraSettingsChanged;
         public event Action<int> CameraRotateRequested;
         public event Action<int> CameraZoomRequested;
@@ -135,6 +137,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _toast.AddToClassList("map-editor-toast");
             _toast.style.display = DisplayStyle.None;
             _root.Add(_toast);
+
+            _hint = new Label { name = "placement-hint", pickingMode = PickingMode.Ignore };
+            _hint.AddToClassList("map-editor-hint");
+            _hudLayer.Add(_hint);
 
             _root.Add(_hudLayer);
             parent.Add(_root);
@@ -439,6 +445,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
             redoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.RedoDepth <= 0);
 
+            RefreshHint();
+
             if (!string.IsNullOrEmpty(_vm.ToastMessage))
             {
                 _toast.text = _vm.ToastMessage;
@@ -452,6 +460,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             // Keep unsaved room fields intact when toasts/undo state refresh the chrome.
             if (_vm.OpenPopover != "area" || _activePopover == null)
                 RefreshPopover();
+        }
+
+        /// <summary>Update only the tool hint bar (cheap; called on hover feedback).</summary>
+        public void RefreshHint()
+        {
+            if (_hint == null)
+                return;
+
+            string text = _vm.SelectedObjectHint;
+            _hint.text = text ?? string.Empty;
+            _hint.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void RebuildSubcategories()
@@ -761,10 +780,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     });
                     break;
                 case "settings":
-                    AddSwitchRow(container, "Grid Snap", _vm.GridSnap, v =>
+                    AddSwitchRow(container, "Always Power Lights", _vm.AlwaysPowerLights, v =>
                     {
-                        _vm.GridSnap = v;
-                        GridSnapChanged?.Invoke(v);
+                        _vm.AlwaysPowerLights = v;
+                        AlwaysPowerLightsChanged?.Invoke(v);
+                    });
+                    AddSwitchRow(container, "Player Invincible", _vm.Invincible, v =>
+                    {
+                        _vm.Invincible = v;
+                        InvincibleChanged?.Invoke(v);
                     });
                     AddSwitchRow(container, "Debug Overlay", _vm.DebugOverlay, v =>
                     {

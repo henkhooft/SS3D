@@ -912,6 +912,21 @@
     font-size: 13px;
 }
 
+.map-editor-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    translate: -50% 0;
+    background-color: var(--ss3d-surface-panel-raised);
+    border-width: 1px;
+    border-color: var(--map-editor-accent);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 6px 14px;
+    color: var(--ss3d-text-primary);
+    font-size: 13px;
+    opacity: 0.92;
+}
+
 .map-editor-reveal-btn {
     position: absolute;
     top: 16px;

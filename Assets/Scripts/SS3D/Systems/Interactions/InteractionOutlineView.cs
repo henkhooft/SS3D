@@ -26,6 +26,9 @@ namespace SS3D.Systems.Interactions
             Unavailable,
         }
 
+        /// <summary>Name of the child GameObjects that hold outline shells.</summary>
+        public const string OutlineObjectName = "InteractionOutline";
+
         private static readonly HashSet<int> PendingSelectableIds = new();
         private static readonly Dictionary<int, InteractionOutlineView> PendingViews = new();
 
@@ -121,6 +124,14 @@ namespace SS3D.Systems.Interactions
 
             _entries.Clear();
         }
+
+        /// <summary>
+        /// Outline shells own their own <see cref="Renderer.enabled"/> state. Bulk renderer toggles
+        /// (map editor show-all, layer dimming, item visibility) must skip them, or every object that
+        /// was ever hovered keeps a visible outline.
+        /// </summary>
+        public static bool IsOutlineRenderer(Renderer renderer) =>
+            renderer != null && renderer.transform.name == OutlineObjectName;
 
         public static bool IsPending(Selectable selectable)
         {
@@ -246,7 +257,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            if (root.name == "InteractionOutline")
+            if (root.name == OutlineObjectName)
             {
                 return;
             }
@@ -283,7 +294,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            GameObject outlineObject = new("InteractionOutline");
+            GameObject outlineObject = new(OutlineObjectName);
             outlineObject.transform.SetParent(source.transform, false);
             outlineObject.layer = source.gameObject.layer;
 
@@ -311,7 +322,7 @@ namespace SS3D.Systems.Interactions
                 return;
             }
 
-            GameObject outlineObject = new("InteractionOutline");
+            GameObject outlineObject = new(OutlineObjectName);
             outlineObject.transform.SetParent(source.transform, false);
             outlineObject.layer = source.gameObject.layer;
 

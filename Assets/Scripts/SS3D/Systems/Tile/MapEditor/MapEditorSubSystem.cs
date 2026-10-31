@@ -95,7 +95,6 @@ namespace SS3D.Systems.Tile.MapEditor
         public bool IsRoomCategory => _viewModel.IsRoomCategory;
         public MapEditorMode CurrentMode => _viewModel.CurrentMode;
         public MapEditorSubcategory CurrentSubcategory => _viewModel.CurrentSubcategory;
-        public bool GridSnapEnabled => _viewModel.GridSnap;
 
         /// <summary>Client-local toast (placement blocked, delete miss, etc.).</summary>
         public void ShowLocalToast(string message)
@@ -113,7 +112,17 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _viewModel.SelectedObjectHint = hint;
-            _viewModel.NotifyChanged();
+            // Hover feedback changes often; update the hint bar only, not the whole chrome.
+            _view?.RefreshHint();
+        }
+
+        /// <summary>Drop a transient hover message and show the tool/asset default hint again.</summary>
+        public void RestoreDefaultPlacementHint()
+        {
+            string previous = _viewModel.SelectedObjectHint;
+            _viewModel.RefreshHint();
+            if (_viewModel.SelectedObjectHint != previous)
+                _view?.RefreshHint();
         }
         public Camera PickCamera => _playerCamera != null ? _playerCamera : Camera.main;
 
@@ -244,8 +253,9 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.MapListRefreshRequested += RefreshMapList;
             _view.ResetViewRequested += OnResetViewRequested;
             _view.ShowUIRequested += OnShowUiRequested;
-            _view.GridSnapChanged += OnGridSnapChanged;
             _view.DebugOverlayChanged += OnDebugOverlayChanged;
+            _view.AlwaysPowerLightsChanged += OnAlwaysPowerLightsChanged;
+            _view.InvincibleChanged += OnInvincibleChanged;
             _view.CameraSettingsChanged += OnCameraSettingsChanged;
             _view.CameraRotateRequested += OnCameraRotateRequested;
             _view.CameraZoomRequested += OnCameraZoomRequested;
@@ -312,6 +322,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 RefreshTileHostVisibility();
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
+                ApplySessionSettingsOnOpen();
             }
             else
             {
@@ -665,8 +676,9 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.MapListRefreshRequested -= RefreshMapList;
             _view.ResetViewRequested -= OnResetViewRequested;
             _view.ShowUIRequested -= OnShowUiRequested;
-            _view.GridSnapChanged -= OnGridSnapChanged;
             _view.DebugOverlayChanged -= OnDebugOverlayChanged;
+            _view.AlwaysPowerLightsChanged -= OnAlwaysPowerLightsChanged;
+            _view.InvincibleChanged -= OnInvincibleChanged;
             _view.CameraSettingsChanged -= OnCameraSettingsChanged;
             _view.CameraRotateRequested -= OnCameraRotateRequested;
             _view.CameraZoomRequested -= OnCameraZoomRequested;
@@ -851,7 +863,6 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.NotifyChanged();
         }
 
-        private void OnGridSnapChanged(bool value) => _viewModel.GridSnap = value;
 
         private void OnCameraSettingsChanged(float fov, float zoomSpeed, float rotationSpeed)
         {

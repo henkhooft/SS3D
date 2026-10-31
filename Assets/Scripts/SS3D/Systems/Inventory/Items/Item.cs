@@ -350,7 +350,7 @@ namespace SS3D.Systems.Inventory.Items
             for (int i = root.childCount - 1; i >= 0; i--)
             {
                 Transform child = root.GetChild(i);
-                if (child.name == "InteractionOutline")
+                if (child.name == SS3D.Systems.Interactions.InteractionOutlineView.OutlineObjectName)
                 {
                     UnityEngine.Object.DestroyImmediate(child.gameObject);
                     continue;
@@ -377,7 +377,7 @@ namespace SS3D.Systems.Inventory.Items
             {
                 // Interaction outline shells manage their own visibility (see InteractionOutlineView);
                 // toggling them here would leave them stuck visible when the outline is meant to be hidden.
-                if (childRenderer.transform.name == "InteractionOutline")
+                if (SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(childRenderer))
                 {
                     continue;
                 }
@@ -642,7 +642,7 @@ namespace SS3D.Systems.Inventory.Items
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             foreach (Renderer childRenderer in renderers)
             {
-                if (childRenderer.transform.name == "InteractionOutline")
+                if (SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(childRenderer))
                 {
                     continue;
                 }

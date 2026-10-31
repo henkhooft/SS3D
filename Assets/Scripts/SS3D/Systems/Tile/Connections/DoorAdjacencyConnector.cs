@@ -6,8 +6,9 @@ using UnityEngine;
 namespace SS3D.Systems.Tile.Connections
 {
     /// <summary>
-    /// Connector for doors, handling adding wall caps, creating custom floor tile under the door.
-    /// TODO : add the custom floor.
+    /// Connector for doors, handling adding wall caps and the floor visual under the door.
+    /// Doors occupy the Turf layer, so they cover the plenum (see <see cref="TileUnderfloorVisibility"/>);
+    /// without their own floor the covered cell would render as open space.
     /// </summary>
     public class DoorAdjacencyConnector : EngineDrivenHorizontalConnector
     {
@@ -33,7 +34,13 @@ namespace SS3D.Systems.Tile.Connections
         [SerializeField]
         private DoorType doorType;
 
+        [SerializeField]
+        [Tooltip("Visual-only floor instantiated under the door. Network, collider and interaction components are stripped.")]
+        private GameObject floorPrefab = null;
+
         private GameObject[] wallCaps = new GameObject[4];
+
+        private GameObject _floor;
 
         public override IConnectionRule ConnectionRule => DoorRule;
 
@@ -53,7 +60,60 @@ namespace SS3D.Systems.Tile.Connections
                 return;
 
             _adjacencyMap.DeserializeFromByte(horizontalConnections);
+            EnsureFloor();
             UpdateWallCaps();
+        }
+
+        private void EnsureFloor()
+        {
+            if (floorPrefab == null || _floor != null)
+                return;
+
+            _floor = Instantiate(floorPrefab, transform);
+            _floor.name = "DoorFloor";
+            _floor.transform.localPosition = Vector3.zero;
+            _floor.transform.localRotation = Quaternion.identity;
+
+            // Visual only: the plenum below already supports and collides; the door owns interaction.
+            // Destroy dependents first: SimpleExaminable [RequireComponent]s Selectable, and Unity refuses
+            // to remove a component another one still requires. Reverse order removes later-added first.
+            MonoBehaviour[] behaviours = _floor.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int i = behaviours.Length - 1; i >= 0; i--)
+                {
+                    MonoBehaviour behaviour = behaviours[i];
+                    if (behaviour == null || behaviour is FishNet.Object.NetworkObject)
+                        continue;
+
+                    if (pass == 0 && behaviour is SS3D.Systems.Selection.Selectable)
+                        continue;
+
+                    Object.DestroyImmediate(behaviour);
+                }
+            }
+
+            foreach (Collider floorCollider in _floor.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(floorCollider);
+
+            if (_floor.TryGetComponent(out FishNet.Object.NetworkObject networkObject))
+                Object.DestroyImmediate(networkObject);
+
+#if UNITY_SERVER
+            ServerVisualsUtility.DisableRenderingComponents(_floor);
+#endif
+
+            RefreshHostRenderers();
+        }
+
+        private void RefreshHostRenderers()
+        {
+            // Children are Instantiated after FishNet may have cached renderers; refresh host AOI visibility
+            // so newly added MeshRenderers hide with the parent door when out of observers.
+            if (TryGetComponent(out PlacedTileObject placed))
+                placed.RefreshHostVisibility();
+            else if (TryGetComponent(out FishNet.Object.NetworkObject nob) && nob.IsSpawned)
+                nob.UpdateRenderers(false);
         }
 
         private void CreateWallCaps(bool isPresent, Direction direction)
@@ -103,14 +163,7 @@ namespace SS3D.Systems.Tile.Connections
             wallCap.transform.localRotation = Quaternion.Euler(0, rotation, 0);
             wallCap.transform.localPosition = new Vector3(cardinal.Item1 * WALL_CAP_DISTANCE_FROM_CENTRE, 0, cardinal.Item2 * WALL_CAP_DISTANCE_FROM_CENTRE);
 
-            // Caps are Instantiated after FishNet may have cached renderers; refresh host AOI visibility
-            // so newly added MeshRenderers hide with the parent door when out of observers.
-            if (TryGetComponent(out PlacedTileObject placed))
-                placed.RefreshHostVisibility();
-            else if (TryGetComponent(out FishNet.Object.NetworkObject nob) && nob.IsSpawned)
-            {
-                nob.UpdateRenderers(false);
-            }
+            RefreshHostRenderers();
 
             return wallCap;
         }

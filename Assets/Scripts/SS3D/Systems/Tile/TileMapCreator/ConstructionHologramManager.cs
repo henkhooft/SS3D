@@ -36,6 +36,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private InputSubSystem _inputSystem;
         private Controls.TileCreatorActions _controls;
         private bool _isPlacingItem = false;
+
+        /// <summary>Item cursor is over a wall/door (items may sit on tables, never on walls).</summary>
+        private bool _itemPointBlocked;
+        private bool _lastItemPointBlocked;
+
+        private const string ItemOnWallMessage = "Items can't be placed on walls";
         /// <summary>
         /// Snapped position are positions in the center of tiles, to display tile objects ghosts properly.
         /// </summary>
@@ -68,7 +74,6 @@ namespace SS3D.Systems.Tile.TileMapCreator
         private readonly List<Vector3> _dragTileBuffer = new();
         private readonly List<Vector2> _lineTileBuffer = new();
         private readonly List<MapEditorDeleteTarget> _deleteTargets = new();
-        private float _invalidHoverToastCooldown;
         private string _lastHoverFailMessage;
         private string _deleteGhostAssetName;
         [SerializeField]
@@ -127,13 +132,48 @@ namespace SS3D.Systems.Tile.TileMapCreator
         }
 
         /// <summary>
-        /// World point under the cursor for placement. Tiles snap when grid-snap is on (default).
+        /// World point under the cursor for placement. Tile objects snap to the tile centre; items do not.
         /// </summary>
         private Vector3 GetPlacementPoint(bool forceTileSnap = false)
         {
-            bool snapToTile = !_isPlacingItem && (forceTileSnap || _mapEditor == null || _mapEditor.GridSnapEnabled);
+            // Tile objects always sit on the grid; items are placed freely.
+            bool snapToTile = forceTileSnap || !_isPlacingItem;
             Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
+            if (!snapToTile)
+                return GetItemPlacementPoint(camera);
+
             return TileHelper.GetPointedPosition(snapToTile, camera);
+        }
+
+        /// <summary>
+        /// Items rest on whatever upward-facing surface is under the cursor (tables, counters, floor),
+        /// falling back to the floor plane. Walls and doors block placement.
+        /// </summary>
+        private Vector3 GetItemPlacementPoint(Camera camera)
+        {
+            Vector3 floorPoint = TileHelper.GetPointedPosition(false, camera);
+            _itemPointBlocked = false;
+
+            if (camera == null || Mouse.current == null)
+                return floorPoint;
+
+            Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (!Physics.Raycast(ray, out RaycastHit hit, 500f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                return floorPoint;
+
+            PlacedTileObject placed = hit.collider.GetComponentInParent<PlacedTileObject>();
+            if (placed != null && placed.tileObjectSO != null
+                && placed.GenericType is TileObjectGenericType.Wall or TileObjectGenericType.Door)
+            {
+                _itemPointBlocked = true;
+                return floorPoint;
+            }
+
+            // Characters are not surfaces; side faces (table edge, machine front) drop to the floor in front.
+            if (hit.collider.GetComponentInParent<SS3D.Systems.Entities.Entity>() != null)
+                return floorPoint;
+
+            return hit.normal.y > 0.5f ? hit.point : floorPoint;
         }
 
         public void SetSelectedFloorDecal(FloorDecalDefinition definition)
@@ -237,7 +277,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_holograms.Count == 1 && !_isDragging)
             {
                 _holograms.First().TargetPosition = position;
-                if (cursorTile != ToTile(_lastSnappedPosition))
+                if (cursorTile != ToTile(_lastSnappedPosition) || (_isPlacingItem && _itemPointBlocked != _lastItemPointBlocked))
                 {
                     if (deleteMode)
                         RefreshDeleteCursorHologram(position);
@@ -249,9 +289,6 @@ namespace SS3D.Systems.Tile.TileMapCreator
             {
                 EnsureDeleteCursorHologram(position);
             }
-
-            if (_invalidHoverToastCooldown > 0f)
-                _invalidHoverToastCooldown -= updateEvent.DeltaTime;
 
             bool squareDrag = _controls.SquareDrag.IsPressed();
             if (_isDragging && (hasPlacementSelection || deleteMode) &&
@@ -271,6 +308,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
             }
 
             _lastSnappedPosition = position;
+            _lastItemPointBlocked = _itemPointBlocked;
         }
 
         /// <summary>
@@ -391,7 +429,8 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 _pressStartedOverUi = false;
                 _placePressActive = true;
 
-                if (!_isPlacingItem)
+                // Items are not on the grid: placing and deleting them are single clicks, never drags.
+                if (!_isPlacingItem && !IsItemDeleteMode())
                 {
                     _isDragging = true;
                     _dragStartPostion = GetPlacementPoint(forceTileSnap: true);
@@ -747,6 +786,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
                 if (_selectedObject is ItemObjectSo)
                 {
+                    if (_itemPointBlocked)
+                    {
+                        NoteSkip(ItemOnWallMessage);
+                        return;
+                    }
+
                     commands.Add(new MapEditorCommandDto
                     {
                         Kind = MapEditorCommandKind.PlaceItem,
@@ -951,7 +996,15 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 return;
             }
 
-            if (_isPlacingItem || _selectedObject is not TileObjectSo tileObjectSo)
+            if (_isPlacingItem)
+            {
+                hologram.ChangeHologramColor(_itemPointBlocked ? ConstructionMode.Invalid : ConstructionMode.Valid);
+                if (reportHoverFeedback)
+                    ReportInvalidHover(_itemPointBlocked ? ItemOnWallMessage : null);
+                return;
+            }
+
+            if (_selectedObject is not TileObjectSo tileObjectSo)
             {
                 hologram.ChangeHologramColor(ConstructionMode.Valid);
                 return;
@@ -982,21 +1035,16 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 if (_lastHoverFailMessage != null)
                 {
                     _lastHoverFailMessage = null;
-                    _mapEditor.SetPlacementHint(
-                        "Edit tool active — drag a line, Shift+drag a rectangle to place");
+                    _mapEditor.RestoreDefaultPlacementHint();
                 }
 
                 return;
             }
 
-            _mapEditor.SetPlacementHint(message);
-
-            if (message == _lastHoverFailMessage && _invalidHoverToastCooldown > 0f)
-                return;
-
+            // Hover feedback lives in the hint bar only; toasts are for committed actions
+            // (skipped tiles, nothing deleted). Toasting here showed every message twice.
             _lastHoverFailMessage = message;
-            _invalidHoverToastCooldown = 0.5f;
-            _mapEditor.ShowLocalToast(message);
+            _mapEditor.SetPlacementHint(message);
         }
 
         private static bool HasPlenumAt(TileMap map, Vector3 worldPosition)
@@ -1010,6 +1058,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void EnsureDeleteCursorHologram(Vector3 position)
         {
+            if (IsItemDeleteMode())
+            {
+                RefreshItemDeleteCursor();
+                return;
+            }
+
             if (_holograms.Count == 0)
                 CreateDeleteMarkerHologram(position);
 
@@ -1018,6 +1072,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
 
         private void RefreshDeleteCursorHologram(Vector3 position)
         {
+            if (IsItemDeleteMode())
+            {
+                RefreshItemDeleteCursor();
+                return;
+            }
+
             if (_holograms.Count == 0)
             {
                 CreateDeleteMarkerHologram(position);
@@ -1097,6 +1157,43 @@ namespace SS3D.Systems.Tile.TileMapCreator
                         ? $"Delete {label} ({_lastRegisteredDirection}) — R to change face"
                         : $"Delete {label}");
             }
+        }
+
+        /// <summary>
+        /// Items sit off-grid, so item deletes raycast the item under the cursor instead of resolving
+        /// tile layers. No ghost: the hint names the item that a click would remove.
+        /// </summary>
+        private bool IsItemDeleteMode() =>
+            _mapEditor != null
+            && _mapEditor.IsDeleting
+            && (_mapEditor.CurrentMode == MapEditorMode.Items
+                || MapEditorDeleteTargeting.IsItemSubcategory(_mapEditor.CurrentSubcategory));
+
+        private void RefreshItemDeleteCursor()
+        {
+            if (_holograms.Count > 0)
+                DestroyHolograms();
+            _deleteGhostAssetName = null;
+            _deleteTargets.Clear();
+
+            _mapEditor.SetPlacementHint(TryGetItemUnderCursor(out PlacedItemObject item)
+                ? $"Click to delete {item.NameString}"
+                : "Point at an item to delete it");
+        }
+
+        private bool TryGetItemUnderCursor(out PlacedItemObject item)
+        {
+            item = null;
+            Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
+            if (camera == null || Mouse.current == null)
+                return false;
+
+            Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (!Physics.Raycast(ray, out RaycastHit hitInfo, 500f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                return false;
+
+            item = hitInfo.collider.GetComponentInParent<PlacedItemObject>();
+            return item != null;
         }
 
         private void ResetDeleteGhostToMarker(Vector3 position)
@@ -1242,19 +1339,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         /// </summary>
         private void FindAndDeleteItem()
         {
-            Vector2 screenPosition = Mouse.current != null
-                ? Mouse.current.position.ReadValue()
-                : (Vector2)Input.mousePosition;
-            Camera camera = _mapEditor != null ? _mapEditor.PickCamera : Camera.main;
-            if (camera == null || _mapEditor == null)
-                return;
-
-            Ray ray = camera.ScreenPointToRay(screenPosition);
-            if (!Physics.Raycast(ray, out RaycastHit hitInfo))
-                return;
-
-            PlacedItemObject placedItem = hitInfo.collider.gameObject.GetComponent<PlacedItemObject>();
-            if (placedItem == null)
+            if (_mapEditor == null || !TryGetItemUnderCursor(out PlacedItemObject placedItem))
                 return;
 
             Direction direction = NearestCardinalDirection(placedItem.transform.rotation);

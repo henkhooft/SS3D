@@ -61,6 +61,15 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 : HumanoidSupportState.Unknown;
         }
 
+        /// <summary>
+        /// Support for a specific entity: <see cref="EntityInvincibility"/> walkers are always supported
+        /// (no space float). Movement also skips gravity for them when no floor collider is underfoot.
+        /// </summary>
+        public static HumanoidSupportState GetSupportFor(Component entity, Vector3 worldPosition) =>
+            EntityInvincibility.IsInvincible(entity)
+                ? HumanoidSupportState.Supported
+                : GetSupportAt(worldPosition);
+
         public static bool IsUnsupportedAt(Vector3 worldPosition) =>
             GetSupportAt(worldPosition) == HumanoidSupportState.Unsupported;
 

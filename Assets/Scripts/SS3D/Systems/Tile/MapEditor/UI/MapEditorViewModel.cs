@@ -21,8 +21,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public MapEditorCatalogEntry SelectedEntry { get; set; }
         public bool IsEraserSelected { get; set; }
         public bool HideUI { get; set; }
-        public bool GridSnap { get; set; } = true;
         public bool DebugOverlay { get; set; }
+        /// <summary>Light fixtures glow without grid power (server-wide; persists after closing the editor).</summary>
+        public bool AlwaysPowerLights { get; set; }
+        /// <summary>Builder takes no damage and walks on open space (persists after closing the editor).</summary>
+        public bool Invincible { get; set; } = true;
         public float CameraFov { get; set; } = 72f;
         public float CameraZoomSpeed { get; set; } = 5f;
         public float CameraRotationSpeed { get; set; } = 4f;
@@ -131,6 +134,32 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             NotifyChanged();
         }
 
+        /// <summary>Recompute the default hint (after a transient hover message such as a build failure).</summary>
+        public void RefreshHint() => UpdateHint();
+
+        /// <summary>
+        /// Construct-tool hint for the selected asset. Lower-layer runs (plenum, pipes, disposals) and
+        /// flooring are usually laid in areas, so Shift fill leads; wall mounts lead with R to rotate.
+        /// </summary>
+        public string PlacementHint()
+        {
+            TileLayer? layer = (SelectedAsset as TileObjectSo)?.layer;
+
+            if (CurrentMode == MapEditorMode.Items || SelectedAsset is ItemObjectSo)
+                return "Click to place the item";
+
+            if (layer is TileLayer.WallMountHigh or TileLayer.WallMountLow
+                || (layer == null && CurrentSubcategory == MapEditorSubcategory.WallAttachments))
+                return "Press R to rotate — click a wall to place, drag for a line";
+
+            if (CurrentMode == MapEditorMode.Lower
+                || layer is TileLayer.Plenum or TileLayer.Turf or TileLayer.Wire or TileLayer.Disposal
+                    or TileLayer.PipeLeft or TileLayer.PipeMiddle or TileLayer.PipeRight or TileLayer.PipeSurface)
+                return "Hold Shift and drag to fill a rectangle — plain drag places a line";
+
+            return "Drag to place a line, Shift+drag to fill a rectangle — R to rotate";
+        }
+
         private void UpdateHint()
         {
             if (IsRoomCategory)
@@ -156,7 +185,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
-                SelectedObjectHint = "Edit tool active — drag a line, Shift+drag a rectangle to place";
+                SelectedObjectHint = PlacementHint();
                 return;
             }
 

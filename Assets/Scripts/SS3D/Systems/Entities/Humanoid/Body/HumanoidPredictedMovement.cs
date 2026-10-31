@@ -300,7 +300,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             float tickDelta = (float)InstanceFinder.TimeManager.TickDelta;
-            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportAt(transform.position);
+            HumanoidSupportState support = HumanoidSpaceSupport.GetSupportFor(this, transform.position);
             bool wasFloating = _bodyStateMachine.Snapshot.IsFloating;
 
             if (support == HumanoidSupportState.Unsupported
@@ -353,7 +353,11 @@ namespace SS3D.Systems.Entities.Humanoid
                 }
             }
 
-            _characterController.Move(tickDelta * Physics.gravity);
+            // Invincible (map editor setting) walks on open space instead of falling through.
+            if (!EntityInvincibility.IsInvincible(this) || HasPhysicalFloorUnderfoot())
+            {
+                _characterController.Move(tickDelta * Physics.gravity);
+            }
 
             if (md.Horizontal == 0f && md.Vertical == 0f)
             {
