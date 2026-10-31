@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 841301978942452613}
   - component: {fileID: -9197675886749755841}
   - component: {fileID: -21496288779316501}
+  - component: {fileID: 4049554737759759330}
   m_Layer: 0
   m_Name: TableWood
   m_TagString: Untagged
@@ -141,6 +142,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 617431495096137990}
+  - {fileID: 4049554737759759330}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -163,10 +165,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef4340642b9b436498fe733f9329ac87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 9015187684533357890}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 9015187684533357890}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   advancedAdjacency:
     o: {fileID: 3156538240660671990, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
     u: {fileID: -3792656056309247605, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
@@ -240,3 +243,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &4049554737759759330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3879826479501069436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 9015187684533357890}
+  _networkObjectCache: {fileID: 9015187684533357890}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

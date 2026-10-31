@@ -53,7 +53,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 1871071288925904272}
-  _networkObjectCache: {fileID: 1871071288925904272}
+  _networkObjectCache: {fileID: 882123426062975120}
 --- !u!33 &2658310834331958832
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -194,10 +194,11 @@ MonoBehaviour:
   <SceneId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 0
   <IsNested>k__BackingField: 1
-  <ComponentIndex>k__BackingField: 0
+  <ComponentIndex>k__BackingField: 1
   <PredictedSpawn>k__BackingField: {fileID: 0}
-  _networkBehaviours: []
-  <ParentNetworkObject>k__BackingField: {fileID: 0}
+  _networkBehaviours:
+  - {fileID: 135671415768211417}
+  <ParentNetworkObject>k__BackingField: {fileID: 1871071288925904272}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
@@ -223,6 +224,7 @@ GameObject:
   - component: {fileID: 5945353116987889375}
   - component: {fileID: 3080324587266757331}
   - component: {fileID: 4855368590833157609}
+  - component: {fileID: 1825850814943121616}
   m_Layer: 0
   m_Name: NukeCart
   m_TagString: Untagged
@@ -347,9 +349,10 @@ MonoBehaviour:
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
-  - {fileID: 135671415768211417}
+  - {fileID: 1825850814943121616}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
-  <ChildNetworkObjects>k__BackingField: []
+  <ChildNetworkObjects>k__BackingField:
+  - {fileID: 882123426062975120}
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -399,3 +402,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &1825850814943121616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2658310835758749969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 1871071288925904272}
+  _networkObjectCache: {fileID: 1871071288925904272}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

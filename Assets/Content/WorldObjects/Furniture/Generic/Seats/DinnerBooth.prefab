@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 4096528702134766434}
   - component: {fileID: 782853747978071427}
   - component: {fileID: -6968845856118018891}
+  - component: {fileID: 346382583713147092}
   m_Layer: 0
   m_Name: DinnerBooth
   m_TagString: Untagged
@@ -118,6 +119,8 @@ MonoBehaviour:
     i: {fileID: -2434755278463371002, guid: bcf01b0847ef6d843ae7613281a81df1, type: 3}
     lIn: {fileID: 7636616512866037679, guid: bcf01b0847ef6d843ae7613281a81df1, type: 3}
     lOut: {fileID: 6294191644598489861, guid: bcf01b0847ef6d843ae7613281a81df1, type: 3}
+  _syncedRotation: 0
+  _syncedShape: 0
 --- !u!114 &8031370004641457100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -141,6 +144,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 7950383285113202337}
+  - {fileID: 346382583713147092}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -214,3 +218,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &346382583713147092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8085678556641831659}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 8031370004641457100}
+  _networkObjectCache: {fileID: 8031370004641457100}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

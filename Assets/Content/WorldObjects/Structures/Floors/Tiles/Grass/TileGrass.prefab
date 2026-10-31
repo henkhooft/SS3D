@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: -7180308641962958576}
   - component: {fileID: -4307772632025379890}
   - component: {fileID: -1991091970337795908}
+  - component: {fileID: 1237820596194105748}
   m_Layer: 0
   m_Name: TileGrass
   m_TagString: Untagged
@@ -136,7 +137,8 @@ MonoBehaviour:
   <IsNested>k__BackingField: 0
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
-  _networkBehaviours: []
+  _networkBehaviours:
+  - {fileID: 1237820596194105748}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -177,3 +179,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &1237820596194105748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6767447678079105841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: -7180308641962958576}
+  _networkObjectCache: {fileID: -7180308641962958576}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: -7143657189525899312}
   - component: {fileID: -7700000000000000005}
   - component: {fileID: 9000000000000000001}
+  - component: {fileID: 8976738124233632684}
   m_Layer: 0
   m_Name: JukeboxBlueGreen
   m_TagString: Untagged
@@ -124,6 +125,7 @@ MonoBehaviour:
   - {fileID: 8174704186285038031}
   - {fileID: 8272970134100573020}
   - {fileID: 5978761350964980520}
+  - {fileID: 8976738124233632684}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -258,3 +260,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e00534faac6488c47893490f2bf4c5a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &8976738124233632684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6118765911134750290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: 4294524822034227355}
+  _networkObjectCache: {fileID: 4294524822034227355}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

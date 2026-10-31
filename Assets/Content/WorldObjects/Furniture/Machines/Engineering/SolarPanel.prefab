@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 3577732101285028664}
   - component: {fileID: 9011634505326941146}
   - component: {fileID: 4272510853685077838}
+  - component: {fileID: 2708312003898069587}
   m_Layer: 0
   m_Name: SolarPanel
   m_TagString: Untagged
@@ -84,6 +85,7 @@ MonoBehaviour:
   _networkBehaviours:
   - {fileID: 9011634505326941146}
   - {fileID: 4272510853685077838}
+  - {fileID: 2708312003898069587}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -168,6 +170,33 @@ MonoBehaviour:
   _peakPowerKw: 2
   _aimVisual: {fileID: 7886775526105952821}
   _aim: 0
+--- !u!114 &2708312003898069587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 941367499997148975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 2
+  _addedNetworkObject: {fileID: 4708122542983595527}
+  _networkObjectCache: {fileID: 4708122542983595527}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1001 &7708418682501158366
 PrefabInstance:
   m_ObjectHideFlags: 0

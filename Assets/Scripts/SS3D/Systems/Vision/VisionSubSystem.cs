@@ -421,7 +421,8 @@ namespace SS3D.Systems.Vision
                 return true;
 
             PlacedTileObject placed = collider.GetComponentInParent<PlacedTileObject>();
-            if (placed == null)
+            // Identity can still be unset on a pure client mid-spawn.
+            if (placed == null || placed.tileObjectSO == null)
                 return false;
 
             return placed.GenericType switch
