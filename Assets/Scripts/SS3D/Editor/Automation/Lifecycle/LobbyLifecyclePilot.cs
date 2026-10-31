@@ -1347,7 +1347,7 @@ namespace SS3D.Editor.Automation
             public string scope;
         }
 
-        // Own the fixture: the shipped ministation currently has no authored spawns.
+        // Own the fixture: valid and invalid copies of ministation with known spawn records.
         // Never overwrite a tester's station merely to make the lifecycle smoke pass.
         private static void CreateValidationStation(bool valid)
         {
