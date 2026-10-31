@@ -29,6 +29,15 @@ todos:
   - id: docs
     content: "Testing/ui/README.md + AGENTS.md pointer + update-system-docs"
     status: completed
+  - id: playmode-step
+    content: "PlayMode step in validate --full with Testing/ui/playmode-known-issues.txt expected-failures list"
+    status: completed
+  - id: server-build-step
+    content: "Dedicated server build (stale-checked, source-hash stamped) alongside the client in the build step"
+    status: completed
+  - id: smoke-step
+    content: "Multiplayer smoke (run_smoketest.sh CI set) as the last validate --full step"
+    status: completed
 isProject: false
 ---
 
@@ -234,3 +243,16 @@ Xwayland's libei RemoteDesktop portal and asked the owner for permission on ever
 remains only for the client window lookup. `/dev/uinput` access comes from the session's uaccess ACL
 (Steam's udev rule on the owner's machine), so no new sudo rule was needed. Verified by
 `validate-20261030-193923` (remote 17 checks, chat line typed, no portal dialog in the journal).
+
+## Implementation notes — 2026-10-31 (PlayMode, server build, smoke)
+
+`validate --full` is now compile → EditMode → PlayMode → visual → lifecycle → client+server build →
+remote → multiplayer smoke. PlayMode tests could not start at all since Phase 3h; the bootstrap,
+session-restart and dedicated-server-settle fixes that made them run, plus server-side round helpers
+in `TestHelpers` (the uGUI lobby buttons they pressed were purged in Phase F), shipped with it. The
+newly running suite exposed two real bugs, both fixed: a stop during Preparing/WarmingUp was dropped,
+and a late joiner on a server that had already run a round never counted as spawned
+(`ContainerViewedCondition` hit a destroyed object). The passing known-issue repros moved to
+`PlayMode/RegressionTests/`; `playmode-known-issues.txt` lists nothing. The smoke step found an
+intermittent late-join `Selectable.OnStart` NRE (`SelectionSubSystem` not yet spawned) — left open.
+Runbook: [Testing/ui/README.md](../../Testing/ui/README.md#validation-loop-agents-start-here).
