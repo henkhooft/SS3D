@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using FishNet;
 using SS3D.Core;
+using SS3D.Data.Management;
+using SS3D.Data.Persistence;
 using SS3D.UI.Lobby;
 using SS3D.Permissions;
 using SS3D.Systems.Comms;
@@ -59,6 +61,10 @@ namespace SS3D.Editor.Automation
         private static uint _previousStationEpoch;
 
         private const string PilotCharacterName = "Lifecycle Pilot";
+        private const string PilotServerName = "Lifecycle Pilot Station";
+        private const string PilotMotd = "Line one\n\nLine <b>two</b>";
+        private static string _originalServerName;
+        private static string _originalMotd;
         private const float PilotHeight = 0.9f;
         private const float PilotFat = 0.7f;
         private static System.Diagnostics.Process _client;
@@ -404,6 +410,26 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Edit server name and MOTD during an active round",
+                Enter = () =>
+                {
+                    _originalServerName = Rounds().ServerName;
+                    _originalMotd = Rounds().Motd;
+                    Shell().Q<TextField>("server-name").value = PilotServerName;
+                    Shell().Q<TextField>("server-motd").value = "Line one\n\nLine <b>two</b>";
+                },
+                Until = () => Rounds().ServerName == PilotServerName && Rounds().Motd == PilotMotd,
+                Verify = () =>
+                {
+                    Require(LocalStorage.TryReadRaw(PersistencePaths.ServerInfo, out string saved)
+                        && saved.Contains(PilotServerName) && saved.Contains("Line <b>two</b>"), "Server info is saved server-side");
+                    Require(Rounds().PublicMode == "Extended", "Players see the configured mode");
+                    Require(!string.IsNullOrEmpty(Rounds().ServerBuild) && Rounds().ServerStarted <= DateTimeOffset.UtcNow,
+                        "Server build and start time are replicated");
+                },
+            },
+            new Step
+            {
                 Name = "Configured round length ends the round",
                 Timeout = 90,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
@@ -438,6 +464,33 @@ namespace SS3D.Editor.Automation
                 },
             },
             new Step { Name = "Back to Server Info", Enter = () => Click(Shell().Q<Button>("tab-server-info")), Until = () => SecurityChip("H") == null },
+            new Step
+            {
+                Name = "Server Info shows live metadata",
+                Until = () => Shell().Q<Label>("server-info-motd")?.text == PilotMotd,
+                Verify = () =>
+                {
+                    Require(!Shell().Q<Label>("server-info-motd").enableRichText, "MOTD renders tags literally");
+                    Require(Shell().Query<Label>().ToList().Any(l => l.text == PilotServerName.ToUpperInvariant()), "Server Info title is the configured name");
+                    Require(Shell().Q<Label>("server-info-meta").text.StartsWith("build " + Rounds().ServerBuild), "Server Info shows the server build");
+                    Require(!Shell().Query<Label>().ToList().Any(l => l.text.Contains("USS Horizon") || l.text.Contains("0.14.2")),
+                        "No mock server metadata remains");
+                    Capture("server-info-live");
+                },
+            },
+            new Step
+            {
+                Name = "Restore server name and MOTD",
+                Enter = () =>
+                {
+                    ServerSettings original = Rounds().SettingsForServer;
+                    original.ServerName = _originalServerName;
+                    original.Motd = _originalMotd;
+                    Rounds().CmdUpdateServerSetting(ServerSetting.ServerName, original);
+                    Rounds().CmdUpdateServerSetting(ServerSetting.Motd, original);
+                },
+                Until = () => Rounds().ServerName == _originalServerName && Rounds().Motd == _originalMotd,
+            },
             new Step { Name = "Open Chat tab", Enter = () => Click(Shell().Q<Button>("tab-chat")), Until = () => ChatInput() != null },
             new Step
             {

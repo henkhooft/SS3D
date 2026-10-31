@@ -244,6 +244,10 @@ namespace SS3D.UI.Lobby
             }
             _shellView.SetJobs(connected && SubSystems.TryGet(out RoleSubSystem roles)
                 ? roles.Jobs : System.Array.Empty<JobSlotInfo>());
+            if (connected && rounds != null)
+                _shellView.SetServerInfo(rounds.ServerName, rounds.Motd, rounds.PublicMode, rounds.ServerBuild, rounds.ServerStarted);
+            else
+                _shellView.SetServerInfo(null, "", null, "", null);
             _shellView.SetStationLoadState(rounds != null ? rounds.CurrentStationLoadState : StationLoadState.NotLoaded,
                 rounds != null ? rounds.StationName : "");
             bool admin = CanAdmin();

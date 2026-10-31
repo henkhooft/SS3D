@@ -7,5 +7,6 @@ namespace SS3D.Data.Persistence
         public const string ServerMeta = "/ServerMeta";
         public const string ServerMetaPermissions = ServerMeta + "/permissions";
         public const string RoundHistory = ServerMeta + "/round-history";
+        public const string ServerInfo = ServerMeta + "/server-info";
     }
 }

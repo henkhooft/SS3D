@@ -106,6 +106,12 @@ namespace SS3D.UI.Lobby
             AddRoundAction(controls, "Stop Round", "server-stop", RoundAdminAction.Stop, true);
             form.Add(controls);
 
+            form.Add(SectionTitle("Server Info"));
+            AddServerText(form, "Server Name", "server-name", ServerSetting.ServerName, ServerInfoText.MaxNameLength, false,
+                value => _serverSettings.ServerName = value);
+            AddServerText(form, "Message of the Day", "server-motd", ServerSetting.Motd, ServerInfoText.MaxMotdLength, true,
+                value => _serverSettings.Motd = value);
+
             form.Add(SectionTitle("Map & Mode"));
             DropdownField map = new("Map") { name = "server-map" };
             map.AddToClassList("lobby-shell__server-select");
@@ -182,6 +188,20 @@ namespace SS3D.UI.Lobby
             parent.Add(column);
         }
 
+        /// <summary>Commits on Enter (name) or focus loss (both); editable in any round state.</summary>
+        private void AddServerText(VisualElement parent, string label, string name, ServerSetting field, int maxLength,
+            bool multiline, Action<string> update)
+        {
+            TextField input = new(label) { name = name, maxLength = maxLength, multiline = multiline, isDelayed = true };
+            input.AddToClassList("lobby-shell__server-text");
+            input.AddToClassList("font-body");
+            input.EnableInClassList("lobby-shell__server-text--multiline", multiline);
+            input.RegisterValueChangedCallback(e => { update(e.newValue); SaveServerSettings(field); });
+            StyleDarkTextField(input);
+            HoldTextEntry(input);
+            parent.Add(input);
+        }
+
         private static Toggle ServerRule(string text, string name, bool supported, string reason)
         {
             Toggle toggle = new() { name = name, text = text, tooltip = reason };
@@ -238,6 +258,14 @@ namespace SS3D.UI.Lobby
                 length.SetValueWithoutNotify(_serverSettings.RoundLengthMinutes);
             cap.SetEnabled(idle && _hasServerSettings);
             length.SetEnabled(idle && _hasServerSettings);
+            foreach ((string name, string value) in new (string, string)[] { ("server-name", _serverSettings.ServerName), ("server-motd", _serverSettings.Motd) })
+            {
+                TextField text = form.Q<TextField>(name);
+                // Same rule as the number fields: never replace text the admin is editing.
+                if (text.panel?.focusController.focusedElement is not VisualElement textFocus || !text.Contains(textFocus))
+                    text.SetValueWithoutNotify(value ?? "");
+                text.SetEnabled(_hasServerSettings);
+            }
             Toggle late = form.Q<Toggle>("server-late-join");
             late.SetValueWithoutNotify(_serverSettings.AllowLateJoin);
             late.SetEnabled(idle && _hasServerSettings);

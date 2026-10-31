@@ -119,6 +119,45 @@ namespace SS3D.UI.Lobby
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
         }
 
+        private const int ChangelogRows = 4;
+        private const int ChangelogSubjectLength = 40;
+        private string _serverName = "Connecting…";
+        private string _motd = "";
+        private string _serverMode = "—";
+        private string _serverBuild = "";
+        private DateTimeOffset? _serverStarted;
+        private Label _headerServerLabel;
+        private Label _headerModeLabel;
+
+        /// <summary>Public server metadata; the Server Info tab rebuilds only when its text changes.</summary>
+        public void SetServerInfo(string name, string motd, string mode, string build, DateTimeOffset? started)
+        {
+            name = string.IsNullOrEmpty(name) ? "Connecting…" : name;
+            mode = string.IsNullOrEmpty(mode) ? "—" : mode;
+            bool changed = name != _serverName || motd != _motd || mode != _serverMode || build != _serverBuild;
+            _serverName = name;
+            _motd = motd ?? "";
+            _serverMode = mode;
+            _serverBuild = build ?? "";
+            _serverStarted = started;
+            if (_headerServerLabel != null) _headerServerLabel.text = _serverName;
+            if (_headerModeLabel != null) _headerModeLabel.text = _serverMode;
+            if (changed && _activeTab == TabServerInfo) ShowTab(TabServerInfo);
+            else if (_tabContent?.Q<Label>("server-info-meta") is { } meta) meta.text = ServerMetaText();
+        }
+
+        private string ServerMetaText()
+        {
+            string uptime = "—";
+            if (_serverStarted is { } started)
+            {
+                TimeSpan up = DateTimeOffset.UtcNow - started;
+                if (up < TimeSpan.Zero) up = TimeSpan.Zero;
+                uptime = up.TotalHours >= 1 ? $"{(int)up.TotalHours}h {up.Minutes:00}m" : $"{up.Minutes}m";
+            }
+            return string.IsNullOrEmpty(_serverBuild) ? $"up {uptime}" : $"build {_serverBuild} · up {uptime}";
+        }
+
         public void SetJobs(IReadOnlyList<JobSlotInfo> jobs)
         {
             if (_jobs.SequenceEqual(jobs)) return;
@@ -248,12 +287,14 @@ namespace SS3D.UI.Lobby
             VisualElement headerLeft = new();
             headerLeft.AddToClassList("lobby-shell__header-left");
             headerLeft.pickingMode = PickingMode.Ignore;
-            headerLeft.Add(MakeLabel(LobbyMockData.ServerName, "font-body", "text-primary"));
+            _headerServerLabel = MakeLabel(_serverName, "font-body", "text-primary");
+            headerLeft.Add(_headerServerLabel);
             headerLeft.Add(MakeSep());
             _headerMapLabel = MakeLabel("No map loaded", "font-body", "text-secondary");
             headerLeft.Add(_headerMapLabel);
             headerLeft.Add(MakeSep());
-            headerLeft.Add(MakeLabel(LobbyMockData.ModeLabel, "font-body", "text-secondary"));
+            _headerModeLabel = MakeLabel(_serverMode, "font-body", "text-secondary");
+            headerLeft.Add(_headerModeLabel);
             header.Add(headerLeft);
 
             VisualElement headerRight = new();
@@ -547,12 +588,12 @@ namespace SS3D.UI.Lobby
             titleRow.AddToClassList("lobby-shell__server-title-row");
             titleRow.pickingMode = PickingMode.Ignore;
 
-            Label title = new(LobbyMockData.ServerName.ToUpperInvariant());
+            Label title = new(_serverName.ToUpperInvariant()) { enableRichText = false };
             title.AddToClassList("lobby-shell__server-title");
             title.AddToClassList("font-titling");
             titleRow.Add(title);
 
-            Label meta = new($"build {LobbyMockData.BuildVersion} · up {LobbyMockData.UptimeLabel}");
+            Label meta = new(ServerMetaText()) { name = "server-info-meta" };
             meta.AddToClassList("lobby-shell__server-meta");
             meta.AddToClassList("font-terminal");
             titleRow.Add(meta);
@@ -568,7 +609,7 @@ namespace SS3D.UI.Lobby
             VisualElement motdBlock = new();
             motdBlock.AddToClassList("lobby-shell__motd");
             motdBlock.Add(SectionTitle("Message of the Day"));
-            Label motd = new(LobbyMockData.Motd);
+            Label motd = new(_motd) { name = "server-info-motd", enableRichText = false };
             motd.AddToClassList("lobby-shell__inset");
             motd.AddToClassList("font-body");
             motdBlock.Add(motd);
@@ -586,9 +627,9 @@ namespace SS3D.UI.Lobby
                 string.IsNullOrEmpty(_stationName) ? "?" : _stationName.Substring(0, 1).ToUpperInvariant(),
                 mapSwatch: true));
             mapModeRow.Add(BuildSelectCard(
-                LobbyMockData.ModeLabel,
+                _serverMode,
                 "Mode",
-                LobbyMockData.ModeLabel.Length > 0 ? LobbyMockData.ModeLabel[0].ToString().ToUpperInvariant() : "?",
+                _serverMode.Length > 0 ? _serverMode[0].ToString().ToUpperInvariant() : "?",
                 mapSwatch: false));
             mapModeBlock.Add(mapModeRow);
             leftCol.Add(mapModeBlock);
@@ -599,19 +640,33 @@ namespace SS3D.UI.Lobby
             logCol.Add(SectionTitle("Change Log"));
             VisualElement logBox = new();
             logBox.AddToClassList("lobby-shell__inset");
-            foreach (LobbyMockData.ChangelogEntry entry in LobbyMockData.Changelog)
+            // Client build's recent commits; generated from git (see BuildInfo). The pane does not
+            // scroll, so show a few shortened subjects and keep the full text in the tooltip.
+            foreach (BuildInfo.Entry entry in BuildInfo.Current.entries.Take(ChangelogRows))
             {
                 VisualElement row = new();
                 row.AddToClassList("lobby-shell__changelog-row");
-                Label ver = new(entry.Version);
+                row.tooltip = $"{entry.date} — {entry.subject}";
+                Label ver = new(entry.hash);
                 ver.AddToClassList("lobby-shell__changelog-ver");
                 ver.AddToClassList("font-terminal");
-                Label text = new($"— {entry.Text}");
+                string subject = entry.subject.Length > ChangelogSubjectLength
+                    ? entry.subject.Substring(0, ChangelogSubjectLength).TrimEnd() + "…"
+                    : entry.subject;
+                Label text = new($"— {subject}") { enableRichText = false };
                 text.AddToClassList("lobby-shell__changelog-text");
                 text.AddToClassList("font-body");
                 row.Add(ver);
                 row.Add(text);
                 logBox.Add(row);
+            }
+
+            if (BuildInfo.Current.entries.Length == 0)
+            {
+                Label none = new("No change log in this build.");
+                none.AddToClassList("lobby-shell__changelog-text");
+                none.AddToClassList("font-body");
+                logBox.Add(none);
             }
 
             logCol.Add(logBox);

@@ -7,7 +7,7 @@
 
 ## Overview
 
-Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure, area metadata, and authored spawn markers; server meta currently covers admin permissions (with legacy `permissions.txt` import) and append-only round history JSONL. Round-config map pools and round snapshots are planned.
+Layered contributor-based disk persistence for station templates and server meta. `PersistenceSubSystem` orchestrates ordered save/load via `IPersistenceContributor` implementations and wraps payloads in versioned `PersistenceEnvelope` files. Station templates split tilemap structure, area metadata, and authored spawn markers; server meta currently covers admin permissions (with legacy `permissions.txt` import), append-only round history JSONL and the lobby server name/MOTD (`ServerMeta/server-info`, owned by `RoundSubSystem`). Round-config map pools and round snapshots are planned.
 
 ## Start here
 

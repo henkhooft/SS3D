@@ -131,3 +131,7 @@ __pycache__/
 /Assets/AddressableAssetsData.meta
 /Assets/AddressableAssetsData/ProfileDataSourceSettings.asset
 /Assets/AddressableAssetsData/ProfileDataSourceSettings.asset.meta
+
+# Generated from git by BuildInfoGenerator (editor load / player build)
+/Assets/Content/Systems/UI/Lobby/Resources/BuildInfo.json
+/Assets/Content/Systems/UI/Lobby/Resources/BuildInfo.json.meta

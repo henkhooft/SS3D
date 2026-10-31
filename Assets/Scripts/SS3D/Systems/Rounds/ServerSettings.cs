@@ -20,10 +20,13 @@ namespace SS3D.Systems.Rounds
         public int PlayerCap;
         public int RoundLengthMinutes;
         public bool AllowLateJoin;
+        public string ServerName;
+        public string Motd;
 
         public static ServerSettings Default => new()
         {
             Map = "", Mode = "Secret", PlayerCap = 32, RoundLengthMinutes = 90, AllowLateJoin = true,
+            ServerName = ServerInfoText.DefaultName, Motd = ServerInfoText.DefaultMotd,
         };
 
         public bool IsValid => PlayerCap is >= 1 and <= 256
@@ -32,7 +35,7 @@ namespace SS3D.Systems.Rounds
 
     public enum StationLoadState { NotLoaded, Loading, Initializing, Ready, Failed }
 
-    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin }
+    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin, ServerName, Motd }
 
     public enum RoundAdminAction { Start, ForceStart, ExtendTimer, CancelCountdown, Stop }
 
@@ -78,6 +81,12 @@ namespace SS3D.Systems.Rounds
         public void CmdUpdateServerSetting(ServerSetting field, ServerSettings value, NetworkConnection sender = null)
         {
             if (!IsAdministrator(sender)) return;
+            if (field is ServerSetting.ServerName or ServerSetting.Motd)
+            {
+                SaveServerInfo(field, value);
+                SendServerSettings(sender, "Server info saved.");
+                return;
+            }
             // Merge only the edited field with current authoritative data, never an old UI snapshot.
             ServerSettings updated = _serverSettings;
             switch (field)
@@ -107,8 +116,12 @@ namespace SS3D.Systems.Rounds
                 return;
             }
             _serverSettingsError = "";
+            // Name/MOTD have their own path; a whole-form save must not roll them back.
+            settings.ServerName = _serverSettings.ServerName;
+            settings.Motd = _serverSettings.Motd;
             _serverSettings = settings;
             _allowLateJoin = settings.AllowLateJoin;
+            _publicMode = settings.Mode;
             SendServerSettings(sender, "Settings saved for this server session.");
         }
 

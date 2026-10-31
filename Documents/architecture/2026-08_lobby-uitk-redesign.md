@@ -170,7 +170,7 @@ the server retains its permission check. Mock force-start/extend-timer controls 
 removed. Observe is disabled until an observer backend exists. Legacy LobbyCanvas
 roots are disabled at runtime, including after scene reload; asset purge remains Phase F.
 
-Lobby chat (shipped 2026-10-31, below), settings application, server metadata/configuration
+Lobby chat and server metadata (both shipped 2026-10-31, below), settings application
 and networked/persisted character appearance remain subsequent implementation slices.
 The existing visual pilot now checks production legacy suppression instead of doing
 the suppression itself. Runtime/multiplayer verification is required before Phase C
@@ -557,3 +557,39 @@ channel, and unspawned LOOC is refused. Remote pilot: a non-admin client types a
 real OS input, and the host receives it attributed to `remoteprobe`.
 
 Deferred: OOC/LOOC in the in-round comms feed (§7), mute/ban moderation, persistent history.
+
+
+## Server Info metadata — 2026-10-31
+
+The Server Info tab and header no longer use mock data. The owner chose these sources:
+
+- **Server name and MOTD are admin-editable.** They are fields in Server Settings (Server Info
+  section): the name commits on Enter or focus loss, the MOTD on focus loss. Unlike map/mode they
+  can be edited in any round state. The server sanitizes them (single-line name, at most 64
+  characters; MOTD at most 1000 characters, keeping paragraph breaks) and stores them in
+  `ServerMeta/server-info.json` through `LocalStorage`. They load in `RoundSubSystem.OnStartServer`.
+  A whole-form settings save cannot roll them back.
+- **The public mode is the configured mode.** `PublicMode` replicates the admin's pick. Secret
+  stays secret because it only resolves at round start.
+- **Build and uptime are replicated** from the server process: `BuildInfo.Label` (app version
+  plus commit) and the server start time. The client formats the uptime.
+- **The change log comes from git.** `BuildInfoGenerator` (editor) writes the last 6 commit
+  hashes, dates and subjects into a gitignored `Resources/BuildInfo.json`. It regenerates on
+  editor load when HEAD changes and before every player build. The shell shows 4 entries, with
+  subjects shortened to 40 characters and the full text in a tooltip, so the pane stays
+  scroll-free. Without git, as in a container build, the file is kept or absent, and the label
+  falls back to the app version with "No change log in this build". The change log describes the
+  client's own build; the build label shows the server's.
+
+Name, MOTD and change log labels have rich text disabled. Unused mock server/player data was
+removed from `LobbyMockData`; only the placeholder character name and the player-row type remain.
+
+Verification: `ServerInfoTests` covers sanitization and build-info parsing. In the lifecycle
+pilot, an admin edits the name and MOTD during an active round. The pilot checks the saved file,
+the replicated mode/build/start time, and the Server Info tab: live name, literal tags in the
+MOTD, server build, and no mock text. It then restores the original values, because the file is
+real server data. `validate-20261031-081305` passed the full loop (EditMode, visual, lifecycle,
+build, remote); the change log row limit was then rechecked in lifecycle `validate-20261031-081828`.
+
+Deferred: per-server banner art, ping/account-age player fields, and settings application.
+
