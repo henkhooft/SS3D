@@ -57,9 +57,7 @@ namespace SS3D.Systems.Audio
             source.loop = loop;
             source.spatialBlend = 0f; // Non-positional, no occlusion — audio.md §4.
             source.volume = loop ? 0f : 1f; // One-shot cue source keeps a fixed base volume.
-
-            // TODO(audio-foundation Phase 0): route to the MainMixer "Personal" group once it
-            // exists and a runtime-loadable mixer reference is available (same gap as Ambience).
+            source.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.PersonalGroup);
             return source;
         }
 

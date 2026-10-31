@@ -1,8 +1,8 @@
 > Implements: Documents/design/audio.md §7 (volume categories), §10 (levels are a settings concern)
 > Touches systems: rounds-lobby, ui-shell, audio, main-hud (panel scale), rendering (URP quality assets), input
-> Status: planned
+> Status: in-progress
 
-**Progress:** not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
+**Progress:** Phase 1 shipped 2026-10-31 (model + store, boot apply, mixer routing, Sound tab); Phases 2–4 not started. Phases 1–2 count toward [test-server.md](../milestones/test-server.md) T6. Phase 3 is polish outside the gates.
 
 # Player settings: display, audio, controls (Oct 2026)
 
@@ -51,7 +51,16 @@ This effort **absorbs** [2026-07_audio-foundation](2026-07_audio-foundation.md) 
 
 ## Phases
 
-### Phase 1 — Model, persistence, boot apply, audio *(T6)*
+### Phase 1 — Model, persistence, boot apply, audio *(T6)* — **shipped**
+
+Shipped notes (2026-10-31):
+
+- Code: `Assets/Scripts/SS3D/Systems/Settings/` (`PlayerSettings`, `PlayerSettingsStore`, `PlayerAudioMix`, `PlayerSettingsSubSystem`), created first in `SystemsBootstrap.EnsureProcessWideServices`. Tests: `PlayerSettingsStoreTests`, `PlayerAudioMixTests` (EditMode).
+- The runtime-loadable mixer reference is the mixer itself, moved (GUID kept) to `Assets/Content/Systems/Audio/Resources/MainMixer.mixer` and read through `SS3D.Systems.Audio.MainAudioMixer`. Exposed: `MasterVolume`, `MusicVolume`, `SFXVolume`, `AmbienceVolume`, `PersonalVolume`.
+- Also routed: `FootstepAudio`'s code-built source → SFX. Still on Master: `CommsFeedController`'s announce source (category undecided).
+- Mute All and Mute-when-unfocused act on `MasterVolume` only; the five slider values stay as saved.
+- Reset to defaults is a two-click button (the first click turns it into Confirm reset).
+- The Display and Keyboard sub-tabs keep their view-local mockup state until Phases 2–3; only audio moved into the model.
 
 - Write the `PlayerSettings` model and JSON store test-first (`tdd`): round-trip, version field, corrupt-file → `.bak` + defaults, missing and unknown keys.
 - `PlayerSettingsSubSystem`: load and apply at boot, debounced save, skipped when headless.

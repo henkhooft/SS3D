@@ -25,7 +25,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
 - `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs` — footwear footsteps on a **client-local** loop, not the pool (host `Move(default)` clears server locomotion every tick); skips while floating
 - `Boombox.cs`, `NoisyCollision.cs`, `ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs` — jukebox, collision SFX, music swap, listener follow, `Sfx`/`Music`/`Ambient` enum
-- `Assets/Content/Systems/Audio/MainMixer.mixer` — `Ambience`/`SFX`/`Music` groups; `Personal` group and exposed volumes are Phase 0/5, so ambience and personal audio output to Master for now. Pool prefabs: `SFXAudioSource.prefab`, `MusicAudioSource.prefab`.
+- `Assets/Content/Systems/Audio/Resources/MainMixer.mixer` — `Master` → `Music`/`SFX`/`Ambience`/`Personal` groups, each with an exposed volume (`MasterVolume`, `MusicVolume`, `SFXVolume`, `AmbienceVolume`, `PersonalVolume`) driven by `PlayerSettingsSubSystem` ([2026-10_player-settings](../2026-10_player-settings.md)). Pool prefabs (`SFXAudioSource.prefab`, `MusicAudioSource.prefab`) target their groups by reference.
+- `Assets/Scripts/SS3D/Systems/Audio/MainAudioMixer.cs` — runtime handle on the mixer (`Resources.Load`) plus group/parameter names; code-built sources (ambience, personal, footsteps) set `outputAudioMixerGroup` through `FindGroup`
 - Clips, track ids and registration: child map [audio-content](audio-content.md)
 
 ## Extension points
@@ -33,7 +34,9 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - Positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId, position, parent, ...)` (server-only). Route anything that should occlude through the pool.
 - Area ambience: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server). In game, the `areaambience (trackId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
 - Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
-- Not built yet: power-gated ambience, PDA notification cues, lobby music and volume settings (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
+- Code-built `AudioSource`: set `outputAudioMixerGroup = MainAudioMixer.FindGroup(...)` so the player's category slider reaches it. Unrouted sources play under Master only (`CommsFeedController`'s announce source still does).
+- Volume settings: `SubSystems.Get<PlayerSettingsSubSystem>().SetVolume(PlayerVolume, linear)`; never `SetFloat` the exposed volumes from elsewhere, the next settings apply overwrites them.
+- Not built yet: power-gated ambience, PDA notification cues, lobby music (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
 
 ## Pitfalls
 
@@ -48,6 +51,11 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   plenum/airlock-tile colliders on `Default` top out near y=0 — a root-height ray false-positives on
   the floor and muffles every pooled SFX. Sample planar LOS at chest height
   (`AudioSourceOcclusion.OcclusionSampleHeight`) so walls still block and floors don't.
+- **`AudioMixer.SetFloat` is ignored when called from `Awake`.** `PlayerSettingsSubSystem` loads in
+  `OnAwake` but first applies volumes in `OnStart`; an exposed parameter set any earlier silently keeps
+  its snapshot value.
+- **Exposed volumes replace the snapshot value.** The `Ambience` group's snapshot level (≈−10 dB) is
+  overwritten by the Ambience slider at boot. Balance levels in the settings defaults, not the snapshot.
 - **`MainMixer` Master defaults to 0 dB.** The inherited snapshot had Master at ≈−20 dB (~10% linear);
   pooled SFX/Music route through it, so that alone made every diegetic sound inaudibly quiet even with
   clear LOS. Per-category slider balancing stays Phase 5 — don't re-bury Master as a stand-in for it.

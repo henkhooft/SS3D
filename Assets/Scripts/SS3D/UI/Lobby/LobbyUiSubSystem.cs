@@ -10,6 +10,7 @@ using SS3D.Systems.Roles;
 using SS3D.Systems.Roles.Messages;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.Settings;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inventory.Containers;
@@ -66,6 +67,8 @@ namespace SS3D.UI.Lobby
             _menuHandle?.Dispose();
             _menuHandle = null;
             ReleasePortraits();
+            if (_playerSettings != null) _playerSettings.Changed -= HandlePlayerSettingsChanged;
+            _playerSettings = null;
             if (_shellView != null)
             {
                 _shellView.CharacterCreatorRequested -= HandleCharacterCreatorRequested;
@@ -139,6 +142,7 @@ namespace SS3D.UI.Lobby
             };
             _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.ChatSubmitted += HandleChatSubmitted;
+            BindPlayerSettings();
             _shellView.SetCharacterName(_draft.Name);
 
             _creatorView = new CharacterCreatorView(_catalog, _draft, profile?.Characters);
@@ -165,6 +169,23 @@ namespace SS3D.UI.Lobby
             _creatorView.SetVisible(false);
             Debug.Log("[Lobby] UITK Lobby Shell + Character Creator attached (Phase E1 + hair styles).");
         }
+
+        private PlayerSettingsSubSystem _playerSettings;
+
+        /// <summary>The Settings tab edits client-local player settings; no server round trip.</summary>
+        private void BindPlayerSettings()
+        {
+            if (!SubSystems.TryGet(out _playerSettings)) return;
+            PlayerSettingsSubSystem settings = _playerSettings;
+            _shellView.VolumeChanged += settings.SetVolume;
+            _shellView.MuteAllChanged += settings.SetMuteAll;
+            _shellView.MuteWhenUnfocusedChanged += settings.SetMuteWhenUnfocused;
+            _shellView.AudioResetRequested += settings.ResetAudio;
+            settings.Changed += HandlePlayerSettingsChanged;
+            HandlePlayerSettingsChanged();
+        }
+
+        private void HandlePlayerSettingsChanged() => _shellView?.SetAudioSettings(_playerSettings.Settings.Audio);
 
         private float _nextSessionRefresh;
         private bool _inWorld;

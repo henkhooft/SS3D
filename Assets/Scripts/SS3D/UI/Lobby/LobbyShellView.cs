@@ -8,6 +8,7 @@ using SS3D.Systems.IdAccess;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
+using SS3D.Systems.Settings;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -54,12 +55,23 @@ namespace SS3D.UI.Lobby
         private string _openPlayerId;
         private string _resolution = "1920x1080";
         private bool _fullscreen = true;
-        private bool _muted;
         private string _rebindingKey;
+        // Display mockup values until Phase 2 of 2026-10_player-settings moves them into PlayerSettings.
         private readonly Dictionary<string, float> _settingsValues = new()
         {
             ["uiScale"] = 0.5f, ["brightness"] = 0.6f,
-            ["masterVolume"] = 0.8f, ["musicVolume"] = 0.6f, ["sfxVolume"] = 0.8f,
+        };
+        // PlayerSettingsSubSystem's live audio values; the view only reads them and raises intents.
+        private PlayerAudioSettings _audio = new();
+        private bool _raisingAudioIntent;
+        private bool _confirmingAudioReset;
+        private static readonly (PlayerVolume Volume, string Key, string Title)[] VolumeSliders =
+        {
+            (PlayerVolume.Master, "masterVolume", "Master Volume"),
+            (PlayerVolume.Music, "musicVolume", "Music Volume"),
+            (PlayerVolume.Sfx, "sfxVolume", "SFX Volume"),
+            (PlayerVolume.Ambience, "ambienceVolume", "Ambience Volume"),
+            (PlayerVolume.Personal, "personalVolume", "Personal Volume"),
         };
         private static readonly (string Key, string Action, string Binding)[] KeybindDefinitions =
         {
@@ -81,6 +93,21 @@ namespace SS3D.UI.Lobby
         public event Action<bool> RoundChangeRequested;
         public event Action JobPreferencesChanged;
         public event Action<OocChannel, string> ChatSubmitted;
+        public event Action<PlayerVolume, float> VolumeChanged;
+        public event Action<bool> MuteAllChanged;
+        public event Action<bool> MuteWhenUnfocusedChanged;
+        public event Action AudioResetRequested;
+
+        /// <summary>
+        /// Supplies the audio settings to show. Rebuilds an open Sound tab, except for the echo of the view's own
+        /// slider intent (rebuilding mid-drag would drop the drag).
+        /// </summary>
+        public void SetAudioSettings(PlayerAudioSettings audio)
+        {
+            _audio = audio ?? new PlayerAudioSettings();
+            if (!_raisingAudioIntent && _activeTab == TabSettings && _settingsSubTab == "sound" && _tabContent != null)
+                ShowTab(TabSettings);
+        }
 
         public IReadOnlyDictionary<string, JobPriority> JobPriorities => _priorities;
 
@@ -207,6 +234,10 @@ namespace SS3D.UI.Lobby
             ReadyRequested = null;
             RoundChangeRequested = null;
             ServerSettingsChanged = null;
+            VolumeChanged = null;
+            MuteAllChanged = null;
+            MuteWhenUnfocusedChanged = null;
+            AudioResetRequested = null;
             RoundAdminRequested = null;
             JobPreferencesChanged = null;
             _tabBar = null;
@@ -1336,14 +1367,20 @@ namespace SS3D.UI.Lobby
             {
                 case "sound":
                 {
-                    form.Add(SettingsToggle("muted", "Mute All Audio", _muted, value =>
+                    form.Add(SettingsToggle("muted", "Mute All Audio", _audio.MuteAll, value => MuteAllChanged?.Invoke(value)));
+                    form.Add(SettingsToggle("muteUnfocused", "Mute When Unfocused", _audio.MuteWhenUnfocused,
+                        value => MuteWhenUnfocusedChanged?.Invoke(value)));
+                    foreach ((PlayerVolume volume, string key, string title) in VolumeSliders)
                     {
-                        _muted = value;
-                        ShowTab(TabSettings);
-                    }));
-                    form.Add(SettingsSlider("masterVolume", "Master Volume", true, !_muted));
-                    form.Add(SettingsSlider("musicVolume", "Music Volume", true, !_muted));
-                    form.Add(SettingsSlider("sfxVolume", "SFX Volume", true, !_muted));
+                        PlayerVolume target = volume;
+                        form.Add(SettingsSlider(key, title, true, !_audio.MuteAll, _audio.Get(volume), value =>
+                        {
+                            _raisingAudioIntent = true;
+                            try { VolumeChanged?.Invoke(target, value); }
+                            finally { _raisingAudioIntent = false; }
+                        }));
+                    }
+                    form.Add(AudioResetButton());
                     break;
                 }
                 case "keyboard":
@@ -1390,8 +1427,10 @@ namespace SS3D.UI.Lobby
                     StyleDarkTextField(resolution);
                     form.Add(resolution);
                     form.Add(SettingsToggle("fullscreen", "Fullscreen", _fullscreen, value => _fullscreen = value));
-                    form.Add(SettingsSlider("uiScale", "UI Scale", false, true));
-                    form.Add(SettingsSlider("brightness", "Brightness", false, true));
+                    form.Add(SettingsSlider("uiScale", "UI Scale", false, true, _settingsValues["uiScale"],
+                        value => _settingsValues["uiScale"] = value));
+                    form.Add(SettingsSlider("brightness", "Brightness", false, true, _settingsValues["brightness"],
+                        value => _settingsValues["brightness"] = value));
                     break;
                 }
             }
@@ -1413,14 +1452,41 @@ namespace SS3D.UI.Lobby
             return toggle;
         }
 
-        private VisualElement SettingsSlider(string key, string title, bool percentage, bool enabled)
+        /// <summary>Reset to defaults asks once more before acting (Decision 13).</summary>
+        private Button AudioResetButton()
+        {
+            Button reset = null;
+            reset = new Button(() =>
+            {
+                if (!_confirmingAudioReset)
+                {
+                    _confirmingAudioReset = true;
+                    reset.text = "CONFIRM RESET";
+                    return;
+                }
+                _confirmingAudioReset = false;
+                AudioResetRequested?.Invoke();
+                ShowTab(TabSettings);
+            })
+            {
+                name = "settings-reset-audio",
+                text = _confirmingAudioReset ? "CONFIRM RESET" : "RESET TO DEFAULTS",
+            };
+            reset.AddToClassList("lobby-shell__btn");
+            reset.AddToClassList("lobby-shell__btn--settings-reset");
+            reset.AddToClassList("font-titling");
+            return reset;
+        }
+
+        private VisualElement SettingsSlider(string key, string title, bool percentage, bool enabled, float value,
+            Action<float> changed)
         {
             VisualElement field = new();
             field.AddToClassList("lobby-shell__settings-slider-field");
             field.Add(SettingsLabel(title));
             VisualElement row = new();
             row.AddToClassList("lobby-shell__settings-slider-row");
-            Slider slider = new(0f, 1f) { name = "settings-" + key, value = _settingsValues[key] };
+            Slider slider = new(0f, 1f) { name = "settings-" + key, value = value };
             slider.AddToClassList("lobby-shell__settings-slider");
             VisualElement fill = new() { pickingMode = PickingMode.Ignore };
             fill.AddToClassList("lobby-shell__settings-slider-fill");
@@ -1433,7 +1499,7 @@ namespace SS3D.UI.Lobby
             number.AddToClassList("lobby-shell__settings-number");
             slider.RegisterValueChangedCallback(evt =>
             {
-                _settingsValues[key] = evt.newValue;
+                changed(evt.newValue);
                 number.text = Display(evt.newValue);
                 fill.style.width = Length.Percent(evt.newValue * 100f);
             });
@@ -1462,6 +1528,7 @@ namespace SS3D.UI.Lobby
             Button btn = new(() =>
             {
                 _rebindingKey = null;
+                _confirmingAudioReset = false;
                 _settingsSubTab = key;
                 ShowTab(TabSettings);
             })

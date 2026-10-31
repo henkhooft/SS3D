@@ -6,6 +6,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.UIElements;
 
 namespace SS3D.Editor.Automation
@@ -110,6 +111,30 @@ namespace SS3D.Editor.Automation
         // here, fail explicitly if it changes, and restore the user's selected size.
         private static EditorWindow GameView() => EditorWindow.GetWindow(
             typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView", true));
+
+        // Mirrors of PlayerSettings' file shape; this editor assembly does not reference the runtime ones.
+        [Serializable]
+        private sealed class SavedSettings
+        {
+            public SavedAudio Audio;
+        }
+
+        [Serializable]
+        private sealed class SavedAudio
+        {
+            public float Master;
+            public float Music;
+            public bool MuteAll;
+        }
+
+        /// <summary>Flushes PlayerSettingsSubSystem's debounced save so the pilot can read the file back.</summary>
+        private static bool SavePlayerSettingsNow()
+        {
+            foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+                if (behaviour.GetType().Name == "PlayerSettingsSubSystem")
+                    return (bool)behaviour.GetType().GetMethod("SaveNow").Invoke(behaviour, null);
+            return false;
+        }
 
         private static PropertyInfo GameViewSizeProperty() => GameView().GetType().GetProperty(
             "selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -313,15 +338,29 @@ namespace SS3D.Editor.Automation
                     break;
                 case 9: Submit(shell, "SOUND"); break;
                 case 10:
-                    Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().Count == 3, "Sound has three volume sliders");
+                    Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().Count == 5,
+                        "Sound has Master, Music, SFX, Ambience and Personal sliders");
+                    Require(shell.Q<Toggle>("settings-muteUnfocused") != null, "Sound has Mute When Unfocused");
                     shell.Q<Slider>("settings-masterVolume").value = 0.35f;
+                    shell.Q<Slider>("settings-musicVolume").value = 0.5f;
                     shell.Q<Toggle>("settings-muted").value = true;
                     break;
                 case 11:
+                {
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().All(s => !s.enabledInHierarchy), "Mute disables volume sliders");
                     Require(shell.Q<Label>("settings-value-masterVolume").text == "35", "Sound slider readout updates");
+                    AudioMixer mixer = Resources.Load<AudioMixer>("MainMixer");
+                    Require(mixer.GetFloat("MusicVolume", out float musicDb) && Mathf.Abs(musicDb - -6.02f) < 0.05f,
+                        "Music slider drives the mixer's MusicVolume");
+                    Require(mixer.GetFloat("MasterVolume", out float masterDb) && masterDb <= -80f, "Mute All silences MasterVolume");
+                    Require(SavePlayerSettingsNow(), "Player settings save");
+                    string settingsPath = Path.Combine(SessionState.GetString(OutputKey, ""), "settings.json");
+                    SavedAudio saved = JsonUtility.FromJson<SavedSettings>(File.ReadAllText(settingsPath)).Audio;
+                    Require(Mathf.Approximately(saved.Master, 0.35f) && Mathf.Approximately(saved.Music, 0.5f) && saved.MuteAll,
+                        "Audio settings persist to the pilot's settings.json");
                     Capture("00-settings-muted");
                     break;
+                }
                 case 12: shell.Q<Toggle>("settings-muted").value = false; break;
                 case 13:
                     Require(shell.Query<Slider>(className: "lobby-shell__settings-slider").ToList().All(s => s.enabledInHierarchy), "Unmute restores volume controls");

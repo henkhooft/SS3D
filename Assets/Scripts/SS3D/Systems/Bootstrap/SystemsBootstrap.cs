@@ -5,6 +5,7 @@ using SS3D.SceneManagement;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.ScreenEffects;
+using SS3D.Systems.Settings;
 using SS3D.Systems.Testing;
 using SS3D.Systems.Vision;
 using SS3D.Systems.WorldReadiness;
@@ -70,6 +71,8 @@ namespace SS3D.Systems.Bootstrap
             // ApplicationInitializerSubSystem.OnStart. Create ApplicationInitializer last in this batch.
             EnsureSubSystemType(NetworkSessionTypeName);
             EnsureSubSystemType(CommandLineArgsTypeName);
+            // Saved player settings are applied before the intro and lobby (2026-10_player-settings).
+            EnsureSubSystem<PlayerSettingsSubSystem>();
             EnsureSubSystem<SceneSubSystem>();
             EnsureSubSystem<InputSubSystem>();
             EnsureSubSystem<WorldReadinessSubSystem>();

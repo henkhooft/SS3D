@@ -1,4 +1,5 @@
 using SS3D.Systems.Tile;
+using SS3D.Systems.Audio;
 using UnityEngine;
 
 namespace SS3D.Systems.StructuralDamage
@@ -118,6 +119,7 @@ namespace SS3D.Systems.StructuralDamage
                 _hissSource.rolloffMode = AudioRolloffMode.Linear;
                 _hissSource.minDistance = 1f;
                 _hissSource.maxDistance = 12f;
+                _hissSource.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.SfxGroup);
             }
 
             if (_hissSource.isPlaying && _hissSource.clip == _crackedHiss)

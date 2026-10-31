@@ -1,5 +1,6 @@
 using Coimbra;
 using System.Collections;
+using SS3D.Systems.Audio;
 using UnityEngine;
 
 namespace SS3D.Systems.StructuralDamage
@@ -92,6 +93,7 @@ namespace SS3D.Systems.StructuralDamage
             _audio.rolloffMode = AudioRolloffMode.Linear;
             _audio.minDistance = 2f;
             _audio.maxDistance = 40f;
+            _audio.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.SfxGroup);
 
             _core = FindOrCreateBurst("FireballCore", isSmoke: false, catalog);
             _smoke = FindOrCreateBurst("FireballSmoke", isSmoke: true, catalog);

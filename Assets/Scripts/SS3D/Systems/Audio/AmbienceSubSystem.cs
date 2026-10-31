@@ -52,10 +52,7 @@ namespace SS3D.Systems.Audio
             source.loop = true;
             source.spatialBlend = 0f; // Non-positional — audio.md §2, unlike diegetic SFX (§3).
             source.volume = 0f;
-
-            // TODO(audio-foundation Phase 0): route to the MainMixer "Ambience" group once a
-            // runtime-loadable mixer reference exists; currently outputs to Master like any
-            // AudioSource with no explicit OutputAudioMixerGroup.
+            source.outputAudioMixerGroup = MainAudioMixer.FindGroup(MainAudioMixer.AmbienceGroup);
             return source;
         }
 

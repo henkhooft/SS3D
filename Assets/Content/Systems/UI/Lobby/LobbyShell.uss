@@ -330,6 +330,18 @@
     background-color: var(--lobby-btn-blue-hover);
 }
 
+.lobby-shell__btn--settings-reset {
+    align-self: flex-start;
+    height: 40px;
+    padding: 0 24px;
+    margin-top: 8px;
+    background-color: var(--lobby-btn-blue);
+}
+
+.lobby-shell__btn--settings-reset:hover {
+    background-color: var(--lobby-btn-blue-hover);
+}
+
 .lobby-shell__btn--admin {
     flex-grow: 1;
     height: 40px;
