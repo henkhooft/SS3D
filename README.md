@@ -32,6 +32,7 @@ Each square is one slice of the goal: ✅ done · 🟡 partly there · ⬜ not s
 | Where the game is at, in plain language | [ROADMAP.md](ROADMAP.md) |
 | What diverged from upstream | [Documents/FORK_STATUS.md](Documents/FORK_STATUS.md) |
 | What to build next (playable gates) | [Documents/milestones/](Documents/milestones/) |
+| Install/update a release build | [Tools/updater/README.md](Tools/updater/README.md) |
 | Find code by system | [Documents/architecture/INDEX.md](Documents/architecture/INDEX.md) |
 | Gameplay what/why | [Documents/design/](Documents/design/) |
 | Doc authoring rules | [Documents/SKILL.md](Documents/SKILL.md) |
