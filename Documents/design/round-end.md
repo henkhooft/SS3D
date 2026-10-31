@@ -57,7 +57,7 @@ A round ends when one canonical thing becomes true, mirroring the single-trigger
   (`round-config.md` §2). A bounded fallback so a stalled round still concludes; the gamemode
   decides what a timeout means for its outcome. A gamemode may set its own length in a later pass.
 - **An admin ends it** — an out-of-band manual end, always available, invoked through `admin-tools.md` §6.
-- **The evacuation shuttle completes its journey** — arrives at its rendezvous, or is lost en route
+- **The evacuation shuttle completes its journey** — arrives at CentCom
   — the common path for any gamemode that resolves through evacuating rather than a bespoke win
   check, **once shuttles exist** (`shuttles.md`). §3 defines the full call/countdown/arrival
   sequence this trigger runs on. Until then, rounds end on the first three triggers.
@@ -67,46 +67,40 @@ The first three fire once, from an instantaneous check. The fourth is deliberate
 fixed at that instant from the facts already on record (objectives, deaths, antagonist status).
 Nothing is rolled after the trigger.
 
-## 3. The evacuation shuttle — call, countdown, point of no return
+## 3. The evacuation shuttle — call, two countdowns, point of no return
 
-The direct answer to the dependency both `shuttles.md` §9 and `objectives.md` §7 flag against this
-doc: shuttles supplies the physical vehicle with real dock/undock/transit/collision behavior
-(`shuttles.md` §2–§6); this doc is what actually calls it, counts down to its departure, and defines
-the instant nothing more can be done about who made it aboard.
+Shuttles supplies the physical vehicle (`shuttles.md` §9); this section is what calls it, counts
+down to its arrival and its departure, and defines the instant nothing more can be done about who
+made it aboard. The flow follows SS13's: the shuttle has to come to the station before it can take
+anyone away.
 
-**Calling the shuttle is a physical interaction, not a menu command.** A call console — a diegetic
-device screen in the same family as every other console in this project (`hacking-interface.md`
-§2) — sited at a fixed station location. Any crew member can interact with it to call the shuttle;
-per `shuttles.md` §5's own precedent for the evac shuttle's open, non-access-gated helm, gating the
-call itself would just relocate the same problem one step earlier, so this doc keeps the call
-symmetric with the helm: no credential required. **Flagged as a recommendation, not locked.**
+**Calling the shuttle is a physical interaction, not a menu command.** A call console sited at a
+fixed station location. Any crew member can use it — no credential required, so a station whose
+heads are dead can still leave. **Flagged as a recommendation, not locked.**
 
-**A visible countdown starts on call** — a real timer, shown at the console and as an alert-stack
-entry (the same hidden-until-relevant precedent `shuttles.md` §8 already sets), not a hidden clock.
-**Recall is available for the length of the countdown** — a second interaction at the same console,
-cancelling it and returning to normal round state, available to any crew member exactly as calling
-was, plus an admin override at any time (§2).
+**1. Arrival countdown.** A call starts a visible countdown — at the console, as an alert-stack
+entry, and as a station announcement (`comms.md` §8). **Recall** is available for its whole length,
+by any crew member at the same console, plus an admin at any time (§2). When it ends, the shuttle
+arrives and docks at the station's evac dock.
 
-**The countdown reaching zero is the point of no return.** Two things happen atomically at that
-instant:
+**2. Departure countdown.** Once docked, a shorter countdown runs while the crew board. It can't be
+recalled — the shuttle is here.
 
-- The shuttle undocks and autopilot engages, per `shuttles.md` §3's clamp/seal model run in reverse
-  and §4's automated piloting.
-- **Whoever is physically aboard at that instant is locked in as the escape roster, for good.**
-  Recall is no longer possible; a player not aboard at this instant has missed it, full stop, no
-  grace period. Nobody joins the roster later.
+**3. Departure is the point of no return.** Two things happen at that instant:
 
-**The shuttle then transits for real** — `shuttles.md` §4's automated piloting, §6's real collision,
-and §9's own worked example of a hijacked, manually-flown, potentially crashed evac run all apply
-exactly as that doc already specifies. Round end doesn't end at the point of no return; it ends
-when the shuttle's journey actually concludes.
+- The doors close and the shuttle undocks and leaves along its route (`shuttles.md` §9).
+- **Whoever is physically aboard at that instant is locked in as the escape roster, for good.** A
+  player not aboard at this instant has missed it, full stop, no grace period. Nobody joins the
+  roster later.
 
-**Arrival (or loss) is what fires §2's "evacuation completes" trigger.** The shuttle reaching its
-rendezvous point, or being destroyed en route, is that trigger. **Escape succeeds for whoever is on
-the roster and still alive and aboard at arrival** — the one rule `objectives.md` §7 resolves
-against; anyone who
-died during transit — a hijacker's crash, sabotage along the way — simply isn't alive at that
-check, the same as anywhere else in this project death is checked (`health.md` §4).
+**4. Transit and arrival.** The shuttle travels to CentCom. Its arrival is what fires §2's
+"evacuation completes" trigger. **Escape succeeds for whoever is on the roster and still alive and
+aboard at arrival** — the one rule `objectives.md` §7 resolves against. Anyone who died during
+transit simply isn't alive at that check, the same as anywhere else death is checked
+(`health.md` §4).
+
+In the first pass the transit is scripted (`shuttles.md` §1): nobody can steer, hijack or crash the
+shuttle on the way. A hijacked evac run is a later pass (`shuttles.md` §9).
 
 ## 4. The reveal
 
@@ -164,16 +158,16 @@ antagonists still revealed (secrecy is spent regardless of who "won"). Transitio
 whatever state exists at that moment — a real read, even of an incomplete round — and the transition
 returns to the lobby.
 
-**Evacuation shuttle called, hijacked, and crashed:**
+**Evacuation, first pass:**
 
 | Step | What happens | Round state |
 |---|---|---|
-| 1 | A crew member interacts with the call console | Countdown starts, visible at the console and on the alert stack |
-| 2 | Most of the crew boards before the countdown reaches zero; two stragglers don't make it | Countdown expires — point of no return: shuttle undocks, autopilot engages, the boarded roster locks in |
-| 3 | An antagonist aboard takes manual control at the open helm and rams the shuttle into a station structure (`shuttles.md` §9) | Real collision resolves; the struck Area breaches; several aboard take impact damage |
-| 4 | The antagonist is removed from the helm; autopilot re-engages and resumes toward the rendezvous | Shuttle, damaged but flying, continues its real transit |
-| 5 | Shuttle reaches the rendezvous point | This doc's "evacuation completes" trigger (§2) fires; outcome fixes from whoever's alive and aboard at this instant |
-| 6 | Round end resolves | Escape objectives (`objectives.md` §7) read true for survivors still aboard, false for the two who missed the countdown; the crash and both stragglers' fates appear in the summary's Notable fates (§5) |
+| 1 | A crew member uses the call console | Arrival countdown starts, announced station-wide |
+| 2 | The countdown ends | The shuttle docks at the evac dock; the departure countdown starts |
+| 3 | Most of the crew boards; two stragglers don't make it | Departure — point of no return: doors close, the boarded roster locks |
+| 4 | Transit | Scripted; nobody can steer or board |
+| 5 | The shuttle arrives at CentCom | "Evacuation completes" (§2) fires; outcome fixes from whoever's on the roster and alive |
+| 6 | Round end resolves | Escape objectives (`objectives.md` §7) read true for survivors aboard, false for the two stragglers; both appear in the summary's Notable fates (§5) |
 
 ## 8. Integration notes
 
@@ -186,8 +180,8 @@ returns to the lobby.
 | Death/clone fates in the summary | `death-cloning-respawn.md` §2, §5 |
 | Return to pre-round flow | `lobby.md` §3, §7 |
 | Admin manual end | `admin-tools.md` §6 (invocation point; this doc defines the trigger's effect) |
-| Evac call console | New — diegetic device-screen pattern (`hacking-interface.md` §2) |
-| Evac shuttle physical behavior | `shuttles.md` §2–§6, §9 |
+| Evac call console | A station console, any crew may use it |
+| Evac shuttle physical behavior | `shuttles.md` §1 (first pass), §9 |
 | Escape objective's resolution moment | `objectives.md` §7 (this doc supplies the instant its check reads) |
 
 ## 9. Out of scope for this pass

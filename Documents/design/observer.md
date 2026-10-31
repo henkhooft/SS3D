@@ -28,7 +28,7 @@ The ghost in this pass is the minimal version of §3:
 - it **can't interact** with anything;
 - it **can't speak to the living** — out-of-character chat (`comms.md` §7) is the only channel it has.
 
-Follow-lock, the dead-chat channel (§4), possession (§5) and the defib reconnection (§6) are later passes.
+Follow-lock, the dead-chat channel (§4) and possession (§5) are later passes.
 
 ## 3. The ghost's screen
 
@@ -61,11 +61,9 @@ One event: a ghost's consciousness attaches to an available body. Ghost state en
 
 **Leaving a possessed body** works exactly like dying does — detaches back to ghost state per §2, no special penalty beyond having lost that body.
 
-## 6. Reconnection — defibrillation before commitment
+## 6. No defibrillator reconnection
 
-Per `death-cloning-respawn.md` §3, defib can revive a body within its window. If the ghost hasn't triggered *any* possession event yet — still free-flying, hasn't accepted a clone, become-AI/cyborg, or a ghost-role body — a successful defib on their own original body pulls them straight back in automatically, no prompt needed, since there's no ambiguity about whose body it still is.
-
-If the ghost has already committed elsewhere before defib succeeds, the original body still revives per death/cloning's own rules — it just comes back empty, a live but unoccupied body in the world. This doc flags that edge case rather than leaving it silently implicit, but the actual handling of an unoccupied-but-alive body belongs to `death-cloning-respawn.md` to formalize, the same way `ai-cyborgs.md` §7 flagged its own amendment back to that doc rather than letting two documents quietly disagree.
+A ghost exists only once the body has died — brain function at zero (§2, `health.md` §4). That's past the point a defibrillator can help (`death-cloning-respawn.md` §3): defib works in the window between the heart stopping and brain death, while the player is still in their body. So a ghost is never pulled back into their original body by a defib; the ways back are the possession paths in §5 (cloning) and, where the server allows it, respawn (`death-cloning-respawn.md` §6).
 
 ## 7. Integration notes
 
@@ -77,7 +75,6 @@ If the ghost has already committed elsewhere before defib succeeds, the original
 | Observe entry | `lobby.md` §7 |
 | Dead chat | One more channel in the chat feed, `comms.md` §5 |
 | Ghost-role body stats/behavior | Whatever system spawned it (e.g. `crafting.md` §3 fabricator job-state) |
-| Defib-before-commitment reconnection | `death-cloning-respawn.md` §3 |
 | Round end | `round-end.md` §5 paints its summary over ghosts and the living alike |
 
 ## 8. Worked examples
@@ -100,22 +97,12 @@ If the ghost has already committed elsewhere before defib succeeds, the original
 | 3 | Confirms "Possess this body?" | Possession fires; player now controls the drone with its real existing stats — limited tool loadout, no vitals, real battery drain |
 | 4 | Drone runs out of charge and shuts down in a maintenance tunnel | Detaches back to ghost state, no penalty beyond losing that body |
 
-**Defib before commitment:**
-
-| Step | What happens | Ghost state |
-|---|---|---|
-| 1 | Player dies from blood loss | Ghost state begins |
-| 2 | Player stays close, watching, hasn't accepted any prompt | Still uncommitted |
-| 3 | A medic reaches the body in time and defibs successfully within the window | No possession event has fired yet |
-| 4 | Reconnection is automatic | Player is pulled straight back into their own revived body; ghost state ends without ever presenting a prompt |
-
 ## 9. Out of scope for this pass
 
 - Exact roster of ghost-role body types (drones, mice, pAIs, hostile simple mobs, etc.) and their individual stat blocks — a content/balancing pass, not a mechanic
 - Any future method for the living to detect or perceive ghosts (a medium-type ability, a specific antagonist power) — this pass commits to fully invisible and undetectable; a later addition would need its own justification against §1
 - Admin/staff observer tooling (godmode, jump-to-player, stealth observation) — designed in `admin-tools.md` §4, built on this doc's ghost framework
-- Full handling of a defib-revived-but-unoccupied body (AI takeover, NPC behavior, etc.) — flagged in §6, belongs to `death-cloning-respawn.md` to formalize
 - Ghost cosmetic customization (appearance, trail effects, etc.) — no gameplay weight
-- Follow-lock, dead chat, possession and defib reconnection — later passes after the first pass in §2
+- Follow-lock, dead chat and possession — later passes after the first pass in §2
 - The round-end summary screen and transition logic itself — this doc only supplies the camera/state framework round-end will use; the content and transition mechanics are `round-end.md`'s job
 

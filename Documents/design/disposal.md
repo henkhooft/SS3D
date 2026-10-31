@@ -14,23 +14,23 @@ Same split the electricity doc found in its own domain applies here almost exact
 Two rules fall out:
 
 1. **An item entering the network is a real object on a real path**, not a state flag that resolves after a timer. It can be found mid-transit if the pipe carrying it is cut open.
-2. **One shared routing technique, not a new one.** Junctions resolve destinations using the same BFS/connectivity approach Area's boundary detection, the lighting system's room-adjacency traversal, and electricity's backbone connectivity already share (`area.md` §3, `rendering-lighting.md`, `electricity.md` §1) — a fourth consumer of one technique, not a bespoke pathfinding system.
+2. **Routing follows the pipes, not a lookup.** A junction forwards an item down whichever connected branch leads to its tag's destination — the same "what's physically connected" logic as the cable network (`electricity.md` §3), not a bespoke pathfinding system.
 
 ## 2. The disposal unit (chute)
 
-A physical hopper/funnel machine, placed in departments and public areas. Dropping an item in is the same Tier 3 combine interaction already used for freeform construction and general item-on-object actions (`crafting.md` §2) — no new gesture to learn.
+A physical hopper/funnel machine, placed in departments and public areas. Dropping an item in is a plain interaction: drag it onto the chute, or use it on the chute.
 
 **Sized by size class, not by an "item" flag.** The chute's accept check keys off inventory's five-tier size-class field (`inventory-storage.md` §4) rather than a type tag. This is entirely for §8's benefit: when player-sized transit lands later, a body just needs to pass the same size check an oversized item would, rather than the entry point being redesigned around it.
 
-**Some units are ID-locked.** A secure evidence chute in Security, for instance, reuses the exact ID-locked-crate pattern from Cargo — another entry in the FDU's existing device taxonomy (`cargo.md` §5, `hacking-interface.md` §3) rather than a bespoke lock.
+**Some units are ID-locked.** A secure evidence chute in Security, for instance, uses the same ID lock as a cargo crate or a locker (`cargo.md` §5, `id-access.md` §6) rather than a bespoke lock.
 
 ## 3. The pipe network — physical distribution
 
-**Pipe segments are real, placeable, cuttable tile objects**, laid via the same freeform construction action cable already uses (`electricity.md` §3, `crafting.md` §2's Tier 3 combine grammar), consuming a pipe-segment material with the same "real, countable physical stock" treatment as cable coil (`crafting.md` §5).
+**Pipe segments are real, placeable, cuttable tile objects.** Use a stack of pipe segments on a floor tile to lay one, the same way cable coil lays cable (`electricity.md` §3); cut it with the same tool. Map authors place pipe in the Map Editor (`creative-mode.md` §4).
 
 **Visible, not buried.** Recommend running pipe along walls and ceilings in maintenance corridors as an observable industrial fixture — glass-paneled sections where practical — rather than hidden entirely under the floor. This matters for the same reason electricity's cable is a real object instead of an abstract graph edge: a player should be able to look at a pipe run and reason about where it goes, and watching a package visibly travel past is worth the modest art cost.
 
-**Junctions route by tag.** A junction reads the destination tag on whatever's currently passing through it (§4) and forwards it down the correct branch using the shared BFS/connectivity technique from §1 — the fourth consumer of that one technique in this project.
+**Junctions route by tag.** A junction reads the destination tag on whatever's currently passing through it (§4) and forwards it down the correct connected branch (§1).
 
 **Cutting a segment is real sabotage.** Same tool interaction as cutting cable. Whatever's currently in transit through that segment spills out physically at the cut, immediately — no hidden loss, no percentage chance of recovery. This directly enables the detection loop in §7.
 
@@ -44,7 +44,9 @@ At or near a chute, a quick tagger interaction lets a player attach a destinatio
 
 ## 5. Transit
 
-An item entering the network becomes a real object riding along the routed pipe path at a visible, reasonably brisk pace — not a physics simulation inside the pipe, a lightweight "move along this spline toward the next junction" behavior, the same restraint electricity showed choosing connectivity-and-flow over full circuit simulation (`electricity.md` §1).
+An item entering the network rides along the routed pipe path at a reasonably brisk pace — not a physics simulation inside the pipe.
+
+**First pass: transit is hidden.** In this pass items travel out of sight and reappear at the far end; they're still really in the pipe, so cutting a segment spills whatever is in it (§3). **Seeing a package travel past** a glass-paneled section is a later pass.
 
 **Travel time scales with real distance along the routed path** — a package tagged for the far side of the station takes longer than one dropped a few rooms from its destination, the same "real transit time, not a teleport" principle the cargo shuttle's round trip already established (`cargo.md` §6).
 
@@ -55,7 +57,7 @@ An item entering the network becomes a real object riding along the routed pipe 
 The main, untagged outlet sits at a physical location in or adjacent to cargo bay — deliberate placement, not incidental, because it's what makes this doc worth designing rather than just flavor.
 
 **Two real fates for arriving waste:**
-- **Unclaimed after a short grace window** — physically ejected into space. Permanent and honest: if you throw something away and nobody intervenes, it's actually gone, not quietly despawned.
+- **Unclaimed after a short grace window** — physically ejected as a **real object**: out into space through the outlet's ejector, or onto the floor at the outlet if it has none. It never quietly despawns. If you throw something away and nobody intervenes, it's out there — drifting in space, or sitting at the outlet — not deleted.
 - **Intercepted before ejection** — cargo or mining crew can sweep unclaimed disposal contents onto the export pad instead, feeding directly into Cargo's existing exporting loop (`cargo.md` §7): same appraisal, same ledger line, no new economy mechanic. This is the concrete payoff of the two systems sharing a location — routing junk through disposal instead of hand-carrying it to the export pad becomes a real, faster option, and untagged trash that would otherwise be silently discarded becomes a passive trickle of income if anyone bothers to catch it.
 
 Tagged packages arriving at a department outlet simply sit there for pickup — no special handling beyond that.
@@ -88,12 +90,11 @@ No new permanent chrome.
 
 | Disposal element | Touches existing / needed system |
 |---|---|
-| Pipe segment as physical object | Cable/backbone precedent (`electricity.md` §3) |
-| Pipe material | Material-stock precedent (`crafting.md` §5) |
-| Chute drop-in interaction | Tier 3 combine grammar (`crafting.md` §2) |
-| Junction routing | Shared BFS/connectivity technique — fourth consumer (`area.md` §3, `rendering-lighting.md`, `electricity.md` §1) |
+| Pipe segment as physical object | Same laying and cutting as cable (`electricity.md` §3); Map Editor placement (`creative-mode.md` §4) |
+| Chute drop-in interaction | Plain drag or use-on (§2) |
+| Junction routing | Physical connectivity, like the cable network (`electricity.md` §3) |
 | Package tag / destination label | Examine system (`examine.md` §5, §7); manifest-as-physical-property precedent (`cargo.md` §5) |
-| Locked/secure disposal unit | ID/access system, FDU device taxonomy reuse (`hacking-interface.md` §3, `cargo.md` §5) |
+| Locked/secure disposal unit | ID/access check (`id-access.md` §6), same lock as cargo crates (`cargo.md` §5) |
 | Outlet → export pad | Cargo's exporting & selling loop (`cargo.md` §7) |
 | Mid-transit interception / sabotage | Same cable-cut detection pattern (`electricity.md` §6) |
 | Phase 2 ejection into space | Existing vacuum-exposure hazard, reused not redesigned |

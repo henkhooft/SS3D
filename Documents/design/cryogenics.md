@@ -2,6 +2,13 @@
 
 > Status: deferred
 
+**Changed by the 2026-10 review.** This doc is deferred and its body predates the review. These points no longer hold or have moved; read them before building on anything below:
+
+- A disconnected player's body stays where it is, asleep, for the whole round, and they can reclaim it any time (`networking.md` §3). There is no automatic move to cryo after a grace period (§4 here).
+- The reactor is deferred (`electricity.md` §2); don't lean on its gauge.
+- The crew manifest needs the PDA, which is also deferred.
+- **Believable first pass:** a voluntary pod. Entering it removes the character and their inventory, frees their job slot, and lets them resume later in the round.
+
 Resolves a gap flagged three times without ever being designed: `combat.md` once name-checked "cryo" alongside cloning and respawn as a distinct, very SS13-specific system worth its own pass; `death-cloning-respawn.md` §10 draws the line explicitly — "a genuinely separate 'pause' mechanic, not a revival path, and worth its own pass"; `chemistry.md` §5 goes further and deliberately builds this doc's own physical primitive early ("a real, trackable temperature value on a container... so that pass wouldn't have to invent one from scratch"), flagged again in §13's out-of-scope list. This is that pass.
 
 ## 1. Design philosophy

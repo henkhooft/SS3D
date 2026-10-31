@@ -35,7 +35,7 @@ Same test as always: is this genuinely good design, or a BYOND-era artifact? App
 
 ## 3. The network — physical distribution
 
-**Cable is a real object**, laid tile-by-tile using cable coil — already an established crafting material (`crafting.md` §5) — through the same freeform construction action used for everything else placed by hand (`crafting.md` §2, Tier 3 combine grammar). Wirecutters remove it. This is construction/destruction gameplay, not a UI puzzle — worth distinguishing explicitly from the hacking interface's device screen, which deliberately has "no wires to trace-and-connect in the UI" (`hacking-interface.md` §7). That rule is about a screen not becoming a minigame; it says nothing about whether real cable exists as a placeable, cuttable object in the world. It does, and always has since §5 of crafting already listed it as a material.
+**Cable is a real object.** Use a cable coil on a floor tile to lay a segment; it joins any cable on the neighbouring tiles. Wirecutters cut it. Map authors place cable in the Map Editor (`creative-mode.md` §4). This is construction and destruction gameplay in the world, not a puzzle on a screen.
 
 **One kind of cable.** As in SS13, there's a single cable type. Generators, SMES units and APCs all connect to the same network; an APC wired straight to a generator works.
 
@@ -93,7 +93,7 @@ A live, exposed, or damaged cable (or a device with a compromised ground, e.g. a
 
 No new permanent chrome, same discipline as every doc in this project.
 
-- Reactor, SMES, and APC interaction all reuse the diegetic device-screen pattern already established for fabricators and diagnostic devices (`hacking-interface.md` §2, `crafting.md` §6) — a screen you're looking at in the world, not a full takeover.
+- Reactor, SMES, and APC interaction use machine screens, which replace the HUD while open (`main-hud.md` §4).
 - Gauges (heat, charge, output) are physical readouts on the object itself, per §2 and §4 — nothing duplicated into a UI panel.
 - A player losing local power gets no special power-specific alert icon; the existing lighting-state transition (`rendering-lighting.md` §10) and any equipment simply failing to respond are the feedback. Consistent with "if the world can carry the information, it should" rather than adding a fourth alert to the existing stack (`main-hud.md` §9).
 
@@ -105,7 +105,7 @@ No new permanent chrome, same discipline as every doc in this project.
 | Lighting channel, Normal/Emergency/Dark cascade | `rendering-lighting.md` §4, §10 |
 | Equipment channel | `crafting.md` §3 (fabricator power draw), any other Area-resident machine |
 | Environment channel | `area.md` §4 (atmospherics, deliberately decoupled but adjacent) |
-| Cable as physical object | `crafting.md` §5 (cable coil material), §2 (freeform construction) |
+| Cable as physical object | Laid with cable coil, cut with wirecutters (§3); Map Editor placement (`creative-mode.md` §4) |
 | Backbone/APC network diagram | `hacking-interface.md` §3, §6 (network panel reads real topology) |
 | Electrocution | `health.md` §2 (per-limb burn damage, reused not redesigned) |
 | Shuttle power | `shuttles.md` §7 (shuttle's own generator/APC — a small-scale instance of §2 and §4 here) |
