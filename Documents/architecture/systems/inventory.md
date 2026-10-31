@@ -67,6 +67,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Pitfalls
 
+- **Placed items sank into the floor:** `ItemUtility.Place` lifted the item, then `TryPlaceItem` was handed the raw surface point and `PlacedItemObject.Create` moved it back down (centre-pivot items such as medkits clipped). `Place` now rests collider bounds on the surface after rotation; callers pass `item.transform` pose to `TryPlaceItem`. Hit 2026-10-31.
 - **Client Main HUD item icons never update:** `HumanInventory.AddContainer` (server-only) used to be the only place that subscribed `AttachedContainer.OnContentsChanged` → `OnContainerContentChanged`. Pure clients get containers via the SyncList and never subscribed, so pickup/equip refreshed nothing on the gear strip. Wire contents in `SyncInventoryContainerChange` / `OnStartClient` via `SubscribeContainerContents` (idempotent `-=` then `+=`). Hit 2026-07-26.
 - **`Couldn't get player ckey` on pickup:** `PickupInteraction` used `Hands.Inventory.Body.Mind` — `Hands.Inventory` is only set on the owning client. Resolve ckey from `Entity.Mind.player` (and set `Hands.Inventory` on server in `HumanInventory.OnStartServer`). Do not wrap in a bare `catch`. Hit 2026-07-26.
 - **Green outline baked into HUD icons:** `RemoveInteractionOutlines` must `DestroyImmediate` on the preview clone — Coimbra `Dispose` → end-of-frame `Destroy`, but the icon camera renders same frame while hover shells are still enabled. Hit 2026-07-26.
