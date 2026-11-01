@@ -197,5 +197,33 @@ namespace SS3D.Tests.EditMode
         {
             Assert.AreEqual(expected, RoundEndWarnings.For(secondsLeft));
         }
+    
+        [Test]
+        public void RespawnCooldown_CountsFromDeath()
+        {
+            SS3D.Systems.Entities.RespawnCooldown cooldown = new();
+            Assert.AreEqual(0, cooldown.SecondsLeft("a", 100, 30), "Never died: no wait");
+
+            cooldown.RecordDeath("a", 100);
+            Assert.AreEqual(30, cooldown.SecondsLeft("a", 100, 30));
+            Assert.AreEqual(1, cooldown.SecondsLeft("a", 129.5, 30));
+            Assert.AreEqual(0, cooldown.SecondsLeft("a", 130, 30));
+            Assert.AreEqual(0, cooldown.SecondsLeft("b", 100, 30), "Cooldowns are per player");
+
+            cooldown.RecordDeath("a", 200);
+            Assert.AreEqual(30, cooldown.SecondsLeft("a", 200, 30), "A second death restarts it");
+            cooldown.Clear();
+            Assert.AreEqual(0, cooldown.SecondsLeft("a", 200, 30));
+        }
+
+        [Test]
+        public void RespawnRules_RefuseUntilEverythingHolds()
+        {
+            Assert.IsNotNull(SS3D.Systems.Entities.RespawnRules.Refusal(enabled: false, roundOngoing: true, isGhost: true, secondsLeft: 0));
+            Assert.IsNotNull(SS3D.Systems.Entities.RespawnRules.Refusal(true, false, true, 0));
+            Assert.IsNotNull(SS3D.Systems.Entities.RespawnRules.Refusal(true, true, false, 0));
+            StringAssert.Contains("5 seconds", SS3D.Systems.Entities.RespawnRules.Refusal(true, true, true, 5));
+            Assert.IsNull(SS3D.Systems.Entities.RespawnRules.Refusal(true, true, true, 0));
+        }
     }
 }

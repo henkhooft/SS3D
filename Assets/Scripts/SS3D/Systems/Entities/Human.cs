@@ -131,7 +131,9 @@ namespace SS3D.Systems.Entities
 			GameObject originEntityGameObject = originEntity.gameObject;
 			originEntityGameObject.GetComponent<Hands>()?.Dispose(true);
 			originEntityGameObject.GetComponent<HumanInventory>()?.Dispose(true);
-			originEntityGameObject.GetComponent<InteractionController>()?.Dispose(true);
+            // CombatInteractionNetwork requires InteractionController, so Unity refuses to remove it.
+            if (originEntityGameObject.TryGetComponent(out InteractionController interactions))
+                interactions.enabled = false;
 			originEntityGameObject.GetComponent<StaminaController>()?.Dispose(true);
 			originEntityGameObject.GetComponent<HumanoidController>()?.Dispose(true);
             originEntityGameObject.GetComponent<HumanoidLivingController>()?.Dispose(true);
@@ -166,6 +168,7 @@ namespace SS3D.Systems.Entities
             {
                 ServerManager.Spawn(_spawnedGhost);
                 BecomeGhost(gameObject, _spawnedGhost);
+                entitySystem.RecordPlayerDeath(GetComponentInParent<Entity>(), _spawnedGhost.GetComponent<Entity>());
             }
             else
             {

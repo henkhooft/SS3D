@@ -109,7 +109,8 @@ namespace SS3D.Systems.Entities
             origin.SetMind(targetMind);
             target.SetMind(originMind);
 
-            if (origin.Owner != null)
+            // SetMind(null) leaves an invalid (-1) owner on the body, which can't take a FirstObject.
+            if (origin.Owner != null && origin.Owner.IsValid)
             {
                 origin.Owner.SetFirstObject(origin.NetworkObject);
                 if (InstanceFinder.ServerManager?.Objects != null)
@@ -118,7 +119,7 @@ namespace SS3D.Systems.Entities
                 }
             }
 
-            if (target.Owner != null)
+            if (target.Owner != null && target.Owner.IsValid)
             {
                 target.Owner.SetFirstObject(target.NetworkObject);
                 if (InstanceFinder.ServerManager?.Objects != null)

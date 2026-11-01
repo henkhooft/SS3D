@@ -1,4 +1,9 @@
 using System.Linq;
+using FishNet;
+using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid;
+using UnityEngine;
+using UnityEngine.InputSystem;
 using SS3D.Core;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Tile;
@@ -46,6 +51,16 @@ namespace SS3D.Editor.Automation
             } });
         }
 
+        private static Human _corpse;
+
+        private static RespawnPrompt Prompt() => SubSystems.Get<EntitySubSystem>().GetComponent<RespawnPrompt>();
+
+        private static bool LocalEntityIsGhost() =>
+            SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local()) is { } entity
+            && entity.GetComponent<HumanoidGhostController>() != null;
+
+        private static Vector3 Flat(Vector3 position) => new(position.x, 0, position.z);
+
         private static string SidebarSub() => Shell()?.Q<Label>(className: "lobby-shell__countdown-sub")?.text;
 
         private static Step[] BuildSandboxSteps() => new Step[]
@@ -70,6 +85,7 @@ namespace SS3D.Editor.Automation
                     ServerSettings settings = SandboxProfile.Apply(Rounds().SettingsForServer);
                     settings.Map = _validationStation;
                     settings.RoundLengthMinutes = 2;
+                    settings.RespawnCooldownSeconds = 8;
                     Rounds().ApplyServerSettingsForTesting(settings);
                 },
                 Until = () => Rounds().AutoStartSecondsLeft > 0 && SidebarSub() == "Starting In",
@@ -88,15 +104,74 @@ namespace SS3D.Editor.Automation
                 Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && Spawned(),
                 Verify = () =>
                 {
+                    // Let the body finish starting on the client before it dies.
+                    Settle(2);
                     Require(SubSystems.Get<SS3D.Systems.Gamemodes.GamemodeSubSystem>().CurrentGamemodeName == "Extended", "Sandbox rounds run Extended");
                     Require(Rounds().StationName == _validationStation, "Auto-start restored the selected station");
                 },
             },
             new Step
             {
-                Name = "Map edit during the sandbox round",
+                Name = "Body finishes starting",
+                Until = Settled,
+            },
+            new Step
+            {
+                Name = "Host dies and becomes a ghost with a respawn countdown",
+                Enter = () =>
+                {
+                    _corpse = (Human)SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local());
+                    _corpse.Kill();
+                },
+                Until = () => LocalEntityIsGhost() && Prompt().IsShown,
+                Verify = () =>
+                {
+                    Require(!Prompt().CanRespawn, "Respawn button waits for the cooldown");
+                    Require(!SubSystems.Get<EntitySubSystem>().TryRespawn(InstanceFinder.ClientManager.Connection, out string refusal)
+                        && refusal.StartsWith("You can respawn in"), "Server refuses a respawn during the cooldown");
+                    Capture("sandbox-ghost-respawn-prompt");
+                },
+            },
+            new Step
+            {
+                Name = "Ghost opens the map editor",
+                Enter = () => TapKey(Key.B),
+                Until = MapEditorActive,
+            },
+            new Step
+            {
+                Name = "Ghost edits the map",
                 Enter = EditEmptySpawnTile,
                 Until = () => UnsavedMapEdits() && MapEditSpawnPresent(),
+                Verify = () => Capture("sandbox-ghost-editing"),
+            },
+            new Step
+            {
+                Name = "Ghost closes the map editor",
+                Enter = () => TapKey(Key.B),
+                Until = () => !MapEditorActive() && Settled(),
+                Verify = () => Require(LocalEntityIsGhost(), "Still a ghost after closing the editor"),
+            },
+            new Step
+            {
+                Name = "Respawn button enables after the cooldown",
+                Timeout = 20,
+                Until = () => Prompt().CanRespawn,
+            },
+            new Step
+            {
+                Name = "Respawn gives a fresh body at a spawn point; the corpse stays",
+                Enter = () => Click(Root().Q<Button>("respawn-prompt-button")),
+                Until = () => Spawned() && !LocalEntityIsGhost() && !Prompt().IsShown,
+                Verify = () =>
+                {
+                    Entity body = SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local());
+                    Require(body is Human && body != _corpse, "Respawned into a new Human");
+                    Require(_corpse != null && _corpse.gameObject.activeInHierarchy, "The corpse stays where it fell");
+                    Vector3 spawn = SubSystems.Get<TileSubSystem>().SpawnPoints.Records[0].Position;
+                    Require(Vector3.Distance(Flat(body.transform.position), Flat(spawn)) < 1.5f, "New body stands at a spawn point");
+                    Capture("sandbox-respawned");
+                },
             },
             new Step
             {
@@ -113,6 +188,8 @@ namespace SS3D.Editor.Automation
                 Verify = () =>
                 {
                     Require(!AutosaveExists(), "No round-end autosave with persistence off");
+                    Require(UnityEngine.Object.FindObjectsByType<Human>(FindObjectsSortMode.None).Length == 0,
+                        "No bodies or corpses survive the reset");
                     ServerSettings settings = Rounds().SettingsForServer;
                     settings.RoundLengthMinutes = 1;
                     Rounds().ApplyServerSettingsForTesting(settings);
