@@ -105,6 +105,8 @@ namespace SS3D.Systems.Rounds
         [Server]
         private void FailStationLoad(string message)
         {
+            // Also log it: a dedicated server has no lobby UI to show the reason, and the round just drops to Stopped.
+            Log.Warning(this, "Round start aborted: {reason}", Logs.ServerOnly, message);
             _serverSettingsError = message;
             _stationLoadState = StationLoadState.Failed;
             RoundState = RoundState.Stopped;
