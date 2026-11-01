@@ -136,6 +136,7 @@ namespace SS3D.UI.Lobby
             _shellView.Attach(modalLayer);
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
+            _shellView.QuitRequested += HandleQuitRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
             _shellView.ServerSettingsChanged += (field, settings) =>
             {
@@ -145,9 +146,9 @@ namespace SS3D.UI.Lobby
             {
                 if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdRoundAdminAction(action);
             };
-            _shellView.MapStartResolved += (token, choice, name) =>
+            _shellView.MapStopResolved += (token, choice, name) =>
             {
-                if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdResolveMapStart(token, choice, name);
+                if (CanAdmin() && SubSystems.TryGet(out RoundSubSystem rounds)) rounds.CmdResolveMapStop(token, choice, name);
             };
             _shellView.JobPreferencesChanged += SendJobPreferences;
             _shellView.ChatSubmitted += HandleChatSubmitted;
@@ -186,8 +187,8 @@ namespace SS3D.UI.Lobby
         private bool _menuBlurred;
 
         /// <summary>
-        /// Blurs the world behind the in-round (Escape) menu. Writes only on open/close so it never clears a blur a
-        /// machine panel set while the menu stayed shut.
+        /// Blurs the world behind the lobby, both between rounds and as the in-round (Escape) menu. Writes only on
+        /// open/close so it never clears a blur a machine panel set while the menu stayed shut.
         /// </summary>
         private void SetMenuBlur(bool open)
         {
@@ -283,7 +284,8 @@ namespace SS3D.UI.Lobby
             BindToggleMenu(SubSystems.TryGet(out InputSubSystem input) ? input : null);
             bool visible = connected && (!spawned || _menuOpen);
             bool holdMenu = visible && spawned;
-            SetMenuBlur(holdMenu);
+            // Blur whatever world sits behind the lobby, in a round (Escape menu) or not.
+            SetMenuBlur(visible);
             if (holdMenu && _menuHandle == null && _inputSystem != null) _menuHandle = _inputSystem.PushContext(InputContext.Menu);
             else if (!holdMenu && _menuHandle != null)
             {
@@ -341,11 +343,9 @@ namespace SS3D.UI.Lobby
                 if (rounds.HasAdminSettings)
                     _shellView.SetServerSettings(rounds.AdminSettings, rounds.AdminMaps, rounds.AdminSettingsStatus);
             }
-            bool mapPrompt = connected && admin && rounds != null
-                && rounds.CurrentRoundState is RoundState.Stopped or RoundState.Ended;
-            _shellView.SetMapStartPrompt(mapPrompt ? rounds.MapStartToken : 0,
-                mapPrompt ? rounds.MapStartSelectedMap : "", mapPrompt ? rounds.MapStartEditingMap : "",
-                mapPrompt ? rounds.MapStartError : "");
+            bool mapPrompt = connected && admin && rounds != null && rounds.CurrentRoundState == RoundState.Ongoing;
+            _shellView.SetMapStopPrompt(mapPrompt ? rounds.MapStopToken : 0,
+                mapPrompt ? rounds.MapStopEditingMap : "", mapPrompt ? rounds.MapStopError : "");
             LobbyMockData.PlayerRow[] rows = connected ? players.OnlinePlayers.Where(p => p != null)
                 .Select(p => new LobbyMockData.PlayerRow(p.Ckey, p.Ckey, ready != null && ready.IsReady(p),
                     null, "—", "—", "—")).ToArray() : System.Array.Empty<LobbyMockData.PlayerRow>();
@@ -442,6 +442,15 @@ namespace SS3D.UI.Lobby
         {
             if (CanAdmin() && InstanceFinder.ClientManager.Started)
                 InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(start));
+        }
+
+        private static void HandleQuitRequested()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         private void HandleReadyRequested()

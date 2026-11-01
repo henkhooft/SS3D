@@ -93,6 +93,7 @@ namespace SS3D.UI.Lobby
 
         public event Action CharacterCreatorRequested;
         public event Action ReadyRequested;
+        public event Action QuitRequested;
         public event Action<bool> RoundChangeRequested;
         public event Action JobPreferencesChanged;
         public event Action<OocChannel, string> ChatSubmitted;
@@ -213,8 +214,6 @@ namespace SS3D.UI.Lobby
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
         }
 
-        private const int ChangelogRows = 4;
-        private const int ChangelogSubjectLength = 40;
         private string _serverName = "Connecting…";
         private string _motd = "";
         private string _serverMode = "—";
@@ -285,7 +284,7 @@ namespace SS3D.UI.Lobby
             _root.Add(window);
 
             BuildChrome(window);
-            _root.Add(BuildMapStartPrompt());
+            _root.Add(BuildMapStopPrompt());
             _root.Add(BuildDisplayPrompt());
             _toast = new Label { name = "lobby-toast", pickingMode = PickingMode.Ignore };
             _toast.AddToClassList("lobby-shell__toast");
@@ -324,9 +323,9 @@ namespace SS3D.UI.Lobby
             KeyCaptureRequested = null;
             KeyCaptureCancelled = null;
             ControlsResetRequested = null;
-            MapStartResolved = null;
-            _mapStartPrompt = null;
-            _mapStartToken = 0;
+            MapStopResolved = null;
+            _mapStopPrompt = null;
+            _mapStopToken = 0;
             _displayPrompt = null;
             _displayPromptText = null;
             _toast = null;
@@ -540,8 +539,47 @@ namespace SS3D.UI.Lobby
             row.Add(_adminButton);
 
             actions.Add(row);
+            actions.Add(BuildQuitButton());
             sidebar.Add(actions);
             return sidebar;
+        }
+
+        /// <summary>
+        /// Quits the game. The first click arms it and the second quits, so a stray click in the
+        /// in-round menu can't drop the player out; moving the pointer away disarms it.
+        /// </summary>
+        private Button BuildQuitButton()
+        {
+            const string idleText = "QUIT GAME";
+            const string armedText = "CLICK AGAIN TO QUIT";
+            bool armed = false;
+            Button quit = null;
+            quit = new Button(() =>
+            {
+                if (!armed)
+                {
+                    armed = true;
+                    quit.text = armedText;
+                    quit.AddToClassList("lobby-shell__btn--quit-armed");
+                    return;
+                }
+
+                QuitRequested?.Invoke();
+            })
+            {
+                name = "lobby-quit",
+                text = idleText,
+            };
+            quit.RegisterCallback<PointerLeaveEvent>(_ =>
+            {
+                armed = false;
+                quit.text = idleText;
+                quit.RemoveFromClassList("lobby-shell__btn--quit-armed");
+            });
+            quit.AddToClassList("lobby-shell__btn");
+            quit.AddToClassList("lobby-shell__btn--quit");
+            quit.AddToClassList("font-titling");
+            return quit;
         }
 
         private void RefreshSidebar()
@@ -759,33 +797,71 @@ namespace SS3D.UI.Lobby
             leftCol.Add(mapModeBlock);
             bodyGrid.Add(leftCol);
 
+            bodyGrid.Add(BuildChangelog());
+            information.Add(bodyGrid);
+        }
+
+        /// <summary>
+        /// The client build's change log (see <see cref="BuildInfo"/>): merged PR titles grouped under
+        /// the release that shipped them, newest first. Rows open the PR on GitHub; the header link
+        /// opens the releases page.
+        /// </summary>
+        private static VisualElement BuildChangelog()
+        {
+            BuildInfo.Data info = BuildInfo.Current;
+
             VisualElement logCol = new();
             logCol.AddToClassList("lobby-shell__changelog-col");
-            logCol.Add(SectionTitle("Change Log"));
-            VisualElement logBox = new();
-            logBox.AddToClassList("lobby-shell__inset");
-            // Client build's recent commits; generated from git (see BuildInfo). The pane does not
-            // scroll, so show a few shortened subjects and keep the full text in the tooltip.
-            foreach (BuildInfo.Entry entry in BuildInfo.Current.entries.Take(ChangelogRows))
+
+            VisualElement header = new();
+            header.AddToClassList("lobby-shell__changelog-header");
+            header.Add(SectionTitle("Change Log"));
+            if (info.ReleasesUrl is { } releasesUrl)
             {
+                header.Add(ExternalLink("All releases ↗", releasesUrl, "changelog-releases-link"));
+            }
+
+            logCol.Add(header);
+
+            ScrollView logBox = new(ScrollViewMode.Vertical) { name = "changelog-list" };
+            logBox.AddToClassList("lobby-shell__inset");
+            logBox.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+
+            string currentRelease = null;
+            foreach (BuildInfo.Entry entry in info.entries)
+            {
+                string release = entry.release ?? string.Empty;
+                if (release != currentRelease)
+                {
+                    currentRelease = release;
+                    Label group = new(release.Length > 0 ? $"v{release}" : "In development");
+                    group.AddToClassList("lobby-shell__changelog-group");
+                    group.AddToClassList("font-titling");
+                    logBox.Add(group);
+                }
+
                 VisualElement row = new();
                 row.AddToClassList("lobby-shell__changelog-row");
-                row.tooltip = $"{entry.date} — {entry.subject}";
-                Label ver = new(entry.hash);
+                row.tooltip = entry.date;
+                Label ver = new(entry.pr > 0 ? $"#{entry.pr}" : entry.hash);
                 ver.AddToClassList("lobby-shell__changelog-ver");
                 ver.AddToClassList("font-terminal");
-                string subject = entry.subject.Length > ChangelogSubjectLength
-                    ? entry.subject.Substring(0, ChangelogSubjectLength).TrimEnd() + "…"
-                    : entry.subject;
-                Label text = new($"— {subject}") { enableRichText = false };
+                Label text = new(entry.subject) { enableRichText = false };
                 text.AddToClassList("lobby-shell__changelog-text");
                 text.AddToClassList("font-body");
                 row.Add(ver);
                 row.Add(text);
+
+                if (entry.Url(info.repository) is { } url)
+                {
+                    row.AddToClassList("lobby-shell__changelog-row--link");
+                    row.RegisterCallback<ClickEvent>(_ => Application.OpenURL(url));
+                }
+
                 logBox.Add(row);
             }
 
-            if (BuildInfo.Current.entries.Length == 0)
+            if (info.entries.Length == 0)
             {
                 Label none = new("No change log in this build.");
                 none.AddToClassList("lobby-shell__changelog-text");
@@ -794,8 +870,16 @@ namespace SS3D.UI.Lobby
             }
 
             logCol.Add(logBox);
-            bodyGrid.Add(logCol);
-            information.Add(bodyGrid);
+            return logCol;
+        }
+
+        private static Label ExternalLink(string text, string url, string name)
+        {
+            Label link = new(text) { name = name, tooltip = url };
+            link.AddToClassList("lobby-shell__link");
+            link.AddToClassList("font-body");
+            link.RegisterCallback<ClickEvent>(_ => Application.OpenURL(url));
+            return link;
         }
 
         private static VisualElement BuildSelectCard(string name, string kind, string initial, bool mapSwatch)

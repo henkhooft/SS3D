@@ -36,7 +36,7 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
-            return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Open);
+            return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Lock);
         }
 
         public bool CanInteract(InteractionEvent interactionEvent)

@@ -31,8 +31,6 @@ namespace SS3D.Systems.Atmospherics.Pipes
     [RequireComponent(typeof(ElectricDeviceAdjacencyConnector))]
     public sealed class AirAlarmController : NetworkBehaviour
     {
-        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-        static readonly int LuminId = Shader.PropertyToID("_Lumin");
 
         [SerializeField]
         private BasicPowerConsumer _powerConsumer;
@@ -70,14 +68,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
         private PlacedTileObject _tileObject;
         private AreaId _areaId;
         private bool _hasArea;
-        private readonly List<Renderer> _emissiveRenderersToUpdate = new();
-        private MaterialPropertyBlock _emissivePropertyBlock;
-        private bool _hasLumin;
-        private bool _hasEmission;
-        private float _poweredLumin;
-        private Color _poweredEmission;
-        private float _lastEmissiveLumin = float.NaN;
-        private Color _lastEmissiveEmissionColor = Color.clear;
+        private EmissiveMaterialSlots _emissiveSlots;
         private Color _alarmEmission = new(1f, 0.15f, 0.1f, 1f);
         private bool _powerEventsSubscribed;
 
@@ -353,89 +344,23 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         private void CacheEmissiveMaterials()
         {
-            _emissiveRenderersToUpdate.Clear();
-            _hasLumin = false;
-            _hasEmission = false;
-            _poweredLumin = 0f;
-            _poweredEmission = Color.black;
-            if (_emissiveRenderers == null)
-                return;
-
-            foreach (Renderer renderer in _emissiveRenderers)
-            {
-                if (renderer == null)
-                    continue;
-
-                Material[] sharedMaterials = renderer.sharedMaterials;
-                bool hasEmissiveMaterial = false;
-                for (int i = 0; i < sharedMaterials.Length; i++)
-                {
-                    Material sharedMaterial = sharedMaterials[i];
-                    if (sharedMaterial == null || !sharedMaterial.IsKeywordEnabled("_EMISSION"))
-                        continue;
-
-                    hasEmissiveMaterial = true;
-
-                    if (!_hasLumin && sharedMaterial.HasProperty(LuminId))
-                    {
-                        _poweredLumin = sharedMaterial.GetFloat(LuminId);
-                        _hasLumin = true;
-                    }
-
-                    if (!_hasEmission && sharedMaterial.HasProperty(EmissionColorId))
-                    {
-                        _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
-                        _hasEmission = true;
-                    }
-                }
-
-                if (hasEmissiveMaterial)
-                {
-                    _emissiveRenderersToUpdate.Add(renderer);
-                }
-            }
+            _emissiveSlots ??= new EmissiveMaterialSlots();
+            _emissiveSlots.Cache(_emissiveRenderers, material => material.IsKeywordEnabled("_EMISSION"));
         }
 
         private void RefreshVisuals()
         {
+            if (_emissiveSlots == null)
+                CacheEmissiveMaterials();
+
             bool powered = IsPowered();
             bool alarming = _alarmState != AirAlarmState.None;
-            float lumin = powered ? (alarming ? _poweredLumin : _poweredLumin * 0.35f) : 0f;
-            Color emission = powered
-                ? (alarming ? _alarmEmission : _poweredEmission * 0.35f)
-                : Color.black;
-
-            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
-                && _lastEmissiveEmissionColor == emission)
-            {
-                return;
-            }
-
-            _lastEmissiveLumin = lumin;
-            _lastEmissiveEmissionColor = emission;
-
-            foreach (Renderer renderer in _emissiveRenderersToUpdate)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                _emissivePropertyBlock ??= new MaterialPropertyBlock();
-                renderer.GetPropertyBlock(_emissivePropertyBlock);
-
-                if (_hasLumin)
-                {
-                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
-                }
-
-                if (_hasEmission)
-                {
-                    _emissivePropertyBlock.SetColor(EmissionColorId, emission);
-                }
-
-                renderer.SetPropertyBlock(_emissivePropertyBlock);
-            }
+            if (!powered)
+                _emissiveSlots.ApplyPowered(false);
+            else if (alarming)
+                _emissiveSlots.ApplyEmissionOverride(1f, _alarmEmission);
+            else
+                _emissiveSlots.Apply(0.35f, Color.white * 0.35f);
         }
 
         private bool IsPowered() => AtmosPortPower.IsPowered(_powerConsumer);

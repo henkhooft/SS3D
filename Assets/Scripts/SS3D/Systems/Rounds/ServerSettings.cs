@@ -132,7 +132,7 @@ namespace SS3D.Systems.Rounds
             switch (action)
             {
                 case RoundAdminAction.Start when CurrentRoundState is RoundState.Stopped or RoundState.Ended:
-                    RequestPlayerRoundStart(sender);
+                    RequestRoundStateChange(new ChangeRoundStateMessage(true));
                     break;
                 case RoundAdminAction.ForceStart when IsWarmingUp:
                     _forceStart = true;
@@ -144,7 +144,7 @@ namespace SS3D.Systems.Rounds
                     CancelCountdown();
                     break;
                 case RoundAdminAction.Stop when IsOngoing:
-                    RequestRoundEnd();
+                    RequestPlayerRoundStop(sender);
                     break;
             }
         }
@@ -154,7 +154,10 @@ namespace SS3D.Systems.Rounds
         protected override void CancelCountdown()
         {
             base.CancelCountdown();
-            RestoreEditorAfterCancelledStart();
+            if (_stationLoadState is StationLoadState.Loading or StationLoadState.Initializing)
+            {
+                _stationLoadState = StationLoadState.NotLoaded;
+            }
         }
 
         [Server]
@@ -173,7 +176,7 @@ namespace SS3D.Systems.Rounds
         {
             AdminSettings = settings;
             AdminMaps = maps;
-            if (!string.IsNullOrEmpty(status) || !HasAdminSettings) AdminSettingsStatus = status;
+            AdminSettingsStatus = status;
             HasAdminSettings = true;
         }
     }

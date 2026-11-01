@@ -7,6 +7,7 @@ namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
     /// Bottom-left worn-equipment doll: head/eyes/face-cover/ears on top, gloves/shirt/feet below.
+    /// Gloves and feet are one slot each, covering both the left and right containers.
     /// Click transfers with the active hand; drag participates in storage-panel cross-surface DnD.
     /// </summary>
     public class EquipmentGrid : VisualElement
@@ -17,9 +18,8 @@ namespace SS3D.UI.MainHud.Components
             Eyes,
             Face,
             Ears,
-            GloveLeft,
+            Gloves,
             Shirt,
-            GloveRight,
             Feet,
         }
 
@@ -32,9 +32,8 @@ namespace SS3D.UI.MainHud.Components
         private readonly InventorySlot _eyes;
         private readonly InventorySlot _face;
         private readonly InventorySlot _ears;
-        private readonly InventorySlot _gloveLeft;
+        private readonly InventorySlot _gloves;
         private readonly InventorySlot _shirt;
-        private readonly InventorySlot _gloveRight;
         private readonly InventorySlot _feet;
 
         private Slot? _dragSlot;
@@ -48,14 +47,13 @@ namespace SS3D.UI.MainHud.Components
             _eyes = CreateSlot(Slot.Eyes, "Eyes", icons.Eyes);
             _face = CreateSlot(Slot.Face, "Face Cover", icons.Face);
             _ears = CreateSlot(Slot.Ears, "Ears", icons.Ears);
-            _gloveLeft = CreateSlot(Slot.GloveLeft, "Left Glove", icons.HandLeft);
+            _gloves = CreateSlot(Slot.Gloves, "Gloves", icons.Gloves);
             _shirt = CreateSlot(Slot.Shirt, "Shirt", icons.Shirt);
-            _gloveRight = CreateSlot(Slot.GloveRight, "Right Glove", icons.HandRight);
             _feet = CreateSlot(Slot.Feet, "Feet", icons.Feet);
 
             Add(BuildRow(BuildSpacer(), _head, BuildSpacer()));
             Add(BuildRow(_eyes, _face, _ears));
-            Add(BuildRow(_gloveLeft, _shirt, _gloveRight));
+            Add(BuildRow(_gloves, _shirt, BuildSpacer()));
             Add(BuildRow(BuildSpacer(), _feet, BuildSpacer()));
         }
 
@@ -90,9 +88,8 @@ namespace SS3D.UI.MainHud.Components
             Slot.Eyes => _eyes,
             Slot.Face => _face,
             Slot.Ears => _ears,
-            Slot.GloveLeft => _gloveLeft,
+            Slot.Gloves => _gloves,
             Slot.Shirt => _shirt,
-            Slot.GloveRight => _gloveRight,
             Slot.Feet => _feet,
             _ => null,
         };
@@ -103,9 +100,8 @@ namespace SS3D.UI.MainHud.Components
             Slot.Eyes => "Eyes",
             Slot.Face => "Face Cover",
             Slot.Ears => "Ears",
-            Slot.GloveLeft => "Left Glove",
+            Slot.Gloves => "Gloves",
             Slot.Shirt => "Shirt",
-            Slot.GloveRight => "Right Glove",
             Slot.Feet => "Feet",
             _ => string.Empty,
         };

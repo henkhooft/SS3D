@@ -12,6 +12,7 @@ using SS3D.Systems.Comms;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Persistence;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
@@ -19,6 +20,7 @@ using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor.Commands;
+using SS3D.Systems.Tile.SpawnPoints;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -60,6 +62,7 @@ namespace SS3D.Editor.Automation
         private static string _savedName;
         private static bool _sawStationLoading;
         private static string _alternateStation;
+        private static string _validationStation;
         private static uint _previousStationEpoch;
 
         private const string PilotCharacterName = "Lifecycle Pilot";
@@ -147,6 +150,7 @@ namespace SS3D.Editor.Automation
                 _osInputsDone = 0;
                 _sawStationLoading = false;
                 _alternateStation = null;
+                _validationStation = null;
                 _clientWindow = null;
                 _running = true;
                 Application.logMessageReceived += OnLog;
@@ -219,22 +223,28 @@ namespace SS3D.Editor.Automation
             catch (Exception exception) { Finish(exception.ToString(), true); }
         }
 
-        private static Vector3 _playtestSpawnPosition;
+        private static Vector3 _mapEditSpawnPosition;
+        private static DateTime _templateWriteTime;
 
-        private static void EditPlaytestSpawn(bool remove)
+        /// <summary>Places (or removes) an Assistant spawn through the map editor's command path, as an author would.</summary>
+        private static void EditMapSpawn(bool remove)
         {
-            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
             if (!remove)
-                _playtestSpawnPosition = tiles.CurrentMap.GetAllChunks()
+                _mapEditSpawnPosition = SubSystems.Get<TileSubSystem>().CurrentMap.GetAllChunks()
                     .SelectMany(chunk => chunk.GetAllTilePlacedObjects()).First(tile => tile.Layer == TileLayer.Plenum).transform.position;
-            SubSystems.Get<MapEditorSubSystem>().SubmitCommands(new[] { new MapEditorCommandDto
+            SubSystems.Get<MapEditorSubSystem>().SubmitCommands(new MapEditorCommandDto[] { new MapEditorCommandDto
             {
                 Kind = remove ? MapEditorCommandKind.ClearSpawnPoint : MapEditorCommandKind.PlaceSpawnPoint,
-                AssetName = "spawn:job:Assistant", Position = _playtestSpawnPosition, Direction = Direction.North,
+                AssetName = "spawn:job:Assistant", Position = _mapEditSpawnPosition, Direction = Direction.North,
             } });
         }
 
-        private static bool PlaytestSpawnPresent() => SubSystems.Get<TileSubSystem>().SpawnPoints.HasAt(_playtestSpawnPosition);
+        private static bool MapEditSpawnPresent() => SubSystems.Get<TileSubSystem>().SpawnPoints.HasAt(_mapEditSpawnPosition);
+        private static bool UnsavedMapEdits() => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges;
+        private static bool TemplateExists(string name) => SubSystems.Get<PersistenceSubSystem>().StationTemplateExists(name);
+        private static string TemplatePath(string name) => PersistencePaths.StationTemplates + "/" + name;
+
+        private static DateTime TemplateWriteTime(string name) => LocalStorage.GetLastWriteTimeUtc(TemplatePath(name));
 
         private static Step[] BuildSteps() => new Step[]
         {
@@ -255,6 +265,7 @@ namespace SS3D.Editor.Automation
                     Require(SubSystems.Get<SS3D.Systems.Tile.TileSubSystem>().CurrentMap.ChunkCount == 0, "Lobby boots without station chunks");
                     Require(Rounds().CurrentStationLoadState == StationLoadState.NotLoaded
                         && Shell().Q<Label>("lobby-map-load-status").text == "No map loaded", "Lobby reports no map loaded");
+                    CreateValidationStation(valid: false);
                     _savedName = CharacterName();
                 },
             },
@@ -331,9 +342,26 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Select a real saved station",
-                Enter = () => Shell().Q<DropdownField>("server-map").value = "ministation",
-                Until = () => Rounds().SettingsForServer.Map == "ministation" && Rounds().AdminSettings.Map == "ministation",
-                Verify = () => Require(Shell().Q<DropdownField>("server-map").choices.Contains("ministation"), "Selected map is a saved template offered by the server"),
+                Enter = () => Shell().Q<DropdownField>("server-map").value = _validationStation,
+                Until = () => Rounds().SettingsForServer.Map == _validationStation && Rounds().AdminSettings.Map == _validationStation,
+                Verify = () => Require(Shell().Q<DropdownField>("server-map").choices.Contains(_validationStation), "Selected map is a saved template offered by the server"),
+            },
+            new Step
+            {
+                Name = "Invalid saved map blocks countdown with the full job list",
+                Enter = () => Click(Shell().Q<Button>("server-start")),
+                Until = () => Rounds().CurrentStationLoadState == StationLoadState.Failed
+                    && Rounds().AdminSettingsStatus.Contains("Missing job spawn"),
+                Verify = () =>
+                {
+                    Require(Rounds().CurrentRoundState == RoundState.Stopped && Rounds().CurrentTimerSeconds == 0
+                        && !Spawned(), "Invalid map never reaches countdown or spawns players");
+                    foreach (JobSlotInfo job in SubSystems.Get<RoleSubSystem>().Jobs)
+                        Require(Rounds().AdminSettingsStatus.Contains(job.Name), $"Validation explains missing {job.Name} spawn");
+                    Shell().Q<ScrollView>("server-settings-scroll").ScrollTo(Shell().Q("server-settings-status"));
+                    Capture("server-settings-validation");
+                    CreateValidationStation(valid: true);
+                },
             },
             new Step
             {
@@ -392,42 +420,12 @@ namespace SS3D.Editor.Automation
                     Shell().Q<DropdownField>("server-map").value = _alternateStation;
                 },
                 Until = () => Rounds().SettingsForServer.Map == _alternateStation,
-                Verify = () => Require(Rounds().StationName == "ministation", "Changing selection does not silently replace the loaded station"),
-            },
-            new Step
-            {
-                Name = "Author an unsaved spawn before playtesting",
-                Enter = () => EditPlaytestSpawn(false),
-                Until = () => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && PlaytestSpawnPresent(),
-            },
-            new Step
-            {
-                Name = "Start warns about unsaved map changes",
-                Enter = () => Click(Shell().Q<Button>("server-start")),
-                Until = () => Visible(Shell().Q("map-start-prompt")),
-                Verify = () =>
-                {
-                    Require(Rounds().CurrentRoundState == RoundState.Stopped, "Prompt leaves map and round untouched");
-                    Capture("map-start-unsaved");
-                },
-            },
-            new Step
-            {
-                Name = "Cancel preserves unsaved map changes",
-                Enter = () => Click(Shell().Q<Button>("map-start-cancel")),
-                Until = () => !Visible(Shell().Q("map-start-prompt")),
-                Verify = () => Require(SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && PlaytestSpawnPresent(), "Cancel preserves authoring edits"),
-            },
-            new Step
-            {
-                Name = "Reopen the unsaved map prompt",
-                Enter = () => Click(Shell().Q<Button>("server-start")),
-                Until = () => Visible(Shell().Q("map-start-prompt")),
+                Verify = () => Require(Rounds().StationName == _validationStation, "Changing selection does not silently replace the loaded station"),
             },
             new Step
             {
                 Name = "Start the configured Extended round",
-                Enter = () => Click(Shell().Q<Button>("map-start-save")),
+                Enter = () => Click(Shell().Q<Button>("server-start")),
                 Until = () => Rounds().CurrentRoundState == RoundState.Ongoing && Shell().Q<Button>("server-stop").enabledInHierarchy,
                 Verify = () =>
                 {
@@ -446,15 +444,31 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Playtest blocks authoring mutations; runtime damage stays in memory",
-                Enter = () =>
+                Name = "Map edit during the round is tracked as unsaved",
+                Enter = () => EditMapSpawn(remove: false),
+                Until = () => UnsavedMapEdits() && MapEditSpawnPresent(),
+                Verify = () => Require(SubSystems.Get<MapEditorSubSystem>().EditingTemplateName == _alternateStation,
+                    "Round start made the loaded station the editing template"),
+            },
+            new Step
+            {
+                Name = "Stop asks about unsaved map changes",
+                Enter = () => Click(Shell().Q<Button>("server-stop")),
+                Until = () => Visible(Shell().Q("map-stop-prompt")),
+                Verify = () =>
                 {
-                    EditPlaytestSpawn(true);
-                    Require(PlaytestSpawnPresent(), "Editor RPC cannot mutate the playtest map");
-                    Require(!SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Save and start established a save point");
-                    SubSystems.Get<TileSubSystem>().SpawnPoints.TryClearAt(_playtestSpawnPosition, out _);
+                    Require(Rounds().CurrentRoundState == RoundState.Ongoing, "Prompt leaves the round running");
+                    Require(!Visible(Shell().Q("map-stop-name")), "A known template is overwritten, so no name is asked");
+                    Capture("map-stop-unsaved");
                 },
-                Verify = () => Require(!PlaytestSpawnPresent(), "Runtime mutation fixture removed the saved spawn"),
+            },
+            new Step
+            {
+                Name = "Cancel keeps the round and the edits",
+                Enter = () => Click(Shell().Q<Button>("map-stop-cancel")),
+                Until = () => !Visible(Shell().Q("map-stop-prompt")) && Rounds().MapStopToken == 0,
+                Verify = () => Require(Rounds().CurrentRoundState == RoundState.Ongoing && UnsavedMapEdits() && MapEditSpawnPresent(),
+                    "Cancel keeps the round running with the edits"),
             },
             new Step
             {
@@ -466,7 +480,12 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Reject configuration changes during an active round",
-                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Enter = () =>
+                {
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
+                },
                 Until = () => Rounds().AdminSettingsStatus.Contains("rejected"),
                 Verify = () => Require(Rounds().SettingsForServer.RoundLengthMinutes == 1 && !Rounds().AllowLateJoin, "Active round configuration cannot change"),
             },
@@ -522,40 +541,21 @@ namespace SS3D.Editor.Automation
                 Verify = () =>
                 {
                     Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn");
-                    Require(Rounds().MapEditingAllowed && PlaytestSpawnPresent(), "Stop restored the saved authoring template, removing runtime damage");
-                    Require(!SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Restored template starts clean");
+                    Require(TemplateExists(_alternateStation + RoundSubSystem.AutosaveSuffix),
+                        "Round end autosaved the unsaved map edits to a separate template");
+                    Require(!UnsavedMapEdits() && SubSystems.Get<MapEditorSubSystem>().EditingTemplateName == null,
+                        "Unloading the station resets the editor's history");
                 },
             },
             new Step
             {
-                Name = "Author another unsaved change for Discard",
-                Enter = () => EditPlaytestSpawn(true),
-                Until = () => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges && !PlaytestSpawnPresent(),
-            },
-            new Step
-            {
-                Name = "Confirm Discard before starting",
-                Enter = () => Click(Shell().Q<Button>("server-start")),
-                Until = () => Visible(Shell().Q("map-start-prompt")),
-            },
-            new Step
-            {
-                Name = "Discard reloads the saved map",
-                Enter = () => Click(Shell().Q<Button>("map-start-discard")),
-                Until = () => Rounds().CurrentRoundState == RoundState.WarmingUp && Shell().Q<Button>("server-cancel").enabledInHierarchy,
-                Verify = () => Require(PlaytestSpawnPresent(), "Discard removed unsaved edits and loaded the saved spawn"),
-            },
-            new Step
-            {
-                Name = "Cancelled playtest restores a clean authoring map",
-                Enter = () => Click(Shell().Q<Button>("server-cancel")),
-                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Rounds().MapEditingAllowed,
-                Verify = () => Require(PlaytestSpawnPresent() && !SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges, "Edit-play-cancel-edit returns to the saved map"),
-            },
-            new Step
-            {
                 Name = "Restore server defaults before lifecycle",
-                Enter = () => Rounds().CmdSaveServerSettings(ServerSettings.Default),
+                Enter = () =>
+                {
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
+                },
                 Until = () => Rounds().SettingsForServer.PlayerCap == 32 && Rounds().AllowLateJoin
                     && Shell().Q<Toggle>("server-late-join").value && Shell().Q<IntegerField>("server-round-length").value == 90,
             },
@@ -851,8 +851,21 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Stop round returns to lobby shell",
+                Name = "Unsaved map edit before a player stop request",
+                Enter = () => EditMapSpawn(remove: false),
+                Until = UnsavedMapEdits,
+            },
+            new Step
+            {
+                Name = "Player stop request asks before unloading edits",
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(false)),
+                Until = () => Rounds().MapStopToken != 0,
+                Verify = () => Require(Rounds().CurrentRoundState == RoundState.Ongoing, "Stop waits for the admin's choice"),
+            },
+            new Step
+            {
+                Name = "Stop round returns to lobby shell",
+                Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.DiscardAndStop, ""),
                 Timeout = 30,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
                 Verify = () =>
@@ -861,6 +874,7 @@ namespace SS3D.Editor.Automation
                     Require(BoothLive(), "Booth restored with RT bound");
                     Require(CharacterName() == _savedName, "Saved character name restored");
                     Require(AssignedRole() == null && Job("Security").Assigned == 0, "Round stop cleared job assignments");
+                    Require(!TemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix), "Discard and stop left no autosave");
                 },
             },
             new Step { Name = "Ensure unready for late join", Enter = () => { if (IsReady()) Click(ReadyButton()); }, Until = () => !IsReady() },
@@ -897,10 +911,31 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Stop round after late join returns",
+                Name = "Unsaved map edit before Save and stop",
+                Enter = () =>
+                {
+                    _templateWriteTime = TemplateWriteTime(_validationStation);
+                    EditMapSpawn(remove: false);
+                },
+                Until = UnsavedMapEdits,
+            },
+            new Step
+            {
+                Name = "Stop after late join asks first",
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(false)),
+                Until = () => Rounds().MapStopToken != 0,
+            },
+            new Step
+            {
+                Name = "Stop round after late join returns",
+                Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.SaveAndStop, ""),
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
-                Verify = () => Require(BoothLive(), "Booth restored after second return"),
+                Verify = () =>
+                {
+                    Require(BoothLive(), "Booth restored after second return");
+                    Require(TemplateWriteTime(_validationStation) > _templateWriteTime, "Save and stop overwrote the editing template");
+                    Require(!TemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix), "Saved edits need no autosave");
+                },
             },
             // New connections 60s+ after server start used to time out before their first packet.
             new Step { Name = "Wait past client timeout window", Timeout = 90, Until = () => Elapsed() > 70 },
@@ -941,6 +976,10 @@ namespace SS3D.Editor.Automation
                 Verify = () =>
                 {
                     Require(AdminButton().enabledInHierarchy, "Host owner has Admin enabled");
+                    CreateValidationStation(valid: true);
+                    ServerSettings settings = ServerSettings.Default;
+                    settings.Map = _validationStation;
+                    Rounds().CmdSaveServerSettings(settings);
                     Require(!SubSystems.Get<PermissionSubSystem>().IsAtLeast(RemoteCkey, ServerRoleTypes.Administrator), $"'{RemoteCkey}' has no Administrator permission");
                 },
             },
@@ -1403,6 +1442,42 @@ namespace SS3D.Editor.Automation
             public string scope;
         }
 
+        // Own the fixture: valid and invalid copies of ministation with known spawn records.
+        // Never overwrite a tester's station merely to make the lifecycle smoke pass.
+        private static void CreateValidationStation(bool valid)
+        {
+            EnvelopePersistenceStore store = new();
+            Require(store.TryLoad(PersistencePaths.StationTemplates + "/ministation", out PersistenceEnvelope envelope),
+                "Loaded base station for temporary validation fixture");
+            _validationStation ??= "validation-pilot-" + Guid.NewGuid().ToString("N");
+            envelope.chunks.RemoveAll(chunk => chunk.contributorId == "spawn-points");
+            List<SavedSpawnPointRecord> records = new();
+            if (valid)
+            {
+                TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+                SavedTileMap map = JsonUtility.FromJson<SavedTileMap>(envelope.chunks.Single(chunk => chunk.contributorId == "tilemap").payloadJson);
+                Vector3[] floors = map.savedChunkList.SelectMany(chunk => chunk.savedTiles
+                    .Where(tile => tile != null && tile.GetPlacedObjects().Any(placed =>
+                        tiles.GetAsset(placed.tileObjectSOName) is TileObjectSo asset && asset.layer == TileLayer.Plenum))
+                    .Select(tile => chunk.originPosition + new Vector3(tile.Location.x, 0, tile.Location.y)))
+                    .Distinct().ToArray();
+                Require(floors.Length > SubSystems.Get<RoleSubSystem>().Jobs.Count,
+                    "Fixture has enough floor cells for every job and the operative marker");
+                int index = 0;
+                foreach (JobSlotInfo job in SubSystems.Get<RoleSubSystem>().Jobs)
+                    records.Add(SavedSpawnPointRecord.FromRecord(SpawnPointRecord.ForJob(job.Name, floors[index++], Direction.North)));
+                records.Add(SavedSpawnPointRecord.FromRecord(SpawnPointRecord.ForAntagonist(
+                    AntagonistSpawnCategory.NuclearOperatives, floors[index], Direction.North)));
+            }
+            envelope.chunks.Add(new PersistenceChunk
+            {
+                contributorId = "spawn-points",
+                payloadJson = JsonUtility.ToJson(new SavedSpawnPointChunkPayload { records = records.ToArray() }),
+            });
+            Require(store.TrySave(PersistencePaths.StationTemplates + "/" + _validationStation, envelope, true),
+                "Saved temporary validation fixture");
+        }
+
         private static void Finish(string failure, bool stopPlay)
         {
             _running = false;
@@ -1412,7 +1487,14 @@ namespace SS3D.Editor.Automation
             if (!string.IsNullOrEmpty(_alternateStation))
             {
                 SS3D.Data.Management.LocalStorage.DeleteFile(SS3D.Data.Persistence.PersistencePaths.StationTemplates + "/" + _alternateStation);
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _alternateStation + RoundSubSystem.AutosaveSuffix);
                 _alternateStation = null;
+            }
+            if (!string.IsNullOrEmpty(_validationStation))
+            {
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _validationStation);
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _validationStation + RoundSubSystem.AutosaveSuffix);
+                _validationStation = null;
             }
             Report report = new()
             {

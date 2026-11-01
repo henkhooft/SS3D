@@ -49,6 +49,9 @@ stage_build() {
         :
     else
         echo "warning: hardlink staging unavailable for $dest_dir; falling back to full copy (high disk use)" >&2
+        # A failed cp --link can leave a partially populated destination. Remove it so the
+        # fallback copies the tree into dest_dir itself rather than dest_dir/<source-name>.
+        rm -rf "$dest_dir"
         cp -a "$source_dir" "$dest_dir" || return 1
     fi
 

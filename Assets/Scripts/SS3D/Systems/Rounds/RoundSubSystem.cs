@@ -7,6 +7,7 @@ using SS3D.Logging;
 using SS3D.Systems.Comms;
 using SS3D.Systems.Gamemodes;
 using SS3D.Systems.Persistence;
+using SS3D.Systems.Tile.Validation;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.WorldReadiness;
 using System;
@@ -54,7 +55,6 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
-            RememberEditorReturnTemplate(_serverSettings.Map);
             RoundState = RoundState.Preparing;
             RoundSeconds = 0;
             _stationName = _serverSettings.Map;
@@ -74,6 +74,12 @@ namespace SS3D.Systems.Rounds
                 if (!loaded)
                 {
                     FailStationLoad("Station could not be loaded. Select another saved map.");
+                    return;
+                }
+                MapValidationReport validation = MapValidationService.Validate(tiles, _serverSettings.Mode);
+                if (!validation.CanStart)
+                {
+                    FailStationLoad(validation.Describe(_serverSettings.Map, _serverSettings.Mode, saved: false));
                     return;
                 }
                 tiles.SyncFloorDecalsToClients();
@@ -103,7 +109,6 @@ namespace SS3D.Systems.Rounds
             _stationLoadState = StationLoadState.Failed;
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
-            RestoreEditorAfterCancelledStart();
         }
 
         [Server]
@@ -232,13 +237,29 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
-            BeginEditorRestore();
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
+            UnloadStation();
 
-            // Stopped removes round bodies before restoring the authoring template.
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
-            await RestoreEditorTemplate(cancellationToken);
+        }
+
+        /// <summary>
+        /// Wipes the finished round's station once its crew is despawned (Stopped), so the lobby sits
+        /// over an empty world instead of a frozen view of the old station. The next Start restores
+        /// the selected template from disk anyway, so nothing a new round needs is lost.
+        /// </summary>
+        [Server]
+        private void UnloadStation()
+        {
+            HandleUnsavedMapEditsBeforeUnload();
+            if (SubSystems.TryGet(out Tile.TileSubSystem tiles) && tiles.CurrentMap != null)
+            {
+                tiles.CurrentMap.Clear();
+                tiles.SyncFloorDecalsToClients();
+            }
+
+            _stationLoadState = StationLoadState.NotLoaded;
         }
 
 #if UNITY_EDITOR

@@ -68,7 +68,10 @@ namespace SS3D.Systems.Settings
             // The Game view owns its size in the editor; Screen.SetResolution would only resize a build window.
             _ = display;
 #else
-            Vector2Int size = CurrentResolution(display);
+            // Borderless always covers the desktop at native size. A smaller borderless swapchain is stretched
+            // to the screen, but on Linux/X11 the pointer still reports desktop pixels, so every UI (map editor,
+            // diegetic screens) clicked with a growing offset. Lower-res rendering is render scale's job.
+            Vector2Int size = display.WindowMode == PlayerWindowMode.Borderless ? Native : CurrentResolution(display);
             FullScreenMode mode = display.WindowMode switch
             {
                 PlayerWindowMode.Fullscreen => FullScreenMode.ExclusiveFullScreen,

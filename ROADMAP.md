@@ -16,7 +16,7 @@ do end to end. Each goal is split into **slices**, the smaller pieces that have 
 | Goal | What you'll be able to do | Progress |
 |------|---------------------------|----------|
 | [Test server](#test-server) | Download a release, click join, play with others on a live server | 2 of 6 done, 3 partial |
-| [Map authoring](#map-authoring) | Build your own station in a release build and hand it in | 2 of 8 done, 2 partial |
+| [Map authoring](#map-authoring) | Build your own station in a release build and hand it in | 3 of 8 done, 2 partial |
 | [Nuclear Operatives round](#nuclear-operatives-round) | Play a full Nuke Ops round from spawn to end screen | 2 of 10 done, 4 partial |
 | [Station round](#station-round) | Play a short, bare-bones SS13 shift with jobs and antagonists | 0 of 7 done, 1 partial, 1 blocked |
 
@@ -48,8 +48,8 @@ What already works, system by system, is listed in
 | 🟡 | A1 | The downloaded build loads, including the station templates |
 | ✅ | A2 | Paint rooms, name them, choose their department and control door access |
 | ⬜ | A2.5 | A developer builds the Nuke Ops station first and fixes what breaks |
-| ⬜ | A3 | The editor warns you about broken maps before you start a round |
-| 🟡 | A4 | Switching between editing and playing doesn't lose your work (protection implemented; runtime acceptance pending) |
+| 🟡 | A3 | The editor warns you about broken maps before you start a round |
+| ✅ | A4 | Switching between editing and playing doesn't lose your work |
 | ⬜ | A5 | Easy to find, share and hand in your map files, with a testers' guide in the download |
 | ⬜ | A6 | A tester builds the Nuke Ops station from the download using only the guide, and it becomes the official test map |
 

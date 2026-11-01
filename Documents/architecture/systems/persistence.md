@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Data/Persistence/, Assets/Scripts/SS3D/Systems/Persistence/
 > Entry points: PersistenceSubSystem, IPersistenceContributor, EnvelopePersistenceStore
 > Status: partial
-> Verified: 5fe7dbb57 — 2026-10-31
+> Verified: 290aa4e1c — 2026-07-28 (chunked station template restore)
 
 # Persistence
 
@@ -14,7 +14,7 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/SS3D/Data/Persistence/PersistenceEnvelope.cs` — envelope wrapper and schema version
 - `Assets/Scripts/SS3D/Data/Persistence/EnvelopePersistenceStore.cs` — JSON file I/O via `LocalStorage`
 - `Assets/Scripts/SS3D/Data/Persistence/PersistencePaths.cs` — `StationTemplates/`, `ServerMeta/`, legacy `Tilemaps/`
-- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood; large templates use `LoadStationTemplateAsync` (time-sliced place + bulk mutation mute)
+- `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood; large templates use `LoadStationTemplateAsync` (time-sliced place + bulk mutation mute). Successful saves/loads raise `StationTemplateSaved` / `StationTemplateLoaded` (the map editor's save point); a second restore is refused while one runs, and saves fail after a partial restore until a full load succeeds
 - `Assets/Scripts/SS3D/Systems/Persistence/TileMapPersistenceContributor.cs` — tilemap + items chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/AreaPersistenceContributor.cs` — area metadata chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/SpawnPointPersistenceContributor.cs` — spawn markers chunk (`spawn-points`, load order 110)
@@ -33,7 +33,6 @@ Layered contributor-based disk persistence for station templates and server meta
 - Authored areas: tile chunk `areaIds` are restored as saved when area records carry `authored`; APC-less records carry `noApc`. The area payload also stores a map-level `authored` flag so deleting all rooms does not regenerate them on load; legacy flat saves carry `hasAuthoredAreas` through migration. Missing flags keep legacy APC flood defaults. See [area-authoring](area-authoring.md).
 
 - New domain: implement `IPersistenceContributor`, register in `PersistenceSubSystem.RegisterBuiltInContributors()` or call `RegisterContributor` at startup; add a `DeserializePayload` arm for the DTO type.
-- Successful saves/restores emit `StationTemplateSaved` / `StationTemplateLoaded` with the template name for editor save points. `IsRestoringStationTemplate` serializes restoration; saves fail during restoration or after a partial restore exception until a complete load succeeds.
 - Station template save/load: `SaveStationTemplate` / `LoadStationTemplate` / `LoadMostRecentStationTemplate`.
 - Server meta: `LoadServerMeta` (owned by `PersistenceSubSystem.OnStart` when server), `SaveServerMeta` (on `UserPermissionsChangedEvent`).
 - Round history: `AppendRoundHistory` — hooked from `RoundSubSystem.ProcessEndRound`.

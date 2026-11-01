@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Gamemodes/, Assets/Scripts/SS3D/Systems/Roles/, Assets/Scripts/SS3D/Systems/Traits/
 > Entry points: GamemodeSubSystem, RoleSubSystem
 > Status: partial
-> Verified: 2fcfc9fa8 — 2026-10-30
+> Verified: 5fe7dbb57 — 2026-10-31
 
 # Gamemodes / roles / traits
 
@@ -21,6 +21,7 @@ Round objectives, job roles/loadouts, and character traits (e.g. ID permissions)
 Server Settings selects Secret / Extended / Nuclear Emergency. Extended skips objective
 initialization; Secret uses the sole existing antagonist mode. The runtime gamemode reference
 is server-side (no SyncVar); authorized settings use the rounds subsystem's TargetRpc.
+Map validation uses the same Secret → nuclear mapping and requires all offered job markers before countdown ([rounds-lobby](rounds-lobby.md)).
 Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 
 ## Extension points
@@ -31,6 +32,7 @@ Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 
 ## Pitfalls
 
+- Authored marker coverage is validated, but `EntitySubSystem.ResolveSpawnPosition` still uses the legacy transform or first marker for everyone; job/operative-specific spawn routing is not implemented.
 - Assignment happens at round start (`ResolveRoundStartRoles`, called by `EntitySubSystem.SpawnReadyPlayers`) or at latejoin spawn, not on connect. `TryGetRole` is empty in the lobby.
 
 ## Depends on / Used by

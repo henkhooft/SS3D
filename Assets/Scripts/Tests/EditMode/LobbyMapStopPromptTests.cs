@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace SS3D.Tests.EditMode
 {
-    public sealed class LobbyMapStartPromptTests
+    public sealed class LobbyMapStopPromptTests
     {
         [Test]
         public void PromptPreservesDraftOnRefreshAndSendsExplicitChoice()
@@ -19,27 +19,27 @@ namespace SS3D.Tests.EditMode
             try
             {
                 view.Attach(parent);
-                view.SetMapStartPrompt(7, "ministation", "", "");
-                TextField name = parent.Q<TextField>("map-start-name");
+                view.SetMapStopPrompt(7, "", "");
+                TextField name = parent.Q<TextField>("map-stop-name");
                 name.value = "My station";
-                view.SetMapStartPrompt(7, "ministation", "", "Choose a name");
+                view.SetMapStopPrompt(7, "", "Choose a name");
                 Assert.AreEqual("My station", name.value);
                 int submitted = 0;
-                view.MapStartResolved += (token, choice, mapName) =>
+                view.MapStopResolved += (token, choice, mapName) =>
                 {
                     Assert.AreEqual(7, token);
-                    Assert.AreEqual(MapStartChoice.SaveAndStart, choice);
+                    Assert.AreEqual(MapStopChoice.SaveAndStop, choice);
                     Assert.AreEqual("My station", mapName);
                     submitted++;
                 };
                 using (NavigationSubmitEvent submit = NavigationSubmitEvent.GetPooled())
                 {
-                    submit.target = parent.Q<Button>("map-start-save");
-                    parent.Q<Button>("map-start-save").SendEvent(submit);
+                    submit.target = parent.Q<Button>("map-stop-save");
+                    parent.Q<Button>("map-stop-save").SendEvent(submit);
                 }
                 Assert.AreEqual(1, submitted);
-                view.SetMapStartPrompt(0, "", "", "");
-                Assert.AreEqual(DisplayStyle.None, parent.Q("map-start-prompt").style.display.value);
+                view.SetMapStopPrompt(0, "", "");
+                Assert.AreEqual(DisplayStyle.None, parent.Q("map-stop-prompt").style.display.value);
             }
             finally { view.Detach(); window.Close(); }
         }

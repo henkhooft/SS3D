@@ -28,18 +28,24 @@ namespace SS3D.Systems.Electricity
 
         public bool IsTrackingEnabled => _enabled;
 
-        public override void OnStartClient()
+        // OnToggle is raised on the server only; subscribing in OnStartClient never ran on a dedicated server.
+        public override void OnStartServer()
         {
-            base.OnStartClient();
+            base.OnStartServer();
             GenericToggleInteractionTarget toggle = GetComponent<GenericToggleInteractionTarget>();
             if (toggle != null)
             {
                 toggle.OnToggle += HandleToggle;
-                if (IsServer)
-                {
-                    _enabled = toggle.GetState();
-                }
+                _enabled = toggle.GetState();
             }
+        }
+
+        public override void OnStopServer()
+        {
+            if (TryGetComponent(out GenericToggleInteractionTarget toggle))
+                toggle.OnToggle -= HandleToggle;
+
+            base.OnStopServer();
         }
 
         private void Update()

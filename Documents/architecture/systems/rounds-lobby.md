@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 5fe7dbb57 — 2026-10-31
+> Verified: 6ef2aabbf — 2026-11-01
 
 # Rounds / lobby
 
@@ -11,11 +11,19 @@ Round lifecycle state machine with single-flight `CancellationTokenSource` (prev
 
 **UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
 preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility (plus Escape as an in-round menu overlay, `InputContext.Menu`) and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard/eyebrows + skin/eye/style colors) is sent to the server and applied to the spawned body (E2 slice); Human is the only available species; other dropdown entries are disabled until models exist. Saved character slots and the last saved selection now persist locally across application restarts. The Chat tab carries networked OOC/LOOC/Admin chat (see [chat-audio-screens](chat-audio-screens.md)). Server Info shows the admin-editable server name/MOTD (persisted server-side), configured mode, server build/uptime and a git-generated change log. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings: the Sound sub-tab is wired to `PlayerSettingsSubSystem` (five volume sliders, Mute All, Mute When Unfocused, Reset to defaults; saved client-locally and applied at boot). The Display sub-tab (resolution, window mode with a 15 s keep/revert prompt, VSync, frame cap, quality tier, render scale, upscaler, anti-aliasing, UI Scale) is wired the same way; Controls is wired to saved rebinding and capture in [2026-10_player-settings](../2026-10_player-settings.md) Phase 3.
+Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility (plus Escape as an in-round menu overlay, `InputContext.Menu`) and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard/eyebrows + skin/eye/style colors) is sent to the server and applied to the spawned body (E2 slice); Human is the only available species; other dropdown entries are disabled until models exist. Saved character slots and the last saved selection now persist locally across application restarts. The Chat tab carries networked OOC/LOOC/Admin chat (see [chat-audio-screens](chat-audio-screens.md)). Server Info shows the admin-editable server name/MOTD (persisted server-side), configured mode, server build/uptime and a git-generated change log. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings: the Sound sub-tab is wired to `PlayerSettingsSubSystem` (five volume sliders, Mute All, Mute When Unfocused, Reset to defaults; saved client-locally and applied at boot). The Display sub-tab (resolution, window mode with a 15 s keep/revert prompt, VSync, frame cap, quality tier, render scale, upscaler, anti-aliasing, UI Scale) is wired the same way; Controls remains a session-local mockup until [2026-10_player-settings](../2026-10_player-settings.md) Phase 3.
 
 Rendered verification: [Unity MCP lobby pilot](../../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
 
 **Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+
+**Round end (Stopped)** despawns the crew (`EntitySubSystem`) and then `RoundSubSystem.UnloadStation`
+clears the station (`TileMap.Clear`, load state `NotLoaded`); the next Start restores the template.
+The lobby blurs the world (`SetMenuBlur`) whenever it is visible, not only as the Escape menu.
+The sidebar has a two-click **Quit Game** button (`QuitRequested`). The Server Info **Change Log**
+lists first-parent changes (merged PRs by title, `#N` links) grouped under the `v*` release tag that
+shipped them ("In development" before a tag) and links to the GitHub releases page. One starter
+character ships (`CharacterCreatorMockData.Loadouts`).
 
 Server Settings now has the reference state card, countdown actions, map/mode selectors,
 player cap/round-length inputs and rule checkboxes. `ServerSettings.cs` extends the existing
@@ -24,12 +32,6 @@ replicated; gamemode identity stays protected. Configuration is editable while s
 across rounds in memory, and not yet persisted to disk. Map options come from saved station
 templates. Session boot creates an empty tile container without restoring any station; Start
 always restores the selected template and awaits world readiness before the countdown.
-A4 authoring protection is implemented, awaiting Unity validation: an admin Start with unsaved
-editor commands opens Save and start / Discard / Cancel. Confirmations bind the editor revision,
-template identity and map selection; stale confirmations require a new decision. Saving an
-unnamed map requires a fresh name and selects it for playtesting. Stop and cancelled starts
-restore the saved authoring template; editing/saving is locked during rounds and restoration.
-A failed restore keeps editing locked until a saved-map start/stop succeeds.
 The map selector stays editable while stopped, even if a prior round left a station in memory.
 Public and admin indicators distinguish no map, loading, initializing, ready and failed.
 Only Stop is visible while a round runs; Start is visible only while stopped/ended.
@@ -37,6 +39,17 @@ Secret resolves to the sole available antagonist mode; Extended suppresses objec
 Nuclear Emergency uses the existing mode. Random Events, Friendly Fire and Cloning controls
 are disabled with explanations because their configurable gameplay consumers do not exist.
 The waiting card says Manual start: there is no population autostart policy yet.
+Start validates the restored template before world readiness/countdown: every offered job needs an authored marker;
+Secret (currently the nuclear mode) and Nuclear Emergency also need an operative marker, placed `Nuke` and placed `NukeCard`.
+Failures return to Stopped/Failed with the complete actionable list in the admin settings status; all start paths share the gate.
+An empty job configuration or unsupported mode fails closed. Missing/unreadable templates retain the existing load-failure path.
+
+Unsaved map edits across a round stop (A4): the map editor runs during an Ongoing round, and
+Stop unloads the station, so an admin Stop with unsaved editor commands first opens
+**Save and stop / Discard and stop / Cancel** in the lobby shell. The confirmation is bound to the editor
+revision and template; a stale one asks again. Saving a map with no template name needs a fresh name.
+Any other round end (timer, gamemode) autosaves unsaved edits to `<template>-autosave` (never the
+original) and tells admins in Admin chat. Unloading resets the editor's history and template identity.
 
 ## Start here
 
@@ -50,8 +63,9 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyAssetCatalog.cs` / `Assets/Scripts/SS3D/Editor/LobbyAssetCatalogBuilder.cs` — curated preview outfit references; umbrella catalog rebuild
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
-- `Assets/Scripts/SS3D/Systems/Rounds/MapEditorPlaytest.cs` — server start confirmation, template return path and restoration lock; `UI/Lobby/LobbyMapStartPrompt.cs` renders choices
+- `Assets/Scripts/SS3D/Systems/Tile/Validation/` — shared map requirements/report and tracked-map content adapter
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
+- `Assets/Scripts/SS3D/Systems/Rounds/MapEditorRoundStop.cs` — Stop confirmation for unsaved map edits, autosave before `UnloadStation`; `UI/Lobby/LobbyMapStopPrompt.cs` renders the choices
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerInfo.cs` — public name/MOTD/mode/build/start-time SyncVars, `ServerInfoText` sanitizers, `ServerMeta/server-info` load/save
 - `Assets/Scripts/SS3D/Systems/Rounds/BuildInfo.cs` / `Assets/Scripts/SS3D/Editor/BuildInfoGenerator.cs` — game version + git commit + change log resource (gitignored, generated on editor load and pre-build; stamps the player version). `GameVersion.cs` formats versions — rules in [2026-10_game-versioning](../2026-10_game-versioning.md). Use `BuildInfo.Version`, not `Application.version` (an `0.0.0-editor` placeholder outside player builds)
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
@@ -73,8 +87,6 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem` (including job preference sends); `LobbyShellView` renders `RoleSubSystem.Jobs`; Character Creator is a separate Modal screen (Phase B/E).
 
 ## Pitfalls
-
-- **Cancelling Preparing must wait for the in-flight persistence restore:** contributor restoration is time-sliced but not cancellable. Lock editor/start requests until that restore finishes, then restore the authoring template; do not launch two restores against the same world.
 
 - **Portrait capture must restore `RenderTexture.active`:** `Graphics.Blit` changes the global active target. Save/restore it around the head crop so later rendering/readback does not inherit the portrait target; the lifecycle pilot uses a sentinel target to check this.
 
@@ -120,6 +132,14 @@ The waiting card says Manual start: there is no population autostart policy yet.
 - **Catalog rebuild over MCP:** SS3D → Data → Rebuild All UI Catalogs ends in a modal "UI Catalogs" OK dialog that blocks MCP and ignores xdotool under XWayland; prefer `LobbyAssetCatalogBuilder.RebuildCatalogBatch` via `execute_code`.
 - **Pilot assembly stays reference-free:** adding `SS3D.Core`/`SS3D.Systems` to `SS3D.Editor.Automation.asmdef` turns on the project's Roslynator rules as errors for the whole pilot (≈25 RCS errors in `LobbyUiPilot.cs`). Reach runtime state through Unity APIs (`Resources.Load`, the pilot's output files) or reflection, as the Sound-tab settings checks do.
 - **Players persist offline:** `PlayerSubSystem.GetPlayer(ckey)` still returns a disconnected player. Use the online count or the connection, not a null record, to detect a remote leaving.
+- **Unloading the station is server-only and after despawn:** `UnloadStation` runs in `StopRound` after `RoundState = Stopped`, whose SyncVar callback already despawned players. Map editor sessions close themselves once the round leaves `Ongoing` ([tile](tile.md)), so no editor camera is left over a cleared map.
+
+## Tests
+
+- `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
+- The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
+- A3 passed compile, EditMode, PlayMode and the lifecycle pilot in Unity (tomnas, 2026-11-01).
+- A4: the lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.
 
 ## Depends on / Used by
 

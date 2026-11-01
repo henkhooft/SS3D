@@ -406,7 +406,7 @@ namespace SS3D.Systems.Inventory.Containers
             if (SubSystems.TryGet(out TileSubSystem tile)
                 && tile.GetAsset(item.Asset) is ItemObjectSo itemObjectSo)
             {
-                tile.Construction.TryPlaceItem(itemObjectSo, point, rotation, item.gameObject);
+                tile.Construction.TryPlaceItem(itemObjectSo, item.transform.position, item.transform.rotation, item.gameObject);
             }
         }
 

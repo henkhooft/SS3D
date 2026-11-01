@@ -535,11 +535,12 @@ namespace SS3D.Editor.Automation
                     case 13: Click(shell.Q(className: "lobby-shell__preview")); break;
                     case 14: Click(creator.Q(className: "char-creator__loadout-btn")); break;
                     case 15:
-                        Click(creator.Query(className: "char-creator__loadout-row").ToList()
-                            .Single(e => e.Query<Label>().ToList().Any(l => l.text == "R. Oyelaran")));
+                        List<VisualElement> loadoutRows = creator.Query(className: "char-creator__loadout-row").ToList();
+                        Require(loadoutRows.Count == 1, "Only the one starter character ships before New Character");
+                        Click(loadoutRows[0]);
                         break;
                     case 16:
-                        Require(creator.Q<TextField>("character-name").value == "R. Oyelaran", "Switching character restores its draft");
+                        Require(creator.Q<TextField>("character-name").value == "Automation Pilot", "Reselecting the character keeps its draft");
                         Click(creator.Q(className: "char-creator__loadout-btn"));
                         break;
                     case 17: Click(creator.Q(className: "char-creator__loadout-new")); break;

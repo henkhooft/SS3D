@@ -1,7 +1,4 @@
 using FishNet.Connection;
-using SS3D.Core;
-using SS3D.Systems.Persistence;
-using SS3D.Systems.Rounds;
 using SS3D.Systems.Tile.MapEditor.Authorizers;
 
 namespace SS3D.Systems.Tile.MapEditor
@@ -19,9 +16,6 @@ namespace SS3D.Systems.Tile.MapEditor
         public static void SetAuthorizer(IMapEditorAuthorizer authorizer) =>
             _authorizer = authorizer ?? new AdminMapEditorAuthorizer();
 
-        public static bool TryAuthorize(NetworkConnection conn) =>
-            (!SubSystems.TryGet(out RoundSubSystem rounds) || rounds.MapEditingAllowed)
-            && (!SubSystems.TryGet(out PersistenceSubSystem persistence) || !persistence.IsRestoringStationTemplate)
-            && _authorizer.TryAuthorize(conn);
+        public static bool TryAuthorize(NetworkConnection conn) => _authorizer.TryAuthorize(conn);
     }
 }

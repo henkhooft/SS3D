@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 3827733058681187247}
   - component: {fileID: -5347318951063967318}
   - component: {fileID: -5085948224428640888}
+  - component: {fileID: 5803045288452657754}
   m_Layer: 0
   m_Name: TablePoker
   m_TagString: Untagged
@@ -141,6 +142,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   _networkBehaviours:
   - {fileID: 5329512703703213614}
+  - {fileID: 5803045288452657754}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -167,6 +169,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 5716146803221059512}
   _networkObjectCache: {fileID: 5716146803221059512}
   _syncedConnections: 0
+  _syncedEngineConnections: 0
   advancedAdjacency:
     o: {fileID: 24074734363293705, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
     u: {fileID: -9005001895540637488, guid: 32ccf9db762cc7c4f8f4af524e3e7ee7, type: 3}
@@ -240,3 +243,30 @@ MonoBehaviour:
   _updateHostVisibility: 1
   _observerConditions:
   - {fileID: 11400000, guid: cc503f7541ebd424c94541e6a767efee, type: 2}
+--- !u!114 &5803045288452657754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3879826479501069436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 5716146803221059512}
+  _networkObjectCache: {fileID: 5716146803221059512}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0

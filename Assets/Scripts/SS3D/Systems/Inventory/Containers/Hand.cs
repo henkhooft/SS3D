@@ -188,10 +188,11 @@ namespace SS3D.Systems.Inventory.Containers
             ItemObjectSo itemObjectSo = SubSystems.Get<TileSubSystem>().GetAsset(item.Asset) as ItemObjectSo;
             if (itemObjectSo != null)
             {
+                // Pass the lifted pose from ItemUtility.Place; the raw surface point sinks the item.
                 SubSystems.Get<TileSubSystem>().Construction.TryPlaceItem(
                     itemObjectSo,
-                    position,
-                    rotation,
+                    item.transform.position,
+                    item.transform.rotation,
                     item.gameObject);
             }
         }

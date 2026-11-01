@@ -13,20 +13,8 @@ namespace SS3D.Systems.Electricity
     /// </summary>
     public class ConsumerPowerVisual : MonoBehaviour
     {
-        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-        static readonly int LuminId = Shader.PropertyToID("_Lumin");
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
-
-        [Serializable]
-        struct EmissiveSlot
-        {
-            public Renderer Renderer;
-            public float PoweredLumin;
-            public Color PoweredEmission;
-            public bool HasLumin;
-            public bool HasEmission;
-        }
 
         [Serializable]
         struct PanelIndicatorSlot
@@ -47,12 +35,11 @@ namespace SS3D.Systems.Electricity
         private PanelIndicatorSlot[] _panelIndicators;
 
         private IPowerConsumer _consumer;
-        private readonly List<EmissiveSlot> _emissiveSlots = new();
+        private EmissiveMaterialSlots _emissiveSlots;
         private bool _waitingForElectricityReady;
         private bool _hasAppliedPowered;
         private bool _lastShownPowered;
 
-        private MaterialPropertyBlock _emissivePropertyBlock;
         private MaterialPropertyBlock _panelPropertyBlock;
 
         private void Awake()
@@ -60,7 +47,7 @@ namespace SS3D.Systems.Electricity
             _consumer = ResolveConsumer();
 
             // Unity disallows `new MaterialPropertyBlock()` in instance field initializers.
-            _emissivePropertyBlock = new MaterialPropertyBlock();
+            _emissiveSlots = new EmissiveMaterialSlots();
             _panelPropertyBlock = new MaterialPropertyBlock();
         }
 
@@ -121,67 +108,11 @@ namespace SS3D.Systems.Electricity
 
         private void CacheVisuals()
         {
-            _emissiveSlots.Clear();
-
             Renderer[] renderers = _renderers != null && _renderers.Length > 0
                 ? _renderers
                 : GetComponentsInChildren<Renderer>(true);
-
-            foreach (Renderer renderer in renderers)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                float lumin = 0f;
-                Color emission = Color.black;
-                bool hasLumin = false;
-                bool hasEmission = false;
-                bool hasAnyEmissive = false;
-
-                Material[] sharedMaterials = renderer.sharedMaterials;
-                for (int i = 0; i < sharedMaterials.Length; i++)
-                {
-                    Material sharedMaterial = sharedMaterials[i];
-                    if (sharedMaterial == null)
-                    {
-                        continue;
-                    }
-
-                    if (sharedMaterial.HasProperty(LuminId))
-                    {
-                        hasAnyEmissive = true;
-                        if (!hasLumin)
-                        {
-                            lumin = sharedMaterial.GetFloat(LuminId);
-                            hasLumin = true;
-                        }
-                    }
-
-                    if (sharedMaterial.HasProperty(EmissionColorId))
-                    {
-                        hasAnyEmissive = true;
-                        if (!hasEmission)
-                        {
-                            emission = sharedMaterial.GetColor(EmissionColorId);
-                            hasEmission = true;
-                        }
-                    }
-                }
-
-                if (hasAnyEmissive)
-                {
-                    _emissiveSlots.Add(new EmissiveSlot
-                    {
-                        Renderer = renderer,
-                        PoweredLumin = lumin,
-                        PoweredEmission = emission,
-                        HasLumin = hasLumin,
-                        HasEmission = hasEmission,
-                    });
-                }
-            }
+            _emissiveSlots ??= new EmissiveMaterialSlots();
+            _emissiveSlots.Cache(renderers);
 
             if (_panelIndicators == null)
             {
@@ -306,28 +237,7 @@ namespace SS3D.Systems.Electricity
 
         private void SetEmissiveState(bool powered)
         {
-            foreach (EmissiveSlot slot in _emissiveSlots)
-            {
-                if (slot.Renderer == null)
-                {
-                    continue;
-                }
-
-                Renderer renderer = slot.Renderer;
-                renderer.GetPropertyBlock(_emissivePropertyBlock);
-
-                if (slot.HasLumin)
-                {
-                    _emissivePropertyBlock.SetFloat(LuminId, powered ? slot.PoweredLumin : 0f);
-                }
-
-                if (slot.HasEmission)
-                {
-                    _emissivePropertyBlock.SetColor(EmissionColorId, powered ? slot.PoweredEmission : Color.black);
-                }
-
-                renderer.SetPropertyBlock(_emissivePropertyBlock);
-            }
+            _emissiveSlots.ApplyPowered(powered);
         }
 
         private void SetPanelIndicators(bool powered)
@@ -350,9 +260,9 @@ namespace SS3D.Systems.Electricity
                     continue;
                 }
 
-                slot.Renderer.GetPropertyBlock(_panelPropertyBlock);
+                slot.Renderer.GetPropertyBlock(_panelPropertyBlock, slot.MaterialIndex);
                 _panelPropertyBlock.SetColor(slot.ColorPropertyId, powered ? slot.PoweredColor : Color.black);
-                slot.Renderer.SetPropertyBlock(_panelPropertyBlock);
+                slot.Renderer.SetPropertyBlock(_panelPropertyBlock, slot.MaterialIndex);
             }
         }
 

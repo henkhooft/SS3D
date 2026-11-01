@@ -58,8 +58,7 @@ namespace SS3D.UI.Lobby
             ApplyPendingServerText();
             _serverMaps = maps ?? Array.Empty<string>();
             _hasServerSettings = true;
-            if (!string.IsNullOrEmpty(status)) _serverSettingsStatus = status;
-            else if (_serverSettingsStatus == "Loading server settings…") _serverSettingsStatus = "";
+            _serverSettingsStatus = status ?? "";
             RefreshServerSettings();
         }
 
@@ -154,7 +153,7 @@ namespace SS3D.UI.Lobby
             form.Add(ServerRule("Random Events", "server-random-events", false, "Random events are not implemented yet."));
             form.Add(ServerRule("Friendly Fire", "server-friendly-fire", false, "Combat has no friendly-fire policy yet."));
             form.Add(ServerRule("Allow Respawn (Cloning)", "server-respawn", false, "Cloning is not implemented yet."));
-            Label status = new() { name = "server-settings-status" };
+            Label status = new() { name = "server-settings-status", enableRichText = false };
             status.AddToClassList("lobby-shell__server-status");
             form.Add(status);
             RefreshServerSettings();
@@ -287,8 +286,7 @@ namespace SS3D.UI.Lobby
             form.Q<Label>("server-ready-ratio").text = $"{_players.Count(p => p.Ready)}/{_players.Length}";
             Button start = form.Q<Button>("server-start");
             start.style.display = idle ? DisplayStyle.Flex : DisplayStyle.None;
-            start.SetEnabled(idle && _hasServerSettings && _serverMaps.Contains(_serverSettings.Map)
-                && _stationLoadState is not (StationLoadState.Loading or StationLoadState.Initializing));
+            start.SetEnabled(idle && _hasServerSettings && _serverMaps.Contains(_serverSettings.Map));
             foreach (string name in new string[] { "server-force", "server-extend", "server-cancel" })
             {
                 Button action = form.Q<Button>(name);

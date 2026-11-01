@@ -17,22 +17,13 @@ namespace SS3D.Systems.Area
     [RequireComponent(typeof(ElectricDeviceAdjacencyConnector))]
     public sealed class LightSwitchController : InteractionTargetNetworkBehaviour, IToggleable
     {
-        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-        static readonly int LuminId = Shader.PropertyToID("_Lumin");
 
         [SerializeField]
         private BasicPowerConsumer _powerConsumer;
         [SerializeField]
         private Renderer[] _emissiveRenderers;
 
-        private readonly List<Renderer> _emissiveRenderersToUpdate = new();
-        private MaterialPropertyBlock _emissivePropertyBlock;
-        private bool _hasLumin;
-        private bool _hasEmission;
-        private float _poweredLumin;
-        private Color _poweredEmission;
-        private float _lastEmissiveLumin = float.NaN;
-        private Color _lastEmissiveEmissionColor = Color.clear;
+        private EmissiveMaterialSlots _emissiveSlots;
         private AreaId _areaId;
         private bool _hasArea;
         private bool _lightsOn = true;
@@ -120,67 +111,10 @@ namespace SS3D.Systems.Area
 
         private void CacheEmissiveMaterials()
         {
-            _emissiveRenderersToUpdate.Clear();
-            _hasLumin = false;
-            _hasEmission = false;
-            _poweredLumin = 0f;
-            _poweredEmission = Color.black;
-
-            Renderer[] renderers = _emissiveRenderers != null && _emissiveRenderers.Length > 0
+            _emissiveSlots ??= new EmissiveMaterialSlots();
+            _emissiveSlots.Cache(_emissiveRenderers != null && _emissiveRenderers.Length > 0
                 ? _emissiveRenderers
-                : GetComponentsInChildren<Renderer>(true);
-
-            foreach (Renderer renderer in renderers)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                bool hasEmissiveProperty = false;
-
-                Material[] sharedMaterials = renderer.sharedMaterials;
-                for (int i = 0; i < sharedMaterials.Length; i++)
-                {
-                    Material sharedMaterial = sharedMaterials[i];
-                    if (sharedMaterial == null)
-                    {
-                        continue;
-                    }
-
-                    if (sharedMaterial.HasProperty(LuminId))
-                    {
-                        hasEmissiveProperty = true;
-                        if (!_hasLumin)
-                        {
-                            _poweredLumin = sharedMaterial.GetFloat(LuminId);
-                            _hasLumin = true;
-                        }
-                    }
-
-                    if (sharedMaterial.HasProperty(EmissionColorId))
-                    {
-                        hasEmissiveProperty = true;
-                        if (!_hasEmission)
-                        {
-                            _poweredEmission = sharedMaterial.GetColor(EmissionColorId);
-                            _hasEmission = true;
-                        }
-                    }
-                }
-
-                if (hasEmissiveProperty)
-                {
-                    _emissiveRenderersToUpdate.Add(renderer);
-                }
-            }
-
-            if (_emissiveRenderersToUpdate.Count == 0)
-            {
-                return;
-            }
-
-            // _poweredLumin/_poweredEmission are captured from shared materials above.
+                : GetComponentsInChildren<Renderer>(true));
         }
 
         private void CacheArea()
@@ -320,41 +254,10 @@ namespace SS3D.Systems.Area
 
         private void RefreshVisuals()
         {
-            bool emit = IsPowered() && _lightsOn;
-            float lumin = emit ? _poweredLumin : 0f;
-            Color emission = emit ? _poweredEmission : Color.black;
+            if (_emissiveSlots == null)
+                CacheEmissiveMaterials();
 
-            if (Mathf.Approximately(_lastEmissiveLumin, lumin)
-                && _lastEmissiveEmissionColor == emission)
-            {
-                return;
-            }
-
-            _lastEmissiveLumin = lumin;
-            _lastEmissiveEmissionColor = emission;
-
-            foreach (Renderer renderer in _emissiveRenderersToUpdate)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                _emissivePropertyBlock ??= new MaterialPropertyBlock();
-                renderer.GetPropertyBlock(_emissivePropertyBlock);
-
-                if (_hasLumin)
-                {
-                    _emissivePropertyBlock.SetFloat(LuminId, lumin);
-                }
-
-                if (_hasEmission)
-                {
-                    _emissivePropertyBlock.SetColor(EmissionColorId, emission);
-                }
-
-                renderer.SetPropertyBlock(_emissivePropertyBlock);
-            }
+            _emissiveSlots.ApplyPowered(IsPowered() && _lightsOn);
         }
 
         private bool IsPowered()

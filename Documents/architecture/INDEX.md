@@ -93,10 +93,10 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) | partial | Map editor extension points for creative mode |
 | [networking-session](systems/networking-session.md) | partial | Session FSM, headless server, multiplayer harness |
 | [permissions](systems/permissions.md) | partial | Admin permission checks |
-| [persistence](systems/persistence.md) | partial | Station templates, server meta, successful save/load events and restore guard |
+| [persistence](systems/persistence.md) | partial | Station templates, server meta |
 | [player-control](systems/player-control.md) | partial | Connect/authorize/disconnect, reconnect-to-body |
 | [rendering](systems/rendering.md) | partial | URP features, selection pick, Vision FOV, decals |
-| [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine, UITK lobby, Server Settings; A4 protected playtest loop implemented, Unity acceptance pending |
+| [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine, UITK lobby, Server Settings, pre-countdown map validation |
 | [scene-management](systems/scene-management.md) | stub | `SceneSubSystem`, scene transitions |
 | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays driven by health/atmos |
 | [selection](systems/selection.md) | shipped | Shader-ID mesh picking, pick-grid index |

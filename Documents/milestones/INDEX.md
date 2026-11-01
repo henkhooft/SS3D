@@ -21,7 +21,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 - **A1** — Loadable local build: shares test-server T1 re-cut; verify newly packaged `Data/StationTemplates/` on that cut
 - **A2 shipped** — Scripts → Rooms: painting, metadata, shared toolbar, undo/persistence and APC-facing membership; owner manually accepted in the editor
 - **A2.5** — Internal dogfood build of the Nuke Ops station before testers see it
-- **A4 partial** — Protected edit/playtest loop implemented; Unity lifecycle and visual acceptance pending
+- **A3 partial** — Map validation and save warnings implemented; Unity validation/render review pending
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 

@@ -145,6 +145,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 787463b79e983e9cd9703802613f05ac
+    m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Unlock.asset
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7b1db10335dc63dec8d3cd4e6696ff76
     m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Break.asset
     m_ReadOnly: 0
@@ -167,6 +172,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 89b0034265666e97d8b877b611f30fd1
     m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Give.asset
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8f71d6a06adc5ea8693a8058b6c25525
+    m_Address: Assets/Content/Systems/UI/Systems/Interactions/InteractionIcons/Lock.asset
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

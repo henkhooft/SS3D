@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 2156158514584011666}
   - component: {fileID: -6726976388225411495}
   - component: {fileID: -7700000000000000002}
+  - component: {fileID: 1993315067073775604}
   m_Layer: 0
   m_Name: VendorYouTool
   m_TagString: Untagged
@@ -149,6 +150,7 @@ MonoBehaviour:
   - {fileID: 8905492951320375787}
   - {fileID: 8149129049948001439}
   - {fileID: 2156158514584011666}
+  - {fileID: 1993315067073775604}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -178,13 +180,21 @@ MonoBehaviour:
   _productsToDispense:
   - Product: {fileID: 11400000, guid: 4d5800940a547b2419e83ec0ccd555d4, type: 2}
     Stock: 5
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: 4b6f5ee7c28256e4783f03f8d96872b7, type: 2}
     Stock: 5
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: 4c4f968211b927b4aa55e22fc7adcb2b, type: 2}
     Stock: 5
+    RequiresId: 0
   - Product: {fileID: 11400000, guid: 58b1ed19ea55c074cb719ae4c4791cf1, type: 2}
     Stock: 5
+    RequiresId: 0
   _dispensingTransform: {fileID: 5160227759105755511}
+  _title: GALLEY VENDOMAT
+  _subtitle: "Crew Mess \u2014 Sundries Dispenser"
+  _modelLabel: "VND-7 \xB7 ration & sundries dispenser"
+  _connectionStatus: "WIRED \xB7 VEND BUS \xB7 PORT J1"
 --- !u!114 &6841733904447030618
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -276,6 +286,33 @@ MonoBehaviour:
   _renderers:
   - {fileID: 2658310835758749971}
   _panelIndicators: []
+--- !u!114 &1993315067073775604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2658310835758749969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff65a9dda1ef18f4cbc16ee4d1aee066, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Tile.PlacedTileObject
+  _componentIndexCache: 3
+  _addedNetworkObject: {fileID: 1871071288925904272}
+  _networkObjectCache: {fileID: 1871071288925904272}
+  _asset: {fileID: 0}
+  _tileObjectSo: {fileID: 0}
+  _syncAssetId: 65535
+  _syncOriginX: 0
+  _syncOriginY: 0
+  _syncWorldOriginX: 0
+  _syncWorldOriginY: 0
+  _syncDirection: 0
+  _syncLayer: 0
+  _syncMapId: 0
+  _syncIntegrityRemaining: -1
+  _syncIntegrityStage: 0
 --- !u!1 &3671711954327816294
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 using Coimbra.Services.Events;
 using Cysharp.Threading.Tasks;
 using Coimbra.Services.PlayerLoopEvents;
+using FishNet;
 using FishNet.Connection;
 using FishNet.Object;
 using SS3D.Core;
@@ -10,8 +11,10 @@ using SS3D.Logging;
 using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Electricity;
+using SS3D.Systems.Entities;
 using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Rounds;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Persistence;
 using SS3D.Systems.Rounds;
@@ -172,12 +175,16 @@ namespace SS3D.Systems.Tile.MapEditor
             ResolvePlayerCamera();
         }
 
-        public override void OnStopServer()
+        /// <summary>
+        /// Forgets the template identity and edit history once the station they belong to is gone
+        /// (round stop unloads it), so the next round's map doesn't inherit stale unsaved changes.
+        /// </summary>
+        [Server]
+        public void ResetAuthoringState()
         {
             EditingTemplateName = null;
             _commandService.ClearHistory();
             _inspectedRooms.Clear();
-            base.OnStopServer();
         }
 
         private void ResolvePlayerCamera()
@@ -315,14 +322,28 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             if (_active)
                 SetActive(false);
-            else
+            else if (CanOpenEditor())
                 SetActive(true);
+        }
+
+        /// <summary>
+        /// The editor takes over the in-world player camera, so it only opens while a round is
+        /// running and the local player has a body. From the lobby or before a round starts there
+        /// is no station to edit and the camera has nowhere sensible to be.
+        /// </summary>
+        private static bool CanOpenEditor()
+        {
+            if (!SubSystems.TryGet(out RoundSubSystem rounds) || rounds.CurrentRoundState != RoundState.Ongoing)
+                return false;
+
+            NetworkConnection local = InstanceFinder.ClientManager != null ? InstanceFinder.ClientManager.Connection : null;
+            return local != null
+                && SubSystems.TryGet(out EntitySubSystem entities)
+                && entities.IsPlayerSpawned(local);
         }
 
         private void SetActive(bool active)
         {
-            if (active && SubSystems.TryGet(out RoundSubSystem rounds) && !rounds.MapEditingAllowed)
-                return;
             _active = active;
 
             if (active)
@@ -481,7 +502,9 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!_active)
                 return;
 
-            if (SubSystems.TryGet(out RoundSubSystem rounds) && !rounds.MapEditingAllowed)
+            // Round ended (or the body went away) while editing: drop back out instead of leaving
+            // the editor driving a camera over a station that is being torn down.
+            if (!CanOpenEditor())
             {
                 SetActive(false);
                 return;
@@ -1062,9 +1085,16 @@ namespace SS3D.Systems.Tile.MapEditor
 
             try
             {
-                bool saved = _persistence.Save(mapName, overwrite);
-                if (saved) TargetRememberTemplate(conn, mapName);
-                TargetToast(conn, saved ? $"Saved {mapName}." : $"Could not save {mapName}. Your edits are still unsaved.");
+                if (!_persistence.Save(mapName, overwrite))
+                {
+                    TargetToast(conn, $"Could not save {mapName}. Your edits are still unsaved.");
+                    return;
+                }
+                TargetRememberTemplate(conn, mapName);
+                string mode = SubSystems.Get<SS3D.Systems.Rounds.RoundSubSystem>().SettingsForServer.Mode;
+                Validation.MapValidationReport report = Validation.MapValidationService.Validate(_tileSystem, mode);
+                TargetSaveValidation(conn, report.HasIssues ? report.Describe(mapName, mode, saved: true) : "");
+                TargetToast(conn, report.HasIssues ? $"Saved {mapName} with validation warnings." : $"Saved {mapName}.");
                 TargetRefreshMapList(conn);
             }
             catch (Exception exception)
@@ -1072,6 +1102,17 @@ namespace SS3D.Systems.Tile.MapEditor
                 Log.Error(this, "Map editor save failed: {error}", Logs.ServerOnly, exception.Message);
                 TargetToast(conn, $"Could not save {mapName}. Your edits are still unsaved.");
             }
+        }
+
+        [TargetRpc]
+        private void TargetSaveValidation(NetworkConnection conn, string report)
+        {
+            _viewModel.ValidationReport = report;
+            if (!string.IsNullOrEmpty(report))
+                _viewModel.OpenPopover = "validation";
+            else if (_viewModel.OpenPopover == "validation")
+                _viewModel.OpenPopover = null;
+            _viewModel.NotifyChanged();
         }
 
         [ServerRpc(RequireOwnership = false)]
