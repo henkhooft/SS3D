@@ -100,6 +100,13 @@ namespace SS3D.Systems.Comms
                 return;
             }
 
+            // Chat command: /bug <note> goes to the server's bug report file, not to chat.
+            if (Rounds.BugCommand.TryParse(text, out string bugNote) && SubSystems.TryGet(out Rounds.RoundSubSystem rounds))
+            {
+                SendOocNotice(conn, request.Channel, rounds.RecordBugReport(conn, ckey, bugNote));
+                return;
+            }
+
             if (request.Channel == OocChannel.Looc)
             {
                 SendLooc(conn, ckey, role, text);

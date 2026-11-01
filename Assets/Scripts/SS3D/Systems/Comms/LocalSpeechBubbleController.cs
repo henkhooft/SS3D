@@ -277,6 +277,14 @@ namespace SS3D.Systems.Comms
             }
 
             CommsSubSystem comms = _commsSubSystem != null ? _commsSubSystem : SubSystems.Get<CommsSubSystem>();
+            // /bug is a chat command handled with OOC, never spoken aloud.
+            if (comms != null && Rounds.BugCommand.TryParse(text, out _))
+            {
+                comms.SendOoc(OocChannel.Ooc, text);
+                EndCompose(clearText: true);
+                return;
+            }
+
             if (CommsComposePrefix.TrySplit(text, out string token, out string body)
                 && comms != null
                 && comms.TryResolveComposePrefix(token, out CommsChannel prefixChannel))

@@ -225,5 +225,24 @@ namespace SS3D.Tests.EditMode
             StringAssert.Contains("5 seconds", SS3D.Systems.Entities.RespawnRules.Refusal(true, true, true, 5));
             Assert.IsNull(SS3D.Systems.Entities.RespawnRules.Refusal(true, true, true, 0));
         }
+    
+        [TestCase("/bug the door ate me", true, "the door ate me")]
+        [TestCase("/BUG  spaced  ", true, "spaced")]
+        [TestCase("/bug", true, "")]
+        [TestCase("/bugs are fun", false, null)]
+        [TestCase("bug report", false, null)]
+        [TestCase("/eng hello", false, null)]
+        public void BugCommand_ParsesNote(string text, bool isBug, string note)
+        {
+            Assert.AreEqual(isBug, BugCommand.TryParse(text, out string parsed));
+            Assert.AreEqual(note, parsed);
+        }
+
+        [Test]
+        public void BugCommand_ClampsLongNotes()
+        {
+            Assert.IsTrue(BugCommand.TryParse("/bug " + new string('x', 2000), out string note));
+            Assert.AreEqual(BugCommand.MaxNoteLength, note.Length);
+        }
     }
 }

@@ -426,6 +426,13 @@ namespace SS3D.Systems.Entities
                 if (player == null)
                     continue;
 
+                // Every spawn creates a Mind and nothing else despawns it; without this one leaked per player per round.
+                Mind mind = player.Mind;
+                if (mind != null && mind != Mind.Empty && mind.IsSpawned)
+                {
+                    ServerManager.Despawn(mind.NetworkObject);
+                }
+
                 ServerManager.Despawn(player.NetworkObject);
                 player.GameObject.Dispose(true);
             }

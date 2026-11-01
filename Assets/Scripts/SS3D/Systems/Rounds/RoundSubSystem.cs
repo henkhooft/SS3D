@@ -58,6 +58,7 @@ namespace SS3D.Systems.Rounds
 
             RoundState = RoundState.Preparing;
             RoundSeconds = 0;
+            BeginRoundId();
             _stationName = _serverSettings.Map;
             _stationLoadState = StationLoadState.Loading;
             try
@@ -177,7 +178,7 @@ namespace SS3D.Systems.Rounds
 
             RoundSeconds = 0;
             RoundState = RoundState.Ongoing;
-            Log.Information(this, "Starting round tick", Logs.ServerOnly);
+            Log.Information(this, "Round {roundId} started", Logs.ServerOnly, _roundId);
             SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
                 "Welcome to the station crew, enjoy your stay.",
                 CommsAudioTrackIds.StationWelcome);
@@ -203,6 +204,7 @@ namespace SS3D.Systems.Rounds
         {
             RoundState = RoundState.Ending;
             CancelTick();
+            Log.Information(this, "Round {roundId} ended after {seconds} s", Logs.ServerOnly, _roundId, RoundSeconds);
             if (SubSystems.TryGet(out CommsSubSystem comms)) comms.PostOocSystem(OocChannel.Ooc, "The round has ended.");
 
             AppendRoundHistory();
@@ -250,6 +252,7 @@ namespace SS3D.Systems.Rounds
             UnloadStation();
 
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
+            AppendResetHealth();
         }
 
         /// <summary>

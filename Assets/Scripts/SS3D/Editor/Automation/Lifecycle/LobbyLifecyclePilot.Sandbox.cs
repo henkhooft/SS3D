@@ -5,6 +5,7 @@ using SS3D.Systems.Entities.Humanoid;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using SS3D.Core;
+using SS3D.Systems.Comms;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor;
@@ -52,6 +53,17 @@ namespace SS3D.Editor.Automation
         }
 
         private static Human _corpse;
+        private static int _resetHealthLines;
+        private static int _bugLines;
+
+        /// <summary>Lines of a jsonl file under the server's Data folder (LocalStorage layout).</summary>
+        private static string[] JsonlLines(string name)
+        {
+            string path = SS3D.Data.Paths.GetPath(SS3D.Data.GamePaths.Data, true) + name + ".jsonl";
+            return System.IO.File.Exists(path) ? System.IO.File.ReadAllLines(path) : System.Array.Empty<string>();
+        }
+
+        private static T LastJsonl<T>(string name) => JsonUtility.FromJson<T>(JsonlLines(name).Last());
 
         private static RespawnPrompt Prompt() => SubSystems.Get<EntitySubSystem>().GetComponent<RespawnPrompt>();
 
@@ -60,6 +72,31 @@ namespace SS3D.Editor.Automation
             && entity.GetComponent<HumanoidGhostController>() != null;
 
         private static Vector3 Flat(Vector3 position) => new(position.x, 0, position.z);
+
+        private static ResetHealthEntry _firstReset;
+
+        /// <summary>The reset-health line lands just after Stopped; wait for this reset's line.</summary>
+        private static bool ResetLogged() =>
+            JsonlLines(SS3D.Data.Persistence.PersistencePaths.ResetHealth).Length > _resetHealthLines + (_firstReset != null ? 1 : 0);
+
+        /// <summary>The reset wrote its health line; nothing from the station is left; the second reset matches the first.</summary>
+        private static void VerifyResetHealth(int resets)
+        {
+            Require(JsonlLines(SS3D.Data.Persistence.PersistencePaths.ResetHealth).Length == _resetHealthLines + resets,
+                $"reset-health.jsonl has a line for reset {resets}");
+            ResetHealthEntry entry = LastJsonl<ResetHealthEntry>(SS3D.Data.Persistence.PersistencePaths.ResetHealth);
+            Timeline.Add($"reset {resets}: {JsonUtility.ToJson(entry)}");
+            Require(entry.roundId == Rounds().RoundId && entry.players == 1, "Health line carries round ID and player count");
+            Require(entry.tileObjects == 0 && entry.items == 0, "No tile objects or items survive the unload");
+            if (resets == 1)
+            {
+                _firstReset = entry;
+                return;
+            }
+
+            Require(entry.networkObjects == _firstReset.networkObjects,
+                $"Spawned network objects match the first reset ({_firstReset.networkObjects} → {entry.networkObjects})");
+        }
 
         private static string SidebarSub() => Shell()?.Q<Label>(className: "lobby-shell__countdown-sub")?.text;
 
@@ -75,6 +112,8 @@ namespace SS3D.Editor.Automation
                 {
                     Require(!Rounds().AutoStartEnabled && Rounds().AutoStartSecondsLeft == 0, "A normal server does not start rounds on its own");
                     CreateValidationStation(valid: true);
+                    _resetHealthLines = JsonlLines(SS3D.Data.Persistence.PersistencePaths.ResetHealth).Length;
+                    _bugLines = JsonlLines(SS3D.Data.Persistence.PersistencePaths.BugReports).Length;
                 },
             },
             new Step
@@ -175,6 +214,20 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "/bug in chat saves a report with round and state",
+                Enter = () => SubSystems.Get<CommsSubSystem>().SendOoc(OocChannel.Ooc, "/bug sandbox pilot report"),
+                Until = () => HostChatContains("Bug report saved. Thanks!"),
+                Verify = () =>
+                {
+                    Require(JsonlLines(SS3D.Data.Persistence.PersistencePaths.BugReports).Length == _bugLines + 1, "bugs.jsonl gained one line");
+                    BugReportEntry bug = LastJsonl<BugReportEntry>(SS3D.Data.Persistence.PersistencePaths.BugReports);
+                    Require(bug.note == "sandbox pilot report" && bug.state == "alive" && bug.roundId == Rounds().RoundId
+                        && bug.ckey == Local().Ckey, "Report carries note, alive state, round ID and ckey");
+                    Require(!HostChatContains("/bug sandbox pilot report"), "The command is not echoed to OOC chat");
+                },
+            },
+            new Step
+            {
                 Name = "One-minute warning",
                 Timeout = 90,
                 Until = () => HostChatContains("The round ends in 1 minute."),
@@ -184,12 +237,13 @@ namespace SS3D.Editor.Automation
             {
                 Name = "First round ends on its own and the station is wiped",
                 Timeout = 90,
-                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty(),
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty() && ResetLogged(),
                 Verify = () =>
                 {
                     Require(!AutosaveExists(), "No round-end autosave with persistence off");
                     Require(UnityEngine.Object.FindObjectsByType<Human>(FindObjectsSortMode.None).Length == 0,
                         "No bodies or corpses survive the reset");
+                    VerifyResetHealth(1);
                     ServerSettings settings = Rounds().SettingsForServer;
                     settings.RoundLengthMinutes = 1;
                     Rounds().ApplyServerSettingsForTesting(settings);
@@ -217,8 +271,12 @@ namespace SS3D.Editor.Automation
             {
                 Name = "Second round ends on its own",
                 Timeout = 120,
-                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty(),
-                Verify = () => Capture("sandbox-second-reset"),
+                Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty() && ResetLogged(),
+                Verify = () =>
+                {
+                    VerifyResetHealth(2);
+                    Capture("sandbox-second-reset");
+                },
             },
         };
     }
