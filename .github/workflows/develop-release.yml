@@ -477,11 +477,25 @@ jobs:
           path: build/Game/StandaloneWindows64
           retention-days: 7
 
+  updater-tests:
+    name: Windows updater regression tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          sparse-checkout: |
+            Builds
+            Tools/updater
+      - name: Exercise updater without network or a real game
+        shell: powershell
+        run: ./Tools/updater/test-update.ps1
+
   release:
     name: GitHub release
-    needs: [prepare, build-linux, build-windows]
+    needs: [prepare, build-linux, build-windows, updater-tests]
     # Same skip-cascade override; Linux may be skipped when build_linux is off.
-    if: ${{ always() && needs.build-windows.result == 'success' && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && needs.prepare.outputs.skip_release != 'true' }}
+    if: ${{ always() && needs.build-windows.result == 'success' && needs.updater-tests.result == 'success' && (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped') && needs.prepare.outputs.skip_release != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -564,7 +578,18 @@ jobs:
           cp -a build-windows/. "${WIN_ROOT}/Game/"
           strip_debug "${WIN_ROOT}/Game"
           seed_cwd_data "${WIN_ROOT}/Game"
-          cp Builds/Start_SS3D_Host.bat Builds/Start_SS3D_Client.bat Builds/README.txt Builds/TESTERS.md "${WIN_ROOT}/"
+          cp Builds/Start_SS3D_Host.bat Builds/Start_SS3D_Client.bat Builds/Update_SS3D.bat Builds/Update_SS3D.ps1 Builds/README.txt Builds/TESTERS.md "${WIN_ROOT}/"
+          # Remember shipped map hashes so updates refresh defaults without replacing edited maps.
+          python3 - "${WIN_ROOT}" "$TAG" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          defaults = {}
+          for folder in ('StationTemplates', 'Tilemaps'):
+              for path in (root / 'Game/Data' / folder).rglob('*'):
+                  if path.is_file():
+                      defaults[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+          (root / '.ss3d-release.json').write_text(json.dumps({'tag': sys.argv[2], 'defaults': defaults}), encoding='utf-8')
+          PY
           (cd staging && zip -qq -r "../dist/SS3D-Windows-${TAG}.zip" "SS3D-Windows-${TAG}")
 
           FILES="dist/SS3D-Windows-${TAG}.zip"
@@ -627,6 +652,9 @@ jobs:
             **Player download (Windows):** `SS3D-Windows-${{ steps.tag.outputs.tag_name }}.zip`
             — unzip, run `Start_SS3D_Host.bat` to host, or `Start_SS3D_Client.bat` to join
             (it asks for your name and the server IP). `Game\SS3D.exe` on its own opens the launcher.
+
+            Close the game and run `Update_SS3D.bat` to get the newest stable numbered release while
+            preserving local data. Prereleases and nightlies are excluded; the previous installation is kept.
 
             Linux:
             ${{ steps.stage.outputs.linux_notes }}

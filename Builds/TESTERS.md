@@ -11,6 +11,11 @@ You don't need to edit any files.
 
 Friends on your network can join with `Start_SS3D_Client.bat`, using your IP address.
 
+On Windows, close the game and run **`Update_SS3D.bat`** regularly for the latest stable
+release (prereleases and nightlies are ignored). Your maps and local data are preserved; the previous
+installation is kept in `.ss3d-backups/`. Keep both updater files beside the launch scripts.
+Use the same launch scripts after updating. See `README.txt` for rollback instructions.
+
 ## 2. Build
 
 Press **B** to open the map editor. Press **B** again to close it.

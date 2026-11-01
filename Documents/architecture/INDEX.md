@@ -92,7 +92,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending UI |
 | [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) | partial | Map editor extension points for creative mode |
-| [networking-session](systems/networking-session.md) | partial | Session FSM, protocol gate, headless server; [Multiplayer testing](systems/networking-session-testing.md) |
+| [networking-session](systems/networking-session.md) | partial | Session FSM, protocol gate, headless server, Windows stable-release updater; [Multiplayer testing](systems/networking-session-testing.md) |
 | [permissions](systems/permissions.md) | partial | Admin permission checks |
 | [persistence](systems/persistence.md) | partial | Station templates, server meta |
 | [player-control](systems/player-control.md) | partial | Connect/authorize/disconnect, reconnect-to-body |

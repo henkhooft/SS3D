@@ -1,0 +1,22 @@
+name: Windows updater tests
+on:
+  pull_request:
+    paths:
+      - 'Builds/Update_SS3D.*'
+      - 'Tools/updater/test-update.ps1'
+      - '.github/workflows/updater-tests.yml'
+      - '.github/workflows/develop-release.yml'
+  workflow_dispatch:
+jobs:
+  updater:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          sparse-checkout: |
+            Builds
+            Tools/updater
+      - name: Exercise updater with isolated fake releases (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./Tools/updater/test-update.ps1

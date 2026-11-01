@@ -8,11 +8,35 @@ WINDOWS (SS3D-Windows-<version>.zip)
 
   Start_SS3D_Host.bat     host a game on this PC (server + your own client)
   Start_SS3D_Client.bat   join a game; asks for your name and the server IP
+  Update_SS3D.bat         update this folder to the latest stable Windows release
   Game\SS3D.exe           run on its own to get the launcher
 
   Both bats also take arguments:
     Start_SS3D_Client.bat <name> <server ip> [port]
     Start_SS3D_Host.bat [name] [port]
+
+UPDATING (WINDOWS)
+
+  Close all SS3D windows, then double-click Update_SS3D.bat. Keep Update_SS3D.ps1 next
+  to it. Requires Windows PowerShell 5.1 (included with Windows 10/11) and internet access.
+  It follows stable numbered vX.Y.Z releases; prereleases and nightlies are ignored.
+  The download is SHA-256 checked before installation. Failed downloads leave the game intact.
+  Maps, exports, logs, server state and Config are preserved. Unmodified bundled maps are
+  refreshed; edited maps keep their contents even if the new release uses the same name.
+  Older downloads without a map manifest keep all local maps on their first update.
+  Player settings stored outside this folder are untouched.
+
+  Use your usual Host/Client script in this same folder after updating (its name may still
+  show an older version). The updater prints the installed version and the backup location.
+  To roll back, close the game and run a Host/Client script in the printed .ss3d-backups
+  folder. That is the complete installation and local data from BEFORE the update; later
+  edits remain in the newer installation. Backups are never deleted automatically.
+  Update_SS3D.bat -CheckOnly checks for updates without downloading or installing.
+
+  If an update is interrupted while installing, keep .ss3d-update-* and .ss3d-backups:
+  the previous Game folder and launch scripts can be recovered from the latest backup.
+  The updater itself stays as a stable bootstrap; replace its two files from a fresh
+  release zip if a future release requires a new updater.
 
 LINUX CLIENT (SS3D-Linux-Client-<version>.zip)
 

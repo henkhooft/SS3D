@@ -56,7 +56,8 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    (`buildName: SS3D`). Same TomNAS Library stash / `runAsHostUser` when self-hosted. Not
    smoke-tested on Windows. Skipped when `skip_release` is set.
 6. **Prerelease** — primary zip `SS3D-Windows-<tag>.zip` with layout:
-   `Start_SS3D_Host.bat`, `Start_SS3D_Client.bat` (prompts for name + IP) and `README.txt`
+   `Start_SS3D_Host.bat`, `Start_SS3D_Client.bat` (prompts for name + IP), `Update_SS3D.bat`,
+   `Update_SS3D.ps1`, `.ss3d-release.json`, `TESTERS.md` and `README.txt`
    beside `Game/SS3D.exe`, plus CWD fixtures
    `Game/Config/` (`permissions.txt`, `network.json`), `Game/Data/Tilemaps/`, and `Game/Data/StationTemplates/`
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
@@ -67,6 +68,33 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    `SS3D-Linux-Server-<tag>/` holds `start_ss3d_server.sh` and `GameServer/` (`SS3D-Server`).
    `*_BurstDebugInformation_DoNotShip` is stripped from every zip. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
    (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.
+
+### Windows release updates
+
+`Builds/Update_SS3D.bat` invokes the adjacent PowerShell 5.1 script. It selects the highest
+published **stable** `vMAJOR.MINOR.PATCH` release, ignoring drafts, prereleases and nightlies.
+The existing CI prerelease policy stays in place: test the prerelease manually, then clear
+its prerelease flag in GitHub to promote that exact artifact onto the update channel.
+`-CheckOnly` checks without downloading; a newer installed version is never downgraded.
+
+Updates require all SS3D processes closed. The script locks the installation against concurrent
+updates, downloads and checks GitHub's SHA-256 digest, checks archive paths and required files,
+and stages beside the installation before swapping `Game/`, launch scripts, guides and metadata.
+`Game/Config`, local data and logs carry forward. `.ss3d-release.json` records tag and shipped
+map hashes so unchanged bundled maps refresh while custom/edited maps survive, including name
+collisions. Older downloads without metadata conservatively preserve every local map.
+Player settings in Unity's persistent-data directory are untouched. Updater files remain a
+stable bootstrap; install newer bootstrap files manually if ever required.
+
+Each update retains a complete previous installation under `.ss3d-backups/<id>/`; launch its
+Host/Client script to roll back with its pre-update local data. Later edits stay in the newer
+installation. Backups are never pruned automatically. A caught swap failure restores the
+original; an interrupted swap or failed restore leaves staging/backup files for manual recovery.
+
+`Tools/updater/test-update.ps1` uses temporary fixtures and mocked downloads, with no Unity or
+network dependency. `.github/workflows/updater-tests.yml` checks relevant PRs on Windows
+PowerShell 5.1; `develop-release.yml` also requires that test job before publishing. Native
+Windows download/update and backup launch are still required in first-release dogfood.
 
 ### Related workflow changes
 
