@@ -1,2 +1,3 @@
-cd Game/
-start SS3D.exe -ip=127.0.0.1 -port=1151 -ckey=GhostOfBeep -skipintro
+@echo off
+rem Dev shortcut: joins 127.0.0.1 as GhostOfBeep. Not shipped in release zips.
+call "%~dp0Start_SS3D_Client.bat" GhostOfBeep 127.0.0.1

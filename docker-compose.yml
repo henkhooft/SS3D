@@ -4,7 +4,7 @@ services:
       context: ./build/StandaloneLinux64
       dockerfile: ../../Dockerfile
     ports:
-      - "2222:2222/udp"
+      - "1151:1151/udp"
     volumes:
       - ss3d-server-config:/server/Config
 

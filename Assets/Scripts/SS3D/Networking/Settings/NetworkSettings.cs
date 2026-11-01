@@ -42,7 +42,7 @@ namespace SS3D.Networking.Settings
 		/// The server port used when start connecting to a server.
 		/// Defined via command line args when in a built executable or the EditorServerAddress when in the Editor.
 		/// </summary>
-		public ushort ServerPort = 2222;
+		public ushort ServerPort = 1151;
 
 		/// <summary>
 		/// Enables Fish-net's bandwidth UI in the game.

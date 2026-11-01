@@ -260,6 +260,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+          # BuildInfoGenerator reads history and v* tags for the lobby change log.
+          fetch-depth: 0
+          filter: blob:none
       - name: Restore Unity Library stash
         if: needs.prepare.outputs.self_hosted == 'true'
         run: |
@@ -307,6 +310,14 @@ jobs:
           customParameters: -ss3dVersion ${{ needs.prepare.outputs.version }}
           unityVersion: 6000.3.16f1
           runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
+      - name: Verify lobby change log was generated
+        run: |
+          set -euo pipefail
+          # Written by BuildInfoGenerator inside the Unity container; gitignored, so a missing
+          # file means git failed there and the lobby shows "No change log in this build".
+          f=Assets/Content/Systems/UI/Lobby/Resources/BuildInfo.json
+          test -s "$f" || { echo "::warning::$f was not generated"; exit 0; }
+          grep -q '"subject"' "$f" || { echo "::warning::$f has no change log entries"; exit 0; }
       - name: Verify server and client binaries
         run: |
           set -euo pipefail
@@ -380,6 +391,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+          # BuildInfoGenerator reads history and v* tags for the lobby change log.
+          fetch-depth: 0
+          filter: blob:none
       - name: Restore Unity Library stash
         if: needs.prepare.outputs.self_hosted == 'true'
         run: |
@@ -426,6 +440,14 @@ jobs:
           customParameters: -ss3dVersion ${{ needs.prepare.outputs.version }}
           unityVersion: 6000.3.16f1
           runAsHostUser: ${{ needs.prepare.outputs.self_hosted == 'true' }}
+      - name: Verify lobby change log was generated
+        run: |
+          set -euo pipefail
+          # Written by BuildInfoGenerator inside the Unity container; gitignored, so a missing
+          # file means git failed there and the lobby shows "No change log in this build".
+          f=Assets/Content/Systems/UI/Lobby/Resources/BuildInfo.json
+          test -s "$f" || { echo "::warning::$f was not generated"; exit 0; }
+          grep -q '"subject"' "$f" || { echo "::warning::$f has no change log entries"; exit 0; }
       - name: Save Unity Library stash
         if: needs.prepare.outputs.self_hosted == 'true' && success()
         run: |
@@ -528,29 +550,49 @@ jobs:
             cp -a Builds/Game/Data/StationTemplates/. "${dest}/Data/StationTemplates/"
           }
 
+          # Burst's debug symbols are a few MB the player never reads.
+          strip_debug() { rm -rf "$1"/*_BurstDebugInformation_DoNotShip; }
+
           # --- Primary: Windows client + launch bats ---
           WIN_ROOT="staging/SS3D-Windows-${TAG}"
           mkdir -p "${WIN_ROOT}/Game"
           # Artifact is the StandaloneWindows64 tree (SS3D.exe + *_Data, etc.).
           test -f build-windows/SS3D.exe
           cp -a build-windows/. "${WIN_ROOT}/Game/"
+          strip_debug "${WIN_ROOT}/Game"
           seed_cwd_data "${WIN_ROOT}/Game"
-          cp Builds/Start_SS3D_*.bat "${WIN_ROOT}/"
-          cp Builds/README.txt "${WIN_ROOT}/"
+          cp Builds/Start_SS3D_Host.bat Builds/Start_SS3D_Client.bat Builds/README.txt "${WIN_ROOT}/"
           (cd staging && zip -qq -r "../dist/SS3D-Windows-${TAG}.zip" "SS3D-Windows-${TAG}")
 
           FILES="dist/SS3D-Windows-${TAG}.zip"
           NOTES_LINUX="_(not built for this dispatch — enable build_linux to attach Linux zips)_"
 
           if [ "${{ needs.prepare.outputs.build_linux }}" = "true" ]; then
-            test -d build-linux/GameServer/StandaloneLinux64
-            test -d build-linux/Game/StandaloneLinux64
-            seed_cwd_data build-linux/GameServer/StandaloneLinux64
-            seed_cwd_data build-linux/Game/StandaloneLinux64
-            zip -qq -r "dist/SS3D-Linux-Server-${TAG}.zip" build-linux/GameServer
-            zip -qq -r "dist/SS3D-Linux-Client-${TAG}.zip" build-linux/Game
+            # Same shape as Windows: launch scripts at the top, the player under Game/ or
+            # GameServer/. upload-artifact drops the exec bit, so restore it before zipping
+            # (zip keeps Unix modes; unzip restores them).
+            stage_linux() {
+              local kind="$1" src="$2" sub="$3" bin="$4"; shift 4
+              local root="staging/SS3D-Linux-${kind}-${TAG}"
+              test -f "${src}/${bin}"
+              mkdir -p "${root}/${sub}"
+              cp -a "${src}/." "${root}/${sub}/"
+              strip_debug "${root}/${sub}"
+              seed_cwd_data "${root}/${sub}"
+              chmod +x "${root}/${sub}/${bin}"
+              for script in "$@"; do
+                cp "Builds/${script}" "${root}/"
+                chmod +x "${root}/${script}"
+              done
+              cp Builds/README.txt "${root}/"
+              (cd staging && zip -qq -r "../dist/SS3D-Linux-${kind}-${TAG}.zip" "SS3D-Linux-${kind}-${TAG}")
+            }
+            stage_linux Client build-linux/Game/StandaloneLinux64 Game SS3D-Client \
+              start_ss3d_client.sh start_ss3d_host.sh
+            stage_linux Server build-linux/GameServer/StandaloneLinux64 GameServer SS3D-Server \
+              start_ss3d_server.sh
             FILES="$(printf '%s\n%s\n%s' "$FILES" "dist/SS3D-Linux-Server-${TAG}.zip" "dist/SS3D-Linux-Client-${TAG}.zip")"
-            NOTES_LINUX="$(printf -- '- `%s`\n- `%s`' "SS3D-Linux-Server-${TAG}.zip" "SS3D-Linux-Client-${TAG}.zip")"
+            NOTES_LINUX="$(printf -- '- `%s` — unzip, run `./start_ss3d_host.sh` or `./start_ss3d_client.sh <server ip>`\n- `%s` — unzip, run `./start_ss3d_server.sh`' "SS3D-Linux-Client-${TAG}.zip" "SS3D-Linux-Server-${TAG}.zip")"
           fi
 
           ls -lh dist
@@ -580,9 +622,10 @@ jobs:
             dispatch (see the Actions run). Windows is not smoke-tested.
 
             **Player download (Windows):** `SS3D-Windows-${{ steps.tag.outputs.tag_name }}.zip`
-            — unzip, run `Start_SS3D_Host.bat`, then a `Start_SS3D_Client_*.bat`.
+            — unzip, run `Start_SS3D_Host.bat` to host, or `Start_SS3D_Client.bat` to join
+            (it asks for your name and the server IP). `Game\SS3D.exe` on its own opens the launcher.
 
-            Secondary (ops / Linux binaries):
+            Linux:
             ${{ steps.stage.outputs.linux_notes }}
           files: ${{ steps.stage.outputs.files }}
         env:

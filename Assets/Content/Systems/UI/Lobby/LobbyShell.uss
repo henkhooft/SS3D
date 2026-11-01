@@ -626,6 +626,13 @@
     overflow: hidden;
 }
 
+.lobby-shell__changelog-empty {
+    color: var(--ss3d-text-secondary);
+    font-size: 14px;
+    white-space: normal;
+    flex-shrink: 0;
+}
+
 .lobby-shell__server-title-row {
     flex-direction: row;
     align-items: center;

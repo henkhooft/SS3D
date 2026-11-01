@@ -146,7 +146,10 @@ namespace SS3D.Editor
             output = null;
             try
             {
-                using Process git = Process.Start(new ProcessStartInfo("git", arguments)
+                // CI builds run inside game-ci's container as root against a checkout owned by the
+                // runner user; without safe.directory git refuses ("dubious ownership") and the
+                // player ships with no change log.
+                using Process git = Process.Start(new ProcessStartInfo("git", "-c safe.directory=* " + arguments)
                 {
                     WorkingDirectory = Path.GetDirectoryName(UnityEngine.Application.dataPath)!,
                     RedirectStandardOutput = true,
@@ -156,7 +159,19 @@ namespace SS3D.Editor
                 });
                 if (git == null) return false;
                 output = git.StandardOutput.ReadToEnd().Trim();
-                if (!git.WaitForExit(5000) || git.ExitCode != 0) return false;
+                string error = git.StandardError.ReadToEnd().Trim();
+                if (!git.WaitForExit(5000)) return false;
+                if (git.ExitCode != 0)
+                {
+                    // Expected for some calls (no v* tag yet), so only batch builds log it.
+                    if (UnityEngine.Application.isBatchMode)
+                    {
+                        Debug.Log($"[BuildInfo] git {arguments} failed ({git.ExitCode}): {error}");
+                    }
+
+                    return false;
+                }
+
                 return output.Length > 0;
             }
             catch (Exception exception)

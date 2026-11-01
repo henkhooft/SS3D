@@ -15,7 +15,7 @@ The launcher itself is a small, stable bootstrap. It is not replaced by game upd
 Requirements: `curl`, `jq`, `unzip`, `sha256sum`.
 
 ```bash
-./ss3d-launcher.sh --server <host> --port 2222 --ckey <ckey>
+./ss3d-launcher.sh --server <host> --port 1151 --ckey <ckey>
 ```
 
 Installs under `~/.local/share/ss3d/versions/`. Useful flags:
@@ -32,7 +32,7 @@ Run `SS3D-Launcher.bat` (it invokes PowerShell with `-ExecutionPolicy Bypass`). 
 PowerShell 5.1 or newer is required, and `SS3D-Launcher.ps1` must stay next to the `.bat`.
 
 ```bat
-SS3D-Launcher.bat -Server <host> -Port 2222 -Ckey <ckey>
+SS3D-Launcher.bat -Server <host> -Port 1151 -Ckey <ckey>
 ```
 
 Installs under `%LOCALAPPDATA%\SS3D\versions\`. Parameters: `-InstallDir`, `-Tag`,

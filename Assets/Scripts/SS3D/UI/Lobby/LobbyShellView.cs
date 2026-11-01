@@ -863,8 +863,10 @@ namespace SS3D.UI.Lobby
 
             if (info.entries.Length == 0)
             {
+                // Not changelog-text: its flex-basis 0 is for the row; in the column it collapses
+                // the label to zero height and only the tops of the glyphs show.
                 Label none = new("No change log in this build.");
-                none.AddToClassList("lobby-shell__changelog-text");
+                none.AddToClassList("lobby-shell__changelog-empty");
                 none.AddToClassList("font-body");
                 logBox.Add(none);
             }

@@ -9,6 +9,9 @@
 
 /[Bb]uilds/*
 !Builds/Game/
+!/[Bb]uilds/*.bat
+!/[Bb]uilds/*.sh
+!/[Bb]uilds/README.txt
 
 Builds/Game/*
 !Builds/Game/Data/
