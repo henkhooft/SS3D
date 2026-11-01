@@ -28,7 +28,7 @@ namespace SS3D.Tests
         /// after the round restarts. Aims to validate Issue #990: Propagating Pocket Problem.
         /// Originally counted the (now condemned/deleted) SingleItemContainerSlot UI elements;
         /// counts the underlying AttachedContainer data instead since the storage redesign
-        /// (Documents/architecture/2026-07_inventory-storage-redesign.md).
+        /// (Documents/architecture/systems/inventory.md).
         /// </summary>
         /// <returns>IEnumerator for use as a UnityTest.</returns>
         public static IEnumerator Issue0990_PlayerHasTheSameNumberOfPocketsAfterEndingRoundAndStartingNewOne(bool useProgrammaticRoundControl = false)

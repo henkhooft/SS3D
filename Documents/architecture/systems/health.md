@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial
-> Verified: a403d978f — 2026-07-29 (DepthNormals stays when SSAO off — Decal Layers)
+> Verified: 259787487 — 2026-11-01
 
 # Health
 
@@ -47,12 +47,14 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 - `Assets/Scripts/SS3D/Systems/Health/Interactions/TransfusionInteraction.cs` / `AntitoxinInteraction.cs` — medkit systemic treatments (Phase 5)
 - `Assets/Scripts/SS3D/Systems/Health/Interactions/DefibrillatorInteraction.cs` — chest-zone defibrillation (Phase 3)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/DefibCommand.cs` — admin defib testing
-- `Assets/Scripts/SS3D/Systems/Health/HealthDebugController.cs` — IMGUI overlay (H) for full zone/organ/pool inspection
+- `Assets/Scripts/SS3D/Systems/Health/HealthDebugController.cs` — IMGUI overlay (F1 → Health) for full zone/organ/pool inspection
 - `Assets/Scripts/SS3D/Systems/Health/HealthDebugDetail.cs` — per-zone/per-organ SyncVar payload for debug UI
 - `Assets/Scripts/SS3D/Systems/Health/ZoneTargetResolver.cs` — point + combat/hover raycast zone resolution, groin banding, reticle labels
 - `Assets/Scripts/SS3D/Systems/Health/HealthLayers.cs` — `BodyParts` layer mask for combat raycasts
 
 ## Extension points
+
+- Map Editor invincibility (`EntityInvincibility`) gates damage, ordinary severing and turf exposure; forced severing may bypass it. This per-connection playtest setting outlives the editor overlay ([tile](tile.md)).
 
 - `IHealthEffectModifier` — virology/chemistry/stamina deltas (Phase 7+)
 - `ApplyDamage(BodyZone, MeleeDamagePacket)` — melee combat input (`MeleeDamagePacket` lives in Health)

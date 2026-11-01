@@ -11,7 +11,7 @@ namespace SS3D.Systems.Entities.Editor
     /// <summary>
     /// Removes dev-only test components from <c>Human.prefab</c> via <see cref="PrefabUtility"/> instead of
     /// hand-edited YAML. First recipe tool for the follow-on (d) "Entity prefab setup / recipes" convention
-    /// named in 2026-07_agent-first-composition.md / 2026-07_human-prefab-decomposition.md.
+    /// named in 2026-07_agent-first-composition.md / Documents/architecture/systems/entities-prefab-recipes.md.
     /// Individual MenuItems removed — run via <see cref="HumanPrefabRecipes"/> (tier B).
     /// </summary>
     /// <remarks>

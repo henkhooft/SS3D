@@ -114,9 +114,9 @@ like upstream — not the diff.
 
    | Surface | Today | After |
    |---|---|---|
-   | Machine UI | `MachineUiAssetPaths` consts + committed `MachineUiAssetCatalog` SO, rebuilt via **SS3D → Machine Interface → Rebuild Asset Catalog** (`MachineUiAssetCatalogBuilder.cs`), loaded with `Resources.Load` | `Addressables.LoadAssetAsync<VisualTreeAsset>("mi/<template>")` (or the `AssetHandle<T>` wrapper from §1) against a stable address; no committed catalog SO |
-   | Main HUD | `MainHudAssetPaths` + `MainHudAssetCatalog` SO, rebuilt via **SS3D → Main HUD → Rebuild Asset Catalog** (`MainHudAssetCatalogBuilder.cs`) | same pattern, `"mainhud/<template>"` addresses |
-   | Storage Panel | `StoragePanelAssetCatalog`, rebuilt via **SS3D → Storage Panel → Rebuild Asset Catalog** (`StoragePanelAssetCatalogBuilder.cs`) | same pattern, `"storagepanel/<template>"` addresses |
+   | Machine UI | `MachineUiAssetPaths` consts + committed `MachineUiAssetCatalog` SO, rebuilt via **SS3D → Data → Rebuild All UI Catalogs** (`MachineUiAssetCatalogBuilder.cs`), loaded with `Resources.Load` | `Addressables.LoadAssetAsync<VisualTreeAsset>("mi/<template>")` (or the `AssetHandle<T>` wrapper from §1) against a stable address; no committed catalog SO |
+   | Main HUD | `MainHudAssetPaths` + `MainHudAssetCatalog` SO, rebuilt via **SS3D → Data → Rebuild All UI Catalogs** (`MainHudAssetCatalogBuilder.cs`) | same pattern, `"mainhud/<template>"` addresses |
+   | Storage Panel | `StoragePanelAssetCatalog`, rebuilt via **SS3D → Data → Rebuild All UI Catalogs** (`StoragePanelAssetCatalogBuilder.cs`) | same pattern, `"storagepanel/<template>"` addresses |
 
    The failure mode this removes: today, forgetting to re-run a rebuild menu after adding/renaming a
    UXML/USS asset leaves the committed catalog SO silently serving a stale reference — nothing catches

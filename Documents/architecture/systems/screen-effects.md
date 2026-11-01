@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/ScreenEffects/
 > Entry points: ScreenEffectsSubSystem
 > Status: partial
-> Verified: be4ea6eea — 2026-07-25
+> Verified: 259787487 — 2026-11-01
 
 # Screen-space effects
 
@@ -9,18 +9,18 @@
 
 Client-only URP Volume overlays for diegetic feedback from [main-hud](../../design/main-hud.md) §5: temperature, fire/freezing, low oxygen, dying/critical, blood-loss tunnel vision, concussion, unconsciousness, plus momentary melee hit flash and blast flash. Driven by intensity (0..1) via `SetEffect` / `TriggerHitFlash` / `TriggerBlastFlash`. Also hosts `SetUiBackdropBlur`, which drives Dual Kawase fullscreen blur (`UiBackdropBlurContext` → [rendering](rendering.md) `UiBackdropBlurRendererFeature`) for soft world focus behind sharp UI Toolkit overlays — separate from `ScreenEffectType` so health clears do not wipe it. Diegetic panels also paint a dark UITK scrim on the overlay root.
 
-**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. While dying/critical is active, LowOxygen screen intensity is attenuated so the red heartbeat blink reads; unconscious uses the previous flat blackout (no pulsed red veil). Dying pulses Dual Kawase via the same `UiBackdropBlurContext` as machine UI (max of UI vs health channels). Temperature/fire/frost are driven from synced `HealthSnapshot.Environment` via `AtmosScreenEffectMapper` (F2/`screeneffect` still for debug solos). Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
+**Health wiring shipped:** local-owner [health](health.md) drives dying/blood-loss/oxy/concussion/unconscious via `HealthScreenEffectMapper`, and hit flash via `HumanHealthController` TargetRpc. While dying/critical is active, LowOxygen screen intensity is attenuated so the red heartbeat blink reads; unconscious uses the previous flat blackout (no pulsed red veil). Dying pulses Dual Kawase via the same `UiBackdropBlurContext` as machine UI (max of UI vs health channels). Temperature/fire/frost are driven from synced `HealthSnapshot.Environment` via `AtmosScreenEffectMapper` (F1 → Screen Effects / `screeneffect` still for debug solos). Blast flash is fired by [structural-destruction](structural-destruction.md) `BlastVfxPresenter` (distance-gated).
 
 Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it can land without scene YAML edits.
 
-**Condemned UI:** F2 debug Canvas (`ScreenEffectsDebugMenuView`) — do not port to UITK; delete when health rewrite absorbs debug. Volume/effect path stays.
+**Condemned UI:** Screen Effects debug Canvas (F1 tool) (`ScreenEffectsDebugMenuView`) — do not port to UITK; delete when health rewrite absorbs debug. Volume/effect path stays.
 
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectsSubSystem.cs` — Volume + blackout + ember/frost particles; `SetEffect` / `TriggerHitFlash` / `TriggerBlastFlash` / `SetUiBackdropBlur`
 - `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectType.cs` — sustained effect enum
 - `Assets/Scripts/SS3D/Systems/Health/HealthScreenEffectMapper.cs` — `HealthSnapshot` → health-driven intensities
-- `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectsDebugMenuView.cs` — F2 debug menu (lazy UI build)
+- `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectsDebugMenuView.cs` — Screen Effects tool opened from F1 (lazy uGUI build)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectCommand.cs` — `screeneffect <type> <0-1>`
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ScreenEffectHitFlashCommand.cs` — hit-flash trigger
 
@@ -36,7 +36,7 @@ Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it
 - **Do not fold UI blur into `ScreenEffectType`:** `HealthScreenEffectMapper.Clear` zeros health types; UI backdrop blur must stay on the separate `SetUiBackdropBlur` path.
 - **Critical washed out by LowOxy + Unconscious:** mapper attenuates LowOxygen under dying; compositor scales oxy vignette. Dying is a hard heartbeat blink (vignette + Dual Kawase), not a soft continuous red. Unconscious blackout stays flat opaque black — do not pulse/tint it with dying (that looked worse than the old ending).
 - **Kawase is shared:** `SetUiBackdropBlur` (machine UI) and health dying both write channels; `UiBackdropBlurContext.Intensity = max(ui, health)`. Do not have health call `SetUiBackdropBlur` directly or it will fight panel open/close.
-- **F2 / screeneffect wiped by health:** live `HealthScreenEffectMapper.Apply` overwrites health channels every snapshot. F2 holds `SetDebugOverrideActive(true)` while open; `screeneffect` engages the same override until `screeneffect release` or F2 close. Mappers must no-op Apply/Clear while override is active.
+- **Debug panel / screeneffect wiped by health:** live `HealthScreenEffectMapper.Apply` overwrites health channels every snapshot. The Screen Effects panel holds `SetDebugOverrideActive(true)` while open; `screeneffect` engages the same override until `screeneffect release` or panel close. Mappers must no-op Apply/Clear while override is active.
 
 ## Depends on / Used by
 

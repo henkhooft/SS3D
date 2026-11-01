@@ -1,4 +1,4 @@
-> Implements: Documents/architecture/2026-07_multiplayer-test-harness.md (CI), Documents/archive/architecture/2026-07_headless-dedicated-server.md
+> Implements: Documents/architecture/systems/networking-session-testing.md (CI), Documents/archive/architecture/2026-07_headless-dedicated-server.md
 > Touches systems: networking-session
 > Status: shipped
 
@@ -135,7 +135,7 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 
 ## Related docs
 
-- [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md)
+- [Multiplayer testing](systems/networking-session-testing.md)
 - [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)
 - [2026-07_multiplayer-testing-self-hosted-ci.md](2026-07_multiplayer-testing-self-hosted-ci.md)
 - [networking-session.md](systems/networking-session.md)

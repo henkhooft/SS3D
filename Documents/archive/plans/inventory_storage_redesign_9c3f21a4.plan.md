@@ -60,8 +60,8 @@ todos:
     content: "Phase 6: update-system-docs — inventory + stamina maps, INDEX, architecture effort, health 7a, this plan"
     status: completed
   - id: verification
-    content: "Verification: NOT RUN in implementing session — owner must compile in Unity Editor and Play-Mode verify equip/panels/weight/stamina/oxy before merge."
-    status: pending
+    content: "Verification follow-up transferred to Documents/architecture/systems/inventory.md#tests; no runtime pass claimed by this archival cleanup."
+    status: cancelled
 isProject: false
 ---
 
@@ -71,9 +71,9 @@ isProject: false
 
 **Design specs (read-only):**
 
-- [Documents/design/inventory-storage.md](../design/inventory-storage.md) — Container primitive, equip
+- [Documents/design/inventory-storage.md](../../design/inventory-storage.md) — Container primitive, equip
   slots, size class/fit, stacking, storage panel UI, nested containers, locked storage, weight/encumbrance
-- [Documents/design/main-hud.md](../design/main-hud.md) §8 — gear strip as the panel's entry point
+- [Documents/design/main-hud.md](../../design/main-hud.md) §8 — gear strip as the panel's entry point
 
 **Architecture effort:** [2026-07_inventory-storage-redesign.md](../architecture/2026-07_inventory-storage-redesign.md)
 
@@ -83,7 +83,7 @@ weight bar, 3-col slot grid, stack badge, oversized-item rejection state) and
 `Looting Scene - Backpack and Locker.dc.html` (multiple panels open side by side, nested lockbox panel
 with origin breadcrumb, drag-in-transit ghost with path line).
 
-**Current-state map (pre-redesign):** [Documents/architecture/systems/inventory.md](../architecture/systems/inventory.md)
+**Current-state map (pre-redesign):** [Documents/architecture/systems/inventory.md](../../architecture/systems/inventory.md)
 
 **Scope decisions:** see architecture effort doc "Scope decisions" — minimal ID-gate locking only
 (hacking-interface FDU bitmask deferred), flat slot-index addressing (no item footprints exist
@@ -129,3 +129,7 @@ stack back out) is explicitly not implemented — only merging on add.
 **Still needed:** Phase 6 (docs sync — this note is part of it), the `purge-prefabs-followup` manual
 Editor step, and the entire Verification section — nothing in this pass was compiled or run. See
 architecture doc "Execution environment constraint."
+
+## Closure
+
+Implementation planning is closed. The outstanding equip/panel/weight/stamina/oxy verification checklist is maintained in the inventory system map; cancelling the transferred plan task does not mean those checks passed.

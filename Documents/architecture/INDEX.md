@@ -37,10 +37,10 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | hacking-interface | [hacking-interface](../design/hacking-interface.md) | none yet | none yet |
 | health | [health](../design/health.md) | [health plan](../plans/health_implementation_plan.md) — in-progress; [body-presentation-authority](../archive/architecture/2026-07_body-presentation-authority.md), [health-env-feel](../archive/architecture/2026-07_health-env-feel.md) — shipped | [health](systems/health.md) — partial |
 | id-access | [id-access](../design/id-access.md) | none yet | [id-access](systems/id-access.md) — partial |
-| inventory-storage | [inventory-storage](../design/inventory-storage.md) | [inventory-storage-redesign](2026-07_inventory-storage-redesign.md) — in-progress | [inventory](systems/inventory.md) — partial |
-| lobby | [lobby](../design/lobby.md) | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| inventory-storage | [inventory-storage](../design/inventory-storage.md) | [inventory-storage-redesign](../archive/architecture/2026-07_inventory-storage-redesign.md) — shipped | [inventory](systems/inventory.md) — partial |
+| lobby | [lobby](../design/lobby.md) | [lobby-uitk-redesign](../archive/architecture/2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | main-hud | [main-hud](../design/main-hud.md) | [machine-interface phase 1](../archive/architecture/2026-07_machine-interface-phase1-foundation.md), [2](../archive/architecture/2026-07_machine-interface-phase2-apc-networking.md), [3](../archive/architecture/2026-07_machine-interface-phase3-smes-generalization.md), [diegetic-screen-ui-framework](../archive/architecture/2026-07_diegetic-screen-ui-framework.md), [mi-path-catalog](../archive/architecture/2026-07_mi-path-catalog.md), [screen-space-effects](../archive/architecture/2026-07_screen-space-effects.md) — shipped; [ui-shell-consolidation](2026-07_ui-shell-consolidation.md) — shipped | [inventory](systems/inventory.md), [machine-interface](systems/machine-interface.md), [screen-effects](systems/screen-effects.md), [ui-shell](systems/ui-shell.md) |
-| networking | [networking](../design/networking.md) | [headless-dedicated-server](../archive/architecture/2026-07_headless-dedicated-server.md), [session-world-lifecycle](../archive/architecture/2026-07_session-world-lifecycle.md), [multiplayer-test-harness](2026-07_multiplayer-test-harness.md), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md), [game-versioning](2026-10_game-versioning.md) — shipped; [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress | [networking-session](systems/networking-session.md) — partial |
+| networking | [networking](../design/networking.md) | [headless-dedicated-server](../archive/architecture/2026-07_headless-dedicated-server.md), [session-world-lifecycle](../archive/architecture/2026-07_session-world-lifecycle.md), [multiplayer-test-harness](../archive/architecture/2026-07_multiplayer-test-harness.md), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md), [game-versioning](2026-10_game-versioning.md) — shipped; [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress | [networking-session](systems/networking-session.md) — partial |
 | objectives | [objectives](../design/objectives.md) | none yet | none yet |
 | observer | [observer](../design/observer.md) | none yet | none yet |
 | onboarding-tutorial | none yet | none yet | none yet |
@@ -49,10 +49,10 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | player-accounts | [player-accounts](../design/player-accounts.md) | none yet | none yet |
 | rd-material-economy | none yet | none yet | none yet |
 | rendering-lighting | [rendering-lighting](../design/rendering-lighting.md) | [srp-batcher-gpu-instancing](2026-07_srp-batcher-gpu-instancing.md) — shipped; [urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) — planned | [rendering](systems/rendering.md) — partial |
-| round-config | [round-config](../design/round-config.md) | [lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| round-config | [round-config](../design/round-config.md) | [lobby-uitk-redesign](../archive/architecture/2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-end | [round-end](../design/round-end.md) | none yet | none yet |
 | shuttles | [shuttles](../design/shuttles.md) | [shuttle plan](../plans/shuttle_system_design_a3dd2e04.plan.md) — planned | none yet |
-| stamina | [stamina](../design/stamina.md) | [inventory-storage-redesign](2026-07_inventory-storage-redesign.md) Phase 7a — in-progress | [stamina](systems/stamina.md) — partial |
+| stamina | [stamina](../design/stamina.md) | [inventory-storage-redesign](../archive/architecture/2026-07_inventory-storage-redesign.md) — shipped | [stamina](systems/stamina.md) — partial |
 | surgery | [surgery](../design/surgery.md) | none yet | none yet |
 | virology | [virology](../design/virology.md) | none yet | none yet |
 
@@ -76,7 +76,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [data-codegen](systems/data-codegen.md) | partial | Asset databases, generated refs, Addressables |
 | [disposal](systems/disposal.md) | partial | Item disposal network |
 | [electricity](systems/electricity.md) | partial | kWh grid, APCs, SMES, solar |
-| [entities](systems/entities.md) | partial | Humanoids, minds, spawning, body animation |
+| [entities](systems/entities.md) | partial | Humanoids, minds, spawning, body animation; [Entity prefab recipes](systems/entities-prefab-recipes.md) |
 | [examine](systems/examine.md) | partial | Hover/detailed examine, Search paperdoll |
 | [furniture](systems/furniture.md) | partial | Airlocks, lockers, vendors, jukebox |
 | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) | partial | Gamemodes, objectives, jobs, traits |
@@ -91,7 +91,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [logging](systems/logging.md) | shipped | Serilog structured logging |
 | [machine-interface](systems/machine-interface.md) | shipped | Diegetic APC/SMES/atmos/vending UI |
 | [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) | partial | Map editor extension points for creative mode |
-| [networking-session](systems/networking-session.md) | partial | Session FSM, headless server, multiplayer harness |
+| [networking-session](systems/networking-session.md) | partial | Session FSM, protocol gate, headless server; [Multiplayer testing](systems/networking-session-testing.md) |
 | [permissions](systems/permissions.md) | partial | Admin permission checks |
 | [persistence](systems/persistence.md) | partial | Station templates, server meta |
 | [player-control](systems/player-control.md) | partial | Connect/authorize/disconnect, reconnect-to-body |
@@ -104,7 +104,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [structural-destruction](systems/structural-destruction.md) | partial | Turf integrity, structural force, blasts |
 | [substances](systems/substances.md) | partial | Networked containers, reactions, heat |
 | [tile](systems/tile.md) | partial | Tilemap, adjacency, Map Editor with persistent Map Check, SS13 DMM import |
-| [ui-shell](systems/ui-shell.md) | partial | UITK composition root, shared catalog/binder |
+| [ui-shell](systems/ui-shell.md) | partial | UITK composition root, shared catalog/binder; F1 debug host still separate |
 
 ## Active efforts and plans
 
@@ -120,9 +120,6 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-07_camera-ownership](2026-07_camera-ownership.md) | planned |
 | [2026-07_ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md) | shipped (reference) |
 | [2026-07_editor-tooling-tiers](2026-07_editor-tooling-tiers.md) | shipped (standing policy) |
-| [2026-07_human-prefab-decomposition](2026-07_human-prefab-decomposition.md) | in-progress |
-| [2026-07_inventory-storage-redesign](2026-07_inventory-storage-redesign.md) | in-progress |
-| [2026-07_multiplayer-test-harness](2026-07_multiplayer-test-harness.md) | shipped (reference) |
 | [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) | in-progress |
 | [2026-07_srp-batcher-gpu-instancing](2026-07_srp-batcher-gpu-instancing.md) | shipped (reference) |
 | [2026-07_structural-destruction](2026-07_structural-destruction.md) | in-progress |
@@ -130,18 +127,22 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-07_unity-framedebug-ai-tooling](2026-07_unity-framedebug-ai-tooling.md) | shipped (reference) |
 | [2026-07_unity-perf-ai-tooling](2026-07_unity-perf-ai-tooling.md) | shipped (reference) |
 | [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) | planned |
-| [2026-08_lobby-uitk-redesign](2026-08_lobby-uitk-redesign.md) | shipped (reference) |
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [combat_implementation_plan](../plans/combat_implementation_plan.md) | in-progress |
 | [health_implementation_plan](../plans/health_implementation_plan.md) | in-progress |
-| [inventory_storage_redesign_9c3f21a4.plan](../plans/inventory_storage_redesign_9c3f21a4.plan.md) | in-progress |
 | [persistence_architecture_design_2fe61864.plan](../plans/persistence_architecture_design_2fe61864.plan.md) | in-progress |
 | [radial_menu_implementation_5a83bdf9.plan](../plans/radial_menu_implementation_5a83bdf9.plan.md) | in-progress |
 | [shuttle_system_design_a3dd2e04.plan](../plans/shuttle_system_design_a3dd2e04.plan.md) | planned |
 | [station_structural_damage.plan](../plans/station_structural_damage.plan.md) | in-progress |
 | [urp_lighting_look_plan_d42c32f5.plan](../plans/urp_lighting_look_plan_d42c32f5.plan.md) | planned |
+
+## Player settings and developer tools
+
+- [Player settings](2026-10_player-settings.md) — in-progress; code under `Assets/Scripts/SS3D/Systems/Settings/`, controls in [inputs](systems/inputs.md), settings UI in [rounds-lobby](systems/rounds-lobby.md).
+- [Debug tools](systems/ui-shell.md#extension-points) — F1 named-tool registry; remaining host debt is [TECH_DEBT.md §1.13](TECH_DEBT.md#113-debug-tools-centralized-ui-host-consolidation-remains).
+- [Multiplayer testing](systems/networking-session-testing.md#tests) — local smoke and load/soak entry points, with coverage limits.
 
 ## Reference
 

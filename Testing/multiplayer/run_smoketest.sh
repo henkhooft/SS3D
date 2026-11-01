@@ -7,7 +7,7 @@
 # known-bad unity.log pattern (tools/known_unity_bad.patterns), or Error/Fatal log entry
 # in any process's logs - replacing the old brittle PlayMode harness
 # (Thread.Sleep readiness, Windows-only window tiling, hardcoded port, global process-name
-# kill). See Documents/architecture/2026-07_multiplayer-test-harness.md.
+# kill). See Documents/architecture/systems/networking-session-testing.md.
 #
 # Usage: ./Testing/multiplayer/run_smoketest.sh <scenario-name> [client-count]
 #

@@ -1,12 +1,12 @@
-> Implements: infrastructure — pays down [TECH_DEBT.md](TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)
+> Implements: infrastructure — pays down [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.1 and delivers follow-on (d) "Entity prefab setup / recipes" named in [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md)
 > Touches systems: entities, health, inventory, combat, core-subsystems
-> Status: in-progress
+> Status: shipped
 
-**Progress:** Phase 0/2/3-hands done and verified; Phase 1 deprioritized; Phase 3's remaining domains — movement/animation, combat, comms, examine, stamina, substances — pick up individually as their own redesigns touch entity wiring.
+**Progress:** Recipe infrastructure shipped. Current recipe contracts live in the entities-prefab-recipes system map; remaining composition debt is tracked in TECH_DEBT §1.1.
 
 # Human.prefab decomposition
 
-Ranked #1 structural risk in [TECH_DEBT.md](TECH_DEBT.md) §1.1. This effort turns "strip-and-rewire via
+Ranked #1 structural risk in [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.1. This effort turns "strip-and-rewire via
 Editor tooling" from a one-off precedent into a repeatable, machine-checked convention, and fixes the
 concrete hygiene debt found on `Human.prefab` along the way (Phase 0). Phase 1's original organ-extraction
 scope turned out to be based on a wrong assumption and is deprioritized; Phase 2 (recipe convention) is
@@ -27,7 +27,7 @@ previously undocumented problems, not just the general size complaint:
    Python script doing regex/GUID find-replace on raw prefab YAML outside the Editor, not
    `PrefabUtility`. TECH_DEBT.md's phrase "strip-and-rewire via Editor tooling" describes this
    loosely; there is no reusable C# recipe, contradicting the policy in
-   [agent-first-composition.md](2026-07_agent-first-composition.md) that prefab mutation should be
+   [agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) that prefab mutation should be
    tool-mediated via `PrefabUtility`/menu items (the pattern already used correctly elsewhere, e.g.
    `Assets/Scripts/SS3D/Systems/Combat/Editor/MeleePrefabSetup.cs`,
    `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/StorageContainerPrefabSetup.cs`).
@@ -67,7 +67,7 @@ copy-pasted organ from landing on `Human.prefab` in review.
 
 - A reusable, Unity-native (`PrefabUtility`-based) recipe pattern for evolving `Human.prefab`, so no
   future change requires hand-editing its YAML — this is follow-on (d) from
-  [agent-first-composition.md](2026-07_agent-first-composition.md).
+  [agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md).
 - A machine-checked gate (EditMode test in the existing headless CI run) that fails a PR which adds an
   unreviewed component, reintroduces a debug-only hack, or leaves a missing-script reference — closing
   "enforcement is convention only."
@@ -82,7 +82,7 @@ copy-pasted organ from landing on `Human.prefab` in review.
   keeps doing that as part of its own redesign touching entity wiring (existing policy), this effort
   only makes sure a recipe tool exists when they do.
 - Body presentation ownership (collapse/death/ragdoll) — that's
-  [2026-07_body-presentation-authority.md](../archive/architecture/2026-07_body-presentation-authority.md), out of scope here
+  [2026-07_body-presentation-authority.md](2026-07_body-presentation-authority.md), out of scope here
   by that doc's own "Out of scope" note.
 
 ## Phased plan
@@ -179,8 +179,8 @@ next one when its owning redesign is ready to touch entity wiring.
 
 ## Related docs
 
-- [TECH_DEBT.md](TECH_DEBT.md) §1.1 — ranking and rationale
-- [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) — policy this effort
+- [TECH_DEBT.md](../../architecture/TECH_DEBT.md) §1.1 — ranking and rationale
+- [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) — policy this effort
   implements (follow-on d)
-- System maps: [entities](systems/entities.md), [health](systems/health.md), [inventory](systems/inventory.md), [combat](systems/combat.md)
-- [health_implementation_plan.md](../plans/health_implementation_plan.md) — Phase 0d precedent
+- System maps: [entities](../../architecture/systems/entities.md), [health](../../architecture/systems/health.md), [inventory](../../architecture/systems/inventory.md), [combat](../../architecture/systems/combat.md)
+- [health_implementation_plan.md](../../plans/health_implementation_plan.md) — Phase 0d precedent

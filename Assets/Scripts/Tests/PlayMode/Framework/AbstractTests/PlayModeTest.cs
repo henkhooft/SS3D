@@ -28,7 +28,7 @@ namespace SS3D.Tests
     /// <summary>
     /// All play mode tests should inherit from this class. This class set up the mock up controls, contains some utilities for all play tests.
     /// Single-process (Host or in-Editor DedicatedServer) only - for real multi-process
-    /// coverage, see Testing/multiplayer/ (Documents/architecture/2026-07_multiplayer-test-harness.md).
+    /// coverage, see Testing/multiplayer/ (Documents/architecture/systems/networking-session-testing.md).
     /// </summary>
     [TestFixture]
     public abstract class PlayModeTest : InputTestFixture
