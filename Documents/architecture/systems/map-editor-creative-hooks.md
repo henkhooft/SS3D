@@ -1,7 +1,7 @@
 > Parent map: [tile.md](tile.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/MapEditor/, Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/
 > Status: partial
-> Verified: 7c8e6b6d7 — 2026-11-01
+> Verified: e87d38958 — 2026-11-01
 
 # Map Editor — creative mode extension hooks
 
@@ -29,6 +29,8 @@ Area metadata: `MapEditorArea.cs` adds admin-checked inspect/apply RPCs and serv
 Sharing (A5): the Save popover's **Save & Export** saves, then zips the template into `Data/Exports/` on the server's disk (`RpcExportMap` → `MapFileSharing.TryExport`). On a host it opens the file manager with the zip selected and copies its path to the clipboard; a remote client only gets a toast, because the file is on the server. The Load popover's **Open Maps Folder** opens `StationTemplates/` (host only); zips dropped there import on the next list. A Load reports objects this build doesn't have (`TileMap.LastLoadSkipped`). Testers' guide: `Builds/TESTERS.md`, shipped in the release zips.
 
 Open build: a server launched with `-openbuild` uses `OpenBuildMapEditorAuthorizer` (anyone not Restricted may edit, without becoming admin). For those non-admin "sandbox players" (`MapEditorPermissions.IsSandboxPlayer`), `MapEditorRateLimiter` throttles edits (4000-operation burst, 400/s refill). They may only undo or redo when the newest history entry is their own (history entries record their owner's client id), and they can't delete maps or overwrite maps saved by someone else this session (`MayReplaceMapFile`).
+
+Sandbox lockdown ([2026-11_sandbox-server](../2026-11_sandbox-server.md)): `-sandbox` implies open build. With `MapEditorPermissions.PersistenceAllowed` off (`ServerSettings.MapPersistence`), Save, Export, Load, Delete, New Map and the round-end autosave are refused for everyone. `MapEditorSandboxRules` refuses spawn-point commands and the nuke/disk assets to sandbox players (also on move), and `RpcSetInvincible` refuses them. On open the server sends a `MapEditorCapabilities` TargetRpc; the view hides Save/Load, the Player Invincible switch, the Spawn Placements tab and denied palette entries (`MapEditorCatalog.HideSandboxDenied`). Ghosts may edit (the open check only asks for a spawned entity).
 
 Save validation uses `Tile/Validation/MapValidationService` for the server's selected mode after saving.
 Incomplete maps remain saveable; errors and soft warnings open an author-only scrollable Map validation popover
@@ -60,6 +62,7 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 
 - `MapValidationTests`: shared requirements, nonblocking warnings, repair and scrollable literal-text save report.
 - `MapEditorCommandRevertTests`: save points across undo/redo, branches, the history limit and new-map/load resets; undo ownership for sandbox players.
+- `SandboxServerTests`: sandbox profile, persistence gate, capabilities, denylist and catalog filter.
 - `MapFileSharingTests`, `MapLoadSkippedSummaryTests`, `MapEditorRateLimiterTests`, `AdminTokensTests`: export/import round trip, load-loss summary text, edit throttling, admin-name tokens.
 
 - `MapEditorAreaViewTests`: room drafts survive toast/undo-state refresh; department defaults and explicit access submit distinct masks; read-only department previews preserve custom overrides; Areas follows the Rooms category across its standard tools; overlay meshes preserve tile positions and gizmo colors. Compile + EditMode passed (`artifacts/ui/validate-20261031-145101/summary.md`: succeeded; all 2149 tests completed); owner manual editor acceptance confirmed; release dogfood remains A2.5.

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: ce69181d3 — 2026-11-01
 
 # Rounds / lobby
 
@@ -52,11 +52,13 @@ Only Stop is visible while a round runs; Start is visible only while stopped/end
 Secret resolves to the sole available antagonist mode; Extended suppresses objectives;
 Nuclear Emergency uses the existing mode. Random Events, Friendly Fire and Cloning controls
 are disabled with explanations because their configurable gameplay consumers do not exist.
-The waiting card says Manual start: there is no population autostart policy yet.
+The waiting card says Manual start unless `AutoStart` is on (then the auto countdown, or that it is held).
 Start validates the restored template before world readiness/countdown: every offered job needs an authored marker;
 Secret (currently the nuclear mode) and Nuclear Emergency also need an operative marker, placed `Nuke` and placed `NukeCard`.
 Failures return to Stopped/Failed with the complete actionable list in the admin settings status; all start paths share the gate.
 An empty job configuration or unsupported mode fails closed. Missing/unreadable templates retain the existing load-failure path.
+
+**Sandbox profile** ([2026-11_sandbox-server](../2026-11_sandbox-server.md)): `-sandbox` overlays the in-memory settings at boot (`SandboxProfile`): Extended, 20 min (`-sandbox-round-minutes=N`), cap 16, and the rule fields `AutoStart`, `AllConnectedReady`, `RespawnEnabled`/`RespawnCooldownSeconds`, `MapPersistence`, which the admin form doesn't edit (`WithRulesOf` keeps them). `AutoStart` runs a 20 s idle countdown (`RoundAutoStart.cs`) once a player is ready, then the normal Start; an admin Cancel or a failed load holds it until an admin Start. `AllConnectedReady` spawns everyone online. Every timed round warns at 5 and 1 minutes left. Each round gets a per-process `RoundId`; after Stopped, `ServerMeta/reset-health.jsonl` gains a line, and `/bug <note>` or the bug report dialog writes `ServerMeta/bugs.jsonl` (`RoundObservability.cs`): the server stamps time, round, ckey, alive/ghost/lobby and position, and keeps the dialog's summary, details, severity, crash flag, client context and log tail; its reduced JPEG goes to `ServerMeta/bug-screenshots/`. Both paths share one report per ckey per minute (`BugReportRateLimiter`). `RoundId` is a SyncVar so clients can name the round. The dialog itself: [ui-shell](ui-shell.md). `-heartbeat-file=` and `-exit-after-rounds=` (`ServerLifetime.cs`) serve an unattended server.
 
 Unsaved map edits across a round stop (A4): the map editor runs during an Ongoing round, and
 Stop unloads the station, so an admin Stop with unsaved editor commands first opens
@@ -78,6 +80,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 - `Assets/Scripts/SS3D/Systems/Roles/RoleSubSystem.cs` / `JobResolver.cs` — replicated job slots, `JobPreferencesMessage` handling, round-start + latejoin assignment ([roles map](gamemodes-roles-traits.md))
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
 - `Assets/Scripts/SS3D/Systems/Tile/Validation/` — shared map requirements/report and tracked-map content adapter
+- `Assets/Scripts/SS3D/Systems/Rounds/SandboxProfile.cs`, `RoundAutoStart.cs`, `RoundObservability.cs`, `ServerLifetime.cs` — sandbox profile, auto-start/warnings, round ID/reset-health/`/bug`, heartbeat/exit-after-N
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
 - `Assets/Scripts/SS3D/Systems/Rounds/MapEditorRoundStop.cs` — Stop confirmation for unsaved map edits, autosave before `UnloadStation`; `UI/Lobby/LobbyMapStopPrompt.cs` renders the choices
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerInfo.cs` — public name/MOTD/mode/build/start-time SyncVars, `ServerInfoText` sanitizers, `ServerMeta/server-info` load/save
@@ -152,6 +155,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 ## Tests
 
 - `Testing/ui/validate.sh --full` runs the current validation loop. `LobbyUiPilot` covers shell/creator visuals; `LobbyLifecyclePilot` covers host lifecycle, saved characters and settings; the remote pilot checks a built non-admin client. Review screenshots as well as assertions; OS-input Ready/chat checks do not imply every pilot action uses real input.
+- **Run Sandbox Pilot** (`LobbyLifecyclePilot.Sandbox.cs`, `validate.sh --full`) applies the profile in Play Mode (`ApplyServerSettingsForTesting`) and runs two automatic rounds: countdown without Ready, death → ghost editing → Respawn, `/bug`, the F8 dialog saving a local bundle, 1-minute warning, wipe without autosave, reset-health lines with no leftover tile objects/items and flat NetworkObject counts. `SandboxServerTests` covers the pure rules.
 - `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
 - The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
 - The lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.

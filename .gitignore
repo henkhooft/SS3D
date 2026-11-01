@@ -9,6 +9,8 @@
 
 /[Bb]uilds/*
 !Builds/Game/
+!Builds/Update_SS3D.ps1
+!Builds/update_ss3d.py
 !/[Bb]uilds/*.bat
 !/[Bb]uilds/*.sh
 !/[Bb]uilds/README.txt

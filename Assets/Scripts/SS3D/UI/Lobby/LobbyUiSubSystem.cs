@@ -137,6 +137,7 @@ namespace SS3D.UI.Lobby
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
             _shellView.QuitRequested += HandleQuitRequested;
+            _shellView.BugReportRequested += HandleBugReportRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
             _shellView.ServerSettingsChanged += (field, settings) =>
             {
@@ -350,6 +351,8 @@ namespace SS3D.UI.Lobby
             LobbyMockData.PlayerRow[] rows = connected ? players.OnlinePlayers.Where(p => p != null)
                 .Select(p => new LobbyMockData.PlayerRow(p.Ckey, p.Ckey, ready != null && ready.IsReady(p),
                     null, "—", "—", "—")).ToArray() : System.Array.Empty<LobbyMockData.PlayerRow>();
+            _shellView.SetAutoStart(rounds != null && rounds.AutoStartEnabled, rounds != null && rounds.AutoStartHeld,
+                rounds != null ? rounds.AutoStartSecondsLeft : 0);
             _shellView.SetSession(rounds != null ? rounds.CurrentRoundState : RoundState.Stopped,
                 rounds != null ? rounds.CurrentTimerSeconds : 0,
                 local != null && ready != null && ready.IsReady(local), local != null && (rounds == null || rounds.CurrentRoundState != RoundState.Ongoing || rounds.AllowLateJoin), admin, rows, spawned);
@@ -365,6 +368,22 @@ namespace SS3D.UI.Lobby
             _inputSystem = input;
             _toggleMenuAction = input != null ? input.Inputs?.Other.ToggleMenu : null;
             if (_toggleMenuAction != null) _toggleMenuAction.performed += HandleToggleMenu;
+        }
+
+        /// <summary>
+        /// Closes the Escape menu first so the report's screenshot shows the round, not the menu; between
+        /// rounds the lobby is what the player sees, so it stays.
+        /// </summary>
+        private void HandleBugReportRequested()
+        {
+            if (_spawned && _menuOpen)
+            {
+                _menuOpen = false;
+                _nextSessionRefresh = 0f;
+                RefreshSession();
+            }
+
+            SS3D.Systems.BugReports.BugReportRequests.RequestOpen();
         }
 
         private void HandleToggleMenu(InputAction.CallbackContext context)

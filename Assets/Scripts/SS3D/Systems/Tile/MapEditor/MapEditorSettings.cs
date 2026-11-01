@@ -75,6 +75,14 @@ namespace SS3D.Systems.Tile.MapEditor
             if (conn == null || !MapEditorPermissions.TryAuthorize(conn))
                 return;
 
+            if (!MapEditorPermissions.MayToggleInvincibility(conn))
+            {
+                // Sandbox players stay vulnerable while editing; correct the client's mirror.
+                EntityInvincibility.SetServer(conn.ClientId, false);
+                TargetSetInvincible(conn, false);
+                return;
+            }
+
             EntityInvincibility.SetServer(conn.ClientId, enabled);
             TargetSetInvincible(conn, enabled);
         }

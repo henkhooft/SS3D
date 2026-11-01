@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/
 > Entry points: UiShellSubSystem, UiLayer, IUiSurface, UiShellAssetCatalog
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: ce69181d3 — 2026-11-01
 
 # UI shell
 
@@ -18,6 +18,7 @@ Composition root for player-facing UI Toolkit surfaces. `UiShellSubSystem` self-
 | Local-speech chips/compose (`LocalSpeechBubbleController`) | Overlay | [chat-audio-screens](chat-audio-screens.md) |
 | Comms feed (`CommsFeedController`) | Hud | [chat-audio-screens](chat-audio-screens.md) |
 | Lobby shell + Character Creator (`LobbyUiSubSystem`) | Modal | [rounds-lobby](rounds-lobby.md) |
+| Bug report dialog + toast (`BugReportSubSystem` / `BugReportView`) | Modal | [rounds-lobby](rounds-lobby.md) (report records) |
 
 **Not migrated yet.** Each still has its own `UIDocument` and path catalog, all rebuilt by **SS3D → Data → Rebuild All UI Catalogs**:
 
@@ -31,6 +32,8 @@ The F1 developer window (`UI/MainHud/Dev/DebugMenuView.cs`) also owns a private 
 
 The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lobby's (`LobbyAssetPaths` / `LobbyAssetCatalog`) use the same rebuild. `ExamineOverlayAssetCatalog` is a lighter one-off: no `PanelSettings` or document of its own, not a `UiAssetCatalogBase` derivative.
 
+**Bug report dialog** ([sandbox-server.md](../../design/sandbox-server.md) §7): `Systems/BugReports/BugReportSubSystem` self-bootstraps on clients (not batch mode) and attaches `BugReportView`, built from `Content/Systems/UI/BugReport/BugReport.uxml` / `.uss` via `BugReportAssetCatalog` (umbrella rebuild). The warmer v2 colours are scoped to this window, not the shared tokens. F8, a bare `/bug` and the menu's **Report a bug (F8)** open it; the context, round, position and screenshot are frozen first (one frame plus end-of-frame, so the closed Escape menu isn't in the shot). A client sends `BugReportSubmitMessage` and keeps the dialog open until `BugReportResultMessage` arrives (rate-limit refusals keep the text). An own host (or an offline player) saves a zip to `Data/Exports/` (`BugReportBundle`) and gets the saved screen with **Open Report Folder** / **Open GitHub Issue** (`BugReportIssueLink` pre-fills `Bug.yml` or `MapBug.yml`). **SS3D → UI → Preview Bug Report** drives the same view with sample data for each design state.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Shell/UiShellSubSystem.cs` — `TryGetLayer(UiLayer, out VisualElement)` (preferred) / `GetLayer`
@@ -39,6 +42,9 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 - `Assets/Scripts/SS3D/UI/Shell/Animation/PanelAnimator.cs` — shared panel animation
 - `Assets/Scripts/SS3D/UI/Shell/Binding/UiBinderBase.cs` — scaffolded binder base with no consumers yet
 - Tokens: `Assets/Content/Systems/UI/Tokens/`, `Assets/Content/Systems/UI/MachineInterface/Tokens/`
+- `Assets/Scripts/SS3D/Systems/BugReports/BugReportSubSystem.cs` (host: entry points, capture, send/save), `BugReportView.cs` (presentation), `BugReportModel.cs` (frozen context, metadata rows), `BugReportBundle.cs` (local zip, issue link)
+- `Assets/Scripts/SS3D/Editor/BugReportPreviewWindow.cs` — editor preview of `BugReportView` with sample data
+- `Assets/Scripts/SS3D/UI/Shell/BugReport/BugReportAssetPaths.cs` — bug report asset paths and Resources name
 
 ## Extension points
 
@@ -47,6 +53,18 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 - `UiShellSubSystem` creates the document itself, so Boot and Game scenes need no `UIDocument` host.
 
 - Debug tools: register a named tool through `Core/Debugging/DebugTools.Get(DebugToolNames.X)`, subscribe/unsubscribe `Invoked`, and set `IsOn` for toggles. The F1 window lists available tools in Editor/development builds; do not add per-tool keys. Remaining host work: [TECH_DEBT §1.13](../TECH_DEBT.md#113-debug-tools-centralized-ui-host-consolidation-remains).
+
+## Pitfalls
+
+- USS does not support `:first-child` / `:last-child`; sibling spacing requires explicit modifier classes. Unsupported selectors are ignored and leave unwanted edge margins.
+- **`Application` inside `SS3D.*` namespaces resolves to the `SS3D.Application` namespace**, not `UnityEngine.Application`, in assemblies that reference it (`SS3D.Systems`, `SS3D.Editor`). Write `UnityEngine.Application.…` there.
+- **A modal surface's scrim must take picks.** The bug report scrim was `picking-mode="Ignore"` in the fixture; on the shared document that lets clicks fall through to the lobby shell underneath.
+
+- **White text-input rectangles on Linux:** rounded input borders can render the clipped contents solid white even when their resolved background colours are correct. Keep bug-report inputs square (`border-radius: 0`); see the [lobby rendering pitfall](rounds-lobby.md#pitfalls). Check runtime screenshots, including typed text.
+
+## Tests
+
+- Bug report: `BugReportTests` (EditMode: rate limit, text, bundle, issue link, log tail); the sandbox pilot opens the dialog in the host, checks badge/round/map option, saves a bundle and checks its entries (screenshots `sandbox-bug-report-dialog`, `sandbox-bug-report-saved`). The graphical remote pilot types and sends a report through the real client/server broadcasts, checks the server-attributed JSONL and reduced JPEG, then reopens the dialog to check cooldown and draft entry. **SS3D → UI → Preview Bug Report** covers each design state; its actions are inert.
 
 ## Depends on / Used by
 

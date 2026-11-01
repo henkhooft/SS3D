@@ -30,7 +30,7 @@ namespace SS3D.Systems.Entities
     /// <summary>
     /// Controls player spawning.
     /// </summary>
-    public class EntitySubSystem : NetworkSubSystem
+    public partial class EntitySubSystem : NetworkSubSystem
     {
         /// <summary>
         /// Event that should be evoked only on client, when the client spawns in the station.
@@ -144,6 +144,11 @@ namespace SS3D.Systems.Entities
             if (!TryGetComponent<HealthDebugController>(out _))
             {
                 gameObject.AddComponent<HealthDebugController>();
+            }
+
+            if (!TryGetComponent<RespawnPrompt>(out _))
+            {
+                gameObject.AddComponent<RespawnPrompt>();
             }
 
             SyncSpawnedPlayers();
@@ -295,11 +300,15 @@ namespace SS3D.Systems.Entities
         /// Spawns a player with a Ckey
         /// </summary>
         /// <param name="playerUnique user object</param>
+        /// <param name="existingMind">A respawning player's mind, moved from their ghost; null creates one.</param>
         [Server]
-        private Entity SpawnPlayer(Player player)
+        private Entity SpawnPlayer(Player player, Mind existingMind = null)
         {
-            MindSubSystem mindSystem = SubSystems.Get<MindSubSystem>();
-            mindSystem.TryCreateMind(player, out Mind createdMind);
+            Mind createdMind = existingMind;
+            if (createdMind == null)
+            {
+                SubSystems.Get<MindSubSystem>().TryCreateMind(player, out createdMind);
+            }
 
             Vector3 spawnPosition = ResolveSpawnPosition();
             Entity entity = Instantiate(_humanPrefab[Random.Range(0, _humanPrefab.Count)], spawnPosition, Quaternion.identity);
@@ -417,12 +426,21 @@ namespace SS3D.Systems.Entities
                 if (player == null)
                     continue;
 
+                // Every spawn creates a Mind and nothing else despawns it; without this one leaked per player per round.
+                Mind mind = player.Mind;
+                if (mind != null && mind != Mind.Empty && mind.IsSpawned)
+                {
+                    ServerManager.Despawn(mind.NetworkObject);
+                }
+
                 ServerManager.Despawn(player.NetworkObject);
                 player.GameObject.Dispose(true);
             }
 
             _hasSpawnedInitialPlayers = false;
             _spawnedPlayers.Clear();
+            _respawnCooldown.Clear();
+            DespawnCorpses();
         }
 
         [Server]

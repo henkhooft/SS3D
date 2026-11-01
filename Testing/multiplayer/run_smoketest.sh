@@ -44,6 +44,14 @@ RUN_ID="$(date +%s)-$$"
 RUN_DIR="$REPO_ROOT/Testing/multiplayer/.runs/$RUN_ID"
 
 SERVER_SCRIPT="$SCRIPT_DIR/scenarios/${SCENARIO}.txt"
+# Optional per-scenario settings, sourced from scenarios/<scenario>.conf: SERVER_EXTRA_ARGS (array of
+# extra server arguments, e.g. -sandbox) and CLIENT_TIMEOUT (seconds each client gets to finish).
+SERVER_EXTRA_ARGS=()
+CLIENT_TIMEOUT=90
+if [[ -f "$SCRIPT_DIR/scenarios/${SCENARIO}.conf" ]]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/scenarios/${SCENARIO}.conf"
+fi
 
 trap kill_tracked_pids EXIT INT TERM
 
@@ -156,7 +164,7 @@ SERVER_UNITY_LOG="$RUN_DIR/server/unity.log"
 
 echo "Starting dedicated server on port $PORT..."
 spawn_process "$RUN_DIR/server" "$RUN_DIR/server/$SERVER_BIN_NAME" "$SERVER_UNITY_LOG" \
-    -batchmode -nographics -serveronly -port="$PORT" -skipintro -testscript="$SERVER_SCRIPT"
+    -batchmode -nographics -serveronly -port="$PORT" -skipintro -testscript="$SERVER_SCRIPT" "${SERVER_EXTRA_ARGS[@]}"
 SERVER_PID="$(last_tracked_pid)"
 
 if ! wait_for_signal "$SERVER_JSON_LOG" "ServerReady" 60; then
@@ -192,7 +200,7 @@ done
 FAILED=0
 
 for ((i = 0; i < CLIENT_COUNT; i++)); do
-    if ! wait_for_signal "${CLIENT_JSON_LOGS[$i]}" "ScriptComplete" 90; then
+    if ! wait_for_signal "${CLIENT_JSON_LOGS[$i]}" "ScriptComplete" "$CLIENT_TIMEOUT"; then
         echo "Client $i script did not complete."
         FAILED=1
     fi

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: 9e6db31db — 2026-11-01
 
 # Networking (session)
 
@@ -23,6 +23,8 @@ FishNet session management — host/join, network type and port settings. Distin
 - [Multiplayer testing](networking-session-testing.md) — smoke/load entry points, extension hooks and log gates
 - `Testing/multiplayer/run_loadtest.sh` — dedicated server + N real headless clients; configurable soak duration/stagger and `metrics.csv`
 - `Tools/build_client_and_server.sh` — batchmode Linux builds (installed Unity required; close the project Editor first)
+- `Builds/Update_SS3D.bat` / `Update_SS3D.ps1` — Windows in-place stable-release updater; packaging, data preservation and rollback contract in [CI release pipeline](../2026-07_ci-develop-release-pipeline.md#windows-release-updates).
+- `Builds/update_ss3d.sh` / `update_ss3d.py` — equivalent Linux client updater using Python 3; [Linux updater contract](../2026-07_ci-develop-release-pipeline.md#linux-client-release-updates).
 
 ## Extension points
 
@@ -63,6 +65,8 @@ FishNet session management — host/join, network type and port settings. Distin
 
 - [Multiplayer testing](networking-session-testing.md) owns smoke/load commands, DSL hooks, fixtures, log gates and coverage limits.
 - With the Editor open, `Testing/ui/validate.sh --full` also runs PlayMode and graphical pilots; [UI runbook](../../../Testing/ui/README.md).
+- `Tools/updater/test-update.ps1` exercises stable release selection, download/hash refusal, data preservation, failed-swap restoration and runnable backups using temporary fake releases. Windows PowerShell 5.1 CI gates release publication; a real packaged Windows update/backup launch remains a manual release check.
+- `python3 -B Tools/updater/test_update_linux.py` covers the Linux equivalent, including executable permissions and archive/local-data link refusal. Runs in PR and release CI; native packaged game/backup launch remains manual.
 
 ## Depends on / Used by
 

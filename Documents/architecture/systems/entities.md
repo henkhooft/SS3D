@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: e87d38958 — 2026-11-01
 
 # Entities
 
@@ -20,6 +20,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - [Entity prefab recipes](entities-prefab-recipes.md) — domain wiring, aggregator, nested FishNet constraints and integrity checks
 
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
+- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.Respawn.cs` — respawn ([sandbox](../2026-11_sandbox-server.md)): death offers a respawn (`RecordPlayerDeath`), `CmdRespawn` checks `ServerSettings.RespawnEnabled` + `RespawnCooldown`, despawns the ghost and re-runs `SpawnPlayer` with the ghost's Mind; corpses are tracked and despawned at round end. `RespawnPrompt` is the ghost-HUD button (UiShell Hud layer, added on client start)
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment; `Mind.DisplayName` (lobby character name, else ckey) is the in-world speaker/record name
 - `Assets/Scripts/SS3D/Systems/Entities/Human.cs` — replicated `CharacterAppearance` from the lobby (morphs on the armature, hair/beard/eyebrows and skin/eye/style colors) — see [rounds-lobby](rounds-lobby.md)
 - `Assets/Scripts/SS3D/Systems/Entities/Character/HumanoidStyleApplier.cs` — head sockets for catalog styles; per-material skin/eye tint without mutating shared assets
@@ -57,6 +58,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
 - **Remote fire/reload never plays:** `CmdFireTrigger` / stagger must `ApplyLocalSnapshot()` (pack `ActiveTrigger`) **before** `_triggerSequence++`. SyncVar OnChange rebuilds from the old pack synchronously and otherwise wipes the trigger — owner still sees local prediction.
 - **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.
+- **Corpses and Minds outlived every round:** at death the ghost replaces the body in `_spawnedPlayers`, so `DestroySpawnedPlayers` never saw the corpse; and `TryCreateMind` spawns a Mind per spawn that nothing despawned (`_spawnedMinds` is never filled, so `HasMind` is always false). Round end now despawns tracked corpses and each spawned player's Mind. Found by `reset-health.jsonl` (+1 NetworkObject per player per round); the sandbox pilot asserts no Human and equal NetworkObject counts across resets.
+- **Death logged errors:** `SwapMinds` called `SetFirstObject` on the corpse's invalid (-1) owner after `SetMind(null)`; and `RpcDestroyComponents` could not remove `InteractionController` because `CombatInteractionNetwork` requires it (it is disabled instead). Killing a body in the same frame it spawned also throws in `HumanoidLivingController.OnStartClient`; pilots wait ~2 s before killing.
 - **Ghost spawn stack-overflow:** `HumanoidGhostController.OnAwake` must call `base.OnAwake()`, never `base.Awake()`.
 - **`SetMind(null)` must `RemoveOwnership()`:** death `SwapMinds` assigns the ghost's empty mind to the corpse. Leaving FishNet Owner on the corpse delivers corpse TargetRpcs (hit flash) to the ghost — see [health](health.md). Server still `AlignToHips` on death ragdolls; do not write `IsFacingDown` (ServerRpc setter) without ownership — use a local facing bool.
 - **Do not redeclare `_bodyStateMachine` on `HumanoidGhostController`:** field already on `HumanoidController`; use `BodyStateMachine` from the base.

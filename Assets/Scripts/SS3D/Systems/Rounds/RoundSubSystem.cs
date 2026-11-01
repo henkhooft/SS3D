@@ -52,11 +52,13 @@ namespace SS3D.Systems.Rounds
             {
                 _serverSettingsError = "No saved maps available. Import or save a station before starting a round.";
                 _stationLoadState = StationLoadState.Failed;
+                SetAutoStartHeld(true, "no saved maps");
                 return;
             }
 
             RoundState = RoundState.Preparing;
             RoundSeconds = 0;
+            BeginRoundId();
             _stationName = _serverSettings.Map;
             _stationLoadState = StationLoadState.Loading;
             try
@@ -109,6 +111,8 @@ namespace SS3D.Systems.Rounds
             Log.Warning(this, "Round start aborted: {reason}", Logs.ServerOnly, message);
             _serverSettingsError = message;
             _stationLoadState = StationLoadState.Failed;
+            // Retrying the same broken map every countdown would only spam the log.
+            SetAutoStartHeld(true, "the station failed to load");
             RoundState = RoundState.Stopped;
             RoundSeconds = 0;
         }
@@ -174,7 +178,7 @@ namespace SS3D.Systems.Rounds
 
             RoundSeconds = 0;
             RoundState = RoundState.Ongoing;
-            Log.Information(this, "Starting round tick", Logs.ServerOnly);
+            Log.Information(this, "Round {roundId} started", Logs.ServerOnly, _roundId);
             SubSystems.Get<CommsSubSystem>()?.SendAnnouncement(
                 "Welcome to the station crew, enjoy your stay.",
                 CommsAudioTrackIds.StationWelcome);
@@ -184,11 +188,14 @@ namespace SS3D.Systems.Rounds
             {
                 await UniTask.Delay(second, cancellationToken: TickCancellationToken.Token);
                 RoundSeconds++;
-                if (RoundSeconds >= _serverSettings.RoundLengthMinutes * 60)
+                int secondsLeft = _serverSettings.RoundLengthMinutes * 60 - RoundSeconds;
+                if (secondsLeft <= 0)
                 {
                     RequestRoundEnd();
                     return;
                 }
+
+                PostRoundEndWarning(secondsLeft);
             }
         }
 
@@ -197,6 +204,7 @@ namespace SS3D.Systems.Rounds
         {
             RoundState = RoundState.Ending;
             CancelTick();
+            Log.Information(this, "Round {roundId} ended after {seconds} s", Logs.ServerOnly, _roundId, RoundSeconds);
             if (SubSystems.TryGet(out CommsSubSystem comms)) comms.PostOocSystem(OocChannel.Ooc, "The round has ended.");
 
             AppendRoundHistory();
@@ -244,6 +252,8 @@ namespace SS3D.Systems.Rounds
             UnloadStation();
 
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
+            AppendResetHealth();
+            ExitIfRoundLimitReached();
         }
 
         /// <summary>
@@ -277,6 +287,20 @@ namespace SS3D.Systems.Rounds
         public void ChangeRoundStateMessageStubBroadcast(ChangeRoundStateMessage m)
         {
             RequestRoundStateChange(m);
+        }
+
+        /// <summary>
+        /// Automation only: replaces the server settings and rules the way <c>-sandbox</c> does at boot,
+        /// so a pilot in the editor can run the sandbox profile without a command-line flag.
+        /// </summary>
+        [Server]
+        public void ApplyServerSettingsForTesting(ServerSettings settings)
+        {
+            _serverSettings = settings;
+            _allowLateJoin = settings.AllowLateJoin;
+            _publicMode = settings.Mode;
+            _motd = settings.Motd;
+            ApplyServerRules();
         }
 #endif
     }

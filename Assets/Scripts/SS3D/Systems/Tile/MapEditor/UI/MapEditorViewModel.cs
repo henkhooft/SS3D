@@ -50,6 +50,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (resetDismissed) ValidationContext++;
             NotifyChanged();
         }
+        /// <summary>What the server lets this player use; full until the server answers on open.</summary>
+        public MapEditorCapabilities Capabilities { get; private set; } = MapEditorCapabilities.Full;
+
+        public void SetCapabilities(MapEditorCapabilities capabilities)
+        {
+            Capabilities = capabilities;
+            if (!capabilities.Persistence && OpenPopover is "saveMenu" or "maps")
+                OpenPopover = null;
+            NotifyChanged();
+        }
+
         public string ToastMessage { get; set; }
         public string OpenPopover { get; set; }
         public string SaveMapName { get; set; } = "Untitled Map";

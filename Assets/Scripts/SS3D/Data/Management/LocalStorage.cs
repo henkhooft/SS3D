@@ -282,6 +282,14 @@ namespace SS3D.Data.Management
             return AppendToFile(fileName, "jsonl", line);
         }
 
+        /// <summary>Lines of a file written by <see cref="AppendJsonlLine"/>; empty when it doesn't exist.</summary>
+        public static string[] ReadJsonlLines(string fileName)
+        {
+            Initialize();
+            string fullPath = SaveFolder + fileName + ".jsonl";
+            return File.Exists(fullPath) ? File.ReadAllLines(fullPath) : Array.Empty<string>();
+        }
+
         private static bool AppendToFile(string fileName, string extension, string line)
         {
             Initialize();

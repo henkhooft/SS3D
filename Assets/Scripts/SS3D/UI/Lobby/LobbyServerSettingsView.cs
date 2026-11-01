@@ -280,7 +280,10 @@ namespace SS3D.UI.Lobby
             };
             string detailText = "Please wait…";
             if (warming) detailText = $"{_secondsLeft / 60:00}:{_secondsLeft % 60:00}";
-            else if (idle) detailText = "Manual start";
+            else if (idle && _autoStartSeconds > 0) detailText = $"Auto start in {_secondsLeft / 60:00}:{_secondsLeft % 60:00}";
+            else if (idle && !_autoStartEnabled) detailText = "Manual start";
+            else if (idle && _autoStartHeld) detailText = "Auto start held. Start resumes it.";
+            else if (idle) detailText = "Auto start when a player is ready";
             else if (_roundState == RoundState.Ongoing) detailText = $"{_secondsLeft / 60:00}:{_secondsLeft % 60:00} elapsed";
             form.Q<Label>("server-round-detail").text = detailText;
             form.Q<Label>("server-ready-ratio").text = $"{_players.Count(p => p.Ready)}/{_players.Length}";
@@ -291,7 +294,8 @@ namespace SS3D.UI.Lobby
             {
                 Button action = form.Q<Button>(name);
                 action.style.display = idle || warming ? DisplayStyle.Flex : DisplayStyle.None;
-                action.SetEnabled(warming);
+                // Cancel also holds the idle auto-start countdown.
+                action.SetEnabled(warming || (name == "server-cancel" && idle && _autoStartSeconds > 0));
             }
             Button stop = form.Q<Button>("server-stop");
             stop.style.display = _roundState == RoundState.Ongoing ? DisplayStyle.Flex : DisplayStyle.None;

@@ -36,6 +36,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public IReadOnlyList<MapEditorCatalogEntry> Entries => _entries;
 
+        /// <summary>Leaves <see cref="MapEditorSandboxRules"/> denied entries out of <see cref="Query"/> (sandbox players).</summary>
+        public bool HideSandboxDenied { get; set; }
+
         public void Build(IReadOnlyList<GenericObjectSo> assets, MapEditorCatalogSo catalogSo)
         {
             _byAssetName.Clear();
@@ -150,7 +153,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public IEnumerable<MapEditorCatalogEntry> Query(MapEditorMode mode, MapEditorSubcategory subcategory, string search)
         {
-            IEnumerable<MapEditorCatalogEntry> query = _entries.Where(e => e.Mode == mode && e.Subcategory == subcategory);
+            IEnumerable<MapEditorCatalogEntry> query = _entries.Where(e => e.Mode == mode && e.Subcategory == subcategory
+                && !(HideSandboxDenied && MapEditorSandboxRules.IsDeniedAsset(e.AssetName)));
 
             if (mode == MapEditorMode.Scripting && subcategory != MapEditorSubcategory.SpawnPlacements)
                 return query;

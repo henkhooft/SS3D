@@ -58,6 +58,9 @@ namespace SS3D.Systems.Comms
         public void SendOoc(OocChannel channel, string text)
         {
             if (!OocChatRules.TryNormalize(text, out string normalized)) return;
+            // A bare /bug opens the bug report dialog; /bug <note> still files from the server.
+            if (Rounds.BugCommand.TryParse(normalized, out string bugNote) && bugNote.Length == 0
+                && BugReports.BugReportRequests.RequestOpen()) return;
             if (InstanceFinder.ClientManager == null || !InstanceFinder.ClientManager.Started) return;
             InstanceFinder.ClientManager.Broadcast(new OocChatSendMessage { Channel = channel, Text = normalized });
         }
@@ -97,6 +100,13 @@ namespace SS3D.Systems.Comms
             if (!_oocRateLimiter.TryConsume(ckey, Time.unscaledTime))
             {
                 SendOocNotice(conn, request.Channel, "You are sending messages too quickly.");
+                return;
+            }
+
+            // Chat command: /bug <note> goes to the server's bug report file, not to chat.
+            if (Rounds.BugCommand.TryParse(text, out string bugNote) && SubSystems.TryGet(out Rounds.RoundSubSystem rounds))
+            {
+                SendOocNotice(conn, request.Channel, rounds.RecordBugReport(conn, ckey, bugNote));
                 return;
             }
 

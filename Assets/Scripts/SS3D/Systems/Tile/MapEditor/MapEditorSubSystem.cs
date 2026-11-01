@@ -832,7 +832,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void HandleOpenMapHotkey()
         {
-            if (!_active || _view == null)
+            if (!_active || _view == null || RefuseLocalPersistence())
                 return;
 
             _view.OpenPopover("maps");
@@ -841,7 +841,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void HandleQuickSaveHotkey()
         {
-            if (!_active)
+            if (!_active || RefuseLocalPersistence())
                 return;
 
             string name = ResolveQuickSaveName();
@@ -853,6 +853,16 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             RpcSaveMap(name, overwrite: true, LocalConnection);
+        }
+
+        /// <summary>Client-side mirror of the server's persistence gate, for the file hotkeys.</summary>
+        private bool RefuseLocalPersistence()
+        {
+            if (_viewModel.Capabilities.Persistence)
+                return false;
+
+            ShowLocalToast(MapEditorPermissions.PersistenceRefusedMessage);
+            return true;
         }
 
         private string ResolveQuickSaveName()
@@ -934,6 +944,9 @@ namespace SS3D.Systems.Tile.MapEditor
                 TargetToast(conn, "Not authorized to load maps.");
                 return;
             }
+
+            if (RefusePersistence(conn))
+                return;
 
             Log.Information(this, "Map editor loading template {mapName}", Logs.Important, mapName);
             try
@@ -1131,7 +1144,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcSaveMap(string mapName, bool overwrite, NetworkConnection conn = null)
         {
-            if (!MapEditorPermissions.TryAuthorize(conn))
+            if (!MapEditorPermissions.TryAuthorize(conn) || RefusePersistence(conn))
                 return;
 
             if (TrySaveFor(conn, mapName, overwrite, out bool hasWarnings))
@@ -1145,7 +1158,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcExportMap(string mapName, NetworkConnection conn = null)
         {
-            if (!MapEditorPermissions.TryAuthorize(conn))
+            if (!MapEditorPermissions.TryAuthorize(conn) || RefusePersistence(conn))
                 return;
 
             if (!TrySaveFor(conn, mapName, true, out _))
@@ -1264,7 +1277,7 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcDeleteMap(string mapName, NetworkConnection conn = null)
         {
-            if (!MapEditorPermissions.TryAuthorize(conn))
+            if (!MapEditorPermissions.TryAuthorize(conn) || RefusePersistence(conn))
                 return;
 
             if (!MapEditorPermissions.MayReplaceMapFile(conn, mapName))
@@ -1281,7 +1294,8 @@ namespace SS3D.Systems.Tile.MapEditor
         [ServerRpc(RequireOwnership = false)]
         private void RpcNewMap(NetworkConnection conn = null)
         {
-            if (!MapEditorPermissions.TryAuthorize(conn))
+            // New Map replaces the station for everyone, so it sits behind the persistence gate with Load.
+            if (!MapEditorPermissions.TryAuthorize(conn) || RefusePersistence(conn))
                 return;
 
             if (_tileSystem?.CurrentMap == null)
@@ -1301,6 +1315,32 @@ namespace SS3D.Systems.Tile.MapEditor
         [TargetRpc]
         private void TargetRefreshMapList(NetworkConnection conn) => RefreshMapList();
 
+        /// <summary>True (and the player told why) when map persistence is off on this server.</summary>
+        [Server]
+        private bool RefusePersistence(NetworkConnection conn)
+        {
+            if (MapEditorPermissions.TryAllowPersistence(out string refusal))
+                return false;
+
+            TargetToastFor(conn, refusal, 4f);
+            return true;
+        }
+
+        /// <summary>
+        /// Drops what a sandbox player may not build (<see cref="MapEditorSandboxRules"/>) and tells them once.
+        /// Admins and the host keep everything.
+        /// </summary>
+        [Server]
+        private MapEditorCommandDto[] FilterDeniedCommands(MapEditorCommandDto[] commands, NetworkConnection conn)
+        {
+            if (!MapEditorPermissions.IsSandboxPlayer(conn) || !commands.Any(MapEditorSandboxRules.IsDenied))
+                return commands;
+
+            Log.Warning(this, "Refused denied map edits from client {clientId}", Logs.ServerOnly, conn.ClientId);
+            TargetToastFor(conn, MapEditorSandboxRules.DeniedMessage, 4f);
+            return commands.Where(command => !MapEditorSandboxRules.IsDenied(command)).ToArray();
+        }
+
         public void SubmitCommands(MapEditorCommandDto[] commands) =>
             RpcExecuteCommands(commands, LocalConnection);
 
@@ -1312,6 +1352,10 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             if (commands == null || commands.Length == 0 || _commandService.Context == null)
+                return;
+
+            commands = FilterDeniedCommands(commands, conn);
+            if (commands.Length == 0)
                 return;
 
             MapEditorCommandContext ctx = _commandService.Context;
@@ -1379,6 +1423,12 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
+            if (MapEditorPermissions.IsSandboxPlayer(conn) && MapEditorSandboxRules.IsDeniedAsset(assetName))
+            {
+                TargetToastFor(conn, MapEditorSandboxRules.DeniedMessage, 4f);
+                return;
+            }
+
             IMapEditorCommand command = isItem
                 ? new CompoundCommand(new IMapEditorCommand[]
                 {
@@ -1400,6 +1450,17 @@ namespace SS3D.Systems.Tile.MapEditor
 
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, false);
             TargetRememberTemplate(conn, EditingTemplateName);
+            TargetCapabilities(conn, MapEditorPermissions.CapabilitiesFor(conn));
+        }
+
+        /// <summary>Hides what this player can't use: persistence, the invincibility setting, denied palette entries.</summary>
+        [TargetRpc]
+        private void TargetCapabilities(NetworkConnection conn, MapEditorCapabilities capabilities)
+        {
+            _catalog.HideSandboxDenied = capabilities.RestrictedPalette;
+            if (!capabilities.Invincibility)
+                _viewModel.Invincible = false;
+            _viewModel.SetCapabilities(capabilities);
         }
 
         [TargetRpc]

@@ -99,6 +99,7 @@ namespace SS3D.Systems.Inputs
             AddFixedRow(rows, "General", "Disarm (hold + click)", "<Keyboard>/ctrl", gameplay);
             AddFixedRow(rows, "General", "Grab (hold + click)", "<Keyboard>/alt", gameplay);
             Plain("General", Inputs.Other.ToggleMenu, "Menu", readOnly: true);
+            Plain("General", _openBugReport, "Report a Bug");
             Plain("General", Inputs.Other.PrimaryClick, "Primary Click", readOnly: true);
             Plain("General", Inputs.Other.SecondaryClick, "Secondary Click", readOnly: true);
 

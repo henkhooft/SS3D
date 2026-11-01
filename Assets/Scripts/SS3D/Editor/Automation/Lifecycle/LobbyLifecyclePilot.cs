@@ -39,7 +39,7 @@ namespace SS3D.Editor.Automation
     /// </para>
     /// </summary>
     [InitializeOnLoad]
-    public static class LobbyLifecyclePilot
+    public static partial class LobbyLifecyclePilot
     {
         private const string ActiveKey = "SS3D.LobbyLifecyclePilot.Active";
         private const string OutputKey = "SS3D.LobbyLifecyclePilot.Output";
@@ -102,6 +102,7 @@ namespace SS3D.Editor.Automation
         public static void RunRemoteClient() => Start(RemoteMode);
 
         private static bool Remote => SessionState.GetString(ModeKey, "") == RemoteMode;
+        private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode;
 
         private static void Start(string mode)
         {
@@ -110,7 +111,8 @@ namespace SS3D.Editor.Automation
             if (EditorApplication.isCompiling || EditorUtility.scriptCompilationFailed)
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
-            string output = Path.GetFullPath($"artifacts/ui/{(mode == RemoteMode ? "remote" : "lifecycle")}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
+            string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox", _ => "lifecycle" };
+            string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
             {
@@ -143,7 +145,8 @@ namespace SS3D.Editor.Automation
                 Errors.Clear();
                 Checks.Clear();
                 Timeline.Clear();
-                _steps = Remote ? BuildRemoteSteps() : BuildSteps();
+                if (Remote) _steps = BuildRemoteSteps();
+                else _steps = Sandbox ? BuildSandboxSteps() : BuildSteps();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -981,6 +984,7 @@ namespace SS3D.Editor.Automation
                     settings.Map = _validationStation;
                     Rounds().CmdSaveServerSettings(settings);
                     Require(!SubSystems.Get<PermissionSubSystem>().IsAtLeast(RemoteCkey, ServerRoleTypes.Administrator), $"'{RemoteCkey}' has no Administrator permission");
+                    _bugLines = JsonlLines(SS3D.Data.Persistence.PersistencePaths.BugReports).Length;
                 },
             },
             new Step
@@ -1024,6 +1028,32 @@ namespace SS3D.Editor.Automation
                     OocChatMessage line = SubSystems.Get<CommsSubSystem>().OocLog.Last(m => m.Text == ChatProbe);
                     Require(line.Channel == OocChannel.Ooc && line.Sender == "remoteprobe" && !line.IsSystem,
                         "Host received the remote line on OOC, attributed to the sending connection's ckey");
+                    Require(JsonlLines(SS3D.Data.Persistence.PersistencePaths.BugReports).Length == _bugLines + 1,
+                        "Remote dialog saved exactly one report despite reopening during cooldown");
+                    BugReportEntry bug = LastJsonl<BugReportEntry>(SS3D.Data.Persistence.PersistencePaths.BugReports);
+                    Require(bug.source == "dialog" && bug.ckey == RemoteCkey && bug.roundId == 0 && bug.state == "lobby",
+                        "Server attributed the remote dialog report to its connection, round and state");
+                    Require(bug.note == "remote pilot bug report"
+                        && bug.details == "reproduced from the remote client with real keyboard input."
+                        && bug.client != null && bug.client.networkRole == "Client" && bug.client.context == "LOBBY",
+                        "Remote summary, details and captured context survived the broadcast");
+                    Require(ClientSignal("UiText", "#toast-text Bug report saved (round 0). Thanks!"),
+                        "Remote received the server acknowledgement");
+                    Require(ClientSignal("UiText", "#rate-limit You can send another report in"),
+                        "Remote reopening showed the rate-limit countdown");
+                    string screenshot = SS3D.Data.Paths.GetPath(SS3D.Data.GamePaths.Data, true)
+                        + SS3D.Data.Persistence.PersistencePaths.BugScreenshots + "/" + bug.screenshot;
+                    Require(!string.IsNullOrEmpty(bug.screenshot) && File.Exists(screenshot), "Server saved the remote screenshot");
+                    byte[] jpg = File.ReadAllBytes(screenshot);
+                    Require(jpg.Length > 0 && jpg.Length <= SS3D.Systems.BugReports.BugReportText.MaxScreenshotBytes,
+                        "Remote JPEG respects the network size limit");
+                    Texture2D image = new(2, 2);
+                    try
+                    {
+                        Require(image.LoadImage(jpg) && image.width <= 960 && image.height > 0,
+                            "Remote screenshot decodes as a reduced image");
+                    }
+                    finally { UnityEngine.Object.Destroy(image); }
                 },
             },
             new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true },
@@ -1504,9 +1534,7 @@ namespace SS3D.Editor.Automation
                 checks = Checks.ToArray(),
                 timeline = Timeline.ToArray(),
                 errors = Errors.ToArray(),
-                scope = Remote
-                    ? "Editor Host + built non-admin client process on loopback. The client's Ready click and chat typing are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
-                    : "Single-editor Host session; synthetic UI events. Does not cover a remote client process, non-admin permissions or OS input.",
+                scope = ReportScope(),
             };
             // Drivers wait for passed/failed; the final status follows the post-Play scene check.
             string result = report.status;
@@ -1515,6 +1543,14 @@ namespace SS3D.Editor.Automation
             report.status = result;
             _pending = report;
             if (stopPlay) EditorApplication.isPlaying = false;
+        }
+
+        private static string ReportScope()
+        {
+            if (Sandbox) return SandboxScope;
+            return Remote
+                ? "Editor Host + built non-admin client process on loopback. The client's Ready click, chat typing and bug-report interaction are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
+                : "Single-editor Host session; synthetic UI events. Does not cover a remote client process, non-admin permissions or OS input.";
         }
 
         private static void Complete(Report report, string output, string[] problems)

@@ -310,6 +310,15 @@ namespace SS3D.Systems.Testing
                     RunConsoleCommand(instruction.ArgsJoined);
                     break;
 
+                // Server: the sandbox wrote at least N reset-health lines (one per round reset).
+                case "assert_reset_health":
+                    int minimum = int.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture);
+                    yield return WaitUntil(
+                        () => SS3D.Data.Management.LocalStorage.ReadJsonlLines(SS3D.Data.Persistence.PersistencePaths.ResetHealth).Length >= minimum,
+                        _waitTimeoutSeconds, "assert_reset_health");
+                    TestSignal.Emit(this, "ResetHealthVerified", minimum.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+
                 case "wait_seconds":
                     yield return new WaitForSeconds(float.Parse(instruction.Args[0]));
                     break;

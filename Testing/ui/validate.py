@@ -1,6 +1,6 @@
 """One-command validation for UI/session work. Use Testing/ui/validate.sh or compile.sh.
 
-Steps: preflight → compile → editmode → playmode → visual → lifecycle → build (client and dedicated
+Steps: preflight → compile → editmode → playmode → visual → lifecycle → sandbox (--full) → build (client and dedicated
 server, each if stale) → remote → smoke (Testing/multiplayer scenarios against both builds).
 --quick skips playmode and stops after lifecycle. PlayMode failures in KnownIssueReproduction fixtures are reported
 separately against Testing/ui/playmode-known-issues.txt (expected failures), so known bugs neither
@@ -29,10 +29,11 @@ UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
 BUILD_RESULTS = {"client": UI / "client-build-result.json", "server": UI / "server-build-result.json"}
-# Same scenarios and client counts as .github/workflows/multiplayer-smoke-test.yml.
-SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1)]
+# The scenarios and client counts of .github/workflows/multiplayer-smoke-test.yml, plus sandbox-reset.
+SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1),
+                   ("sandbox-reset", 1)]
 LOG_ERROR = re.compile(r"(: error [A-Za-z]+\d+:|error CS\d+)")
-ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "build", "remote", "smoke"]
+ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "sandbox", "build", "remote", "smoke"]
 QUICK = ["preflight", "compile", "editmode", "visual", "lifecycle"]  # PlayMode is --full only (minutes)
 KNOWN_ISSUE_DIR = ROOT / "Assets/Scripts/Tests/KnownIssueReproduction"
 KNOWN_ISSUE_LIST = ROOT / "Testing/ui/playmode-known-issues.txt"
@@ -346,6 +347,11 @@ async def step_visual(editor, ctx):
 
 async def step_lifecycle(editor, ctx):
     return await run_pilot(editor, "SS3D/Testing/Run Lobby Lifecycle Pilot", "lifecycle-*/status.json", 150, 420)
+
+
+async def step_sandbox(editor, ctx):
+    # Two automatic sandbox rounds (2 + 1 minutes plus countdowns): --full only.
+    return await run_pilot(editor, "SS3D/Testing/Run Sandbox Pilot", "sandbox-*/status.json", 300, 600)
 
 
 async def build_target(editor, target):

@@ -1,0 +1,11 @@
+# Client side of sandbox-reset: a remote client survives one sandbox reset. It never readies or
+# starts a round; the server's auto-start and all-connected-ready rule put it in both rounds.
+wait_timeout 180
+wait_connected
+wait_round Ongoing
+assert_embarked
+wait_round Stopped
+wait_round Ongoing
+assert_embarked
+wait_seconds 2
+disconnect
