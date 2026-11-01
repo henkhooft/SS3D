@@ -30,13 +30,13 @@ UPDATING (WINDOWS)
   show an older version). The updater prints the installed version and the backup location.
   To roll back, close the game and run a Host/Client script in the printed .ss3d-backups
   folder. That is the complete installation and local data from BEFORE the update; later
-  edits remain in the newer installation. Backups are never deleted automatically.
+  edits remain in the newer installation. Only that one previous installation is kept;
+  older backups are deleted after a successful update.
   Update_SS3D.bat -CheckOnly checks for updates without downloading or installing.
 
   If an update is interrupted while installing, keep .ss3d-update-* and .ss3d-backups:
   the previous Game folder and launch scripts can be recovered from the latest backup.
-  The updater itself stays as a stable bootstrap; replace its two files from a fresh
-  release zip if a future release requires a new updater.
+  Update_SS3D.ps1 updates itself along with the game; Update_SS3D.bat stays as it is.
 
 LINUX CLIENT (SS3D-Linux-Client-<version>.zip)
 

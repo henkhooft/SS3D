@@ -13,7 +13,7 @@ Friends on your network can join with `Start_SS3D_Client.bat`, using your IP add
 
 On Windows, close the game and run **`Update_SS3D.bat`** regularly for the latest stable
 release (prereleases and nightlies are ignored). Your maps and local data are preserved; the previous
-installation is kept in `.ss3d-backups/`. Keep both updater files beside the launch scripts.
+installation is kept in `.ss3d-backups/` (only the one before the latest update). Keep both updater files beside the launch scripts.
 Use the same launch scripts after updating. See `README.txt` for rollback instructions.
 On Linux, use **`./update_ss3d.sh`** instead (requires Python 3; keep `update_ss3d.py`
 beside it). It follows the same stable channel and preserves the same local data.

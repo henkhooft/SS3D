@@ -45,7 +45,8 @@ strongest signal wins:
 
 The dispatch input `version_bump` (`auto` default) overrides the computed level. A dispatch with
 no commits since the last tag fails rather than re-releasing. `tag_suffix` still gives an
-unversioned `develop-<suffix>` test cut. While MAJOR is 0, releases are GitHub prereleases.
+unversioned `develop-<suffix>` test cut. Numbered releases are stable GitHub releases even while
+MAJOR is 0 (1.0 means a complete game, far off); nightlies and `develop-*` cuts are prereleases.
 
 ### Rules for agents
 

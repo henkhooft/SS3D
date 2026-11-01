@@ -47,7 +47,7 @@ function Expand-SS3DRelease([string]$Zip, [string]$Destination, [string]$Tag) {
     foreach ($required in @('Game/SS3D.exe', 'Game/UnityPlayer.dll', 'Game/SS3D_Data/globalgamemanagers',
             'Game/Config/permissions.txt', 'Game/Config/network.json',
             'Game/Data/StationTemplates/ministation.json', 'Start_SS3D_Host.bat',
-            'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md')) {
+            'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md', 'Update_SS3D.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $root $required) -PathType Leaf)) {
             throw "Incomplete Windows release: missing $required"
         }
@@ -87,8 +87,10 @@ function Copy-SS3DLocalData([string]$OldRoot, [string]$NewRoot) {
 }
 
 function Install-SS3DRelease([string]$Root, [string]$NewRoot, [string]$Backup) {
-    # The updater is a stable bootstrap and is intentionally not replaced while executing.
-    $managed = @('Game', 'Start_SS3D_Host.bat', 'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md', '.ss3d-release.json')
+    # Update_SS3D.ps1 replaces itself so updater fixes reach existing installs; PowerShell has already
+    # read it. Update_SS3D.bat is NOT replaced: cmd reads a running batch file line by line.
+    $managed = @('Game', 'Start_SS3D_Host.bat', 'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md',
+        'Update_SS3D.ps1', '.ss3d-release.json')
     $saved = @()
     $installed = @()
     New-Item -ItemType Directory -Path $Backup | Out-Null
@@ -113,6 +115,20 @@ function Install-SS3DRelease([string]$Root, [string]$NewRoot, [string]$Backup) {
         }
         throw $failure
     }
+}
+
+function Remove-SS3DOldBackups([string]$Backups, [string]$Keep) {
+    # Keep only the backup just made (the previous version); older ones add up to GBs.
+    $removed = 0
+    # $Keep may mix / and \; GetFullPath normalizes both sides before comparing.
+    $Keep = [IO.Path]::GetFullPath($Keep).TrimEnd('\', '/')
+    foreach ($old in @(Get-ChildItem -LiteralPath $Backups -Directory -Force)) {
+        if ([IO.Path]::GetFullPath($old.FullName).TrimEnd('\', '/') -eq $Keep -or
+            ($old.Attributes -band [IO.FileAttributes]::ReparsePoint)) { continue }
+        Remove-Item -LiteralPath $old.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path -LiteralPath $old.FullName)) { $removed++ }
+    }
+    return $removed
 }
 
 function Update-SS3D([string]$Root, [switch]$CheckOnly) {
@@ -179,8 +195,10 @@ function Update-SS3D([string]$Root, [switch]$CheckOnly) {
         $swapStarted = $true
         Install-SS3DRelease $Root $newRoot $backup
         $complete = $true
+        $removed = Remove-SS3DOldBackups (Split-Path $backup -Parent) $backup
         Write-Host "Updated to $tag. Use your usual Host or Client script in this folder."
         Write-Host "Previous installation: $backup"
+        if ($removed) { Write-Host "Removed $removed older backup(s); only the previous installation is kept." }
         Write-Host 'To roll back, close SS3D and run the Host or Client script inside that backup folder.'
     } finally {
         # On a swap/restore failure leave staging available for manual recovery.
