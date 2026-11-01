@@ -149,8 +149,9 @@ is not enforced before merge. The load/soak runner is local tooling, not a sched
 ([networking-session.md](systems/networking-session.md) §Tests).
 
 **Last recorded CI observation (2026-10-31):** no smoke pass since 2026-10-01; 10-05/06 failed,
-10-07 through 10-19 waited for the runner and were cancelled, with no later scheduled runs observed.
-This refresh checked workflow configuration, not current Actions history. Recheck runs and runner
+10-07 through 10-19 waited for the runner and were cancelled. Checked 2026-11-01: there have been no
+runs since, because GitHub has the workflow `disabled_inactivity`; re-enable it
+(`gh workflow enable multiplayer-smoke-test.yml`) and confirm the self-hosted runner picks jobs up. Recheck runs and runner
 availability before claiming CI coverage is healthy. Headless smoke still cannot prove rendered
 selection/drop behavior or the Nuke Ops happy path.
 

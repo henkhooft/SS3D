@@ -152,7 +152,6 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 ## Tests
 
 - `Testing/ui/validate.sh --full` runs the current validation loop. `LobbyUiPilot` covers shell/creator visuals; `LobbyLifecyclePilot` covers host lifecycle, saved characters and settings; the remote pilot checks a built non-admin client. Review screenshots as well as assertions; OS-input Ready/chat checks do not imply every pilot action uses real input.
-
 - `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
 - The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
 - The lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.

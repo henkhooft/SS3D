@@ -116,7 +116,8 @@ The pilot opens the real lobby and creator, changes name and body sliders, rotat
 the preview, navigates steps, saves, and returns. It checks visibility, control
 presence, preview texture binding, angle label, saved name, updated dropdown/footer behavior, Saved confirmation,
 local character switching and New Character reset. It fails on captured
-Error/Exception/Assert logs. It does not claim that a bound RenderTexture contains
+Error/Exception/Assert logs. Fix the cause of a captured error; never allowlist one to
+turn the report green. It does not claim that a bound RenderTexture contains
 the correct model; inspect the PNGs too.
 
 This is a **rendered smoke test**, not a visual golden-image test: animations and
@@ -187,6 +188,9 @@ Before building, make sure `Game.unity` is not dirty: `BuildPlayer` opens a bloc
   not prove Unity connected. Keep it local to this machine.
 - Compilation: automation has its own editor-only asmdef. `Assets` has a parent
   asmdef; merely placing scripts in an `Editor` folder does not isolate them.
+- Blocking dialog after a catalog rebuild: the **SS3D → Data → Rebuild All UI Catalogs** menu
+  opens a modal success dialog. Automation calls `UiCatalogRebuildAll.TryRebuildAll` from editor
+  code instead of invoking the menu.
 - Null UI root: a `UIDocument` may exist before its `rootVisualElement` does.
 - UI events: set the pooled event's `target` before `SendEvent`.
 - Game View sizing uses Unity's internal editor API, confined to one helper. If an

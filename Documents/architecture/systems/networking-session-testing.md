@@ -58,7 +58,9 @@ Run the smoke scenarios after building:
 `basic-round` covers connect/ready/start/embark and a console round trip; `late-join` covers
 embark after Ongoing; `reconnect` checks reclaiming a body; `atmos-client-sync` forces heat then
 asserts a client snapshot. The CI workflow runs this set on dispatch, PR label `test:multiplayer`
-and a nightly schedule. Configured checks do not establish a current passing run.
+and a nightly schedule. GitHub disabled the workflow for inactivity after the 2026-10-19
+run (`gh workflow list --all` shows `disabled_inactivity`), so none of these triggers fire until it
+is re-enabled. Configured checks do not establish a current passing run.
 
 With the Editor open, `Testing/ui/validate.sh --full` runs compile, EditMode, PlayMode, visual and
 lifecycle pilots, stale builds, remote pilot and smoke. Reports live under `artifacts/ui/`;
