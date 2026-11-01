@@ -39,7 +39,7 @@ namespace SS3D.Editor.Automation
     /// </para>
     /// </summary>
     [InitializeOnLoad]
-    public static class LobbyLifecyclePilot
+    public static partial class LobbyLifecyclePilot
     {
         private const string ActiveKey = "SS3D.LobbyLifecyclePilot.Active";
         private const string OutputKey = "SS3D.LobbyLifecyclePilot.Output";
@@ -102,6 +102,7 @@ namespace SS3D.Editor.Automation
         public static void RunRemoteClient() => Start(RemoteMode);
 
         private static bool Remote => SessionState.GetString(ModeKey, "") == RemoteMode;
+        private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode;
 
         private static void Start(string mode)
         {
@@ -110,7 +111,8 @@ namespace SS3D.Editor.Automation
             if (EditorApplication.isCompiling || EditorUtility.scriptCompilationFailed)
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
-            string output = Path.GetFullPath($"artifacts/ui/{(mode == RemoteMode ? "remote" : "lifecycle")}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
+            string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox", _ => "lifecycle" };
+            string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
             {
@@ -143,7 +145,8 @@ namespace SS3D.Editor.Automation
                 Errors.Clear();
                 Checks.Clear();
                 Timeline.Clear();
-                _steps = Remote ? BuildRemoteSteps() : BuildSteps();
+                if (Remote) _steps = BuildRemoteSteps();
+                else _steps = Sandbox ? BuildSandboxSteps() : BuildSteps();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -1504,9 +1507,7 @@ namespace SS3D.Editor.Automation
                 checks = Checks.ToArray(),
                 timeline = Timeline.ToArray(),
                 errors = Errors.ToArray(),
-                scope = Remote
-                    ? "Editor Host + built non-admin client process on loopback. The client's Ready click and chat typing are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
-                    : "Single-editor Host session; synthetic UI events. Does not cover a remote client process, non-admin permissions or OS input.",
+                scope = ReportScope(),
             };
             // Drivers wait for passed/failed; the final status follows the post-Play scene check.
             string result = report.status;
@@ -1515,6 +1516,14 @@ namespace SS3D.Editor.Automation
             report.status = result;
             _pending = report;
             if (stopPlay) EditorApplication.isPlaying = false;
+        }
+
+        private static string ReportScope()
+        {
+            if (Sandbox) return SandboxScope;
+            return Remote
+                ? "Editor Host + built non-admin client process on loopback. The client's Ready click and chat typing are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."
+                : "Single-editor Host session; synthetic UI events. Does not cover a remote client process, non-admin permissions or OS input.";
         }
 
         private static void Complete(Report report, string output, string[] problems)

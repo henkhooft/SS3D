@@ -144,5 +144,58 @@ namespace SS3D.Tests.EditMode
             catalog.HideSandboxDenied = true;
             Assert.AreEqual(0, Spawns());
         }
+    
+        [Test]
+        public void AutoStart_CountsDownOnceAPlayerIsReady_ThenStartsOnce()
+        {
+            AutoStartCountdown countdown = new();
+            Assert.IsFalse(countdown.Tick(enabled: true, idle: true, readyCount: 0));
+            Assert.AreEqual(0, countdown.SecondsLeft);
+
+            Assert.IsFalse(countdown.Tick(true, true, 1));
+            Assert.AreEqual(AutoStartCountdown.CountdownSeconds, countdown.SecondsLeft);
+
+            int starts = 0;
+            for (int i = 0; i < AutoStartCountdown.CountdownSeconds; i++)
+                if (countdown.Tick(true, true, 1)) starts++;
+            Assert.AreEqual(1, starts);
+            Assert.AreEqual(0, countdown.SecondsLeft);
+        }
+
+        [TestCase(false, true, 3, false)]
+        [TestCase(true, false, 3, false)]
+        [TestCase(true, true, 0, false)]
+        [TestCase(true, true, 3, true)]
+        public void AutoStart_CountsOnlyWhenEnabledIdleAndReady(bool enabled, bool idle, int ready, bool counts)
+        {
+            AutoStartCountdown countdown = new();
+            countdown.Tick(enabled, idle, ready);
+            Assert.AreEqual(counts, countdown.SecondsLeft > 0);
+        }
+
+        [Test]
+        public void AutoStart_ResetsWhenReadyPlayersLeave_AndHoldStopsIt()
+        {
+            AutoStartCountdown countdown = new();
+            countdown.Tick(true, true, 1);
+            countdown.Tick(true, true, 1);
+            countdown.Tick(true, true, 0);
+            Assert.AreEqual(0, countdown.SecondsLeft);
+
+            countdown.Tick(true, true, 1);
+            countdown.Held = true;
+            for (int i = 0; i <= AutoStartCountdown.CountdownSeconds; i++)
+                Assert.IsFalse(countdown.Tick(true, true, 1));
+            Assert.AreEqual(0, countdown.SecondsLeft);
+        }
+
+        [TestCase(300, "The round ends in 5 minutes.")]
+        [TestCase(60, "The round ends in 1 minute.")]
+        [TestCase(299, null)]
+        [TestCase(0, null)]
+        public void RoundEndWarnings_At5And1Minutes(int secondsLeft, string expected)
+        {
+            Assert.AreEqual(expected, RoundEndWarnings.For(secondsLeft));
+        }
     }
 }

@@ -204,8 +204,10 @@ namespace SS3D.UI.Lobby
             _ready = ready;
             bool playersChanged = !_players.Select(p => (p.Id, p.Ready)).SequenceEqual(players.Select(p => (p.Id, p.Ready)));
             _players = players;
-            _countingDown = state == RoundState.WarmingUp;
-            _secondsLeft = seconds;
+            // The self-starting lobby countdown runs while idle, before the station loads.
+            bool autoCounting = state is RoundState.Stopped or RoundState.Ended && _autoStartSeconds > 0;
+            _countingDown = state == RoundState.WarmingUp || autoCounting;
+            _secondsLeft = autoCounting ? _autoStartSeconds : seconds;
             if (_playerCount != null) _playerCount.text = $"{players.Length} online";
             if (!admin && _adminActive) ToggleAdmin();
             _adminButton?.SetEnabled(admin);
@@ -213,6 +215,18 @@ namespace SS3D.UI.Lobby
             RefreshServerSettings();
             _readyButton?.SetEnabled(canAct && !inRound && state is not RoundState.Ending);
             if (playersChanged && _activeTab == TabPlayers) ShowTab(TabPlayers);
+        }
+
+        private bool _autoStartEnabled;
+        private bool _autoStartHeld;
+        private int _autoStartSeconds;
+
+        /// <summary>Server auto-start state; call before <see cref="SetSession"/>.</summary>
+        public void SetAutoStart(bool enabled, bool held, int secondsLeft)
+        {
+            _autoStartEnabled = enabled;
+            _autoStartHeld = held;
+            _autoStartSeconds = secondsLeft;
         }
 
         private string _serverName = "Connecting…";

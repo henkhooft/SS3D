@@ -168,6 +168,7 @@ namespace SS3D.Systems.Rounds
             switch (action)
             {
                 case RoundAdminAction.Start when CurrentRoundState is RoundState.Stopped or RoundState.Ended:
+                    SetAutoStartHeld(false, "an admin started a round");
                     RequestRoundStateChange(new ChangeRoundStateMessage(true));
                     break;
                 case RoundAdminAction.ForceStart when IsWarmingUp:
@@ -178,6 +179,10 @@ namespace SS3D.Systems.Rounds
                     break;
                 case RoundAdminAction.CancelCountdown when IsWarmingUp:
                     CancelCountdown();
+                    SetAutoStartHeld(true, "an admin cancelled the countdown");
+                    break;
+                case RoundAdminAction.CancelCountdown when _autoStart.SecondsLeft > 0:
+                    SetAutoStartHeld(true, "an admin cancelled the countdown");
                     break;
                 case RoundAdminAction.Stop when IsOngoing:
                     RequestPlayerRoundStop(sender);

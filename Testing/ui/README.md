@@ -48,7 +48,7 @@ One command validates UI/session work in the open editor, unattended:
 
 ```bash
 Testing/ui/validate.sh            # --quick (default): preflight, compile, EditMode, visual, lifecycle
-Testing/ui/validate.sh --full     # + PlayMode, client+server build if stale, remote pilot, multiplayer smoke
+Testing/ui/validate.sh --full     # + PlayMode, sandbox pilot, client+server build if stale, remote pilot, multiplayer smoke
 Testing/ui/validate.sh --steps compile,visual   # any subset, in order
 Testing/ui/compile.sh             # = --steps compile
 ```
@@ -66,6 +66,7 @@ failure, prints a summary table with report paths and the screenshots to review,
 | playmode | `--full` only. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
+| sandbox | `--full` only. The sandbox pilot below (~4.5 min). |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
 | smoke | `--full` only. `Testing/multiplayer/run_smoketest.sh` for basic-round, late-join (2 clients), reconnect and atmos-client-sync, the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
 
@@ -139,6 +140,14 @@ Buttons use synthetic `NavigationSubmitEvent`; these checks do not prove OS inpu
 client process. The [rounds/lobby map](../../Documents/architecture/systems/rounds-lobby.md) describes
 current contracts and test coverage. Boot leaves the station unloaded; Start restores the selected
 saved template. No current pass is implied by this runbook—use the report for the checkout tested.
+
+## Sandbox pilot
+
+**SS3D → Testing → Run Sandbox Pilot** applies the sandbox profile in Play Mode (the editor has no
+`-sandbox` flag; `RoundSubSystem.ApplyServerSettingsForTesting` sets the same settings) and lets the
+Host run rounds on its own: auto-start countdown without Ready, 1-minute warning, round end, station
+wipe with no autosave, a second automatic round on a fresh station. Reports and screenshots live
+under `artifacts/ui/sandbox-<UTC>/`. Effort: [2026-11_sandbox-server](../../Documents/architecture/2026-11_sandbox-server.md).
 
 ## Lobby remote client pilot
 

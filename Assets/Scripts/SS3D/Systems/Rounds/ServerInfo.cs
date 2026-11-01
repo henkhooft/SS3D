@@ -96,6 +96,7 @@ namespace SS3D.Systems.Rounds
                 Log.Information(this, "Sandbox profile applied", Logs.ServerOnly);
             }
             ApplyServerRules();
+            StartAutoStartLoop();
             _serverName = _serverSettings.ServerName;
             _motd = _serverSettings.Motd;
             _publicMode = _serverSettings.Mode;

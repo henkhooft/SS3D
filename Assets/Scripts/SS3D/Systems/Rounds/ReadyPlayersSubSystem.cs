@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Coimbra.Services.Events;
 using FishNet.Connection;
 using FishNet.Object;
@@ -48,7 +49,12 @@ namespace SS3D.Systems.Rounds
                 return;
             }
 
-            SpawnReadyPlayersEvent spawnReadyPlayersEvent = new(_readyPlayers.ToList());
+            // Sandbox rule: everyone connected joins, ready or not (no observers exist yet to leave out).
+            bool allConnected = SubSystems.TryGet(out RoundSubSystem rounds) && rounds.SettingsForServer.AllConnectedReady;
+            List<Player> spawning = allConnected
+                ? SubSystems.Get<PlayerSubSystem>().OnlinePlayers.ToList()
+                : _readyPlayers.ToList();
+            SpawnReadyPlayersEvent spawnReadyPlayersEvent = new(spawning);
             spawnReadyPlayersEvent.Invoke(this);
 
             _readyPlayers.Clear();
@@ -141,6 +147,14 @@ namespace SS3D.Systems.Rounds
         }
 
         public int Count => _readyPlayers.Count;
+
+        /// <summary>
+        /// Players who would join a round starting now: everyone online when
+        /// <paramref name="allConnected"/> (<see cref="ServerSettings.AllConnectedReady"/>), else the ready list.
+        /// </summary>
+        [Server]
+        public int EffectiveReadyCount(bool allConnected) =>
+            allConnected ? SubSystems.Get<PlayerSubSystem>().OnlinePlayers.Count() : _readyPlayers.Count;
 
         public bool IsReady(Player player) => player != null && _readyPlayers.Contains(player);
 
