@@ -42,7 +42,9 @@ namespace SS3D.Systems.Rounds
         [Server]
         protected override void RequestPlayerRoundStop(NetworkConnection sender)
         {
-            if (IsOngoing && SubSystems.TryGet(out MapEditorSubSystem editor) && editor.HasUnsavedChanges)
+            // With map persistence off there is nothing to save, so no prompt.
+            if (IsOngoing && MapEditorPermissions.PersistenceAllowed
+                && SubSystems.TryGet(out MapEditorSubSystem editor) && editor.HasUnsavedChanges)
             {
                 PendingMapStop pending = new()
                 {
@@ -128,7 +130,7 @@ namespace SS3D.Systems.Rounds
             _mapDiscardApproved = false;
             ClearMapStopPrompts();
             if (!SubSystems.TryGet(out MapEditorSubSystem editor)) return;
-            if (!discard && editor.HasUnsavedChanges) AutosaveMapEdits(editor);
+            if (!discard && editor.HasUnsavedChanges && MapEditorPermissions.PersistenceAllowed) AutosaveMapEdits(editor);
             editor.ResetAuthoringState();
         }
 
@@ -163,6 +165,7 @@ namespace SS3D.Systems.Rounds
         {
             _pendingMapStops.Clear();
             _mapDiscardApproved = false;
+            MapEditorPermissions.PersistenceAllowed = true;
             base.OnStopServer();
         }
     }

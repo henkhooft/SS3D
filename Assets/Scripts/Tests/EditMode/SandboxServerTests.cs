@@ -1,0 +1,148 @@
+using NUnit.Framework;
+using SS3D.Systems.Rounds;
+using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile.MapEditor.Commands;
+
+namespace SS3D.Tests.EditMode
+{
+    /// <summary>Sandbox server P1: the profile, map persistence gate, build denylist and invincibility refusal.</summary>
+    public sealed class SandboxServerTests
+    {
+        [TearDown]
+        public void RestorePersistence() => MapEditorPermissions.PersistenceAllowed = true;
+
+        [Test]
+        public void Profile_AppliesSandboxRules_KeepsMapAndName()
+        {
+            ServerSettings original = ServerSettings.Default;
+            original.Map = "ministation";
+            original.ServerName = "Test";
+
+            ServerSettings sandbox = SandboxProfile.Apply(original);
+
+            Assert.AreEqual("Extended", sandbox.Mode);
+            Assert.AreEqual(20, sandbox.RoundLengthMinutes);
+            Assert.AreEqual(16, sandbox.PlayerCap);
+            Assert.IsTrue(sandbox.AllowLateJoin);
+            Assert.IsTrue(sandbox.AutoStart);
+            Assert.IsTrue(sandbox.AllConnectedReady);
+            Assert.IsTrue(sandbox.RespawnEnabled);
+            Assert.AreEqual(30, sandbox.RespawnCooldownSeconds);
+            Assert.IsFalse(sandbox.MapPersistence);
+            Assert.AreEqual(SandboxProfile.Motd, sandbox.Motd);
+            Assert.AreEqual("ministation", sandbox.Map);
+            Assert.AreEqual("Test", sandbox.ServerName);
+            Assert.IsTrue(sandbox.IsValid);
+        }
+
+        [Test]
+        public void Defaults_KeepNormalServerBehaviour()
+        {
+            ServerSettings settings = ServerSettings.Default;
+            Assert.IsFalse(settings.AutoStart);
+            Assert.IsFalse(settings.AllConnectedReady);
+            Assert.IsFalse(settings.RespawnEnabled);
+            Assert.IsTrue(settings.MapPersistence);
+        }
+
+        [Test]
+        public void AdminFormSave_KeepsServerRules()
+        {
+            ServerSettings current = SandboxProfile.Apply(ServerSettings.Default);
+            // The admin form doesn't know the rule fields, so it sends their defaults.
+            ServerSettings form = ServerSettings.Default;
+            form.Mode = "Secret";
+            form.RoundLengthMinutes = 45;
+
+            ServerSettings saved = form.WithRulesOf(current);
+
+            Assert.AreEqual("Secret", saved.Mode);
+            Assert.AreEqual(45, saved.RoundLengthMinutes);
+            Assert.IsTrue(saved.AutoStart);
+            Assert.IsTrue(saved.RespawnEnabled);
+            Assert.IsFalse(saved.MapPersistence);
+            Assert.AreEqual(SandboxProfile.Motd, saved.Motd);
+        }
+
+        [Test]
+        public void RespawnCooldown_OutOfRange_IsInvalid()
+        {
+            ServerSettings settings = ServerSettings.Default;
+            settings.RespawnCooldownSeconds = -1;
+            Assert.IsFalse(settings.IsValid);
+            settings.RespawnCooldownSeconds = 3601;
+            Assert.IsFalse(settings.IsValid);
+        }
+
+        [Test]
+        public void PersistenceGate_RefusesWithReason_WhenOff()
+        {
+            MapEditorPermissions.PersistenceAllowed = false;
+            Assert.IsFalse(MapEditorPermissions.TryAllowPersistence(out string refusal));
+            Assert.AreEqual(MapEditorPermissions.PersistenceRefusedMessage, refusal);
+
+            MapEditorPermissions.PersistenceAllowed = true;
+            Assert.IsTrue(MapEditorPermissions.TryAllowPersistence(out refusal));
+            Assert.IsNull(refusal);
+        }
+
+        [Test]
+        public void Capabilities_FollowPersistenceAndSandboxPlayer()
+        {
+            MapEditorCapabilities sandboxPlayer = MapEditorCapabilities.For(persistenceAllowed: false, isSandboxPlayer: true);
+            Assert.IsFalse(sandboxPlayer.Persistence);
+            Assert.IsFalse(sandboxPlayer.Invincibility);
+            Assert.IsTrue(sandboxPlayer.RestrictedPalette);
+
+            MapEditorCapabilities sandboxAdmin = MapEditorCapabilities.For(persistenceAllowed: false, isSandboxPlayer: false);
+            Assert.IsFalse(sandboxAdmin.Persistence);
+            Assert.IsTrue(sandboxAdmin.Invincibility);
+            Assert.IsFalse(sandboxAdmin.RestrictedPalette);
+
+            MapEditorCapabilities full = MapEditorCapabilities.Full;
+            Assert.IsTrue(full.Persistence && full.Invincibility && !full.RestrictedPalette);
+        }
+
+        [Test]
+        public void Invincibility_RefusedForSandboxPlayersOnly()
+        {
+            Assert.IsFalse(MapEditorPermissions.MayToggleInvincibility(isSandboxPlayer: true));
+            Assert.IsTrue(MapEditorPermissions.MayToggleInvincibility(isSandboxPlayer: false));
+        }
+
+        [TestCase(MapEditorCommandKind.PlaceSpawnPoint, "spawn:job:Assistant")]
+        [TestCase(MapEditorCommandKind.ClearSpawnPoint, "")]
+        [TestCase(MapEditorCommandKind.ClearSpawnPoint, null)]
+        [TestCase(MapEditorCommandKind.PlaceItem, "NuclearAuthenticationDisk")]
+        [TestCase(MapEditorCommandKind.PlaceTile, "NukeCart")]
+        [TestCase(MapEditorCommandKind.PlaceTile, "nukecart")]
+        [TestCase(MapEditorCommandKind.MoveTile, "NukeCart")]
+        public void Denylist_RefusesSpawnPointsAndNuke(MapEditorCommandKind kind, string assetName)
+        {
+            Assert.IsTrue(MapEditorSandboxRules.IsDenied(new MapEditorCommandDto { Kind = kind, AssetName = assetName }));
+        }
+
+        [TestCase(MapEditorCommandKind.PlaceTile, "Table")]
+        [TestCase(MapEditorCommandKind.PlaceItem, "Grenade")]
+        [TestCase(MapEditorCommandKind.ClearTile, "Wall")]
+        [TestCase(MapEditorCommandKind.SetFloorDecal, "floor-decal:3")]
+        public void Denylist_AllowsEverythingElse(MapEditorCommandKind kind, string assetName)
+        {
+            Assert.IsFalse(MapEditorSandboxRules.IsDenied(new MapEditorCommandDto { Kind = kind, AssetName = assetName }));
+        }
+
+        [Test]
+        public void Catalog_HidesDeniedEntries_OnlyWhenRestricted()
+        {
+            MapEditorCatalog catalog = new();
+            catalog.Build(System.Array.Empty<SS3D.Systems.Tile.GenericObjectSo>(), null);
+
+            int Spawns() => System.Linq.Enumerable.Count(
+                catalog.Query(MapEditorMode.Scripting, MapEditorSubcategory.SpawnPlacements, null));
+
+            Assert.Greater(Spawns(), 0);
+            catalog.HideSandboxDenied = true;
+            Assert.AreEqual(0, Spawns());
+        }
+    }
+}

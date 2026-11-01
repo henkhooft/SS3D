@@ -42,6 +42,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _root;
         private VisualElement _hudLayer;
         private VisualElement _leftToolbar;
+        // Hidden when the server turns map persistence off (sandbox).
+        private VisualElement _saveMapButton;
+        private VisualElement _loadMapButton;
+        private VisualElement _persistenceSeparator;
         private VisualElement _rightToolbar;
         private VisualElement _modeRail;
         private VisualElement _subcatRow;
@@ -194,12 +198,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _leftToolbar.Add(WrapWithHoverHint(redo, "Redo"));
             AddSeparator(_leftToolbar, vertical: true);
 
-            _leftToolbar.Add(WrapWithHoverHint(
+            _persistenceSeparator = _leftToolbar[_leftToolbar.childCount - 1];
+            _saveMapButton = WrapWithHoverHint(
                 CreateIconButton(_icons?.SaveMap, null, () => TogglePopover("saveMenu")),
-                "Save map [Ctrl+Shift+S]"));
-            _leftToolbar.Add(WrapWithHoverHint(
+                "Save map [Ctrl+Shift+S]");
+            _leftToolbar.Add(_saveMapButton);
+            _loadMapButton = WrapWithHoverHint(
                 CreateIconButton(_icons?.OpenMap, null, () => TogglePopover("maps")),
-                "Load map [Ctrl+Shift+O]"));
+                "Load map [Ctrl+Shift+O]");
+            _leftToolbar.Add(_loadMapButton);
 
             region.Add(_leftToolbar);
             _hudLayer.Add(region);
@@ -459,6 +466,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             RebuildSubcategories();
             ApplyPaletteMode();
 
+            DisplayStyle persistence = _vm.Capabilities.Persistence ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_saveMapButton != null)
+                _saveMapButton.style.display = persistence;
+            if (_loadMapButton != null)
+                _loadMapButton.style.display = persistence;
+            if (_persistenceSeparator != null)
+                _persistenceSeparator.style.display = persistence;
+
             Button undoBtn = _leftToolbar?.Q<Button>("undo-btn");
             Button redoBtn = _leftToolbar?.Q<Button>("redo-btn");
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
@@ -501,6 +516,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(_vm.CurrentMode);
             foreach (MapEditorSubcategory sub in subs)
             {
+                if (sub == MapEditorSubcategory.SpawnPlacements && _vm.Capabilities.RestrictedPalette)
+                    continue;
+
                 Button tab = CreateSubcategoryTab(sub);
                 _subcatButtons[sub] = tab;
                 _subcatRow.Add(tab);
@@ -849,11 +867,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                         _vm.AlwaysPowerLights = v;
                         AlwaysPowerLightsChanged?.Invoke(v);
                     });
-                    AddSwitchRow(container, "Player Invincible", _vm.Invincible, v =>
+                    if (_vm.Capabilities.Invincibility)
                     {
-                        _vm.Invincible = v;
-                        InvincibleChanged?.Invoke(v);
-                    });
+                        AddSwitchRow(container, "Player Invincible", _vm.Invincible, v =>
+                        {
+                            _vm.Invincible = v;
+                            InvincibleChanged?.Invoke(v);
+                        });
+                    }
                     AddSwitchRow(container, "Debug Overlay", _vm.DebugOverlay, v =>
                     {
                         _vm.DebugOverlay = v;

@@ -2,6 +2,7 @@ using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Permissions;
 using SS3D.Systems.PlayerControl;
+using SS3D.Systems.Rounds;
 using System;
 using System.Collections.Generic;
 using SS3D.Systems.Tile.MapEditor.Authorizers;
@@ -21,9 +22,9 @@ namespace SS3D.Systems.Tile.MapEditor
         public static void SetAuthorizer(IMapEditorAuthorizer authorizer) =>
             _authorizer = authorizer ?? CreateDefault();
 
-        /// <summary>Admin-only, unless the server was launched with <c>-openbuild</c>.</summary>
+        /// <summary>Admin-only, unless the server was launched with <c>-openbuild</c> or <c>-sandbox</c>.</summary>
         private static IMapEditorAuthorizer CreateDefault() =>
-            OpenBuildMapEditorAuthorizer.RequestedOnCommandLine
+            OpenBuildMapEditorAuthorizer.RequestedOnCommandLine || SandboxProfile.RequestedOnCommandLine
                 ? new OpenBuildMapEditorAuthorizer()
                 : new AdminMapEditorAuthorizer();
 
@@ -56,6 +57,31 @@ namespace SS3D.Systems.Tile.MapEditor
             && !conn.IsHost
             && !SubSystems.Get<PermissionSubSystem>().IsAtLeast(
                 SubSystems.Get<PlayerSubSystem>().GetCkey(conn), AdminMapEditorAuthorizer.RequiredRole);
+
+        /// <summary>
+        /// Map files and the station-replacing editor actions: Save, Export, Load, Delete, New Map and the
+        /// round-end autosave. Off on the sandbox, for everyone. Server only; set from
+        /// <see cref="ServerSettings.MapPersistence"/>.
+        /// </summary>
+        public static bool PersistenceAllowed { get; set; } = true;
+
+        public const string PersistenceRefusedMessage = "Saving and loading maps is off on this server. Builds reset with the round.";
+
+        /// <summary>Server-side gate for every persistence path; <paramref name="refusal"/> is the player-facing reason.</summary>
+        public static bool TryAllowPersistence(out string refusal)
+        {
+            refusal = PersistenceAllowed ? null : PersistenceRefusedMessage;
+            return PersistenceAllowed;
+        }
+
+        /// <summary>Sandbox players can't make themselves invincible; admins and the host can (sandbox-server.md §5).</summary>
+        public static bool MayToggleInvincibility(bool isSandboxPlayer) => !isSandboxPlayer;
+
+        public static bool MayToggleInvincibility(NetworkConnection conn) => MayToggleInvincibility(IsSandboxPlayer(conn));
+
+        /// <summary>What this connection's editor may show; sent to the client when the editor opens.</summary>
+        public static MapEditorCapabilities CapabilitiesFor(NetworkConnection conn) =>
+            MapEditorCapabilities.For(PersistenceAllowed, IsSandboxPlayer(conn));
 
         /// <summary>Records who saved a map, for <see cref="MayReplaceMapFile"/>. Server only, this session.</summary>
         public static void RecordSave(NetworkConnection conn, string mapName)

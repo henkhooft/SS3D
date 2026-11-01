@@ -8,6 +8,7 @@ using SS3D.Permissions;
 using SS3D.Systems.Persistence;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.Tile.MapEditor;
 
 namespace SS3D.Systems.Rounds
 {
@@ -23,14 +24,43 @@ namespace SS3D.Systems.Rounds
         public string ServerName;
         public string Motd;
 
+        // Server rules with no admin form field yet; the sandbox profile sets them at boot
+        // (SandboxProfile). A whole-form admin save keeps the current values.
+        /// <summary>Starts a countdown on its own while Stopped once a player is ready (lobby.md §7).</summary>
+        public bool AutoStart;
+        /// <summary>At round start, every connected player who isn't observing counts as ready.</summary>
+        public bool AllConnectedReady;
+        /// <summary>Ghosts may respawn as a fresh body after <see cref="RespawnCooldownSeconds"/>.</summary>
+        public bool RespawnEnabled;
+        /// <summary>Seconds from death until respawn is allowed.</summary>
+        public int RespawnCooldownSeconds;
+        /// <summary>Map editor save, export, load, delete, new map and the round-end autosave.</summary>
+        public bool MapPersistence;
+
         public static ServerSettings Default => new()
         {
             Map = "", Mode = "Secret", PlayerCap = 32, RoundLengthMinutes = 90, AllowLateJoin = true,
             ServerName = ServerInfoText.DefaultName, Motd = ServerInfoText.DefaultMotd,
+            RespawnCooldownSeconds = 30, MapPersistence = true,
         };
 
         public bool IsValid => PlayerCap is >= 1 and <= 256
-            && RoundLengthMinutes is >= 1 and <= 1440;
+            && RoundLengthMinutes is >= 1 and <= 1440
+            && RespawnCooldownSeconds is >= 0 and <= 3600;
+
+        /// <summary>These form values with the name, MOTD and server rules of <paramref name="current"/>, which the admin form does not edit.</summary>
+        public ServerSettings WithRulesOf(ServerSettings current)
+        {
+            ServerSettings result = this;
+            result.ServerName = current.ServerName;
+            result.Motd = current.Motd;
+            result.AutoStart = current.AutoStart;
+            result.AllConnectedReady = current.AllConnectedReady;
+            result.RespawnEnabled = current.RespawnEnabled;
+            result.RespawnCooldownSeconds = current.RespawnCooldownSeconds;
+            result.MapPersistence = current.MapPersistence;
+            return result;
+        }
     }
 
     public enum StationLoadState { NotLoaded, Loading, Initializing, Ready, Failed }
@@ -116,13 +146,19 @@ namespace SS3D.Systems.Rounds
                 return;
             }
             _serverSettingsError = "";
-            // Name/MOTD have their own path; a whole-form save must not roll them back.
-            settings.ServerName = _serverSettings.ServerName;
-            settings.Motd = _serverSettings.Motd;
-            _serverSettings = settings;
+            // Name/MOTD have their own path and the server rules have no form fields;
+            // a whole-form save must not roll them back.
+            _serverSettings = settings.WithRulesOf(_serverSettings);
             _allowLateJoin = settings.AllowLateJoin;
             _publicMode = settings.Mode;
             SendServerSettings(sender, "Settings saved for this server session.");
+        }
+
+        /// <summary>Pushes the server rules other systems enforce outside the round subsystem.</summary>
+        [Server]
+        private void ApplyServerRules()
+        {
+            MapEditorPermissions.PersistenceAllowed = _serverSettings.MapPersistence;
         }
 
         [ServerRpc(RequireOwnership = false)]

@@ -4,6 +4,7 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Data.Management;
 using SS3D.Data.Persistence;
+using SS3D.Logging;
 using UnityEngine;
 
 namespace SS3D.Systems.Rounds
@@ -87,6 +88,14 @@ namespace SS3D.Systems.Rounds
             SavedServerInfo saved = LocalStorage.LoadObject<SavedServerInfo>(PersistencePaths.ServerInfo);
             _serverSettings.ServerName = ServerInfoText.SanitizeName(saved?.serverName);
             _serverSettings.Motd = ServerInfoText.SanitizeMotd(saved?.motd);
+            if (SandboxProfile.RequestedOnCommandLine)
+            {
+                // In memory only: the saved server info and settings stay as they are.
+                _serverSettings = SandboxProfile.Apply(_serverSettings);
+                _allowLateJoin = _serverSettings.AllowLateJoin;
+                Log.Information(this, "Sandbox profile applied", Logs.ServerOnly);
+            }
+            ApplyServerRules();
             _serverName = _serverSettings.ServerName;
             _motd = _serverSettings.Motd;
             _publicMode = _serverSettings.Mode;
