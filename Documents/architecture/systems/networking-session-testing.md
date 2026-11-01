@@ -1,7 +1,7 @@
 > Parent map: [networking-session.md](networking-session.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Status: partial
-> Verified: 5932d8552 — 2026-11-01
+> Verified: e87d38958 — 2026-11-01
 
 # Multiplayer testing
 
@@ -27,7 +27,7 @@ client count, soak duration and server metrics. Graphical UI/session pilots have
 
 ## Extension points
 
-- Add server/client scenario text under `Testing/multiplayer/scenarios/`. Use `wait_connected`, `ready`, `start_round`, `wait_round`, `embark`, `assert_embarked`, `reconnect`, `console`, `wait_timeout`, `wait_seconds` and `disconnect`; `embark` requests spawning, `assert_embarked` confirms control of a body.
+- Add server/client scenario text under `Testing/multiplayer/scenarios/`. Use `wait_connected`, `ready`, `start_round`, `wait_round`, `embark`, `assert_embarked`, `reconnect`, `console`, `wait_timeout`, `wait_seconds`, `assert_reset_health` (server: N lines in `reset-health.jsonl`) and `disconnect`. A scenario's optional `scenarios/<name>.conf` (sourced) sets `SERVER_EXTRA_ARGS` and `CLIENT_TIMEOUT`; `embark` requests spawning, `assert_embarked` confirms control of a body.
 - Expose deterministic assertions through `console` commands or DSL instructions. Emit distinctive signals and throw on failed assertions so the runner emits `ScriptFailed`.
 - Graphical clients also accept `ui_wait`, `ui_text`, `ui_submit`, `os_click`, `os_type`, `os_key` and `screenshot`. `ui_submit` is synthetic navigation; the remote pilot services `os_*` through the OS-input bridge.
 - Override builds with `SS3D_SERVER_BUILD_DIR`, `SS3D_CLIENT_BUILD_DIR`, `SS3D_SERVER_BIN_NAME` and `SS3D_CLIENT_BIN_NAME`. Both runners accept `SS3D_TILEMAP_FIXTURES` and `SS3D_STATION_FIXTURES` for map data.
@@ -52,12 +52,14 @@ Run the smoke scenarios after building:
 ./Testing/multiplayer/run_smoketest.sh late-join 2
 ./Testing/multiplayer/run_smoketest.sh reconnect
 ./Testing/multiplayer/run_smoketest.sh atmos-client-sync
+./Testing/multiplayer/run_smoketest.sh sandbox-reset
 ./Testing/multiplayer/tools/triage_run.sh latest
 ```
 
 `basic-round` covers connect/ready/start/embark and a console round trip; `late-join` covers
 embark after Ongoing; `reconnect` checks reclaiming a body; `atmos-client-sync` forces heat then
-asserts a client snapshot. The CI workflow runs this set on dispatch, PR label `test:multiplayer`
+asserts a client snapshot; `sandbox-reset` runs a `-sandbox` server with one-minute rounds and
+checks that a client that never readies joins two automatic rounds and the reset writes `reset-health.jsonl`. The CI workflow runs this set on dispatch, PR label `test:multiplayer`
 and a nightly schedule. GitHub disabled the workflow for inactivity after the 2026-10-19
 run (`gh workflow list --all` shows `disabled_inactivity`), so none of these triggers fire until it
 is re-enabled. Configured checks do not establish a current passing run.

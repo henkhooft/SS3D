@@ -11,6 +11,8 @@ In-game comms hub, local-speech UI, non-diegetic radio/announcement feed, and ca
 controllers. Audio has its own map — [audio](audio.md). Camera pose is still multi-writer — see
 [camera ownership](../2026-07_camera-ownership.md).
 
+**Chat command:** `/bug <note>` is intercepted in the server's OOC handler (`CommsSubSystem.Ooc.cs`) and in-round compose forwards it to OOC; it writes `bugs.jsonl` and answers with a notice instead of posting ([rounds-lobby](rounds-lobby.md), `BugCommand`).
+
 **Comms hub:** `CommsSubSystem` owns local speech (proximity ObserversRpc) and non-positional radio /
 announcements (`CommsMessage` broadcast; radio to all clients, announcements only to connections
 with a spawned crew body, so lobby clients never get the round-start welcome). Legacy `ChatSubSystem` / `Engine.Chat` purged;

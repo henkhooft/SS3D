@@ -1,8 +1,8 @@
 > Implements: Documents/design/sandbox-server.md §2–§7; Documents/design/lobby.md §7 (self-starting round); Documents/design/death-cloning-respawn.md §6 (respawn setting)
 > Touches systems: rounds-lobby, map-editor-creative-hooks (tile), entities, networking-session, persistence
-> Status: planned
+> Status: in-progress
 
-**Progress:** Not started. Phases P1–P5 lead to the first invite-only session; P6 follows from its data. Advances [test-server.md](../milestones/test-server.md) T7.
+**Progress:** P1–P4 built and pilot-tested in the editor (`Run Sandbox Pilot`); P5's server-build half (heartbeat, exit after N rounds) is in, hosting files and the TomNAS deploy are not; P6 waits on session data. Advances [test-server.md](../milestones/test-server.md) T7.
 
 # Sandbox server (Nov 2026)
 
@@ -53,7 +53,7 @@ A separate dedicated instance where everyone can build and fight, with a 20-minu
 
 ## Phases
 
-### P1 — Profile and lockdown — **planned**
+### P1 — Profile and lockdown — **built**
 
 - `-sandbox` flag and in-memory profile (Decision 1).
 - Persistence gate on all six paths, buttons hidden (Decision 7).
@@ -61,25 +61,25 @@ A separate dedicated instance where everyone can build and fight, with a 20-minu
 - Invincibility refused and hidden for sandbox players (Decision 6).
 - Tests: EditMode for the persistence gate, denylist and invincibility refusal.
 
-### P2 — Round cycle — **planned**
+### P2 — Round cycle — **built**
 
 - `AutoStart` countdown while Stopped, minimum 1 ready (Decision 2).
 - Sandbox all-ready at round start (Decision 3).
 - 5/1-minute warnings for every timed round; sandbox MOTD (Decision 9).
 - Tests: EditMode for auto-start conditions; `LobbyLifecyclePilot` `-sandbox` run with 1-minute rounds through two automatic cycles.
 
-### P3 — Respawn and ghost editing — **planned**
+### P3 — Respawn and ghost editing — **built**
 
 - `RespawnEnabled` / `RespawnCooldownSeconds`, ghost-screen Respawn button, server respawn RPC (Decision 4).
 - Runtime check of the editor as a ghost; fix what breaks (Decision 5).
 - Tests: EditMode for the cooldown; pilot covers death → ghost → edit → respawn → fresh body at a spawn point.
 
-### P4 — Observability — **planned**
+### P4 — Observability — **built**
 
 - Round ID in logs (Decision 10), `reset-health.jsonl` (Decision 11), `/bug` (Decision 12).
 - Tests: multiplayer smoke step where a remote client survives one reset and `reset-health.jsonl` gains a line.
 
-### P5 — TomNAS hosting — **planned**
+### P5 — TomNAS hosting — **in-progress** (server-build half done)
 
 - Heartbeat writer and exit-after-N-rounds in the server build (Decision 13).
 - `Tools/sandbox-server/` Dockerfile, compose with healthcheck and volume, runbook.
@@ -92,6 +92,22 @@ A separate dedicated instance where everyone can build and fight, with a 20-minu
 - Tests: EditMode for each counter and the refusal path.
 
 Each phase runs `Testing/ui/validate.sh --full` before merge.
+
+## Implementation notes
+
+Where the built code differs from the plan above, or adds to it:
+
+- **Settings.** The rules are `ServerSettings` fields: `AutoStart`, `AllConnectedReady`, `RespawnEnabled`, `RespawnCooldownSeconds`, `MapPersistence`. The admin form doesn't edit them; `ServerSettings.WithRulesOf` keeps them through a whole-form save. `SandboxProfile` (`Systems/Rounds/`) applies them at boot; `RoundSubSystem.ApplyServerRules` pushes `MapPersistence` into `MapEditorPermissions.PersistenceAllowed`. `-sandbox-round-minutes=N` overrides the 20-minute length (tests).
+- **Persistence gate** applies to everyone, admins included; a Stop with unsaved edits doesn't prompt when it's off. The editor learns what to hide from a per-connection `MapEditorCapabilities` TargetRpc sent when it opens, not a SyncVar.
+- **Denylist** (`MapEditorSandboxRules`): spawn-point command kinds and the `NukeCart` / `NuclearAuthenticationDisk` assets, also in `RpcMoveObject`. Applies to every `IsSandboxPlayer`, so plain `-openbuild` servers get it too.
+- **Auto-start**: 20 s idle countdown (`AutoStartCountdown`), then the normal Start (station load, warmup). An admin Cancel (warmup or idle countdown) or a failed station load **holds** auto-start until an admin Start; the hold is announced in Admin chat. Warnings go out as an announcement banner and an OOC line (`RoundEndWarnings`); rounds shorter than 5 or 1 minute skip that warning.
+- **All-ready** counts every online player; observers don't exist yet, so none are left out.
+- **Respawn** (`EntitySubSystem.Respawn.cs`, `RespawnPrompt`): the ghost's Mind moves to the new body. The prompt is a code-built panel on the UiShell HUD layer; a reconnecting ghost isn't re-offered a respawn until it dies again.
+- **Ghost editing** needed no fix: `CanOpenEditor` passes for a ghost and the camera hand-over works (pilot screenshot `sandbox-ghost-editing.png`).
+- **Leaks fixed on the way** (found by the pilot's reset checks): corpses left `_spawnedPlayers` at death and survived every reset; every spawn's `Mind` was never despawned (+1 NetworkObject per player per round). Death also logged a `SetFirstObject` error (`SwapMinds` on the corpse's invalid owner) and a refused `InteractionController` removal (now disabled instead).
+- **Files**: `reset-health.jsonl` and `bugs.jsonl` sit in `Data/ServerMeta/` next to `round-history.jsonl`. `/bug` is intercepted in the server's OOC handler (lobby/Escape chat) and forwarded from the in-round compose box.
+- **P5 server half**: `-heartbeat-file=<path>` (main-thread timestamp every 5 s) and `-exit-after-rounds=<N>` (`ServerLifetimeOptions`).
+- **Open finding**: plain GameObjects grow by about 8 per reset in the editor Host (336 → 344) while NetworkObjects stay flat. Watch it in `reset-health.jsonl` on the real server before calling it a leak.
 
 ## Parked
 

@@ -51,7 +51,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | rendering-lighting | [rendering-lighting](../design/rendering-lighting.md) | [srp-batcher-gpu-instancing](2026-07_srp-batcher-gpu-instancing.md) — shipped; [urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) — planned | [rendering](systems/rendering.md) — partial |
 | round-config | [round-config](../design/round-config.md) | [lobby-uitk-redesign](../archive/architecture/2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | round-end | [round-end](../design/round-end.md) | none yet | none yet |
-| sandbox-server | [sandbox-server](../design/sandbox-server.md) | [sandbox-server](2026-11_sandbox-server.md) — planned | none yet |
+| sandbox-server | [sandbox-server](../design/sandbox-server.md) | [sandbox-server](2026-11_sandbox-server.md) — in-progress | [rounds-lobby](systems/rounds-lobby.md), [map-editor-creative-hooks](systems/map-editor-creative-hooks.md), [entities](systems/entities.md) — partial |
 | shuttles | [shuttles](../design/shuttles.md) | [shuttle plan](../plans/shuttle_system_design_a3dd2e04.plan.md) — planned | none yet |
 | stamina | [stamina](../design/stamina.md) | [inventory-storage-redesign](../archive/architecture/2026-07_inventory-storage-redesign.md) — shipped | [stamina](systems/stamina.md) — partial |
 | surgery | [surgery](../design/surgery.md) | none yet | none yet |
@@ -130,7 +130,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) | planned |
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
-| [2026-11_sandbox-server](2026-11_sandbox-server.md) | planned |
+| [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [combat_implementation_plan](../plans/combat_implementation_plan.md) | in-progress |
 | [health_implementation_plan](../plans/health_implementation_plan.md) | in-progress |
