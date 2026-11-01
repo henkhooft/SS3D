@@ -111,29 +111,94 @@ namespace EditorTests
         }
 
         [Test]
-        public void SaveReportIsScrollableAndDisplaysMapNamesLiterally()
+        public void EditorChecklistsIncludeMetAndMissingRequirementsWithoutChangingPolicy()
         {
-            MapEditorViewModel model = new()
-            {
-                OpenPopover = "validation",
-                ValidationReport = "Saved <b>draft</b>.\n" + string.Join("\n", Enumerable.Repeat("Missing spawn", 40)),
-            };
+            MapValidationReport report = MapValidator.Validate("Nuclear Emergency", new[] { "Assistant", "Captain" },
+                new[] { Job("Assistant"), Operative }, false, true);
+            Assert.AreEqual(2, report.Errors.Count);
+            Assert.AreEqual(2, report.Issues.Count);
+            MapValidationIssue jobs = report.Issues.Single(issue => issue.Id == "job-spawns");
+            Assert.IsTrue(jobs.Checks.Single(check => check.Label == "Assistant").IsMet);
+            Assert.IsFalse(jobs.Checks.Single(check => check.Label == "Captain").IsMet);
+            MapValidationIssue nuclear = report.Issues.Single(issue => issue.Id == "nuclear");
+            Assert.AreEqual(2, nuclear.Checks.Count(check => check.IsMet));
+            Assert.AreEqual("NukeCart", nuclear.Checks.Single(check => !check.IsMet).Target);
+        }
+
+        [Test]
+        public void MapCheckFiltersIgnoresWarningsAndRestoresWithoutChangingServerPolicy()
+        {
+            MapValidationReport report = MapValidator.Validate("Extended", new[] { "Captain" },
+                new[] { Job("RetiredJob") }, false, false);
+            MapEditorViewModel model = new();
+            model.SetValidation(report.Issues.ToArray(), "Extended");
             MapEditorView view = new(null, null, model, new MapEditorCatalog(), null);
             try
             {
                 VisualElement root = new();
                 view.Build(root);
-                ScrollView scroll = root.Q<ScrollView>("map-validation-report");
-                Assert.IsNotNull(scroll);
-                Assert.AreEqual(320f, scroll.style.maxHeight.value.value);
-                Label report = scroll.Q<Label>();
-                Assert.AreEqual(model.ValidationReport, report.text);
-                Assert.IsFalse(report.enableRichText);
+                Assert.IsNotNull(root.Q<ScrollView>("map-check-issues"));
+                Click(root, "map-check-filter-warning");
+                Assert.IsNull(root.Q("map-check-issue-job-spawns"));
+                Click(root, "map-check-toggle-unavailable:RetiredJob");
+                Click(root, "map-check-ignore-unavailable:RetiredJob");
+                Assert.IsNull(root.Q("map-check-issue-unavailable:RetiredJob"));
+                Assert.IsFalse(report.CanStart);
+                Assert.AreEqual(1, model.ValidationIssues.Count(issue => issue.IsWarning));
+                // Dismissal survives a re-check but never crosses into another map.
+                model.SetValidation(report.Issues.ToArray(), "Extended");
+                Assert.IsNull(root.Q("map-check-issue-unavailable:RetiredJob"));
+                Click(root, "map-check-unignore");
+                Assert.IsNotNull(root.Q("map-check-issue-unavailable:RetiredJob"));
+                Click(root, "map-check-ignore-unavailable:RetiredJob");
+                model.SetValidation(report.Issues.ToArray(), "Extended", resetDismissed: true);
+                Assert.IsNotNull(root.Q("map-check-issue-unavailable:RetiredJob"));
             }
-            finally
+            finally { view.Destroy(); }
+        }
+
+        [Test]
+        public void MapCheckUsesLiteralTextAndWiresRecheckAndCameraTargets()
+        {
+            Vector3 position = new(4, 0, 9);
+            MapEditorViewModel model = new();
+            model.SetValidation(new[] { new MapValidationIssue { Id = "test", IsWarning = true,
+                Title = "<b>draft</b>", Body = "Literal <i>body</i>", Category = "Jobs",
+                HasPosition = true, Position = position } }, "Extended");
+            MapEditorView view = new(null, null, model, new MapEditorCatalog(), null);
+            bool rechecked = false;
+            Vector3 located = Vector3.zero;
+            view.ValidationRequested += () => rechecked = true;
+            view.ValidationLocateRequested += issue => located = issue.Position;
+            try
             {
-                view.Destroy();
+                VisualElement root = new();
+                view.Build(root);
+                Click(root, "map-check-toggle-test");
+                foreach (Label label in root.Query<Label>().ToList())
+                    if (label.text.Contains("<")) Assert.IsFalse(label.enableRichText);
+                Assert.AreEqual("Literal <i>body</i>", root.Q<Label>(className: "map-check__body").text);
+                Click(root, "map-check-locate-test");
+                Assert.AreEqual(position, located);
+                Click(root, "map-check-recheck");
+                Assert.IsTrue(rechecked);
+                model.SetValidation(Array.Empty<MapValidationIssue>(), "Extended");
+                Assert.IsNull(root.Q("map-check-issue-test"));
+                Assert.AreEqual("Map is playable.", root.Q<Label>(className: "map-check__status").text);
+                model.ValidationStale = true;
+                model.NotifyChanged();
+                Assert.AreEqual("Map changed. Re-check.", root.Q<Label>(className: "map-check__status").text);
             }
+            finally { view.Destroy(); }
+        }
+
+        private static void Click(VisualElement root, string name)
+        {
+            Button button = root.Q<Button>(name);
+            Assert.IsNotNull(button, name);
+            using NavigationSubmitEvent evt = NavigationSubmitEvent.GetPooled();
+            evt.target = button;
+            button.SendEvent(evt);
         }
     }
 }

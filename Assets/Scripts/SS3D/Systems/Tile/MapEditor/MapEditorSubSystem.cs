@@ -17,7 +17,6 @@ using SS3D.Systems.Inputs;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Screens;
 using SS3D.Systems.Persistence;
-using SS3D.Systems.Rounds;
 using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
@@ -26,6 +25,7 @@ using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -284,6 +284,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void WireViewEvents()
         {
+            _view.ValidationRequested += OnValidationRequested;
+            _view.ValidationLocateRequested += OnValidationLocateRequested;
             _view.ToolSelected += OnToolSelected;
             _view.AreaApplyRequested += OnAreaApplyRequested;
             _view.RoomPaletteSelected += OnRoomPaletteSelected;
@@ -382,6 +384,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
                 ApplySessionSettingsOnOpen();
+                OnValidationRequested();
             }
             else
             {
@@ -731,6 +734,8 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_view == null)
                 return;
 
+            _view.ValidationRequested -= OnValidationRequested;
+            _view.ValidationLocateRequested -= OnValidationLocateRequested;
             _view.ToolSelected -= OnToolSelected;
             _view.AreaApplyRequested -= OnAreaApplyRequested;
             _view.RoomPaletteSelected -= OnRoomPaletteSelected;
@@ -911,6 +916,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 _tileSystem.SyncFloorDecalsToClients();
                 TargetRememberTemplate(conn, mapName);
                 TargetSyncUndoState(conn, 0, 0);
+                SendMapValidation(conn, true);
                 TargetToast(conn, $"Loaded {mapName}.");
             }
             catch (Exception exception)
@@ -1093,7 +1099,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 TargetRememberTemplate(conn, mapName);
                 string mode = SubSystems.Get<SS3D.Systems.Rounds.RoundSubSystem>().SettingsForServer.Mode;
                 Validation.MapValidationReport report = Validation.MapValidationService.Validate(_tileSystem, mode);
-                TargetSaveValidation(conn, report.HasIssues ? report.Describe(mapName, mode, saved: true) : "");
+                TargetMapValidation(conn, report.Issues.ToArray(), mode, false);
                 TargetToast(conn, report.HasIssues ? $"Saved {mapName} with validation warnings." : $"Saved {mapName}.");
                 TargetRefreshMapList(conn);
             }
@@ -1104,14 +1110,59 @@ namespace SS3D.Systems.Tile.MapEditor
             }
         }
 
-        [TargetRpc]
-        private void TargetSaveValidation(NetworkConnection conn, string report)
+        private void OnValidationRequested() => RpcValidateMap(LocalConnection);
+
+        [ServerRpc(RequireOwnership = false)]
+        private void RpcValidateMap(NetworkConnection conn = null)
         {
-            _viewModel.ValidationReport = report;
-            if (!string.IsNullOrEmpty(report))
-                _viewModel.OpenPopover = "validation";
-            else if (_viewModel.OpenPopover == "validation")
-                _viewModel.OpenPopover = null;
+            if (!MapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            SendMapValidation(conn);
+        }
+
+        [Server]
+        private void SendMapValidation(NetworkConnection conn, bool resetDismissed = false)
+        {
+            string mode = SubSystems.Get<RoundSubSystem>().SettingsForServer.Mode;
+            Validation.MapValidationReport report = Validation.MapValidationService.Validate(_tileSystem, mode);
+            TargetMapValidation(conn, report.Issues.ToArray(), mode, resetDismissed);
+        }
+
+        [TargetRpc]
+        private void TargetMapValidation(NetworkConnection conn, Validation.MapValidationIssue[] issues, string mode, bool resetDismissed)
+        {
+            _viewModel.SetValidation(issues, mode, resetDismissed);
+        }
+
+        private void OnValidationLocateRequested(Validation.MapValidationIssue issue)
+        {
+            if (issue.HasPosition)
+            {
+                _session.CenterOn(issue.Position);
+                return;
+            }
+            if (string.IsNullOrEmpty(issue.Target))
+                return;
+
+            _viewModel.SearchText = string.Empty;
+            if (issue.Target == "spawns" || issue.Target.StartsWith("spawn:", StringComparison.Ordinal))
+            {
+                OnModeSelected(MapEditorMode.Scripting);
+                OnSubcategorySelected(MapEditorSubcategory.SpawnPlacements);
+            }
+            else
+            {
+                MapEditorCatalogEntry entry = _catalog.Entries.FirstOrDefault(candidate => candidate.AssetName == issue.Target);
+                if (entry == null)
+                {
+                    ShowLocalToast("This asset is not available in the object library.");
+                    return;
+                }
+                OnModeSelected(entry.Mode);
+                OnSubcategorySelected(entry.Subcategory);
+                _viewModel.SearchText = issue.Target;
+            }
             _viewModel.NotifyChanged();
         }
 
@@ -1148,6 +1199,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _hologramManager.DestroyHolograms();
             SpawnPointEditorView.RefreshAll();
             TargetSyncUndoState(conn, 0, 0);
+            SendMapValidation(conn, true);
             TargetToast(conn, "Started a new empty map.");
         }
 
@@ -1248,8 +1300,11 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         [TargetRpc]
-        private void TargetSyncUndoState(NetworkConnection conn, int undoDepth, int redoDepth) =>
+        private void TargetSyncUndoState(NetworkConnection conn, int undoDepth, int redoDepth)
+        {
+            _viewModel.ValidationStale = true;
             _viewModel.SetUndoState(undoDepth, redoDepth);
+        }
 
         [TargetRpc]
         private void TargetToast(NetworkConnection conn, string message)

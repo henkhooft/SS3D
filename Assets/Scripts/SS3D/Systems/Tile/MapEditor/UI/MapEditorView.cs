@@ -19,18 +19,16 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         /// <summary>Object library panel heights (px) for the three resize states.</summary>
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
         {
-            [PaletteMode.Min] = 40f,
-            [PaletteMode.Normal] = 210f,
-            [PaletteMode.Max] = 420f,
+            [PaletteMode.Min] = 52f,
+            [PaletteMode.Normal] = 260f,
+            [PaletteMode.Max] = 460f,
         };
 
         /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
-        private const int NormalGridRows = 1;
-        private const int MaxGridRows = 3;
-        /// <summary>Slot width (108) + horizontal margins (8) + border (3).</summary>
-        private const float GridSlotOuterWidthPx = 120f;
-        /// <summary>Slot height (104) + vertical margins (8) + border (3).</summary>
-        private const float GridSlotOuterHeightPx = 115f;
+        private const int NormalGridRows = 2;
+        private const int MaxGridRows = 4;
+        /// <summary>Slot height (74) + vertical margins (8) + border (3).</summary>
+        private const float GridSlotOuterHeightPx = 85f;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
@@ -59,8 +57,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _cameraPopoverAnchor;
         private VisualElement _activePopover;
 
-        private PaletteMode _paletteMode = PaletteMode.Normal;
         private float _lastGridViewportWidth;
+        private PaletteMode _paletteMode = PaletteMode.Normal;
 
         private readonly Dictionary<MapEditorTool, Button> _toolButtons = new();
         private readonly Dictionary<MapEditorMode, Button> _modeButtons = new();
@@ -220,6 +218,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toolbarWrap.Add(_rightToolbar);
             region.Add(toolbarWrap);
 
+            BuildMapCheck(region);
             _hudLayer.Add(region);
         }
 
@@ -340,9 +339,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toolsRow.Add(_subcatRow);
             toolsRow.Add(search);
 
-            _gridScroll = new ScrollView(ScrollViewMode.Vertical);
-            _gridScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            _gridScroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            _gridScroll = new ScrollView(ScrollViewMode.Horizontal);
+            _gridScroll.horizontalScrollerVisibility = ScrollerVisibility.Auto;
+            _gridScroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             _gridScroll.AddToClassList("map-editor-grid-scroll");
             _grid = new VisualElement();
             _grid.AddToClassList("map-editor-grid");
@@ -391,6 +390,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _paletteRegion.style.height = PaletteHeights[_paletteMode];
+            if (_toast != null)
+                _toast.style.bottom = 48 + PaletteHeights[_paletteMode];
+            if (_mapCheckColumn != null)
+                _mapCheckColumn.style.bottom = 24 + PaletteHeights[_paletteMode] + 12;
             bool showBody = _paletteMode != PaletteMode.Min;
             _paletteBody.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
             _modeRail.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
@@ -437,6 +440,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 pair.Value.EnableInClassList("map-editor-mode-tab--active", pair.Key == _vm.CurrentMode);
             }
 
+            _searchField?.SetValueWithoutNotify(_vm.SearchText);
             RebuildSubcategories();
             ApplyPaletteMode();
 
@@ -445,6 +449,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
             redoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.RedoDepth <= 0);
 
+            RefreshMapCheck();
             RefreshHint();
 
             if (!string.IsNullOrEmpty(_vm.ToastMessage))
@@ -500,6 +505,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _grid.Clear();
+            _gridScroll.mode = _vm.IsRoomCategory ? ScrollViewMode.Vertical : ScrollViewMode.Horizontal;
+            _gridScroll.horizontalScrollerVisibility = _vm.IsRoomCategory ? ScrollerVisibility.Hidden : ScrollerVisibility.Auto;
+            _gridScroll.verticalScrollerVisibility = _vm.IsRoomCategory ? ScrollerVisibility.Auto : ScrollerVisibility.Hidden;
+            _grid.style.flexDirection = _vm.IsRoomCategory ? FlexDirection.Column : FlexDirection.Row;
 
             if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
             {
@@ -535,30 +544,26 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
-            int maxColumns = GetMaxGridColumns();
-            if (maxColumns <= 0)
-                maxColumns = Math.Max(1, entryList.Count);
-
-            int columnCount = maxColumns;
-            int usedRows = (entryList.Count + columnCount - 1) / columnCount;
-            VisualElement[] rows = new VisualElement[usedRows];
-            for (int rowIndex = 0; rowIndex < usedRows; rowIndex++)
+            int rowCount = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
+            int columnCount = (entryList.Count + rowCount - 1) / rowCount;
+            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++)
             {
-                VisualElement row = new() { pickingMode = PickingMode.Position };
-                row.AddToClassList("map-editor-grid-row");
-                rows[rowIndex] = row;
-                _grid.Add(row);
-            }
-
-            for (int index = 0; index < entryList.Count; index++)
-            {
-                rows[index / columnCount].Add(BuildSlot(entryList[index]));
+                VisualElement column = new() { pickingMode = PickingMode.Position };
+                column.style.flexDirection = FlexDirection.Column;
+                column.style.flexShrink = 0;
+                for (int row = 0; row < rowCount; row++)
+                {
+                    int index = columnIndex * rowCount + row;
+                    if (index < entryList.Count)
+                        column.Add(BuildSlot(entryList[index]));
+                }
+                _grid.Add(column);
             }
         }
 
         private void OnGridScrollGeometryChanged(GeometryChangedEvent evt)
         {
-            if (_grid == null || _paletteMode == PaletteMode.Min)
+            if (!_vm.IsRoomCategory || _grid == null || _paletteMode == PaletteMode.Min)
                 return;
 
             float width = _gridScroll.contentViewport.layout.width;
@@ -581,7 +586,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (width <= 1f)
                 return 0;
 
-            return Math.Max(1, Mathf.FloorToInt(width / GridSlotOuterWidthPx));
+            return Math.Max(1, Mathf.FloorToInt(width / 91f));
         }
 
         private Button BuildSlot(MapEditorCatalogEntry entry)
@@ -670,7 +675,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _vm.NotifyChanged();
         }
 
-        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area" or "validation";
+        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area";
 
         private void RefreshPopover()
         {
@@ -683,7 +688,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement anchor = _vm.OpenPopover switch
             {
-                "maps" or "saveMenu" or "area" or "validation" => _leftPopoverAnchor,
+                "maps" or "saveMenu" or "area" => _leftPopoverAnchor,
                 "camera" => _cameraPopoverAnchor,
                 _ => _rightPopoverAnchor,
             };
@@ -693,7 +698,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
                 ? "map-editor-popover--anchor-right"
                 : "map-editor-popover--anchor-left");
-            if (_vm.OpenPopover is "maps" or "saveMenu" or "area" or "validation")
+            if (_vm.OpenPopover is "maps" or "saveMenu" or "area")
                 popover.AddToClassList("map-editor-popover--wide");
 
             VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
@@ -730,7 +735,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static string GetPopoverTitle(string key) =>
             key switch
             {
-                "validation" => "Map validation",
                 "area" => "Room properties",
                 "maps" => "Map Selection",
                 "saveMenu" => "Save Map",
@@ -744,15 +748,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             switch (key)
             {
-                case "validation":
-                    ScrollView issues = new() { name = "map-validation-report" };
-                    issues.style.maxHeight = 320;
-                    Label report = new(_vm.ValidationReport) { enableRichText = false };
-                    report.AddToClassList("map-editor-popover-label");
-                    report.style.whiteSpace = WhiteSpace.Normal;
-                    issues.Add(report);
-                    container.Add(issues);
-                    break;
                 case "area":
                     BuildAreaPopover(container);
                     break;

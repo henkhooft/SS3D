@@ -1,5 +1,6 @@
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Tile.TileMapCreator;
+using SS3D.Systems.Tile.Validation;
 using System;
 using System.Collections.Generic;
 
@@ -32,7 +33,23 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public int UndoDepth { get; set; }
         public int RedoDepth { get; set; }
         public string SelectedObjectHint { get; set; } = "Select the Edit tool to place this object";
-        public string ValidationReport { get; set; }
+        public MapValidationIssue[] ValidationIssues { get; private set; } = Array.Empty<MapValidationIssue>();
+        public bool ValidationChecked { get; private set; }
+        public string ValidationMode { get; private set; }
+        public bool ValidationStale { get; set; }
+        public int ValidationRevision { get; private set; }
+        public int ValidationContext { get; private set; }
+
+        public void SetValidation(MapValidationIssue[] issues, string mode, bool resetDismissed = false)
+        {
+            ValidationIssues = issues ?? Array.Empty<MapValidationIssue>();
+            ValidationMode = mode;
+            ValidationChecked = true;
+            ValidationStale = false;
+            ValidationRevision++;
+            if (resetDismissed) ValidationContext++;
+            NotifyChanged();
+        }
         public string ToastMessage { get; set; }
         public string OpenPopover { get; set; }
         public string SaveMapName { get; set; } = "Untitled Map";
