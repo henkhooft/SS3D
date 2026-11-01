@@ -24,5 +24,74 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(1, stack.UndoDepth);
             Assert.AreEqual(0, stack.RedoDepth);
         }
+
+        [Test]
+        public void SavePoint_UndoAndRedoReturnToSavedState()
+        {
+            MapEditorUndoStack stack = new();
+            stack.Push(EmptyCommand());
+            stack.MarkSaved();
+            stack.Push(EmptyCommand());
+            Assert.IsTrue(stack.HasUnsavedChanges);
+            Assert.IsTrue(stack.TryUndo(null));
+            Assert.IsFalse(stack.HasUnsavedChanges);
+            Assert.IsTrue(stack.TryUndo(null));
+            Assert.IsTrue(stack.HasUnsavedChanges);
+            Assert.IsTrue(stack.TryRedo(null));
+            Assert.IsFalse(stack.HasUnsavedChanges);
+        }
+
+        [Test]
+        public void SavePoint_BranchAtSameDepthDoesNotLookSaved()
+        {
+            MapEditorUndoStack stack = new();
+            stack.Push(EmptyCommand());
+            stack.Push(EmptyCommand());
+            stack.MarkSaved();
+            Assert.IsTrue(stack.TryUndo(null));
+            stack.Push(EmptyCommand());
+            Assert.AreEqual(2, stack.UndoDepth);
+            Assert.IsTrue(stack.HasUnsavedChanges);
+            Assert.AreEqual(0, stack.RedoDepth);
+        }
+
+        [Test]
+        public void SavePoint_SurvivesHistoryLimitAndCannotUndoBeforeRetainedHistory()
+        {
+            MapEditorUndoStack stack = new();
+            for (int i = 0; i < 80; i++) stack.Push(EmptyCommand());
+            stack.MarkSaved();
+            stack.Push(EmptyCommand());
+            Assert.AreEqual(50, stack.UndoDepth);
+            Assert.IsTrue(stack.TryUndo(null));
+            Assert.IsFalse(stack.HasUnsavedChanges);
+            for (int i = 0; i < 49; i++) Assert.IsTrue(stack.TryUndo(null));
+            Assert.IsFalse(stack.TryUndo(null));
+            Assert.IsTrue(stack.HasUnsavedChanges);
+            for (int i = 0; i < 49; i++) Assert.IsTrue(stack.TryRedo(null));
+            Assert.IsFalse(stack.HasUnsavedChanges);
+        }
+
+        [Test]
+        public void NewMapIsUnsavedEvenWithoutCommands_LoadClearsOldHistory()
+        {
+            MapEditorUndoStack stack = new();
+            stack.MarkNewMap();
+            Assert.AreEqual(0, stack.UndoDepth);
+            Assert.IsTrue(stack.HasUnsavedChanges);
+            Assert.IsFalse(stack.TryUndo(null));
+            stack.MarkSaved();
+            Assert.IsFalse(stack.HasUnsavedChanges);
+            stack.Push(EmptyCommand());
+            long beforeLoad = stack.Revision;
+            stack.Clear();
+            Assert.AreNotEqual(beforeLoad, stack.Revision);
+            Assert.IsFalse(stack.HasUnsavedChanges);
+            Assert.IsFalse(stack.TryUndo(null));
+            Assert.IsFalse(stack.TryRedo(null));
+        }
+
+        private static IMapEditorCommand EmptyCommand() =>
+            new CompoundCommand(System.Array.Empty<IMapEditorCommand>());
     }
 }

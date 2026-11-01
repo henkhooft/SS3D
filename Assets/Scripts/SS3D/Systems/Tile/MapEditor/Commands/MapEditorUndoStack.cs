@@ -9,22 +9,42 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
     {
         private const int MaxDepth = 50;
 
-        private readonly Stack<IMapEditorCommand> _undo = new();
-        private readonly Stack<IMapEditorCommand> _redo = new();
+        private readonly Stack<Entry> _undo = new();
+        private readonly Stack<Entry> _redo = new();
+
+        private sealed class Entry
+        {
+            public IMapEditorCommand Command;
+            public long Before;
+            public long After;
+        }
+
+        private long _nextRevision;
+        private long _revision;
+        private long _savedRevision;
+        public long Revision => _revision;
+        public bool HasUnsavedChanges => _revision != _savedRevision;
+        public void MarkSaved() => _savedRevision = _revision;
+        public void MarkNewMap()
+        {
+            Clear();
+            _revision = ++_nextRevision;
+        }
 
         public int UndoDepth => _undo.Count;
         public int RedoDepth => _redo.Count;
 
         public void Push(IMapEditorCommand command)
         {
-            _undo.Push(command);
+            _undo.Push(new Entry { Command = command, Before = _revision, After = ++_nextRevision });
+            _revision = _nextRevision;
             _redo.Clear();
 
             while (_undo.Count > MaxDepth)
             {
-                Stack<IMapEditorCommand> trimmed = new();
+                Stack<Entry> trimmed = new();
                 int keep = MaxDepth;
-                foreach (IMapEditorCommand item in _undo)
+                foreach (Entry item in _undo)
                 {
                     if (keep-- <= 0)
                         break;
@@ -32,7 +52,7 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
                 }
 
                 _undo.Clear();
-                foreach (IMapEditorCommand item in trimmed)
+                foreach (Entry item in trimmed)
                     _undo.Push(item);
             }
         }
@@ -42,9 +62,11 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             if (_undo.Count == 0)
                 return false;
 
-            IMapEditorCommand command = _undo.Pop();
-            command.Revert(ctx);
-            _redo.Push(command);
+            Entry entry = _undo.Peek();
+            entry.Command.Revert(ctx);
+            _undo.Pop();
+            _revision = entry.Before;
+            _redo.Push(entry);
             return true;
         }
 
@@ -53,9 +75,11 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
             if (_redo.Count == 0)
                 return false;
 
-            IMapEditorCommand command = _redo.Pop();
-            command.Apply(ctx);
-            _undo.Push(command);
+            Entry entry = _redo.Peek();
+            entry.Command.Apply(ctx);
+            _redo.Pop();
+            _revision = entry.After;
+            _undo.Push(entry);
             return true;
         }
 
@@ -63,6 +87,8 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         {
             _undo.Clear();
             _redo.Clear();
+            _revision = ++_nextRevision;
+            _savedRevision = _revision;
         }
     }
 }

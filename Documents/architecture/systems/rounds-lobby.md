@@ -1,11 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-<<<<<<< HEAD
-> Verified: 5fe7dbb57 — 2026-10-31
-=======
-> Verified: 73a838a3b — 2026-11-01
->>>>>>> origin/develop
+> Verified: 6ef2aabbf — 2026-11-01
 
 # Rounds / lobby
 
@@ -48,6 +44,13 @@ Secret (currently the nuclear mode) and Nuclear Emergency also need an operative
 Failures return to Stopped/Failed with the complete actionable list in the admin settings status; all start paths share the gate.
 An empty job configuration or unsupported mode fails closed. Missing/unreadable templates retain the existing load-failure path.
 
+Unsaved map edits across a round stop (A4): the map editor runs during an Ongoing round, and
+Stop unloads the station, so an admin Stop with unsaved editor commands first opens
+**Save and stop / Discard and stop / Cancel** in the lobby shell. The confirmation is bound to the editor
+revision and template; a stale one asks again. Saving a map with no template name needs a fresh name.
+Any other round end (timer, gamemode) autosaves unsaved edits to `<template>-autosave` (never the
+original) and tells admins in Admin chat. Unloading resets the editor's history and template identity.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell + Character Creator host; attaches into Modal
@@ -62,6 +65,7 @@ An empty job configuration or unsupported mode fails closed. Missing/unreadable 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyServerSettingsView.cs` — admin form and live enabled states
 - `Assets/Scripts/SS3D/Systems/Tile/Validation/` — shared map requirements/report and tracked-map content adapter
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerSettings.cs` — validated configuration, admin RPCs, countdown commands
+- `Assets/Scripts/SS3D/Systems/Rounds/MapEditorRoundStop.cs` — Stop confirmation for unsaved map edits, autosave before `UnloadStation`; `UI/Lobby/LobbyMapStopPrompt.cs` renders the choices
 - `Assets/Scripts/SS3D/Systems/Rounds/ServerInfo.cs` — public name/MOTD/mode/build/start-time SyncVars, `ServerInfoText` sanitizers, `ServerMeta/server-info` load/save
 - `Assets/Scripts/SS3D/Systems/Rounds/BuildInfo.cs` / `Assets/Scripts/SS3D/Editor/BuildInfoGenerator.cs` — game version + git commit + change log resource (gitignored, generated on editor load and pre-build; stamps the player version). `GameVersion.cs` formats versions — rules in [2026-10_game-versioning](../2026-10_game-versioning.md). Use `BuildInfo.Version`, not `Application.version` (an `0.0.0-editor` placeholder outside player builds)
 - `Assets/Scripts/SS3D/Systems/Rounds/RoundSubSystem.cs` — concrete round subsystem; `PrepareRound` →
@@ -134,7 +138,8 @@ An empty job configuration or unsupported mode fails closed. Missing/unreadable 
 
 - `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
 - The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
-- A3 verification in the cloud environment is pending: `Testing/ui/validate.sh --full` cannot start without `artifacts/unity-mcp/venv/bin/python`; no Unity editor is available here.
+- A3 passed compile, EditMode, PlayMode and the lifecycle pilot in Unity (tomnas, 2026-11-01).
+- A4: the lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.
 
 ## Depends on / Used by
 

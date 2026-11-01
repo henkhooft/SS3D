@@ -144,7 +144,7 @@ namespace SS3D.Systems.Rounds
                     CancelCountdown();
                     break;
                 case RoundAdminAction.Stop when IsOngoing:
-                    RequestRoundEnd();
+                    RequestPlayerRoundStop(sender);
                     break;
             }
         }

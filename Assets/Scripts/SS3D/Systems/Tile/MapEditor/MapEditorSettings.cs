@@ -24,6 +24,7 @@ namespace SS3D.Systems.Tile.MapEditor
         public override void OnStopServer()
         {
             base.OnStopServer();
+            ResetAuthoringState();
             ServerManager.OnRemoteConnectionState -= HandleRemoteConnectionState;
             LightingDevBypass.MapEditorOverride = false;
         }

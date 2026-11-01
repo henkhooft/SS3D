@@ -284,6 +284,7 @@ namespace SS3D.UI.Lobby
             _root.Add(window);
 
             BuildChrome(window);
+            _root.Add(BuildMapStopPrompt());
             _root.Add(BuildDisplayPrompt());
             _toast = new Label { name = "lobby-toast", pickingMode = PickingMode.Ignore };
             _toast.AddToClassList("lobby-shell__toast");
@@ -322,6 +323,9 @@ namespace SS3D.UI.Lobby
             KeyCaptureRequested = null;
             KeyCaptureCancelled = null;
             ControlsResetRequested = null;
+            MapStopResolved = null;
+            _mapStopPrompt = null;
+            _mapStopToken = 0;
             _displayPrompt = null;
             _displayPromptText = null;
             _toast = null;

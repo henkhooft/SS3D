@@ -9,6 +9,11 @@
 
 Reserved extension points shipped with map editor v1 for [creative-mode.md](../../design/creative-mode.md) Phase 2. Spawn Placements and Area metadata now have authoring UI; the remaining reserved hooks are unselected.
 
+Unsaved-change tracking (A4): `MapEditorUndoStack` keeps revision-based save points through undo/redo,
+branches and the bounded history. Successful persistence saves/loads set the template identity
+(`EditingTemplateName`) and save point; a failed save keeps the edits unsaved, and a new empty map
+starts unsaved. Round stop uses this to prompt or autosave before unloading; see [rounds-lobby](rounds-lobby.md).
+
 ## Start here
 
 Spawn Placements authoring:
@@ -49,7 +54,8 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 
 ## Tests
 
-- `MapValidationTests`: shared requirements, nonblocking warnings, repair and scrollable literal-text save report. Unity execution/render review remains pending in this cloud environment.
+- `MapValidationTests`: shared requirements, nonblocking warnings, repair and scrollable literal-text save report.
+- `MapEditorCommandRevertTests`: save points across undo/redo, branches, the history limit and new-map/load resets.
 
 - `MapEditorAreaViewTests`: room drafts survive toast/undo-state refresh; department defaults and explicit access submit distinct masks; read-only department previews preserve custom overrides; Areas follows the Rooms category across its standard tools; overlay meshes preserve tile positions and gizmo colors. Compile + EditMode passed (`artifacts/ui/validate-20261031-145101/summary.md`: succeeded; all 2149 tests completed); owner manual editor acceptance confirmed; release dogfood remains A2.5.
 

@@ -31,6 +31,12 @@ namespace SS3D.Systems.Persistence
         private readonly List<IPersistenceContributor> _contributors = new();
         private bool _serverMetaLoaded;
 
+        // Only successful operations establish an editor save point / template identity.
+        public bool IsRestoringStationTemplate { get; private set; }
+        private bool _incompleteStationRestore;
+        public event Action<string> StationTemplateSaved;
+        public event Action<string> StationTemplateLoaded;
+
         public event Action<PersistenceLayer> OnBeforeRestore;
 
         public event Action<PersistenceLayer> OnAfterRestore;
@@ -99,9 +105,12 @@ namespace SS3D.Systems.Persistence
 
         public bool SaveStationTemplate(string templateName, bool overwrite)
         {
+            if (IsRestoringStationTemplate || _incompleteStationRestore) return false;
             string path = GetStationTemplatePath(templateName);
             PersistenceEnvelope envelope = CaptureStationTemplate(templateName);
-            return _store.TrySave(path, envelope, overwrite);
+            bool saved = _store.TrySave(path, envelope, overwrite);
+            if (saved) StationTemplateSaved?.Invoke(templateName);
+            return saved;
         }
 
         public bool LoadStationTemplate(string templateName)
@@ -145,8 +154,17 @@ namespace SS3D.Systems.Persistence
                 return false;
             }
 
-            RestoreStationTemplate(envelope, templateName, timeSlice);
-            return true;
+            if (IsRestoringStationTemplate) return false;
+            IsRestoringStationTemplate = true;
+            _incompleteStationRestore = true;
+            try
+            {
+                RestoreStationTemplate(envelope, templateName, timeSlice);
+                _incompleteStationRestore = false;
+                StationTemplateLoaded?.Invoke(templateName);
+                return true;
+            }
+            finally { IsRestoringStationTemplate = false; }
         }
 
         private async UniTask<bool> LoadStationTemplateInternalAsync(string templateName, bool timeSlice)
@@ -157,8 +175,17 @@ namespace SS3D.Systems.Persistence
                 return false;
             }
 
-            await RestoreStationTemplateAsync(envelope, templateName, timeSlice);
-            return true;
+            if (IsRestoringStationTemplate) return false;
+            IsRestoringStationTemplate = true;
+            _incompleteStationRestore = true;
+            try
+            {
+                await RestoreStationTemplateAsync(envelope, templateName, timeSlice);
+                _incompleteStationRestore = false;
+                StationTemplateLoaded?.Invoke(templateName);
+                return true;
+            }
+            finally { IsRestoringStationTemplate = false; }
         }
 
         public bool StationTemplateExists(string templateName)

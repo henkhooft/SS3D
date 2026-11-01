@@ -66,8 +66,8 @@ namespace SS3D.Systems.Tile.MapEditor.Persistence
         public bool Save(string mapName, bool overwrite)
         {
             // Bare name only — TileSubSystem / PersistenceSubSystem add StationTemplates/.
-            _tileSystem.Save(mapName, overwrite);
-            return true;
+            return SubSystems.TryGet(out PersistenceSubSystem persistence)
+                && persistence.SaveStationTemplate(mapName, overwrite);
         }
 
         public bool Load(string mapName)

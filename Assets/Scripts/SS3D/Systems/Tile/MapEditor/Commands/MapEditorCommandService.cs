@@ -15,6 +15,11 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
         private MapEditorCommandContext _context;
         private MapEditorPlacementMode _placementMode = MapEditorPlacementMode.Normal;
 
+        public bool HasUnsavedChanges => _undoStack.HasUnsavedChanges;
+        public long Revision => _undoStack.Revision;
+        public void MarkSaved() => _undoStack.MarkSaved();
+        public void MarkNewMap() => _undoStack.MarkNewMap();
+
         public int UndoDepth => _undoStack.UndoDepth;
         public int RedoDepth => _undoStack.RedoDepth;
 

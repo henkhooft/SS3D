@@ -252,6 +252,7 @@ namespace SS3D.Systems.Rounds
         [Server]
         private void UnloadStation()
         {
+            HandleUnsavedMapEditsBeforeUnload();
             if (SubSystems.TryGet(out Tile.TileSubSystem tiles) && tiles.CurrentMap != null)
             {
                 tiles.CurrentMap.Clear();

@@ -85,7 +85,7 @@ The check runs in two places:
 
 **Saving writes the map to a station file** on the server: tiles, areas, objects, items, pipes and cables, spawn points and starting air. Save as often as you like, under different names.
 
-**The edit → playtest → edit loop.** A saved map can be picked for the next round (`round-config.md` §2), played, and reopened in the editor afterwards. That loop is the whole point of the tool.
+**The edit → playtest → edit loop.** Editing happens inside a running round: an admin with a body opens the editor on the live station, builds, closes it and plays what they built straight away. Ending the round unloads the station, so edits must be saved before then. An admin who presses Stop with unsaved edits is asked to **save and stop, discard and stop, or cancel**. A round that ends any other way (timer, gamemode) saves unsaved edits as a separate `<map>-autosave` file and never overwrites the original. A saved map can be picked for the next round (`round-config.md` §2). That loop is the whole point of the tool.
 
 **Promotion is a file handoff.** A map gets into everyone's game when its author hands the station file to the maintainers and it's added to the game itself. There's no in-game approval queue.
 

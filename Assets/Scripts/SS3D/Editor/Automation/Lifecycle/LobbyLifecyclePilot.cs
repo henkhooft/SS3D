@@ -12,12 +12,14 @@ using SS3D.Systems.Comms;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Character;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Persistence;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Roles;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.MapEditor.Commands;
 using SS3D.Systems.Tile.SpawnPoints;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -221,6 +223,29 @@ namespace SS3D.Editor.Automation
             catch (Exception exception) { Finish(exception.ToString(), true); }
         }
 
+        private static Vector3 _mapEditSpawnPosition;
+        private static DateTime _templateWriteTime;
+
+        /// <summary>Places (or removes) an Assistant spawn through the map editor's command path, as an author would.</summary>
+        private static void EditMapSpawn(bool remove)
+        {
+            if (!remove)
+                _mapEditSpawnPosition = SubSystems.Get<TileSubSystem>().CurrentMap.GetAllChunks()
+                    .SelectMany(chunk => chunk.GetAllTilePlacedObjects()).First(tile => tile.Layer == TileLayer.Plenum).transform.position;
+            SubSystems.Get<MapEditorSubSystem>().SubmitCommands(new MapEditorCommandDto[] { new MapEditorCommandDto
+            {
+                Kind = remove ? MapEditorCommandKind.ClearSpawnPoint : MapEditorCommandKind.PlaceSpawnPoint,
+                AssetName = "spawn:job:Assistant", Position = _mapEditSpawnPosition, Direction = Direction.North,
+            } });
+        }
+
+        private static bool MapEditSpawnPresent() => SubSystems.Get<TileSubSystem>().SpawnPoints.HasAt(_mapEditSpawnPosition);
+        private static bool UnsavedMapEdits() => SubSystems.Get<MapEditorSubSystem>().HasUnsavedChanges;
+        private static bool TemplateExists(string name) => SubSystems.Get<PersistenceSubSystem>().StationTemplateExists(name);
+        private static string TemplatePath(string name) => PersistencePaths.StationTemplates + "/" + name;
+
+        private static DateTime TemplateWriteTime(string name) => LocalStorage.GetLastWriteTimeUtc(TemplatePath(name));
+
         private static Step[] BuildSteps() => new Step[]
         {
             new Step
@@ -419,6 +444,34 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Map edit during the round is tracked as unsaved",
+                Enter = () => EditMapSpawn(remove: false),
+                Until = () => UnsavedMapEdits() && MapEditSpawnPresent(),
+                Verify = () => Require(SubSystems.Get<MapEditorSubSystem>().EditingTemplateName == _alternateStation,
+                    "Round start made the loaded station the editing template"),
+            },
+            new Step
+            {
+                Name = "Stop asks about unsaved map changes",
+                Enter = () => Click(Shell().Q<Button>("server-stop")),
+                Until = () => Visible(Shell().Q("map-stop-prompt")),
+                Verify = () =>
+                {
+                    Require(Rounds().CurrentRoundState == RoundState.Ongoing, "Prompt leaves the round running");
+                    Require(!Visible(Shell().Q("map-stop-name")), "A known template is overwritten, so no name is asked");
+                    Capture("map-stop-unsaved");
+                },
+            },
+            new Step
+            {
+                Name = "Cancel keeps the round and the edits",
+                Enter = () => Click(Shell().Q<Button>("map-stop-cancel")),
+                Until = () => !Visible(Shell().Q("map-stop-prompt")) && Rounds().MapStopToken == 0,
+                Verify = () => Require(Rounds().CurrentRoundState == RoundState.Ongoing && UnsavedMapEdits() && MapEditSpawnPresent(),
+                    "Cancel keeps the round running with the edits"),
+            },
+            new Step
+            {
                 Name = "Attempt late join while policy forbids it",
                 Enter = () => SubSystems.Get<EntitySubSystem>().CmdSpawnLatePlayer(Local()),
                 Until = () => Rounds().CurrentTimerSeconds >= 2,
@@ -485,7 +538,14 @@ namespace SS3D.Editor.Automation
                 Name = "Configured round length ends the round",
                 Timeout = 90,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
-                Verify = () => Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn"),
+                Verify = () =>
+                {
+                    Require(!Spawned(), "One-minute Extended round ended automatically without a late spawn");
+                    Require(TemplateExists(_alternateStation + RoundSubSystem.AutosaveSuffix),
+                        "Round end autosaved the unsaved map edits to a separate template");
+                    Require(!UnsavedMapEdits() && SubSystems.Get<MapEditorSubSystem>().EditingTemplateName == null,
+                        "Unloading the station resets the editor's history");
+                },
             },
             new Step
             {
@@ -791,8 +851,21 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Stop round returns to lobby shell",
+                Name = "Unsaved map edit before a player stop request",
+                Enter = () => EditMapSpawn(remove: false),
+                Until = UnsavedMapEdits,
+            },
+            new Step
+            {
+                Name = "Player stop request asks before unloading edits",
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(false)),
+                Until = () => Rounds().MapStopToken != 0,
+                Verify = () => Require(Rounds().CurrentRoundState == RoundState.Ongoing, "Stop waits for the admin's choice"),
+            },
+            new Step
+            {
+                Name = "Stop round returns to lobby shell",
+                Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.DiscardAndStop, ""),
                 Timeout = 30,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
                 Verify = () =>
@@ -801,6 +874,7 @@ namespace SS3D.Editor.Automation
                     Require(BoothLive(), "Booth restored with RT bound");
                     Require(CharacterName() == _savedName, "Saved character name restored");
                     Require(AssignedRole() == null && Job("Security").Assigned == 0, "Round stop cleared job assignments");
+                    Require(!TemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix), "Discard and stop left no autosave");
                 },
             },
             new Step { Name = "Ensure unready for late join", Enter = () => { if (IsReady()) Click(ReadyButton()); }, Until = () => !IsReady() },
@@ -837,10 +911,31 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Stop round after late join returns",
+                Name = "Unsaved map edit before Save and stop",
+                Enter = () =>
+                {
+                    _templateWriteTime = TemplateWriteTime(_validationStation);
+                    EditMapSpawn(remove: false);
+                },
+                Until = UnsavedMapEdits,
+            },
+            new Step
+            {
+                Name = "Stop after late join asks first",
                 Enter = () => InstanceFinder.ClientManager.Broadcast(new ChangeRoundStateMessage(false)),
+                Until = () => Rounds().MapStopToken != 0,
+            },
+            new Step
+            {
+                Name = "Stop round after late join returns",
+                Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.SaveAndStop, ""),
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
-                Verify = () => Require(BoothLive(), "Booth restored after second return"),
+                Verify = () =>
+                {
+                    Require(BoothLive(), "Booth restored after second return");
+                    Require(TemplateWriteTime(_validationStation) > _templateWriteTime, "Save and stop overwrote the editing template");
+                    Require(!TemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix), "Saved edits need no autosave");
+                },
             },
             // New connections 60s+ after server start used to time out before their first packet.
             new Step { Name = "Wait past client timeout window", Timeout = 90, Until = () => Elapsed() > 70 },
@@ -1392,11 +1487,13 @@ namespace SS3D.Editor.Automation
             if (!string.IsNullOrEmpty(_alternateStation))
             {
                 SS3D.Data.Management.LocalStorage.DeleteFile(SS3D.Data.Persistence.PersistencePaths.StationTemplates + "/" + _alternateStation);
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _alternateStation + RoundSubSystem.AutosaveSuffix);
                 _alternateStation = null;
             }
             if (!string.IsNullOrEmpty(_validationStation))
             {
                 LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _validationStation);
+                LocalStorage.DeleteFile(PersistencePaths.StationTemplates + "/" + _validationStation + RoundSubSystem.AutosaveSuffix);
                 _validationStation = null;
             }
             Report report = new()
