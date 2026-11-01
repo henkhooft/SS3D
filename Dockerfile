@@ -13,6 +13,6 @@ WORKDIR /server
 COPY . /server/
 RUN chmod +x /server/*.x86_64
 
-EXPOSE 2222/udp
+EXPOSE 1151/udp
 
-ENTRYPOINT ["/bin/sh", "-c", "exec /server/*.x86_64 -batchmode -nographics -serveronly -port=2222 -logFile /dev/stdout"]
+ENTRYPOINT ["/bin/sh", "-c", "exec /server/*.x86_64 -batchmode -nographics -serveronly -port=1151 -logFile /dev/stdout"]

@@ -56,13 +56,16 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    (`buildName: SS3D`). Same TomNAS Library stash / `runAsHostUser` when self-hosted. Not
    smoke-tested on Windows. Skipped when `skip_release` is set.
 6. **Prerelease** — primary zip `SS3D-Windows-<tag>.zip` with layout:
-   `Start_SS3D_*.bat` + `README.txt` beside `Game/SS3D.exe`, plus CWD fixtures
+   `Start_SS3D_Host.bat`, `Start_SS3D_Client.bat` (prompts for name + IP) and `README.txt`
+   beside `Game/SS3D.exe`, plus CWD fixtures
    `Game/Config/` (`permissions.txt`, `network.json`), `Game/Data/Tilemaps/`, and `Game/Data/StationTemplates/`
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
    `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime) or
    `StationTemplates/Metastation v2.json` (broken; kept in git only for the multiplayer loadtest).
-   Linux client/server zips get the same seed under each `StandaloneLinux64/` tree when
-   Linux was built. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
+   Linux zips use the same shape when Linux was built: `SS3D-Linux-Client-<tag>/` holds
+   `start_ss3d_client.sh`, `start_ss3d_host.sh`, `README.txt` and `Game/` (binary `SS3D-Client`);
+   `SS3D-Linux-Server-<tag>/` holds `start_ss3d_server.sh` and `GameServer/` (`SS3D-Server`).
+   `*_BurstDebugInformation_DoNotShip` is stripped from every zip. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
    (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.
 
 ### Related workflow changes
@@ -91,6 +94,15 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
   `ServerAddress`; Host without `-ip=` used to DNS-resolve empty → `fe80::…` and drop the
   session after WorldReady (Wine reproduces hard). See networking-session pitfalls; Host.bat
   now passes `-ip=127.0.0.1` and code defaults empty Host address to loopback.
+- **`upload-artifact` drops the exec bit.** v0.1.0's Linux zips shipped `SS3D-Client` /
+  `SS3D-Server` as `-rw-r--r--` under `build-linux/Game/StandaloneLinux64/`. Staging now
+  `chmod +x`es the binary and scripts before `zip` (which keeps Unix modes); the scripts also
+  `chmod +x` the binary themselves.
+- **The lobby change log needs git inside the game-ci container.** v0.1.0 (GitHub-hosted) shipped
+  without `BuildInfo.json`: the container runs git as root against a runner-owned checkout
+  ("dubious ownership") and the build jobs cloned at depth 1. `BuildInfoGenerator` now passes
+  `-c safe.directory=*`, the build checkouts use `fetch-depth: 0`, and a step after each build
+  warns when the file is missing or empty.
 - **License secrets live on the `unity_tests` Environment.** Jobs without
   `environment: unity_tests` see empty `UNITY_LICENSE` / `UNITY_SERIAL` even when EditMode is
   green (the old `main.yml` hit this before Environment was wired).

@@ -88,6 +88,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 
 ## Pitfalls
 
+- **The empty change log needs its own label style.** `lobby-shell__changelog-text` has `flex-basis: 0` for the row layout; reused on the lone "No change log in this build." label in the ScrollView's column it collapses to ~0 px and only the tops of the glyphs show (v0.1.0, every build without `BuildInfo.json`). The editor always has the file, so only player builds show it. Use `lobby-shell__changelog-empty`.
 - **Portrait capture must restore `RenderTexture.active`:** `Graphics.Blit` changes the global active target. Save/restore it around the head crop so later rendering/readback does not inherit the portrait target; the lifecycle pilot uses a sentinel target to check this.
 
 - **Long map status displaced Ready over the preview:** wrapping a full save name made the fixed sidebar too tall. Keep status labels single-line with ellipsis; the lifecycle pilot uses a long temporary map name to check this.
