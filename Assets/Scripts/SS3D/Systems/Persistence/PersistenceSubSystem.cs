@@ -195,6 +195,9 @@ namespace SS3D.Systems.Persistence
 
         public IReadOnlyList<string> ListStationTemplates()
         {
+            // Testers import shared maps by dropping a zip into StationTemplates/.
+            MapFileSharing.ImportDroppedArchives();
+
             var names = new HashSet<string>(_store.List(PersistencePaths.StationTemplates));
             foreach (string legacyName in _store.List(PersistencePaths.LegacyTilemaps))
             {

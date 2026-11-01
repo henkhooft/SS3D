@@ -1,0 +1,48 @@
+# SS3D map building: testers' guide
+
+Thanks for testing. This build lets you build a space station, play on it, and share it.
+Expect bugs. Finding them is the point.
+
+## 1. Start the game
+
+Unzip the download and run **`Start_SS3D_Host.bat`** (Linux: `./start_ss3d_host.sh`).
+This hosts a game on your PC and makes you the admin, so the map editor works straight away.
+You don't need to edit any files.
+
+Friends on your network can join with `Start_SS3D_Client.bat`, using your IP address.
+
+## 2. Build
+
+Press **B** to open the map editor. Press **B** again to close it.
+
+- Search the palette by name or tag: "wall", "floor", "door", "pipe", "apc".
+- **Scripts → Spawn Placements** sets where players appear. **Scripts → Rooms** paints rooms and
+  sets their name, department and door access.
+- Ctrl+Z / Ctrl+Y undo and redo.
+
+## 3. Save
+
+Click the **Save** icon, type a name, then click **Save Map**. Afterwards the editor lists anything
+the map still needs, such as missing spawn points. Click an entry to jump to it.
+
+To play on your map, choose it in the lobby's server settings and start a round. You can keep
+editing during the round. When the round ends, the map goes back to your last save, so round damage
+is never saved into it.
+
+## 4. Share your map
+
+In the **Save** menu, click **Save & Export**. A folder opens with `<your map>.zip`. Drag that zip
+into Discord. It's small enough to upload even for large stations.
+
+To play someone else's map, open the **Load** menu, click **Open Maps Folder**, and drop their
+`.zip` (or `.json`) into that folder. Reopen the Load menu and the map shows up.
+
+All your maps are plain files in `Game/Data/StationTemplates/`.
+
+## 5. Report a bug
+
+Open an issue at <https://github.com/henkhooft/SS3D/issues/new/choose>, or post in Discord. Include:
+
+- what you did, what you expected, and what happened instead
+- the log files from `Game/Logs/`
+- for map problems, the exported map `.zip`

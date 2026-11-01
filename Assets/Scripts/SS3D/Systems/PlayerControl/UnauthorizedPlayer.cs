@@ -30,7 +30,7 @@ namespace SS3D.Systems.PlayerControl
 
             Log.Debug(this, "Attempting authentication for user {ckey}", Logs.ClientOnly, ckey);
 
-            UserAuthorizationMessage userAuthorizationMessage = new(ckey);
+            UserAuthorizationMessage userAuthorizationMessage = new(ckey, LocalPlayer.AccessToken);
             ClientManager.Broadcast(userAuthorizationMessage);
         }
     }

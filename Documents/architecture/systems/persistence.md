@@ -15,6 +15,7 @@ Layered contributor-based disk persistence for station templates and server meta
 - `Assets/Scripts/SS3D/Data/Persistence/EnvelopePersistenceStore.cs` — JSON file I/O via `LocalStorage`
 - `Assets/Scripts/SS3D/Data/Persistence/PersistencePaths.cs` — `StationTemplates/`, `ServerMeta/`, legacy `Tilemaps/`
 - `Assets/Scripts/SS3D/Systems/Persistence/PersistenceSubSystem.cs` — orchestrator, lifecycle events; station restore resets world-readiness epoch and notifies `TileMapLoaded` after contributors + deferred area flood; large templates use `LoadStationTemplateAsync` (time-sliced place + bulk mutation mute). Successful saves/loads raise `StationTemplateSaved` / `StationTemplateLoaded` (the map editor's save point); a second restore is refused while one runs, and saves fail after a partial restore until a full load succeeds
+- `Assets/Scripts/SS3D/Data/Persistence/MapFileSharing.cs` — map sharing: `TryExport` zips a template into `Data/Exports/<name>.zip`; `ImportDroppedArchives` unpacks zips dropped into `StationTemplates/` (run by `ListStationTemplates`; name clashes get ` (2)`; processed zips move to `StationTemplates/ImportedZips/`); `Reveal` opens the OS file manager
 - `Assets/Scripts/SS3D/Systems/Persistence/TileMapPersistenceContributor.cs` — tilemap + items chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/AreaPersistenceContributor.cs` — area metadata chunk
 - `Assets/Scripts/SS3D/Systems/Persistence/SpawnPointPersistenceContributor.cs` — spawn markers chunk (`spawn-points`, load order 110)

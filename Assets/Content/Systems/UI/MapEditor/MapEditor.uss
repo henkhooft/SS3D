@@ -372,6 +372,13 @@
     margin-bottom: 4px;
 }
 
+.map-editor-popover-hint {
+    color: var(--ss3d-text-secondary);
+    font-size: 11px;
+    white-space: normal;
+    margin-top: 6px;
+}
+
 /* -- Camera dial ---------------------------------------------------- */
 /* Matches Construction Map Editor mockup: 76px panel, 56px dial, gap 8. */
 
@@ -908,6 +915,9 @@
     padding: 12px 20px;
     color: var(--ss3d-text-primary);
     font-size: 17px;
+    max-width: 720px;
+    white-space: normal;
+    -unity-text-align: middle-center;
 }
 
 .map-editor-hint {

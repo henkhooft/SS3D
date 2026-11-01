@@ -96,6 +96,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public event Action UndoRequested;
         public event Action RedoRequested;
         public event Action<string> SaveAsRequested;
+        public event Action<string> ExportRequested;
+        public event Action OpenMapsFolderRequested;
         public event Action<string> LoadMapRequested;
         public event Action<string> DeleteMapRequested;
         public event Action ResetViewRequested;
@@ -865,8 +867,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             Button newMapBtn = new(() => NewMapRequested?.Invoke()) { text = "New Map" };
             newMapBtn.AddToClassList("map-editor-action-btn");
-            newMapBtn.style.marginBottom = 8;
+            newMapBtn.style.marginBottom = 4;
             container.Add(newMapBtn);
+
+            Button openFolderBtn = new(() => OpenMapsFolderRequested?.Invoke())
+            { text = "Open Maps Folder", tooltip = "Drop a shared .zip or .json here, then reopen this list" };
+            openFolderBtn.AddToClassList("map-editor-action-btn");
+            openFolderBtn.style.marginBottom = 8;
+            container.Add(openFolderBtn);
 
             VisualElement listRoot = new() { pickingMode = PickingMode.Position, name = "map-load-list" };
             container.Add(listRoot);
@@ -882,7 +890,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             nameField.AddToClassList("map-editor-search");
             _saveNameField = new TextField { value = string.IsNullOrEmpty(_vm.SaveMapName) ? "Untitled Map" : _vm.SaveMapName };
             _saveNameField.AddToClassList("map-editor-search-field");
-            _saveNameField.RegisterValueChangedCallback(evt => _vm.SaveMapName = evt.newValue);
+            _saveNameField.RegisterValueChangedCallback(evt =>
+            {
+                _vm.SaveMapName = evt.newValue;
+                // Keep the "Overwriting" badge on the row the typed name will actually replace.
+                if (_lastMaps != null)
+                    PopulateOverwriteList(_lastMaps);
+            });
             WireTextEntryField(_saveNameField);
             nameField.Add(_saveNameField);
             container.Add(nameField);
@@ -907,10 +921,33 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             saveBtn.AddToClassList("map-editor-action-btn--primary");
             saveBtn.style.marginTop = 10;
             container.Add(saveBtn);
+
+            Button exportBtn = new(() =>
+            {
+                string name = _saveNameField.value?.Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                    ExportRequested?.Invoke(name);
+            })
+            { text = "Save & Export", tooltip = "Saves, then opens a folder with a .zip of the map to share" };
+            exportBtn.AddToClassList("map-editor-action-btn");
+            exportBtn.style.marginTop = 6;
+            exportBtn.style.marginLeft = 0;
+            exportBtn.style.marginRight = 0;
+            exportBtn.style.paddingTop = 8;
+            exportBtn.style.paddingBottom = 8;
+            container.Add(exportBtn);
+
+            Label exportHint = new("Export makes a .zip you can drag into Discord. To add someone's map, use Open Maps Folder under Load and drop their .zip in.")
+            { pickingMode = PickingMode.Ignore };
+            exportHint.AddToClassList("map-editor-popover-hint");
+            container.Add(exportHint);
         }
+
+        private IReadOnlyList<MapEditorMapEntry> _lastMaps;
 
         public void PopulateMapList(IReadOnlyList<MapEditorMapEntry> maps)
         {
+            _lastMaps = maps;
             if (_activePopover == null)
                 return;
 

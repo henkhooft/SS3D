@@ -200,6 +200,17 @@ namespace SS3D.Systems.PlayerControl
                 return;
             }
             string ckey = userAuthorizationMessage.Ckey;
+
+            if (!conn.IsHost
+                && SubSystems.TryGet(out PermissionSubSystem permissions)
+                && permissions.TryGetUserRole(ckey, out ServerRoleTypes role)
+                && !AdminTokens.IsAdmitted(role, ckey, userAuthorizationMessage.Token, IsServerOnly, out string reason))
+            {
+                Log.Warning(this, "Rejected login from client {clientId}: {reason}", Logs.Important, conn.ClientId, reason);
+                conn.Disconnect(true);
+                return;
+            }
+
             bool playedHasConnectedAlready = _serverPlayers.TryGetValue(ckey, out Player player) && player != null;
 
             if (playedHasConnectedAlready)

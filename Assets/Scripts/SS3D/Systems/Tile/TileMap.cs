@@ -43,6 +43,21 @@ namespace SS3D.Systems.Tile
 
         public IReadOnlyList<SavedAreaRecord> LoadedAreaRecords => _loadedAreaRecords;
 
+        private readonly Dictionary<string, int> _lastLoadSkipped = new();
+
+        /// <summary>
+        /// Asset names the last <see cref="LoadRoutine"/> could not resolve, with how many placements
+        /// each dropped. Non-empty means the map was saved by a build with objects this build lacks;
+        /// saving it now would make the loss permanent.
+        /// </summary>
+        public IReadOnlyDictionary<string, int> LastLoadSkipped => _lastLoadSkipped;
+
+        private void CountSkipped(string assetName)
+        {
+            string key = string.IsNullOrEmpty(assetName) ? "(unnamed)" : assetName;
+            _lastLoadSkipped[key] = _lastLoadSkipped.TryGetValue(key, out int count) ? count + 1 : 1;
+        }
+
         public void SetLoadedAreaRecords(IEnumerable<SavedAreaRecord> records)
         {
             _loadedAreaRecords.Clear();
@@ -758,6 +773,7 @@ namespace SS3D.Systems.Tile
             // Clear TileMap data first (this clears the _items list)
             Clear();
             _loadedAreaRecords.Clear();
+            _lastLoadSkipped.Clear();
 
             // Then clear all items in the scene, not just those tracked by TileMap
             ClearUntrackedItems();
@@ -795,6 +811,7 @@ namespace SS3D.Systems.Tile
                                 "Skipping unknown or removed tile asset '{assetName}' while loading map",
                                 Logs.Generic,
                                 savedObject.tileObjectSOName);
+                            CountSkipped(savedObject.tileObjectSOName);
                             continue;
                         }
 
@@ -829,7 +846,14 @@ namespace SS3D.Systems.Tile
             SavedPlacedItemObject[] savedItems = saveObject.savedItemList ?? Array.Empty<SavedPlacedItemObject>();
             foreach (SavedPlacedItemObject savedItem in savedItems)
             {
-                ItemObjectSo toBePlaced = (ItemObjectSo)tileSystem.GetAsset(savedItem.itemName);
+                if (tileSystem.GetAsset(savedItem.itemName) is not ItemObjectSo toBePlaced)
+                {
+                    Log.Warning(this, "Skipping unknown or removed item asset '{assetName}' while loading map",
+                        Logs.Generic, savedItem.itemName);
+                    CountSkipped(savedItem.itemName);
+                    continue;
+                }
+
                 PlaceItemObject(savedItem.worldPosition, savedItem.rotation, toBePlaced);
                 sinceYield++;
                 if (yieldFrames && sinceYield >= BulkLoadYieldEveryPlacements)

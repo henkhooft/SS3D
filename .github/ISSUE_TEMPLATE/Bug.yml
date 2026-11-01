@@ -54,4 +54,4 @@ body:
     id: extra
     attributes:
       label: Logs, screenshots or map file
-      description: Drag files in here. Logs are in the `Game/Logs/` folder of the release download. For map bugs, attach the map `.json` too.
+      description: Drag files in here. Logs are in the `Game/Logs/` folder of the release download. For map bugs, use the Map editor bug form instead.

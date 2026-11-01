@@ -12,6 +12,7 @@
 !/[Bb]uilds/*.bat
 !/[Bb]uilds/*.sh
 !/[Bb]uilds/README.txt
+!/[Bb]uilds/TESTERS.md
 
 Builds/Game/*
 !Builds/Game/Data/
@@ -20,6 +21,9 @@ Builds/Game/*
 
 # Runtime server persistence (generated on boot / save; not source data)
 /[Bb]uilds/Game/[Dd]ata/[Ss]erver[Mm]eta/
+# Map editor sharing output (Save & Export, imported zips)
+/[Bb]uilds/Game/[Dd]ata/[Ee]xports/
+/[Bb]uilds/Game/[Dd]ata/[Ss]tation[Tt]emplates/[Ii]mported[Zz]ips/
 
 
 /[Ll]ogs/

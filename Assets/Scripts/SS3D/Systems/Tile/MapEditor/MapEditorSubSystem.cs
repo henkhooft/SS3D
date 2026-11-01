@@ -50,6 +50,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private readonly MapEditorCatalog _catalog = new();
         private readonly MapEditorSession _session = new();
         private readonly MapEditorCommandService _commandService = new();
+        private readonly MapEditorRateLimiter _rateLimiter = new();
         private readonly MapEditorLighting _lighting = new();
         private readonly MapEditorAreaOverlay _areaOverlay = new();
 
@@ -295,6 +296,8 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.UndoRequested += OnUndoRequested;
             _view.RedoRequested += OnRedoRequested;
             _view.SaveAsRequested += OnSaveAsRequested;
+            _view.ExportRequested += OnExportRequested;
+            _view.OpenMapsFolderRequested += OnOpenMapsFolderRequested;
             _view.LoadMapRequested += OnLoadMapRequested;
             _view.DeleteMapRequested += OnDeleteMapRequested;
             _view.NewMapRequested += OnNewMapRequested;
@@ -746,6 +749,8 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.UndoRequested -= OnUndoRequested;
             _view.RedoRequested -= OnRedoRequested;
             _view.SaveAsRequested -= OnSaveAsRequested;
+            _view.ExportRequested -= OnExportRequested;
+            _view.OpenMapsFolderRequested -= OnOpenMapsFolderRequested;
             _view.LoadMapRequested -= OnLoadMapRequested;
             _view.DeleteMapRequested -= OnDeleteMapRequested;
             _view.NewMapRequested -= OnNewMapRequested;
@@ -883,6 +888,27 @@ namespace SS3D.Systems.Tile.MapEditor
             RpcSaveMap(name, true, LocalConnection);
         }
 
+        private void OnExportRequested(string name)
+        {
+            _viewModel.ShowToast($"Exporting {name}…");
+            _toastTimer = 1.6f;
+            RpcExportMap(name, LocalConnection);
+        }
+
+        private void OnOpenMapsFolderRequested()
+        {
+            // Maps live on the server's disk; a remote client has no local folder to open.
+            if (!IsServer)
+            {
+                _viewModel.ShowToast("Maps are stored on the server. Ask the host to add shared maps.");
+                _toastTimer = 3f;
+                return;
+            }
+
+            System.IO.Directory.CreateDirectory(SS3D.Data.Persistence.MapFileSharing.StationTemplatesFolder);
+            SS3D.Data.Persistence.MapFileSharing.Reveal(SS3D.Data.Persistence.MapFileSharing.StationTemplatesFolder);
+        }
+
         private void OnLoadMapRequested(string name)
         {
             ClearAreaSelection();
@@ -921,7 +947,12 @@ namespace SS3D.Systems.Tile.MapEditor
                 TargetRememberTemplate(conn, mapName);
                 TargetSyncUndoState(conn, 0, 0, false);
                 SendMapValidation(conn, true);
-                TargetToast(conn, $"Loaded {mapName}.");
+                string skipped = DescribeSkipped(_tileSystem.CurrentMap?.LastLoadSkipped);
+                if (skipped == null)
+                    TargetToast(conn, $"Loaded {mapName}.");
+                else
+                    TargetToastFor(conn, $"Loaded {mapName}, but this version doesn't have {skipped}. "
+                        + "They were left out. Saving over the map makes that permanent; save under a new name to keep the original.", 10f);
             }
             catch (Exception exception)
             {
@@ -990,6 +1021,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.SetMode(mode);
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts,
                 _viewModel.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            SyncTurfsLayerVisibility();
             OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
@@ -997,8 +1029,17 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnSubcategorySelected(MapEditorSubcategory sub)
         {
             _viewModel.SetSubcategory(sub);
+            SyncTurfsLayerVisibility();
             OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
+        }
+
+        /// <summary>Piping/Disposals tabs toggle Turfs in the view model; only re-dim when it changed (walks the map).</summary>
+        private void SyncTurfsLayerVisibility()
+        {
+            bool visible = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Turfs);
+            if (TileLayerVisibilityService.IsGroupVisible(TileLayerCategory.Turfs) != visible)
+                TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Turfs, visible);
         }
 
         /// <summary>
@@ -1093,24 +1134,82 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
+            if (TrySaveFor(conn, mapName, overwrite, out bool hasWarnings))
+                TargetToast(conn, hasWarnings ? $"Saved {mapName} with validation warnings." : $"Saved {mapName}.");
+        }
+
+        /// <summary>
+        /// Saves the current edits under <paramref name="mapName"/>, then zips the template into
+        /// <c>Data/Exports/</c> on the server's machine for sharing.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        private void RpcExportMap(string mapName, NetworkConnection conn = null)
+        {
+            if (!MapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            if (!TrySaveFor(conn, mapName, true, out _))
+                return;
+
+            if (!SS3D.Data.Persistence.MapFileSharing.TryExport(mapName, out string zipPath, out string error))
+            {
+                Log.Error(this, "Map export failed: {error}", Logs.ServerOnly, error);
+                TargetToast(conn, $"Saved {mapName}, but could not export it: {error}");
+                return;
+            }
+
+            Log.Information(this, "Exported map {map} to {path}", Logs.ServerOnly, mapName, zipPath);
+            TargetMapExported(conn, mapName, zipPath);
+        }
+
+        [TargetRpc]
+        private void TargetMapExported(NetworkConnection conn, string mapName, string zipPath)
+        {
+            // The zip lives on the server's disk. Only a host can open it on this machine.
+            if (IsServer)
+            {
+                GUIUtility.systemCopyBuffer = zipPath;
+                SS3D.Data.Persistence.MapFileSharing.Reveal(zipPath);
+                _viewModel.ShowToast($"Exported {mapName}.zip. Drag it from the opened folder into Discord.");
+                _toastTimer = 5f;
+            }
+            else
+            {
+                _viewModel.ShowToast($"Exported {mapName}.zip on the server (Data/Exports). Ask the host for it.");
+                _toastTimer = 5f;
+            }
+        }
+
+        private bool TrySaveFor(NetworkConnection conn, string mapName, bool overwrite, out bool hasWarnings)
+        {
+            hasWarnings = false;
+            if (_persistence.Exists(mapName) && !MapEditorPermissions.MayReplaceMapFile(conn, mapName))
+            {
+                TargetToast(conn, $"{mapName} belongs to someone else on this server. Save under a new name.");
+                return false;
+            }
+
             try
             {
                 if (!_persistence.Save(mapName, overwrite))
                 {
                     TargetToast(conn, $"Could not save {mapName}. Your edits are still unsaved.");
-                    return;
+                    return false;
                 }
+                MapEditorPermissions.RecordSave(conn, mapName);
                 TargetRememberTemplate(conn, mapName);
                 string mode = SubSystems.Get<SS3D.Systems.Rounds.RoundSubSystem>().SettingsForServer.Mode;
                 Validation.MapValidationReport report = Validation.MapValidationService.Validate(_tileSystem, mode);
                 TargetMapValidation(conn, report.Issues.ToArray(), mode, false);
-                TargetToast(conn, report.HasIssues ? $"Saved {mapName} with validation warnings." : $"Saved {mapName}.");
                 TargetRefreshMapList(conn);
+                hasWarnings = report.HasIssues;
+                return true;
             }
             catch (Exception exception)
             {
                 Log.Error(this, "Map editor save failed: {error}", Logs.ServerOnly, exception.Message);
                 TargetToast(conn, $"Could not save {mapName}. Your edits are still unsaved.");
+                return false;
             }
         }
 
@@ -1167,6 +1266,12 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
+
+            if (!MapEditorPermissions.MayReplaceMapFile(conn, mapName))
+            {
+                TargetToast(conn, $"Only admins can delete {mapName} on this server.");
+                return;
+            }
 
             _persistence.Delete(mapName);
             TargetToast(conn, $"Deleted {mapName}.");
@@ -1226,9 +1331,22 @@ namespace SS3D.Systems.Tile.MapEditor
             if (list.Count == 0)
                 return;
 
-            _commandService.ExecuteCompound(list);
+            if (MapEditorPermissions.IsSandboxPlayer(conn)
+                && !_rateLimiter.TryConsume(conn.ClientId, list.Count, Time.unscaledTimeAsDouble))
+            {
+                Log.Warning(this, "Throttled map edits from client {clientId} ({count} operations)",
+                    Logs.ServerOnly, conn.ClientId, list.Count);
+                TargetToast(conn, "Slow down: too many edits at once. Try again in a few seconds.");
+                return;
+            }
+
+            _commandService.ExecuteCompound(list, conn.ClientId);
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
         }
+
+        /// <summary>Sandbox players may only undo their own edits; admins and hosts undo anything.</summary>
+        private static int UndoActor(NetworkConnection conn) =>
+            MapEditorPermissions.IsSandboxPlayer(conn) ? conn.ClientId : MapEditorUndoStack.AnyOwner;
 
         [ServerRpc(RequireOwnership = false)]
         private void RpcUndo(NetworkConnection conn = null)
@@ -1236,7 +1354,8 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            _commandService.Undo();
+            if (!_commandService.Undo(UndoActor(conn)) && _commandService.UndoDepth > 0)
+                TargetToast(conn, "Someone else edited since your last change, so there's nothing of yours to undo.");
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetRefreshAreaProperties(conn);
         }
@@ -1247,7 +1366,8 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            _commandService.Redo();
+            if (!_commandService.Redo(UndoActor(conn)) && _commandService.RedoDepth > 0)
+                TargetToast(conn, "The next redo is someone else's change.");
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetRefreshAreaProperties(conn);
         }
@@ -1267,7 +1387,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 })
                 : new MoveTileCommand(assetName, from, to, direction);
 
-            _commandService.Execute(command);
+            _commandService.Execute(command, conn.ClientId);
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetToast(conn, "Moved object.");
         }
@@ -1298,6 +1418,28 @@ namespace SS3D.Systems.Tile.MapEditor
                 _validationDueTime = Time.unscaledTime + ValidationDebounceSeconds;
             }
             _viewModel.SetUndoState(undoDepth, redoDepth);
+        }
+
+        /// <summary>"3 × OldLamp, 1 × RemovedChair" for the load summary, or null when nothing was skipped.</summary>
+        public static string DescribeSkipped(IReadOnlyDictionary<string, int> skipped)
+        {
+            if (skipped == null || skipped.Count == 0)
+                return null;
+
+            const int shown = 4;
+            IEnumerable<string> parts = skipped
+                .OrderByDescending(pair => pair.Value)
+                .Take(shown)
+                .Select(pair => $"{pair.Value} × {pair.Key}");
+            string text = string.Join(", ", parts);
+            return skipped.Count > shown ? $"{text} and {skipped.Count - shown} more kinds" : text;
+        }
+
+        [TargetRpc]
+        private void TargetToastFor(NetworkConnection conn, string message, float seconds)
+        {
+            _viewModel.ShowToast(message);
+            _toastTimer = seconds;
         }
 
         [TargetRpc]

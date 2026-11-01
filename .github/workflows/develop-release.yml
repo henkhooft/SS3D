@@ -564,7 +564,7 @@ jobs:
           cp -a build-windows/. "${WIN_ROOT}/Game/"
           strip_debug "${WIN_ROOT}/Game"
           seed_cwd_data "${WIN_ROOT}/Game"
-          cp Builds/Start_SS3D_Host.bat Builds/Start_SS3D_Client.bat Builds/README.txt "${WIN_ROOT}/"
+          cp Builds/Start_SS3D_Host.bat Builds/Start_SS3D_Client.bat Builds/README.txt Builds/TESTERS.md "${WIN_ROOT}/"
           (cd staging && zip -qq -r "../dist/SS3D-Windows-${TAG}.zip" "SS3D-Windows-${TAG}")
 
           FILES="dist/SS3D-Windows-${TAG}.zip"
@@ -587,7 +587,7 @@ jobs:
                 cp "Builds/${script}" "${root}/"
                 chmod +x "${root}/${script}"
               done
-              cp Builds/README.txt "${root}/"
+              cp Builds/README.txt Builds/TESTERS.md "${root}/"
               (cd staging && zip -qq -r "../dist/SS3D-Linux-${kind}-${TAG}.zip" "SS3D-Linux-${kind}-${TAG}")
             }
             stage_linux Client build-linux/Game/StandaloneLinux64 Game SS3D-Client \

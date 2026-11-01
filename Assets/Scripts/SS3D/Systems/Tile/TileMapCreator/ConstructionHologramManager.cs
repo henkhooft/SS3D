@@ -623,6 +623,11 @@ namespace SS3D.Systems.Tile.TileMapCreator
                 ? tileObjectSo.placementYOffset
                 : 0f;
 
+            // PlacedTileObject.Create overwrites the prefab root rotation with yaw only. Match it, or a
+            // prefab with an authored root rotation (APC: 180°) previews on the opposite wall face.
+            if (_selectedObject is TileObjectSo)
+                tileObject.transform.localRotation = Quaternion.identity;
+
             ConstructionHologram hologram = new(tileObject, position, _lastRegisteredDirection, placementYOffset);
             tileObject.transform.rotation = hologram.TargetWorldRotation;
             tileObject.transform.position = hologram.TargetPosition + new Vector3(0, placementYOffset + 0.1f, 0);

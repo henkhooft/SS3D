@@ -112,7 +112,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 TargetToast(conn, error);
                 return;
             }
-            _commandService.Execute(new CreateRoomCommand(areas, room, stroke, wasAuthored));
+            _commandService.Execute(new CreateRoomCommand(areas, room, stroke, wasAuthored), conn.ClientId);
             _inspectedRooms[conn] = room;
             TargetAreaProperties(conn, room.Id.Value, Vector3.zero, room.DisplayName, room.ParentTag, 0);
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
@@ -129,7 +129,7 @@ namespace SS3D.Systems.Tile.MapEditor
             { TargetToast(conn, "Select the room again before painting."); return; }
             if (!areas.TryPaintArea(target, tiles, out AreaPaintingService.AreaPaintChange change, out string error))
             { TargetToast(conn, error); return; }
-            _commandService.Execute(new PaintRoomCommand(change));
+            _commandService.Execute(new PaintRoomCommand(change), conn.ClientId);
             if (_inspectedRooms.TryGetValue(conn, out AreaRecord inspected) && !areas.TryGetArea(inspected.Id, out _))
             {
                 _inspectedRooms.Remove(conn);
