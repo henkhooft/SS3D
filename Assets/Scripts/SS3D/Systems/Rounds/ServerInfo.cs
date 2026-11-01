@@ -98,6 +98,7 @@ namespace SS3D.Systems.Rounds
             ApplyServerRules();
             StartAutoStartLoop();
             StartServerLifetime();
+            RegisterBugReportBroadcasts();
             _serverName = _serverSettings.ServerName;
             _motd = _serverSettings.Motd;
             _publicMode = _serverSettings.Mode;

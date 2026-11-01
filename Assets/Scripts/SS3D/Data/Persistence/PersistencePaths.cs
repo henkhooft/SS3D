@@ -10,5 +10,7 @@ namespace SS3D.Data.Persistence
         public const string ServerInfo = ServerMeta + "/server-info";
         public const string ResetHealth = ServerMeta + "/reset-health";
         public const string BugReports = ServerMeta + "/bugs";
+        /// <summary>Folder of JPEGs attached to dialog reports in <see cref="BugReports"/>.</summary>
+        public const string BugScreenshots = ServerMeta + "/bug-screenshots";
     }
 }

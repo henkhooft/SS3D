@@ -31,6 +31,12 @@ namespace SS3D.Editor.Automation
         [MenuItem("SS3D/Testing/Run Sandbox Pilot")]
         public static void RunSandbox() => Start(SandboxMode);
 
+        private static SS3D.Systems.BugReports.BugReportSubSystem BugReports() =>
+            SubSystems.Get<SS3D.Systems.BugReports.BugReportSubSystem>();
+
+        private static VisualElement BugDialog() =>
+            SubSystems.Get<SS3D.UI.Shell.UiShellSubSystem>().Document.rootVisualElement.Q("bug-report");
+
         private static bool AutosaveExists() =>
             SubSystems.Get<SS3D.Systems.Persistence.PersistenceSubSystem>().StationTemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix);
 
@@ -216,7 +222,7 @@ namespace SS3D.Editor.Automation
             {
                 Name = "/bug in chat saves a report with round and state",
                 Enter = () => SubSystems.Get<CommsSubSystem>().SendOoc(OocChannel.Ooc, "/bug sandbox pilot report"),
-                Until = () => HostChatContains("Bug report saved. Thanks!"),
+                Until = () => HostChatContains($"Bug report saved (round {Rounds().RoundId}). Thanks!"),
                 Verify = () =>
                 {
                     Require(JsonlLines(SS3D.Data.Persistence.PersistencePaths.BugReports).Length == _bugLines + 1, "bugs.jsonl gained one line");
@@ -225,6 +231,52 @@ namespace SS3D.Editor.Automation
                         && bug.ckey == Local().Ckey, "Report carries note, alive state, round ID and ckey");
                     Require(!HostChatContains("/bug sandbox pilot report"), "The command is not echoed to OOC chat");
                 },
+            },
+            new Step
+            {
+                Name = "F8 opens the bug report dialog with the moment frozen",
+                Enter = () => BugReports().Open("pressed F8"),
+                Until = () => BugReports().IsOpen,
+                Verify = () =>
+                {
+                    VisualElement dialog = BugDialog();
+                    Require(dialog.Q<Label>("capture-context").text.StartsWith($"ROUND #{Rounds().RoundId} · CAPTURED AT "),
+                        "The dialog names the round and the moment");
+                    Require(dialog.Q<Label>("context-badge").text == "IN ROUND · ALIVE", "Context badge reads in round, alive");
+                    Require(dialog.Q<Button>("submit").text == "SAVE REPORT", "Own host saves the report locally");
+                    Require(dialog.Q("include-map").style.display == DisplayStyle.Flex, "The map option appears in a local session");
+                    Require(!dialog.Q<Button>("submit").enabledSelf, "Save waits for a summary");
+                    dialog.Q<TextField>("summary").value = "Sandbox pilot dialog report";
+                    dialog.Q<TextField>("details").value = "Both inputs must remain readable while reporting a bug.";
+                    Require(dialog.Q<Button>("submit").enabledSelf, "A summary enables Save");
+                    Capture("sandbox-bug-report-dialog");
+                },
+            },
+            new Step
+            {
+                Name = "Saving writes a local bundle and shows where",
+                Enter = () => BugReports().View.TrySubmit(),
+                Until = () => BugReports().View.IsSavedScreen && BugReports().LastBundlePath != null,
+                Verify = () =>
+                {
+                    string path = BugReports().LastBundlePath;
+                    Require(System.IO.File.Exists(path), "The bundle exists");
+                    using (System.IO.Compression.ZipArchive zip = new(System.IO.File.OpenRead(path), System.IO.Compression.ZipArchiveMode.Read))
+                    {
+                        string[] names = zip.Entries.Select(entry => entry.FullName).ToArray();
+                        Require(names.Contains("report.json") && names.Contains("screenshot.png"), "Bundle has the report and screenshot");
+                        Require(names.Any(name => name.StartsWith("map/")), "Bundle has the current map (the editor was used this round)");
+                        Require(names.Any(name => name.StartsWith("logs/")), "Bundle has the player's logs");
+                    }
+                    Capture("sandbox-bug-report-saved");
+                },
+            },
+            new Step
+            {
+                Name = "Close dismisses the saved screen",
+                Enter = () => BugReports().Close(),
+                Until = () => !BugReports().IsOpen,
+                Verify = () => System.IO.File.Delete(BugReports().LastBundlePath),
             },
             new Step
             {

@@ -31,6 +31,10 @@ namespace SS3D.Systems.Inputs
         /// Escape closes it; movement, camera and world interactions are off.</summary>
         Menu = 35,
 
+        /// <summary>The bug report dialog is open. Every action is off; the dialog polls Escape and
+        /// Ctrl+Enter from the keyboard, so neither reaches the Escape menu or a machine panel.</summary>
+        Dialog = 38,
+
         /// <summary>The in-game debug console is open.</summary>
         Console = 40,
 

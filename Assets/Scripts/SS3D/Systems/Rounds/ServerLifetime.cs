@@ -115,7 +115,7 @@ namespace SS3D.Systems.Rounds
             Log.Information(this, "Round limit {rounds} reached; exiting for a fresh process", Logs.ServerOnly, _lifetime.ExitAfterRounds);
             StopServerLifetime();
 #if !UNITY_EDITOR
-            Application.Quit(0);
+            UnityEngine.Application.Quit(0);
 #endif
         }
     }

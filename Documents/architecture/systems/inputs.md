@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/, Assets/Content/Systems/Input/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: ce69181d3 — 2026-11-01
 
 # Inputs
 
@@ -28,7 +28,8 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
 
 - `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.cs` — owns `Controls`, builds the context table,
   exposes `PushContext` / `SuppressMap` / `SuppressAction` / `SuppressBinding` and the code-defined
-  `UiCancel` / `DetailedExamine` / `ToggleIntent` / `OpenLocalSpeechCompose` / `ToggleDebugMenu`
+  `UiCancel` / `DetailedExamine` / `ToggleIntent` / `OpenLocalSpeechCompose` / `ToggleDebugMenu` /
+  `OpenBugReport` (F8, rebindable as "Report a Bug"; live in every context but Console, Dialog and TextEntry)
   actions.
 - `Assets/Content/Systems/Input/Controls.inputactions` — asset bindings (keep in sync with generated
   `Controls.cs` when regenerating).
@@ -91,7 +92,8 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
   (B = map editor) and `Other` (Escape), so an unscoped field types straight into keybinds. Also `Exit` when the
   view rebuilds or hides: a focused field removed from the panel gets no `FocusOut` (lobby shell/creator do both).
 - **Escape owners:** `Other/Toggle Menu` = in-round lobby menu (`LobbyUiSubSystem`, `Menu` context);
-  `UiCancel` = machine panel; armed interactions poll the key and win (the lobby menu skips while armed).
+  `UiCancel` = machine panel; armed interactions poll the key and win (the lobby menu skips while armed);
+  the bug report dialog pushes `InputContext.Dialog` (every action off) and polls Escape / Ctrl+Enter itself.
 - **Regenerating `Controls.cs`:** re-apply Caps / Backspace (and startup erasures, including the retired F6 debug binding) if the generator
   restores old paths — asset + generated wrapper must match [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 

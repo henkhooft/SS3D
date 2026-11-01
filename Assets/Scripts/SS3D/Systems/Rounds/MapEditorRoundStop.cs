@@ -168,6 +168,7 @@ namespace SS3D.Systems.Rounds
             MapEditorPermissions.PersistenceAllowed = true;
             StopAutoStartLoop();
             StopServerLifetime();
+            UnregisterBugReportBroadcasts();
             base.OnStopServer();
         }
     }

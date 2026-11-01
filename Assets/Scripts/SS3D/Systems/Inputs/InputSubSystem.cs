@@ -39,12 +39,16 @@ namespace SS3D.Systems.Inputs
         /// </summary>
         public InputAction ToggleDebugMenu => _toggleDebugMenu;
 
+        /// <summary>F8: the bug report dialog, from anywhere but a focused text field or the console.</summary>
+        public InputAction OpenBugReport => _openBugReport;
+
         private InputActionMap _systemMap;
         private InputAction _uiCancel;
         private InputAction _detailedExamine;
         private InputAction _toggleIntent;
         private InputAction _openLocalSpeechCompose;
         private InputAction _toggleDebugMenu;
+        private InputAction _openBugReport;
 
         private InputArbiter _arbiter;
         private Dictionary<InputContext, InputContextDefinition> _contexts;
@@ -145,6 +149,7 @@ namespace SS3D.Systems.Inputs
             _toggleDebugMenu = Debug.isDebugBuild
                 ? _systemMap.AddAction("ToggleDebugMenu", InputActionType.Button, "<Keyboard>/f1")
                 : _systemMap.AddAction("ToggleDebugMenu", InputActionType.Button);
+            _openBugReport = _systemMap.AddAction("OpenBugReport", InputActionType.Button, "<Keyboard>/f8");
         }
 
         private List<InputAction> CollectAllActions()
@@ -182,36 +187,41 @@ namespace SS3D.Systems.Inputs
                 // plus code-defined debug toggles that share Other's availability.
                 [InputContext.Global] = new InputContextDefinition(
                     new[] { other },
-                    new[] { consoleOpen, tileToggle, _toggleDebugMenu }),
+                    new[] { consoleOpen, tileToggle, _toggleDebugMenu, _openBugReport }),
 
                 [InputContext.Gameplay] = new InputContextDefinition(
                     new[] { movement, camera, interactions, hotkeys, other },
                     new[]
                     {
                         consoleOpen, tileToggle, _detailedExamine, _toggleIntent,
-                        _openLocalSpeechCompose, _toggleDebugMenu,
+                        _openLocalSpeechCompose, _toggleDebugMenu, _openBugReport,
                     }),
 
                 // Build menu: keep looking around and placing; drop world interactions/hotkeys.
                 [InputContext.TileMenu] = new InputContextDefinition(
                     new[] { movement, camera, tile, other },
-                    new[] { consoleOpen, _detailedExamine, _toggleDebugMenu }),
+                    new[] { consoleOpen, _detailedExamine, _toggleDebugMenu, _openBugReport }),
 
                 // Map Editor: it polls Keyboard/Mouse directly for its own free-fly camera, so
                 // Movement/Camera must be masked here too (unlike TileMenu) to avoid the normal
                 // character/camera fighting it every frame.
                 [InputContext.MapEditor] = new InputContextDefinition(
                     new[] { tile, other },
-                    new[] { consoleOpen }),
+                    new[] { consoleOpen, _openBugReport }),
 
                 // Machine panel captures movement/camera; Escape closes via UiCancel (Other masked).
                 [InputContext.MachineUI] = new InputContextDefinition(
                     new[] { hotkeys, interactions },
-                    new[] { _uiCancel }),
+                    new[] { _uiCancel, _openBugReport }),
 
                 // In-round lobby overlay: Other keeps Escape (ToggleMenu) live to close it.
                 [InputContext.Menu] = new InputContextDefinition(
                     new[] { other },
+                    new[] { _openBugReport }),
+
+                // Bug report dialog: everything off; the dialog polls Escape and Ctrl+Enter itself.
+                [InputContext.Dialog] = new InputContextDefinition(
+                    System.Array.Empty<InputActionMap>(),
                     System.Array.Empty<InputAction>()),
 
                 [InputContext.Console] = new InputContextDefinition(

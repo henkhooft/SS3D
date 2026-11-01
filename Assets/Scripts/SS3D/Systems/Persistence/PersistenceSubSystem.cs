@@ -113,6 +113,16 @@ namespace SS3D.Systems.Persistence
             return saved;
         }
 
+        /// <summary>
+        /// The station as Save would write it now, as JSON, without writing anything: a bug report bundle
+        /// carries the current map with unsaved edits and leaves the saved file alone.
+        /// </summary>
+        public string CaptureStationTemplateJson(string templateName)
+        {
+            if (IsRestoringStationTemplate || _incompleteStationRestore) return null;
+            return UnityEngine.JsonUtility.ToJson(CaptureStationTemplate(templateName));
+        }
+
         public bool LoadStationTemplate(string templateName)
         {
             // Sync / EditMode path — no frame yields (can freeze Editor on MetaStation-scale maps).

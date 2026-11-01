@@ -1,7 +1,7 @@
 > Parent map: [networking-session.md](networking-session.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Status: partial
-> Verified: e87d38958 — 2026-11-01
+> Verified: ce69181d3 — 2026-11-01
 
 # Multiplayer testing
 
@@ -63,6 +63,8 @@ checks that a client that never readies joins two automatic rounds and the reset
 and a nightly schedule. GitHub disabled the workflow for inactivity after the 2026-10-19
 run (`gh workflow list --all` shows `disabled_inactivity`), so none of these triggers fire until it
 is re-enabled. Configured checks do not establish a current passing run.
+
+The graphical remote pilot also files a bug report over client/server broadcasts, verifies the server-attributed JSONL and reduced JPEG, and checks the reopened dialog's cooldown; see the [UI runbook](../../../Testing/ui/README.md#lobby-remote-client-pilot).
 
 With the Editor open, `Testing/ui/validate.sh --full` runs compile, EditMode, PlayMode, visual and
 lifecycle pilots, stale builds, remote pilot and smoke. Reports live under `artifacts/ui/`;

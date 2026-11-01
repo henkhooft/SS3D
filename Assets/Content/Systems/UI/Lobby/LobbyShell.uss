@@ -393,6 +393,18 @@
     background-color: var(--lobby-btn-amber-hover);
 }
 
+.lobby-shell__btn--report {
+    height: 34px;
+    margin-top: 8px;
+    background-color: #3a3a40;
+    color: #c8c8cc;
+}
+
+.lobby-shell__btn--report:hover {
+    background-color: #55555c;
+    color: #ffffff;
+}
+
 .lobby-shell__btn--quit {
     height: 34px;
     margin-top: 8px;

@@ -2,7 +2,7 @@
     <ui:Style src="project://database/Assets/Content/Systems/UI/Tokens/ss3d-tokens.uss" />
     <ui:Style src="project://database/Assets/Content/Systems/UI/BugReport/BugReport.uss" />
     <ui:VisualElement name="bug-report-root" class="bug-report">
-        <ui:VisualElement name="scrim" class="bug-report__scrim" picking-mode="Ignore" />
+        <ui:VisualElement name="scrim" class="bug-report__scrim" />
         <ui:VisualElement name="window" class="bug-report__window">
             <ui:VisualElement class="bug-report__header">
                 <ui:Label text="BUG REPORT" class="bug-report__title" />
@@ -53,14 +53,14 @@
                     </ui:VisualElement>
                     <ui:VisualElement name="saved" class="bug-report__hidden">
                         <ui:Label text="Report saved to" class="bug-report__saved-label" />
-                        <ui:Label text="Data/Exports/bug-1187-001432.zip" class="bug-report__saved-path bug-report__mono" />
+                        <ui:Label name="saved-path" text="Data/Exports/bug-1187-001432.zip" class="bug-report__saved-path bug-report__mono" />
                         <ui:VisualElement class="bug-report__saved-actions"><ui:Button name="open-folder" text="OPEN REPORT FOLDER" class="bug-report__button bug-report__button--first" /><ui:Button name="open-issue" text="OPEN GITHUB ISSUE" class="bug-report__button bug-report__button--blue" /></ui:VisualElement>
-                        <ui:Label text="or post the zip in the project’s Discord" class="bug-report__hint bug-report__saved-hint" />
+                        <ui:Label name="saved-hint" text="or post the zip in the project’s Discord" class="bug-report__hint bug-report__saved-hint" />
                         <ui:VisualElement class="bug-report__saved-footer"><ui:Button name="saved-close" text="CLOSE" class="bug-report__button" /></ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:ScrollView>
         </ui:VisualElement>
-        <ui:VisualElement name="success-toast" class="bug-report__toast bug-report__hidden"><ui:VisualElement class="bug-report__success-dot" /><ui:Label text="Bug report saved (round 1187). Thanks!" class="bug-report__small" /></ui:VisualElement>
+        <ui:VisualElement name="success-toast" class="bug-report__toast bug-report__hidden"><ui:VisualElement name="toast-dot" class="bug-report__success-dot" /><ui:Label name="toast-text" text="Bug report saved (round 1187). Thanks!" class="bug-report__small" /></ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

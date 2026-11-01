@@ -146,7 +146,7 @@ saved template. No current pass is implied by this runbook—use the report for 
 **SS3D → Testing → Run Sandbox Pilot** applies the sandbox profile in Play Mode (the editor has no
 `-sandbox` flag; `RoundSubSystem.ApplyServerSettingsForTesting` sets the same settings) and lets the
 Host run rounds on its own: auto-start countdown without Ready, 1-minute warning, round end, station
-wipe with no autosave, a second automatic round on a fresh station. Reports and screenshots live
+wipe with no autosave, a second automatic round on a fresh station. It also checks the bug-report dialog and local bundle (report, screenshot, logs and current map with unsaved edits). Review `sandbox-bug-report-dialog.png` for readable text in both inputs. Reports and screenshots live
 under `artifacts/ui/sandbox-<UTC>/`. Effort: [2026-11_sandbox-server](../../Documents/architecture/2026-11_sandbox-server.md).
 
 ## Lobby remote client pilot
@@ -160,12 +160,12 @@ first build compiles URP shader variants (~13 min), later ones ~30s; the editor 
 
 The pilot boots the editor Host, launches the client windowed as non-admin `remoteprobe` with
 `-testscript=Testing/multiplayer/scenarios/lobby-remote-client.txt`, and drives Admin → Start/Stop
-Round twice. It writes `artifacts/ui/remote-<UTC>/status.json`, `client.log`, six client
-screenshots (`remote-0*.png`) and `host-after-remote.png`. A pass needs the client's
+Round twice. The remote files a bug report with real keyboard input, waits for the server acknowledgement, and reopens the dialog during cooldown. The host checks the attributed JSONL and decodes the reduced JPEG. It writes `artifacts/ui/remote-<UTC>/status.json`, `client.log`, client
+screenshots (`remote-0*.png` and `remote-bug-report-*.png`) and `host-after-remote.png`. A pass needs the client's
 `ScriptComplete` signal and no errors in either log.
 
 **Real OS input:** the client's Ready click, the Chat tab and chat-field clicks, the typed chat
-line and Return are real OS input. The client scenario's `os_click <selector>` resolves the element
+line and Return, plus the bug-report menu button, fields, Send and Cancel, are real OS input. The client scenario's `os_click <selector>` resolves the element
 to window pixels and emits an `OsClick` test signal; the pilot reads `client.log` and sends it to
 `Testing/ui/uinput_input.py serve`, a virtual uinput pointer+keyboard that lives for the whole run
 (`os_type`, `os_key` likewise). This moves the desktop pointer and types into the focused window

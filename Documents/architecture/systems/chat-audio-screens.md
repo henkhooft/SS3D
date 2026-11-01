@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Comms/, Assets/Scripts/SS3D/Systems/Screens/, Assets/Content/Data/Comms/Channels/, Assets/Content/Systems/UI/Comms/
 > Entry points: CommsSubSystem, LocalSpeechBubbleController, CommsFeedController, PlayerCameraSubSystem, CameraSubSystem, CameraFollow
 > Status: partial
-> Verified: f04093919 — 2026-10-31
+> Verified: ce69181d3 — 2026-11-01
 
 # Chat / audio / screens
 
@@ -11,7 +11,7 @@ In-game comms hub, local-speech UI, non-diegetic radio/announcement feed, and ca
 controllers. Audio has its own map — [audio](audio.md). Camera pose is still multi-writer — see
 [camera ownership](../2026-07_camera-ownership.md).
 
-**Chat command:** `/bug <note>` is intercepted in the server's OOC handler (`CommsSubSystem.Ooc.cs`) and in-round compose forwards it to OOC; it writes `bugs.jsonl` and answers with a notice instead of posting ([rounds-lobby](rounds-lobby.md), `BugCommand`).
+**Chat command:** `/bug <note>` is intercepted in the server's OOC handler (`CommsSubSystem.Ooc.cs`) and in-round compose forwards it to OOC; it writes `bugs.jsonl` and answers with a notice instead of posting ([rounds-lobby](rounds-lobby.md), `BugCommand`). A bare `/bug` never reaches the server: `CommsSubSystem.SendOoc` opens the bug report dialog through `BugReportRequests` ([ui-shell](ui-shell.md)).
 
 **Comms hub:** `CommsSubSystem` owns local speech (proximity ObserversRpc) and non-positional radio /
 announcements (`CommsMessage` broadcast; radio to all clients, announcements only to connections

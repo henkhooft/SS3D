@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using SS3D.Systems.BugReports;
 using SS3D.UI.Shell.BugReport;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -8,12 +9,15 @@ using UnityEngine.UIElements;
 
 namespace SS3D.Editor
 {
-    /// <summary>Isolated visual fixture. All sample values and interactions are editor-only.</summary>
+    /// <summary>
+    /// Visual fixture for the bug report dialog: the runtime <see cref="BugReportView"/> with sample data
+    /// for each state of the "Bug Report v2" design. Report actions are inert here.
+    /// </summary>
     public sealed class BugReportPreviewWindow : EditorWindow
     {
         public enum PreviewState { InRound, MapEditor, Saved, RateLimited, SuccessToast, MetadataExpanded, ScreenshotRemoved }
         private VisualElement _stage;
-        private VisualElement _view;
+        private BugReportView _view;
         private Texture2D _frame;
         private PreviewState _state;
 
@@ -55,6 +59,7 @@ namespace SS3D.Editor
         {
             _state = state;
             rootVisualElement.Q<EnumField>("preview-state")?.SetValueWithoutNotify(state);
+            _view?.Detach();
             _stage.Clear();
             BugReportAssetCatalog catalog = AssetDatabase.LoadAssetAtPath<BugReportAssetCatalog>(BugReportAssetPaths.Catalog);
             if (catalog == null || !catalog.HasRequiredAssets(out _))
@@ -62,121 +67,80 @@ namespace SS3D.Editor
                 _stage.Add(new Label("Rebuild All UI Catalogs to load the bug report visuals."));
                 return;
             }
-            _view = catalog.Template.CloneTree();
-            _view.style.flexGrow = 1;
-            _view.styleSheets.Add(catalog.Ss3dTokensStyle);
-            _view.styleSheets.Add(catalog.Ss3dTypographyStyle);
-            _view.styleSheets.Add(catalog.Style);
-            _stage.Add(_view);
+
+            VisualElement host = new() { pickingMode = PickingMode.Ignore };
+            host.style.flexGrow = 1;
+            host.styleSheets.Add(catalog.Ss3dTokensStyle);
+            host.styleSheets.Add(catalog.Ss3dTypographyStyle);
+            _stage.Add(host);
+            _view = new BugReportView(catalog);
+            _view.Attach(host);
+
             bool map = state == PreviewState.MapEditor;
-            bool saved = state == PreviewState.Saved;
-            bool toast = state == PreviewState.SuccessToast;
-            bool rate = state == PreviewState.RateLimited;
-            Visible("window", !toast);
-            Visible("scrim", !toast);
-            Visible("success-toast", toast);
-            Visible("form", !saved);
-            Visible("saved", saved);
-            Visible("include-map", map);
-            Visible("rate-limit", rate);
-            Label badge = _view.Q<Label>("context-badge");
-            badge.text = "IN ROUND · ALIVE";
-            if (saved) badge.text = "Saved";
-            else if (map) badge.text = "MAP EDITOR · AREA TOOL";
-            else if (rate) badge.text = "GHOST";
-            badge.EnableInClassList("bug-report__badge--saved", saved);
-            TextField summary = _view.Q<TextField>("summary");
-            summary.textEdition.placeholder = "Wrench clips through the floor when dropped";
-            _view.Q<TextField>("details").textEdition.placeholder = "What were you doing, step by step? What did you expect?";
-            string sampleSummary = "";
-            if (map) sampleSummary = "Area tool leaves ghost tiles after undo";
-            else if (rate) sampleSummary = "Ghost follow camera snaps to map origin";
-            summary.SetValueWithoutNotify(sampleSummary);
-            Button submit = _view.Q<Button>("submit");
-            submit.text = map ? "SAVE REPORT" : "SEND REPORT";
-            void RefreshSummary()
+            float now = (float)EditorApplication.timeSinceStartup;
+            _view.ShowForm(new BugReportFormModel
             {
-                _view.Q<Label>("summary-count").text = $"{summary.value.Length}/80";
-                submit.SetEnabled(!rate && !string.IsNullOrWhiteSpace(summary.value));
-            }
-            summary.RegisterValueChangedCallback(_ => RefreshSummary());
-            RefreshSummary();
-            foreach (string severity in new[] { "minor", "major", "blocker" })
-            {
-                string selected = severity;
-                _view.Q<Button>(severity).clicked += () => SelectSeverity(selected);
-            }
-            if (map) SelectSeverity("major");
-            SetScreenshot(state != PreviewState.ScreenshotRemoved);
-            _view.Q<Button>("remove-screenshot").clicked += () =>
-                SetScreenshot(_view.Q<Label>("no-screenshot").style.display == DisplayStyle.Flex);
-            PopulateMetadata(map);
-            SetMetadata(state == PreviewState.MetadataExpanded);
-            _view.Q<Button>("metadata-toggle").clicked += () =>
-                SetMetadata(_view.Q<VisualElement>("metadata-fields").style.display == DisplayStyle.None);
-        }
+                Info = SampleInfo(state),
+                Screenshot = _frame,
+                ScreenshotTitle = "Screenshot · taken when you pressed F8",
+                ScreenshotFile = "screenshot.png · 1920×1080",
+                LogLines = 42,
+                Local = map || state == PreviewState.Saved,
+                MapOptionLabel = "Include current map (ministation, unsaved edits included)",
+                MapOptionDefault = true,
+                Summary = map ? "Area tool leaves ghost tiles after undo"
+                    : state == PreviewState.RateLimited ? "Ghost follow camera snaps to map origin" : "",
+                Severity = map ? BugReportSeverity.Major : BugReportSeverity.None,
+            });
 
-        private void Visible(string name, bool visible)
-        {
-            _view.Q(name).style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
-        }
-
-        private void SelectSeverity(string selected)
-        {
-            foreach (string severity in new[] { "minor", "major", "blocker" })
+            switch (state)
             {
-                Button button = _view.Q<Button>(severity);
-                button.EnableInClassList("bug-report__button--blue", severity == selected && severity == "minor");
-                button.EnableInClassList("bug-report__button--amber", severity == selected && severity == "major");
-                button.EnableInClassList("bug-report__button--danger", severity == selected && severity == "blocker");
+                case PreviewState.Saved:
+                    _view.ShowSaved("Data/Exports/bug-1187-001432.zip");
+                    break;
+                case PreviewState.RateLimited:
+                    _view.SetRateLimit(now + 42f, now);
+                    break;
+                case PreviewState.SuccessToast:
+                    _view.Close();
+                    _view.ShowToast("Bug report saved (round 1187). Thanks!", true, now);
+                    break;
+                case PreviewState.MetadataExpanded:
+                    _view.SetMetadataExpanded(true);
+                    break;
+                case PreviewState.ScreenshotRemoved:
+                    _view.SetScreenshotIncluded(false);
+                    break;
             }
         }
 
-        private void SetScreenshot(bool included)
+        private static BugReportClientInfo SampleInfo(PreviewState state)
         {
-            _view.Q("screenshot").style.backgroundImage = included && _frame != null ? new StyleBackground(_frame) : StyleKeyword.None;
-            Visible("no-screenshot", !included);
-            _view.Q<Label>("screenshot-title").text = included ? "Screenshot · taken when you pressed F8" : "Screenshot removed";
-            _view.Q<Label>("screenshot-file").text = included ? "frame_001432.png · 1920×1080" : "Not included in the report";
-            _view.Q<Button>("remove-screenshot").text = included ? "REMOVE" : "ADD BACK";
-        }
-
-        private void PopulateMetadata(bool map)
-        {
-            string[,] fields = {
-                { "Game version", "0.0.9-prealpha · a3f9c1e" }, { "Round", "#1187 · 00:14:32" },
-                { "Map", map ? "ministation · unsaved edits: yes" : "Box Station · unsaved edits: no" },
-                { "Context", map ? "Map editor · area tool" : "In round · alive" },
-                { "Position", map ? "(12.0, 0.0, 4.5)" : "Engineering / Main Hall (142.6, 0.0, -38.2)" },
-                { "Network role", map ? "Own host" : "Client" }, { "Players", map ? "1" : "24" },
-                { "FPS", map ? "144" : "58" }, { "OS / GPU", "Windows 11 · RTX 3060" },
-                { "Player name", "Wrenchman" }, { map ? "Log files" : "Recent log", map ? "Included in the bundle" : "42 lines" }
+            bool map = state is PreviewState.MapEditor or PreviewState.Saved;
+            return new BugReportClientInfo
+            {
+                version = "0.0.9-prealpha · a3f9c1e",
+                roundId = 1187,
+                roundSeconds = 14 * 60 + 32,
+                roundState = "Ongoing",
+                map = map ? "ministation" : "Box Station",
+                unsavedEdits = map,
+                context = map ? "MAP EDITOR · AREA TOOL" : state == PreviewState.RateLimited ? "GHOST" : "IN ROUND · ALIVE",
+                hasPosition = true,
+                position = map ? new Vector3(12f, 0f, 4.5f) : new Vector3(142.6f, 0f, -38.2f),
+                area = map ? "" : "Engineering / Main Hall",
+                networkRole = map ? "Own host" : "Client",
+                players = map ? 1 : 24,
+                fps = map ? 144 : 58,
+                os = "Windows 11",
+                gpu = "RTX 3060",
+                playerName = "Wrenchman",
             };
-            VisualElement parent = _view.Q("metadata-fields");
-            for (int i = 0; i < fields.GetLength(0); i++)
-            {
-                VisualElement row = new();
-                row.AddToClassList("bug-report__meta-row");
-                Label key = new(fields[i, 0]);
-                key.AddToClassList("bug-report__mono");
-                key.AddToClassList("bug-report__meta-key");
-                Label value = new(fields[i, 1]);
-                value.AddToClassList("bug-report__mono");
-                value.AddToClassList("bug-report__meta-value");
-                row.Add(key);
-                row.Add(value);
-                parent.Add(row);
-            }
-        }
-
-        private void SetMetadata(bool expanded)
-        {
-            Visible("metadata-fields", expanded);
-            _view.Q<Label>("metadata-caption").text = expanded ? "HIDE −" : "11 FIELDS · SHOW +";
         }
 
         private void OnDisable()
         {
+            _view?.Detach();
             if (_frame != null) DestroyImmediate(_frame);
         }
     }

@@ -32,7 +32,8 @@
 .bug-report__label-row { flex-direction: row; align-items: center; margin-bottom: 6px; }
 .bug-report .bug-report__optional { margin-left: 5px; color: var(--bug-muted); font-size: 12px; }
 .bug-report__input { margin: 0; padding: 0; }
-.bug-report__input > .unity-text-field__input { background-color: var(--bug-inset); border-width: 1px; border-color: var(--bug-border); border-radius: 2px; padding: 9px 12px; color: white; font-size: 15px; -unity-font-style: normal; margin: 0; }
+/* Keep inputs square: rounded clipping renders their contents solid white on Linux. */
+.bug-report__input > .unity-text-field__input { background-color: var(--bug-inset); border-width: 1px; border-color: var(--bug-border); border-radius: 0; padding: 9px 12px; color: white; font-size: 15px; -unity-font-style: normal; margin: 0; }
 .bug-report__input > .unity-text-field__input:focus { border-color: var(--ss3d-accent-rust); }
 .bug-report__input .unity-base-text-field__input--placeholder { color: var(--bug-muted); }
 .bug-report__details > .unity-text-field__input { min-height: 86px; white-space: normal; }
@@ -80,4 +81,7 @@
 .bug-report__saved-footer { align-items: flex-end; border-top-width: 1px; border-top-color: var(--bug-border); padding-top: 12px; margin-top: 16px; }
 .bug-report__toast { position: absolute; bottom: 96px; flex-direction: row; align-items: center; background-color: var(--bug-panel); border-width: 1px; border-color: var(--bug-border); border-radius: 2px; padding: 10px 14px; }
 .bug-report__success-dot { width: 8px; height: 8px; background-color: #88b36a; margin-right: 10px; }
+.bug-report__success-dot--error { background-color: #b13d3d; }
+.bug-report__toast { transition-property: opacity; transition-duration: 0.26s; }
+.bug-report__toast--fading { opacity: 0; }
 .bug-report__hidden { display: none; }

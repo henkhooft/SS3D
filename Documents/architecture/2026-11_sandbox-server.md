@@ -1,8 +1,8 @@
 > Implements: Documents/design/sandbox-server.md §2–§7; Documents/design/lobby.md §7 (self-starting round); Documents/design/death-cloning-respawn.md §6 (respawn setting)
-> Touches systems: rounds-lobby, map-editor-creative-hooks (tile), entities, networking-session, persistence
+> Touches systems: rounds-lobby, map-editor-creative-hooks (tile), entities, networking-session, persistence, ui-shell, inputs
 > Status: in-progress
 
-**Progress:** P1–P4 built and pilot-tested in the editor (`Run Sandbox Pilot`); P5's server-build half (heartbeat, exit after N rounds) is in, hosting files and the TomNAS deploy are not; P6 waits on session data. Advances [test-server.md](../milestones/test-server.md) T7.
+**Progress:** P1–P4 built and pilot-tested in the editor (`Run Sandbox Pilot`), plus the bug report dialog (below); P5's server-build half (heartbeat, exit after N rounds) is in, hosting files and the TomNAS deploy are not; P6 waits on session data. Advances [test-server.md](../milestones/test-server.md) T7.
 
 # Sandbox server (Nov 2026)
 
@@ -107,6 +107,7 @@ Where the built code differs from the plan above, or adds to it:
 - **Leaks fixed on the way** (found by the pilot's reset checks): corpses left `_spawnedPlayers` at death and survived every reset; every spawn's `Mind` was never despawned (+1 NetworkObject per player per round). Death also logged a `SetFirstObject` error (`SwapMinds` on the corpse's invalid owner) and a refused `InteractionController` removal (now disabled instead).
 - **Files**: `reset-health.jsonl` and `bugs.jsonl` sit in `Data/ServerMeta/` next to `round-history.jsonl`. `/bug` is intercepted in the server's OOC handler (lobby/Escape chat) and forwarded from the in-round compose box.
 - **P5 server half**: `-heartbeat-file=<path>` (main-thread timestamp every 5 s) and `-exit-after-rounds=<N>` (`ServerLifetimeOptions`).
+- **Bug report dialog** ([sandbox-server.md](../design/sandbox-server.md) §7, revised 2026-11-01; built on top of Decision 12): F8 (`InputSubSystem.OpenBugReport`), a bare `/bug`, or **Report a bug (F8)** in the lobby/Escape menu opens it. A client sends the report to the server, which appends it to `bugs.jsonl` with `source: "dialog"` and saves the reduced screenshot to `ServerMeta/bug-screenshots/`. An own host saves a zip in `Data/Exports/` instead (report, logs, full screenshot, optional current map via `PersistenceSubSystem.CaptureStationTemplateJson`). One report per ckey per minute, shared with `/bug <note>`; the chat confirmation now names the round. `RoundId` became a SyncVar and the dialog adds broadcasts, so `ProtocolVersion` went to 8. "Map ships with the game" is a hard-coded list (`ministation`, `Metastation v2`) in `BugReportSubSystem`. The sandbox pilot runs the local-bundle path; the graphical remote pilot sends a report over the network, checks the server-attributed record and reduced JPEG, and checks cooldown on reopening.
 - **Open finding**: plain GameObjects grow by about 8 per reset in the editor Host (336 → 344) while NetworkObjects stay flat. Watch it in `reset-health.jsonl` on the real server before calling it a leak.
 
 ## Parked

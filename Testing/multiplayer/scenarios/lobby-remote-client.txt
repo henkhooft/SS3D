@@ -32,6 +32,33 @@ ui_text .lobby-shell__btn--ready ✓
 ui_text .lobby-shell__countdown 1/2 ready
 screenshot remote-02-ready
 
+# File a report through the real dialog and broadcast transport. The host verifies the JSONL
+# metadata and reduced JPEG. Reopening during cooldown keeps the new draft and disables Send.
+os_click #lobby-report-bug
+ui_wait #window visible
+ui_text #submit SEND REPORT
+os_click #summary
+os_type remote pilot bug report
+os_click #details
+os_type reproduced from the remote client with real keyboard input.
+# OS requests are serviced asynchronously; allow both strings to finish before the screenshot.
+wait_seconds 6
+screenshot remote-bug-report-dialog
+os_click #submit
+ui_wait #window hidden
+ui_text #toast-text Bug report saved (round 0). Thanks!
+screenshot remote-bug-report-sent
+os_click #lobby-report-bug
+ui_wait #window visible
+os_click #summary
+os_type keep this draft during cooldown
+ui_wait #submit disabled
+ui_text #rate-limit You can send another report in
+wait_seconds 3
+screenshot remote-bug-report-cooldown
+os_click #cancel
+ui_wait #window hidden
+
 # Keyboard focus: click into the chat composer, type, send with Return (the host checks client.log).
 os_click #tab-chat
 os_click .lobby-shell__chat-input

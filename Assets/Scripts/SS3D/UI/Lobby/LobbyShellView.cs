@@ -94,6 +94,9 @@ namespace SS3D.UI.Lobby
         public event Action CharacterCreatorRequested;
         public event Action ReadyRequested;
         public event Action QuitRequested;
+
+        /// <summary>"Report a bug": the host opens the bug report dialog (<c>sandbox-server.md</c> §7).</summary>
+        public event Action BugReportRequested;
         public event Action<bool> RoundChangeRequested;
         public event Action JobPreferencesChanged;
         public event Action<OocChannel, string> ChatSubmitted;
@@ -555,6 +558,16 @@ namespace SS3D.UI.Lobby
             row.Add(_adminButton);
 
             actions.Add(row);
+
+            Button report = new(() => BugReportRequested?.Invoke())
+            {
+                name = "lobby-report-bug",
+                text = "REPORT A BUG (F8)",
+            };
+            report.AddToClassList("lobby-shell__btn");
+            report.AddToClassList("lobby-shell__btn--report");
+            report.AddToClassList("font-titling");
+            actions.Add(report);
             actions.Add(BuildQuitButton());
             sidebar.Add(actions);
             return sidebar;

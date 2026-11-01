@@ -137,6 +137,7 @@ namespace SS3D.UI.Lobby
             _shellView.CharacterCreatorRequested += HandleCharacterCreatorRequested;
             _shellView.ReadyRequested += HandleReadyRequested;
             _shellView.QuitRequested += HandleQuitRequested;
+            _shellView.BugReportRequested += HandleBugReportRequested;
             _shellView.RoundChangeRequested += HandleRoundChangeRequested;
             _shellView.ServerSettingsChanged += (field, settings) =>
             {
@@ -367,6 +368,22 @@ namespace SS3D.UI.Lobby
             _inputSystem = input;
             _toggleMenuAction = input != null ? input.Inputs?.Other.ToggleMenu : null;
             if (_toggleMenuAction != null) _toggleMenuAction.performed += HandleToggleMenu;
+        }
+
+        /// <summary>
+        /// Closes the Escape menu first so the report's screenshot shows the round, not the menu; between
+        /// rounds the lobby is what the player sees, so it stays.
+        /// </summary>
+        private void HandleBugReportRequested()
+        {
+            if (_spawned && _menuOpen)
+            {
+                _menuOpen = false;
+                _nextSessionRefresh = 0f;
+                RefreshSession();
+            }
+
+            SS3D.Systems.BugReports.BugReportRequests.RequestOpen();
         }
 
         private void HandleToggleMenu(InputAction.CallbackContext context)
