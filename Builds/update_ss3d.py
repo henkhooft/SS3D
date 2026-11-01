@@ -19,8 +19,10 @@ import zipfile
 
 API = "https://api.github.com/repos/henkhooft/SS3D/releases"
 TAG = re.compile(r"v([0-9]+)\.([0-9]+)\.([0-9]+)\Z")
+# update_ss3d.py replaces itself so updater fixes reach existing installs; Python has already
+# read it. update_ss3d.sh is only a launcher and stays as is.
 MANAGED = ("Game", "start_ss3d_host.sh", "start_ss3d_client.sh", "README.txt",
-           "TESTERS.md", ".ss3d-release.json")
+           "TESTERS.md", "update_ss3d.py", ".ss3d-release.json")
 
 
 def version(tag):
@@ -103,7 +105,7 @@ def expand_release(archive_path, destination, tag):
     required = ("Game/SS3D-Client", "Game/UnityPlayer.so", "Game/SS3D-Client_Data/globalgamemanagers",
                 "Game/Config/permissions.txt", "Game/Config/network.json",
                 "Game/Data/StationTemplates/ministation.json", "start_ss3d_host.sh",
-                "start_ss3d_client.sh", "README.txt", "TESTERS.md")
+                "start_ss3d_client.sh", "README.txt", "TESTERS.md", "update_ss3d.py")
     for name in required:
         if not (root / name).is_file():
             raise RuntimeError(f"Incomplete Linux client release: missing {name}")
@@ -176,6 +178,16 @@ def install_release(root, new, backup):
         raise
 
 
+def prune_backups(backups, keep):
+    """Keep only the backup just made (the previous version); older ones add up to GBs."""
+    removed = 0
+    for path in backups.iterdir():
+        if path != keep and path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path, ignore_errors=True)
+            removed += not path.exists()
+    return removed
+
+
 def update(root, check_only=False):
     root = root.resolve()
     if not any((root / "Game" / name).is_file() for name in ("SS3D-Client", "SS3D.x86_64")):
@@ -226,8 +238,11 @@ def update(root, check_only=False):
             swap_started = True
             install_release(root, new, backup)
             complete = True
+            removed = prune_backups(backup.parent, backup)
             print(f"Updated to {tag}. Use your usual Host or Client script in this folder.")
             print(f"Previous installation: {backup}")
+            if removed:
+                print(f"Removed {removed} older backup(s); only the previous installation is kept.")
             print("To roll back, close SS3D and run the Host or Client script inside that backup folder.")
         finally:
             if stage is not None and (not swap_started or complete):

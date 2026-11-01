@@ -52,7 +52,7 @@ try {
     $new = Join-Path $payload 'SS3D-Windows-v0.3.0'
     foreach ($name in @('Game/SS3D.exe', 'Game/UnityPlayer.dll', 'Game/SS3D_Data/globalgamemanagers',
         'Game/Config/permissions.txt', 'Game/Config/network.json', 'Start_SS3D_Host.bat',
-        'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md', 'Game/Data/StationTemplates/ministation.json',
+        'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md', 'Update_SS3D.ps1', 'Game/Data/StationTemplates/ministation.json',
         'Game/Data/StationTemplates/edited.json')) { Write-Fixture $new $name 'new release' }
     $script:zip = Join-Path $testRoot 'release.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($payload, $script:zip)
@@ -79,7 +79,7 @@ try {
 
     $install = Join-Path $testRoot 'installation with spaces'
     foreach ($name in @('Game/SS3D.exe', 'Start_SS3D_Host.bat', 'Start_SS3D_Client.bat', 'README.txt', 'TESTERS.md',
-        'Game/Data/StationTemplates/ministation.json', 'Game/Data/StationTemplates/edited.json',
+        'Update_SS3D.ps1', 'Update_SS3D.bat', 'Game/Data/StationTemplates/ministation.json', 'Game/Data/StationTemplates/edited.json',
         'Game/Data/StationTemplates/my station.json', 'Game/Data/Exports/map.zip', 'Game/Data/ServerMeta/permissions.json',
         'Game/Logs/player.log', 'Game/Config/network.json')) { Write-Fixture $install $name 'local data' }
     $hash = (Get-FileHash (Join-Path $install 'Game/Data/StationTemplates/ministation.json')).Hash
@@ -120,8 +120,14 @@ try {
     Assert ((Read-Fixture $install 'README.txt') -eq 'local data') 'Swap failure restores launch files'
     Assert ((Get-Content (Join-Path $install '.ss3d-release.json') -Raw | ConvertFrom-Json).tag -eq 'v0.2.0') 'Swap failure restores version'
 
+    foreach ($old in @('20260101-000000-aaaaaaaa', '20260201-000000-bbbbbbbb')) {
+        Write-Fixture (Join-Path $install ".ss3d-backups/$old") 'Game/SS3D.exe' 'older install'
+    }
     Update-SS3D $install
     Assert ((Read-Fixture $install 'Game/SS3D.exe') -eq 'new release') 'Installs game'
+    Assert ((Read-Fixture $install 'Update_SS3D.ps1') -eq 'new release') 'Updater script replaces itself'
+    Assert ((Read-Fixture $install 'Update_SS3D.bat') -eq 'local data') 'Running batch launcher is left alone'
+    Assert (@(Get-ChildItem (Join-Path $install '.ss3d-backups') -Directory).Count -eq 1) 'Only the previous installation is kept'
     Assert ((Read-Fixture $install 'Game/Data/StationTemplates/ministation.json') -eq 'new release') 'Refreshes unchanged shipped map'
     foreach ($name in @('Game/Data/StationTemplates/edited.json', 'Game/Data/StationTemplates/my station.json',
         'Game/Data/Exports/map.zip', 'Game/Data/ServerMeta/permissions.json', 'Game/Logs/player.log', 'Game/Config/network.json')) {
@@ -132,6 +138,7 @@ try {
     Assert ($backups.Count -eq 1) 'Keeps a complete runnable backup'
     Assert ((Read-Fixture $backups[0].FullName 'Game/SS3D.exe') -eq 'local data') 'Backup contains old build'
     Assert ((Read-Fixture $backups[0].FullName 'Start_SS3D_Host.bat') -eq 'local data') 'Backup contains matching launcher'
+    Assert ((Read-Fixture $backups[0].FullName 'Update_SS3D.ps1') -eq 'local data') 'Backup contains matching updater'
     $count = $script:downloads
     Update-SS3D $install
     Assert ($script:downloads -eq $count) 'Same version does not download again'
@@ -158,5 +165,5 @@ try {
     $null = $archive.CreateEntry('SS3D-Windows-v0.3.0/Game/SS3D.exe')
     $archive.Dispose()
     Expect-Failure { Expand-SS3DRelease $incomplete (Join-Path $testRoot 'incomplete-extract') 'v0.3.0' } 'Incomplete'
-    Write-Host 'PASS: stable release selection/promotion, check-only, process/lock refusal, download/hash/asset failures, swap rollback, data preservation, backups, repeat update, no downgrade, legacy update, unsafe/incomplete archives.'
+    Write-Host 'PASS: stable release selection/promotion, check-only, process/lock refusal, download/hash/asset failures, swap rollback, data preservation, self-update, n-1 backup retention, repeat update, no downgrade, legacy update, unsafe/incomplete archives.'
 } finally { Remove-Item -LiteralPath $testRoot -Recurse -Force }

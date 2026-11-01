@@ -10,9 +10,9 @@ Unmodified bundled maps refresh using hashes recorded in `.ss3d-release.json`; o
 without metadata conservatively keep all existing maps, including collisions with bundled maps.
 
 Only **published, non-prerelease `vMAJOR.MINOR.PATCH` releases** are selected, by highest version.
-Drafts, prereleases and nightlies never reach this channel. CI still creates prereleases: test
-one manually, then promote it in GitHub by clearing its prerelease flag. The updater will then
-offer that exact build. A newer installed version is never automatically downgraded.
+Drafts, prereleases and nightlies never reach this channel. CI publishes numbered releases as
+stable (0.x included), so the updater offers them as soon as the release job finishes; nightlies
+and `develop-<suffix>` cuts stay prereleases. A newer installed version is never automatically downgraded.
 
 The script locks out concurrent updates, refuses while any SS3D process is running, verifies
 GitHub's SHA-256 asset digest, validates archive paths and required player files, and stages
@@ -22,8 +22,11 @@ There is no dependency on Git, Unity, a hosted server, or an administrator accou
 
 Each successful update keeps the previous complete installation in `.ss3d-backups/<id>/`.
 To roll back, close the game and run the Host/Client script in that backup; it contains the
-local data from before the update. Later changes remain in the newer installation. Backups
-are never pruned automatically. The updater files themselves stay as a stable bootstrap.
+local data from before the update. Later changes remain in the newer installation. Only that
+previous installation (n-1) is kept: older backups are deleted after a successful update.
+`Update_SS3D.ps1` is replaced along with the game (PowerShell has already read it), so updater
+fixes reach existing installs. `Update_SS3D.bat` is never replaced: cmd reads a running batch
+file line by line.
 
 Regression coverage: `pwsh -NoProfile -File Tools/updater/test-update.ps1` (or `powershell`
 on Windows). All fixtures and simulated downloads are temporary; no real game is launched.
@@ -39,7 +42,7 @@ installing. Requires Python 3 and its standard library only. No sudo or system c
 The updater shares the Windows contract above: stable numbered releases only, verified
 downloads, preserved local data, refreshed unchanged bundled maps and runnable backups.
 It also restores executable permissions on the player, native helpers and launch scripts.
-Both updater files remain a stable bootstrap and are not replaced while running.
+`update_ss3d.py` updates itself like the PowerShell script; the `update_ss3d.sh` launcher stays.
 
 Use `python3 -B Tools/updater/test_update_linux.py` for isolated regression tests. Fixtures
 and mocked downloads live in temporary directories; no real game runs. Both the PR updater
@@ -49,10 +52,9 @@ required to ship the helper and map-hash manifest only in the client zip, not th
 For manual release acceptance, update a disposable older Linux client extraction with a custom
 map, export and config change; confirm those survive, the new client launches, a repeat update
 does nothing, and the backup's launch script starts the old build. Native game launch remains
-a manual check. Before the first stable release, "No stable numbered release is available"
-is expected. Publish Linux assets with `build_linux=true` before promoting a prerelease:
-the updater refuses a stable release without its matching Linux client zip rather than
-silently falling back to a different version.
+a manual check. Numbered releases always build Linux (the release workflow forces
+`build_linux`), because the updater refuses a stable release without its matching Linux
+client zip rather than silently falling back to a different version.
 
 ## Separate bootstrap launchers
 
