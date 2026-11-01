@@ -141,8 +141,11 @@ rm -f "$RUN_DIR/server/Data/ServerMeta/permissions.json" \
     "$RUN_DIR/server/Data/ServerMeta/permissions"
 mkdir -p "$RUN_DIR/server/Config"
 : > "$RUN_DIR/server/Config/permissions.txt"
+# Dedicated servers only admit admin names with a matching -token (AdminTokens).
+: > "$RUN_DIR/server/Config/admin-tokens.txt"
 for ckey in "${CLIENT_CKEYS[@]}"; do
     echo "${ckey} Administrator" >> "$RUN_DIR/server/Config/permissions.txt"
+    echo "${ckey} smoke-${ckey}" >> "$RUN_DIR/server/Config/admin-tokens.txt"
 done
 
 PORT="$(alloc_port)"
@@ -179,7 +182,7 @@ for ((i = 0; i < CLIENT_COUNT; i++)); do
 
     echo "Starting client $i (ckey=$ckey)..."
     spawn_process "$workdir" "$workdir/$CLIENT_BIN_NAME" "$unity_log" \
-        -batchmode -nographics -ip=127.0.0.1 -port="$PORT" -ckey="$ckey" -skipintro -testscript="${CLIENT_SCRIPTS[$i]}"
+        -batchmode -nographics -ip=127.0.0.1 -port="$PORT" -ckey="$ckey" -token="smoke-${ckey}" -skipintro -testscript="${CLIENT_SCRIPTS[$i]}"
 
     CLIENT_PIDS+=("$(last_tracked_pid)")
     CLIENT_JSON_LOGS+=("$json_log")

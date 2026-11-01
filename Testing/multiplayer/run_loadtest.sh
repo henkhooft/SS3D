@@ -120,10 +120,13 @@ rm -f "$RUN_DIR/server/Data/ServerMeta/permissions.json" \
     "$RUN_DIR/server/Data/ServerMeta/permissions"
 mkdir -p "$RUN_DIR/server/Config"
 : > "$RUN_DIR/server/Config/permissions.txt"
+# Dedicated servers only admit admin names with a matching -token (AdminTokens).
+: > "$RUN_DIR/server/Config/admin-tokens.txt"
 for ((i = 0; i < CLIENTS; i++)); do
     ckey="load_${RUN_ID}_${i}"
     CLIENT_CKEYS+=("$ckey")
     echo "$ckey Administrator" >> "$RUN_DIR/server/Config/permissions.txt"
+    echo "$ckey token-$ckey" >> "$RUN_DIR/server/Config/admin-tokens.txt"
 done
 
 sed "s/__DURATION__/$((DURATION + 60))/g" "$SERVER_SRC" > "$RUN_DIR/server-script.txt"
@@ -154,7 +157,7 @@ for ((i = 0; i < CLIENTS; i++)); do
     CLIENT_JSON_LOGS+=("$json_log")
     spawn_process "$workdir" "$workdir/$CLIENT_BIN_NAME" "$unity_log" \
         -batchmode -nographics -ip=127.0.0.1 -port="$PORT" -ckey="$ckey" \
-        -skipintro -testscript="$script"
+        -token="token-$ckey" -skipintro -testscript="$script"
     CLIENT_PIDS+=("$(last_tracked_pid)")
     if ((STAGGER > 0 && i < CLIENTS - 1)); then
         sleep "$STAGGER"

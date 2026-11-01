@@ -47,44 +47,45 @@ namespace SS3D.Systems.Tile.MapEditor.Commands
 
         public void ClearHistory() => _undoStack.Clear();
 
-        public bool Execute(IMapEditorCommand command)
+        /// <param name="owner">Client that made the edit; see <see cref="MapEditorUndoStack.TryUndo"/>.</param>
+        public bool Execute(IMapEditorCommand command, int owner = MapEditorUndoStack.AnyOwner)
         {
             if (_context == null)
                 return false;
 
             _context.PlacementMode = _placementMode;
             command.Apply(_context);
-            _undoStack.Push(command);
+            _undoStack.Push(command, owner);
             return true;
         }
 
-        public bool ExecuteCompound(IReadOnlyList<IMapEditorCommand> commands)
+        public bool ExecuteCompound(IReadOnlyList<IMapEditorCommand> commands, int owner = MapEditorUndoStack.AnyOwner)
         {
             if (commands == null || commands.Count == 0)
                 return false;
 
             if (commands.Count == 1)
-                return Execute(commands[0]);
+                return Execute(commands[0], owner);
 
-            return Execute(new CompoundCommand(System.Array.ConvertAll(commands.ToArray(), c => c)));
+            return Execute(new CompoundCommand(System.Array.ConvertAll(commands.ToArray(), c => c)), owner);
         }
 
-        public bool Undo()
+        public bool Undo(int actor = MapEditorUndoStack.AnyOwner)
         {
             if (_context == null)
                 return false;
 
             _context.PlacementMode = _placementMode;
-            return _undoStack.TryUndo(_context);
+            return _undoStack.TryUndo(_context, actor);
         }
 
-        public bool Redo()
+        public bool Redo(int actor = MapEditorUndoStack.AnyOwner)
         {
             if (_context == null)
                 return false;
 
             _context.PlacementMode = _placementMode;
-            return _undoStack.TryRedo(_context);
+            return _undoStack.TryRedo(_context, actor);
         }
 
         public static IMapEditorCommand FromPlacement(string assetName, Vector3 position, Direction direction, bool replaceExisting, bool isItem)

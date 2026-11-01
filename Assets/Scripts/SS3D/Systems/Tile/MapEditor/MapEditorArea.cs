@@ -83,7 +83,7 @@ namespace SS3D.Systems.Tile.MapEditor
             }
             EnsureCommandServiceBound();
             if (!_commandService.Execute(new EditAreaPropertiesCommand(areas, room,
-                    roomName.Trim(), department.Trim(), access)))
+                    roomName.Trim(), department.Trim(), access), conn.ClientId))
                 return;
             TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetToast(conn, "Room properties applied. Save the map to keep them.");

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SS3D.Core.Behaviours;
+using SS3D.Core.Settings;
 
 namespace SS3D.CommandLine
 {
@@ -91,6 +92,11 @@ namespace SS3D.CommandLine
                 string ckey = arg.Replace(CommandLineArgs.Ckey, "");
 
                 _networkSettings.Ckey = ckey;
+            }
+
+            if (arg.StartsWith(CommandLineArgs.AccessToken, StringComparison.Ordinal))
+            {
+                LocalPlayer.UpdateAccessToken(arg.Substring(CommandLineArgs.AccessToken.Length));
             }
 
             if (arg.Contains(CommandLineArgs.Port))

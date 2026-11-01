@@ -26,6 +26,29 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
+        public void SandboxPlayer_CanOnlyUndoTheirOwnNewestEdit()
+        {
+            MapEditorUndoStack stack = new();
+            stack.Push(EmptyCommand(), owner: 1);
+            stack.Push(EmptyCommand(), owner: 2);
+
+            Assert.IsFalse(stack.TryUndo(null, actor: 1), "player 1 must not undo player 2's newer edit");
+            Assert.AreEqual(2, stack.UndoDepth);
+            Assert.IsTrue(stack.TryUndo(null, actor: 2));
+            Assert.IsFalse(stack.TryRedo(null, actor: 1));
+            Assert.IsTrue(stack.TryUndo(null, actor: 1));
+            Assert.IsTrue(stack.TryUndo(null) == false && stack.UndoDepth == 0);
+        }
+
+        [Test]
+        public void Admin_UndoesAnyEdit()
+        {
+            MapEditorUndoStack stack = new();
+            stack.Push(EmptyCommand(), owner: 7);
+            Assert.IsTrue(stack.TryUndo(null, MapEditorUndoStack.AnyOwner));
+        }
+
+        [Test]
         public void SavePoint_UndoAndRedoReturnToSavedState()
         {
             MapEditorUndoStack stack = new();
