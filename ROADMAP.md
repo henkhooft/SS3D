@@ -53,7 +53,7 @@ What already works, system by system, is listed in
 | ✅ | A4 | Switching between editing and playing doesn't lose your work |
 | 🟡 | A5 | Easy to find, share and hand in your map files, with a testers' guide in the download (export, import and the guide are in; release check pending) |
 | ⬜ | A6 | A tester builds the Nuke Ops station from the download using only the guide, and it becomes the official test map |
-| 🟡 | A7 | Close the game and run Update_SS3D.bat to get the latest stable release without losing maps; the previous build stays available |
+| 🟡 | A7 | Close the game and run Update_SS3D.bat (Windows) or ./update_ss3d.sh (Linux) to get the latest stable release without losing maps; the previous build stays available |
 
 ## Nuclear Operatives round
 

@@ -15,6 +15,8 @@ On Windows, close the game and run **`Update_SS3D.bat`** regularly for the lates
 release (prereleases and nightlies are ignored). Your maps and local data are preserved; the previous
 installation is kept in `.ss3d-backups/`. Keep both updater files beside the launch scripts.
 Use the same launch scripts after updating. See `README.txt` for rollback instructions.
+On Linux, use **`./update_ss3d.sh`** instead (requires Python 3; keep `update_ss3d.py`
+beside it). It follows the same stable channel and preserves the same local data.
 
 ## 2. Build
 

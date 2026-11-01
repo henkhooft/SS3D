@@ -31,6 +31,29 @@ on Windows). All fixtures and simulated downloads are temporary; no real game is
 the release workflow also gates publication on these tests. A real Windows download/update
 and backup launch still need a manual check before announcing the first release.
 
+## Update an extracted Linux client release
+
+Linux client zips ship `update_ss3d.sh` and `update_ss3d.py` beside the launch scripts.
+Close all Linux clients, then run `./update_ss3d.sh`; use `--check-only` to check without
+installing. Requires Python 3 and its standard library only. No sudo or system changes.
+The updater shares the Windows contract above: stable numbered releases only, verified
+downloads, preserved local data, refreshed unchanged bundled maps and runnable backups.
+It also restores executable permissions on the player, native helpers and launch scripts.
+Both updater files remain a stable bootstrap and are not replaced while running.
+
+Use `python3 -B Tools/updater/test_update_linux.py` for isolated regression tests. Fixtures
+and mocked downloads live in temporary directories; no real game runs. Both the PR updater
+workflow and the release publication gate run this suite on Linux. Release packaging is also
+required to ship the helper and map-hash manifest only in the client zip, not the server zip.
+
+For manual release acceptance, update a disposable older Linux client extraction with a custom
+map, export and config change; confirm those survive, the new client launches, a repeat update
+does nothing, and the backup's launch script starts the old build. Native game launch remains
+a manual check. Before the first stable release, "No stable numbered release is available"
+is expected. Publish Linux assets with `build_linux=true` before promoting a prerelease:
+the updater refuses a stable release without its matching Linux client zip rather than
+silently falling back to a different version.
+
 ## Separate bootstrap launchers
 
 Bootstrap launchers that download and run the newest **stable `v*`** release. They do not

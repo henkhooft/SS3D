@@ -22,7 +22,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 - **A2 shipped** — Scripts → Rooms: painting, metadata, shared toolbar, undo/persistence and APC-facing membership; owner manually accepted in the editor
 - **A2.5** — Internal dogfood build of the Nuke Ops station before testers see it
 - **A3 partial** — Map validation and save warnings implemented; Unity validation/render review pending
-- **A7 partial** — Windows stable-release updater implemented; packaged Windows update and backup launch check pending before public announcement
+- **A7 partial** — Windows/Linux client stable-release updaters implemented; packaged update and backup launch checks pending before public announcement
 
 **Active gameplay gate** — [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (M1 combat + M2 structural/blast API + client atmos VFX Phase 1 + equal-P turf diffusion shipped):
 

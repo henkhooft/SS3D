@@ -42,7 +42,17 @@ LINUX CLIENT (SS3D-Linux-Client-<version>.zip)
 
   ./start_ss3d_host.sh                         host a game on this machine
   ./start_ss3d_client.sh <server ip> [port] [name]
+  ./update_ss3d.sh                            update this folder to the latest stable release
   Game/SS3D-Client                             run on its own to get the launcher
+
+  Close all Linux client windows before running ./update_ss3d.sh. Requires Python 3;
+  keep update_ss3d.py beside the shell script. ./update_ss3d.sh --check-only checks
+  without downloading or installing. Prereleases and nightlies are ignored.
+  Local data preservation, SHA-256 verification and .ss3d-backups rollback work as on
+  Windows above. Run the host/client script inside a backup to use the previous build
+  with its pre-update data. The updater never starts or stops a game process.
+  A stable release must include its Linux client zip; otherwise updating fails safely.
+  No sudo, Unity, Git, curl, jq, or extra Python packages are needed.
 
 LINUX DEDICATED SERVER (SS3D-Linux-Server-<version>.zip)
 

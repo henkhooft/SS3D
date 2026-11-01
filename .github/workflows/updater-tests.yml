@@ -1,13 +1,27 @@
-name: Windows updater tests
+name: Client updater tests
 on:
   pull_request:
     paths:
       - 'Builds/Update_SS3D.*'
+      - 'Builds/update_ss3d.*'
       - 'Tools/updater/test-update.ps1'
+      - 'Tools/updater/test_update_linux.py'
       - '.github/workflows/updater-tests.yml'
       - '.github/workflows/develop-release.yml'
   workflow_dispatch:
 jobs:
+  linux-updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          sparse-checkout: |
+            Builds
+            Tools/updater
+      - name: Exercise Linux updater without network or a real game
+        run: python3 -B Tools/updater/test_update_linux.py
+
   updater:
     runs-on: windows-latest
     steps:

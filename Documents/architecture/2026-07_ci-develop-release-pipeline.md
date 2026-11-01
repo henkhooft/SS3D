@@ -64,7 +64,8 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime) or
    `StationTemplates/Metastation v2.json` (broken; kept in git only for the multiplayer loadtest).
    Linux zips use the same shape when Linux was built: `SS3D-Linux-Client-<tag>/` holds
-   `start_ss3d_client.sh`, `start_ss3d_host.sh`, `README.txt` and `Game/` (binary `SS3D-Client`);
+   `start_ss3d_client.sh`, `start_ss3d_host.sh`, `update_ss3d.sh`, `update_ss3d.py`,
+   `.ss3d-release.json`, `TESTERS.md`, `README.txt` and `Game/` (binary `SS3D-Client`);
    `SS3D-Linux-Server-<tag>/` holds `start_ss3d_server.sh` and `GameServer/` (`SS3D-Server`).
    `*_BurstDebugInformation_DoNotShip` is stripped from every zip. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
    (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.
@@ -95,6 +96,29 @@ original; an interrupted swap or failed restore leaves staging/backup files for 
 network dependency. `.github/workflows/updater-tests.yml` checks relevant PRs on Windows
 PowerShell 5.1; `develop-release.yml` also requires that test job before publishing. Native
 Windows download/update and backup launch are still required in first-release dogfood.
+
+### Linux client release updates
+
+`Builds/update_ss3d.sh` invokes the adjacent Python 3 standard-library helper,
+`update_ss3d.py`. It follows the same stable-only selection, map-hash metadata, local-data
+preservation and `.ss3d-backups/` rollback contract as Windows. Both bootstrap files remain
+in place during updates. Linux uses `flock` for the installation lock and reads `/proc/*/comm`
+before downloading and before swapping to refuse running `SS3D-Client` / `SS3D.x86_64`
+processes; it never signals or launches them. It rejects archive symlinks/special files and
+path traversal, refuses links in local data, preserves native helper execute bits and ensures
+the player and launch scripts are executable. Caught swap failures (including Ctrl+C) restore
+the old installation; interrupted/failed restoration retains staging and backup directories.
+
+Only Linux **client** zips include the updater and metadata. A stable release without its
+matching Linux client asset is refused safely. Enable `build_linux=true` when cutting a
+candidate intended for Linux users, then test and promote that same release. The dedicated
+server remains manually deployed, as before.
+
+`python3 -B Tools/updater/test_update_linux.py` covers stable selection/promotion and pagination,
+download/hash/asset refusal, process and concurrent-update refusal, data preservation, native
+permissions, rollback and unsafe archives using temporary fixtures. Both updater CI workflows
+gate publication on this suite. A packaged update followed by real client/backup launch remains
+a manual release check.
 
 ### Related workflow changes
 
