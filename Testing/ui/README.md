@@ -107,17 +107,17 @@ entry should say why it fails.
 
 ## Evidence and scope
 
-Each run writes `artifacts/ui/<UTC timestamp>/status.json` and fourteen PNGs: eight player-view captures (Server Info, Jobs, Chat, Players,
-Display, Sound, muted Sound, Keyboard), plus lobby, identity, body/side, style,
-review and saved lobby. Captures use a fixed 1920×1080 Game
-View preset. The selected Game View size and Play Mode start scene are restored
-after the run; Boot/Game assets are not edited. The pilot asserts the legacy uGUI lobby canvas (purged in Phase F) is absent. Other startup/game UI can still appear.
+Each visual run writes `artifacts/ui/<UTC timestamp>/status.json` and PNGs for the shell,
+settings and Character Creator. Captures use a fixed 1920×1080 Game View preset. The selected
+Game View size and Play Mode start scene are restored afterwards; Boot/Game assets are not edited.
+The pilot checks that legacy lobby canvases are absent. Other startup/game UI can still appear.
 
 The pilot opens the real lobby and creator, changes name and body sliders, rotates
 the preview, navigates steps, saves, and returns. It checks visibility, control
 presence, preview texture binding, angle label, saved name, updated dropdown/footer behavior, Saved confirmation,
 local character switching and New Character reset. It fails on captured
-Error/Exception/Assert logs. It does not claim that a bound RenderTexture contains
+Error/Exception/Assert logs. Fix the cause of a captured error; never allowlist one to
+turn the report green. It does not claim that a bound RenderTexture contains
 the correct model; inspect the PNGs too.
 
 This is a **rendered smoke test**, not a visual golden-image test: animations and
@@ -127,129 +127,20 @@ arbitration, multiplayer synchronization, or layout at other resolutions. Initia
 startup messages before the EnteredPlayMode callback and teardown after the report
 are outside its error collection window; consult `artifacts/ui/editor.log` too.
 
-## First verified baseline — 2026-10-27
+## Lobby lifecycle pilot
 
-Run `20261027-134342-128`: 18 assertions passed, six 1920×1080 screenshots captured
-and visually inspected. Overall result **failed**, correctly, on three existing
-preview stripping errors:
+**SS3D → Testing → Run Lobby Lifecycle Pilot** boots a single editor Host and exercises
+ready/unready, start/spawn/stop/return, latejoin, local disconnect/reconnect, character persistence
+and appearance, player/server settings, map validation, and unsaved-map Stop/autosave choices.
+Reports and screenshots live under `artifacts/ui/lifecycle-<UTC>/`; failures name the step and
+session state. The pilot uses temporary map copies and restores edited server metadata.
 
-- `InteractionController` required by `CombatInteractionNetwork`.
-- `Human` required by `LocalSpeechEmitter`.
-- `HumanoidBodyStateMachine` required by movement/combat/body bridge components.
+Buttons use synthetic `NavigationSubmitEvent`; these checks do not prove OS input or a separate
+client process. The [rounds/lobby map](../../Documents/architecture/systems/rounds-lobby.md) describes
+current contracts and test coverage. Boot leaves the station unloaded; Start restores the selected
+saved template. No current pass is implied by this runbook—use the report for the checkout tested.
 
-These originate in `CharacterPreviewBooth.StripNetworking` when opening the creator.
-Do not allowlist them to make the test green. Visual review also found the Front
-view showing the dummy's back, other UI/background content behind the lobby, and
-raw hair catalog identifiers wrapping across lines. No gameplay/UI redesign fixes
-are bundled into the tooling setup.
-
-## Preview fix verification — 2026-10-30
-
-Run `20261030-130709-268`: **passed**, all 18 assertions, zero captured errors,
-six 1920×1080 screenshots. Preview stripping now removes combat/speech/movement
-and body-bridge dependents before the generic network-component pass. Front uses
-base yaw 0° toward the +Z camera; Front and Side screenshots were inspected.
-Background/overlapping UI and raw hair identifiers remain follow-up work. After
-the report, editor teardown logged an unrelated `TileMap` `MissingReferenceException`
-in `TileSubSystem.WaitForResourcesLoad`; teardown is outside the pilot collection window.
-
-## Updated creator verification — 2026-10-30
-
-Run `20261030-133826-904`: **passed**, 40 assertions, zero captured errors and
-six 1920×1080 PNGs. Identity, Body, Style and Review were visually reviewed during
-the refresh; final captures confirm the red slider fill and clean catalog labels.
-The pilot additionally checks the Species dropdown, absence of Uniform Color,
-one footer Save action, Saved confirmation, local character switching, new-draft
-reset, and restoration of saved name/body values. See the
-[lobby effort](../../Documents/architecture/2026-08_lobby-uitk-redesign.md#2026-10-30-character-creator-refresh)
-for the source reference and agreed body-control exception.
-
-The pilot refuses to start while scripts are compiling or compilation has failed,
-and restores editor settings left by a prior compiler-blocked Play request before
-retrying. Real pointer/keyboard input, other resolutions, and multiplayer remain
-outside this fixed-resolution smoke test.
-
-## Style palette relocation — 2026-10-30
-
-Run `20261030-134939-028`: **passed**, 60 assertions, zero captured errors,
-six 1920×1080 PNGs. Hair Color is absent from Body and sits below the Style tiles.
-Hair, Facial Hair and Eyebrows show their own labelled palettes with independent
-saved selections. The pilot changes all three colors and checks restoration after
-character switching; the Style screenshot was visually reviewed. Hair and beard
-use separate live tints; eyebrow rendering remains deferred.
-
-## Player View fidelity pass — 2026-10-30
-
-Run `20261030-140336-222`: **passed**, 84 assertions, zero captured errors,
-14 screenshots at 1920×1080. Player tabs and Settings were visually reviewed.
-Coverage now checks the 1180px maximum shell / 280px sidebar, player-tab surfaces,
-three underlined Settings subtabs, resolution/fullscreen and display sliders,
-volume readouts, mute disabling/re-enabling sliders, eight key-binding buttons,
-local next-key capture, retained values, and the existing creator flow.
-
-Settings changes and keyboard capture affect session-local UI state only: they do
-not change the editor/Game View resolution, fullscreen, game audio, rendering or
-Input System actions. Prototype keyboard labels do not claim to be the fork's
-actual default bindings. See the [effort scope](../../Documents/architecture/2026-08_lobby-uitk-redesign.md#2026-10-30-player-view-shell-refresh).
-
-Rounded dropdown/preview borders produced white output on the tested Linux path;
-square corners restored content. Toggle input needs an automatic growing basis.
-Volume checks must filter `lobby-shell__settings-slider` because `ScrollView`
-scrollers also contain sliders. A green assertion report still requires PNG review.
-
-## Scroll-free lobby and live startup preview — 2026-10-30
-
-Run `20261030-142251-600`: **passed**, 89 assertions, zero captured errors,
-14 screenshots at 1920×1080. The full server information and all four Change Log
-entries fit without an outer ScrollView. The 840px shell is viewport-capped, banner
-height follows sprite aspect and may shrink, and Ready retains bottom alignment
-with top padding. `00-server-info.png` verifies the live RT before any creator
-interaction; `01-lobby.png` was visually inspected with the lit character and layout.
-
-New checks cover RT binding at startup, both preview lights surviving station
-initialization, absence of Server Info scrolling, content bounds and action spacing.
-Early booth creation exposed the orphan-light sweep deactivating its lights;
-`GameplayLightGuard` now preserves lights owned by the preview booth as well as
-station fixtures. Do not restore a placeholder or delay booth creation to hide this.
-
-## Default preview outfits — 2026-10-30
-
-Run `20261030-144343-787`: **passed**, 100 assertions, zero captured errors,
-14 screenshots at 1920×1080. The selected security jumpsuit and jackboots were
-visually inspected in the startup lobby, creator and side/body-edit captures.
-Assertions check all three worn renderers and stable meshes through edits and
-saved-character restoration. The curated catalog also contains civilian,
-engineering and botany combinations; choice occurs once per new session-local draft.
-No networked clothing Items or authoritative player equipment are spawned.
-
-The umbrella catalog's interactive menu opens a blocking success dialog. Automation
-should call `UiCatalogRebuildAll.TryRebuildAll` from editor code rather than invoking
-that interactive menu; otherwise the dialog must be dismissed before MCP can continue.
-
-## Lobby lifecycle pilot — 2026-10-30
-
-**SS3D → Testing → Run Lobby Lifecycle Pilot** (native MCP: `execute_menu_item` with that
-path) boots a single editor Host from Boot and drives: ready/unready, round start with the
-creator open, spawn hiding, stop/return, Admin → Start Round with an unready player, late
-join, a second return, then local client disconnect/reconnect 70s after server start. It writes
-`artifacts/ui/lifecycle-<UTC timestamp>/status.json` (checks, per-step timeline with session
-state, captured errors) and `lobby-after-reconnect.png`. Each step has its own timeout; a
-failure names the step and the current session state.
-
-Run `lifecycle-20261030-153833-081`: **passed**, 28 checks, zero captured errors, 72s.
-Since the E2 character slice it also edits name/height/fat/hair in the creator, saves, and
-checks the round-start and late-join bodies (name, armature height, Fat shape key, hair mesh;
-`spawned-appearance.png`): `lifecycle-20261030-184836-089`, 58 checks. It
-does not cover a separate client process, non-admin permissions or OS input. Buttons are
-driven with `NavigationSubmitEvent` (a synthetic `ClickEvent` does not fire `Button.clicked`).
-
-Lobby boot now leaves the station unloaded. Choose an actual saved template in Server
-Settings and press Start Round; a default selection prefers saved ministation, otherwise the
-first available save. `ApplicationSettings.EditorStationTemplate` still applies to an explicit
-parameterless `TileSubSystem.LoadAsync()` call, not lobby startup. Edit project settings through
-the inspector or `SerializedObject`/`SetDirty` while the editor is open.
-
-## Lobby remote client pilot — 2026-10-30
+## Lobby remote client pilot
 
 **SS3D → Testing → Run Lobby Remote Client Pilot** needs a current client build at
 `Builds/Game/SS3D.x86_64`. `validate.sh --full` rebuilds it when stale; otherwise call
@@ -277,15 +168,14 @@ Requirements: write access to `/dev/uinput` for the session user (on Rutger's ma
 `KERNEL=="uinput", TAG+="uaccess"`), `xdotool` for the client window lookup only, and every monitor
 at scale 1 (the absolute pointer spans the X root, which then equals GNOME's logical desktop).
 
-Why not xdotool for input: on GNOME Wayland its XTEST events go through Xwayland's libei portal,
+Input constraint: on GNOME Wayland its XTEST events go through Xwayland's libei portal,
 which shows an "allow remote interaction" dialog on every run. uinput sits below the compositor and
-needs no dialog. Pitfalls found: udev tags the device as a keyboard only when keycodes 1–31 are all
+needs no dialog. Keep these constraints: udev tags the device as a keyboard only when keycodes 1–31 are all
 declared (otherwise clicks work but typing silently does nothing), and keys from a second, freshly
 created device did not reach the window the first device clicked, hence one device per run.
 
-Run `remote-20261030-162400-944`: **passed**, 15 host checks, zero errors, 37s. The client may
-still be tearing down after `ScriptComplete` (`Environment.Exit` stalls in a windowed player); the
-pilot kills it and notes that in the timeline.
+Windowed clients may stall during teardown after `ScriptComplete`; the pilot cleans up the
+process and records that in the timeline. Completion still requires the signal and clean logs.
 
 Before building, make sure `Game.unity` is not dirty: `BuildPlayer` opens a blocking
 "Scene(s) Have Been Modified" dialog. If it is dirty after a playtest, look for root
@@ -293,12 +183,14 @@ Before building, make sure `Game.unity` is not dirty: `BuildPlayer` opens a bloc
 
 ## Troubleshooting
 
-- Missing license: sign in and reactivate via Unity Hub. The initial license failure
-  on this machine cleared after sign-in; no cipher/security-policy changes were needed.
+- Missing license: check Unity Hub activation for the installed editor before running pilots.
 - No instances: check the bridge and server logs; a healthy MCP server alone does
   not prove Unity connected. Keep it local to this machine.
 - Compilation: automation has its own editor-only asmdef. `Assets` has a parent
   asmdef; merely placing scripts in an `Editor` folder does not isolate them.
+- Blocking dialog after a catalog rebuild: the **SS3D → Data → Rebuild All UI Catalogs** menu
+  opens a modal success dialog. Automation calls `UiCatalogRebuildAll.TryRebuildAll` from editor
+  code instead of invoking the menu.
 - Null UI root: a `UIDocument` may exist before its `rootVisualElement` does.
 - UI events: set the pooled event's `target` before `SendEvent`.
 - Game View sizing uses Unity's internal editor API, confined to one helper. If an
@@ -313,89 +205,3 @@ Before building, make sure `Game.unity` is not dirty: `BuildPlayer` opens a bloc
 - No final report: the external driver times out after 180 seconds; the in-editor
   scenario times out after 120 seconds once Play Mode has started. Inspect the logs
   and exit Play Mode before retrying. A compiler-blocked editor cannot run the pilot.
-
-## Enlarged preview framing — 2026-10-30
-
-Run `20261030-150133-789`: **passed**, 102 assertions, zero captured errors, 14 screenshots. Lobby, creator Identity and Body side-view captures were visually reviewed. The pilot now measures foreground occupancy in the preview RT: at least 72% height, with head and feet clear of the edges. This run measured 84%. The shared camera fits visible baked geometry rather than padded animation bounds or empty equipment slots.
-
-## Validation loop baseline — 2026-10-30
-
-`validate.sh --full` run `validate-20261030-173633`: **passed** unattended on the restored tree in
-~4.5 min — compile clean, 2093/2093 EditMode, visual 122 checks (`20261030-173731-178`), lifecycle
-28 (`lifecycle-20261030-173840-591`), build current (skipped), remote 17 host checks with real
-Ready/chat input (`remote-20261030-174007-995`). Each acceptance check in the
-[plan](../../Documents/plans/agent_validation_loop.plan.md#implementation-notes-2026-10-30) was
-demonstrated by a deliberate break, then reverted.
-
-
-## Server Settings coverage — 2026-10-30
-
-The lifecycle pilot opens Admin and checks the real authorized snapshot, live ready ratio,
-map/mode options, disabled explanations for unsupported rules, cap/length/mode/late-join edits,
-invalid server-side rejection, settings lock during countdown, Extend Timer (+60 seconds),
-Cancel Countdown (no spawn) and Force Start. It captures `server-settings-waiting.png` and
-`server-settings-countdown.png` and `server-settings-rules.png` in its lifecycle output folder.
-It also restores ministation through the map selector and runs a real one-minute Extended round
-to verify server-enforced late-join denial, active-round edit rejection and automatic expiry. These are synthetic UI callback
-checks; inspect the screenshots as well. The remote client sends unauthorized settings
-read/write/action RPCs with `probe_server_settings_permissions`; the host verifies that the
-cap and join policy remain unchanged, and the client verifies that no admin snapshot arrives.
-
-
-Verification: runtime validation `validate-20261030-203641` passed compile, lifecycle
-(96 checks, no captured errors), client rebuild and remote (19 host checks, client
-permission probe + real Ready/chat input). The preceding full run
-`validate-20261030-203255` passed EditMode (2089 completed tests) and visual (122 checks);
-its lifecycle failure exposed the stale-snapshot edit race fixed by per-field server merges.
-Waiting/countdown/rules screenshots from `lifecycle-20261030-203711-067` were reviewed.
-
-
-## Deferred round-map loading — 2026-10-30
-
-The lobby no longer restores a station at boot. Start Round loads the selected saved map,
-waits for world readiness, then counts down. `lobby-map-load-status` and
-`server-map-load-status` expose loading / initializing / ready / failed states. The lifecycle
-pilot checks empty startup, captures `server-settings-loading.png`, validates a temporary second
-map selection/restore and captures `server-settings-running.png` with Stop visible and Start hidden.
-The remote scenario verifies no map is loaded on join and a ready status after the host starts.
-
-
-Deferred-loading verification: full `validate-20261030-205054` passed compile,
-2089/2089 EditMode tests, visual (122 checks), lifecycle (107 checks), rebuild and remote
-(21 checks). After the long-name status layout adjustment, `validate-20261030-205721`
-passed compile, visual (122), lifecycle (108), rebuilt client and remote (21). Loading,
-waiting, countdown and running screenshots were reviewed; the running form shows Stop
-without Start, and the long map status no longer displaces the sidebar actions.
-
-
-## Playtest fix review coverage — 2026-10-30
-
-The lifecycle pilot exercises B while typing in lobby chat, releases text capture on tab rebuild,
-opens/closes the Escape menu over a spawned body and verifies gameplay input suppression and
-restoration. It also waits for a rendered character-selector portrait and checks that head-crop
-blitting preserves a sentinel `RenderTexture.active` (`character-selector-portrait.png`).
-`SelectionRendererSetupTests` checks repeated renderer wiring retains the same selection-feature
-instance/local ID and a matching feature recovery map. Generated glyph atlases, build-prefilter
-flags and runtime-only catalog entries are not authored feature changes.
-
-
-Review verification: `validate-20261030-211254` passed preflight, compile, all 2090 EditMode
-tests (including renderer setup identity/recovery mapping), 122 visual checks, 110 lifecycle
-checks (including portrait target preservation and Escape/focus behavior), client rebuild and
-21 remote checks. Selector portrait and in-round menu captures were visually reviewed.
-
-
-## A3 map validation coverage
-
-The lifecycle pilot now creates a temporary ministation copy with no spawn markers, starts it,
-and checks that the complete missing-job list appears while the round remains stopped, with
-no timer or spawned player. It writes `server-settings-validation.png`, repairs the same saved
-file with offered-job and operative markers, then retries through the normal countdown flow.
-The remote pilot uses a valid temporary copy too. Original station templates are never overwritten;
-temporary copies are removed on completion. The shipped ministation currently has an empty
-spawn chunk and correctly fails validation until its markers are authored.
-
-`MapValidationTests` covers Extended versus nuclear/Secret requirements, each missing nuclear
-requirement, all-job coverage, incorrect tags, warning-only maps, repair, configuration failure,
-and the scrollable literal-text save report. These additions have not been run in the cloud
-workspace: the required MCP venv and Unity editor are unavailable.

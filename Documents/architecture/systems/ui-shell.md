@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/
 > Entry points: UiShellSubSystem, UiLayer, IUiSurface, UiShellAssetCatalog
 > Status: partial
-> Verified: f04093919 — 2026-10-31
+> Verified: 259787487 — 2026-11-01
 
 # UI shell
 
@@ -27,6 +27,8 @@ Composition root for player-facing UI Toolkit surfaces. `UiShellSubSystem` self-
 | Main HUD | `MainHudAssetPaths` / `MainHudAssetCatalog` | [inventory](inventory.md) |
 | Storage Panel | `StoragePanelAssetPaths` / `StoragePanelAssetCatalog` | [inventory](inventory.md) |
 
+The F1 developer window (`UI/MainHud/Dev/DebugMenuView.cs`) also owns a private DDOL `UIDocument`; it uses Main HUD PanelSettings and has not migrated to `UiLayer.Debug`.
+
 The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lobby's (`LobbyAssetPaths` / `LobbyAssetCatalog`) use the same rebuild. `ExamineOverlayAssetCatalog` is a lighter one-off: no `PanelSettings` or document of its own, not a `UiAssetCatalogBase` derivative.
 
 ## Start here
@@ -43,6 +45,8 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 - New UI is UITK only. Resolve the shell with `SubSystems.Get<UiShellSubSystem>()`, attach via `TryGetLayer`, and implement `IUiSurface`. The effort doc's agent checklist covers the steps.
 - A surface that needs its own asset catalog derives from `UiAssetCatalogBase` and registers with `UiCatalogBuilderKit` and the umbrella rebuild menu ([editor-tooling-tiers](../2026-07_editor-tooling-tiers.md)), not a per-surface MenuItem.
 - `UiShellSubSystem` creates the document itself, so Boot and Game scenes need no `UIDocument` host.
+
+- Debug tools: register a named tool through `Core/Debugging/DebugTools.Get(DebugToolNames.X)`, subscribe/unsubscribe `Invoked`, and set `IsOn` for toggles. The F1 window lists available tools in Editor/development builds; do not add per-tool keys. Remaining host work: [TECH_DEBT §1.13](../TECH_DEBT.md#113-debug-tools-centralized-ui-host-consolidation-remains).
 
 ## Depends on / Used by
 

@@ -22,7 +22,7 @@ namespace SS3D.UI.StoragePanel
     /// One grid cell in a <see cref="StoragePanelView"/>. Extends the shared <see cref="InventorySlot"/>
     /// well/icon/label chrome with a stack-count badge and the pointer-capture drag source/target events
     /// a storage panel needs (screen-space slot-to-slot dragging — see
-    /// Documents/architecture/2026-07_inventory-storage-redesign.md "Scope decisions" on why this is a
+    /// Documents/architecture/systems/inventory.md § Overview on why this is a
     /// new UITK implementation rather than the world-space InteractionTier.Combine grammar).
     /// </summary>
     public class StorageSlot : InventorySlot

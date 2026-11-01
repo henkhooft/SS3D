@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Rounds/, Assets/Scripts/SS3D/UI/Lobby/
 > Entry points: RoundSubSystem, ReadyPlayersSubSystem, RoundSubSystemBase, LobbyUiSubSystem
 > Status: partial
-> Verified: 6ef2aabbf — 2026-11-01
+> Verified: 259787487 — 2026-11-01
 
 # Rounds / lobby
 
@@ -9,13 +9,27 @@
 
 Round lifecycle state machine with single-flight `CancellationTokenSource` (prevents double start/stop and embark-during-ending races). States: `Stopped → Preparing → WarmingUp → Ongoing → Ending → Ended`. `PrepareRound` awaits `WorldReadinessSubSystem` `WorldReady` (not a fixed 500 ms delay).
 
-**UITK lobby (in progress):** Phase A shell + Phase B Character Creator visual + Phase E1 live booth
-preview from first lobby attachment on `UiLayer.Modal` — [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md).
-Ready/late-join, replicated player readiness/counts, round timer/state, admin start/stop, spawn-based visibility (plus Escape as an in-round menu overlay, `InputContext.Menu`) and job/antagonist preferences (Phase D: live slots/demand, round-start resolution, latejoin) are wired. The saved character (name, body morphs, hair/beard/eyebrows + skin/eye/style colors) is sent to the server and applied to the spawned body (E2 slice); Human is the only available species; other dropdown entries are disabled until models exist. Saved character slots and the last saved selection now persist locally across application restarts. The Chat tab carries networked OOC/LOOC/Admin chat (see [chat-audio-screens](chat-audio-screens.md)). Server Info shows the admin-editable server name/MOTD (persisted server-side), configured mode, server build/uptime and a git-generated change log. Host-mode lifecycle (ready/unready → start → spawn → stop → return, late join, local client disconnect/reconnect) is verified by the lifecycle pilot; a built non-admin client process joining the editor Host (permission gating, ready via UI, admin start/stop, late join) is verified by the remote client pilot, whose Ready click and chat typing are real OS input (uinput virtual device). Other pilot steps remain synthetic. Player shell Settings: the Sound sub-tab is wired to `PlayerSettingsSubSystem` (five volume sliders, Mute All, Mute When Unfocused, Reset to defaults; saved client-locally and applied at boot). The Display sub-tab (resolution, window mode with a 15 s keep/revert prompt, VSync, frame cap, quality tier, render scale, upscaler, anti-aliasing, UI Scale) is wired the same way; Controls remains a session-local mockup until [2026-10_player-settings](../2026-10_player-settings.md) Phase 3.
+**UITK lobby:** `LobbyUiSubSystem` owns the shell and guided Character Creator on
+`UiLayer.Modal`. Ready/latejoin, player readiness/counts, round timer, admin controls and job
+preferences are networked. Jobs use H/M/L/N chips; latejoin resolves those preferences against
+open slots rather than a direct job picker. Playtime locks and a gamemode consumer for antagonist
+opt-ins are absent.
 
-Rendered verification: [Unity MCP lobby pilot](../../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) — player-tab/creator screenshots and UI assertions via MCP; expanded pilot passes 102 checks with no captured errors (player tabs, local Settings, default clothing, creator palettes/footer and character-slot restoration).
+The saved Human character (name, body morphs, hair/beard/eyebrows and independent colors) persists
+client-locally and is sent to the server for application to the next spawned body. Other species
+are disabled until models exist. Creator body controls are Height/Female/Fat/Muscle/Chest/Jaw,
+matching the model's available controls. Character slots and the last saved selection survive
+restarts; unsaved drafts do not overwrite saved slots.
 
-**Legacy uGUI purged (Phase F):** `Systems/Lobby/UI`, `LobbyCanvas`, the old Character Customizer canvas and the `GameScreens` system are deleted; the UITK shell is the only lobby UI. Round state machine was never condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
+The shell is also the in-round Escape menu (`InputContext.Menu`). Its Display, Audio and Controls
+tabs apply through `PlayerSettingsSubSystem`; controls use real binding overrides and conflict
+rules ([player settings](../2026-10_player-settings.md), [inputs](inputs.md)). The Chat tab carries
+OOC/LOOC/Admin chat ([comms](chat-audio-screens.md)). Server Info shows persisted server name/MOTD,
+configured mode, server build/uptime and git-generated change log. Per-server banner art and
+ping/account-age fields are absent.
+
+The UITK shell is the sole lobby UI. Do not restore the removed uGUI lobby/customizer or
+`GameScreens`; the round simulation remains live ([composition policy](../2026-07_agent-first-composition.md)).
 
 **Round end (Stopped)** despawns the crew (`EntitySubSystem`) and then `RoundSubSystem.UnloadStation`
 clears the station (`TileMap.Clear`, load state `NotLoaded`); the next Start restores the template.
@@ -54,7 +68,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Lobby/LobbyUiSubSystem.cs` — UITK shell + Character Creator host; attaches into Modal
-- `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — Player View tabs/sidebar, Chat tab (`SetChat` / `ChatSubmitted`) + local Display/Sound/Keyboard controls
+- `Assets/Scripts/SS3D/UI/Lobby/LobbyShellView.cs` — Player View tabs/sidebar, Chat tab (`SetChat` / `ChatSubmitted`) + Display/Audio/Controls intents
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorView.cs` — guided-steps Character Creator, local character slots + pinned Save footer
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterProfileStore.cs` — versioned local presets under `Application.persistentDataPath/Lobby/characters.json`; atomic replacement, unreadable/newer file preservation, pilot-isolated profiles
 - `Assets/Scripts/SS3D/UI/Lobby/CharacterCreatorDraft.cs` — local name/species/body/style/preferences + separate hair/beard/brow colors + stable outfit index
@@ -84,7 +98,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 
 - Round transitions: extend `RoundSubSystemBase` state handlers and messages in `Messages/`.
 - Spawn flow: `SpawnReadyPlayersEvent` after Ongoing (world must already be ready from PrepareRound).
-- Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem` (including job preference sends); `LobbyShellView` renders `RoleSubSystem.Jobs`; Character Creator is a separate Modal screen (Phase B/E).
+- Lobby UITK: Session snapshots/actions live in `LobbyUiSubSystem` (including job preference sends); `LobbyShellView` renders `RoleSubSystem.Jobs`; Character Creator is a separate Modal screen.
 
 ## Pitfalls
 
@@ -103,7 +117,7 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 - **Pilot clicks:** a synthetic `ClickEvent` does not fire `Button.clicked` (its `Clickable` listens to pointer/submit). Drive buttons with `NavigationSubmitEvent`; keep `ClickEvent` for `RegisterCallback<ClickEvent>` surfaces such as the preview. UI snapshots lag subsystem state by the 200ms refresh — wait on the UI, not only the backend.
 - **No boot restore:** `TileSubSystem.Setup` creates only an empty container, never a saved station. The first Start waits for tile resources, restores the selected map and then awaits `WorldReady`. A default selection prefers saved `ministation`, otherwise the first saved template; it is not loaded until Start.
 - **Session lifetime:** the lobby host survives network teardown. Read replicated subsystem snapshots with `TryGet`, hide both surfaces/booth offline or when the local player is spawned, and restore the saved draft on return.
-- **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — recorded on the architecture effort. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
+- **Jobs prefs:** shell uses H/M/L/N chips (attached design), not drag-ranked lists (`lobby.md` §3) — an accepted presentation deviation. Jobs come only from `StartingRoles.asset`; a job needs a `RoleData` there to appear. Job resolution must run before `SpawnPlayer` (loadout reads the assignment); anything spawning players outside `SpawnReadyPlayers` falls through to latejoin assignment.
 - **Preview booth:** live preview uses `CharacterPreviewBooth` on layer **23** with its own camera/lights/RT at (-250, -250, 250). Never share layer 22 or (-250, -250, -250) with `RuntimePreviewGenerator`: sharing put the dummy in every item icon — (the old `LobbyCameraRenderTexture`/`StaticWorldObjects` customizer was deleted in Phase F). Dispose the booth on host destroy; deactivate (don’t destroy) on Return to avoid respawn hitch.
 - **E1 vs E2:** Save stores local character slots on disk and sends the saved slot as `CharacterAppearanceMessage` (also once per connection); `EntitySubSystem` sanitizes/stores it per ckey and stamps `Mind.CharacterName` + `Human.SetAppearance` at spawn. Save never changes a living body. Skin/eye tint and catalog-backed eyebrows render in the booth and on spawned bodies; account/server player-meta persistence is separate from local presets.
 - **Spawned height:** scale the armature (`HumanoidRigReferences.ArmatureRoot`), never the networked root (capsule, NetworkTransform). The server applies morphs too so bone hit colliders match. Clothing mesh swaps reset shape keys — `ClothesDisplayer` calls `Human.ReapplyBodyMorphs`.
@@ -137,10 +151,10 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 
 ## Tests
 
+- `Testing/ui/validate.sh --full` runs the current validation loop. `LobbyUiPilot` covers shell/creator visuals; `LobbyLifecyclePilot` covers host lifecycle, saved characters and settings; the remote pilot checks a built non-admin client. Review screenshots as well as assertions; OS-input Ready/chat checks do not imply every pilot action uses real input.
 - `MapValidationTests` covers mode/job requirements, combined failures, repair, warnings and the scrollable save report.
 - The lifecycle pilot creates temporary invalid/valid station copies, checks a failed Start lists all missing jobs without countdown/spawn, then repairs the file and retries. Remote smoke uses the valid copy; original templates are untouched. `server-settings-validation.png` captures the failure list.
-- A3 passed compile, EditMode, PlayMode and the lifecycle pilot in Unity (tomnas, 2026-11-01).
-- A4: the lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.
+- The lifecycle pilot edits a spawn during the first round, checks that Stop opens the prompt (`map-stop-unsaved.png`) and that Cancel keeps the round and edits, then that the timed round end autosaves. Later rounds check a player stop request with Discard and stop (no autosave) and Save and stop (template overwritten). `LobbyMapStopPromptTests` covers the name draft and choice submission.
 
 ## Depends on / Used by
 
@@ -154,7 +168,6 @@ original) and tells admins in Admin chat. Unloading resets the editor's history 
 
 - Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: lobby, round-end, round-config (autostart loop, opt-in list, Secret leak, fallback, `fallbackMap` bug)
 - Design (read-only): [Documents/design/lobby.md](../../design/lobby.md), [round-config.md](../../design/round-config.md)
-- Effort: [2026-08_lobby-uitk-redesign](../2026-08_lobby-uitk-redesign.md)
 - [2026-07_session-world-lifecycle](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [2026-07_comms-non-diegetic-feed](../../archive/architecture/2026-07_comms-non-diegetic-feed.md)
 - [INDEX.md](../INDEX.md)

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: be79cc8ad — 2026-07-29 (GasPipeNetworkId IEquatable + scrubber filter unroll)
+> Verified: 259787487 — 2026-11-01
 
 # Atmospherics
 
@@ -24,7 +24,7 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosChunkPatch.cs` — ObserversRpc payload
 - `Assets/Scripts/SS3D/Rendering/URP/AtmosRendererFeature.cs` — URP scatter, glow, distortion passes
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosCamera.cs` — registers player camera with render context (all clients)
-- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosDebugController.cs` — runtime overlay (P toggle; server/host)
+- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosDebugController.cs` — runtime overlay (F1 → Atmospherics; server/host)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPortRegistry.cs` — registered vent/scrubber/pump port tick list
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaPortIndex.cs` — `areaId → vents/scrubbers`; dirty on register/unregister + area reflood
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/GasPipeNetworkRegistry.cs` — pipe networks; `TopologyVersion` invalidates port caches
@@ -38,6 +38,8 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - `Assets/Scripts/Tests/EditMode/Atmospherics/` — flux, combustion, neighbour, GPU, visual-metrics, air-alarm sampler tests
 
 ## Extension points
+
+- Air alarm power/alarm visuals use `Electricity/EmissiveMaterialSlots` to preserve each material slot's authored emission/luminance; avoid one renderer-wide baseline for mixed-material meshes.
 
 - New gases: add `GasDefinition` assets under `Assets/Content/Systems/Atmospherics/Gases/`; call `AtmosRegistryGenerator.CreateCoreGasRegistry` (tier B static — no MenuItem) to refresh registry slots.
 - Per-gas visuals: assign `GasVisualProfile` on each `GasDefinition` (scatter tint, emission, smoke). `GasVisualProfileBuilder.Build` caches per registry instance.

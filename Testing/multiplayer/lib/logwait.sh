@@ -69,7 +69,7 @@ check_for_json_errors() {
 
 # check_unity_log_for_exceptions <unity_logfile_path>
 # Uncaught exceptions/NREs surface through Unity's own -logFile, not the Serilog pipeline - see
-# Testing/multiplayer notes in Documents/architecture/2026-07_multiplayer-test-harness.md.
+# Testing/multiplayer notes in Documents/architecture/systems/networking-session-testing.md.
 check_unity_log_for_exceptions() {
     local log_path="$1"
 

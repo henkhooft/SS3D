@@ -1,8 +1,8 @@
 > Implements: Documents/design/inventory-storage.md (all sections), Documents/design/main-hud.md §8, Documents/design/stamina.md (Phase 7a core)
 > Touches systems: inventory, main-hud, ui-shell, id-access, stamina, health
-> Status: in-progress
+> Status: shipped
 
-**Progress:** Clean-slate code shipped; Play Mode / Editor verification pending.
+**Progress:** Implementation shipped. Outstanding runtime verification is maintained in the inventory system map; this archive does not assert that it passed.
 
 # Inventory & storage redesign
 
@@ -45,10 +45,10 @@ of the two nested PrefabInstances (inventory + stamina bar) rather than left dan
 
 ## Related docs
 
-- Design (read-only): [inventory-storage.md](../design/inventory-storage.md), [main-hud.md](../design/main-hud.md) §8,
-  [stamina.md](../design/stamina.md)
-- System maps: [systems/inventory.md](systems/inventory.md), [systems/stamina.md](systems/stamina.md),
-  [systems/ui-shell.md](systems/ui-shell.md), [systems/id-access.md](systems/id-access.md),
-  [systems/health.md](systems/health.md)
+- Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md) §8,
+  [stamina.md](../../design/stamina.md)
+- System maps: [systems/inventory.md](../../architecture/systems/inventory.md), [systems/stamina.md](../../architecture/systems/stamina.md),
+  [systems/ui-shell.md](../../architecture/systems/ui-shell.md), [systems/id-access.md](../../architecture/systems/id-access.md),
+  [systems/health.md](../../architecture/systems/health.md)
 - Plan: [inventory_storage_redesign_9c3f21a4.plan.md](../plans/inventory_storage_redesign_9c3f21a4.plan.md)
 - Clean-slate plan: `.cursor/plans/inventory_clean_slate_43796029.plan.md`

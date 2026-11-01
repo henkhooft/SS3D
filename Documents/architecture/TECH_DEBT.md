@@ -1,6 +1,9 @@
 # Technical debt tracker
 
-**Last updated:** 2026-10-31
+**Last updated:** 2026-11-01
+
+Checked against `259787487` (source and workflow inspection). Runtime and CI-run results below
+are prior observations, not new test results from this documentation refresh.
 
 This is the project-wide register of architecture problems, code smells, and quality risks that
 threaten long-term viability rather than one-off bugs. It is a cross-cutting **reference** doc, not
@@ -35,31 +38,20 @@ become a second copy of the maps.
 
 **Blast radius: highest — trend: stable by policy, not by tooling**
 
-`Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab` is ~15.6k lines with 126
-distinct `m_Script` component references. Health, inventory, movement, combat, body animation, and
-entity identity are all bolted onto one GameObject graph that agents (and humans) cannot safely
-hand-edit — a wrong YAML edit silently desyncs `fileID` references with no compiler error.
-[2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) makes this a named
-prefab-composition-debt item and forbids "add one more behaviour" as a feature path, and the health
-rewrite's Phase 0d demonstrated the only accepted mitigation (strip-and-rewire via Editor tooling,
-not organic growth). Follow-on **(d) Entity prefab setup / recipes** (named in the same doc) is now
-partly paid down: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
-turned strip-and-rewire into a repeatable `PrefabUtility` recipe convention
-(`HumanPrefabHygiene`/`BodyPartContainerInteractiveStrip`/`HumanPrefabRecipes`), added a CI-checked
-missing-script/dev-hack/`ContainerInteractive` gate (`HumanPrefabIntegrityTests`, passing), and fixed
-the concrete hygiene bugs the audit found (stale missing-script GUID caches, the never-built
-`BodyPartContainerInteractiveStrip.cs` tool `inventory.md`/`combat.md` cited, a dev-only hack shipping
-on production `Human.prefab`). **Enforcement is now partially machine-checked** (the EditMode test
-catches regressions on those specific items) but still not comprehensive — nothing stops a future PR
-from adding a 127th *unrelated* component; only the denylisted/known-bad ones are caught. The organ
-prefab-ization originally planned turned out to target the wrong thing (see the effort doc's Phase 1)
-and was deprioritized. Phase 3 (domain strip-and-rewire) has its first instance done: `Hands.PlayerHands`
-on `Human.prefab` — previously hand-dragged `fileID`s with no recipe tool — is now managed via
-`HandsPrefabSetup` (**SS3D → Entities → Run All Human Prefab Recipes**). Every other domain directly on
-`Human.prefab` (movement/animation, combat, comms, examine, stamina, substances) remains scheduled, not
-forced — pick up each when its own redesign next touches entity wiring.
+`Human.prefab` is a large graph spanning health, inventory, movement, combat and identity.
+Changes must use the [Entity prefab recipes](systems/entities-prefab-recipes.md), registered on
+`HumanPrefabRecipes`, rather than hand-editing YAML. The aggregator covers hygiene, hands,
+speech, combat networking, substance-container cleanup and nested-instance resync.
+`HumanPrefabIntegrityTests` checks specific script/wiring contracts, not a general component budget.
 
-- Related: [entities.md](systems/entities.md) § Prefab composition debt, [health.md](systems/health.md), [combat.md](systems/combat.md) (`spawndummy` reuses the same prefab), [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md)
+**Remaining work:** keep domain rewiring recipe-owned when movement/animation, examine, stamina or
+other entity composition changes. Continue reducing unrelated root responsibilities; existing
+recipes do not make the whole prefab decomposed. Visual-only organ mesh extraction is unscheduled
+unless Human/TestHuman visual drift warrants it; removed-organ item prefabs cannot replace rigged
+in-body visuals.
+
+- Related: [entities](systems/entities.md), [Entity prefab recipes](systems/entities-prefab-recipes.md),
+  [composition policy](2026-07_agent-first-composition.md)
 
 ### 1.2 Collapse/death/ragdoll presentation has no single owner
 
@@ -108,19 +100,20 @@ time, not at PR time. Do not add another per-surface rebuild MenuItem; use the u
 `RuntimeInitializeOnLoad` self-bootstraps (UiShell / MainHud / StoragePanel) stay under agent-first
 follow-on **(b)**, not this item.
 
-### 1.8 Condemned-UI backlog: 6+ live uGUI surfaces still shipping
+### 1.8 Condemned UI remains; legacy tile UI partly purged
 
 **Blast radius: medium — trend: shrinking slowly**
 
-Still condemned-but-present on `develop` (checked 2026-10-31): the console panel
-(`ConsolePanelView`, [ingame-console.md](systems/ingame-console.md)), the ScreenEffects F2 debug canvas
-([screen-effects.md](systems/screen-effects.md)), and TileMap Creator remnants (`Tile/UI/AssetSlot.cs`,
-`Tile/TileMapCreator/`; [tile.md](systems/tile.md)). Each is "do not extend, replace when the owning
-redesign lands", but nothing tracks the order they go in, and input arbitration and pointer-over-UI
-code still have to account for them.
+Still present at `259787487`: the console panel (`ConsolePanelView`,
+[ingame-console.md](systems/ingame-console.md)) and ScreenEffects debug canvas
+(`ScreenEffectsDebugMenuView`, now opened through F1; [screen-effects.md](systems/screen-effects.md)).
+The old TileMap Creator construction prefabs and prefab-collection entry were purged; residual
+`Tile/UI/AssetSlot.cs` remains, while `TileMapCreator/` also contains live Map Editor hologram and
+layer-visibility helpers. Do not treat that whole folder as obsolete UI.
 
 - Purged so far: crafting menu (2026-07-23), examine panels (2026-07-26), inventory/hands/intent,
-  legacy lobby + `GameScreens` (lobby Phase F, 2026-10-30).
+  legacy lobby + `GameScreens` (lobby Phase F, 2026-10-30), legacy construction UI prefabs
+  ([tile.md](systems/tile.md) §Overview).
 
 ### 1.9 God-classes forming in hot UI/interaction code
 
@@ -130,7 +123,7 @@ code still have to account for them.
 delayed tracker, and sibling `CombatInteractionNetwork` for Harm melee/ranged RPCs — see
 [2026-07_interaction-controller-decomposition.md](../archive/architecture/2026-07_interaction-controller-decomposition.md)
 (**shipped**). World/inventory/examine RPCs remain on the controller by design (follow-on optional).
-`MainHudSubSystem.cs` (~1.5k lines on 2026-10-31, up from ~1.1k in July) still composes equip/unequip, gear, hands, intent chip, zone-reticle,
+`MainHudSubSystem.cs` (1,530 lines at `259787487`, up from ~1.1k in July) still composes equip/unequip, gear, hands, intent chip, zone-reticle,
 and HUD/MI visibility in one class with **no** decomposition plan — remains open under this item.
 
 - Related: [interactions-runtime.md](systems/interactions-runtime.md), [inventory.md](systems/inventory.md)
@@ -139,25 +132,28 @@ and HUD/MI visibility in one class with **no** decomposition plan — remains op
 
 ### 1.10 Play Mode / multiplayer verification is optional in practice
 
-**Blast radius: high — trend: mixed (local loop much stronger; CI smoke not running)**
+**Blast radius: high — trend: mixed (local loop stronger; CI health last recorded as failing)**
 
-There is no CLI build/test flow ([CLAUDE.md](../../CLAUDE.md) says so directly) — everything runs
-through the Unity Editor, and CI ([editmodetestrunner.yml](../../.github/workflows/editmodetestrunner.yml))
-only exercises EditMode tests. Several recently-merged, currently-shipping systems explicitly flag
-that they were never run in Play Mode before merging: the inventory/storage redesign
-([inventory.md](systems/inventory.md) — "Play Mode / Editor verification still required... compile/Play
-Mode not run in implementing session"), and the multiplayer test harness itself
-([2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — "not yet verified
-against a real Unity build"). The headless dedicated server has a known, un-root-caused bug (selection
-outline and drop interaction break against a real client) that has shipped for multiple sessions
-because nothing in CI would catch it. This isn't one bug — it's a structural gap where "the tests
-pass" and "a human pressed Play once" are different, unenforced bars.
+**Current tooling:** [Tools/build_client_and_server.sh](../../Tools/build_client_and_server.sh)
+builds Linux client/server binaries via Unity batchmode (close the project's Editor first).
+With the Editor open, [Testing/ui/validate.sh](../../Testing/ui/validate.sh) `--full` drives compile,
+EditMode, PlayMode, visual/lifecycle pilots, stale client/server builds, remote-client checks and
+four smoke scenarios. Both paths require an installed Unity Editor; the scripts do not make
+runtime verification automatic at merge time.
 
-**Progress (2026-10-31):** `multiplayer-smoke-test.yml` is scheduled nightly on the self-hosted
-runner, but no run has passed since 2026-10-01: 10-05 and 10-06 failed, 10-07 to 10-19 were
-cancelled after 24h waiting for the runner, and nothing has been scheduled since. The PlayMode suite was repaired and extended (#73–#83); and
-`Testing/ui/validate.sh --full` runs compile, EditMode, PlayMode, a server build and smoke in one
-command. Still open: PlayMode is not in CI, and nothing requires the local loop before merge.
+**CI configuration:** [editmodetestrunner.yml](../../.github/workflows/editmodetestrunner.yml)
+runs EditMode; [multiplayer-smoke-test.yml](../../.github/workflows/multiplayer-smoke-test.yml)
+runs `basic-round`, `late-join`, `reconnect` and `atmos-client-sync` on manual dispatch, labeled PRs
+(`test:multiplayer`) and a nightly schedule. PlayMode is not a CI gate, and local full validation
+is not enforced before merge. The load/soak runner is local tooling, not a scheduled soak service
+([networking-session.md](systems/networking-session.md) §Tests).
+
+**Last recorded CI observation (2026-10-31):** no smoke pass since 2026-10-01; 10-05/06 failed,
+10-07 through 10-19 waited for the runner and were cancelled. Checked 2026-11-01: there have been no
+runs since, because GitHub has the workflow `disabled_inactivity`; re-enable it
+(`gh workflow enable multiplayer-smoke-test.yml`) and confirm the self-hosted runner picks jobs up. Recheck runs and runner
+availability before claiming CI coverage is healthy. Headless smoke still cannot prove rendered
+selection/drop behavior or the Nuke Ops happy path.
 
 - Related: [networking-session.md](systems/networking-session.md), [Testing/ui/README.md](../../Testing/ui/README.md), [test-server.md](../milestones/test-server.md) T3
 
@@ -176,46 +172,33 @@ early and expensive to reinstate once thousands of lines have drifted.
 
 **Blast radius: low-medium — trend: improving for locator; Item/Locker scans unchanged**
 
-Ten call sites use `FindObjectOfType`/`FindObjectsByType` for O(n) scene scans. Most are legitimately
-Editor-only (catalog builders, debug gizmo drawers) or dev-bypass toggles, which is fine. Three are
-not: `TileMap.cs` scans every `Item` in the scene (`FindObjectsOfType<Item>()`), `Locker.cs` scans
-every `ContainerViewer`, and — more structurally — `Core/Subsystems.cs`, the service locator every
-domain depends on, falls back to `FindObjectOfType` when a subsystem isn't in its registry cache.
-The locator fallback is now skipped while quitting **and** while `WaitingForServer`
-([2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) Phase 3 scaffolding);
-prefer `TryGet` + ready. Hot-path Item/Locker scans remain.
+Scene scans remain in gameplay code: `TileMap.ClearUntrackedItems` scans all `Item`s during
+map restore/cleanup, `Locker.CloseStorageUIs` scans `ContainerViewer`s on close, and
+`Core/Subsystems.cs` falls back to `FindObjectOfType` on a registry miss. These are lifecycle/event
+paths, not evidence of a per-frame scan. The locator fallback is skipped while quitting and while
+missing-subsystem errors are suppressed (Disconnecting / WaitingForServer); prefer `TryGet` and
+world-readiness gates. A registry/event-based replacement for the Item/Locker scans remains open.
 
 - Related: [core-subsystems.md](systems/core-subsystems.md), [tile.md](systems/tile.md), [2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md)
 
-### 1.13 Hotkey-bound debug UIs sprawl with no shared shell
+### 1.13 Debug tools centralized; UI-host consolidation remains
 
-**Blast radius: medium — trend: getting worse**
+**Blast radius: medium — trend: improving (F1 registry shipped; separate panels remain)**
 
-Dev/debug surfaces are accumulating as one-off function-key toggles instead of a single debug layer
-under [ui-shell.md](systems/ui-shell.md). Current map (not exhaustive — more will land the same way):
+Player settings Phase 3 (`fdf2de0d8`, PR #90) replaced scattered H/P/I/L/Y/F2–F6 debug keys with
+one arbitrated F1 window in Editor/development builds. `Core/Debugging/DebugTools` owns named
+registrations; tool owners subscribe to `Invoked` and provide `IsOn` for toggles. Old debug action
+bindings are erased at boot so those keys are available for player rebinding. F12 remains console.
+The old collision table is obsolete; do not restore per-tool keys.
 
-| Key | Surface | Notes |
-|---|---|---|
-| F2 | `ScreenEffectsDebugMenuView` | Condemned uGUI canvas; Keyboard-polled |
-| F3 | `LocalSpeechDebugTrigger` | Cycles local chat test lines; Keyboard-polled; must respect `InputInterface.IsCapturingText` |
-| F4 | `AlertStackDebugMenuView` | UITK + arbitrated `ToggleAlertStackDebug`; moved off F3 after colliding with speech |
-| F6 | Selection pick shader debug | `Other/Toggle Selection Debug` (moved off **E**, which is Use) |
-| P | Atmos debug overlay | `Other/Toggle Atmos Debug` (+ Keyboard fallback) |
-| (other) | health H, etc. | Same pattern: domain-owned bootstrap + ad-hoc chord |
+**Remaining debt:** `UI/MainHud/Dev/DebugMenuView` self-bootstraps a DDOL host and private
+`UIDocument`, loading PanelSettings from `MainHudAssetCatalog`. It does not attach to
+`UiShell`'s Debug layer. Domain panels still own their presentation, including the condemned
+ScreenEffects canvas. Fold these hosts into the shared shell when their presentation is replaced;
+keep console commands as the scriptable debug API.
 
-Problems this creates: **key collisions** (alert stack and speech both wanted F3 until one moved; selection debug sat on E until the default scheme moved it),
-**inconsistent input paths** (raw `Keyboard.current` vs code-defined `InputSubSystem` actions vs
-`Controls.inputactions`), **no inventory of what's bound** so the next feature guesses another F-key,
-and **no shared PanelSettings/theme/bootstrap** (blank UITK `PanelSettings` already caused invisible
-labels on the alert menu). Console commands (`screeneffect`, `alertstack`, …) are the durable debug
-API; the hotkey panels are convenience debt until UiShell owns a debug layer.
-
-**Do not** add another F-key panel without (a) checking this table + [inputs.md](systems/inputs.md) +
-[2026-07_default-input-scheme.md](../archive/architecture/2026-07_default-input-scheme.md)
-and (b) preferring an in-game console command first. Target: one arbitrated debug overlay host under
-UiShell that registers chords centrally; delete or fold F2/F3/F4 panels when that lands.
-
-- Related: [inputs.md](systems/inputs.md), [2026-07_default-input-scheme.md](../archive/architecture/2026-07_default-input-scheme.md), [screen-effects.md](systems/screen-effects.md), [chat-audio-screens.md](systems/chat-audio-screens.md), [inventory.md](systems/inventory.md) (alert F4), [ingame-console.md](systems/ingame-console.md), [ui-shell.md](systems/ui-shell.md)
+- Related: [inputs.md](systems/inputs.md) §Pitfalls, [ui-shell.md](systems/ui-shell.md),
+  [2026-10_player-settings.md](2026-10_player-settings.md) Phase 3
 
 ### 1.14 Asset/file organization drift (icons scattered across 8+ locations)
 
@@ -311,7 +294,7 @@ tables before starting any redesign that touches `Human.prefab` or a condemned s
   T3; origin in [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) § Known issues.
 - **Multiplayer harness gaps:** mouse/screen-space interaction and pocket/container round-trip are
   not covered by the automated harness yet, so regressions there ship silently.
-  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md).
+  [Multiplayer testing](systems/networking-session-testing.md).
 
 ---
 

@@ -10,7 +10,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
     /// Strips the world-click <see cref="ContainerInteractive"/> from the HumanHead/HumanTorso root
     /// GameObjects so hovering/clicking a player's head or torso no longer offers Store/Take/View
     /// container interactions during combat and examine targeting — confirmed live debt, not intentional
-    /// (see TECH_DEBT.md §1.1 / 2026-07_human-prefab-decomposition.md Phase 0). The clothing-slot
+    /// (see TECH_DEBT.md §1.1 / Documents/architecture/systems/entities-prefab-recipes.md § Tests). The clothing-slot
     /// <see cref="AttachedContainer"/> itself is kept (still reachable via the HUD equip/storage UI);
     /// only the world-click surface is removed. Surgery's future body-part-as-container work will
     /// re-add a world-interactive surface deliberately rather than reviving this one.

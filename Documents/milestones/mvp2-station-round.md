@@ -60,7 +60,7 @@ flowchart TB
 Hidden blockers this sketch makes explicit (each its own future pass):
 
 - **Jobs need a job-select UI** — now provided by the UITK lobby ([lobby.md](../design/lobby.md);
-  [effort](../architecture/2026-08_lobby-uitk-redesign.md) Phase D, legacy uGUI purged in Phase F). What
+  [effort](../architecture/systems/rounds-lobby.md) Phase D, legacy uGUI purged in Phase F). What
   remains for S1 is a real roster: only Security and Assistant are authored in `StartingRoles.asset`. Roles/loadouts have a legacy home (`RoleSubSystem`/`RoleLoadout`,
   [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)); access presets come
   from [id-access.md](../design/id-access.md) §5.

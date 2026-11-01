@@ -88,7 +88,7 @@ Info, Jobs, Chat, Players and Settings; the removed Character tab stays removed.
 Resolution/fullscreen, UI scale/brightness, audio mixer levels and input-action
 rebinding are not applied to the game or persisted. The reference keyboard labels
 (including Tab inventory / T chat) are prototype data, not the fork's actual default
-scheme; consult [inputs](systems/inputs.md) before runtime wiring. Ready/jobs/chat,
+scheme; consult [inputs](../../architecture/systems/inputs.md) before runtime wiring. Ready/jobs/chat,
 player actions, observer and admin round APIs retain their existing mock/stub status
 (Phases C/D). Admin Server Settings is a later fidelity/wiring pass.
 
@@ -136,9 +136,9 @@ of the same meshes after Save → other character → New Character → saved ch
 
 ## Visual QA
 
-The [MCP lobby pilot](../archive/architecture/2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
+The [MCP lobby pilot](2026-10_unity-mcp-lobby-pilot.md) automates Identity/Body/Style/
 Review, name/body edits, preview rotation, Save/Return, character switching and
-New Character reset, plus all player tabs and Settings interactions. See [Testing/ui/README.md](../../Testing/ui/README.md)
+New Character reset, plus all player tabs and Settings interactions. See [Testing/ui/README.md](../../../Testing/ui/README.md)
 for commands and evidence. It does not establish physical-input or multiplayer correctness.
 
 Play Mode: click character preview → Character Creator with live humanoid RT; Body sliders drive
@@ -148,8 +148,8 @@ RT appearance. The old uGUI lobby was removed in Phase F; the pilots assert it i
 
 ## Related
 
-- Design: [lobby.md](../design/lobby.md)
-- Maps: [rounds-lobby](systems/rounds-lobby.md), [ui-shell](systems/ui-shell.md)
+- Design: [lobby.md](../../design/lobby.md)
+- Maps: [rounds-lobby](../../architecture/systems/rounds-lobby.md), [ui-shell](../../architecture/systems/ui-shell.md)
 
 ## Preview framing — 2026-10-30
 
@@ -397,7 +397,7 @@ Events, Friendly Fire policy and Cloning are visible disabled controls with expl
 Manual start replaces the prototype's unimplemented autostart threshold caption.
 
 This is the attached prototype's direct-selection UI. The 2026-10 design review adopted it as
-the first pass ([round-config.md](../design/round-config.md) §2); weighted pools are its later
+the first pass ([round-config.md](../../design/round-config.md) §2); weighted pools are its later
 pass (§7). History UI, the map-fits-mode check (§5), autostart and disk persistence remain
 deferred.
 
@@ -410,7 +410,7 @@ Verification: `validate-20261030-203641` passed compile, lifecycle (96 checks, z
 errors), rebuild and remote (19 host checks, zero captured errors). EditMode (2089 completed)
 and visual (122 checks) passed in `validate-20261030-203255`; the subsequent runtime rerun
 verified the per-field merge correction. Server Settings waiting/countdown/rules PNGs were
-visually reviewed. See [test runbook](../../Testing/ui/README.md#server-settings-coverage--2026-10-30).
+visually reviewed. See [test runbook](../../../Testing/ui/README.md#lobby-lifecycle-pilot).
 
 
 ## 2026-10-30 Deferred round-map loading
@@ -476,7 +476,7 @@ file plus atomic replacement protects the existing save during writes. Unreadabl
 profiles fall back to defaults in memory and remain untouched on subsequent Save calls.
 
 This is a client-owned preset library within the effort's expanded creator scope, separate
-from server-owned player meta in [persistence-save.md](../design/persistence-save.md) §5.
+from server-owned player meta in [persistence-save.md](../../design/persistence-save.md) §5.
 No account identity, job preferences, moderation data or in-round crew records are stored here.
 Style indices retain the existing matching-catalog assumption.
 
@@ -535,7 +535,7 @@ laid out yet. Validation `validate-20261030-225941` passed: 2112 EditMode tests,
 ## Lobby chat — 2026-10-31
 
 The Chat tab now uses real networked OOC/LOOC/Admin channels instead of mock lines. These are
-the non-diegetic channels from [comms.md](../design/comms.md) §7. The UI is in the lobby
+the non-diegetic channels from [comms.md](../../design/comms.md) §7. The UI is in the lobby
 shell, which is also the in-round Escape menu. There is no HUD feed for OOC yet.
 
 - **Transport:** FishNet broadcasts in a `CommsSubSystem` partial (`CommsSubSystem.Ooc.cs`), so

@@ -8,7 +8,7 @@
 
 ## Build, run, and test
 
-Day-to-day dev runs through the Unity Editor. There is no CLI build.
+Day-to-day dev runs through the Unity Editor. For a batchmode Linux client/server build, close the Editor on this project and run `Tools/build_client_and_server.sh` (`UNITY_EDITOR_PATH` selects the installed Unity executable). For validation with the Editor open, use `Testing/ui/validate.sh --full`.
 
 - **Editor toolbar**: the fork adds Scene Switcher (left), Launcher toggle and Network Settings (right). If they're missing, right-click the toolbar and enable them under **Tools**.
 - **Tests**: EditMode and PlayMode suites live under `Assets/Scripts/Tests/` (`SS3D.Tests.EditMode`, `SS3D.Tests.PlayMode`, `AssetAudit`, shared `Common`). Run them from **Window > General > Test Runner**. CI runs EditMode via `.github/workflows/editmodetestrunner.yml`.

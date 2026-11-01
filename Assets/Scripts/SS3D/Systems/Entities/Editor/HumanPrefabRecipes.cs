@@ -8,7 +8,7 @@ namespace SS3D.Systems.Entities.Editor
 {
     /// <summary>
     /// Single discoverable entry point for every registered <c>Human.prefab</c> recipe tool — the
-    /// "recipe" convention named in 2026-07_human-prefab-decomposition.md Phase 2 and
+    /// "recipe" convention named in Documents/architecture/systems/entities-prefab-recipes.md § Extension points and
     /// 2026-07_editor-tooling-tiers.md tier B: a <see cref="PrefabUtility"/>-based static per concern,
     /// registered here, instead of an agent needing tribal knowledge of which scattered menu items
     /// exist or need re-running after a merge. Add a line here whenever a new recipe targeting

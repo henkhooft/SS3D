@@ -6,7 +6,7 @@
 
 # Player settings: display, audio, controls (Oct 2026)
 
-Wire up the player **Settings** tab in the lobby shell. It also serves as the in-round Escape menu. Today the tab is a session-local mockup with three sub-tabs: Display, Sound and Keyboard ([rounds-lobby](systems/rounds-lobby.md) Overview; `LobbyShellView.BuildSettingsTab`). None of its values are applied to the game, and none survive a restart. Scope was settled in a grilling session on 2026-10-31.
+The player **Settings** tab in the lobby shell also serves as the in-round Escape menu. Display, Audio and Controls now apply and persist through `PlayerSettingsSubSystem`; Phases 1–3 are shipped, with the Phase 4 verification checklist still open. The starting-state inventory below records the pre-implementation mockup. Scope was settled on 2026-10-31.
 
 No design doc covers player settings: `main-hud.md` lists settings menus as out of scope, and `audio.md` §10 treats volume levels as a settings concern. The only design premise is audio.md §7's four volume categories. Brightness is deliberately left out (see Decisions).
 

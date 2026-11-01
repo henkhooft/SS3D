@@ -13,7 +13,7 @@ namespace SS3D.Systems.Inventory.Containers
     /// Deliberately does not expose the hacker-visible raw access bitmask from
     /// hacking-interface.md §3's FDU taxonomy; that integration is deferred until
     /// hacking-interface has its own architecture effort. See
-    /// Documents/architecture/2026-07_inventory-storage-redesign.md "Scope decisions".
+    /// Documents/architecture/systems/inventory.md § Overview.
     /// </summary>
     [RequireComponent(typeof(AttachedContainer))]
     [RequireComponent(typeof(AuthLogDeviceBehaviour))]

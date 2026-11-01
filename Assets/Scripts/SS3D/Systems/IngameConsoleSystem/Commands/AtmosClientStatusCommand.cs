@@ -13,7 +13,7 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
     /// actually applied a chunk patch. Runs entirely client-side (no server round trip), so it
     /// also works against a pure client's own <see cref="AtmosRenderContext"/> — see
     /// Documents/architecture/2026-07_atmos-client-visualization-sync.md and
-    /// Documents/architecture/2026-07_multiplayer-test-harness.md.
+    /// Documents/architecture/systems/networking-session-testing.md.
     /// </summary>
     public class AtmosClientStatusCommand : Command
     {

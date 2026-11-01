@@ -15,7 +15,7 @@ namespace SS3D.Tests
     /// in UnityTests. Only valid for single-process (Host or in-Editor DedicatedServer)
     /// PlayMode tests - the stub broadcast methods it calls are Editor-only and don't compile
     /// into a real built player/server. For real multi-process coverage, see
-    /// Testing/multiplayer/ (Documents/architecture/2026-07_multiplayer-test-harness.md).
+    /// Testing/multiplayer/ (Documents/architecture/systems/networking-session-testing.md).
     /// </summary>
     public static class ServerHelpers
     {

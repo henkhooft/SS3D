@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 86569a0c4 — 2026-10-30
+> Verified: 259787487 — 2026-11-01
 
 # Entities
 
@@ -9,11 +9,15 @@
 
 Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lobby](rounds-lobby.md). Humanoid body animation is driven by a packed `BodyAnimationSnapshot` SyncVar, not ad-hoc Animator calls.
 
-**Prefab composition debt:** `Human.prefab` is a mega-prefab (~15k lines, ~120 script refs). Do not hand-add features on it. Target is a thin visual/network anchor; health Phase 0d is strip-and-rewire, not grow. See [2026-07_agent-first-composition.md](../2026-07_agent-first-composition.md) and the scheduled paydown [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) (planned).
+**Prefab composition:** Human remains a large shared graph. Evolve it through the
+[Entity prefab recipes](entities-prefab-recipes.md); remaining structural work is tracked in
+[TECH_DEBT §1.1](../TECH_DEBT.md#11-humanprefab-mega-prefab).
 
 **Body presentation:** `Ragdoll` owns replicated `BodyPresentationState` (`Locomotion` / `Collapsed` / `Dead`) and is the sole applier. Movement, bridge, and orchestrator read `Presentation` — do not invent a parallel collapse path ([2026-07_body-presentation-authority.md](../../archive/architecture/2026-07_body-presentation-authority.md), shipped).
 
 ## Start here
+
+- [Entity prefab recipes](entities-prefab-recipes.md) — domain wiring, aggregator, nested FishNet constraints and integrity checks
 
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment; `Mind.DisplayName` (lobby character name, else ckey) is the in-world speaker/record name
@@ -33,7 +37,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - `Assets/Scripts/SS3D/Editor/HumanoidLocomotionBlendSetup.cs` — **SS3D → Animation → Rebuild Combat Stance Blend Trees**
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Hand.cs` — `HandSide` on left/right hand prefabs (Upper Body mirror)
 - Combat test dummy: [combat](combat.md) (`spawndummy` / `CombatDummyBootstrap`) — reuses Human prefab, no mind, do not grow `Human.prefab`
-- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, `CombatInteractionNetwork` ensure, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
+- `Assets/Scripts/SS3D/Systems/Entities/Editor/HumanPrefabRecipes.cs` — **SS3D → Entities → Run All Human Prefab Recipes**, the single menu for every `Human.prefab`-targeting recipe (dev-hack removal, ContainerInteractive strip, hands wiring, LocalSpeechEmitter ensure, `CombatInteractionNetwork` ensure, substance-container strip, nested resync). Add new Human recipes here as statics — no individual MenuItems ([2026-07_editor-tooling-tiers.md](../2026-07_editor-tooling-tiers.md) tier B).
 - `Assets/Scripts/SS3D/Systems/Combat/Editor/CombatInteractionNetworkPrefabSetup.cs` — ensures `CombatInteractionNetwork` beside `InteractionController` and rebuilds FishNet `_networkBehaviours`
 - Clip bake helpers (`HumanoidClipBakeUtility`) are demoted statics (no menu) — rare Mixamo/placeholder path; call from batch/code if needed.
 
@@ -64,7 +68,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Timed knockdown from server:** call `ServerRecover`, not `Recover()` (ServerRpc is a no-op from server).
 - **Melee swing torso fight:** Upper Body mask must include spine/chest; head stays unmasked for look-at. Do not reintroduce C# swing duration timers — use AttackSwing + `AttackVariant` (0–2: horizontal / downward / backhand).
 - **Left-hand Mixamo mirror:** Upper Body Hold* / Attack Swing* use `MirrorUpperBody` (`Hand.Side`). Do not mirror Base Layer FreeformCartesian — that flips strafes. Set `_side` on `HumanHandLeft`/`HumanHandRight`, not mega `Human.prefab`. Two-hand rifles (`RequiresBothHands`) force `MirrorUpperBody=false` via `TwoHandedWeaponRules` even when the left hand is selected.
-- **Every body part is its own nested `NetworkObject`, not a flat component list:** `HumanTorso`/`HumanHead`/each limb prefab under `HumanBodyParts/` carries its own `NetworkObject` with `IsNested = true`. The root `NetworkObject`'s `_networkBehaviours` flattens across those nested boundaries (it lists behaviours living inside body-part prefabs directly). A recipe tool that reuses `StorageContainerPrefabSetup`-style behaviour collection (which stops descending at any child with a `NetworkObject`) will silently drop every nested body-part behaviour from the rebuilt list — only stop at a child Nob when `!IsNested`. See `HumanPrefabHygiene.CollectNetworkBehaviours` ([2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md)).
+- **Every body part is its own nested `NetworkObject`, not a flat component list:** `HumanTorso`/`HumanHead`/each limb prefab under `HumanBodyParts/` carries its own `NetworkObject` with `IsNested = true`. The root `NetworkObject`'s `_networkBehaviours` flattens across those nested boundaries (it lists behaviours living inside body-part prefabs directly). A recipe tool that reuses `StorageContainerPrefabSetup`-style behaviour collection (which stops descending at any child with a `NetworkObject`) will silently drop every nested body-part behaviour from the rebuilt list — only stop at a child Nob when `!IsNested`. See `HumanPrefabHygiene.CollectNetworkBehaviours` ([Entity prefab recipes](entities-prefab-recipes.md)).
 - **Stale `m_Script` on stripped nested-prefab mirrors is cosmetic, not a broken reference:** a `stripped` MonoBehaviour placeholder's authoritative type comes from `m_CorrespondingSourceObject` in the source prefab, not its own cached `m_Script` GUID — the cache can go stale (and even reference a since-deleted class) after the source prefab's component type changes without Human.prefab being resaved in the Editor. Fix by updating the cached GUID to match the source's current type; do not delete the stripped block — it is a live entry in the root `NetworkObject`'s `_networkBehaviours` array and deleting it (versus correcting it) shifts every subsequent behaviour's index.
 - **Editing a nested body-part prefab asset directly leaves `Human.prefab`'s own mirror of it stale:** running a recipe that destroys a component on `HumanHead.prefab`/`HumanTorso.prefab` (e.g. `BodyPartContainerInteractiveStrip`) does not retroactively update `Human.prefab`'s stripped mirror of that instance — that only refreshes the next time `Human.prefab` itself is reloaded and resaved. `HumanPrefabRecipes.RunAllMenu` always calls `HumanPrefabHygiene.ResyncNestedPrefabInstances()` last, regardless of what the other recipes changed, specifically to converge this. Any new recipe that removes a component from a nested body-part prefab must trigger the same resync.
 - **Injured oneshots:** Jump / Turn90 / Emote while limping → Injured Jump / Turn / Wave (Base Layer); healthy oneshots require `LimpSide == 0`. **Jump/Turn90 are not bound in `Controls.inputed`** and nothing calls `PlayLocomotionTrigger` yet — presentation only.
@@ -93,6 +97,6 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - [2026-07_player-body-animation](../../archive/architecture/2026-07_player-body-animation.md)
 - [2026-07_agent-first-composition](../2026-07_agent-first-composition.md) (prefab debt)
 - [2026-07_editor-tooling-tiers](../2026-07_editor-tooling-tiers.md) — Editor MenuItem A/B/C policy
-- [2026-07_human-prefab-decomposition](../2026-07_human-prefab-decomposition.md) — **planned** Human.prefab paydown
+- [Entity prefab recipes](entities-prefab-recipes.md) — current recipe contracts and integrity checks
 - [animation_system_design plan](../../archive/plans/animation_system_design_250de599.plan.md)
 - [INDEX.md](../INDEX.md)

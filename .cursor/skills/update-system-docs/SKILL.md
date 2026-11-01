@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Update System Docs
 
-Sync navigation documentation after implementation work. Updates INDEX, system maps, plans,
+Sync navigation documentation after implementation work. Update current sections in place; leave session history and test-run timelines in git/artifacts (see Documents/SKILL.md, Live-reference principle). Updates INDEX, system maps, plans,
 architecture effort status, and playable milestone slice/focus status.
 
 **Never edit:** `Documents/design/*` (unless the owner explicitly asks).
@@ -90,7 +90,7 @@ If work completed a dated effort in `Documents/architecture/YYYY-MM_*.md`:
 Then archive every effort and plan that is now `shipped` or fully completed, per [Documents/SKILL.md](../../../Documents/SKILL.md) Archive:
 
 1. **Harvest**: move known issues to the map's Pitfalls or TECH_DEBT, deferred phases to the milestone slice, and design deviations to the map.
-2. Skip docs still cited by path from code, CI, tests, skills or governance. They stay active as reference.
+2. Keep current policies/runbooks active. If a completed effort is cited from code, CI, tests, skills or governance, harvest its live guidance and retarget the citations before archiving it (Documents/SKILL.md, Live-reference principle).
 3. `git mv` the rest into `Documents/archive/architecture/` or `Documents/archive/plans/`, then fix relative links into and out of each moved file.
 4. In INDEX, drop the doc from **Active efforts and plans** and repoint its coverage-table link at the archive path.
 
