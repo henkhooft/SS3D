@@ -21,7 +21,7 @@ namespace SS3D.Systems.Tile.Validation
             {
                 if (!spawns.Any(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job))
                     report.AddIssue("job:" + job, false, "Jobs", $"Missing job spawn: {job}",
-                        $"Missing job spawn: {job}. Add it under Scripts → Spawn Placements.", "spawn:job:" + job);
+                        $"Missing job spawn: {job}. Add it under Scripts → Spawn Placements.");
             }
 
             // Secret resolves to the sole existing antagonist mode, just as GamemodeSubSystem does.
@@ -30,13 +30,13 @@ namespace SS3D.Systems.Tile.Validation
                 if (!spawns.Any(spawn => spawn.Kind == SpawnPointKind.Antagonist
                     && spawn.AntagonistCategory == AntagonistSpawnCategory.NuclearOperatives))
                     report.AddIssue("operative", false, "Game Modes", "Missing Nuclear Operatives spawn",
-                        "Missing Nuclear Operatives spawn. Add it under Scripts → Spawn Placements.", "spawns");
+                        "Missing Nuclear Operatives spawn. Add it under Scripts → Spawn Placements.");
                 if (!hasNuke)
                     report.AddIssue("nuke", false, "Game Modes", "Missing nuclear device",
-                        "Missing nuclear device. Place a NukeCart on the map.", "NukeCart");
+                        "Missing nuclear device. Place a NukeCart on the map.");
                 if (!hasDisk)
                     report.AddIssue("disk", false, "Game Modes", "Missing authentication disk",
-                        "Missing authentication disk. Place a NuclearAuthenticationDisk on the map.", "NuclearAuthenticationDisk");
+                        "Missing authentication disk. Place a NuclearAuthenticationDisk on the map.");
             }
             else if (mode != "Extended")
                 report.AddIssue("mode", false, "Game Modes", "Unsupported game mode",
@@ -49,7 +49,7 @@ namespace SS3D.Systems.Tile.Validation
                 if (!requiredJobs.Contains(job, StringComparer.Ordinal))
                     report.AddIssue("unavailable:" + job, true, "Jobs", $"Spawn for unavailable job: {job}",
                         $"Spawn for unavailable job: {job}. Check its job name or server role configuration.",
-                        "spawns", spawns.First(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job).Position, true);
+                        spawns.First(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job).Position, true);
             }
             // The policy retains one error per missing requirement; the editor groups related
             // failures into a single expandable checklist, including requirements already met.
@@ -59,7 +59,7 @@ namespace SS3D.Systems.Tile.Validation
                 report.Issues.Insert(0, new MapValidationIssue
                 {
                     Id = "job-spawns", Category = "Jobs", Title = "Offered jobs missing spawn markers",
-                    Body = "Every offered job needs an authored spawn marker.", Target = "spawns",
+                    Body = "Every offered job needs an authored spawn marker.",
                     Checks = requiredJobs.Select(job => new MapValidationCheck
                     {
                         Label = job, IsMet = spawns.Any(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job),
@@ -73,13 +73,12 @@ namespace SS3D.Systems.Tile.Validation
                 {
                     Id = "nuclear", Category = "Game Modes", Title = "Nuclear requirements incomplete",
                     Body = "Nuclear Emergency and Secret require an operative marker, nuclear device and authentication disk.",
-                    Target = "spawns",
                     Checks = new[]
                     {
                         new MapValidationCheck { Label = "Operative marker", IsMet = spawns.Any(spawn => spawn.Kind == SpawnPointKind.Antagonist
-                            && spawn.AntagonistCategory == AntagonistSpawnCategory.NuclearOperatives), Target = "spawns" },
-                        new MapValidationCheck { Label = "Nuclear device", IsMet = hasNuke, Target = "NukeCart" },
-                        new MapValidationCheck { Label = "Authentication disk", IsMet = hasDisk, Target = "NuclearAuthenticationDisk" },
+                            && spawn.AntagonistCategory == AntagonistSpawnCategory.NuclearOperatives) },
+                        new MapValidationCheck { Label = "Nuclear device", IsMet = hasNuke },
+                        new MapValidationCheck { Label = "Authentication disk", IsMet = hasDisk },
                     },
                 });
             }
@@ -92,7 +91,6 @@ namespace SS3D.Systems.Tile.Validation
     {
         public string Label;
         public bool IsMet;
-        public string Target;
     }
 
     /// <summary>Server-authored issue data shared by save policy and the editor's Map Check panel.</summary>
@@ -104,7 +102,7 @@ namespace SS3D.Systems.Tile.Validation
         public string Category;
         public string Title;
         public string Body;
-        public string Target;
+        /// <summary>Map location the issue points at (e.g. a spawn without floor); drives the Locate button.</summary>
         public Vector3 Position;
         public bool HasPosition;
         public MapValidationCheck[] Checks;
@@ -115,10 +113,10 @@ namespace SS3D.Systems.Tile.Validation
         public List<MapValidationIssue> Issues { get; } = new();
 
         public void AddIssue(string id, bool warning, string category, string title, string body,
-            string target = null, Vector3 position = default, bool hasPosition = false)
+            Vector3 position = default, bool hasPosition = false)
         {
             Issues.Add(new MapValidationIssue { Id = id, IsWarning = warning, Category = category,
-                Title = title, Body = body, Target = target, Position = position, HasPosition = hasPosition });
+                Title = title, Body = body, Position = position, HasPosition = hasPosition });
             (warning ? Warnings : Errors).Add(body);
         }
 

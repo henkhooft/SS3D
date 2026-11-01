@@ -2,6 +2,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
+using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
@@ -19,16 +20,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         /// <summary>Object library panel heights (px) for the three resize states.</summary>
         private static readonly Dictionary<PaletteMode, float> PaletteHeights = new()
         {
-            [PaletteMode.Min] = 52f,
-            [PaletteMode.Normal] = 260f,
-            [PaletteMode.Max] = 460f,
+            [PaletteMode.Min] = 40f,
+            [PaletteMode.Normal] = 210f,
+            [PaletteMode.Max] = 420f,
         };
 
         /// <summary>Object library grid row count per resize state (extra columns scroll horizontally).</summary>
-        private const int NormalGridRows = 2;
-        private const int MaxGridRows = 4;
-        /// <summary>Slot height (74) + vertical margins (8) + border (3).</summary>
-        private const float GridSlotOuterHeightPx = 85f;
+        private const int NormalGridRows = 1;
+        private const int MaxGridRows = 3;
+        /// <summary>Slot width (108) + horizontal margins (8) + border (3).</summary>
+        private const float GridSlotOuterWidthPx = 120f;
+        /// <summary>Slot height (104) + vertical margins (8) + border (3).</summary>
+        private const float GridSlotOuterHeightPx = 115f;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
@@ -339,9 +342,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toolsRow.Add(_subcatRow);
             toolsRow.Add(search);
 
-            _gridScroll = new ScrollView(ScrollViewMode.Horizontal);
-            _gridScroll.horizontalScrollerVisibility = ScrollerVisibility.Auto;
-            _gridScroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            _gridScroll = new ScrollView(ScrollViewMode.Vertical);
+            _gridScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            _gridScroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
             _gridScroll.AddToClassList("map-editor-grid-scroll");
             _grid = new VisualElement();
             _grid.AddToClassList("map-editor-grid");
@@ -390,8 +393,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _paletteRegion.style.height = PaletteHeights[_paletteMode];
-            if (_toast != null)
-                _toast.style.bottom = 48 + PaletteHeights[_paletteMode];
             if (_mapCheckColumn != null)
                 _mapCheckColumn.style.bottom = 24 + PaletteHeights[_paletteMode] + 12;
             bool showBody = _paletteMode != PaletteMode.Min;
@@ -440,7 +441,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 pair.Value.EnableInClassList("map-editor-mode-tab--active", pair.Key == _vm.CurrentMode);
             }
 
-            _searchField?.SetValueWithoutNotify(_vm.SearchText);
             RebuildSubcategories();
             ApplyPaletteMode();
 
@@ -505,10 +505,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _grid.Clear();
-            _gridScroll.mode = _vm.IsRoomCategory ? ScrollViewMode.Vertical : ScrollViewMode.Horizontal;
-            _gridScroll.horizontalScrollerVisibility = _vm.IsRoomCategory ? ScrollerVisibility.Hidden : ScrollerVisibility.Auto;
-            _gridScroll.verticalScrollerVisibility = _vm.IsRoomCategory ? ScrollerVisibility.Auto : ScrollerVisibility.Hidden;
-            _grid.style.flexDirection = _vm.IsRoomCategory ? FlexDirection.Column : FlexDirection.Row;
 
             if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
             {
@@ -544,26 +540,30 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
-            int rowCount = _paletteMode == PaletteMode.Max ? MaxGridRows : NormalGridRows;
-            int columnCount = (entryList.Count + rowCount - 1) / rowCount;
-            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++)
+            int maxColumns = GetMaxGridColumns();
+            if (maxColumns <= 0)
+                maxColumns = Math.Max(1, entryList.Count);
+
+            int columnCount = maxColumns;
+            int usedRows = (entryList.Count + columnCount - 1) / columnCount;
+            VisualElement[] rows = new VisualElement[usedRows];
+            for (int rowIndex = 0; rowIndex < usedRows; rowIndex++)
             {
-                VisualElement column = new() { pickingMode = PickingMode.Position };
-                column.style.flexDirection = FlexDirection.Column;
-                column.style.flexShrink = 0;
-                for (int row = 0; row < rowCount; row++)
-                {
-                    int index = columnIndex * rowCount + row;
-                    if (index < entryList.Count)
-                        column.Add(BuildSlot(entryList[index]));
-                }
-                _grid.Add(column);
+                VisualElement row = new() { pickingMode = PickingMode.Position };
+                row.AddToClassList("map-editor-grid-row");
+                rows[rowIndex] = row;
+                _grid.Add(row);
+            }
+
+            for (int index = 0; index < entryList.Count; index++)
+            {
+                rows[index / columnCount].Add(BuildSlot(entryList[index]));
             }
         }
 
         private void OnGridScrollGeometryChanged(GeometryChangedEvent evt)
         {
-            if (!_vm.IsRoomCategory || _grid == null || _paletteMode == PaletteMode.Min)
+            if (_grid == null || _paletteMode == PaletteMode.Min)
                 return;
 
             float width = _gridScroll.contentViewport.layout.width;
@@ -586,7 +586,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (width <= 1f)
                 return 0;
 
-            return Math.Max(1, Mathf.FloorToInt(width / 91f));
+            return Math.Max(1, Mathf.FloorToInt(width / GridSlotOuterWidthPx));
         }
 
         private Button BuildSlot(MapEditorCatalogEntry entry)
@@ -632,6 +632,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             else if (floorDecal?.Texture != null)
             {
                 icon.style.backgroundImage = new StyleBackground(floorDecal.Texture);
+            }
+            else if (isSpawn && _icons?.GetSpawnIcon(entry.AssetName) is VectorImage spawnIcon)
+            {
+                icon.style.backgroundImage = new StyleBackground(spawnIcon);
+                bool antagonist = MapEditorSpawnCatalog.TryDecode(entry.AssetName, out SpawnPointKind kind, out _, out _)
+                                  && kind == SpawnPointKind.Antagonist;
+                icon.AddToClassList(antagonist ? "map-editor-slot__icon--spawn-antag" : "map-editor-slot__icon--spawn-job");
             }
             else if (asset?.icon != null)
             {

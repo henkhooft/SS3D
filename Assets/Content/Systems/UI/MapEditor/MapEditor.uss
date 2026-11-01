@@ -216,7 +216,7 @@
 
 .map-editor-region--top-left { left: 24px; top: 24px; overflow: visible; }
 .map-editor-region--top-right { right: 24px; top: 24px; overflow: visible; }
-.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 260px; }
+.map-editor-region--bottom { left: 24px; right: 24px; bottom: 24px; height: 210px; }
 
 .map-editor-right-column {
     flex-direction: column;
@@ -724,15 +724,15 @@
 }
 
 .map-editor-slot {
-    width: 80px;
-    height: 74px;
+    width: 108px;
+    height: 104px;
     min-height: 0;
     flex-shrink: 0;
     align-items: center;
     justify-content: flex-start;
     margin: 4px;
-    padding: 8px 4px 6px;
-    background-color: var(--ss3d-surface-panel-raised);
+    padding: 7px 6px 6px;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 1.5px;
     border-color: var(--ss3d-border-default);
     border-radius: 8px;
@@ -743,8 +743,8 @@
 }
 
 .map-editor-slot__icon-frame {
-    width: 38px;
-    height: 38px;
+    width: 74px;
+    height: 74px;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
@@ -752,8 +752,8 @@
 }
 
 .map-editor-slot__icon {
-    width: 34px;
-    height: 34px;
+    width: 70px;
+    height: 70px;
     background-color: rgba(0, 0, 0, 0);
     border-radius: 6px;
     -unity-background-scale-mode: scale-to-fit;
@@ -763,6 +763,15 @@
     background-color: rgba(179, 51, 51, 0.35);
     border-radius: 6px;
 }
+
+/* Spawn marker glyphs: tinted like the in-world spawn pins (blue job, red antagonist). */
+.map-editor-slot__icon--spawn-job,
+.map-editor-slot__icon--spawn-antag {
+    width: 52px;
+    height: 52px;
+}
+.map-editor-slot__icon--spawn-job { -unity-background-image-tint-color: rgb(64, 191, 255); }
+.map-editor-slot__icon--spawn-antag { -unity-background-image-tint-color: rgb(255, 89, 64); }
 
 .map-editor-slot__label {
     font-size: 10.5px;
@@ -1068,7 +1077,7 @@
     background-color: var(--ss3d-surface-panel-raised);
 }
 .map-check__title { flex-grow: 1; color: var(--ss3d-text-primary); font-size: 14px; }
-.map-check__badge { background-color: var(--ss3d-surface-inset); border-radius: 3px; padding: 3px 6px; margin-right: 6px; font-size: 11px; }
+.map-check__badge { background-color: var(--ss3d-surface-inset); color: var(--ss3d-text-primary); border-radius: 3px; padding: 3px 6px; margin-right: 6px; font-size: 11px; }
 .map-check__danger { color: var(--ss3d-feedback-danger); }
 .map-check__warning { color: var(--ss3d-feedback-warning); }
 .map-check__filters { flex-direction: row; padding: 8px; flex-shrink: 0; border-bottom-width: 1px; border-bottom-color: var(--ss3d-border-subtle); }
@@ -1083,7 +1092,7 @@
     font-size: 12px;
 }
 .map-check__button:hover { background-color: var(--ss3d-surface-panel-raised); }
-.map-check__filter { flex-grow: 1; }
+.map-check__filter { flex-grow: 1; font-size: 16px; }
 .map-check__filter--active { background-color: var(--ss3d-accent-rust-dim); border-color: var(--ss3d-accent-rust); }
 .map-check__issues { min-height: 0; flex-shrink: 1; }
 .map-check__issue { border-bottom-width: 1px; border-bottom-color: var(--ss3d-border-subtle); flex-shrink: 0; }
@@ -1114,6 +1123,7 @@
 .map-check__success { color: var(--ss3d-feedback-success); }
 .map-check__badge.map-check__danger { background-color: var(--ss3d-feedback-danger-bg); }
 .map-check__badge.map-check__warning { background-color: var(--ss3d-feedback-warning-bg); }
+.map-check__badge.map-check__success { background-color: var(--ss3d-feedback-success-bg); border-width: 1px; border-color: var(--ss3d-feedback-success-border); }
 
 .map-check__title, .map-check__filter {
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
@@ -1122,5 +1132,4 @@
     -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
 }
 
-.map-editor-grid-scroll { min-height: 0; flex-shrink: 1; }
 .map-check__issue-toggle > .map-editor-vector-icon { width: 14px; height: 14px; flex-shrink: 0; }

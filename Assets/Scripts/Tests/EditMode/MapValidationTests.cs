@@ -6,6 +6,7 @@ using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.Validation;
 using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile.MapEditor.UI;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -122,7 +123,7 @@ namespace EditorTests
             Assert.IsFalse(jobs.Checks.Single(check => check.Label == "Captain").IsMet);
             MapValidationIssue nuclear = report.Issues.Single(issue => issue.Id == "nuclear");
             Assert.AreEqual(2, nuclear.Checks.Count(check => check.IsMet));
-            Assert.AreEqual("NukeCart", nuclear.Checks.Single(check => !check.IsMet).Target);
+            Assert.AreEqual("Nuclear device", nuclear.Checks.Single(check => !check.IsMet).Label);
         }
 
         [Test]
@@ -133,9 +134,12 @@ namespace EditorTests
             MapEditorViewModel model = new();
             model.SetValidation(report.Issues.ToArray(), "Extended");
             MapEditorView view = new(null, null, model, new MapEditorCatalog(), null);
+            // Buttons only react to submit events inside a live panel, so host the view in a window.
+            EditorWindow window = ScriptableObject.CreateInstance<EditorWindow>();
+            window.Show();
             try
             {
-                VisualElement root = new();
+                VisualElement root = window.rootVisualElement;
                 view.Build(root);
                 Assert.IsNotNull(root.Q<ScrollView>("map-check-issues"));
                 Click(root, "map-check-filter-warning");
@@ -154,11 +158,11 @@ namespace EditorTests
                 model.SetValidation(report.Issues.ToArray(), "Extended", resetDismissed: true);
                 Assert.IsNotNull(root.Q("map-check-issue-unavailable:RetiredJob"));
             }
-            finally { view.Destroy(); }
+            finally { view.Destroy(); window.Close(); }
         }
 
         [Test]
-        public void MapCheckUsesLiteralTextAndWiresRecheckAndCameraTargets()
+        public void MapCheckUsesLiteralTextAndShowsCheckingWhileStale()
         {
             Vector3 position = new(4, 0, 9);
             MapEditorViewModel model = new();
@@ -166,13 +170,14 @@ namespace EditorTests
                 Title = "<b>draft</b>", Body = "Literal <i>body</i>", Category = "Jobs",
                 HasPosition = true, Position = position } }, "Extended");
             MapEditorView view = new(null, null, model, new MapEditorCatalog(), null);
-            bool rechecked = false;
             Vector3 located = Vector3.zero;
-            view.ValidationRequested += () => rechecked = true;
             view.ValidationLocateRequested += issue => located = issue.Position;
+            // Buttons only react to submit events inside a live panel, so host the view in a window.
+            EditorWindow window = ScriptableObject.CreateInstance<EditorWindow>();
+            window.Show();
             try
             {
-                VisualElement root = new();
+                VisualElement root = window.rootVisualElement;
                 view.Build(root);
                 Click(root, "map-check-toggle-test");
                 foreach (Label label in root.Query<Label>().ToList())
@@ -180,16 +185,16 @@ namespace EditorTests
                 Assert.AreEqual("Literal <i>body</i>", root.Q<Label>(className: "map-check__body").text);
                 Click(root, "map-check-locate-test");
                 Assert.AreEqual(position, located);
-                Click(root, "map-check-recheck");
-                Assert.IsTrue(rechecked);
+                Assert.IsNull(root.Q<Button>("map-check-recheck"));
                 model.SetValidation(Array.Empty<MapValidationIssue>(), "Extended");
                 Assert.IsNull(root.Q("map-check-issue-test"));
                 Assert.AreEqual("Map is playable.", root.Q<Label>(className: "map-check__status").text);
+                Assert.IsNotNull(root.Q<Label>(className: "map-check__success"));
                 model.ValidationStale = true;
                 model.NotifyChanged();
-                Assert.AreEqual("Map changed. Re-check.", root.Q<Label>(className: "map-check__status").text);
+                Assert.AreEqual("Checking the map...", root.Q<Label>(className: "map-check__status").text);
             }
-            finally { view.Destroy(); }
+            finally { view.Destroy(); window.Close(); }
         }
 
         private static void Click(VisualElement root, string name)

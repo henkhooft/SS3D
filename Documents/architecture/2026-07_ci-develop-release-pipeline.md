@@ -59,7 +59,8 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    `Start_SS3D_*.bat` + `README.txt` beside `Game/SS3D.exe`, plus CWD fixtures
    `Game/Config/` (`permissions.txt`, `network.json`), `Game/Data/Tilemaps/`, and `Game/Data/StationTemplates/`
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
-   `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime).
+   `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime) or
+   `StationTemplates/Metastation v2.json` (broken; kept in git only for the multiplayer loadtest).
    Linux client/server zips get the same seed under each `StandaloneLinux64/` tree when
    Linux was built. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
    (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.

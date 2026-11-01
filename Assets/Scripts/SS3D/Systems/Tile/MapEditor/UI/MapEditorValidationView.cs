@@ -18,7 +18,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private int _renderedValidationContext = -1;
         private bool _renderedValidationStale;
 
-        public event Action ValidationRequested;
         public event Action<MapValidationIssue> ValidationLocateRequested;
 
         private void BuildMapCheck(VisualElement column)
@@ -61,7 +60,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (warnings > 0)
                 header.Add(CheckLabel(warnings.ToString(), "map-check__badge map-check__warning"));
             if (live.Length == 0)
-                header.Add(CheckLabel(_vm.ValidationStale ? "Re-check" : _vm.ValidationChecked ? "Clear" : "Unchecked", "map-check__badge"));
+                header.Add(_vm.ValidationStale || !_vm.ValidationChecked
+                    ? CheckLabel("Checking", "map-check__badge")
+                    : CheckLabel("Clear", "map-check__badge map-check__success"));
             header.Add(CreateHeaderIconButton(_checkCollapsed ? _icons?.PanelCollapse : _icons?.PanelExpand,
                 _checkCollapsed ? "Expand Map Check" : "Collapse Map Check", () =>
                 {
@@ -84,12 +85,11 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 || (_issueFilter == "warning") == issue.IsWarning))
                 scroll.Add(BuildIssueRow(issue));
             if (scroll.contentContainer.childCount == 0)
-                scroll.Add(CheckLabel(_vm.ValidationChecked ? "No issues." : "Re-check to validate the current map.", "map-check__empty"));
+                scroll.Add(CheckLabel(_vm.ValidationChecked ? "No issues." : "Checking the map...", "map-check__empty"));
             _mapCheck.Add(scroll);
 
             VisualElement footer = CheckElement("map-check__footer");
-            string status = !_vm.ValidationChecked ? "Not checked yet."
-                : _vm.ValidationStale ? "Map changed. Re-check."
+            string status = !_vm.ValidationChecked || _vm.ValidationStale ? "Checking the map..."
                 : errors > 0 ? "Errors block round start." : "Map is playable.";
             Label statusLabel = CheckLabel(status, "map-check__status");
             statusLabel.tooltip = $"Game mode: {_vm.ValidationMode}. Saving is always allowed. Ignoring warnings only hides them in this editor.";
@@ -102,7 +102,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     _ignoredWarnings.Clear();
                     RefreshMapCheck(true);
                 }));
-            footer.Add(CheckButton("Re-check", "map-check-recheck", () => ValidationRequested?.Invoke()));
             _mapCheck.Add(footer);
         }
 
@@ -150,23 +149,16 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                         line.Add(CheckLabel(check.Label, "map-check__check-label"));
                         line.Add(CheckLabel(check.IsMet ? "OK" : "MISSING",
                             check.IsMet ? "map-check__success" : "map-check__danger"));
-                        if (!check.IsMet && !string.IsNullOrEmpty(check.Target))
-                        {
-                            MapValidationIssue target = issue;
-                            target.Target = check.Target;
-                            line.Add(CheckButton("Locate", "map-check-locate-" + check.Target,
-                                () => ValidationLocateRequested?.Invoke(target)));
-                        }
                         checks.Add(line);
                     }
                     detail.Add(checks);
                 }
                 VisualElement actions = CheckElement("map-check__actions");
-                if (issue.HasPosition || !string.IsNullOrEmpty(issue.Target))
+                if (issue.HasPosition)
                 {
                     Button locate = CheckButton("Locate", "map-check-locate-" + issue.Id,
                         () => ValidationLocateRequested?.Invoke(issue));
-                    locate.tooltip = issue.HasPosition ? "Move camera to the affected spawn" : "Open the relevant object library category";
+                    locate.tooltip = "Move the camera to this spot on the map";
                     actions.Add(locate);
                 }
                 if (issue.IsWarning)

@@ -115,7 +115,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _commandService.Execute(new CreateRoomCommand(areas, room, stroke, wasAuthored));
             _inspectedRooms[conn] = room;
             TargetAreaProperties(conn, room.Id.Value, Vector3.zero, room.DisplayName, room.ParentTag, 0);
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -135,7 +135,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 _inspectedRooms.Remove(conn);
                 TargetClearAreaSelection(conn);
             }
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
         }
 
         private sealed class PaintRoomCommand : IMapEditorCommand

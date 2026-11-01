@@ -103,6 +103,11 @@ namespace SS3D.Editor.MapEditor
             ("_subSpawnPlacements", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubSpawnPlacements),
             ("_subRandomSpawners", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubRandomSpawners),
             ("_subTriggers", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SubTriggers),
+            ("_spawnAssistant", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SpawnAssistant),
+            ("_spawnSecurity", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SpawnSecurity),
+            ("_spawnTraitor", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SpawnTraitor),
+            ("_spawnMalfunctioningAI", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SpawnMalfunctioningAI),
+            ("_spawnNuclearOperatives", Systems.Tile.MapEditor.MapEditorIconsSo.Paths.SpawnNuclearOperatives),
         };
     }
 }

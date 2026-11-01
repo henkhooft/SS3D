@@ -36,7 +36,7 @@ namespace SS3D.Systems.Tile.Validation
                     Vector2Int cell = SpawnPoints.SpawnPointRegistry.TileKey(spawn.Position);
                     report.AddIssue($"floor:{cell.x}:{cell.y}:{spawn.Kind}:{spawn.JobName}", true, "Jobs", $"Spawn at ({cell.x}, {cell.y}) has no floor",
                         $"Spawn at ({cell.x}, {cell.y}) has no floor. Place flooring beneath it.",
-                        null, spawn.Position, true);
+                        spawn.Position, true);
                 }
             }
             return report;

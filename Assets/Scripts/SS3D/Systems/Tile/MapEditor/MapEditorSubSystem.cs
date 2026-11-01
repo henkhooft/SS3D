@@ -63,6 +63,10 @@ namespace SS3D.Systems.Tile.MapEditor
         private IInputHandle _mapEditorHandle;
         private VisualElement _overlayRoot;
         private bool _active;
+        /// <summary>Unscaled time at which the pending Map Check runs after an edit; negative when none is pending.</summary>
+        private float _validationDueTime = -1f;
+        /// <summary>Quiet period after an edit before re-validating, so drags and bursts of edits trigger one check.</summary>
+        private const float ValidationDebounceSeconds = 0.4f;
         private bool _hadWorldSimsSuspend;
         private bool _restoredAtmosPaused;
         private bool _mouseOverUI;
@@ -284,7 +288,6 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void WireViewEvents()
         {
-            _view.ValidationRequested += OnValidationRequested;
             _view.ValidationLocateRequested += OnValidationLocateRequested;
             _view.ToolSelected += OnToolSelected;
             _view.AreaApplyRequested += OnAreaApplyRequested;
@@ -384,7 +387,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 EditorOpened?.Invoke();
                 RpcRequestUndoState(LocalConnection);
                 ApplySessionSettingsOnOpen();
-                OnValidationRequested();
+                RequestValidation();
             }
             else
             {
@@ -517,6 +520,8 @@ namespace SS3D.Systems.Tile.MapEditor
             _areaOverlay.SetVisible(showAreas);
             SubSystems.TryGet(out AreaSubSystem labelAreas);
             _view?.UpdateAreaLabels(_areaOverlay.LabelPositions, labelAreas?.FloorVisualCache, PickCamera, showAreas);
+
+            UpdatePendingValidation();
 
             if (_session.IsActive)
                 _session.Update(updateEvent.DeltaTime);
@@ -734,7 +739,6 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_view == null)
                 return;
 
-            _view.ValidationRequested -= OnValidationRequested;
             _view.ValidationLocateRequested -= OnValidationLocateRequested;
             _view.ToolSelected -= OnToolSelected;
             _view.AreaApplyRequested -= OnAreaApplyRequested;
@@ -915,7 +919,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 }
                 _tileSystem.SyncFloorDecalsToClients();
                 TargetRememberTemplate(conn, mapName);
-                TargetSyncUndoState(conn, 0, 0);
+                TargetSyncUndoState(conn, 0, 0, false);
                 SendMapValidation(conn, true);
                 TargetToast(conn, $"Loaded {mapName}.");
             }
@@ -1110,7 +1114,18 @@ namespace SS3D.Systems.Tile.MapEditor
             }
         }
 
-        private void OnValidationRequested() => RpcValidateMap(LocalConnection);
+        private void RequestValidation()
+        {
+            _validationDueTime = -1f;
+            RpcValidateMap(LocalConnection);
+        }
+
+        /// <summary>Runs the debounced Map Check once edits have been quiet for <see cref="ValidationDebounceSeconds"/>.</summary>
+        private void UpdatePendingValidation()
+        {
+            if (_validationDueTime >= 0f && Time.unscaledTime >= _validationDueTime)
+                RequestValidation();
+        }
 
         [ServerRpc(RequireOwnership = false)]
         private void RpcValidateMap(NetworkConnection conn = null)
@@ -1138,32 +1153,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnValidationLocateRequested(Validation.MapValidationIssue issue)
         {
             if (issue.HasPosition)
-            {
                 _session.CenterOn(issue.Position);
-                return;
-            }
-            if (string.IsNullOrEmpty(issue.Target))
-                return;
-
-            _viewModel.SearchText = string.Empty;
-            if (issue.Target == "spawns" || issue.Target.StartsWith("spawn:", StringComparison.Ordinal))
-            {
-                OnModeSelected(MapEditorMode.Scripting);
-                OnSubcategorySelected(MapEditorSubcategory.SpawnPlacements);
-            }
-            else
-            {
-                MapEditorCatalogEntry entry = _catalog.Entries.FirstOrDefault(candidate => candidate.AssetName == issue.Target);
-                if (entry == null)
-                {
-                    ShowLocalToast("This asset is not available in the object library.");
-                    return;
-                }
-                OnModeSelected(entry.Mode);
-                OnSubcategorySelected(entry.Subcategory);
-                _viewModel.SearchText = issue.Target;
-            }
-            _viewModel.NotifyChanged();
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -1198,7 +1188,7 @@ namespace SS3D.Systems.Tile.MapEditor
             EditingTemplateName = null;
             _hologramManager.DestroyHolograms();
             SpawnPointEditorView.RefreshAll();
-            TargetSyncUndoState(conn, 0, 0);
+            TargetSyncUndoState(conn, 0, 0, false);
             SendMapValidation(conn, true);
             TargetToast(conn, "Started a new empty map.");
         }
@@ -1237,7 +1227,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _commandService.ExecuteCompound(list);
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -1247,7 +1237,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _commandService.Undo();
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetRefreshAreaProperties(conn);
         }
 
@@ -1258,7 +1248,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _commandService.Redo();
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetRefreshAreaProperties(conn);
         }
 
@@ -1278,7 +1268,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 : new MoveTileCommand(assetName, from, to, direction);
 
             _commandService.Execute(command);
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, true);
             TargetToast(conn, "Moved object.");
         }
 
@@ -1288,7 +1278,7 @@ namespace SS3D.Systems.Tile.MapEditor
             if (!MapEditorPermissions.TryAuthorize(conn))
                 return;
 
-            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth);
+            TargetSyncUndoState(conn, _commandService.UndoDepth, _commandService.RedoDepth, false);
             TargetRememberTemplate(conn, EditingTemplateName);
         }
 
@@ -1300,9 +1290,13 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         [TargetRpc]
-        private void TargetSyncUndoState(NetworkConnection conn, int undoDepth, int redoDepth)
+        private void TargetSyncUndoState(NetworkConnection conn, int undoDepth, int redoDepth, bool mapChanged)
         {
-            _viewModel.ValidationStale = true;
+            if (mapChanged)
+            {
+                _viewModel.ValidationStale = true;
+                _validationDueTime = Time.unscaledTime + ValidationDebounceSeconds;
+            }
             _viewModel.SetUndoState(undoDepth, redoDepth);
         }
 
