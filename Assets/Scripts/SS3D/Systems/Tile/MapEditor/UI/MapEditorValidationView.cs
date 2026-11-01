@@ -25,6 +25,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _mapCheckColumn = column;
             _mapCheck = new VisualElement { name = "map-check", pickingMode = PickingMode.Position };
             _mapCheck.AddToClassList("map-check");
+            // The header is rebuilt on every refresh, so the drag lives on the panel and matches the header by class.
+            _mapCheck.AddManipulator(new PanelDragManipulator(_mapCheck,
+                pressed => pressed.ClassListContains("map-check__header")));
             column.Add(_mapCheck);
         }
 

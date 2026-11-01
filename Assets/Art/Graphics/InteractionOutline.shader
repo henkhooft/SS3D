@@ -3,7 +3,7 @@ Shader "Custom/InteractionOutline"
     Properties
     {
         _OutlineColor ("Outline Color", Color) = (0, 1, 0, 1)
-        _OutlineWidth ("Outline Width", Range(0, 0.1)) = 0.03
+        _OutlineWidth ("Outline Width (px)", Range(0, 8)) = 2
     }
 
     SubShader
@@ -21,6 +21,10 @@ Shader "Custom/InteractionOutline"
         // so the object failed its own pick, lost hover, dropped the outline and regained hover the
         // next frame: outline and examine tooltip flickered. Without depth writes the hull can only
         // show where nothing nearer was drawn, and the pick pass never sees it.
+        //
+        // The hull is pushed out in clip space by a fixed number of screen pixels along the projected normal, so the
+        // outline stays a thin, even line at any distance and on any object scale. (It used to grow 0.03 object units
+        // along the normal, which read as a thick shell up close and on large objects.)
 
         Pass
         {
@@ -67,8 +71,18 @@ Shader "Custom/InteractionOutline"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                float3 positionOS = input.positionOS.xyz + normalize(input.normalOS) * _OutlineWidth;
-                output.positionCS = TransformObjectToHClip(positionOS);
+                float4 positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float2 normalCS = mul((float3x3)GetWorldToHClipMatrix(), normalWS).xy;
+                float normalLength = length(normalCS);
+                if (normalLength > 1e-5)
+                {
+                    // NDC spans 2 units across the target; multiply by w to undo the perspective divide.
+                    float2 pixelToNdc = 2.0 / _ScreenParams.xy;
+                    positionCS.xy += (normalCS / normalLength) * _OutlineWidth * pixelToNdc * positionCS.w;
+                }
+
+                output.positionCS = positionCS;
                 return output;
             }
 

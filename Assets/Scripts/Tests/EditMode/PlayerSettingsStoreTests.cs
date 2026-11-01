@@ -129,6 +129,7 @@ namespace EditorTests
             settings.Display.Upscaler = PlayerUpscaler.Fsr1;
             settings.Display.AntiAliasing = PlayerAntiAliasing.Taa;
             settings.Display.UiScale = 1.25f;
+            settings.Display.ShowFps = true;
             new PlayerSettingsStore(SettingsPath).Save(settings);
 
             PlayerDisplaySettings loaded = new PlayerSettingsStore(SettingsPath).Load().Display;
@@ -141,6 +142,7 @@ namespace EditorTests
             Assert.That(loaded.Upscaler, Is.EqualTo(PlayerUpscaler.Fsr1));
             Assert.That(loaded.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Taa));
             Assert.That(loaded.UiScale, Is.EqualTo(1.25f));
+            Assert.That(loaded.ShowFps, Is.True);
         }
 
         [Test]
@@ -157,6 +159,7 @@ namespace EditorTests
             Assert.That(display.Upscaler, Is.EqualTo(PlayerUpscaler.Stp));
             Assert.That(display.AntiAliasing, Is.EqualTo(PlayerAntiAliasing.Smaa));
             Assert.That(display.UiScale, Is.EqualTo(1f));
+            Assert.That(display.ShowFps, Is.False);
         }
 
         [Test]

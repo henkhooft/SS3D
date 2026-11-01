@@ -59,6 +59,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _rightPopoverAnchor;
         private VisualElement _cameraPopoverAnchor;
         private VisualElement _activePopover;
+        private VisualElement _popoverLayer;
+        /// <summary>Where the player dragged each popover; reopening it keeps that spot for the session.</summary>
+        private readonly Dictionary<string, Vector2> _popoverOffsets = new();
 
         private float _lastGridViewportWidth;
         private PaletteMode _paletteMode = PaletteMode.Normal;
@@ -142,6 +145,16 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _hint = new Label { name = "placement-hint", pickingMode = PickingMode.Ignore };
             _hint.AddToClassList("map-editor-hint");
             _hudLayer.Add(_hint);
+
+            // Popovers live in their own last-child layer: UITK paints in hierarchy order and ignores z-index, so a
+            // popover parented under its toolbar was painted beneath later siblings such as Map Check.
+            _popoverLayer = new VisualElement { name = "popover-layer", pickingMode = PickingMode.Ignore };
+            _popoverLayer.style.position = Position.Absolute;
+            _popoverLayer.style.left = 0;
+            _popoverLayer.style.top = 0;
+            _popoverLayer.style.right = 0;
+            _popoverLayer.style.bottom = 0;
+            _hudLayer.Add(_popoverLayer);
 
             _root.Add(_hudLayer);
             parent.Add(_root);
@@ -700,24 +713,61 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 _ => _rightPopoverAnchor,
             };
 
-            VisualElement popover = new() { pickingMode = PickingMode.Position };
+            string key = _vm.OpenPopover;
+            VisualElement popover = new() { pickingMode = PickingMode.Position, name = "popover-" + key };
             popover.AddToClassList("map-editor-popover");
-            popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
-                ? "map-editor-popover--anchor-right"
-                : "map-editor-popover--anchor-left");
-            if (_vm.OpenPopover is "maps" or "saveMenu" or "area")
+            if (IsLeftPopover(key))
                 popover.AddToClassList("map-editor-popover--wide");
 
-            VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
+            VisualElement window = CreatePopoverWindow(GetPopoverTitle(key), ClosePopover);
             VisualElement contentRoot = window.Q("popover-body");
-            BuildPopoverContent(_vm.OpenPopover, contentRoot);
+            BuildPopoverContent(key, contentRoot);
             popover.Add(window);
 
-            anchor.Add(popover);
+            _popoverOffsets.TryGetValue(key, out Vector2 dragOffset);
+            popover.AddManipulator(new PanelDragManipulator(popover,
+                pressed => pressed.ClassListContains("map-editor-popover-window__header"),
+                dragOffset, offset => _popoverOffsets[key] = offset));
+
+            _popoverLayer.Add(popover);
             _activePopover = popover;
+            PlacePopover(popover, anchor, opensRight: IsLeftPopover(key));
+            if (float.IsNaN(anchor.layout.width))
+                anchor.RegisterCallback<GeometryChangedEvent>(PlaceOnceLaidOut);
+
+            void PlaceOnceLaidOut(GeometryChangedEvent evt)
+            {
+                anchor.UnregisterCallback<GeometryChangedEvent>(PlaceOnceLaidOut);
+                if (_activePopover == popover)
+                    PlacePopover(popover, anchor, opensRight: IsLeftPopover(key));
+            }
 
             if (_vm.OpenPopover == "maps" || _vm.OpenPopover == "saveMenu")
                 RequestMapListRefresh();
+        }
+
+        /// <summary>
+        /// Puts the popover beside its anchor, top-aligned: left-column popovers open to the anchor's right, the rest
+        /// to its left. Dragging adds a translate on top of this.
+        /// </summary>
+        private void PlacePopover(VisualElement popover, VisualElement anchor, bool opensRight)
+        {
+            const float gap = 8f;
+            Rect anchorRect = _popoverLayer.WorldToLocal(anchor.worldBound);
+            if (float.IsNaN(anchorRect.x))
+                return;
+
+            popover.style.top = anchorRect.yMin;
+            if (opensRight)
+            {
+                popover.style.left = anchorRect.xMax + gap;
+                popover.style.right = StyleKeyword.Auto;
+            }
+            else
+            {
+                popover.style.right = _popoverLayer.layout.width - anchorRect.xMin + gap;
+                popover.style.left = StyleKeyword.Auto;
+            }
         }
 
         private void HideToolbarHints()
