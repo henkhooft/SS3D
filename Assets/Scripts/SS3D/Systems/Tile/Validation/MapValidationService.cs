@@ -15,7 +15,8 @@ namespace SS3D.Systems.Tile.Validation
             if (tiles == null || tiles.CurrentMap == null)
             {
                 MapValidationReport missing = new();
-                missing.Errors.Add("No station map is loaded. Load or create a map first.");
+                missing.AddIssue("map", false, "Map", "No station map loaded",
+                    "No station map is loaded. Load or create a map first.");
                 return missing;
             }
 
@@ -33,7 +34,9 @@ namespace SS3D.Systems.Tile.Validation
                     || floor.IsFullyEmpty())
                 {
                     Vector2Int cell = SpawnPoints.SpawnPointRegistry.TileKey(spawn.Position);
-                    report.Warnings.Add($"Spawn at ({cell.x}, {cell.y}) has no floor. Place flooring beneath it.");
+                    report.AddIssue($"floor:{cell.x}:{cell.y}:{spawn.Kind}:{spawn.JobName}", true, "Jobs", $"Spawn at ({cell.x}, {cell.y}) has no floor",
+                        $"Spawn at ({cell.x}, {cell.y}) has no floor. Place flooring beneath it.",
+                        spawn.Position, true);
                 }
             }
             return report;

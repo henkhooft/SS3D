@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 73a838a3b — 2026-11-01
+> Verified: 259787487 — 2026-11-01
 
 # Tile / construction
 
@@ -43,7 +43,8 @@ WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 - `Assets/Scripts/SS3D/Systems/Tile/BuildChecker.cs` / `BuildFailReason.cs` — placement rules + toastable fail reasons
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorDeleteTargeting.cs` — subcategory → clear targets (wall-mount face via `Direction`)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSubSystem.cs` — full-screen map editor (admin-gated)
-- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/UI/MapEditorView.cs` — UI Toolkit editor chrome
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/UI/MapEditorView.cs` — UI Toolkit editor chrome; compact two/four-row horizontal object library (52/260/460 px dock states)
+- `Assets/Scripts/SS3D/Systems/Tile/MapEditor/UI/MapEditorValidationView.cs` — persistent right-column Map Check, severity filters, requirement checklists, local warning dismissal and Locate actions
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorCatalog.cs` — object library taxonomy (+ spawn keys)
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/MapEditorSpawnCatalog.cs` — `spawn:job:` / `spawn:antag:` keys
 - `Assets/Scripts/SS3D/Systems/Tile/MapEditor/Commands/MapEditorCommandService.cs` — server undo/redo command layer
@@ -54,6 +55,8 @@ WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
 
 ## Extension points
+
+- **Map Check (Claude Design refresh, 2026-11-01):** `MapValidationReport.Issues` carries typed server-authored issues (stable ID, severity, category, body, optional checklist and camera position). Original `Errors`/`Warnings` and round-start gate remain authoritative; requirement failures are grouped only for editor presentation. The editor validates on open and successful save/load/new-map; every edit/undo/redo (`TargetSyncUndoState(mapChanged: true)`) marks the snapshot stale ("Checking") and re-validates after a 0.4 s quiet period, so there is no manual Re-check. Ignoring warnings hides them locally until Unignore or a different map is loaded, and never changes server policy. Locate appears only on issues with a map position (e.g. a spawn without floor) and centers the camera there; missing-content issues have no Locate. The mockup's atmosphere/power/disposal examples remain unimplemented validators. `TargetMapValidation` replaces the string save popup (protocol 6). Unity runtime/visual verification is pending: this workspace has neither Unity nor the validation runner's local Python environment; syntax, USS references and diff checks passed. Regression coverage is in `MapValidationTests`.
 
 - New tile objects: create `TileObjectSo` assets and adjacency connectors implementing `IAdjacencyConnector`.
 - React to placement: implement `ITileMutationObserver` (see [electricity](electricity.md), [area](area.md), [atmospherics](atmospherics.md)).

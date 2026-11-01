@@ -103,7 +103,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [stamina](systems/stamina.md) | partial | Regen, encumbrance, sprint, exertion |
 | [structural-destruction](systems/structural-destruction.md) | partial | Turf integrity, structural force, blasts |
 | [substances](systems/substances.md) | partial | Networked containers, reactions, heat |
-| [tile](systems/tile.md) | partial | Tilemap, adjacency, Map Editor, SS13 DMM import |
+| [tile](systems/tile.md) | partial | Tilemap, adjacency, Map Editor with persistent Map Check, SS13 DMM import |
 | [ui-shell](systems/ui-shell.md) | partial | UITK composition root, shared catalog/binder |
 
 ## Active efforts and plans

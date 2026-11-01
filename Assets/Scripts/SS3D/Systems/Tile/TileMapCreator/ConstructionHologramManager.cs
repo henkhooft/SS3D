@@ -380,6 +380,9 @@ namespace SS3D.Systems.Tile.TileMapCreator
             if (_selectedObject != null)
                 return CreateHologram(_selectedObject.PrefabAsset, Vector3.zero, addToActive: false);
 
+            if (IsSpawnDeleteMode())
+                return CreateSpawnPointHologram(Vector3.zero, addToActive: false);
+
             return CreateDeleteMarkerHologram(Vector3.zero, addToActive: false);
         }
 
@@ -1121,7 +1124,12 @@ namespace SS3D.Systems.Tile.TileMapCreator
             {
                 MaybeSwapDeleteGhostPrefab(hintAsset, position);
             }
-            else if (hintAsset == "floor-decal" || hintAsset == "spawn-point")
+            else if (subcategory == MapEditorSubcategory.SpawnPlacements)
+            {
+                // Same pin ghost as placing a spawn, tinted red by the delete colouring below.
+                ResetDeleteGhostToSpawnPin(position);
+            }
+            else if (hintAsset == "floor-decal")
             {
                 ResetDeleteGhostToMarker(position);
             }
@@ -1204,6 +1212,22 @@ namespace SS3D.Systems.Tile.TileMapCreator
             DestroyHolograms();
             _deleteGhostAssetName = null;
             CreateDeleteMarkerHologram(position);
+        }
+
+        private const string SpawnPinDeleteGhost = "spawn-point";
+
+        private bool IsSpawnDeleteMode() =>
+            _mapEditor != null && _mapEditor.IsDeleting
+            && _mapEditor.CurrentSubcategory == MapEditorSubcategory.SpawnPlacements;
+
+        private void ResetDeleteGhostToSpawnPin(Vector3 position)
+        {
+            if (_deleteGhostAssetName == SpawnPinDeleteGhost && _holograms.Count > 0)
+                return;
+
+            DestroyHolograms();
+            CreateSpawnPointHologram(position);
+            _deleteGhostAssetName = SpawnPinDeleteGhost;
         }
 
         private void MaybeSwapDeleteGhostPrefab(string assetName, Vector3 position)

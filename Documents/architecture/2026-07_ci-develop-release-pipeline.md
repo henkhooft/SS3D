@@ -60,7 +60,8 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    beside `Game/SS3D.exe`, plus CWD fixtures
    `Game/Config/` (`permissions.txt`, `network.json`), `Game/Data/Tilemaps/`, and `Game/Data/StationTemplates/`
    copied from git-tracked [`Builds/Game/`](../../Builds/Game/) (Unity does not pack these;
-   `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime).
+   `Paths.cs` reads them from process CWD). Never ships `Data/ServerMeta/` (runtime) or
+   `StationTemplates/Metastation v2.json` (broken; kept in git only for the multiplayer loadtest).
    Linux zips use the same shape when Linux was built: `SS3D-Linux-Client-<tag>/` holds
    `start_ss3d_client.sh`, `start_ss3d_host.sh`, `README.txt` and `Game/` (binary `SS3D-Client`);
    `SS3D-Linux-Server-<tag>/` holds `start_ss3d_server.sh` and `GameServer/` (`SS3D-Server`).

@@ -2,6 +2,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile.FloorVisuals;
 using SS3D.Systems.Tile.MapEditor.Persistence;
+using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
@@ -59,8 +60,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private VisualElement _cameraPopoverAnchor;
         private VisualElement _activePopover;
 
-        private PaletteMode _paletteMode = PaletteMode.Normal;
         private float _lastGridViewportWidth;
+        private PaletteMode _paletteMode = PaletteMode.Normal;
 
         private readonly Dictionary<MapEditorTool, Button> _toolButtons = new();
         private readonly Dictionary<MapEditorMode, Button> _modeButtons = new();
@@ -220,6 +221,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             toolbarWrap.Add(_rightToolbar);
             region.Add(toolbarWrap);
 
+            BuildMapCheck(region);
             _hudLayer.Add(region);
         }
 
@@ -391,6 +393,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
 
             _paletteRegion.style.height = PaletteHeights[_paletteMode];
+            if (_mapCheckColumn != null)
+                _mapCheckColumn.style.bottom = 24 + PaletteHeights[_paletteMode] + 12;
             bool showBody = _paletteMode != PaletteMode.Min;
             _paletteBody.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
             _modeRail.style.display = showBody ? DisplayStyle.Flex : DisplayStyle.None;
@@ -445,6 +449,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             undoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.UndoDepth <= 0);
             redoBtn?.EnableInClassList("map-editor-icon-btn--disabled", _vm.RedoDepth <= 0);
 
+            RefreshMapCheck();
             RefreshHint();
 
             if (!string.IsNullOrEmpty(_vm.ToastMessage))
@@ -628,6 +633,13 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             {
                 icon.style.backgroundImage = new StyleBackground(floorDecal.Texture);
             }
+            else if (isSpawn && _icons?.GetSpawnIcon(entry.AssetName) is VectorImage spawnIcon)
+            {
+                icon.style.backgroundImage = new StyleBackground(spawnIcon);
+                bool antagonist = MapEditorSpawnCatalog.TryDecode(entry.AssetName, out SpawnPointKind kind, out _, out _)
+                                  && kind == SpawnPointKind.Antagonist;
+                icon.AddToClassList(antagonist ? "map-editor-slot__icon--spawn-antag" : "map-editor-slot__icon--spawn-job");
+            }
             else if (asset?.icon != null)
             {
                 icon.style.backgroundImage = new StyleBackground(asset.icon);
@@ -670,7 +682,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _vm.NotifyChanged();
         }
 
-        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area" or "validation";
+        private static bool IsLeftPopover(string key) => key is "maps" or "saveMenu" or "area";
 
         private void RefreshPopover()
         {
@@ -683,7 +695,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement anchor = _vm.OpenPopover switch
             {
-                "maps" or "saveMenu" or "area" or "validation" => _leftPopoverAnchor,
+                "maps" or "saveMenu" or "area" => _leftPopoverAnchor,
                 "camera" => _cameraPopoverAnchor,
                 _ => _rightPopoverAnchor,
             };
@@ -693,7 +705,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             popover.AddToClassList(IsLeftPopover(_vm.OpenPopover)
                 ? "map-editor-popover--anchor-right"
                 : "map-editor-popover--anchor-left");
-            if (_vm.OpenPopover is "maps" or "saveMenu" or "area" or "validation")
+            if (_vm.OpenPopover is "maps" or "saveMenu" or "area")
                 popover.AddToClassList("map-editor-popover--wide");
 
             VisualElement window = CreatePopoverWindow(GetPopoverTitle(_vm.OpenPopover), ClosePopover);
@@ -730,7 +742,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private static string GetPopoverTitle(string key) =>
             key switch
             {
-                "validation" => "Map validation",
                 "area" => "Room properties",
                 "maps" => "Map Selection",
                 "saveMenu" => "Save Map",
@@ -744,15 +755,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             switch (key)
             {
-                case "validation":
-                    ScrollView issues = new() { name = "map-validation-report" };
-                    issues.style.maxHeight = 320;
-                    Label report = new(_vm.ValidationReport) { enableRichText = false };
-                    report.AddToClassList("map-editor-popover-label");
-                    report.style.whiteSpace = WhiteSpace.Normal;
-                    issues.Add(report);
-                    container.Add(issues);
-                    break;
                 case "area":
                     BuildAreaPopover(container);
                     break;

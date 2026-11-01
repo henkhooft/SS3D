@@ -56,3 +56,8 @@ MonoBehaviour:
   _subSpawnPlacements: {fileID: 7388822144124034973, guid: e42e5f1a6d5ae88779a25bc3dc312d63, type: 3}
   _subRandomSpawners: {fileID: 7388822144124034973, guid: f2f48a9e2ef92f56c8b720580a47e684, type: 3}
   _subTriggers: {fileID: 7388822144124034973, guid: 99f76c5ad3eaff1a6b5eaeb71d5d3666, type: 3}
+  _spawnAssistant: {fileID: 7388822144124034973, guid: 05a2eaa02b8cc3f0d881840632b4bfd6, type: 3}
+  _spawnSecurity: {fileID: 7388822144124034973, guid: a329af8d1a6738ba4b7750ba45a72a88, type: 3}
+  _spawnTraitor: {fileID: 7388822144124034973, guid: d9cefe08cafd7c20192fe4a0a44e5e4d, type: 3}
+  _spawnMalfunctioningAI: {fileID: 7388822144124034973, guid: 96f2ac857b908dd2a8917fa7f4e86097, type: 3}
+  _spawnNuclearOperatives: {fileID: 7388822144124034973, guid: fcd3a7ef92f963580bf0c458a48ef77e, type: 3}

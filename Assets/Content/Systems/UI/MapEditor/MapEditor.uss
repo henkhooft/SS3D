@@ -764,6 +764,15 @@
     border-radius: 6px;
 }
 
+/* Spawn marker glyphs: tinted like the in-world spawn pins (blue job, red antagonist). */
+.map-editor-slot__icon--spawn-job,
+.map-editor-slot__icon--spawn-antag {
+    width: 52px;
+    height: 52px;
+}
+.map-editor-slot__icon--spawn-job { -unity-background-image-tint-color: rgb(64, 191, 255); }
+.map-editor-slot__icon--spawn-antag { -unity-background-image-tint-color: rgb(255, 89, 64); }
+
 .map-editor-slot__label {
     font-size: 10.5px;
     color: var(--ss3d-text-secondary);
@@ -1047,3 +1056,80 @@
 .map-editor-slot--create .map-editor-slot__icon-frame {
     background-color: var(--ss3d-surface-inset);
 }
+
+/* Map Check: persistent server validation, aligned above the library dock. */
+.map-editor-right-column > .map-check { margin-bottom: 0; }
+.map-editor-right-column > * { flex-shrink: 0; }
+.map-check {
+    width: 340px;
+    min-height: 0;
+    flex-shrink: 1;
+    background-color: var(--ss3d-surface-panel);
+    border-radius: var(--ss3d-radius-md);
+    -unity-font-definition: url("project://database/Assets/Art/Font/TextMesh%20Pro/Fonts/LiberationSans.ttf");
+}
+.map-check--collapsed { width: auto; }
+.map-check__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 10px;
+    background-color: var(--ss3d-surface-panel-raised);
+}
+.map-check__title { flex-grow: 1; color: var(--ss3d-text-primary); font-size: 14px; }
+.map-check__badge { background-color: var(--ss3d-surface-inset); color: var(--ss3d-text-primary); border-radius: 3px; padding: 3px 6px; margin-right: 6px; font-size: 11px; }
+.map-check__danger { color: var(--ss3d-feedback-danger); }
+.map-check__warning { color: var(--ss3d-feedback-warning); }
+.map-check__filters { flex-direction: row; padding: 8px; flex-shrink: 0; border-bottom-width: 1px; border-bottom-color: var(--ss3d-border-subtle); }
+.map-check__button {
+    background-color: var(--ss3d-surface-panel);
+    color: var(--ss3d-text-primary);
+    border-width: 1px;
+    border-color: var(--ss3d-border-default);
+    border-radius: var(--ss3d-radius-sm);
+    padding: 5px 8px;
+    margin: 0 2px;
+    font-size: 12px;
+}
+.map-check__button:hover { background-color: var(--ss3d-surface-panel-raised); }
+.map-check__filter { flex-grow: 1; font-size: 16px; }
+.map-check__filter--active { background-color: var(--ss3d-accent-rust-dim); border-color: var(--ss3d-accent-rust); }
+.map-check__issues { min-height: 0; flex-shrink: 1; }
+.map-check__issue { border-bottom-width: 1px; border-bottom-color: var(--ss3d-border-subtle); flex-shrink: 0; }
+.map-check__issue--open, .map-check__issue:hover { background-color: var(--ss3d-surface-panel-raised); }
+.map-check__issue-toggle {
+    flex-direction: row;
+    align-items: flex-start;
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 0;
+    padding: 10px 12px;
+    margin: 0;
+}
+.map-check__heading { flex-grow: 1; flex-shrink: 1; margin-left: 10px; margin-right: 6px; }
+.map-check__issue-title { white-space: normal; color: var(--ss3d-text-primary); font-size: 13px; }
+.map-check__category { color: var(--ss3d-text-tertiary); font-size: 11px; margin-top: 2px; }
+.map-check__detail { padding: 0 12px 12px 38px; }
+.map-check__body { white-space: normal; color: var(--ss3d-text-secondary); font-size: 12px; }
+.map-check__actions { flex-direction: row; margin-top: 10px; }
+.map-check__footer { flex-direction: row; align-items: center; flex-wrap: wrap; flex-shrink: 0; padding: 8px; border-top-width: 1px; border-top-color: var(--ss3d-border-subtle); }
+.map-check__status { flex-grow: 1; font-size: 11px; color: var(--ss3d-text-secondary); }
+.map-check__status.map-check__danger { color: var(--ss3d-feedback-danger); }
+.map-check__empty { padding: 20px 14px; color: var(--ss3d-text-tertiary); font-size: 12px; white-space: normal; }
+
+.map-check__checks { margin-top: 10px; padding: 8px 10px; background-color: var(--ss3d-surface-inset); border-radius: var(--ss3d-radius-sm); }
+.map-check__check { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.map-check__check-label { flex-grow: 1; flex-shrink: 1; white-space: normal; color: var(--ss3d-text-secondary); font-size: 12px; }
+.map-check__success { color: var(--ss3d-feedback-success); }
+.map-check__badge.map-check__danger { background-color: var(--ss3d-feedback-danger-bg); }
+.map-check__badge.map-check__warning { background-color: var(--ss3d-feedback-warning-bg); }
+.map-check__badge.map-check__success { background-color: var(--ss3d-feedback-success-bg); border-width: 1px; border-color: var(--ss3d-feedback-success-border); }
+
+.map-check__title, .map-check__filter {
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/GurajadaRegularSDF.asset");
+}
+.map-check__category, .map-check__badge, .map-check__status {
+    -unity-font-definition: url("project://database/Assets/Content/Systems/UI/Font/Fonts/SpessmanFontSDF.asset");
+}
+
+.map-check__issue-toggle > .map-editor-vector-icon { width: 14px; height: 14px; flex-shrink: 0; }

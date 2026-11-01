@@ -58,6 +58,14 @@ namespace SS3D.Systems.Tile.MapEditor
             public const string SubSpawnPlacements = Root + "pin.svg";
             public const string SubRandomSpawners = Root + "dice.svg";
             public const string SubTriggers = Root + "bolt.svg";
+
+            // Spawn Placements library slots (game-icons.net glyphs, tinted per spawn kind in USS).
+            private const string External = "Assets/Art/Icons/External/";
+            public const string SpawnAssistant = External + "delapouite/person.svg";
+            public const string SpawnSecurity = External + "delapouite/police-officer-head.svg";
+            public const string SpawnTraitor = External + "delapouite/spy.svg";
+            public const string SpawnMalfunctioningAI = External + "lorc/android-mask.svg";
+            public const string SpawnNuclearOperatives = External + "lorc/radioactive.svg";
         }
 
         [Header("Baked references (filled by SS3D/Map Editor/Bake Icons for player builds)")]
@@ -105,6 +113,11 @@ namespace SS3D.Systems.Tile.MapEditor
         [SerializeField] private VectorImage _subSpawnPlacements;
         [SerializeField] private VectorImage _subRandomSpawners;
         [SerializeField] private VectorImage _subTriggers;
+        [SerializeField] private VectorImage _spawnAssistant;
+        [SerializeField] private VectorImage _spawnSecurity;
+        [SerializeField] private VectorImage _spawnTraitor;
+        [SerializeField] private VectorImage _spawnMalfunctioningAI;
+        [SerializeField] private VectorImage _spawnNuclearOperatives;
 
         public VectorImage GetToolIcon(MapEditorTool tool) =>
             tool switch
@@ -153,6 +166,30 @@ namespace SS3D.Systems.Tile.MapEditor
                 MapEditorSubcategory.Rooms => Resolve(_subFlooring, Paths.SubFlooring),
                 _ => null,
             };
+
+        /// <summary>Library icon for a spawn catalog key; jobs without their own glyph fall back to the map pin.</summary>
+        public VectorImage GetSpawnIcon(string spawnAssetName)
+        {
+            if (!MapEditorSpawnCatalog.TryDecode(spawnAssetName, out SpawnPoints.SpawnPointKind kind, out string jobName,
+                    out SpawnPoints.AntagonistSpawnCategory category))
+                return null;
+
+            if (kind == SpawnPoints.SpawnPointKind.Antagonist)
+                return category switch
+                {
+                    SpawnPoints.AntagonistSpawnCategory.Traitor => Resolve(_spawnTraitor, Paths.SpawnTraitor),
+                    SpawnPoints.AntagonistSpawnCategory.MalfunctioningAI => Resolve(_spawnMalfunctioningAI, Paths.SpawnMalfunctioningAI),
+                    SpawnPoints.AntagonistSpawnCategory.NuclearOperatives => Resolve(_spawnNuclearOperatives, Paths.SpawnNuclearOperatives),
+                    _ => Resolve(_subSpawnPlacements, Paths.SubSpawnPlacements),
+                };
+
+            return jobName switch
+            {
+                "Assistant" => Resolve(_spawnAssistant, Paths.SpawnAssistant),
+                "Security" => Resolve(_spawnSecurity, Paths.SpawnSecurity),
+                _ => Resolve(_subSpawnPlacements, Paths.SubSpawnPlacements),
+            };
+        }
 
         public VectorImage Undo => Resolve(_undo, Paths.Undo);
         public VectorImage Redo => Resolve(_redo, Paths.Redo);
