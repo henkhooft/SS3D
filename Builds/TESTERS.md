@@ -48,8 +48,18 @@ All your maps are plain files in `Game/Data/StationTemplates/`.
 
 ## 5. Report a bug
 
-Open an issue at <https://github.com/henkhooft/SS3D/issues/new/choose>, or post in Discord. Include:
+Press **F8** the moment something goes wrong (or choose **Report a bug** in the Escape menu).
+The game keeps running, and the screenshot shows what you saw before the dialog opened.
 
-- what you did, what you expected, and what happened instead
-- the log files from `Game/Logs/`
-- for map problems, the exported map `.zip`
+- Write a short **summary**. The other fields are optional.
+- Leave **Include current map** ticked for map problems. It adds your map as it is now,
+  unsaved edits included, without changing your saved file.
+- Click **Save Report**. The report, your logs, the screenshot and the map go into one zip in
+  `Game/Data/Exports/`.
+
+Then click **Open GitHub Issue** to file it at <https://github.com/henkhooft/SS3D/issues>
+with the zip attached, or post the zip in Discord.
+
+If the game crashed and you can't press F8, report it the same way by hand: say what you did,
+what you expected and what happened, and attach the log files from `Game/Logs/` (plus the exported
+map `.zip` for map problems).
