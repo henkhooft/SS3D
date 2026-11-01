@@ -22,14 +22,33 @@ namespace SS3D.Systems.Rounds
             + "and you can respawn after dying. The station resets every 20 minutes and nothing is saved. "
             + "Report bugs with /bug <what happened>.";
 
+        /// <summary>Overrides <see cref="RoundLengthMinutes"/>, for tests: <c>-sandbox-round-minutes=1</c>.</summary>
+        public const string RoundMinutesFlag = "-sandbox-round-minutes=";
+
         public static bool RequestedOnCommandLine =>
             Environment.GetCommandLineArgs().Any(arg => string.Equals(arg, CommandLineFlag, StringComparison.OrdinalIgnoreCase));
 
+        /// <summary>The round length from <see cref="RoundMinutesFlag"/>, else <see cref="RoundLengthMinutes"/>.</summary>
+        public static int RoundMinutesFrom(string[] args)
+        {
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith(RoundMinutesFlag, StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(arg.AsSpan(RoundMinutesFlag.Length), out int minutes) && minutes is >= 1 and <= 1440)
+                    return minutes;
+            }
+
+            return RoundLengthMinutes;
+        }
+
         /// <summary>The sandbox rules over <paramref name="settings"/>; map and server name are kept.</summary>
-        public static ServerSettings Apply(ServerSettings settings)
+        public static ServerSettings Apply(ServerSettings settings) =>
+            Apply(settings, RoundMinutesFrom(Environment.GetCommandLineArgs()));
+
+        public static ServerSettings Apply(ServerSettings settings, int roundLengthMinutes)
         {
             settings.Mode = "Extended";
-            settings.RoundLengthMinutes = RoundLengthMinutes;
+            settings.RoundLengthMinutes = roundLengthMinutes;
             settings.AllowLateJoin = true;
             settings.PlayerCap = PlayerCap;
             settings.AutoStart = true;

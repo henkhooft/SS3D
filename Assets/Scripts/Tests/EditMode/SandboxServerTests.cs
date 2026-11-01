@@ -244,5 +244,15 @@ namespace SS3D.Tests.EditMode
             Assert.IsTrue(BugCommand.TryParse("/bug " + new string('x', 2000), out string note));
             Assert.AreEqual(BugCommand.MaxNoteLength, note.Length);
         }
+    
+        [Test]
+        public void RoundMinutesOverride_ParsesValidValuesOnly()
+        {
+            Assert.AreEqual(1, SandboxProfile.RoundMinutesFrom(new[] { "game", "-sandbox", "-sandbox-round-minutes=1" }));
+            Assert.AreEqual(SandboxProfile.RoundLengthMinutes, SandboxProfile.RoundMinutesFrom(new[] { "-sandbox" }));
+            Assert.AreEqual(SandboxProfile.RoundLengthMinutes, SandboxProfile.RoundMinutesFrom(new[] { "-sandbox-round-minutes=0" }));
+            Assert.AreEqual(SandboxProfile.RoundLengthMinutes, SandboxProfile.RoundMinutesFrom(new[] { "-sandbox-round-minutes=abc" }));
+            Assert.AreEqual(7, SandboxProfile.Apply(ServerSettings.Default, 7).RoundLengthMinutes);
+        }
     }
 }

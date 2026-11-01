@@ -29,8 +29,9 @@ UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
 BUILD_RESULTS = {"client": UI / "client-build-result.json", "server": UI / "server-build-result.json"}
-# Same scenarios and client counts as .github/workflows/multiplayer-smoke-test.yml.
-SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1)]
+# The scenarios and client counts of .github/workflows/multiplayer-smoke-test.yml, plus sandbox-reset.
+SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1),
+                   ("sandbox-reset", 1)]
 LOG_ERROR = re.compile(r"(: error [A-Za-z]+\d+:|error CS\d+)")
 ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "sandbox", "build", "remote", "smoke"]
 QUICK = ["preflight", "compile", "editmode", "visual", "lifecycle"]  # PlayMode is --full only (minutes)
