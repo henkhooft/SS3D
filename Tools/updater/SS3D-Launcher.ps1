@@ -1,6 +1,6 @@
 param(
     [string]$Server = "127.0.0.1",
-    [int]$Port = 2222,
+    [int]$Port = 1151,
     [string]$Ckey = "player",
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "SS3D"),
     [string]$Tag = "",
