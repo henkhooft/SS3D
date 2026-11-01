@@ -20,7 +20,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 
 - **A1** — Loadable local build: shares test-server T1 re-cut; verify newly packaged `Data/StationTemplates/` on that cut
 - **A2 shipped** — Scripts → Rooms: painting, metadata, shared toolbar, undo/persistence and APC-facing membership; owner manually accepted in the editor
-- **A2.5** — Internal dogfood build of the Nuke Ops station before testers see it
+- **A2.5 shipped** — Owner dogfooded the map editor and the F8 bug report in a release build
 - **A3 partial** — Map validation and save warnings implemented; Unity validation/render review pending
 - **A7 partial** — Windows/Linux client stable-release updaters implemented; packaged update and backup launch checks pending before public announcement
 
