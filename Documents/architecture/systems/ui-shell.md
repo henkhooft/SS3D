@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/
 > Entry points: UiShellSubSystem, UiLayer, IUiSurface, UiShellAssetCatalog
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: 1cd9236ea — 2026-11-01
 
 # UI shell
 
@@ -31,6 +31,8 @@ The F1 developer window (`UI/MainHud/Dev/DebugMenuView.cs`) also owns a private 
 
 The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lobby's (`LobbyAssetPaths` / `LobbyAssetCatalog`) use the same rebuild. `ExamineOverlayAssetCatalog` is a lighter one-off: no `PanelSettings` or document of its own, not a `UiAssetCatalogBase` derivative.
 
+**Bug-report visual assets only:** `Assets/Content/Systems/UI/BugReport/BugReport.uxml` / `.uss` reproduce the supplied “Bug Report v2” design. `UI/Shell/BugReport/BugReportAssetCatalog` holds the resolved template/styles, rebuilt by the umbrella catalog builder. **SS3D → UI → Preview Bug Report** opens an editor-only fixture with in-round, map-editor, saved, rate-limited, toast, expanded-metadata and screenshot-removed states. `Testing/ui/fixtures/bug-report-frame.png` is the supplied reference image, loaded only by the editor preview. No runtime host, input entry point, capture, export, networking or submission is implemented; preview report actions are inert. The warmer v2 colors are scoped to this window rather than changing shared tokens.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/UI/Shell/UiShellSubSystem.cs` — `TryGetLayer(UiLayer, out VisualElement)` (preferred) / `GetLayer`
@@ -39,6 +41,8 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 - `Assets/Scripts/SS3D/UI/Shell/Animation/PanelAnimator.cs` — shared panel animation
 - `Assets/Scripts/SS3D/UI/Shell/Binding/UiBinderBase.cs` — scaffolded binder base with no consumers yet
 - Tokens: `Assets/Content/Systems/UI/Tokens/`, `Assets/Content/Systems/UI/MachineInterface/Tokens/`
+- `Assets/Scripts/SS3D/Editor/BugReportPreviewWindow.cs` — isolated visual fixture, sample metadata and presentation-only controls
+- `Assets/Scripts/SS3D/UI/Shell/BugReport/BugReportAssetPaths.cs` — bug-report visual asset paths
 
 ## Extension points
 
@@ -47,6 +51,14 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 - `UiShellSubSystem` creates the document itself, so Boot and Game scenes need no `UIDocument` host.
 
 - Debug tools: register a named tool through `Core/Debugging/DebugTools.Get(DebugToolNames.X)`, subscribe/unsubscribe `Invoked`, and set `IsOn` for toggles. The F1 window lists available tools in Editor/development builds; do not add per-tool keys. Remaining host work: [TECH_DEBT §1.13](../TECH_DEBT.md#113-debug-tools-centralized-ui-host-consolidation-remains).
+
+## Pitfalls
+
+- USS does not support `:first-child` / `:last-child`; sibling spacing requires explicit modifier classes. Unsupported selectors are ignored and leave unwanted edge margins.
+
+## Tests
+
+- Bug-report visuals: compile with `Testing/ui/validate.sh --steps compile`, then inspect **SS3D → UI → Preview Bug Report** across its states and at reduced window heights. Report actions stay inert; editor fixture controls do not validate any gameplay integration.
 
 ## Depends on / Used by
 
