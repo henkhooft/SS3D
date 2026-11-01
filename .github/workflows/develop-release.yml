@@ -259,7 +259,9 @@ jobs:
       - name: Checkout project code
         uses: actions/checkout@v4
         with:
-          lfs: true
+          # No LFS-tracked files; lfs: true makes git-lfs scan history of the partial
+          # clone and fail on blobs it never fetched ("missing object").
+          lfs: false
           # BuildInfoGenerator reads history and v* tags for the lobby change log.
           fetch-depth: 0
           filter: blob:none
@@ -390,7 +392,7 @@ jobs:
       - name: Checkout project code
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
           # BuildInfoGenerator reads history and v* tags for the lobby change log.
           fetch-depth: 0
           filter: blob:none
