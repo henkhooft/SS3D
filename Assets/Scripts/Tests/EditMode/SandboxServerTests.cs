@@ -254,5 +254,22 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(SandboxProfile.RoundLengthMinutes, SandboxProfile.RoundMinutesFrom(new[] { "-sandbox-round-minutes=abc" }));
             Assert.AreEqual(7, SandboxProfile.Apply(ServerSettings.Default, 7).RoundLengthMinutes);
         }
+    
+        [Test]
+        public void ServerLifetime_ParsesHeartbeatAndRoundLimit()
+        {
+            ServerLifetimeOptions options = ServerLifetimeOptions.Parse(new[]
+            {
+                "SS3D.x86_64", "-serveronly", "-heartbeat-file=/data/heartbeat", "-exit-after-rounds=12",
+            });
+            Assert.AreEqual("/data/heartbeat", options.HeartbeatPath);
+            Assert.AreEqual(12, options.ExitAfterRounds);
+            Assert.IsFalse(options.ShouldExit(11));
+            Assert.IsTrue(options.ShouldExit(12));
+
+            ServerLifetimeOptions none = ServerLifetimeOptions.Parse(new[] { "-serveronly", "-exit-after-rounds=nope" });
+            Assert.AreEqual(string.Empty, none.HeartbeatPath);
+            Assert.IsFalse(none.ShouldExit(1000), "No limit: never exits on its own");
+        }
     }
 }

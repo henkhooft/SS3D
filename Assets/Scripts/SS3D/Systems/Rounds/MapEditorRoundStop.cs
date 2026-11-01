@@ -167,6 +167,7 @@ namespace SS3D.Systems.Rounds
             _mapDiscardApproved = false;
             MapEditorPermissions.PersistenceAllowed = true;
             StopAutoStartLoop();
+            StopServerLifetime();
             base.OnStopServer();
         }
     }

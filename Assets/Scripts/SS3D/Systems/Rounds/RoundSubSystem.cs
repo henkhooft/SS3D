@@ -253,6 +253,7 @@ namespace SS3D.Systems.Rounds
 
             await UniTask.Delay(System.TimeSpan.FromMilliseconds(500), cancellationToken: cancellationToken);
             AppendResetHealth();
+            ExitIfRoundLimitReached();
         }
 
         /// <summary>
