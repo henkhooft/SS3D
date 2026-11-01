@@ -2,7 +2,7 @@
 > Touches systems: application, core-subsystems, scene-management, entities, machine-interface, inputs, inventory, chat-audio-screens, rounds-lobby, crafting, tile, screen-effects, examine, ingame-console, health
 > Status: shipped
 
-**Progress:** Policy; code deferred — see Follow-on efforts.
+**Progress:** Standing policy; bootstrap and UI-shell foundations shipped, remaining composition work is tracked under Follow-on efforts.
 
 # Agent-first composition
 
@@ -36,7 +36,7 @@ Pressure already in-tree:
 - New player-facing UI is **UI Toolkit only** (UXML/USS + catalog + path-based asset load).
 - Shared tokens (`ss3d-tokens`, diegetic tokens/typography) are the visual system.
 - No new `UnityEngine.UI` / TMP uGUI in gameplay code.
-- Reference pattern until UiShell exists: [machine-interface](systems/machine-interface.md), radial, armed overlays.
+- Attach new surfaces through [ui-shell](systems/ui-shell.md); [machine-interface](systems/machine-interface.md) documents the catalog/path pattern for surfaces awaiting migration.
 - Do **not** port condemned uGUI to UITK as a bridge — redesigns replace UX; build the new surface.
 
 ## Replace-and-purge
@@ -56,10 +56,10 @@ Do not extend or restyle. Replace per design + Phase 0 purge.
 |---|---|
 | Inventory / hands / intent uGUI | **Phase 0 purged** — [inventory.md](systems/inventory.md) confirms uGUI fully removed, not just disabled |
 | Chat window (always-on box) | **Phase 0 purged** — `ChatSubSystem` also purged; feed/PDA via [comms.md](../design/comms.md) + [2026-07_comms-non-diegetic-feed.md](../archive/architecture/2026-07_comms-non-diegetic-feed.md) |
-| Lobby job-select UI | [lobby.md](../design/lobby.md) |
+| Lobby job-select UI | **Phase 0 purged** — UITK lobby shipped; [rounds-lobby](systems/rounds-lobby.md) |
 | Crafting menu uGUI | **Phase 0 purged** (TECH_DEBT 1.6) — redesign per [crafting.md](../design/crafting.md) |
-| TileMap creator uGUI | creative-mode / construction redesign (editor) |
-| ScreenEffects debug Canvas | delete with health rewrite |
+| TileMap creator uGUI | Construction prefabs purged; residual `AssetSlot.cs` remains. Live hologram/layer helpers stay — see [tile](systems/tile.md) §Overview |
+| ScreenEffects debug Canvas | Still present, opened through the F1 tool registry; delete with owning debug presentation replacement |
 | Examine uGUI views | **Phase 0 purged** (2026-07-26) — `ExamineOverlaySubSystem` on UITK per [examine.md](systems/examine.md) |
 | In-game console uGUI | when debug layer moves to UITK |
 
@@ -80,8 +80,8 @@ Named only — separate architecture efforts when scheduled:
 |---|---|
 | (a) Subsystem bootstrap + `NetworkSystemsHub` | **Shipped:** [2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md) — Boot/Game emptied of SubSystem GOs; `SystemsBootstrap` + hub prefab |
 | (b) UiShell + path catalog | **Wedges shipped:** MI ([mi-path-catalog](../archive/architecture/2026-07_mi-path-catalog.md)), Main HUD (`MainHudAssetCatalog` — see [inventory](systems/inventory.md)), and shared scaffolding + radial/armed migration ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md)). **Still deferred:** migrating MI/Main HUD/Storage Panel onto the shared `UiShellSubSystem` + `UiAssetCatalogBase` ([ui-shell-consolidation](2026-07_ui-shell-consolidation.md) § Explicit non-goals) |
-| (c) Main-HUD UITK slice | **Partial:** player overlay (`MainHudSubSystem` — hands, gear, equipment, intent) + `MainHudAssetCatalog` Resources load; vitals/alerts/self-examine and Phase 0 uGUI purge still open — see [inventory](systems/inventory.md) |
-| (d) Entity prefab setup / recipes | Safe `Human.prefab` evolution beyond one-off Phase 0d edits — scheduled: [2026-07_human-prefab-decomposition.md](2026-07_human-prefab-decomposition.md) (planned) |
+| (c) Main-HUD UITK slice | **Partial:** player overlay (`MainHudSubSystem` — hands, gear, equipment, intent) + `MainHudAssetCatalog` Resources load; alert stack, self-examine and uGUI purge shipped; vitals cluster remains open — see [inventory](systems/inventory.md) |
+| (d) Entity prefab setup / recipes | [Entity prefab recipes](systems/entities-prefab-recipes.md) define the current aggregator and integrity contracts; remaining root-composition debt is tracked in [TECH_DEBT §1.1](TECH_DEBT.md#11-humanprefab-mega-prefab) |
 
 ## Related docs
 

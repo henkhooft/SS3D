@@ -91,7 +91,7 @@ Thin sync layer on top of existing types — no renderer rewrite.
   valid with `atmosclientstatus assert` — a real regression check that a pure client receives
   and applies chunk patches, not just that the render path compiles. Wired into
   `develop-release.yml` and `multiplayer-smoke-test.yml`. See
-  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md).
+  [Multiplayer testing](systems/networking-session-testing.md).
 
 ## Related docs
 
@@ -99,5 +99,5 @@ Thin sync layer on top of existing types — no renderer rewrite.
 - Prior effort: [2026-07_atmos-ecs-foundation.md](../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Design (read-only): [atmospherics.md](../design/atmospherics.md) §9
 - [rendering.md](systems/rendering.md) — `AtmosRenderContext` / `AtmosRendererFeature`
-- [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — headless
+- [Multiplayer testing](systems/networking-session-testing.md) — headless
   server+client regression coverage (`atmos-client-sync` scenario)

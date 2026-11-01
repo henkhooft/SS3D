@@ -52,7 +52,7 @@ CI artifacts unpack to the same layout.
   that line — never the whole file.
 - Pitfalls: [networking-session.md](../../../Documents/architecture/systems/networking-session.md)
   (PlayerSubSystem wait, batchmode icons), effort doc
-  [2026-07_multiplayer-test-harness.md](../../../Documents/architecture/2026-07_multiplayer-test-harness.md).
+  [Multiplayer testing](../../../Documents/architecture/systems/networking-session-testing.md).
 
 ## Known noise policy
 

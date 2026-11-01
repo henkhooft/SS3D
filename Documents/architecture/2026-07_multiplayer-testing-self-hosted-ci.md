@@ -19,7 +19,7 @@ minutes, and grow the harness to catch the classes of desync it currently can't.
 
 Today's loop blocks the dev box for ~45 min per cold build and burns rate-limited
 `unity_tests` minutes; the `Testing/multiplayer/` harness
-([2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md)) is solid but
+([Multiplayer testing](systems/networking-session-testing.md)) is solid but
 runs **entirely headless** (`-batchmode -nographics`), so it structurally cannot observe
 rendered or UI-presented state. The three bugs that motivated this effort each land in a
 different bucket:
@@ -127,7 +127,7 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 
 - Add lighting/electricity debug + assert console commands paralleling `AtmosDebugCommand` /
   `AtmosClientStatusCommand` (see the atmos-client-sync entry in
-  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md)): force a known
+  [Multiplayer testing](systems/networking-session-testing.md)): force a known
   power/light state server-side, then have the client assert its `LightPower` SyncVar / area
   lighting snapshot matches. See [electricity](systems/electricity.md) (LightPower SyncVar) and
   [area](systems/area.md) (client lighting snapshot).
@@ -189,11 +189,11 @@ try/catch turns into a `ScriptFailed` the harness already fails on — no new DS
 - The rendered-client and soak-server efforts themselves (Phases 3–4, deferred above).
 - Pocket/container round-trip regression (needs a `stop_round` DSL verb + headless
   inventory-state assertion; tracked as a Known gap in
-  [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md)).
+  [Multiplayer testing](systems/networking-session-testing.md)).
 
 ## Related docs
 
-- [2026-07_multiplayer-test-harness.md](2026-07_multiplayer-test-harness.md) — the harness Phases 1–2 extend
+- [Multiplayer testing](systems/networking-session-testing.md) — the harness Phases 1–2 extend
 - [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md) — the workflows Phase 0 moves onto the runner
 - [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) — the deferred visual regressions Phase 3 would reopen
 - [networking-session.md](systems/networking-session.md), [electricity.md](systems/electricity.md), [area.md](systems/area.md)

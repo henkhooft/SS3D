@@ -11,7 +11,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
     /// <c>HumanHandLeft</c>/<c>HumanHandRight</c> <see cref="Hand"/> components via
     /// <see cref="PrefabUtility"/>, instead of hand-dragging `fileID`s in the Inspector. Concrete first
     /// recipe for the "Human hands wiring remains prefab composition debt" note in this map and
-    /// 2026-07_human-prefab-decomposition.md Phase 3 — the wiring is currently correct, this tool is the
+    /// Documents/architecture/systems/entities-prefab-recipes.md § Extension points — the wiring is currently correct, this tool is the
     /// safety net for reproducing/verifying it, not a bug fix.
     /// Also ensures <see cref="HandSearchExtension"/> on the hand body-part prefabs.
     /// </summary>

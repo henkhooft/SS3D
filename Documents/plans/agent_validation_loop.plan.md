@@ -55,7 +55,7 @@ non-admin client running `Testing/multiplayer/scenarios/lobby-remote-client.txt`
 UI opcodes, and `Testing/ui/README.md`. Reports land in `artifacts/ui/`.
 
 These problems came up during that session (see the
-[lobby effort](../architecture/2026-08_lobby-uitk-redesign.md#remote-client-verification--2026-10-30)):
+[lobby effort](../architecture/systems/rounds-lobby.md)):
 
 1. A player build waited ~10 min on Unity's "Scene(s) Have Been Modified" dialog. Over MCP the editor
    just looked idle. The owner clicked Save, which wrote leaked tile chunks into `Game.unity`

@@ -3,6 +3,22 @@
 This fork maintains its own documentation layer, independent of upstream's GitBook.
 Read this before writing or editing anything in `Documents/`.
 
+## Live-reference principle
+
+Active documentation describes current contracts, code entry points, operating procedures and
+unfinished work. Update the relevant section in place; do not append dated session reports,
+phase-by-phase implementation diaries, solved investigations, test-run counts or artifact timelines.
+Git and generated validation reports preserve that history.
+
+Keep a solved issue only when it teaches a constraint a future change could violate. Express it
+as a short symptom → cause → required practice in the owning map's Pitfalls, without the session
+story. Tests sections name coverage, commands and outstanding checks; do not treat an old passing
+run as evidence for the current checkout. Keep accepted design deviations explicit.
+
+Completed efforts leave the active index after useful contracts and follow-ups are harvested.
+Avoid creating a new history document just to preserve prose already recoverable from git.
+`Documents/FORK_STATUS.md` remains the explicit upstream-divergence log, not a session changelog.
+
 ## Structure
 
 | Path | Answers | Who updates |
@@ -58,7 +74,11 @@ Shipped efforts and completed plans move to `Documents/archive/architecture/` or
 - deferred phases or follow-ups → the milestone slice, or a new effort or plan
 - deviations from design → the owning system map
 
-**Exception: standing reference.** A shipped doc stays active while code comments, CI workflows, tests, skills or governance docs (`AGENTS.md`, `CLAUDE.md`, this file) cite it by path. Examples are policies like agent-first composition and reference docs like the CI pipeline. The INDEX lists these as `shipped (reference)` or `shipped (standing policy)`.
+**Standing references.** Keep policies and current operational contracts active. A citation from
+code, CI, tests, skills or governance must keep resolving, but does not make an implementation
+history a permanent reference. First move its live guidance to a system map, child map or runbook,
+retarget those citations, then archive the completed effort. The INDEX lists retained policies and
+runbooks as `shipped (reference)` or `shipped (standing policy)`; trim their historical sections too.
 
 ### Milestones (`Documents/milestones/`)
 

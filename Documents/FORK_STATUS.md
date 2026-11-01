@@ -227,7 +227,7 @@ Upstream runs EditMode tests only. This fork adds (PRs #73–#84):
   through Unity MCP with real OS input, and with `--full` also PlayMode, a server build and smoke.
   See [Testing/ui/README.md](../Testing/ui/README.md)
 
-Architecture: [2026-07_multiplayer-test-harness.md](architecture/2026-07_multiplayer-test-harness.md),
+Architecture: [2026-07_multiplayer-test-harness.md](archive/architecture/2026-07_multiplayer-test-harness.md),
 [2026-07_multiplayer-testing-self-hosted-ci.md](architecture/2026-07_multiplayer-testing-self-hosted-ci.md).
 
 ---
@@ -836,7 +836,7 @@ placeholder inventory data model:
 - **Stamina bridge (Phase 7a)** — `CarriedWeight` feeds the stamina regen function
 
 Merged via PR #16 (`claude/inventory-architecture-redesign-6q9527`). Architecture:
-[2026-07_inventory-storage-redesign.md](architecture/2026-07_inventory-storage-redesign.md).
+[2026-07_inventory-storage-redesign.md](archive/architecture/2026-07_inventory-storage-redesign.md).
 System map: [inventory.md](architecture/systems/inventory.md).
 
 **Clothing world presentation** (PR #50): single NetworkObject jumpsuit with
@@ -972,7 +972,7 @@ dedicated server and one or more real clients:
 - Atmospherics client-visualization sync regression coverage (PR #34)
 
 Merged via PR #15 (`claude/multiplayer-test-harness-l90540`); reconnect via PR #35. Architecture:
-[2026-07_multiplayer-test-harness.md](architecture/2026-07_multiplayer-test-harness.md).
+[2026-07_multiplayer-test-harness.md](archive/architecture/2026-07_multiplayer-test-harness.md).
 
 Self-hosted CI effort (PR #49 docs; TomNAS prefer in PRs #55 / editmode workflow):
 [2026-07_multiplayer-testing-self-hosted-ci.md](architecture/2026-07_multiplayer-testing-self-hosted-ci.md)
@@ -1022,7 +1022,7 @@ Replaces upstream's uGUI lobby and character customizer with a UI Toolkit shell 
   MOTD, build, uptime and git change log
 - **Legacy purge**: the uGUI lobby, old customizer canvas and `GameScreens` system are deleted
 
-Architecture: [2026-08_lobby-uitk-redesign.md](architecture/2026-08_lobby-uitk-redesign.md).
+Architecture: [2026-08_lobby-uitk-redesign.md](archive/architecture/2026-08_lobby-uitk-redesign.md).
 System map: [rounds-lobby.md](architecture/systems/rounds-lobby.md).
 
 ### Agent-first composition, UiShell, and UI path catalogs
@@ -1050,7 +1050,7 @@ Pays down TECH_DEBT §1.1 (PR #31): remove dev-only hack components; establish `
 convention (`HumanPrefabHygiene`, `BodyPartContainerInteractiveStrip`, hands wiring recipe);
 integrity tests prevent regression. Phase 1 organ-extraction deprioritized; remaining Phase 3
 domains strip-and-rewire as their own redesigns touch entity wiring. Effort:
-[2026-07_human-prefab-decomposition.md](architecture/2026-07_human-prefab-decomposition.md).
+[2026-07_human-prefab-decomposition.md](archive/architecture/2026-07_human-prefab-decomposition.md).
 
 ### Hot-path performance
 

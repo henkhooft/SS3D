@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: f04093919 — 2026-10-31
+> Verified: 259787487 — 2026-11-01
 
 # Networking (session)
 
 ## Overview
 
-FishNet session management — host/join, network type and port settings. Distinct from tile AOI helpers under `Systems/Networking/`. Includes a genuine headless dedicated-server build (`UNITY_SERVER` subtarget), not just a client build launched with `-serveronly` — see [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md). A real multi-process test harness now exercises this end to end — see [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md). Manual CI prerelease + nightly `develop-nightly` (EditMode/smoke opt-in on dispatch): [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md). Self-hosted TomNAS runner (smoke + EditMode/release with GitHub fallback): [2026-07_multiplayer-testing-self-hosted-ci](../2026-07_multiplayer-testing-self-hosted-ci.md).
+FishNet session management — host/join, network type and port settings. Distinct from tile AOI helpers under `Systems/Networking/`. Includes a genuine headless dedicated-server build (`UNITY_SERVER` subtarget), not just a client build launched with `-serveronly` — see [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md). A multi-process test harness exercises scripted session paths — see [Multiplayer testing](networking-session-testing.md). Manual CI prerelease + nightly `develop-nightly` (EditMode/smoke opt-in on dispatch): [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md). Self-hosted TomNAS runner (smoke + EditMode/release with GitHub fallback): [2026-07_multiplayer-testing-self-hosted-ci](../2026-07_multiplayer-testing-self-hosted-ci.md).
 
 ## Start here
 
@@ -20,7 +20,9 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide (incl. NetworkSession via type name)
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — harness script runner (bootstrapped via SystemsBootstrap); Empty offline redirect never restores Boot
 - `Assets/Scripts/SS3D/Editor/Bootstrap/SessionWorldLifecycleEditorMenus.cs` — **SS3D → Bootstrap → Rebuild NetworkSystemsHub Prefab** (tier A); Phase 3h strip helpers remain as `-executeMethod` statics only
-- `Testing/multiplayer/run_smoketest.sh` — multiplayer harness
+- [Multiplayer testing](networking-session-testing.md) — smoke/load entry points, extension hooks and log gates
+- `Testing/multiplayer/run_loadtest.sh` — dedicated server + N real headless clients; configurable soak duration/stagger and `metrics.csv`
+- `Tools/build_client_and_server.sh` — batchmode Linux builds (installed Unity required; close the project Editor first)
 
 ## Extension points
 
@@ -57,6 +59,11 @@ FishNet session management — host/join, network type and port settings. Distin
 - **Windowed clients may not exit after `ScriptComplete`.** In a graphical Linux player `Environment.Exit(0)` can stall in subsystem teardown; the harness and the lobby remote pilot treat the `ScriptComplete` signal as success and kill leftovers. Don't key a pass on process exit.
 - **UI opcodes need a graphical client.** The lobby UITK host skips bootstrap under `-batchmode`/Null GFX, so `ui_*` and `screenshot` instructions time out in the headless smoke harness by design.
 
+## Tests
+
+- [Multiplayer testing](networking-session-testing.md) owns smoke/load commands, DSL hooks, fixtures, log gates and coverage limits.
+- With the Editor open, `Testing/ui/validate.sh --full` also runs PlayMode and graphical pilots; [UI runbook](../../../Testing/ui/README.md).
+
 ## Depends on / Used by
 
 - **Used by:** All `NetworkSubSystem` domains, [tile](tile.md) AOI
@@ -67,6 +74,6 @@ FishNet session management — host/join, network type and port settings. Distin
 - [INDEX.md](../INDEX.md)
 - [2026-07_headless-dedicated-server](../../archive/architecture/2026-07_headless-dedicated-server.md) — headless
   server build, runtime guards, known issues, testing-harness gap
-- [2026-07_multiplayer-test-harness](../2026-07_multiplayer-test-harness.md) — the harness that closes that gap
+- [Multiplayer testing](networking-session-testing.md) — current smoke/load reference and coverage gaps
 - [2026-07_ci-develop-release-pipeline](../2026-07_ci-develop-release-pipeline.md) — manual + nightly CI prerelease (EditMode/smoke opt-in on dispatch)
 - [2026-07_multiplayer-testing-self-hosted-ci](../2026-07_multiplayer-testing-self-hosted-ci.md) — TomNAS self-hosted runner + warm Library stash + harness coverage growth

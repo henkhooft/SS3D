@@ -9,7 +9,7 @@
 # Two sequential unity-builder steps share Library across Docker restarts and race PackageCache
 # (CS2001 / missing Unity.Cecil.Awesome.dll on the client step).
 #
-# See also Documents/architecture/2026-07_multiplayer-test-harness.md and
+# See also Documents/architecture/systems/networking-session-testing.md and
 # Documents/architecture/2026-07_ci-develop-release-pipeline.md.
 name: Multiplayer Smoke Test
 on:

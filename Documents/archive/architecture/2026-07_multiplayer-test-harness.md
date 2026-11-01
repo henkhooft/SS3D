@@ -9,7 +9,7 @@
 ## Goal
 
 Close the testing gap the headless dedicated-server effort surfaced
-([2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md)): every bug found
+([2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md)): every bug found
 there (a network session port race, several `[Server]`-path NREs, broken selection outline and
 drop interaction against a real remote client) was found by hand — build server, build client,
 launch both, play, read two log files, repeat. EditMode tests can't reach any of it (no FishNet
@@ -41,12 +41,11 @@ Manual / partial:
 ## Shipped
 
 ### In-game automation
-- `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — self-bootstraps via
-  `[RuntimeInitializeOnLoadMethod]` (same pattern as `ScreenEffectsSubSystem`; no `Boot.unity`
-  edit, per [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md)). No-op
+- `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — bootstrapped by
+  `SystemsBootstrap.EnsureProcessWideServices` (no `Boot.unity` edit, per [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md)). No-op
   unless the new `-testscript=<path>` CLI arg is set. Drives a headless process through a small
   line-DSL script (`AutomationScript.cs`) using the same client→server broadcast/RPC APIs the
-  lobby UI calls (`LobbyReadyView`, `ChangeRoundStateView`, `EntitySubSystem.CmdSpawnLatePlayer`)
+  lobby UI calls (`ChangePlayerReadyMessage`, `ChangeRoundStateMessage`, `EntitySubSystem.CmdSpawnLatePlayer`)
   — never simulated input, never the `#if UNITY_EDITOR`-only stub broadcasts on
   `ReadyPlayersSubSystem`/`RoundSubSystem` (those don't compile into a real built player/server).
   Instructions: `wait_connected`, `ready`, `start_round`, `wait_round <state>`, `embark`,
@@ -66,7 +65,7 @@ Manual / partial:
 - `Assets/Settings/LogSettings.asset`: `UseCompactJsonFormatter` flipped `0` → `1`. It already had
   full code support in `LogManager.cs` but defaulted off, so file-sink logs were plain text —
   the harness's log-based signal detection needs the structured JSON. See the **Pitfall** this
-  added to [networking-session.md](systems/networking-session.md).
+  added to [networking-session.md](../../architecture/systems/networking-session.md).
 
 ### Orchestration (`Testing/multiplayer/`)
 - `run_smoketest.sh <scenario> [client-count]` — launches one real dedicated-server process and
@@ -109,9 +108,9 @@ Manual / partial:
   regained control of that same body rather than being left with no controllable entity while
   the old one sits ownerless in the world. Regression coverage for the disconnect/reconnect
   ownership fix in `PlayerSubSystem.ProcessPlayerDisconnect`/`ProcessAuthorizePlayer` and
-  `EntitySubSystem.TryReclaimEntity` — see [player-control.md](systems/player-control.md).
+  `EntitySubSystem.TryReclaimEntity` — see [player-control.md](../../architecture/systems/player-control.md).
 - `scenarios/atmos-client-sync{,-client}.txt` — regression coverage for
-  [2026-07_atmos-client-visualization-sync.md](2026-07_atmos-client-visualization-sync.md): the
+  [2026-07_atmos-client-visualization-sync.md](../../architecture/2026-07_atmos-client-visualization-sync.md): the
   client embarks, runs `console atmosdebug heat 500` (new `AtmosDebugCommand` — headless
   equivalent of `AtmosDebugController`'s GUI buttons, since a `-batchmode` client can't click
   one) at its own tile to force a fresh dirty chunk, waits for the next atmos tick, then runs
@@ -127,7 +126,7 @@ Manual / partial:
   ship one), then seeds `Config/permissions.txt` with each client's ckey as `Administrator` —
   a real dedicated server has no Editor session to grant this by hand, and `start_round` is
   server-side gated on it. Without clearing the envelope, Persistence wins and the txt is
-  ignored (see [permissions.md](systems/permissions.md) Pitfalls).
+  ignored (see [permissions.md](../../architecture/systems/permissions.md) Pitfalls).
 - Station map fixtures: CI player builds have no CWD `Data/Tilemaps`. Without seeding,
   `TileSubSystem.Load()` logs "No station templates found", atmos starts with **0 cells**, and
   `atmos-client-sync` fails on `AtmosClientSnapshotInvalid`. `run_smoketest.sh` copies
@@ -138,7 +137,7 @@ Manual / partial:
 - `.github/workflows/develop-release.yml` — **manual** Windows-default prerelease + **nightly**
   full cut (Windows + Linux client/server → floating `develop-nightly`); TomNAS prefer;
   Linux via `BuildBothForCi`. See
-  [2026-07_ci-develop-release-pipeline.md](2026-07_ci-develop-release-pipeline.md).
+  [2026-07_ci-develop-release-pipeline.md](../../architecture/2026-07_ci-develop-release-pipeline.md).
 - `.github/workflows/multiplayer-smoke-test.yml` — opt-in smoke (`workflow_dispatch` or PR
   label `test:multiplayer`) plus nightly 04:00 UTC; same harness as the release smoke stage.
 - `.github/workflows/editmodetestrunner.yml` — cheap EditMode on PR/`develop` push
@@ -160,6 +159,15 @@ Manual / partial:
   DedicatedServer roles, which is what the remaining `RoundLifecycle_*` tests (promoted from
   `KnownIssueReproduction/` to `PlayMode/RegressionTests/` on 2026-10-31) and
   `GeneralTests/Host/HostGameActions.cs` actually use.
+
+## Load/soak extension (2026-11-01)
+
+`Testing/multiplayer/run_loadtest.sh` (PR #91) stages one dedicated server and N headless clients,
+waits for all to embark, then holds the round for a configurable duration. Example:
+`./Testing/multiplayer/run_loadtest.sh --clients 8 --duration 300 --stagger 2`.
+Defaults are 8 clients, 300 seconds and stagger 0. Logs and server metrics are preserved under
+`Testing/multiplayer/.runs/load-*`. This is local load tooling; it does not close the deferred
+24/7 soak-server work. Metrics and coverage limits: [networking-session §Tests](../../architecture/systems/networking-session.md#tests).
 
 ## Known gaps
 
@@ -195,9 +203,11 @@ Manual / partial:
 - **Linux client SIGSEGV without `SDL_VIDEODRIVER`.** On headless hosts with no DISPLAY, Unity 6
   client players pick window backend `(null)` and crash in `PlayerMain`. `lib/process.sh`
   defaults `SDL_VIDEODRIVER=dummy`. Dedicated server builds do not need it.
-- **Not yet verified against a real Unity build in this environment** — see Verification below.
+- **Verification provenance:** the original implementation session used mock binaries. Later local Unity validation paths exist; neither those paths nor the configured CI schedule establish a fresh passing run. See Verification and [TECH_DEBT §1.10](../../architecture/TECH_DEBT.md#110-play-mode--multiplayer-verification-is-optional-in-practice).
 
 ## Verification
+
+**Original implementation-session results (historical):**
 
 Built and exercised the orchestration logic (`Testing/multiplayer/run_smoketest.sh` and its
 `lib/` helpers) against mock "SS3D.x86_64" shell scripts standing in for the real Unity
@@ -226,19 +236,25 @@ possible here):
   `PlayerSubSystem`/`EntitySubSystem` server logic they drive, which still needs a real build
   (see below).
 
-**Not yet verified: a real `AutomationSubSystem`/`ServerBuildScript`/`ClientBuildScript` build**
+**Original session limitation: no real `AutomationSubSystem`/`ServerBuildScript`/`ClientBuildScript` build**
 (this session had no Unity Editor to build with). Next step for whoever picks this up: run
 `SS3D/Build/Dedicated Server (Linux)` and `SS3D/Build/Client (Linux)` from the Editor, then
 `./Testing/multiplayer/run_smoketest.sh basic-round` locally, `./Testing/multiplayer/run_smoketest.sh
 reconnect` (new — also needs its first real-build run), and a `workflow_dispatch` run of
-`multiplayer-smoke-test.yml` in CI, before relying on the `push: develop`/labeled-PR triggers as
+`multiplayer-smoke-test.yml` in CI, before relying on the nightly/labeled-PR triggers as
 a real merge gate.
+
+**Current verification entry point (2026-11-01):** with the Editor open,
+`Testing/ui/validate.sh --full` drives builds and the same four smoke scenarios as CI. It also
+runs PlayMode and graphical pilots. The separate load runner is manual; CI currently invokes
+smoke only. This documentation refresh inspected source/workflows and did not run Unity or query
+fresh CI results. Last recorded CI health and remaining merge-gate gaps: [TECH_DEBT §1.10](../../architecture/TECH_DEBT.md#110-play-mode--multiplayer-verification-is-optional-in-practice).
 
 ## Related docs
 
-- [2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md) — the effort and
+- [2026-07_headless-dedicated-server.md](2026-07_headless-dedicated-server.md) — the effort and
   testing gap this closes
-- [2026-07_agent-first-composition.md](2026-07_agent-first-composition.md) — why
-  `AutomationSubSystem` self-bootstraps instead of living in `Boot.unity`
-- [networking-session.md](systems/networking-session.md), [permissions.md](systems/permissions.md),
-  [rounds-lobby.md](systems/rounds-lobby.md), [ingame-console.md](systems/ingame-console.md)
+- [2026-07_agent-first-composition.md](../../architecture/2026-07_agent-first-composition.md) — why
+  `AutomationSubSystem` is code-bootstrapped instead of living in `Boot.unity`
+- [networking-session.md](../../architecture/systems/networking-session.md), [permissions.md](../../architecture/systems/permissions.md),
+  [rounds-lobby.md](../../architecture/systems/rounds-lobby.md), [ingame-console.md](../../architecture/systems/ingame-console.md)

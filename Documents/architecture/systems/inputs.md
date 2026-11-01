@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inputs/, Assets/Content/Systems/Input/
 > Entry points: InputSubSystem, InputArbiter, InputInterface
 > Status: partial
-> Verified: ebf05fdfb — 2026-10-30
+> Verified: 259787487 — 2026-11-01
 
 # Inputs
 
@@ -28,7 +28,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
 
 - `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.cs` — owns `Controls`, builds the context table,
   exposes `PushContext` / `SuppressMap` / `SuppressAction` / `SuppressBinding` and the code-defined
-  `UiCancel` / `DetailedExamine` / `ToggleIntent` / `OpenLocalSpeechCompose` / `ToggleAlertStackDebug`
+  `UiCancel` / `DetailedExamine` / `ToggleIntent` / `OpenLocalSpeechCompose` / `ToggleDebugMenu`
   actions.
 - `Assets/Content/Systems/Input/Controls.inputactions` — asset bindings (keep in sync with generated
   `Controls.cs` when regenerating).
@@ -36,7 +36,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
 - `Assets/Scripts/SS3D/Systems/Inputs/InputContext.cs` — the context enum (value = priority).
 - `Assets/Scripts/SS3D/Systems/Inputs/InputInterface.cs` — unified pointer query + document registry.
 - `Assets/Scripts/SS3D/Systems/Inputs/InputTextEntryScope.cs` — shared focus helper for text fields.
-- `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.Keybinds.cs` — player rebinding ([2026-10_player-settings](../2026-10_player-settings.md) Phase 3): `BuildKeybindRows` (the Controls tab's fixed visible list; every other live binding becomes a hidden read-only row, so it is reserved), `Rebind`, override save/load/reset, `CaptureNextButton`, `SetMouseSensitivity`. Pure conflict/swap rules: `KeybindRules.cs` (`KeybindRulesTests`).
+- `Assets/Scripts/SS3D/Systems/Inputs/InputSubSystem.Keybinds.cs` — player rebinding ([2026-10_player-settings](../2026-10_player-settings.md) Phase 3): `BuildKeybindRows` (the Controls tab's fixed visible list; every other live binding becomes a hidden read-only row, so it is reserved), `Rebind`, override save/load/reset and `CaptureNextButton`. Pure conflict/swap rules: `KeybindRules.cs` (`KeybindRulesTests`).
 
 ## Extension points
 
@@ -52,7 +52,7 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
   unregister on your own surface's teardown, since other surfaces sharing that document still need it registered.
 - **Need a one-off debug/UI chord without regenerating `Controls.cs`?** Add a code-defined action on
   `InputSubSystem`'s `System` map (see `UiCancel`, `ToggleIntent`, `OpenLocalSpeechCompose`,
-  `ToggleAlertStackDebug`), include it in the contexts that should enable it, and subscribe to `performed`.
+  `ToggleDebugMenu`), include it in the contexts that should enable it, and subscribe to `performed`.
   Prefer a console command first for debug; hotkey panels are debt — [TECH_DEBT.md](../TECH_DEBT.md) §1.13.
 - **Tab ownership:** compose channel cycle owns Tab while drafting (Keyboard poll in
   `LocalSpeechBubbleController`). Legacy objectives `Other/Fade` Tab binding is erased at startup.
@@ -92,13 +92,13 @@ bindings. Arbitration model: [2026-07_input-arbitration.md](../../archive/archit
   view rebuilds or hides: a focused field removed from the panel gets no `FocusOut` (lobby shell/creator do both).
 - **Escape owners:** `Other/Toggle Menu` = in-round lobby menu (`LobbyUiSubSystem`, `Menu` context);
   `UiCancel` = machine panel; armed interactions poll the key and win (the lobby menu skips while armed).
-- **Regenerating `Controls.cs`:** re-apply Caps / Backspace / F6 (and startup erasures) if the generator
+- **Regenerating `Controls.cs`:** re-apply Caps / Backspace (and startup erasures, including the retired F6 debug binding) if the generator
   restores old paths — asset + generated wrapper must match [2026-07_default-input-scheme.md](../../archive/architecture/2026-07_default-input-scheme.md).
 
 ## Tests
 
 - EditMode: `Assets/Scripts/Tests/EditMode/InputArbiterTests.cs`,
-  `Assets/Scripts/Tests/EditMode/InputInterfaceTests.cs`.
+  `Assets/Scripts/Tests/EditMode/InputInterfaceTests.cs`; rebinding conflicts/swaps in `KeybindRulesTests.cs` and named debug registration in `DebugToolsTests.cs`.
 
 ## Depends on / Used by
 

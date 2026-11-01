@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 73a838a3b — 2026-11-01
+> Verified: 259787487 — 2026-11-01
 
 # Inventory
 
@@ -23,9 +23,9 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 **Fork deviation from** [main-hud.md](../../design/main-hud.md) **§ diegetic overlays:** design frames MI/diagnostic panels as an in-hand display that layers on top of the persistent HUD ("they don't compete with this layout, they sit on top of it"). Shipped behavior instead fully hides Main HUD (`MainHudSubSystem.ApplyVisibility` gates `shouldShow` on `!_machineUiOpen`) whenever an MI panel is open, rather than keeping vitals/hands/intent visible underneath. Accepted as current fork direction, not scheduled for rework.
 
-**Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is recipe-managed via **SS3D → Entities → Run All Human Prefab Recipes** (`HandsPrefabSetup` + peers, [2026-07_human-prefab-decomposition.md](../2026-07_human-prefab-decomposition.md) Phase 3) instead of hand-dragging `fileID`s in the Inspector. `HandsPrefabSetup` also ensures `HandSearchExtension` on `HumanHandLeft`/`HumanHandRight` (Search → character paperdoll). Currently correctly wired; the aggregator is the safety net. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — same **Run All Human Prefab Recipes** strip if it regresses (fixed and verified as of Phase 0).
+**Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is recipe-managed via **SS3D → Entities → Run All Human Prefab Recipes** (`HandsPrefabSetup` + peers, [Entity prefab recipes](entities-prefab-recipes.md)) instead of hand-dragging `fileID`s in the Inspector. `HandsPrefabSetup` also ensures `HandSearchExtension` on `HumanHandLeft`/`HumanHandRight` (Search → character paperdoll). Currently correctly wired; the aggregator is the safety net. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — same **Run All Human Prefab Recipes** strip if it regresses (enforced by the recipe and integrity tests).
 
-**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Art/Icons/Alerts/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). Atmos / hunger / thirst / pulling / restrained / fire / radiation stay all-clear until those systems exist. **F4** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged. **Audio cue ([audio-foundation](../2026-07_audio-foundation.md) Phase 4, [audio](audio.md) §6):** every `AlertStackState` push (health-driven, debug override, or clear) funnels through `MainHudSubSystem.PushAlertState`, which diffs against the previous state via `AlertStackAudioMapper.HasNewAlert` and fires `PersonalAudioSubSystem.PlayAlertCue()` only when a hazard newly appears (None → any severity) — an escalation already showing does not re-trigger it.
+**Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Art/Icons/Alerts/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). `AtmosAlertStackMapper` also supplies Hot/Cold/pressure/Fire and turf LowOxygen; hunger / thirst / pulling / restrained / radiation remain unbound. **F1 → Alert Stack** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged. **Audio cue ([audio-foundation](../2026-07_audio-foundation.md) Phase 4, [audio](audio.md) §6):** every `AlertStackState` push (health-driven, debug override, or clear) funnels through `MainHudSubSystem.PushAlertState`, which diffs against the previous state via `AlertStackAudioMapper.HasNewAlert` and fires `PersonalAudioSubSystem.PlayAlertCue()` only when a hazard newly appears (None → any severity) — an escalation already showing does not re-trigger it.
 
 ## Start here
 
@@ -50,7 +50,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - `Assets/Content/Systems/UI/StoragePanel/Resources/StoragePanelAssetCatalog.asset` — committed UITK refs
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertIconStack.cs` — hazard/severity model + chip rendering
 - `Assets/Scripts/SS3D/Systems/Health/HealthAlertStackMapper.cs` — health → alert signals (Main HUD copies into stack state)
-- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — F4 alert debug menu (`ToggleAlertStackDebug`; namespace `Dev` not `Debug`)
+- `Assets/Scripts/SS3D/UI/MainHud/Dev/AlertStackDebugMenuView.cs` — Alert Stack tool registered with `DebugTools` (F1; namespace `Dev` not `Debug`)
 - `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — `alertstack` console command (MainHud asm)
 
 ## Extension points
@@ -61,7 +61,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **New HUD drop peer:** register via `StoragePanelHost.SetHudDropTargets` from Main HUD bind/refresh.
 - **New storage panel stylesheet:** path in `StoragePanelAssetPaths`, run **SS3D → Data → Rebuild All UI Catalogs**.
 - **Head/torso world containers:** do not re-add `ContainerInteractive` on `HumanHead`/`HumanTorso` until surgery needs organ holes — re-strip via **SS3D → Entities → Run All Human Prefab Recipes**.
-- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Assets/Art/Icons/Alerts/`, wire catalog/builder/editor fallback, rebuild catalogs via **SS3D → Data → Rebuild All UI Catalogs**; add F4 debug row + `AlertStackCommand` case.
+- **New alert hazard:** add to `AlertHazard`/`AlertStackState`/`AlertIconSet`, drop PNG under `Assets/Art/Icons/Alerts/`, wire catalog/builder/editor fallback, rebuild catalogs via **SS3D → Data → Rebuild All UI Catalogs**; add alert debug row + `AlertStackCommand` case.
 - **New clothing with dual mesh:** add folded + worn-shaped children on one Item, `Cloth` mesh map, `ClothingItemPresentation` + root collider via `ClothingPrefabSetup` (or same PrefabUtility pattern) — never a second NetworkObject for the folded form.
 - **World spawn/drop facing:** use `Item.GetWorldFacing(yaw)` (or `ComposeWorldFacing` with the prefab rest) — never yaw-only or `Quaternion.identity`, or long items (M4, knives, tools) stand upright. Map-editor place goes through `PlacedItemObject.Create` (composes rest); holograms use `ConstructionHologram.TargetWorldRotation`.
 
@@ -98,13 +98,20 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Sticky `_dragMoved` blocks hand clicks:** HUD WireDrag must clear `_dragMoved` on every PointerDown *before* the empty-slot early-out. After dragging an item out of a hand, the well is empty so the next press never re-entered the old reset path and ClickEvent kept ignoring hand switches.
 - **Dropped clothing falls through floor / looks body-shaped:** missing root collider or active worn-shaped child — use `ClothingItemPresentation` + root `BoxCollider` on the Item (jumpsuit base); `Item.SetVisibility(true)` re-applies world form. Do not spawn a separate folded NetworkObject.
 - **Worn equipment HUD shows folded pile:** equipment doll must call `Item.GetHudSprite(preferWornShape: true)`; hands/storage keep default `ItemSprite` (folded). Do not point both at the same cached sprite.
-- **Play Mode / Editor verification still required** for this clean-slate pass (catalog present; compile/Play Mode not run in implementing session).
+- **Storage/equip runtime acceptance remains outstanding in the documentation**; use the explicit checklist under Tests rather than treating historical implementation notes as a passing run.
 - **Console commands that touch Main HUD must live in `SS3D.UI.MainHud`:** `SS3D.Systems` cannot reference MainHud (MainHud → Systems already). Put `Command` subclasses under `Assets/Scripts/SS3D/UI/MainHud/`; `CommandsController` discovers them across loaded assemblies.
 - **Do not create a `SS3D.UI.MainHud.Debug` namespace:** it shadows `UnityEngine.Debug`. Use `Dev`. On `Actor`/`View` subclasses, qualify UITK `Position` (`UnityEngine.UIElements.Position`) — `Actor.Position` is a `Vector3`.
-- **Alert debug is F4, not F3:** F3 is `LocalSpeechDebugTrigger` ([chat-audio-screens](chat-audio-screens.md)). Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right). Hotkey debug panels in general are [TECH_DEBT.md](../TECH_DEBT.md) § 1.13 — prefer `alertstack` / console commands over new F-keys.
+- **Alert debug opens through F1 → Alert Stack:** `DebugTools` replaces the old F4 action. Alert panel needs themed `MainHudAssetCatalog.PanelSettings` (blank PanelSettings = invisible labels) and sits top-left (icons are top-right). Separate debug hosts remain debt under [TECH_DEBT.md](../TECH_DEBT.md) § 1.13 — prefer `alertstack` / console commands over new F-keys.
 - **Worn clothing ignores body sliders:** a new `sharedMesh` starts with zero shape-key weights, so the clothes no longer fit the customized body and nothing logs it. `ClothesDisplayer` calls `Human.ReapplyBodyMorphs()` after every swap.
 - **Late join fails after an earlier round:** `ContainerViewedCondition` could still list a destroyed `NetworkObject` (a previous body) and threw mid observer rebuild, aborting the spawn. Skip null entries in observer conditions.
 - **`SyncList.Clear` callbacks carry default items:** FishNet raises one `Clear` change with `default` old/new values, so `oldItem.Item` is null. `AttachedContainer.HandleStoredItemsChanged` dereferenced it, throwing on the server each time a body with containers was despawned (`Purge` on round stop, seen with a remote client's body). Null-check items in every `SyncListOperation` branch.
+
+## Tests
+
+- EditMode `HumanPrefabIntegrityTests` covers hand order and head/torso interaction exclusions; container/stack/lock suites live under `Assets/Scripts/Tests/EditMode/`.
+- **Outstanding acceptance checklist:** compile in Unity; confirm HUD/storage catalogs resolve; exercise equip/unequip, both hands, panel↔panel and panel↔HUD transfers, nested/world containers and character Search; check carried weight, stamina encumbrance and overdraw oxygen debt in Play Mode.
+- Check pocket/container state across stop/start with a real remote client; headless smoke does not cover that round trip. No passing run is claimed by archiving the implementation plan.
+- Current feature gaps: stack splitting, bulk loot, item footprints, full FDU locks and persistent inventory. Runtime extension paths are above; design scope remains [inventory-storage](../../design/inventory-storage.md).
 
 ## Depends on / Used by
 
@@ -116,6 +123,5 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: inventory (stripping rule), main-hud (zone selection in every intent)
 - Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
-- [2026-07_inventory-storage-redesign](../2026-07_inventory-storage-redesign.md)
 - [clothing_world_presentation.plan.md](../../archive/plans/clothing_world_presentation.plan.md)
 - [INDEX.md](../INDEX.md)

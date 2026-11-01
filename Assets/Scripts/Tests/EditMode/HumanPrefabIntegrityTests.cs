@@ -10,7 +10,7 @@ namespace EditorTests
     /// <summary>
     /// Guards TECH_DEBT.md §1.1 "enforcement is convention only" — catches drift that hand-editing
     /// Human.prefab's YAML would otherwise let through silently. See
-    /// 2026-07_human-prefab-decomposition.md Phase 0.
+    /// Documents/architecture/systems/entities-prefab-recipes.md § Tests.
     /// </summary>
     public class HumanPrefabIntegrityTests
     {
