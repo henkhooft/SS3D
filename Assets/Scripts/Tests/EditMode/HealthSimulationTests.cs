@@ -7,6 +7,47 @@ namespace EditorTests
 {
     public class HealthSimulationTests
     {
+        [TestCase("blood")]
+        [TestCase("oxygen")]
+        [TestCase("toxins")]
+        [TestCase("unconscious")]
+        [TestCase("arrest")]
+        [TestCase("dead")]
+        public void IncapacitationBlocksActionsWithUndamagedLimbsAndRecoveryRestoresThem(string cause)
+        {
+            var zones = new ZoneDamageState[HealthConstants.ZoneCount];
+            for (int i = 0; i < zones.Length; i++)
+                zones[i] = ZoneDamageState.Default;
+            var organs = new List<OrganState>
+            {
+                OrganState.Default(OrganType.Brain),
+                OrganState.Default(OrganType.Heart),
+            };
+            SystemicPools pools = SystemicPools.Default;
+            switch (cause)
+            {
+                case "blood": pools.BloodVolumeRatio = HealthConstants.CriticalBloodVolumeRatio; break;
+                case "oxygen": pools.OxyDebt = HealthConstants.CriticalOxyDebt; break;
+                case "toxins": pools.ToxinConcentration = HealthConstants.CriticalToxinConcentration; break;
+                case "unconscious":
+                    organs[0] = new OrganState { Type = OrganType.Brain,
+                        FunctionPercent = HealthConstants.ConsciousnessBrainFunctionPercent };
+                    break;
+                case "arrest": organs[1] = new OrganState { Type = OrganType.Heart, FunctionPercent = 0f }; break;
+                case "dead": organs[0] = new OrganState { Type = OrganType.Brain, FunctionPercent = 0f }; break;
+            }
+
+            HealthSnapshot down = HealthSimulation.BuildSnapshot(pools, zones, organs);
+            Assert.IsFalse(down.CanUseArms, cause);
+            Assert.AreEqual(0f, down.MovementSpeedMultiplier, cause);
+
+            organs[0] = OrganState.Default(OrganType.Brain);
+            organs[1] = OrganState.Default(OrganType.Heart);
+            HealthSnapshot recovered = HealthSimulation.BuildSnapshot(SystemicPools.Default, zones, organs);
+            Assert.IsTrue(recovered.CanUseArms);
+            Assert.AreEqual(1f, recovered.MovementSpeedMultiplier);
+        }
+
         [Test]
         public void LowBloodVolumeRaisesOxyDebtEvenWithHealthyOrgans()
         {

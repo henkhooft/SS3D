@@ -30,7 +30,8 @@ namespace SS3D.Rendering.URP
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (_material == null || UiBackdropBlurContext.Intensity < 0.001f)
+            if (_material == null || (UiBackdropBlurContext.Intensity < 0.001f
+                && UiBackdropBlurContext.BlackoutIntensity < 0.001f))
             {
                 return;
             }

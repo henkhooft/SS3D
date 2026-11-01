@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
 
 # Inventory
 
@@ -66,6 +66,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **World spawn/drop facing:** use `Item.GetWorldFacing(yaw)` (or `ComposeWorldFacing` with the prefab rest) — never yaw-only or `Quaternion.identity`, or long items (M4, knives, tools) stand upright. Map-editor place goes through `PlacedItemObject.Create` (composes rest); holograms use `ConstructionHologram.TargetWorldRotation`.
 
 ## Pitfalls
+
+- **Incapacitated inventory actions:** use `Hand.CanUseHand` for server pickup, inventory transfer/placement/drop, combat and continued delayed interactions. It combines health arm control with ragdoll presentation; UI suppression alone does not guard incoming RPCs.
 
 - **Soda cans placed at the world origin:** an interpolated Rigidbody created and moved only via its Transform in the same frame snaps back to its creation pose. `PlacedItemObject.Create` instantiates at (0,0,0) then moves, so `SodaCanGeneric` (the only item with `Interpolate`) landed at 0,0 — host and dedicated alike. Move items with `ItemUtility.SetWorldPose` (Transform + Rigidbody). Hit 2026-10-31.
 - **Placed items sank into the floor:** `ItemUtility.Place` lifted the item, then `TryPlaceItem` was handed the raw surface point and `PlacedItemObject.Create` moved it back down (centre-pivot items such as medkits clipped). `Place` now rests collider bounds on the surface after rotation; callers pass `item.transform` pose to `TryPlaceItem`. Hit 2026-10-31.

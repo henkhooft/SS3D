@@ -96,7 +96,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [permissions](systems/permissions.md) | partial | Admin permission checks |
 | [persistence](systems/persistence.md) | partial | Station templates, server meta |
 | [player-control](systems/player-control.md) | partial | Connect/authorize/disconnect, reconnect-to-body |
-| [rendering](systems/rendering.md) | partial | URP features, selection pick, Vision FOV, decals |
+| [rendering](systems/rendering.md) | partial | URP features, selection pick, living-body Vision FOV, decals, world-only health blackout |
 | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine, UITK lobby, Server Settings, pre-countdown map validation |
 | [scene-management](systems/scene-management.md) | stub | `SceneSubSystem`, scene transitions |
 | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays driven by health/atmos |

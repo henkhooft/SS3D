@@ -14,6 +14,7 @@ namespace SS3D.Rendering.URP
         static readonly int BlitTextureId = Shader.PropertyToID("_BlitTexture");
         static readonly int BlitTexelSizeId = Shader.PropertyToID("_BlitTexture_TexelSize");
         static readonly int BlurOffsetId = Shader.PropertyToID("_BlurOffset");
+        static readonly int BlackoutIntensityId = Shader.PropertyToID("_BlackoutIntensity");
         static readonly MaterialPropertyBlock s_PropertyBlock = new();
 
         const int MaxIterations = 4;
@@ -30,7 +31,8 @@ namespace SS3D.Rendering.URP
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
             float intensity = UiBackdropBlurContext.Intensity;
-            if (_material == null || intensity < 0.001f)
+            float blackout = Mathf.Clamp01(UiBackdropBlurContext.BlackoutIntensity);
+            if (_material == null || (intensity < 0.001f && blackout < 0.001f))
             {
                 return;
             }
@@ -42,6 +44,29 @@ namespace SS3D.Rendering.URP
                 return;
             }
 
+            if (intensity >= 0.001f)
+                RecordBlur(renderGraph, activeColor, intensity);
+
+            if (blackout >= 0.001f)
+            {
+                using var builder = renderGraph.AddRasterRenderPass<BlackoutPassData>(
+                    "Health Blackout", out BlackoutPassData data, profilingSampler);
+                data.Material = _material;
+                data.Intensity = blackout;
+                // Alpha blending needs the world color loaded; UI renders after this camera pass.
+                builder.SetRenderAttachment(activeColor, 0, AccessFlags.ReadWrite);
+                builder.SetRenderFunc(static (BlackoutPassData pass, RasterGraphContext context) =>
+                {
+                    s_PropertyBlock.Clear();
+                    s_PropertyBlock.SetFloat(BlackoutIntensityId, pass.Intensity);
+                    context.cmd.DrawProcedural(Matrix4x4.identity, pass.Material, 2,
+                        MeshTopology.Triangles, 3, 1, s_PropertyBlock);
+                });
+            }
+        }
+
+        void RecordBlur(RenderGraph renderGraph, TextureHandle activeColor, float intensity)
+        {
             // intensity 1 ≈ soft modal focus (3 half-res steps), not a milky wash.
             int iterations = Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(2f, 3.5f, intensity)), 2, MaxIterations);
             float offset = Mathf.Lerp(0.75f, 1.5f, intensity);
@@ -130,6 +155,12 @@ namespace SS3D.Rendering.URP
             public TextureHandle Source;
             public int PassIndex;
             public float Offset;
+        }
+
+        sealed class BlackoutPassData
+        {
+            public Material Material;
+            public float Intensity;
         }
     }
 }
