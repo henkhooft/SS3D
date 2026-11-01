@@ -165,25 +165,33 @@ namespace SS3D.UI.MachineInterface
             return true;
         }
 
-        protected override void OnDestroyed()
+        // Unregister here, not in OnDestroyed: FishNet clears IsServer during despawn, before Unity's
+        // OnDestroy, so an IsServer-gated unregister there never ran and a deleted APC kept powering
+        // its room (and blocked a replacement APC with "A room can have only one APC").
+        public override void OnStopServer()
         {
             if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
             {
                 areaSubSystem.WhenReady -= OnAreaSystemSetup;
-                if (IsServer)
-                {
-                    areaSubSystem.UnregisterApc(this);
-                }
+                areaSubSystem.UnregisterApc(this);
             }
 
             if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
             {
                 electricitySystem.WhenReady -= OnElectricitySystemSetup;
-                if (IsServer)
-                {
-                    electricitySystem.RemoveElectricalElement(this);
-                }
+                electricitySystem.RemoveElectricalElement(this);
             }
+
+            base.OnStopServer();
+        }
+
+        protected override void OnDestroyed()
+        {
+            if (SubSystems.TryGet(out AreaSubSystem areaSubSystem))
+                areaSubSystem.WhenReady -= OnAreaSystemSetup;
+
+            if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
 
             base.OnDestroyed();
         }

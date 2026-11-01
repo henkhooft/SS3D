@@ -24,18 +24,26 @@ namespace SS3D.Systems.Tile.Connections
                 electricitySystem.WhenReady += OnElectricitySystemSetup;
         }
 
+        // Unregister on despawn: FishNet clears IsServer before Unity's OnDestroy, so a server-gated
+        // OnDestroyed never ran and removed devices lingered until the next graph rebuild pruned them.
+        public override void OnStopServer()
+        {
+            if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
+            {
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
+                electricitySystem.RemoveElectricalElement(this);
+            }
+
+            base.OnStopServer();
+        }
+
         protected override void OnDestroyed()
         {
             base.OnDestroyed();
 
             // Tile icon previews DestroyImmediate prefabs that never started as server objects.
-            if (!IsServer || !SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
-            {
-                return;
-            }
-
-            electricitySystem.WhenReady -= OnElectricitySystemSetup;
-            electricitySystem.RemoveElectricalElement(this);
+            if (SubSystems.TryGet(out ElectricitySubSystem electricitySystem))
+                electricitySystem.WhenReady -= OnElectricitySystemSetup;
         }
 
         private void OnElectricitySystemSetup()

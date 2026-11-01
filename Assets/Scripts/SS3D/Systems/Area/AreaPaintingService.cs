@@ -104,6 +104,7 @@ namespace SS3D.Systems.Area
             HashSet<ushort> occupied = new();
             foreach (IAreaApcOrigin apc in _apcs)
             {
+                if (!IsLive(apc)) continue;
                 TileCoord coord = GetApcMembershipTile(apc);
                 ushort id;
                 if (!after.TryGetValue(coord.Grid, out id)) _map.TryGetAreaId(coord, out id);
@@ -139,6 +140,9 @@ namespace SS3D.Systems.Area
             return true;
         }
 
+        /// <summary>A despawned APC is Unity-null but still a live C# reference; it must not claim a room.</summary>
+        private static bool IsLive(IAreaApcOrigin apc) => apc is not UnityEngine.Object unityObject || unityObject;
+
         public TileCoord GetApcMembershipTile(IAreaApcOrigin apc) => AreaDeviceTileResolver.GetApcRoomTile(apc, _query);
 
         public string NextRoomName()
@@ -152,10 +156,10 @@ namespace SS3D.Systems.Area
         public void RefreshApcLinks()
         {
             foreach (AreaRecord record in _registry.GetAllAreas()) record.Apc = null;
-            foreach (IAreaApcOrigin apc in _apcs) apc.SetMultipleApcsInArea(false);
+            foreach (IAreaApcOrigin apc in _apcs) if (IsLive(apc)) apc.SetMultipleApcsInArea(false);
             foreach (IAreaApcOrigin apc in _apcs)
             {
-                if (!_map.TryGetAreaId(GetApcMembershipTile(apc), out ushort id) ||
+                if (!IsLive(apc) || !_map.TryGetAreaId(GetApcMembershipTile(apc), out ushort id) ||
                     !_registry.TryGet(new AreaId(id), out AreaRecord record)) continue;
                 if (record.Apc != null)
                 {

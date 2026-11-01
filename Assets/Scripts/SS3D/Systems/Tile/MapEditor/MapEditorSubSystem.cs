@@ -1021,6 +1021,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _viewModel.SetMode(mode);
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts,
                 _viewModel.IsLayerCategoryVisible(TileLayerCategory.Scripts));
+            SyncTurfsLayerVisibility();
             OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
         }
@@ -1028,8 +1029,17 @@ namespace SS3D.Systems.Tile.MapEditor
         private void OnSubcategorySelected(MapEditorSubcategory sub)
         {
             _viewModel.SetSubcategory(sub);
+            SyncTurfsLayerVisibility();
             OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
+        }
+
+        /// <summary>Piping/Disposals tabs toggle Turfs in the view model; only re-dim when it changed (walks the map).</summary>
+        private void SyncTurfsLayerVisibility()
+        {
+            bool visible = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Turfs);
+            if (TileLayerVisibilityService.IsGroupVisible(TileLayerCategory.Turfs) != visible)
+                TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Turfs, visible);
         }
 
         /// <summary>

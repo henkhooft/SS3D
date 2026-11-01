@@ -59,6 +59,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private readonly Dictionary<TileLayerCategory, bool> _layerCategoryVisibility = new();
 
+        // True while Piping/Disposals hid Turfs; leaving those tabs restores it. A manual Turfs toggle clears it.
+        private bool _turfsAutoHidden;
+
         public event Action StateChanged;
 
         public void EnsureLayerDefaults()
@@ -76,6 +79,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetLayerCategoryVisible(TileLayerCategory category, bool visible)
         {
             _layerCategoryVisibility[category] = visible;
+            if (category == TileLayerCategory.Turfs) _turfsAutoHidden = false;
             NotifyChanged();
         }
 
@@ -113,6 +117,23 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             bool rooms = CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
             if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
             _layerCategoryVisibility[TileLayerCategory.Areas] = rooms;
+            UpdateTurfsForLowerRuns();
+        }
+
+        /// <summary>Pipes and disposals run under the turf, so their tabs hide Turfs until you leave them.</summary>
+        private void UpdateTurfsForLowerRuns()
+        {
+            bool underTurf = CurrentSubcategory is MapEditorSubcategory.Piping or MapEditorSubcategory.Disposals;
+            if (underTurf && !_turfsAutoHidden && IsLayerCategoryVisible(TileLayerCategory.Turfs))
+            {
+                _layerCategoryVisibility[TileLayerCategory.Turfs] = false;
+                _turfsAutoHidden = true;
+            }
+            else if (!underTurf && _turfsAutoHidden)
+            {
+                _layerCategoryVisibility[TileLayerCategory.Turfs] = true;
+                _turfsAutoHidden = false;
+            }
         }
 
         public void SelectEntry(MapEditorCatalogEntry entry, GenericObjectSo asset)
