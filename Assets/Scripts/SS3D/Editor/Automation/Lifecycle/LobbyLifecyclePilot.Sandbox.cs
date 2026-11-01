@@ -241,6 +241,25 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Ghost hides the body HUD and releases hand hotkeys",
+                Until = () => _corpse.GetComponent<Hands>() == null
+                    && SubSystems.Get<SS3D.UI.MainHud.MainHudSubSystem>().GetComponent<UIDocument>()
+                        .rootVisualElement.Q(className: "main-hud").resolvedStyle.display == DisplayStyle.None,
+                Verify = () =>
+                {
+                    TapKey(Key.Q);
+                    TapKey(Key.X);
+                    Settle(0.5);
+                },
+            },
+            new Step
+            {
+                Name = "Ghost hand hotkeys do not invoke destroyed components",
+                Until = Settled,
+                Verify = () => Capture("sandbox-ghost-no-body-hud"),
+            },
+            new Step
+            {
                 Name = "Ghost opens the map editor",
                 Enter = () => TapKey(Key.B),
                 Until = MapEditorActive,
@@ -278,6 +297,9 @@ namespace SS3D.Editor.Automation
                 {
                     Entity body = SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local());
                     Require(body is Human && body != _corpse, "Respawned into a new Human");
+                    Require(SubSystems.Get<SS3D.UI.MainHud.MainHudSubSystem>().GetComponent<UIDocument>()
+                        .rootVisualElement.Q(className: "main-hud").resolvedStyle.display != DisplayStyle.None,
+                        "Body HUD returns on respawn");
                     Require(_corpse != null && _corpse.gameObject.activeInHierarchy, "The corpse stays where it fell");
                     Vector3 spawn = SubSystems.Get<TileSubSystem>().SpawnPoints.Records[0].Position;
                     Require(Vector3.Distance(Flat(body.transform.position), Flat(spawn)) < 1.5f, "New body stands at a spawn point");

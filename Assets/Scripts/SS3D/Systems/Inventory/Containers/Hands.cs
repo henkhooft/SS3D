@@ -134,6 +134,9 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void OnInventorySetUp()
         {
+            if (_controlsInitialized)
+                return;
+
             // Set up hand related controls.
             _controls = SubSystems.Get<InputSubSystem>().Inputs.Hotkeys;
             _controls.SwapHands.performed += HandleSwapHands;
@@ -148,13 +151,18 @@ namespace SS3D.Systems.Inventory.Containers
         {
             base.OnDestroyed();
 
-            if (IsOwner && _controlsInitialized)
+            // Death removes ownership before destroying Hands. Subscription lifetime must not
+            // depend on current ownership or callbacks keep a destroyed component alive.
+            if (_controlsInitialized)
             {
                 _controls.SwapHands.performed -= HandleSwapHands;
                 _controls.Drop.performed -= HandleDropHeldItem;
                 _controls.ToggleInternalClothing.performed -= HandleTogglePockets;
                 _controlsInitialized = false;
             }
+
+            if (Inventory != null)
+                Inventory.OnInventorySetUp -= OnInventorySetUp;
         }
 
         [Client]
@@ -222,6 +230,9 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void HandleDropHeldItem(InputAction.CallbackContext context)
         {
+            if (!IsOwner || !enabled || SelectedHand == null)
+                return;
+
             // Drop is a Help-mode world verb; Harm is combat-exclusive (melee / future combat chords).
             IIntentProvider intentProvider = GetComponentInParent<IIntentProvider>()
                 ?? GetComponent<IIntentProvider>();

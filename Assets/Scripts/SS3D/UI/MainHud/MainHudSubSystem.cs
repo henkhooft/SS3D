@@ -11,6 +11,7 @@ using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inputs;
@@ -838,7 +839,9 @@ namespace SS3D.UI.MainHud
         /// </summary>
         private void ApplyVisibility()
         {
-            bool shouldShow = _localPlayer != null && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen && !_menuOpen;
+            bool shouldShow = _localPlayer != null
+                && _localPlayer.GetComponent<HumanoidGhostController>() == null
+                && IsRoundInGame() && !_machineUiOpen && !_mapEditorOpen && !_menuOpen;
             _view?.SetVisible(shouldShow);
         }
 
