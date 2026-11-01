@@ -55,7 +55,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 - `Assets/Scripts/SS3D/Systems/Interactions/ArmedInteractionSubSystem.cs` — armed-mode interaction overlay
 - `Assets/Scripts/SS3D/Systems/Interactions/InteractionOutlineView.cs` — hover and pending interaction outlines (exclude from pick via [selection](selection.md) rendering layers; clear on pickup)
 - `Assets/Scripts/SS3D/Systems/Interactions/ArmedTargetEvaluation.cs` — armed target filtering
-- `Assets/Art/Graphics/InteractionOutline.shader` — inverted-hull outline material for availability feedback
+- `Assets/Art/Graphics/InteractionOutline.shader` — inverted-hull outline material for availability feedback; the hull is extruded in clip space by a fixed pixel width (`_OutlineWidth`, 2 px from `InteractionOutlineView`), so the line stays thin at any distance or object scale
 
 ## Extension points
 

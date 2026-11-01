@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 
 namespace SS3D.Editor
@@ -52,6 +53,7 @@ namespace SS3D.Editor
         {
             Directory.CreateDirectory(Path.GetDirectoryName(buildPath) ?? string.Empty);
 
+            StandaloneBuildSubtarget previous = EditorUserBuildSettings.standaloneBuildSubtarget;
             EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
 
             BuildPlayerOptions buildPlayerOptions = new()
@@ -63,11 +65,33 @@ namespace SS3D.Editor
                 options = BuildOptions.None,
             };
 
-            UnityEditor.Build.Reporting.BuildReport report = BuildPipeline.BuildPlayer(buildPlayerOptions);
+            UnityEditor.Build.Reporting.BuildReport report;
+            try
+            {
+                report = BuildPipeline.BuildPlayer(buildPlayerOptions);
+            }
+            finally
+            {
+                RestoreEditorSubtarget(previous);
+            }
 
             if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
             {
                 throw new Exception($"Dedicated server build failed with result: {report.summary.result}");
+            }
+        }
+
+        /// <summary>
+        /// The Server subtarget makes the editor compile its own assemblies with UNITY_SERVER, and they stay that way
+        /// after the subtarget is set back: Play Mode then has no audio source pool (AudioSubSystem null refs), no
+        /// item icons and inert player settings. Put the subtarget back and force a clean recompile.
+        /// </summary>
+        private static void RestoreEditorSubtarget(StandaloneBuildSubtarget previous)
+        {
+            EditorUserBuildSettings.standaloneBuildSubtarget = previous;
+            if (previous != StandaloneBuildSubtarget.Server && !UnityEngine.Application.isBatchMode)
+            {
+                CompilationPipeline.RequestScriptCompilation(RequestScriptCompilationOptions.CleanBuildCache);
             }
         }
 

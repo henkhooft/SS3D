@@ -34,7 +34,8 @@ namespace SS3D.Systems.Interactions
 
         private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
         private static readonly int OutlineWidthId = Shader.PropertyToID("_OutlineWidth");
-        private const float OutlineWidth = 0.03f;
+        /// <summary>Screen pixels; the shader extrudes the hull in clip space so this holds at any distance.</summary>
+        private const float OutlineWidth = 2f;
         private static readonly Color PendingColor = new(0.55f, 0.85f, 1f, 1f);
         private static readonly Color AvailableColor = new(0.15f, 0.95f, 0.35f, 1f);
         private static readonly Color UnavailableColor = new(0.98f, 0.88f, 0.15f, 1f);

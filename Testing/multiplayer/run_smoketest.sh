@@ -116,6 +116,18 @@ else
     echo "warning: no tilemap fixtures at $TILEMAP_FIXTURES — scenarios that need a station map may fail" >&2
 fi
 
+# Round start loads Data/StationTemplates/<map> (default ministation) and refuses a map that fails
+# Map Check (missing job/antag spawns). Always overwrite with the committed templates: a GameServer
+# tree can carry a stale copy from before the spawn markers were authored, and the round then
+# drops from Preparing straight back to Stopped.
+STATION_FIXTURES="${SS3D_STATION_FIXTURES:-$REPO_ROOT/Builds/Game/Data/StationTemplates}"
+if [[ -d "$STATION_FIXTURES" ]]; then
+    mkdir -p "$RUN_DIR/server/Data/StationTemplates"
+    cp -a "$STATION_FIXTURES"/. "$RUN_DIR/server/Data/StationTemplates/"
+else
+    echo "warning: no station template fixtures at $STATION_FIXTURES — round start will fail" >&2
+fi
+
 # Every client's ckey needs Administrator to be allowed to start the round (see
 # ChangeRoundStateView.HandleEmbarkButtonPress / PermissionSubSystem) - seeded here since a
 # real headless dedicated server has no Editor session to grant it by hand. Harmless for

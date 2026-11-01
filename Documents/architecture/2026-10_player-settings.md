@@ -77,6 +77,7 @@ Implementation notes (2026-10-31):
 - An unconfirmed resolution/window change is never written to disk: saves while the prompt is pending store the last confirmed values. In the editor, `Screen.SetResolution` is skipped (the Game view owns its size).
 - UI Scale: the screen-space hosts register their `PanelSettings` with `PlayerSettingsSubSystem.RegisterUiPanel`. **Divergence from Decision 8:** the lobby shell, HUD, storage and radial overlays all share `HudOverlayPanelSettings.asset` (not `Assets/UI Toolkit/PanelSettings.asset`, which only the launcher uses), and the machine interface panel is screen-space overlay (no target texture), so it is scaled too. `CommsOverlayPanelSettings.asset` is referenced by nothing.
 - **Divergence from Decision 8 (owner's call, 2026-10-31):** UI Scale applies live while dragging, in 1 % steps (not 5 %), instead of on release. The view skips rebuilding the tab for its own UI Scale echo so the drag survives.
+- **Show FPS (owner's request, 2026-11-01):** a Display toggle (`PlayerDisplaySettings.ShowFps`, off by default) for a small top-left FPS / frame-time readout, `SS3D.UI.MainHud.Components.FpsCounterView`: process-wide, own `UIDocument` at sorting order 3000, polls the setting and averages frames every 0.5 s (no per-frame work).
 - Frame cap is disabled while VSync is on (VSync paces frames). Sub-tabs are now labelled Display / Audio / Controls (Decision 1).
 
 - Replace the six quality levels with four, each with its own URP asset; default High.

@@ -791,21 +791,10 @@
     padding-bottom: 0;
 }
 
+/* Lives in the view's popover layer; MapEditorView.PlacePopover sets top/left/right beside its anchor. */
 .map-editor-popover {
     position: absolute;
-    top: 0;
     width: 260px;
-    z-index: 100;
-}
-
-.map-editor-popover--anchor-right {
-    left: 100%;
-    margin-left: 8px;
-}
-
-.map-editor-popover--anchor-left {
-    right: 100%;
-    margin-right: 8px;
 }
 
 .map-editor-popover--wide {

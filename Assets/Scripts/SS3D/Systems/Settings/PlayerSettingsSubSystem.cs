@@ -176,6 +176,14 @@ namespace SS3D.Systems.Settings
 
         public void SetAntiAliasing(PlayerAntiAliasing antiAliasing) => ChangeQuality(d => d.AntiAliasing = antiAliasing);
 
+        /// <summary>Display-only overlay toggle; nothing to apply to the engine, the FPS view reads it on Changed.</summary>
+        public void SetShowFps(bool on)
+        {
+            Settings.Display.ShowFps = on;
+            ScheduleSave();
+            Changed?.Invoke();
+        }
+
         /// <summary>Called on slider release, not per drag step (Decision 8).</summary>
         public void SetUiScale(float scale)
         {

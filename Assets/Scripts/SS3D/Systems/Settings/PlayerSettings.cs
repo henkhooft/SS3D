@@ -122,6 +122,8 @@ namespace SS3D.Systems.Settings
         public PlayerUpscaler Upscaler = PlayerUpscaler.Stp;
         public PlayerAntiAliasing AntiAliasing = PlayerAntiAliasing.Smaa;
         public float UiScale = 1f;
+        /// <summary>Small frame-rate readout in the screen corner; off by default.</summary>
+        public bool ShowFps;
 
         public static float SnapUiScale(float value)
         {
