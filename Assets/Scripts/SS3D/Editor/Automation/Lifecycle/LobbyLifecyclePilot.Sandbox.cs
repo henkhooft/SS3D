@@ -2,6 +2,11 @@ using System.Linq;
 using FishNet;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Rendering.URP;
+using SS3D.Systems.Health;
+using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.ScreenEffects;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using SS3D.Core;
@@ -23,6 +28,10 @@ namespace SS3D.Editor.Automation
     public static partial class LobbyLifecyclePilot
     {
         private const string SandboxMode = "sandbox";
+        private const string HealthRegressionMode = "health-regressions";
+
+        // Runs only spawn, incapacitation, blackout/menu, ghost and respawn checks.
+        public static void RunHealthRegressions() => Start(HealthRegressionMode);
 
         private const string SandboxScope = "Single-editor Host session with the sandbox profile applied in Play Mode "
             + "(no -sandbox flag in the editor). Two automatic round cycles; nobody presses Ready or Start. "
@@ -162,13 +171,66 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
+                Name = "Critical state drops the held weapon and blocks hand actions",
+                Enter = () =>
+                {
+                    Human body = (Human)SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local());
+                    Hand hand = body.GetComponent<Hands>().SelectedHand;
+                    GameObject weapon = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
+                        "Assets/Content/WorldObjects/Items/Weapons/M4.prefab"), body.transform.position, Quaternion.identity);
+                    InstanceFinder.ServerManager.Spawn(weapon);
+                    hand.Pickup(weapon.GetComponent<Item>());
+                    Require(!hand.IsEmpty(), "Weapon held before critical state");
+                    body.GetComponent<HumanHealthController>().TickHealth(
+                        toxinIntake: HealthConstants.CriticalToxinConcentration + 5f);
+                    Require(hand.IsEmpty(), "Critical state drops the held weapon");
+                    Require(!hand.CanUseHand && !hand.CanContinueInteraction(), "Critical state blocks new and ongoing hand actions");
+                    hand.Pickup(weapon.GetComponent<Item>());
+                    Require(hand.IsEmpty(), "Server refuses pickup while critical");
+                    Require(body.GetComponent<HumanHealthController>().Snapshot.MovementSpeedMultiplier == 0f,
+                        "Critical state blocks health-driven movement");
+                    body.GetComponent<HumanHealthController>().RestoreSystemicPools();
+                    Require(hand.CanUseHand, "Treatment restores hand control");
+                    InstanceFinder.ServerManager.Despawn(weapon);
+                    SubSystems.Get<ScreenEffectsSubSystem>().SetDebugOverrideActive(true);
+                    SubSystems.Get<ScreenEffectsSubSystem>().SetEffect(ScreenEffectType.Unconscious, 1f);
+                    // Unconsciousness fades at 0.3/sec; wait for a fully opaque veil.
+                    Settle(4);
+                },
+                Until = Settled,
+            },
+            new Step
+            {
+                Name = "Escape menu stays visible over the unconsciousness blackout",
+                Enter = () => TapKey(Key.Escape),
+                Until = () => Visible(Shell()),
+                Verify = () =>
+                {
+                    Require(UiBackdropBlurContext.BlackoutIntensity > 0.99f, "World blackout is opaque");
+                    Require(GameObject.Find("ScreenEffectsBlackout") == null, "No overlay canvas can cover the menu");
+                    Capture("sandbox-blackout-menu");
+                },
+            },
+            new Step
+            {
+                Name = "Close the menu and release the blackout",
+                Enter = () =>
+                {
+                    TapKey(Key.Escape);
+                    SubSystems.Get<ScreenEffectsSubSystem>().SetEffect(ScreenEffectType.Unconscious, 0f);
+                    SubSystems.Get<ScreenEffectsSubSystem>().SetDebugOverrideActive(false);
+                },
+                Until = () => !Visible(Shell()),
+            },
+            new Step
+            {
                 Name = "Host dies and becomes a ghost with a respawn countdown",
                 Enter = () =>
                 {
                     _corpse = (Human)SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Local());
                     _corpse.Kill();
                 },
-                Until = () => LocalEntityIsGhost() && Prompt().IsShown,
+                Until = () => LocalEntityIsGhost() && Prompt().IsShown && !VisionRenderContext.Enabled,
                 Verify = () =>
                 {
                     Require(!Prompt().CanRespawn, "Respawn button waits for the cooldown");
@@ -195,7 +257,11 @@ namespace SS3D.Editor.Automation
                 Name = "Ghost closes the map editor",
                 Enter = () => TapKey(Key.B),
                 Until = () => !MapEditorActive() && Settled(),
-                Verify = () => Require(LocalEntityIsGhost(), "Still a ghost after closing the editor"),
+                Verify = () =>
+                {
+                    Require(LocalEntityIsGhost(), "Still a ghost after closing the editor");
+                    Require(!VisionRenderContext.Enabled, "Ghost FOV stays disabled after map editor closes");
+                },
             },
             new Step
             {

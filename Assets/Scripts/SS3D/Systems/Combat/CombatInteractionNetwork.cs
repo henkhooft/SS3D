@@ -179,7 +179,8 @@ namespace SS3D.Systems.Combat
         private bool TryGetHeldRangedWeapon(out Hand hand, out RangedWeaponItemExtension weapon)
         {
             Hands hands = GetComponent<Hands>();
-            return TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out hand, out weapon);
+            return TwoHandedWeaponRules.TryGetWieldedRangedWeapon(hands, out hand, out weapon)
+                && hand.CanUseHand;
         }
 
         [ServerRpc]
@@ -563,7 +564,7 @@ namespace SS3D.Systems.Combat
                 return;
             }
 
-            if (hand == null)
+            if (hand == null || !hand.CanUseHand)
             {
                 return;
             }

@@ -820,8 +820,20 @@ namespace SS3D.Systems.Health
         {
             HealthSnapshot snapshot = HealthSimulation.BuildSnapshot(_pools, _zones, _organs);
             snapshot.Environment = _environment;
+            bool lostArmControl = _snapshot.CanUseArms && !snapshot.CanUseArms;
             _snapshot = snapshot;
             _debugDetail = HealthDebugDetail.FromStates(_zones, _organs);
+
+            if (lostArmControl && TryGetComponent(out Hands hands))
+            {
+                foreach (Hand hand in hands.PlayerHands)
+                {
+                    if (hand == null || hand.Container == null || hand.IsEmpty())
+                        continue;
+                    hand.ItemInHand.GiveOwnership(null);
+                    hand.Container.Dump();
+                }
+            }
 
             // Do not rely on SyncVar OnChange for this — FishNet may not invoke it on the
             // server when assigning the snapshot, which left unconscious players walking.

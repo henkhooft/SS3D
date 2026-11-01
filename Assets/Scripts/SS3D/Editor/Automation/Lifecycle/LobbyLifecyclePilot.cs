@@ -102,7 +102,8 @@ namespace SS3D.Editor.Automation
         public static void RunRemoteClient() => Start(RemoteMode);
 
         private static bool Remote => SessionState.GetString(ModeKey, "") == RemoteMode;
-        private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode;
+        private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode
+            || SessionState.GetString(ModeKey, "") == HealthRegressionMode;
 
         private static void Start(string mode)
         {
@@ -111,7 +112,8 @@ namespace SS3D.Editor.Automation
             if (EditorApplication.isCompiling || EditorUtility.scriptCompilationFailed)
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
-            string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox", _ => "lifecycle" };
+            string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox",
+                HealthRegressionMode => "health-regressions", _ => "lifecycle" };
             string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
@@ -147,6 +149,8 @@ namespace SS3D.Editor.Automation
                 Timeline.Clear();
                 if (Remote) _steps = BuildRemoteSteps();
                 else _steps = Sandbox ? BuildSandboxSteps() : BuildSteps();
+                if (SessionState.GetString(ModeKey, "") == HealthRegressionMode)
+                    _steps = _steps.TakeWhile(step => step.Name != "/bug in chat saves a report with round and state").ToArray();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -1547,6 +1551,8 @@ namespace SS3D.Editor.Automation
 
         private static string ReportScope()
         {
+            if (SessionState.GetString(ModeKey, "") == HealthRegressionMode)
+                return "Focused editor Host checks: critical held-item drop and action refusal, recovery, world blackout with Escape menu, ghost FOV and respawn. No builds or remote multiplayer tests.";
             if (Sandbox) return SandboxScope;
             return Remote
                 ? "Editor Host + built non-admin client process on loopback. The client's Ready click, chat typing and bug-report interaction are real OS input (uinput virtual device); other UI steps are synthetic events. Client screenshots and client.log in this folder. Does not cover remote machines."

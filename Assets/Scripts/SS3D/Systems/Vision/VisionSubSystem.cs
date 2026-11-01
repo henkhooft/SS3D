@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using SS3D.Core;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Events;
 using SS3D.Systems.Tile;
 using SS3D.Rendering.URP;
@@ -171,8 +172,11 @@ namespace SS3D.Systems.Vision
 
         private void HandlePlayerObjectChanged(ref EventContext context, in LocalPlayerObjectChanged e)
         {
-            target = e.PlayerObject != null ? e.PlayerObject.transform : null;
             _targetEntity = e.PlayerObject != null ? e.PlayerObject.GetComponent<Entity>() : null;
+            target = _targetEntity != null && _targetEntity.GetComponent<HumanoidGhostController>() == null
+                ? _targetEntity.transform : null;
+            if (target == null)
+                StopVisionRendering();
         }
 
         private void LateUpdate()

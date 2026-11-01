@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 92522e751 — 2026-11-01 (runtime decal shader references and URP build stripping)
+> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
 
 # Rendering
 
@@ -40,6 +40,7 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 
 ## Pitfalls
 
+- **Ghost FOV:** `VisionSubSystem` clears its target and disables the composite on a `HumanoidGhostController` body. Map-editor suppression must not reactivate vision for a ghost; respawning into a living body restores targeting.
 - **Runtime impact decals need build-time shader retention:** keep `Shader Graphs/Decal` and `Hidden/SS3D/MultiplyTint` in `GraphicsSettings` Always Included Shaders. Bullet holes instantiate projector materials and tint textures at runtime; a Resources reference includes the shader asset but does not guarantee every required variant survives stripping. Verify bullet holes on walls/floors in Windows and Linux players after changing this path.
 - **Borderless below native resolution offsets the mouse:** `Screen.SetResolution` in `FullScreenWindow` at a smaller size stretches the swapchain to the desktop, but Linux/X11 still reports pointer coordinates in desktop pixels, so map editor and diegetic UI clicks land off-target. `PlayerDisplayApplier.ApplyWindow` always uses native size in Borderless; the saved resolution only applies to Fullscreen/Windowed. Hit 2026-10-31.
 - **One URP asset per quality tier.** `QualitySettings` has four levels (Low/Medium/High/Ultra, default High), each pointing at its own `Assets/Settings/URP/SS3D_URPAsset_<Tier>.asset`; `GraphicsSettings` keeps Ultra as the fallback. A pipeline-wide change (renderer features, GPU Resident Drawer, HDR) must go into all four. Render scale and upscaler are written at runtime by `PlayerSettingsSubSystem` onto whichever asset is active ([2026-10_player-settings](../2026-10_player-settings.md)); in the editor it restores them when play stops, so don't treat play-mode values in the inspector as saved.

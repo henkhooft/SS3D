@@ -274,6 +274,8 @@ namespace SS3D.Systems.Health
             float heartStored = OrganSimulation.GetStoredOrganFunction(organs, OrganType.Heart);
             float brainEffective = GetOrganFunction(organs, OrganType.Brain, pools.BloodVolumeRatio);
             HealthState state = EvaluateHealthState(pools, organs);
+            bool canAct = state != HealthState.Dead && state != HealthState.Critical
+                && IsConscious(brainEffective) && !IsCardiacArrest(heartStored);
 
             return new HealthSnapshot
             {
@@ -290,8 +292,8 @@ namespace SS3D.Systems.Health
                 TotalBleedingRate = totalBleedingRate,
                 BrainFunctionPercent = brainStored,
                 HeartFunctionPercent = heartStored,
-                MovementSpeedMultiplier = OrganSimulation.ComputeMovementSpeedMultiplier(zones),
-                CanUseArms = OrganSimulation.CanUseArms(zones),
+                MovementSpeedMultiplier = canAct ? OrganSimulation.ComputeMovementSpeedMultiplier(zones) : 0f,
+                CanUseArms = canAct && OrganSimulation.CanUseArms(zones),
                 CriticalFlags = BuildCriticalFlags(pools, brainEffective),
                 CanDefibrillate = IsCardiacArrest(heartStored) && brainStored > 0f,
                 Environment = HealthEnvironmentState.SafeDefault,

@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: e87d38958 — 2026-11-01
+> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
 
 # Entities
 
@@ -55,6 +55,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Pitfalls
 
+- **Critical movement:** the living movement loop also checks health presentation intent and clears pending movement when incapacitated; do not rely on component disabling alone (Coimbra update subscriptions can still fire).
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
 - **Remote fire/reload never plays:** `CmdFireTrigger` / stagger must `ApplyLocalSnapshot()` (pack `ActiveTrigger`) **before** `_triggerSequence++`. SyncVar OnChange rebuilds from the old pack synchronously and otherwise wipes the trigger — owner still sees local prediction.
 - **Weird pose until first shot after entering Ranged:** a held gun parks Upper Body on **Hold Weapon**; that state must transition to **Rifle Aim Idle** when `CombatStance == Ranged` (also Hold Item/Default). Orchestrator CrossFades to Aim Idle on Ranged enter as a belt-and-suspenders.

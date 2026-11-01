@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Combat/, Assets/Scripts/SS3D/Systems/Entities/Humanoid/Body/, Assets/Scripts/SS3D/Utils/LineOfSight.cs
 > Entry points: Harm primary → `CombatInteractionNetwork.TryRunRangedFirePrimary` / `CmdRunRangedFire` (held `RangedWeaponItemExtension`) else `TryRunMeleeSwingPrimary` / `CmdRunMeleeSwing`
 > Status: partial
-> Verified: ac35e3e8e — 2026-07-28 (CombatInteractionNetwork extract)
+> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
 
 # Combat
 
@@ -58,6 +58,8 @@ stamina drain), projectile/thrown.
 - Shared LOS: call `LineOfSight.HasLineOfSight` / `TryGetFirstHit` — do not fork parallel raycasts.
 
 ## Pitfalls
+
+- **Incapacitated attacks:** hand capability gates apply to ranged fire/reload, melee start and the scheduled connect frame. A queued swing must not deal damage after the attacker collapses.
 
 - **`CombatEditorAssembly` needs `SS3D.Core`:** editor recipes that `AddComponent<CombatInteractionNetwork>()` (extends `NetworkActor`) fail CS0012/UNT0014 unless `CombatEditorAssembly.asmdef` references `SS3D.Core` — referencing `SS3D.Systems` alone is not enough to see the base type.
 - **Held gun never melee-swings** — `TryRunRangedFirePrimary` returns true whenever a ranged extension is held (including empty/cooldown); do not fall through to `CmdRunMeleeSwing`.

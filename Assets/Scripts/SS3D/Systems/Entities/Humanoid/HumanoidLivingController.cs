@@ -133,6 +133,14 @@ namespace SS3D.Systems.Entities.Humanoid
         /// </summary>
         protected override void ProcessCharacterMovement()
         {
+            if (_healthController != null
+                && BodyPresentationIntent.FromSnapshot(_healthController.Snapshot) != BodyPresentationState.Locomotion)
+            {
+                Input = Vector2.zero;
+                TargetMovement = Vector3.zero;
+                return;
+            }
+
             if (TryGetComponent(out Ragdoll ragdoll)
                 && ragdoll.Presentation != BodyPresentationState.Locomotion)
             {

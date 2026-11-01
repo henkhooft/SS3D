@@ -82,7 +82,7 @@ namespace SS3D.Systems.Combat.Interactions
         public bool CanStartSwing(IInteractionSource source)
         {
             Hand hand = ResolveHand(source);
-            if (hand == null)
+            if (hand == null || !hand.CanUseHand)
             {
                 return false;
             }
@@ -144,7 +144,7 @@ namespace SS3D.Systems.Combat.Interactions
         [Server]
         public void ServerApplyConnect(Hand hand, CombatInteractionNetwork combat)
         {
-            if (hand == null)
+            if (hand == null || !hand.CanUseHand)
             {
                 return;
             }

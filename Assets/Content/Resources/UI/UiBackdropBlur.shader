@@ -131,5 +131,32 @@ Shader "SS3D/UI/UiBackdropBlur"
             }
             ENDHLSL
         }
+        // Pass 2: health blackout over the world, before screen-space UI.
+        Pass
+        {
+            Name "HealthBlackout"
+            ZTest Always
+            ZWrite Off
+            Cull Off
+            Blend SrcAlpha OneMinusSrcAlpha
+            ColorMask RGB
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Frag
+            float _BlackoutIntensity;
+
+            float4 Vert(uint vertexID : SV_VertexID) : SV_POSITION
+            {
+                float2 uv = float2((vertexID << 1) & 2, vertexID & 2);
+                return float4(uv * 2.0 - 1.0, 0.0, 1.0);
+            }
+
+            half4 Frag() : SV_Target
+            {
+                return half4(0.0, 0.0, 0.0, _BlackoutIntensity);
+            }
+            ENDHLSL
+        }
     }
 }

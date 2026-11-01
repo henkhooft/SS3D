@@ -39,7 +39,6 @@ namespace SS3D.Systems.ScreenEffects
         private ChromaticAberration _chromaticAberration;
         private ColorAdjustments _colorAdjustments;
         private DepthOfField _depthOfField;
-        private Image _blackout;
 
         private readonly List<ScreenParticle> _emberParticles = new();
         private readonly List<ScreenParticle> _frostParticles = new();
@@ -83,7 +82,6 @@ namespace SS3D.Systems.ScreenEffects
             }
 
             BuildVolume();
-            BuildBlackout();
             BuildParticles();
 
             AddHandle(UpdateEvent.AddListener(HandleUpdate));
@@ -92,6 +90,7 @@ namespace SS3D.Systems.ScreenEffects
         protected override void OnDestroyed()
         {
             UiBackdropBlurContext.Intensity = 0f;
+            UiBackdropBlurContext.BlackoutIntensity = 0f;
             base.OnDestroyed();
         }
 
@@ -151,30 +150,6 @@ namespace SS3D.Systems.ScreenEffects
             volume.priority = 100f;
             volume.weight = 1f;
             volume.sharedProfile = profile;
-        }
-
-        private void BuildBlackout()
-        {
-            GameObject canvasHost = new("ScreenEffectsBlackout");
-            canvasHost.transform.SetParent(Transform, false);
-
-            Canvas canvas = canvasHost.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 999;
-            canvasHost.AddComponent<CanvasScaler>();
-
-            GameObject imageHost = new("Blackout");
-            imageHost.transform.SetParent(canvasHost.transform, false);
-
-            _blackout = imageHost.AddComponent<Image>();
-            _blackout.color = new Color(0f, 0f, 0f, 0f);
-            _blackout.raycastTarget = false;
-
-            RectTransform rect = _blackout.rectTransform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
         }
 
         // Ember rise (OnFire) / frost fall (Freezing) - mirrors the drifting flecks in the "Screen-Space Effect"
@@ -428,12 +403,7 @@ namespace SS3D.Systems.ScreenEffects
 
             ApplyDepthOfField(blur);
 
-            Color blackoutColor = _blackout.color;
-            blackoutColor.r = 0f;
-            blackoutColor.g = 0f;
-            blackoutColor.b = 0f;
-            blackoutColor.a = blackoutAlpha;
-            _blackout.color = blackoutColor;
+            UiBackdropBlurContext.BlackoutIntensity = blackoutAlpha;
         }
 
         private float ComputeHitFlash(float deltaTime)

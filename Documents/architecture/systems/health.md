@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Health/
 > Entry points: HumanHealthController, HealthSimulation, OrganSimulation
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
 
 # Health
 
@@ -71,6 +71,7 @@ Phase 0d strips legacy health components from `Human.prefab` and rewires a thinn
 
 ## Pitfalls
 
+- **Critical patients can still act despite collapsing:** snapshot `CanUseArms` and `MovementSpeedMultiplier` must include systemic critical, consciousness, arrest and death checks, not only limb injury. `PublishSnapshot` drops held items on loss of arm control; recovery restores capabilities.
 - **Blood decals vanish after setting Surface Type Transparent:** URP `Decal` shadergraph materials must stay **Opaque**. Alpha already blends via the DBuffer/Screen Space passes (`SrcAlpha OneMinusSrcAlpha`); flipping `_Surface` / render queue 3000 / `_SURFACE_TYPE_TRANSPARENT` makes projectors stop drawing. Keep `BloodDecal.mat` Opaque like the package `Decal.mat` default.
 - **White / untinted splatters:** most `Assets/Art/Textures/World/VFX/Splatters/Splatter*.png` are white masks. URP Decal has no Base Color multiply (only `Base_Map` → albedo). `BleedingVfxCatalog.CreateDecalMaterial` tints those masks at runtime; do not “fix” white by switching the material to Transparent.
 - **Floor blood paints through the player / looks cut off:** Mesh Bias only affects mesh decals. Cutoffs: align with `DecalRotationOntoSurface` (never bare `LookRotation(-normal)` on flats — use world-forward as the up hint when projecting vertically). `LookRotation`'s second arg is **upwards**, not a surface tangent; a `Cross` tangent rolled wall projectors and made vertical stamps miss. Through-player: URP Decal Layers need receivers to write rendering layers in a **DepthNormals** pass — Simple Toon lacked that, so character pixels kept the floor’s layer and still matched floor projectors. `STDefault` now has DepthNormals/`_WRITE_RENDERING_LAYERS`; tiles stamp `ReceiveWorldDecals`, floor projectors use `WorldFloorProjectorMask`. Floor blood never paints walls — `SpawnAtAnchor` only raycasts down. **Do not drop DepthNormals when turning SSAO off** — DBuffer + Decal Layers still need that prepass ([rendering](rendering.md)).

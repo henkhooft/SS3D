@@ -9,6 +9,7 @@ using SS3D.Systems.Tile;
 using SS3D.Core;
 using SS3D.Systems.Stamina;
 using SS3D.Systems.Health;
+using SS3D.Systems.Entities.Humanoid;
 
 namespace SS3D.Systems.Inventory.Containers
 {
@@ -51,6 +52,17 @@ namespace SS3D.Systems.Inventory.Containers
         public Hands HandsController;
 
         public HandSide Side => _side;
+
+        public bool CanUseHand
+        {
+            get
+            {
+                HumanHealthController health = GetComponentInParent<HumanHealthController>();
+                Ragdoll ragdoll = GetComponentInParent<Ragdoll>();
+                return (health == null || health.Snapshot.CanUseArms)
+                    && (ragdoll == null || !ragdoll.IsKnockedDown);
+            }
+        }
 
         /// <summary>
         /// The item held in this hand, if it exists
@@ -112,8 +124,7 @@ namespace SS3D.Systems.Inventory.Containers
                 return false;
             }
 
-            HumanHealthController health = GetComponentInParent<HumanHealthController>();
-            if (health != null && !health.Snapshot.CanUseArms)
+            if (!CanUseHand)
             {
                 return false;
             }
@@ -125,12 +136,15 @@ namespace SS3D.Systems.Inventory.Containers
         {
             StaminaController stamina = GetComponentInParent<StaminaController>();
 
-            return stamina == null || stamina.CanContinueInteraction;
+            return CanUseHand && (stamina == null || stamina.CanContinueInteraction);
         }
 
         [Server]
         public void Pickup(Item item)
         {
+            if (!CanUseHand)
+                return;
+
             Hands hands = HandsController;
             if (hands == null)
             {

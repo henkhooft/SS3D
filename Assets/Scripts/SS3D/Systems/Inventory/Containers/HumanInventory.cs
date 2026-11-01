@@ -359,6 +359,9 @@ namespace SS3D.Systems.Inventory.Containers
         [ServerRpc]
         private void CmdDropItem(GameObject gameObject)
         {
+            if (Hands == null || Hands.SelectedHand == null || !Hands.SelectedHand.CanUseHand)
+                return;
+
             Item item = gameObject.GetComponent<Item>();
             if (item == null)
             {
@@ -382,6 +385,9 @@ namespace SS3D.Systems.Inventory.Containers
         [ServerRpc]
         private void CmdPlaceItemInWorld(GameObject itemObject, Vector3 point, Vector3 surfaceNormal)
         {
+            if (Hands == null || Hands.SelectedHand == null || !Hands.SelectedHand.CanUseHand)
+                return;
+
             Item item = itemObject != null ? itemObject.GetComponent<Item>() : null;
             if (item == null || !CanPlaceInventoryItemInWorld(item, point, surfaceNormal))
             {
@@ -486,6 +492,9 @@ namespace SS3D.Systems.Inventory.Containers
         [ServerRpc]
         private void CmdTransferItem(GameObject itemObject, Vector2Int position, AttachedContainer container)
         {
+            if (Hands == null || Hands.SelectedHand == null || !Hands.SelectedHand.CanUseHand)
+                return;
+
             Item item = itemObject.GetComponent<Item>();
             if (item == null)
             {
