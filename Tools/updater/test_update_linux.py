@@ -28,8 +28,8 @@ class UpdaterTests(unittest.TestCase):
         self.root = self.base / "installation with spaces"
         self.new = self.base / "payload/SS3D-Linux-Client-v0.3.0"
         for name in ("Game/SS3D-Client", "Game/UnityPlayer.so", "Game/SS3D-Client_Data/globalgamemanagers",
-                     "Game/Config/permissions.txt", "Game/Config/network.json", "start_ss3d_host.sh",
-                     "start_ss3d_client.sh", "README.txt", "TESTERS.md", "update_ss3d.py",
+                     "Game/Config/permissions.txt", "Game/Config/network.json", "README.txt", "TESTERS.md",
+                     "update_ss3d.py",
                      "Game/Data/StationTemplates/ministation.json", "Game/Data/StationTemplates/edited.json"):
             self.write(self.new, name, "new release")
         self.write(self.new, "Game/UnityCrashHandler64", "native helper")
@@ -39,6 +39,7 @@ class UpdaterTests(unittest.TestCase):
             for path in self.new.rglob("*"):
                 if path.is_file():
                     archive.write(path, path.relative_to(self.new.parent))
+        # The installed copy predates the main menu and still has the retired launch scripts.
         for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh", "README.txt", "TESTERS.md",
                      "update_ss3d.py", "update_ss3d.sh", "Game/Config/network.json", "Game/Data/StationTemplates/ministation.json",
                      "Game/Data/StationTemplates/edited.json", "Game/Data/StationTemplates/my station.json",
@@ -85,8 +86,10 @@ class UpdaterTests(unittest.TestCase):
                      "Game/Logs/player.log", "Game/Config/network.json"):
             self.assertEqual((self.root / name).read_text(), "local data", name)
         self.assertEqual(updater.metadata(self.root)["tag"], "v0.3.0")
-        for name in ("Game/SS3D-Client", "Game/UnityCrashHandler64", "start_ss3d_host.sh", "start_ss3d_client.sh"):
+        for name in ("Game/SS3D-Client", "Game/UnityCrashHandler64"):
             self.assertTrue((self.root / name).stat().st_mode & stat.S_IXUSR, name)
+        for name in updater.RETIRED:
+            self.assertFalse((self.root / name).exists(), name)
         backups = list((self.root / ".ss3d-backups").iterdir())
         self.assertEqual(len(backups), 1)
         for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh", "update_ss3d.py"):

@@ -23,8 +23,9 @@ API = "https://api.github.com/repos/henkhooft/SS3D/releases"
 TAG = re.compile(r"v([0-9]+)\.([0-9]+)\.([0-9]+)\Z")
 # update_ss3d.py replaces itself so updater fixes reach existing installs; Python has already
 # read it. update_ss3d.sh is only a launcher and stays as is.
-MANAGED = ("Game", "start_ss3d_host.sh", "start_ss3d_client.sh", "README.txt",
-           "TESTERS.md", "update_ss3d.py", ".ss3d-release.json")
+MANAGED = ("Game", "README.txt", "TESTERS.md", "update_ss3d.py", ".ss3d-release.json")
+# Launch scripts from releases before the main menu replaced them; moved into the backup, not reinstalled.
+RETIRED = ("start_ss3d_host.sh", "start_ss3d_client.sh")
 
 
 def version(tag):
@@ -126,13 +127,12 @@ def expand_release(archive_path, destination, tag):
     root = destination / prefix.rstrip("/")
     required = ("Game/SS3D-Client", "Game/UnityPlayer.so", "Game/SS3D-Client_Data/globalgamemanagers",
                 "Game/Config/permissions.txt", "Game/Config/network.json",
-                "Game/Data/StationTemplates/ministation.json", "start_ss3d_host.sh",
-                "start_ss3d_client.sh", "README.txt", "TESTERS.md", "update_ss3d.py")
+                "Game/Data/StationTemplates/ministation.json", "README.txt", "TESTERS.md", "update_ss3d.py")
     for name in required:
         if not (root / name).is_file():
             raise RuntimeError(f"Incomplete Linux client release: missing {name}")
-    for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh"):
-        (root / name).chmod((root / name).stat().st_mode | stat.S_IXUSR)
+    client = root / "Game/SS3D-Client"
+    client.chmod(client.stat().st_mode | stat.S_IXUSR)
     return root
 
 
@@ -184,6 +184,11 @@ def install_release(root, new, backup):
     backup.mkdir(parents=True)
     saved, installed = [], []
     try:
+        for name in RETIRED:
+            old = root / name
+            if old.exists() or old.is_symlink():
+                old.rename(backup / name)
+                saved.append(name)
         for name in MANAGED:
             old = root / name
             if old.exists():
@@ -213,7 +218,7 @@ def prune_backups(backups, keep):
 def update(root, check_only=False):
     root = root.resolve()
     if not any((root / "Game" / name).is_file() for name in ("SS3D-Client", "SS3D.x86_64")):
-        raise RuntimeError("Keep the updater beside start_ss3d_host.sh in an extracted Linux client release.")
+        raise RuntimeError("Keep the updater beside the Game folder in an extracted Linux client release.")
     if (root / "Game").is_symlink():
         raise RuntimeError("The Game directory must not be a symbolic link.")
     assert_closed()
@@ -261,11 +266,11 @@ def update(root, check_only=False):
             install_release(root, new, backup)
             complete = True
             removed = prune_backups(backup.parent, backup)
-            print(f"Updated to {tag}. Use your usual Host or Client script in this folder.")
+            print(f"Updated to {tag}. Start Game/SS3D-Client as usual.")
             print(f"Previous installation: {backup}")
             if removed:
                 print(f"Removed {removed} older backup(s); only the previous installation is kept.")
-            print("To roll back, close SS3D and run the Host or Client script inside that backup folder.")
+            print("To roll back, close SS3D and run Game/SS3D-Client inside that backup folder.")
         finally:
             if stage is not None and (not swap_started or complete):
                 shutil.rmtree(stage, ignore_errors=True)

@@ -20,7 +20,7 @@ An **operational** gate, not a gameplay one: it's what makes everything else act
 - A **smoke / harness path** covers the Nuke Ops happy path (spawn→fight→breach→arm→end→restart) so merges don’t silently re-break the loop
 - The authored **test station stays performant** enough for ~8 players + blast + atmos without hitching the session into unplayability
 
-The release zips now load and run (T1, verified by the owner on stable releases v0.3.x). What the artifact still lacks is a destination: shipped launch scripts still target `127.0.0.1` and the client `.bat` prompts for an IP (LAN/self-host only), not a public server (T2). So far only the owner has played a release; no outside tester has.
+The release zips now load and run (T1, verified by the owner on stable releases v0.3.x). What the artifact still lacks is a destination: a fresh install's main menu lists no servers, so players must type an IP (LAN/self-host only); nothing points at a public server (T2). So far only the owner has played a release; no outside tester has.
 
 ## Dependency tree
 
@@ -62,8 +62,8 @@ flowchart TB
   loop --> server
 ```
 
-- **Loadable build (shipped)** — release zips package `Config/`, `Data/Tilemaps/` and `Data/StationTemplates/`; `Start_SS3D_Host.bat` passes an explicit `-ip=127.0.0.1` to avoid the IPv6 link-local disconnect (see [networking-session](../architecture/systems/networking-session.md) pitfalls). The owner hosted, dogfooded and joined a sandbox server on stable v0.3.x releases.
-- **Zero-setup remote join** — launch bats hardcode `-ip=127.0.0.1` ([`Builds/`](../../Builds/)); public builds must default to the hosted server ([networking-session](../architecture/systems/networking-session.md)).
+- **Loadable build (shipped)** — release zips package `Config/`, `Data/Tilemaps/` and `Data/StationTemplates/`; Host defaults an empty address to `127.0.0.1` to avoid the IPv6 link-local disconnect (see [networking-session](../architecture/systems/networking-session.md) pitfalls). The owner hosted, dogfooded and joined a sandbox server on stable v0.3.x releases.
+- **Zero-setup remote join** — the main menu joins any typed or remembered address, but a fresh install has no servers listed; public builds must default to the hosted server ([networking-session](../architecture/systems/networking-session.md)).
 - **Session stability** — foundations shipped ([2026-07_headless-dedicated-server.md](../archive/architecture/2026-07_headless-dedicated-server.md), [2026-07_session-world-lifecycle.md](../archive/architecture/2026-07_session-world-lifecycle.md)); still **partial**. Covers: graceful round start/stop + connect/disconnect; no silent mind→spawn→loadout failures; remote drop/selection break; **doors/airlocks under MP**; host admin wedge tools; happy-path smoke ([Multiplayer testing](../architecture/systems/networking-session-testing.md)); test-station performance floor.
 - **Player settings (audio + display)** — [2026-10_player-settings.md](../architecture/2026-10_player-settings.md) Phases 1–2; controls rebinding (Phase 3) is outside this gate.
 - **End-game screen + restart + latejoin** — shared with MVP1 M5 ([round-end.md](../design/round-end.md) §5–§6; [lobby.md](../design/lobby.md) §7). Latejoin as ghost or late crew must not brick the session; ghosts must still receive the end screen.
