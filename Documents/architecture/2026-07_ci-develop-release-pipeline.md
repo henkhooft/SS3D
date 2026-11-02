@@ -8,10 +8,12 @@
 
 Give this fork a path from a known commit to a downloadable **Windows** player zip
 (self-host via `Builds/*.bat`), with optional secondary Linux client/server artifacts.
-Default **manual** dispatch is **Windows → prerelease** (~one player build). Linux (~30–45 min),
-EditMode, and multiplayer smoke are **opt-in** — day-to-day cuts should not pay for
+Default **manual** dispatch is a numbered **stable** `vX.Y.Z` release with Windows + Linux
+client/server (Linux is forced on, since both client updaters follow stable releases).
+`tag_suffix` test cuts stay Windows-only prereleases unless `build_linux` is set. EditMode and
+multiplayer smoke are **opt-in** — day-to-day cuts should not pay for
 gates/`StandaloneLinux64` that `editmodetestrunner.yml` / `multiplayer-smoke-test.yml`
-already cover separately. A **nightly schedule** (05:00 UTC) always builds Windows + Linux
+already cover separately. A **nightly schedule** (05:17 UTC) always builds Windows + Linux
 client + Linux dedicated server and publishes a floating `develop-nightly` prerelease.
 Not triggered on every develop merge (license cost + release spam at high PR volume).
 
@@ -19,11 +21,19 @@ Not triggered on every develop merge (license cost + release spam at high PR vol
 
 ### Workflow: `.github/workflows/develop-release.yml`
 
-**Triggers:** `workflow_dispatch` + nightly `cron: "0 5 * * *"` (after smoke at 04:00 so
+**Triggers:** `workflow_dispatch` + nightly `cron: "17 5 * * *"` (after smoke at 04:00 so
 TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress: false`.
 
-**Nightly (schedule):** forces `build_linux=true`, `skip_release=false`, EditMode/smoke off,
-`tag_suffix=nightly` → tag `develop-nightly` (overwritten each night).
+**Nightly (schedule or manual `tag_suffix=nightly`):** forces `build_linux=true`, `skip_release=false`, EditMode/smoke off,
+`tag_suffix=nightly` → tag `develop-nightly` (overwritten each night). The tag is explicitly
+moved to the built commit before publication; a missing tag/release is recreated.
+
+The schedule runs away from the busy top of the hour to reduce delayed/dropped GitHub triggers.
+A cron edit on the default branch refreshes the scheduled actor registration. To recover a missing
+nightly immediately, run `gh workflow run develop-release.yml --ref develop -f tag_suffix=nightly`.
+This uses the same full-platform flags and nightly title as a scheduled run. It remains a
+prerelease and is excluded from stable client updates. Check the run and all three release assets
+afterward; a manual recovery confirms publication, not future delivery of GitHub schedule events.
 
 **Inputs (manual; defaults favour a fast Windows cut):**
 
@@ -34,7 +44,7 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
 | `run_smoke` | `false` | When true, after Linux builds run smoke scenarios (needs `build_linux`). |
 | `skip_release` | `false` | When true, skip Windows build and GitHub prerelease (Linux-only if `build_linux`). |
 | `version_bump` | `auto` | Release bump level; `auto` derives it from signals — see [2026-10_game-versioning](2026-10_game-versioning.md). |
-| `tag_suffix` | _(empty)_ | Unversioned test cut tagged `develop-<suffix>` instead of a `vX.Y.Z` release. |
+| `tag_suffix` | _(empty)_ | Unversioned test cut tagged `develop-<suffix>`; `nightly` forces the full nightly path. |
 | `runner` | `auto` | `auto` / `tomnas` / `github` — TomNAS when online, else `ubuntu-latest`. |
 
 **Jobs:**
@@ -68,14 +78,15 @@ TomNAS `Library` is warm). `concurrency: develop-release` / `cancel-in-progress:
    `.ss3d-release.json`, `TESTERS.md`, `README.txt` and `Game/` (binary `SS3D-Client`);
    `SS3D-Linux-Server-<tag>/` holds `start_ss3d_server.sh` and `GameServer/` (`SS3D-Server`).
    `*_BurstDebugInformation_DoNotShip` is stripped from every zip. Tag `vX.Y.Z` (manual release, at the built commit), `develop-nightly`
-   (schedule) or `develop-<tag_suffix>`. Prerelease while the version is `0.x` or a dev build.
+   (schedule) or `develop-<tag_suffix>`. Numbered `vX.Y.Z` releases (0.x included) are stable
+and become GitHub's Latest; nightlies and `develop-*` cuts are prereleases.
 
 ### Windows release updates
 
 `Builds/Update_SS3D.bat` invokes the adjacent PowerShell 5.1 script. It selects the highest
 published **stable** `vMAJOR.MINOR.PATCH` release, ignoring drafts, prereleases and nightlies.
-The existing CI prerelease policy stays in place: test the prerelease manually, then clear
-its prerelease flag in GitHub to promote that exact artifact onto the update channel.
+Numbered releases publish as stable, so they reach the update channel immediately. To hold one
+back, mark it as a prerelease in GitHub; clearing the flag later promotes that exact artifact.
 `-CheckOnly` checks without downloading; a newer installed version is never downgraded.
 
 Updates require all SS3D processes closed. The script locks the installation against concurrent
@@ -84,12 +95,14 @@ and stages beside the installation before swapping `Game/`, launch scripts, guid
 `Game/Config`, local data and logs carry forward. `.ss3d-release.json` records tag and shipped
 map hashes so unchanged bundled maps refresh while custom/edited maps survive, including name
 collisions. Older downloads without metadata conservatively preserve every local map.
-Player settings in Unity's persistent-data directory are untouched. Updater files remain a
-stable bootstrap; install newer bootstrap files manually if ever required.
+Player settings in Unity's persistent-data directory are untouched. `Update_SS3D.ps1` is
+swapped along with the game, so updater fixes reach existing installs; `Update_SS3D.bat` is
+never replaced, because cmd reads a running batch file line by line.
 
 Each update retains a complete previous installation under `.ss3d-backups/<id>/`; launch its
 Host/Client script to roll back with its pre-update local data. Later edits stay in the newer
-installation. Backups are never pruned automatically. A caught swap failure restores the
+installation. Only that previous installation is kept: after a successful update, older
+backups are deleted (n-1 retention; each is a full player). A caught swap failure restores the
 original; an interrupted swap or failed restore leaves staging/backup files for manual recovery.
 
 `Tools/updater/test-update.ps1` uses temporary fixtures and mocked downloads, with no Unity or
@@ -101,8 +114,8 @@ Windows download/update and backup launch are still required in first-release do
 
 `Builds/update_ss3d.sh` invokes the adjacent Python 3 standard-library helper,
 `update_ss3d.py`. It follows the same stable-only selection, map-hash metadata, local-data
-preservation and `.ss3d-backups/` rollback contract as Windows. Both bootstrap files remain
-in place during updates. Linux uses `flock` for the installation lock and reads `/proc/*/comm`
+preservation, `.ss3d-backups/` n-1 rollback and self-update contract as Windows
+(`update_ss3d.py` is replaced, the `update_ss3d.sh` launcher stays). Linux uses `flock` for the installation lock and reads `/proc/*/comm`
 before downloading and before swapping to refuse running `SS3D-Client` / `SS3D.x86_64`
 processes; it never signals or launches them. It rejects archive symlinks/special files and
 path traversal, refuses links in local data, preserves native helper execute bits and ensures
@@ -110,8 +123,7 @@ the player and launch scripts are executable. Caught swap failures (including Ct
 the old installation; interrupted/failed restoration retains staging and backup directories.
 
 Only Linux **client** zips include the updater and metadata. A stable release without its
-matching Linux client asset is refused safely. Enable `build_linux=true` when cutting a
-candidate intended for Linux users, then test and promote that same release. The dedicated
+matching Linux client asset is refused safely, which is why numbered releases always build Linux. The dedicated
 server remains manually deployed, as before.
 
 `python3 -B Tools/updater/test_update_linux.py` covers stable selection/promotion and pagination,

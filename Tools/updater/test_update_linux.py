@@ -29,7 +29,7 @@ class UpdaterTests(unittest.TestCase):
         self.new = self.base / "payload/SS3D-Linux-Client-v0.3.0"
         for name in ("Game/SS3D-Client", "Game/UnityPlayer.so", "Game/SS3D-Client_Data/globalgamemanagers",
                      "Game/Config/permissions.txt", "Game/Config/network.json", "start_ss3d_host.sh",
-                     "start_ss3d_client.sh", "README.txt", "TESTERS.md",
+                     "start_ss3d_client.sh", "README.txt", "TESTERS.md", "update_ss3d.py",
                      "Game/Data/StationTemplates/ministation.json", "Game/Data/StationTemplates/edited.json"):
             self.write(self.new, name, "new release")
         self.write(self.new, "Game/UnityCrashHandler64", "native helper")
@@ -40,7 +40,7 @@ class UpdaterTests(unittest.TestCase):
                 if path.is_file():
                     archive.write(path, path.relative_to(self.new.parent))
         for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh", "README.txt", "TESTERS.md",
-                     "Game/Config/network.json", "Game/Data/StationTemplates/ministation.json",
+                     "update_ss3d.py", "update_ss3d.sh", "Game/Config/network.json", "Game/Data/StationTemplates/ministation.json",
                      "Game/Data/StationTemplates/edited.json", "Game/Data/StationTemplates/my station.json",
                      "Game/Data/Exports/map.zip", "Game/Data/ServerMeta/permissions.json", "Game/Logs/player.log"):
             self.write(self.root, name, "local data")
@@ -89,8 +89,21 @@ class UpdaterTests(unittest.TestCase):
             self.assertTrue((self.root / name).stat().st_mode & stat.S_IXUSR, name)
         backups = list((self.root / ".ss3d-backups").iterdir())
         self.assertEqual(len(backups), 1)
-        for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh"):
+        for name in ("Game/SS3D-Client", "start_ss3d_host.sh", "start_ss3d_client.sh", "update_ss3d.py"):
             self.assertEqual((backups[0] / name).read_text(), "local data")
+
+    def test_updater_replaces_itself_but_keeps_shell_launcher(self):
+        self.update()
+        self.assertEqual((self.root / "update_ss3d.py").read_text(), "new release")
+        self.assertEqual((self.root / "update_ss3d.sh").read_text(), "local data")
+
+    def test_only_the_previous_installation_is_kept_as_backup(self):
+        for old in ("20260101-000000-aaaaaaaa", "20260201-000000-bbbbbbbb"):
+            self.write(self.root / ".ss3d-backups" / old, "Game/SS3D-Client", "older install")
+        self.update()
+        backups = list((self.root / ".ss3d-backups").iterdir())
+        self.assertEqual(len(backups), 1)
+        self.assertEqual((backups[0] / "Game/SS3D-Client").read_text(), "local data")
 
     def test_check_only_and_same_or_newer_version_do_not_download(self):
         self.update(check_only=True)
