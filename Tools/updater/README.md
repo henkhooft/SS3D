@@ -31,8 +31,14 @@ file line by line.
 Regression coverage: `pwsh -NoProfile -File Tools/updater/test-update.ps1` (or `powershell`
 on Windows). All fixtures and simulated downloads are temporary; no real game is launched.
 `.github/workflows/updater-tests.yml` runs it on Windows PowerShell 5.1 for relevant PRs;
-the release workflow also gates publication on these tests. A real Windows download/update
-and backup launch still need a manual check before announcing the first release.
+the release workflow also gates publication on these tests.
+
+Real-Windows end to end: `.github/workflows/updater-e2e.yml` runs `e2e-windows.ps1` on GitHub's
+`windows-latest` (Windows PowerShell 5.1). It updates the previous stable release to the latest
+with that install's own `Update_SS3D.bat`, checks data preservation, byte-identical game files,
+n-1 backups, self-update and a no-op repeat, then launches the updated game and the backup
+headless (`e2e-host.txt`). PRs test the branch's updater (`-UseRepoUpdater`); runs after manual
+Develop Release dispatches test the updater players actually have.
 
 ## Update an extracted Linux client release
 
