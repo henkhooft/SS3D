@@ -31,7 +31,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 - **M1p** — Combat feel **partial:** muzzle/holes/SS14 audio/anims/two-hand/`rangeddebug` shipped; still blood, knockdown clarity, sprint, strip debug chrome (aim IK deferred)
 - **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
 - **M4** — Objectives + win/lose
-- **M5** — End-game screen + restart; spectators still see the outcome
+- **M5** — End-game screen + restart; spectators still see the outcome. M4 + M5 are planned together in [2026-11_round-end-loop](../architecture/2026-11_round-end-loop.md)
 - **M7** — Drag body/carrier remainder (crit ragdoll, screen FX, feel SFX shipped)
 - **M8** — Armor seal + internals + air alarms that alarm + thin fire response (turf→health exposure + equal-P turf mixing shipped)
 - **M9** — Test-map APC lights matter + wall damage readable at range
