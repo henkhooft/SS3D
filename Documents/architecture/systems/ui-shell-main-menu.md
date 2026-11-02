@@ -10,7 +10,8 @@ Client main menu, built from the owner's **SS3D Main menu design(1).zip** refere
 (DDOL, created by `SystemsBootstrap` by type name, never on dedicated servers or batch/Null-GFX
 clients) attaches `MainMenuView` to the shell's Modal layer whenever the **Launcher** scene loads:
 a build started without command-line args, `-forceLauncher`, or the editor **Launcher** toolbar
-toggle. Launches with args still go through Intro and `ServerConnectionView`.
+toggle. Launches with args still go through Intro and `ServerConnectionView`. The lobby's **Quit to
+menu** returns here from any session (`NetworkSessionSubSystem.LeaveToMainMenu`).
 
 What is live: name (defaults to the OS user name), join a recent server or a pasted
 `host[:port]` / `[ipv6]:port`, play locally on the Advanced port (default 1151), per-server label
@@ -56,6 +57,7 @@ backend), and Settings shows the reference placeholder, not the live settings ta
 - **Re-presenting rebuilds the server list.** Status replies that arrive while a field in the list has focus are deferred (`IsEditingServerList`), and address/label/token typing never re-presents; otherwise focus and caret are lost mid-typing. The name field keeps its untrimmed value for the same reason.
 - **Servers without the status patch never answer**, so the menu shows them Offline and disables Join until they update.
 - **`NetworkSettings` is an asset.** In the editor, the menu's writes (name, address, port, network type) outlived Play Mode and overwrote the developer's editor settings. `MainMenuSubSystem` remembers the first values it overwrites and restores them in `OnDestroyed`.
+- **Leaving a session must wait for FishNet's offline swap.** Stopping the client makes `DefaultScene` load Empty (Single); loading Launcher immediately would be replaced by it. `LeaveToMainMenu` waits until both transports are stopped and Empty is active, then loads Launcher. The menu re-unlocks the cursor on show.
 - **No AudioListener after a failed join.** The Empty scene has no camera, so the music went silent ("no audio listeners" spam). The menu adds its own listener whenever none exists and removes it on hide.
 - **Unity's Slider sits high in a row.** Its field box is taller than the tracker and the tracker hugs its top. The music slider pins the input, drag container, tracker and dragger to a 16px box.
 - Wallpaper imports must preserve NPOT dimensions; the catalog builder preserves the supplied 1920×1080 size and disables compression/mips.
@@ -67,7 +69,7 @@ backend), and Settings shows the reference placeholder, not the live settings ta
 
 - `MainMenuTests` (EditMode): track titles, status packet round trip and clipping, classification, row naming, address parsing, recent-server ordering/cap, store round trip and broken file, release selection and `IsNewer`, and a status query over loopback.
 - `python3 -B Tools/updater/test_update_linux.py` and `Tools/updater/test-update.ps1` cover `--wait-pid` / `-WaitPid` and `--restart`.
-- Play Mode check (2026-11-02, ad hoc): Launcher toggle on, menu → Join → direct connect to a closed port returns to the list with the error and no OnGUI box (scene Empty); Play Locally reaches the lobby; a raw UDP status query to the host returned protocol, name, 1/32 players. Music (same day): plays on the Music group, Next and the toggle change track/fade, keeps playing after the failed join (menu listener added), and has faded to silence once the lobby loads; editor NetworkSettings were unchanged after Play Mode. Not yet covered: a real join to a remote server through the menu, and an in-game update of a packaged build.
+- Play Mode check (2026-11-02, ad hoc): Launcher toggle on, menu → Join → direct connect to a closed port returns to the list with the error and no OnGUI box (scene Empty); Play Locally reaches the lobby; a raw UDP status query to the host returned protocol, name, 1/32 players. Music (same day): plays on the Music group, Next and the toggle change track/fade, keeps playing after the failed join (menu listener added), and has faded to silence once the lobby loads; editor NetworkSettings were unchanged after Play Mode. Quit to menu: host → lobby → Quit to menu → host again → Quit to menu in one process, and an Intro-started host → Quit to menu, all without errors. Not yet covered: a real join to a remote server through the menu, and an in-game update of a packaged build.
 
 ## Depends on / Used by
 

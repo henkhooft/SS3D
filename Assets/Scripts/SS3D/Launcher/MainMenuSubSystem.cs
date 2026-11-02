@@ -178,6 +178,9 @@ namespace SS3D.Launcher
             }
 
             ClientConnectionRecovery.FailureUiOwnedElsewhere = true;
+            // Back from a round: the game may have locked or hidden the cursor.
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
             _view = new MainMenuView(_catalog);
             _view.CommandIssued += HandleCommand;
             _view.FieldChanged += HandleField;

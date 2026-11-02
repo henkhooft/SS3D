@@ -13,7 +13,7 @@ FishNet session management — host/join, network type and port settings. Distin
 
 - `Assets/Scripts/SS3D/Networking/SessionState.cs` — `Cold → Connecting → Online → Disconnecting → WaitingForServer`
 - `Assets/Scripts/SS3D/Networking/ClientConnectionRecovery.cs` — DDOL session FSM owner; arms `Scenes.EmptyPath` offline after first Online; OnGUI Retry/Quit; suppresses `SubSystems.Get` Errors while WaitingForServer; spawns `NetworkSystemsHub` on server Online
-- `Assets/Scripts/SS3D/Networking/NetworkSessionSubSystem.cs` — session host/join; gates on `ClientConnectionRecovery.CanStart`; UNITY_SERVER auto-starts on `ApplicationInitializing`
+- `Assets/Scripts/SS3D/Networking/NetworkSessionSubSystem.cs` — session host/join; gates on `ClientConnectionRecovery.CanStart`; UNITY_SERVER auto-starts on `ApplicationInitializing`; `LeaveToMainMenu` stops client/server, waits for FishNet's Empty swap, then loads Launcher
 - `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub NetworkObject (all Game NetworkSubSystems)
 - `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again. Launches without args use the [main menu](ui-shell-main-menu.md) instead, which owns its failures (`ClientConnectionRecovery.FailureUiOwnedElsewhere`) and arms Empty before joining (`ArmEmptyOfflineScene`)
 - `Assets/Scripts/SS3D/Networking/Status/` + `Systems/Rounds/ServerStatusPublisher.cs` — pre-join status query answered on the game port through the `SS3D patch` in Tugboat's `ServerSocket.UnconnectedRequestHandler` (LiteNetLib unconnected messages; re-apply on FishNet upgrades)
