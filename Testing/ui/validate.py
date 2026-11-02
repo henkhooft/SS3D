@@ -434,8 +434,14 @@ async def step_round_reset(editor, ctx):
                            "round-reset-regressions-*/status.json", 90, 300)
 
 
+async def step_ragdoll_space(editor, ctx):
+    return await run_pilot(editor, "SS3D/Testing/Run Ragdoll Space Regressions",
+                           "ragdoll-space-*/status.json", 90, 300)
+
+
 STEPS = {name: globals()["step_" + name] for name in ORDER}
 STEPS["round-reset"] = step_round_reset
+STEPS["ragdoll-space"] = step_ragdoll_space
 
 
 async def main():

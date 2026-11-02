@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: e496b5a3e — 2026-11-01 (health, ghost vision and blackout action/layering contracts)
+> Verified: 1c321ae95 — 2026-11-02
 
 # Entities
 
@@ -50,10 +50,13 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - Ranged fire/reload: `RequestAttack(FireRifle|Reload)`. Upper Body stays weighted for the whole Ranged stance on **Rifle Aim Idle** (`Mix_AimingIdle`); Fire/Reload oneshot and return there. Orchestrator CrossFades to Aim Idle on Ranged enter (Hold Weapon had no path otherwise). Base Ranged FreeformCartesian keeps foot phase — do not pulse Upper Body weight per shot.
 - `HumanoidCombatMode` is 2 bits; **`F` toggles Help/Harm intent** (combat stance follows Harm via `InteractionController` / `InputSubSystem.ToggleIntent`). Inventory picks Melee vs Ranged while in combat (`RangedWeaponItemExtension` preferred over trait name match). `LimpSide != 0` → Injured locomotion; `InjuredLeg` drives idle severity + additive weight.
 - **Animator vs code:** swing exit times, limp transitions, masks are animator-owned ([animation-polish](../../archive/architecture/2026-07_animation-polish.md)). Code sets parameters/triggers and look-at only — no swing duration constants.
+- **Ragdoll gravity:** `Ragdoll` checks support at the hips while down; unsupported bones disable gravity and discard downward settling velocity. Returning to a plenum restores gravity. Root alignment only snaps to nearby floor under supported bodies.
 - **Collapse / death:** write `Ragdoll.ServerSetPresentation` (or wrappers); readers use `Ragdoll.Presentation`.
 - **Space float:** living bodies — confirmed no plenum (`Unsupported`) → `SetFloating(true)`, skip gravity/WASD, coast. Client AOI lag / incomplete plenum (`Unknown`) must not enter float; skip gravity only while no physical floor collider is underfoot (raycast), then resume normal loco so spawn is not soft-locked when the map is visible but occupancy is still Unknown. Keep coasting only if SyncVar already Floating (deep space). Server occupancy-miss is Unsupported only after `TileMapLoaded`; `ServerReconcileSpaceSupport` clears Floating while Unknown and packs it for remotes. **`HumanoidPredictedMovement` is disabled on `Human.prefab`**; `HumanoidLivingController` owns the live path. Ghosts still set Floating on spawn.
 
 ## Pitfalls
+
+- **Spaced ragdolls falling below the deck:** dynamic bones must update `useGravity` from plenum support, including after death transfers physics to the server. Unknown client occupancy preserves known Floating or probes nearby floor; never use an unlimited alignment ray or count bodies/items as floor.
 
 - **Critical movement:** the living movement loop also checks health presentation intent and clears pending movement when incapacitated; do not rely on component disabling alone (Coimbra update subscriptions can still fire).
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
@@ -87,6 +90,10 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **`HumanoidPredictedMovement` is disabled on `Human.prefab`:** space float and predicted ticks do not run until it is enabled; living Update path must carry space float (see `HumanoidLivingController.TryProcessSpaceFloat`).
 - **`PublishSnapshot` used to no-op on pure clients:** owner now `ApplyOwnerSnapshot` so Floating hits the Animator without waiting on SyncVar; dedicated server still reconciles Floating via `ServerReconcileSpaceSupport`.
 - **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
+
+## Tests
+
+- `Testing/ui/validate.sh --steps compile,ragdoll-space` checks supported critical collapse, recovery, critical/dead zero-gravity stability and returning a corpse to deck in a host session. Remote physics ownership remains outside this pilot.
 
 ## Depends on / Used by
 
