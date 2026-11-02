@@ -17,7 +17,7 @@ do end to end. Each goal is split into **slices**, the smaller pieces that have 
 |------|---------------------------|----------|
 | [Test server](#test-server) | Download a release, click join, play with others on a live server | 3 of 7 done, 3 partial |
 | [Map authoring](#map-authoring) | Build your own station in a release build and hand it in | 5 of 9 done, 3 partial |
-| [Nuclear Operatives round](#nuclear-operatives-round) | Play a full Nuke Ops round from spawn to end screen | 2 of 10 done, 4 partial |
+| [Nuclear Operatives round](#nuclear-operatives-round) | Play a full Nuke Ops round from spawn to end screen | 2 of 10 done, 5 partial |
 | [Station round](#station-round) | Play a short, bare-bones SS13 shift with jobs and antagonists | 0 of 7 done, 1 partial, 1 blocked |
 
 What already works, system by system, is listed in
@@ -33,7 +33,7 @@ What already works, system by system, is listed in
 | ✅ | T1 | The downloaded build loads and runs |
 | ⬜ | T2 | The game opens to a main menu: paste a server address once, then join in one click |
 | 🟡 | T3 | Multiplayer sessions stay stable: doors work, admins can unstick a round, no lag spikes |
-| 🟡 | T4 | Rounds end with a summary screen and restart; you can join mid-round (joining mid-round works) |
+| 🟡 | T4 | Rounds end with a summary screen and restart; you can join mid-round (joining mid-round works; rounds end with a summary everyone sees, and the next round starts on its own) |
 | ✅ | T6 | You can change volume, resolution and graphics quality, and they stay set |
 | 🟡 | T7 | A separate server where everyone can build and fight, and the station resets every 20 minutes (live, address shared in Discord) |
 
@@ -67,7 +67,7 @@ What already works, system by system, is listed in
 | ✅ | M2 | Walls take damage and explosions tear through the station |
 | ⬜ | M3 | The nuke itself: find the disk, breach the vault, arm or defuse, station-wide warning |
 | ⬜ | M4 | Objectives exist and the round has a winner |
-| ⬜ | M5 | An end-of-round screen everyone sees, then the round restarts |
+| 🟡 | M5 | An end-of-round screen everyone sees, then the round restarts (the summary and automatic restart work; it names a real winner once M4 lands) |
 | 🟡 | M7 | Getting hurt feels real and you can drag bodies (ragdolls, screen effects and sounds work) |
 | 🟡 | M8 | Space, bad air and fire hurt you; suits and internals protect you; air alarms go off (exposure damage works) |
 | ⬜ | M9 | Station power and lights matter; wall damage is visible from a distance |

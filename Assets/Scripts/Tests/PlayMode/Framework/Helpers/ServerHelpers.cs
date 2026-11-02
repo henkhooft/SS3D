@@ -58,7 +58,10 @@ namespace SS3D.Tests
             }
         }
 
-        /// <summary>Stops a running or starting round and waits until it is Stopped. Safe when no round runs.</summary>
+        /// <summary>
+        /// Stops a running or starting round and waits until it is Stopped. Safe when no round runs.
+        /// <paramref name="timeout"/> is on top of the 30 s round-end summary beat an Ongoing round passes through.
+        /// </summary>
         public static IEnumerator StopRound(float timeout = 30f)
         {
             if (!SubSystems.TryGet(out RoundSubSystem rounds) || rounds.CurrentRoundState == RoundState.Stopped)
@@ -67,7 +70,7 @@ namespace SS3D.Tests
             }
 
             ChangeRoundState(false);
-            yield return WaitForRoundState(RoundState.Stopped, timeout);
+            yield return WaitForRoundState(RoundState.Stopped, timeout + RoundEndBeat.Seconds);
         }
 
         /// <summary>

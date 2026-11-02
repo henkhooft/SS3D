@@ -21,12 +21,17 @@ namespace SS3D.Systems.Rounds
         public int PlayerCap;
         public int RoundLengthMinutes;
         public bool AllowLateJoin;
+        /// <summary>Ready players needed before the auto-start countdown runs (lobby.md §7).</summary>
+        public int MinimumReady;
         public string ServerName;
         public string Motd;
 
         // Server rules with no admin form field yet; the sandbox profile sets them at boot
         // (SandboxProfile). A whole-form admin save keeps the current values.
-        /// <summary>Starts a countdown on its own while Stopped once a player is ready (lobby.md §7).</summary>
+        /// <summary>
+        /// Starts a countdown on its own while Stopped once <see cref="MinimumReady"/> players are ready
+        /// (lobby.md §7). On by default for a dedicated server (<see cref="ForDedicatedServer"/>).
+        /// </summary>
         public bool AutoStart;
         /// <summary>At round start, every connected player who isn't observing counts as ready.</summary>
         public bool AllConnectedReady;
@@ -41,12 +46,20 @@ namespace SS3D.Systems.Rounds
 
         public static ServerSettings Default => new()
         {
-            Map = "", Mode = "Secret", PlayerCap = 32, RoundLengthMinutes = 90, AllowLateJoin = true,
+            Map = "", Mode = "Secret", PlayerCap = 32, RoundLengthMinutes = 90, AllowLateJoin = true, MinimumReady = 1,
             ServerName = ServerInfoText.DefaultName, Motd = ServerInfoText.DefaultMotd,
             RespawnCooldownSeconds = 30, MapPersistence = true,
         };
 
+        /// <summary>A dedicated server runs rounds on its own (round-end.md §6, Q16); a listen host starts them by hand.</summary>
+        public static ServerSettings ForDedicatedServer(ServerSettings settings)
+        {
+            settings.AutoStart = true;
+            return settings;
+        }
+
         public bool IsValid => PlayerCap is >= 1 and <= 256
+            && MinimumReady is >= 1 and <= 256
             && RoundLengthMinutes is >= 1 and <= 1440
             && RespawnCooldownSeconds is >= 0 and <= 3600;
 
@@ -68,9 +81,9 @@ namespace SS3D.Systems.Rounds
 
     public enum StationLoadState { NotLoaded, Loading, Initializing, Ready, Failed }
 
-    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin, ServerName, Motd }
+    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin, ServerName, Motd, MinimumReady, AutoStart }
 
-    public enum RoundAdminAction { Start, ForceStart, ExtendTimer, CancelCountdown, Stop }
+    public enum RoundAdminAction { Start, ForceStart, ExtendTimer, CancelCountdown, Stop, HoldEnd, ResumeEnd }
 
     public sealed partial class RoundSubSystem
     {
@@ -120,6 +133,14 @@ namespace SS3D.Systems.Rounds
                 SendServerSettings(sender, "Server info saved.");
                 return;
             }
+            if (field == ServerSetting.AutoStart)
+            {
+                // A server rule, not round config: it applies at once, in any round state.
+                _serverSettings.AutoStart = value.AutoStart;
+                _autoStart.Held = false;
+                SendServerSettings(sender, value.AutoStart ? "Auto start is on." : "Auto start is off.");
+                return;
+            }
             // Merge only the edited field with current authoritative data, never an old UI snapshot.
             ServerSettings updated = _serverSettings;
             switch (field)
@@ -129,6 +150,7 @@ namespace SS3D.Systems.Rounds
                 case ServerSetting.PlayerCap: updated.PlayerCap = value.PlayerCap; break;
                 case ServerSetting.RoundLengthMinutes: updated.RoundLengthMinutes = value.RoundLengthMinutes; break;
                 case ServerSetting.AllowLateJoin: updated.AllowLateJoin = value.AllowLateJoin; break;
+                case ServerSetting.MinimumReady: updated.MinimumReady = value.MinimumReady; break;
                 default: SendServerSettings(sender, "Unknown setting rejected."); return;
             }
             SaveServerSettings(updated, sender);
@@ -189,6 +211,12 @@ namespace SS3D.Systems.Rounds
                     break;
                 case RoundAdminAction.Stop when IsOngoing:
                     RequestPlayerRoundStop(sender);
+                    break;
+                case RoundAdminAction.HoldEnd when CurrentRoundState == RoundState.Ending:
+                    SetEndHeld(true, SubSystems.Get<PlayerSubSystem>().GetCkey(sender));
+                    break;
+                case RoundAdminAction.ResumeEnd when CurrentRoundState == RoundState.Ending:
+                    SetEndHeld(false, SubSystems.Get<PlayerSubSystem>().GetCkey(sender));
                     break;
             }
         }

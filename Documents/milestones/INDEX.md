@@ -14,7 +14,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 - **T1 shipped** — Release zips load and host (owner-verified on stable v0.3.x; no outside tester yet)
 - **T2** — Main menu with one-click join ([main-menu.md](../design/main-menu.md)); replaces the IP-prompting `.bat` files
 - **T3** — Session stability: doors under MP, remote drop/selection, remaining admin wedge tools (round controls + stop-cancels-start shipped), Nuke Ops happy-path smoke, test-station perf floor. Local `validate.sh --full` covers PlayMode/server build/smoke, but **CI smoke hasn't passed since 2026-10-01** (runner offline)
-- **T4** — End-game screen + restart (**shared with M5**); latejoin without softlock shipped, including after an earlier round
+- **T4** — End-game screen + restart (**shared with M5**): round-end loop implemented ([2026-11_round-end-loop](../architecture/2026-11_round-end-loop.md) P1), dedicated-server playtest pending; latejoin without softlock shipped, including after an earlier round
 - **T7** — Sandbox server caps (live on TomNAS; loop, `/bug`/F8 and the owner's first-session fixes #111–#118 shipped)
 
 **Authoring track** — [map-authoring.md](map-authoring.md) (expect many gaps: map authoring in a build is largely untested):
@@ -31,7 +31,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 - **M1p** — Combat feel **partial:** muzzle/holes/SS14 audio/anims/two-hand/`rangeddebug` shipped; still blood, knockdown clarity, sprint, strip debug chrome (aim IK deferred)
 - **M3** — Nuke loop + disk pinpoint + breaching + arm announce + examine state
 - **M4** — Objectives + win/lose
-- **M5** — End-game screen + restart; spectators still see the outcome. M4 + M5 are planned together in [2026-11_round-end-loop](../architecture/2026-11_round-end-loop.md)
+- **M5** — End-game screen + restart; spectators still see the outcome (P1 implemented; the Nuke Ops winner waits on M4). M4 + M5 are planned together in [2026-11_round-end-loop](../architecture/2026-11_round-end-loop.md)
 - **M7** — Drag body/carrier remainder (crit ragdoll, screen FX, feel SFX shipped)
 - **M8** — Armor seal + internals + air alarms that alarm + thin fire response (turf→health exposure + equal-P turf mixing shipped)
 - **M9** — Test-map APC lights matter + wall damage readable at range

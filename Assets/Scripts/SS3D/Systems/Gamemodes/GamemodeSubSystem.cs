@@ -136,12 +136,16 @@ namespace SS3D.Systems.Gamemodes
         }
 
         /// <summary>
-        /// Finishes the round.
+        /// The gamemode's end condition fired (<c>round-end.md</c> §2) with no winner of its own.
         /// </summary>
         [Server]
-        public void EndRound()
+        public void EndRound() => EndRound(new RoundEndRequest(RoundEndTrigger.GamemodeCondition));
+
+        /// <summary>The gamemode's end condition fired; the request carries its winner and wording.</summary>
+        [Server]
+        public void EndRound(RoundEndRequest request)
         {
-            SubSystems.Get<RoundSubSystem>().RequestRoundEnd();
+            SubSystems.Get<RoundSubSystem>().RequestRoundEnd(request);
         }
 
         /// <summary>

@@ -1,8 +1,8 @@
 > Implements: Documents/design/round-end.md §2, §4–§6; Documents/design/antagonist-content.md §2, §6 (first pass, How the round ends); Documents/design/objectives.md §2, §4, §8 (team objective, assignment, spawn briefing); Documents/design/lobby.md §4, §7 (opt-in list, self-starting round)
 > Touches systems: rounds-lobby, gamemodes-roles-traits, entities, persistence, chat-audio-screens, screen-effects, ui-shell
-> Status: planned
+> Status: active
 
-**Progress:** P1–P3 not started. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4.
+**Progress:** P1 implemented (round outcome, summary overlay and banner, 30 s beat with admin hold, Last Round tab, auto-start defaults, round history fields); P2–P3 not started. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4.
 
 # Round-end loop and thin Nuke Ops outcome (Nov 2026)
 
@@ -90,3 +90,14 @@ A round ends with a legible outcome, everyone sees a summary, and the server ret
 - Cause of death on the summary; objectives Notes panel; restraints (then lift Decision 16's deviation).
 - Gamemode-identity leak; crew spawning on job markers; gamemode-specific round length.
 - Evacuation trigger and escape roster (round-end §3, MVP2).
+
+## Implementation notes
+
+**P1 (2026-11-02).** Code: `Systems/Rounds/RoundEnd.cs`, `Systems/Rounds/Outcome/`, `UI/Lobby/RoundEnd/`; map: [rounds-lobby](systems/rounds-lobby.md). Divergences from the decisions above and the design pass:
+
+- **Last round lives in a lobby tab, not a sidebar card** (Decision 6). The design's card sits in a wide left sidebar; the real lobby's sidebar is the 280 px character preview column. The Last Round tab (after Server Info) renders the same ledger as the overlay. The shell opens it once per ended round, but not while the player is on Server Settings or Chat.
+- **Lobby players read the summary in that tab during the beat.** The overlay sits on the shell's Overlay layer, below the lobby window (Modal), so only players with a body or ghost see the overlay itself (Decision 4).
+- **Dedicated means `NetworkType.DedicatedServer`.** A listen host (editor, main-menu Host) keeps `AutoStart` off. The admin form gained an Auto Start toggle and a Minimum Ready field (Decision 7).
+- **Admin hold** is a Hold Summary / Resume Summary pair in Server Settings → Round Controls, posted to Admin chat (Decision 5).
+- **The outcome reaches clients through a buffered `ObserversRpc`**, so a client connecting later still gets the last round. `fallbackMap` is written from a flag that P2's Extended fallback sets.
+- **Tab** is a code-defined `ToggleRoundSummary` system action, live in the Global, Gameplay, TileMenu and MapEditor contexts ([inputs](systems/inputs.md)).

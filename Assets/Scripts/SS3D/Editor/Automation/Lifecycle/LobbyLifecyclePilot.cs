@@ -58,6 +58,8 @@ namespace SS3D.Editor.Automation
         private static bool _entered;
         private static double _stepDeadline;
         private static double _started;
+        private static int _heldEndSeconds;
+        private static double _heldAt;
         private static bool _running;
         private static string _savedName;
         private static bool _sawStationLoading;
@@ -561,7 +563,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Configured round length ends the round",
-                Timeout = 90,
+                Timeout = 130,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && Shell().Q<Button>("server-start").enabledInHierarchy,
                 Verify = () =>
                 {
@@ -889,18 +891,74 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Stop round returns to lobby shell",
+                Name = "Round end shows the summary over the living player",
                 Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.DiscardAndStop, ""),
-                Timeout = 30,
+                Until = () => Rounds().CurrentRoundState == RoundState.Ending && Shown(RoundEndPart("round-end-panel")),
+                Verify = () =>
+                {
+                    RoundOutcome outcome = Rounds().LastOutcome;
+                    Require(outcome != null && outcome.Trigger == RoundEndTrigger.Admin && outcome.Winner == RoundWinner.None,
+                        "An admin stop records an admin end with no winner");
+                    Require(outcome.RoundId == Rounds().RoundId && outcome.Players.Any(p => p.Ckey == Local().Ckey && p.Alive),
+                        "The outcome lists the host, alive");
+                    Require(Shown(RoundEndPart("round-end-row-you")), "The viewer's own row is highlighted");
+                    Require(Spawned() && !Visible(Shell()), "The player keeps their body and the world during the beat");
+                    Capture("round-end-summary");
+                },
+            },
+            new Step
+            {
+                Name = "Tab collapses the summary to a banner",
+                Enter = () => RoundEndUi().ToggleCollapsed(),
+                Until = () => Shown(RoundEndPart("round-end-banner")) && !Shown(RoundEndPart("round-end-panel")),
+                Verify = () => Capture("round-end-banner"),
+            },
+            new Step
+            {
+                Name = "Admin holds the summary beat",
+                Enter = () =>
+                {
+                    RoundEndUi().ToggleCollapsed();
+                    Rounds().CmdRoundAdminAction(RoundAdminAction.HoldEnd);
+                },
+                Until = () => Rounds().EndHeld && Shown(RoundEndPart("round-end-panel")) && Shown(RoundEndPart("round-end-paused")),
+                Verify = () =>
+                {
+                    _heldEndSeconds = Rounds().EndSecondsLeft;
+                    _heldAt = EditorApplication.timeSinceStartup;
+                    Capture("round-end-held");
+                },
+            },
+            new Step
+            {
+                Name = "A held beat does not count down",
+                Until = () => EditorApplication.timeSinceStartup - _heldAt > 3,
+                Verify = () => Require(Rounds().CurrentRoundState == RoundState.Ending && Rounds().EndSecondsLeft == _heldEndSeconds,
+                    "Holding freezes the summary countdown"),
+            },
+            new Step
+            {
+                Name = "Stop round returns to lobby shell",
+                Enter = () => Rounds().CmdRoundAdminAction(RoundAdminAction.ResumeEnd),
+                Timeout = 60,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
                 Verify = () =>
                 {
+                    Require(!Shown(RoundEndPart("round-end-panel")), "The summary overlay is gone in the lobby");
+                    Require(Shell().Q<Button>("tab-last-round") != null, "The lobby keeps the outcome as a Last Round tab");
                     Require(!Visible(Creator()), "Return shows shell, not creator");
                     Require(BoothLive(), "Booth restored with RT bound");
                     Require(CharacterName() == _savedName, "Saved character name restored");
                     Require(AssignedRole() == null && Job("Security").Assigned == 0, "Round stop cleared job assignments");
                     Require(!TemplateExists(_validationStation + RoundSubSystem.AutosaveSuffix), "Discard and stop left no autosave");
                 },
+            },
+            new Step
+            {
+                Name = "Last Round tab shows the ended round",
+                Enter = () => Click(Shell().Q<Button>("tab-last-round")),
+                Until = () => Shown(Shell().Q("last-round")) && Shown(Shell().Q("last-round").Q("round-end-row-you")),
+                Verify = () => Capture("lobby-last-round"),
             },
             new Step { Name = "Ensure unready for late join", Enter = () => { if (IsReady()) Click(ReadyButton()); }, Until = () => !IsReady() },
             new Step { Name = "Open admin tab", Enter = () => Click(AdminButton()), Until = () => Shell().Q<Button>("server-start")?.enabledInHierarchy == true },
@@ -953,6 +1011,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Stop round after late join returns",
+                Timeout = 60,
                 Enter = () => Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.SaveAndStop, ""),
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
                 Verify = () =>
@@ -1096,6 +1155,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Admin Stop Round returns remote",
+                Timeout = 60,
                 Enter = () => Click(FindButton(Shell(), "STOP ROUND")),
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned() && CountLabel() == "0/2 ready"
                     && Shell().Q<Button>("server-start").enabledInHierarchy,
@@ -1113,6 +1173,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Stop second round",
+                Timeout = 60,
                 Enter = () => Click(FindButton(Shell(), "STOP ROUND")),
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !RemoteSpawned()
                     && Shell().Q<Button>("server-start").enabledInHierarchy,
@@ -1300,6 +1361,25 @@ namespace SS3D.Editor.Automation
         private static VisualElement Root() => UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None)
             .Select(d => d.rootVisualElement)
             .FirstOrDefault(r => r != null && r.Q("lobby-shell-surface") != null);
+
+        private static RoundEndUiSubSystem RoundEndUi() => SubSystems.TryGet(out RoundEndUiSubSystem ui) ? ui : null;
+
+        /// <summary>A named element of the round-end overlay (shared shell document, Overlay layer).</summary>
+        private static VisualElement RoundEndPart(string name)
+        {
+            RoundEndUiSubSystem ui = RoundEndUi();
+            return ui != null && ui.Overlay?.Root != null ? ui.Overlay.Root.Q(name) : null;
+        }
+
+        /// <summary>Displayed with every ancestor displayed; <see cref="Visible"/> checks the element alone.</summary>
+        private static bool Shown(VisualElement element)
+        {
+            if (element?.panel == null) return false;
+            for (VisualElement current = element; current != null; current = current.parent)
+                if (current.resolvedStyle.display == DisplayStyle.None || current.resolvedStyle.visibility == Visibility.Hidden)
+                    return false;
+            return true;
+        }
 
         private static VisualElement Swatch(string picker, int index)
         {
