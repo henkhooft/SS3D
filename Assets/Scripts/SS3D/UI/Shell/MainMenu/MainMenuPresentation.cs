@@ -53,7 +53,7 @@ namespace SS3D.UI.Shell.MainMenu
         public float MusicVolume = 0.8f;
         public bool FirstLaunch;
         public bool Advanced;
-        public string Port = "7777";
+        public string Port = "1151";
         public string Address = "";
         public string AddressError = "";
         public string CheckedText = "Checked just now";

@@ -1,6 +1,6 @@
 > Parent map: [ui-shell.md](ui-shell.md)
 > Status: partial
-> Verified: f21a4d0b4 — 2026-11-02
+> Verified: 468e8b6c0 — 2026-11-02
 
 # Main menu
 
@@ -22,7 +22,8 @@ direct-connect errors, the GitHub update banner and **Update and restart**, Quit
 
 **Music:** every clip in `Assets/Art/Sound/World/Music` except `Intro` / `IntroSneeze`, streamed,
 random first track then in order. It plays on the menu, server list, settings and Connecting,
-fades out for Starting local session / Update and when Game loads. On/off is saved in
+fades out for Starting local session / Update and when Game loads. Returning to Launcher restarts
+the current track from the beginning; toggling music off/on within one visit still resumes it. On/off is saved in
 `main-menu.json`; the slider is the player's **Music** volume (same as the in-game Sound tab), and
 the source plays through the mixer's Music group. `Space Theme` was converted from the 65 MB WAV to OGG. Not live: the PUBLIC list always shows its empty state (no list
 backend), and Settings shows the reference placeholder, not the live settings tabs.
@@ -59,7 +60,8 @@ backend), and Settings shows the reference placeholder, not the live settings ta
 - **`NetworkSettings` is an asset.** In the editor, the menu's writes (name, address, port, network type) outlived Play Mode and overwrote the developer's editor settings. `MainMenuSubSystem` remembers the first values it overwrites and restores them in `OnDestroyed`.
 - **Leaving a session must wait for FishNet's offline swap.** Stopping the client makes `DefaultScene` load Empty (Single); loading Launcher immediately would be replaced by it. `LeaveToMainMenu` waits until both transports are stopped and Empty is active, then loads Launcher. The menu re-unlocks the cursor on show.
 - **No AudioListener after a failed join.** The Empty scene has no camera, so the music went silent ("no audio listeners" spam). The menu adds its own listener whenever none exists and removes it on hide.
-- **Unity's Slider sits high in a row.** Its field box is taller than the tracker and the tracker hugs its top. The music slider pins the input, drag container, tracker and dragger to a 16px box.
+- **Launcher music survives scene changes.** The DDOL source pauses after fading out; `Show` must stop/reset it before presenting a fresh launcher visit or it resumes the old playback position.
+- **Unity's Slider sits high in a row.** Its field box is taller than the tracker and the tracker hugs its top. The thumb must use absolute positioning to avoid its default relative vertical offset. The music slider pins the input, drag container, tracker and dragger to a 16px box, with a rounded thumb and a value-driven filled track matching the reference.
 - Wallpaper imports must preserve NPOT dimensions; the catalog builder preserves the supplied 1920×1080 size and disables compression/mips.
 - Gurajada's natural line box is taller than the reference's `line-height: 1`; navigation titles need explicit 20px text boxes.
 - A ScrollView's percentage content min-height did not pin the footer; the view sets the sidebar content's min-height from its own geometry.

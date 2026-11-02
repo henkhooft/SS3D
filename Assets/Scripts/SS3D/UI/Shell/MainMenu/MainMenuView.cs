@@ -52,8 +52,16 @@ namespace SS3D.UI.Shell.MainMenu
             Command("cancel", MainMenuCommand.Cancel);
             Command("music-toggle", MainMenuCommand.ToggleMusic);
             Command("music-next", MainMenuCommand.NextTrack);
-            Root.Q<Slider>("music-volume").RegisterValueChangedCallback(e => FieldChanged?.Invoke(
-                MainMenuField.MusicVolume, "", e.newValue.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Slider musicVolume = Root.Q<Slider>("music-volume");
+            VisualElement volumeFill = new() { name = "music-volume-fill", pickingMode = PickingMode.Ignore };
+            volumeFill.AddToClassList("main-menu__music-volume-fill");
+            musicVolume.Q("unity-tracker").Add(volumeFill);
+            musicVolume.RegisterValueChangedCallback(e =>
+            {
+                UpdateVolumeFill(e.newValue);
+                FieldChanged?.Invoke(MainMenuField.MusicVolume, "",
+                    e.newValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            });
             Field("player-name", MainMenuField.PlayerName);
             Field("port", MainMenuField.Port);
             Root.RegisterCallback<KeyDownEvent>(e =>
@@ -62,6 +70,11 @@ namespace SS3D.UI.Shell.MainMenu
                 Issue(MainMenuCommand.Back);
                 e.StopPropagation();
             }, TrickleDown.TrickleDown);
+        }
+
+        private void UpdateVolumeFill(float value)
+        {
+            Root.Q("music-volume-fill").style.width = Length.Percent(Mathf.Clamp01(value) * 100f);
         }
 
         public void Attach(VisualElement layerRoot) { Detach(); layerRoot.Add(Root); }
@@ -94,6 +107,7 @@ namespace SS3D.UI.Shell.MainMenu
             Root.Q<Button>("music-next").SetEnabled(hasMusic);
             Slider volume = Root.Q<Slider>("music-volume");
             if (!Mathf.Approximately(volume.value, model.MusicVolume)) volume.SetValueWithoutNotify(model.MusicVolume);
+            UpdateVolumeFill(volume.value);
             Root.Q<Button>("update").text = model.CanSelfUpdate ? "UPDATE AND RESTART" : "DOWNLOAD";
             Show("update-hint", model.CanSelfUpdate);
             Root.Q<Label>("update-copy").text = $"v{model.LatestVersion} is out; this is v{model.Version}. {model.UpdateMessage}";

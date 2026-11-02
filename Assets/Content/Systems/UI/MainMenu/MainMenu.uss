@@ -46,12 +46,12 @@
 .main-menu__music--off .main-menu__music-icon, .main-menu__music--off .main-menu__music-volume { opacity: 0.4; }
 .main-menu .main-menu__music-next { height: 32px; padding: 0 8px; margin: 0 0 0 10px; border-width: 0; border-radius: 2px; background-color: transparent; color: #aaaaaa; font-size: 12px; flex-shrink: 0; }
 /* Unity's slider has an 18px+ field box with the tracker near its top; pin every part to a 16px box centred in the row. */
-.main-menu__music-volume { width: 96px; height: 16px; min-height: 16px; margin: 0 0 0 10px; padding: 0; flex-shrink: 0; align-self: center; }
-.main-menu__music-volume > .unity-base-slider__input { height: 16px; min-height: 16px; margin: 0; padding: 0; }
-.main-menu__music-volume .unity-base-slider__drag-container { height: 16px; margin: 0; padding: 0; }
-.main-menu__music-volume .unity-base-slider__tracker { top: 6px; height: 4px; margin: 0; background-color: var(--menu-inset); border-width: 1px; border-color: var(--menu-border); border-radius: 0; }
-.main-menu__music-volume .unity-base-slider__dragger { top: 2px; width: 8px; height: 12px; margin: 0; background-color: #aaaaaa; border-width: 0; border-radius: 0; }
-.main-menu__music-volume .unity-base-slider__dragger-border { display: none; }
+.main-menu #music-volume { width: 96px; height: 16px; min-height: 16px; margin: 0 0 0 10px; padding: 0; flex-shrink: 0; align-self: center; }
+.main-menu #music-volume > .unity-base-slider__input { height: 16px; min-height: 16px; margin: 0; padding: 0; }
+.main-menu #music-volume .unity-base-slider__drag-container { height: 16px; margin: 0; padding: 0; }
+.main-menu #music-volume .unity-base-slider__tracker { top: 5px; height: 6px; margin: 0; background-color: var(--menu-inset); border-width: 1px; border-color: var(--menu-border); border-radius: 3px; }
+.main-menu #music-volume .unity-base-slider__dragger { position: absolute; top: 1px; width: 14px; height: 14px; margin: 0; background-color: #aaaaaa; border-width: 0; border-radius: 7px; }
+.main-menu #music-volume .unity-base-slider__dragger-border { display: none; }
 .main-menu__footer > .main-menu__row { margin-top: 4px; }
 .main-menu .main-menu__link { padding: 0; background-color: transparent; color: #d8d8d8; font-size: 12px; border-radius: 0; border-bottom-width: 1px; border-bottom-color: #aaaaaa; margin-left: 3px; }
 .main-menu .main-menu__link:hover { color: white; border-bottom-color: white; }
@@ -148,3 +148,5 @@
 .main-menu .main-menu__nav:disabled { opacity: 1; }
 .main-menu .main-menu__nav.main-menu__nav--selected { background-color: var(--menu-panel); }
 .main-menu__empty { border-color: transparent; }
+
+.main-menu .main-menu__music-volume-fill { position: absolute; left: 0; top: 0; bottom: 0; background-color: #aaaaaa; border-radius: 3px; }

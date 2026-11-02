@@ -107,11 +107,11 @@ namespace SS3D.Editor
         {
             bool old = state is PreviewState.ReturningOutOfDate or PreviewState.ServersOutOfDate;
             bool first = state is PreviewState.FirstLaunch or PreviewState.FirstJoin;
-            MainMenuServerPresentation sandbox = Server("sandbox", "RE:SS3D Sandbox", "sandbox.ss3d.space:7777", old ? MainMenuServerState.NeedsUpdate : MainMenuServerState.Compatible, "9/16", "41 ms");
-            MainMenuServerPresentation kai = Server("kai", "Kai's build night", "82.14.203.9:7777", old ? MainMenuServerState.Compatible : MainMenuServerState.OlderVersion, "15/16", "22 ms", "0.4.2");
+            MainMenuServerPresentation sandbox = Server("sandbox", "RE:SS3D Sandbox", "sandbox.ss3d.space:1151", old ? MainMenuServerState.NeedsUpdate : MainMenuServerState.Compatible, "9/16", "41 ms");
+            MainMenuServerPresentation kai = Server("kai", "Kai's build night", "82.14.203.9:1151", old ? MainMenuServerState.Compatible : MainMenuServerState.OlderVersion, "15/16", "22 ms", "0.4.2");
             MainMenuServerPresentation full = Server("medbay", "Medbay RP (EU)", "medbay-rp.eu:7780", MainMenuServerState.Full, "16/16", "58 ms");
-            MainMenuServerPresentation offline = Server("oldbox", "Old test box", "192.168.1.44:7777", MainMenuServerState.Offline, "—", "—");
-            MainMenuServerPresentation night = Server("night", "Night shift (NA)", "ns.ss3d-community.net:7777", MainMenuServerState.Compatible, "4/16", "134 ms");
+            MainMenuServerPresentation offline = Server("oldbox", "Old test box", "192.168.1.44:1151", MainMenuServerState.Offline, "—", "—");
+            MainMenuServerPresentation night = Server("night", "Night shift (NA)", "ns.ss3d-community.net:1151", MainMenuServerState.Compatible, "4/16", "134 ms");
             if (!first) { night.Refusal = "Timed out: no answer after 15 s."; night.RefusalTime = "21:47"; }
             MainMenuPresentation model = new()
             {
@@ -121,10 +121,10 @@ namespace SS3D.Editor
                 UpdateMessage = "1 server in your list needs it.", FirstLaunch = first,
                 Advanced = state == PreviewState.AdvancedPort,
                 Recent = first ? System.Array.Empty<MainMenuServerPresentation>() : new[] { sandbox, kai, full, offline },
-                Public = new[] { sandbox, Server("eng", "Engineering co-op", "eng-coop.ss3d.space:7777", MainMenuServerState.Compatible, "3/12", "33 ms"), night,
-                    Server("honk", "Honk Station", "honk.example.org:7777", MainMenuServerState.Compatible, "11/20", "76 ms"),
-                    Server("legacy", "Legacy 0.4 archive", "archive.ss3d.space:7777", MainMenuServerState.OlderVersion, "1/16", "47 ms", "0.4.1") },
-                OperationName = "RE:SS3D Sandbox", OperationAddress = "sandbox.ss3d.space:7777", OperationStep = 1,
+                Public = new[] { sandbox, Server("eng", "Engineering co-op", "eng-coop.ss3d.space:1151", MainMenuServerState.Compatible, "3/12", "33 ms"), night,
+                    Server("honk", "Honk Station", "honk.example.org:1151", MainMenuServerState.Compatible, "11/20", "76 ms"),
+                    Server("legacy", "Legacy 0.4 archive", "archive.ss3d.space:1151", MainMenuServerState.OlderVersion, "1/16", "47 ms", "0.4.1") },
+                OperationName = "RE:SS3D Sandbox", OperationAddress = "sandbox.ss3d.space:1151", OperationStep = 1,
             };
             model.Screen = state switch
             {
@@ -156,7 +156,7 @@ namespace SS3D.Editor
                     ? "Timed out: no answer after 15 s." : "Unreachable: nothing answered at this address.";
                 sandbox.RefusalTime = "21:48";
             }
-            if (state == PreviewState.Hosting) { model.OperationName = "Local session"; model.OperationAddress = "Port 7777"; }
+            if (state == PreviewState.Hosting) { model.OperationName = "Local session"; model.OperationAddress = "Port 1151"; }
             if (state == PreviewState.Updating) { model.OperationName = "v0.5.0"; model.OperationAddress = "Keeps maps and settings"; }
             return model;
         }

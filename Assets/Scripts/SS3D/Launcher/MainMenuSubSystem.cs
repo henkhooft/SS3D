@@ -187,6 +187,8 @@ namespace SS3D.Launcher
             _view.Attach(layer);
             _model.Screen = MainMenuScreen.Menu;
             _music ??= new MainMenuMusic(gameObject, _catalog.Music);
+            // A fresh launcher visit starts the current track from the beginning.
+            _music.Stop();
             EnsureListener();
             _query ??= new ServerStatusQuery();
             _query.Completed += HandleStatus;
