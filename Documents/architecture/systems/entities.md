@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 948061cc0 — 2026-11-02
+> Verified: b0df80aa9 — 2026-11-02
 
 # Entities
 
@@ -56,6 +56,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 
 ## Pitfalls
 
+- **Critical rejoin T-pose:** ownership changes do not change presentation. `Ragdoll.OnOwnershipClient` must reapply collapsed/dead presentation so the new owner simulates bones and observers stay kinematic. Initial SyncVars may collapse before `OnStartNetwork`; preserve the original NetworkAnimator enabled state instead of recapturing its suppressed value.
+
 - **Spaced ragdolls falling below the deck:** dynamic bones must update `useGravity` from plenum support, including after death transfers physics to the server. Unknown client occupancy preserves known Floating or probes nearby floor; never use an unlimited alignment ray or count bodies/items as floor.
 
 - **Critical movement:** the living movement loop also checks health presentation intent and clears pending movement when incapacitated; do not rely on component disabling alone (Coimbra update subscriptions can still fire).
@@ -92,6 +94,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
 
 ## Tests
+
+- `Testing/ui/validate.sh --steps compile,critical-reclaim` exercises ownership loss/reclaim while critical, collapsed-before-network-start ordering and treatment recovery in a host. A separate-client transport reconnect remains outside the pilot.
 
 - `Testing/ui/validate.sh --steps compile,respawn-cleanup` checks two death/respawn cycles: refusal preserves the corpse, success removes it, and Human count stays flat. `SandboxServerTests` covers the profile/default/admin-save rule values.
 

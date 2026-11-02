@@ -123,11 +123,9 @@ namespace SS3D.Systems.Entities.Humanoid
 		{
 			base.OnStartNetwork();
 
-			_animator = GetComponent<Animator>();
-			_humanoidLivingController = GetComponent<HumanoidLivingController>();
-			_characterController = GetComponent<CharacterController>();
-			_networkAnimator = GetComponent<NetworkAnimator>();
-            _networkAnimatorInitiallyEnabled = _networkAnimator != null && _networkAnimator.enabled;
+            // Initial SyncVars may already have applied collapse and disabled the drivers.
+            // Preserve the original NetworkAnimator enabled state captured by that application.
+            EnsureAnimatorCached();
             _knockdownTimer = 0;
             _hips = _armatureRoot.GetChild(0);
             _character = _armatureRoot.parent;
@@ -176,10 +174,19 @@ namespace SS3D.Systems.Entities.Humanoid
 
             CacheRagdollParts();
 
-            // Set interval need to be called by owner. This allows fast setting
-            foreach (Transform part in _ragdollParts)
+            if (IsOwner)
             {
-                part.GetComponent<NetworkTransform>().SetInterval(_ragdollPartSyncInterval);
+                foreach (Transform part in _ragdollParts)
+                {
+                    part.GetComponent<NetworkTransform>().SetInterval(_ragdollPartSyncInterval);
+                }
+            }
+
+            // Reclaim does not change the presentation SyncVar. Reapply its physics authority
+            // when ownership changes, otherwise the new owner inherits kinematic observer bones.
+            if (_hips != null && _presentation != BodyPresentationState.Locomotion)
+            {
+                ApplyPresentation(_presentation, applyImpulse: false);
             }
         }
 
