@@ -54,6 +54,7 @@ Testing/ui/compile.sh             # = --steps compile
 Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
 Testing/ui/validate.sh --steps compile,ragdoll-space # focused host critical/dead space physics
 Testing/ui/validate.sh --steps compile,respawn-cleanup # focused sandbox corpse cleanup
+Testing/ui/validate.sh --steps compile,critical-speech # focused server speech gates
 ```
 
 Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It stops at the first

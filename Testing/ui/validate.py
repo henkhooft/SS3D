@@ -444,10 +444,16 @@ async def step_respawn_cleanup(editor, ctx):
                            "respawn-cleanup-*/status.json", 90, 300)
 
 
+async def step_critical_speech(editor, ctx):
+    return await run_pilot(editor, "SS3D/Testing/Run Critical Speech Regressions",
+                           "critical-speech-*/status.json", 90, 300)
+
+
 STEPS = {name: globals()["step_" + name] for name in ORDER}
 STEPS["round-reset"] = step_round_reset
 STEPS["ragdoll-space"] = step_ragdoll_space
 STEPS["respawn-cleanup"] = step_respawn_cleanup
+STEPS["critical-speech"] = step_critical_speech
 
 
 async def main():
