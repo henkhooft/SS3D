@@ -13,8 +13,13 @@ on:
         description: Stable release to update from (default = the one before the latest)
         type: string
         default: ''
+      repo_updater:
+        description: Test this branch's Builds/Update_SS3D.ps1 instead of the one the release shipped
+        type: boolean
+        default: false
   pull_request:
     paths:
+      - 'Builds/Update_SS3D.*'
       - 'Tools/updater/e2e-*'
       - '.github/workflows/updater-e2e.yml'
 
@@ -30,13 +35,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
-          sparse-checkout: Tools/updater
+          sparse-checkout: |
+            Builds
+            Tools/updater
       - name: Update previous stable release to latest with its own Update_SS3D.bat
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
           FROM_TAG: ${{ inputs.from_tag }}
-        run: ./Tools/updater/e2e-windows.ps1 -FromTag "$env:FROM_TAG" -WorkDir "$env:RUNNER_TEMP\ss3d-e2e"
+          # PRs test the changed updater; post-release runs test what players actually have.
+          REPO_UPDATER: ${{ github.event_name == 'pull_request' || inputs.repo_updater == true }}
+        run: ./Tools/updater/e2e-windows.ps1 -FromTag "$env:FROM_TAG" -WorkDir "$env:RUNNER_TEMP\ss3d-e2e" -UseRepoUpdater:($env:REPO_UPDATER -eq 'true')
       - name: Upload game logs
         if: always()
         uses: actions/upload-artifact@v4

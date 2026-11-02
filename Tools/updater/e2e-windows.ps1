@@ -2,8 +2,10 @@
 # Installs the previous stable release (or -FromTag), seeds local data, runs its Update_SS3D.bat,
 # then checks the result, a repeat update, and that both the updated game and the rollback backup
 # start (headless host + Tools/updater/e2e-host.txt). Needs gh (GH_TOKEN) and network.
+# -UseRepoUpdater swaps in this checkout's Builds/Update_SS3D.ps1 first, to test an updater
+# change against real releases before it ships.
 # Run by .github/workflows/updater-e2e.yml; locally: powershell -File Tools/updater/e2e-windows.ps1
-param([string]$FromTag = '', [string]$WorkDir = '')
+param([string]$FromTag = '', [string]$WorkDir = '', [switch]$UseRepoUpdater)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 $repo = 'henkhooft/SS3D'
@@ -70,10 +72,14 @@ if (-not $FromTag) {
 Write-Host "Updating $FromTag -> $toTag (latest stable)"
 Assert ([version]$FromTag.Substring(1) -lt [version]$toTag.Substring(1)) 'Start version is older than latest stable'
 # Updaters from v0.3.1 on replace their own .ps1 and keep only the previous installation.
-$modernUpdater = [version]$FromTag.Substring(1) -ge [version]'0.3.1'
+$modernUpdater = $UseRepoUpdater -or [version]$FromTag.Substring(1) -ge [version]'0.3.1'
 
 $expected = Get-Release $toTag (Join-Path $WorkDir 'expected')
 $root = Get-Release $FromTag (Join-Path $WorkDir 'install with spaces')
+if ($UseRepoUpdater) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\Builds\Update_SS3D.ps1') -Destination (Join-Path $root 'Update_SS3D.ps1') -Force
+    Write-Host 'Using this checkout''s Builds/Update_SS3D.ps1 instead of the shipped one'
+}
 $originalPs1 = Get-Hash (Join-Path $root 'Update_SS3D.ps1')
 $originalBat = Get-Hash (Join-Path $root 'Update_SS3D.bat')
 
@@ -129,6 +135,10 @@ if ($modernUpdater) {
     Assert ((Get-Hash (Join-Path $root 'Update_SS3D.ps1')) -eq $originalPs1) "$FromTag updater leaves its script alone"
 }
 
+if ($UseRepoUpdater) {
+    # The update installed the release's own script; test the repeat with the candidate again.
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\Builds\Update_SS3D.ps1') -Destination (Join-Path $root 'Update_SS3D.ps1') -Force
+}
 $output = Invoke-Updater $root
 Assert ($output -match 'Already up to date') 'Repeat update is a no-op'
 Assert (@(Get-ChildItem -LiteralPath (Join-Path $root '.ss3d-backups') -Directory).Count -eq $backups.Count) 'Repeat update adds no backup'
