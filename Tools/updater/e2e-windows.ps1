@@ -35,10 +35,11 @@ function Invoke-Updater([string]$Root) {
 }
 function Test-Launch([string]$Root, [string]$Label) {
     # The client keeps running after ScriptComplete in batchmode, so stop it once the signal lands.
+    # Start inside Game\ like Start_SS3D_Host.bat: players resolve Config/Data from the working directory.
     $log = Join-Path $Root 'Game\Logs\LogHost.json'
     Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
     $unityLog = Join-Path $WorkDir "$Label-unity.log"
-    $game = Start-Process -FilePath (Join-Path $Root 'Game\SS3D.exe') -PassThru -ArgumentList @(
+    $game = Start-Process -FilePath (Join-Path $Root 'Game\SS3D.exe') -WorkingDirectory (Join-Path $Root 'Game') -PassThru -ArgumentList @(
         '-batchmode', '-host', '-port=1151', '-ckey=e2e', '-skipintro', "-testscript=$hostScript", '-logFile', $unityLog)
     $result = 'timeout'
     $deadline = (Get-Date).AddMinutes(5)
