@@ -56,6 +56,7 @@ Testing/ui/validate.sh --steps compile,ragdoll-space # focused host critical/dea
 Testing/ui/validate.sh --steps compile,respawn-cleanup # focused sandbox corpse cleanup
 Testing/ui/validate.sh --steps compile,critical-speech # focused server speech gates
 Testing/ui/validate.sh --steps compile,critical-reclaim # focused critical ownership/recovery
+Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay visuals
 ```
 
 Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It stops at the first

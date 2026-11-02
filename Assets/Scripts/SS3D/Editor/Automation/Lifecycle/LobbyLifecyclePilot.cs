@@ -108,7 +108,8 @@ namespace SS3D.Editor.Automation
             || SessionState.GetString(ModeKey, "") == RagdollSpaceMode
             || SessionState.GetString(ModeKey, "") == RespawnCleanupMode
             || SessionState.GetString(ModeKey, "") == CriticalSpeechMode
-            || SessionState.GetString(ModeKey, "") == CriticalReclaimMode;
+            || SessionState.GetString(ModeKey, "") == CriticalReclaimMode
+            || SessionState.GetString(ModeKey, "") == InteractionOverlayMode;
 
         private static void Start(string mode)
         {
@@ -118,7 +119,7 @@ namespace SS3D.Editor.Automation
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
             string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox",
-                HealthRegressionMode => "health-regressions", RoundResetRegressionMode => "round-reset-regressions", RagdollSpaceMode => "ragdoll-space", RespawnCleanupMode => "respawn-cleanup", CriticalSpeechMode => "critical-speech", CriticalReclaimMode => "critical-reclaim", _ => "lifecycle" };
+                HealthRegressionMode => "health-regressions", RoundResetRegressionMode => "round-reset-regressions", RagdollSpaceMode => "ragdoll-space", RespawnCleanupMode => "respawn-cleanup", CriticalSpeechMode => "critical-speech", CriticalReclaimMode => "critical-reclaim", InteractionOverlayMode => "interaction-overlay", _ => "lifecycle" };
             string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
@@ -166,6 +167,8 @@ namespace SS3D.Editor.Automation
                     _steps = BuildCriticalSpeechSteps();
                 if (SessionState.GetString(ModeKey, "") == CriticalReclaimMode)
                     _steps = BuildCriticalReclaimSteps();
+                if (SessionState.GetString(ModeKey, "") == InteractionOverlayMode)
+                    _steps = BuildInteractionOverlaySteps();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -1566,6 +1569,8 @@ namespace SS3D.Editor.Automation
 
         private static string ReportScope()
         {
+            if (SessionState.GetString(ModeKey, "") == InteractionOverlayMode)
+                return "Focused runtime CPR armed/radial overlay geometry at panel scales 1.5 and 0.75, including screen-edge placement. Interaction dispatch and CPR health effects are outside this visual pilot.";
             if (SessionState.GetString(ModeKey, "") == CriticalReclaimMode)
                 return "Focused Host ownership loss/reclaim while critical, late-join startup ordering and treatment recovery. Does not simulate a separate client process or transport reconnect.";
             if (SessionState.GetString(ModeKey, "") == CriticalSpeechMode)
