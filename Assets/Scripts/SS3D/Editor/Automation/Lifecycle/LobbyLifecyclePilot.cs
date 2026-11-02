@@ -105,7 +105,8 @@ namespace SS3D.Editor.Automation
         private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode
             || SessionState.GetString(ModeKey, "") == HealthRegressionMode
             || SessionState.GetString(ModeKey, "") == RoundResetRegressionMode
-            || SessionState.GetString(ModeKey, "") == RagdollSpaceMode;
+            || SessionState.GetString(ModeKey, "") == RagdollSpaceMode
+            || SessionState.GetString(ModeKey, "") == RespawnCleanupMode;
 
         private static void Start(string mode)
         {
@@ -115,7 +116,7 @@ namespace SS3D.Editor.Automation
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
             string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox",
-                HealthRegressionMode => "health-regressions", RoundResetRegressionMode => "round-reset-regressions", RagdollSpaceMode => "ragdoll-space", _ => "lifecycle" };
+                HealthRegressionMode => "health-regressions", RoundResetRegressionMode => "round-reset-regressions", RagdollSpaceMode => "ragdoll-space", RespawnCleanupMode => "respawn-cleanup", _ => "lifecycle" };
             string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
@@ -157,6 +158,8 @@ namespace SS3D.Editor.Automation
                     _steps = BuildRoundResetSteps();
                 if (SessionState.GetString(ModeKey, "") == RagdollSpaceMode)
                     _steps = BuildRagdollSpaceSteps();
+                if (SessionState.GetString(ModeKey, "") == RespawnCleanupMode)
+                    _steps = BuildRespawnCleanupSteps();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -1557,6 +1560,8 @@ namespace SS3D.Editor.Automation
 
         private static string ReportScope()
         {
+            if (SessionState.GetString(ModeKey, "") == RespawnCleanupMode)
+                return "Focused Host sandbox respawn checks: refused respawns preserve corpses; successful respawns remove previous corpses over two deaths. Remote clients are not covered.";
             if (SessionState.GetString(ModeKey, "") == RagdollSpaceMode)
                 return "Focused Host physics: supported critical collapse, recovery, critical/dead zero-gravity ragdolls and returning a corpse to the deck. Remote clients are not covered.";
             if (SessionState.GetString(ModeKey, "") == RoundResetRegressionMode)

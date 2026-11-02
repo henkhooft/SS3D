@@ -369,7 +369,7 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Respawn gives a fresh body at a spawn point; the corpse stays",
+                Name = "Respawn gives a fresh body and removes the previous corpse",
                 Enter = () => Click(Root().Q<Button>("respawn-prompt-button")),
                 Until = () => Spawned() && !LocalEntityIsGhost() && !Prompt().IsShown,
                 Verify = () =>
@@ -379,7 +379,7 @@ namespace SS3D.Editor.Automation
                     Require(SubSystems.Get<SS3D.UI.MainHud.MainHudSubSystem>().GetComponent<UIDocument>()
                         .rootVisualElement.Q(className: "main-hud").resolvedStyle.display != DisplayStyle.None,
                         "Body HUD returns on respawn");
-                    Require(_corpse != null && _corpse.gameObject.activeInHierarchy, "The corpse stays where it fell");
+                    Require(_corpse == null, "Sandbox removes the previous corpse after respawn");
                     Vector3 spawn = SubSystems.Get<TileSubSystem>().SpawnPoints.Records[0].Position;
                     Require(Vector3.Distance(Flat(body.transform.position), Flat(spawn)) < 1.5f, "New body stands at a spawn point");
                     Capture("sandbox-respawned");

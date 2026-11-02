@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 1c321ae95 — 2026-11-02
+> Verified: 948061cc0 — 2026-11-02
 
 # Entities
 
@@ -20,7 +20,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - [Entity prefab recipes](entities-prefab-recipes.md) — domain wiring, aggregator, nested FishNet constraints and integrity checks
 
 - `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.cs` — entity spawn/management; `TryReclaimEntity` re-links a reconnecting player's existing body (see [player-control](player-control.md)); `ServerSpawnCombatDummy` for mindless test Humans
-- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.Respawn.cs` — respawn ([sandbox](../2026-11_sandbox-server.md)): death offers a respawn (`RecordPlayerDeath`), `CmdRespawn` checks `ServerSettings.RespawnEnabled` + `RespawnCooldown`, despawns the ghost and re-runs `SpawnPlayer` with the ghost's Mind; corpses are tracked and despawned at round end. `RespawnPrompt` is the ghost-HUD button (UiShell Hud layer, added on client start)
+- `Assets/Scripts/SS3D/Systems/Entities/EntitySubSystem.Respawn.cs` — respawn ([sandbox](../2026-11_sandbox-server.md)): death offers a respawn (`RecordPlayerDeath`), `CmdRespawn` checks `ServerSettings.RespawnEnabled` + `RespawnCooldown`, despawns the ghost and re-runs `SpawnPlayer` with the ghost's Mind; `RemoveCorpseOnRespawn` removes the previous corpse only after a successful respawn (sandbox default); remaining corpses are tracked and despawned at round end. `RespawnPrompt` is the ghost-HUD button (UiShell Hud layer, added on client start)
 - `Assets/Scripts/SS3D/Systems/Entities/MindSubSystem.cs` — mind/player mind assignment; `Mind.DisplayName` (lobby character name, else ckey) is the in-world speaker/record name
 - `Assets/Scripts/SS3D/Systems/Entities/Human.cs` — replicated `CharacterAppearance` from the lobby (morphs on the armature, hair/beard/eyebrows and skin/eye/style colors) — see [rounds-lobby](rounds-lobby.md)
 - `Assets/Scripts/SS3D/Systems/Entities/Character/HumanoidStyleApplier.cs` — head sockets for catalog styles; per-material skin/eye tint without mutating shared assets
@@ -92,6 +92,8 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Space float is plenum absence, not atmos vacuum alone:** depressurized rooms with a floor still walk; no thrusters this pass — pure coast until plenum returns.
 
 ## Tests
+
+- `Testing/ui/validate.sh --steps compile,respawn-cleanup` checks two death/respawn cycles: refusal preserves the corpse, success removes it, and Human count stays flat. `SandboxServerTests` covers the profile/default/admin-save rule values.
 
 - `Testing/ui/validate.sh --steps compile,ragdoll-space` checks supported critical collapse, recovery, critical/dead zero-gravity stability and returning a corpse to deck in a host session. Remote physics ownership remains outside this pilot.
 

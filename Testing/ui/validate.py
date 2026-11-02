@@ -439,9 +439,15 @@ async def step_ragdoll_space(editor, ctx):
                            "ragdoll-space-*/status.json", 90, 300)
 
 
+async def step_respawn_cleanup(editor, ctx):
+    return await run_pilot(editor, "SS3D/Testing/Run Respawn Cleanup Regressions",
+                           "respawn-cleanup-*/status.json", 90, 300)
+
+
 STEPS = {name: globals()["step_" + name] for name in ORDER}
 STEPS["round-reset"] = step_round_reset
 STEPS["ragdoll-space"] = step_ragdoll_space
+STEPS["respawn-cleanup"] = step_respawn_cleanup
 
 
 async def main():
