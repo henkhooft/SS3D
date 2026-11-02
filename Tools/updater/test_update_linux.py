@@ -195,6 +195,40 @@ class UpdaterTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "Unsafe|Incomplete"):
                         updater.expand_release(archive_path, Path(dest), "v0.3.0")
 
+    def test_wait_for_exit_returns_once_the_process_is_gone_and_times_out_otherwise(self):
+        with mock.patch.object(updater.Path, "exists", side_effect=[True, True, False]), \
+                mock.patch.object(updater.time, "sleep") as sleep:
+            updater.wait_for_exit(4242)
+        self.assertEqual(sleep.call_count, 2)
+        with mock.patch.object(updater.Path, "exists", return_value=True), \
+                mock.patch.object(updater.time, "sleep"), \
+                mock.patch.object(updater.time, "monotonic", side_effect=[0.0, 0.0, 61.0]):
+            with self.assertRaisesRegex(RuntimeError, "did not close"):
+                updater.wait_for_exit(4242)
+
+    def test_restart_relaunches_the_client_without_arguments_even_after_a_failed_update(self):
+        self.latest.side_effect = OSError("offline")
+        with mock.patch.object(updater.subprocess, "Popen") as popen, \
+                mock.patch.object(updater, "wait_for_exit") as wait, \
+                mock.patch.object(updater, "__file__", str(self.root / "update_ss3d.py")), \
+                mock.patch.object(updater.sys, "argv", ["update_ss3d.py", "--wait-pid", "77", "--restart"]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(updater.main(), 1)
+        wait.assert_called_once_with(77)
+        args, kwargs = popen.call_args
+        self.assertEqual(args[0], [str(self.root.resolve() / "Game/SS3D-Client")])
+        self.assertEqual(kwargs["cwd"], self.root.resolve() / "Game")
+        self.assertTrue(kwargs["start_new_session"])
+
+    def test_without_restart_the_updater_never_launches_the_game(self):
+        self.latest.side_effect = OSError("offline")
+        with mock.patch.object(updater.subprocess, "Popen") as popen, \
+                mock.patch.object(updater, "__file__", str(self.root / "update_ss3d.py")), \
+                mock.patch.object(updater.sys, "argv", ["update_ss3d.py"]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(updater.main(), 1)
+        popen.assert_not_called()
+
 
 class ReleaseSelectionTests(unittest.TestCase):
     def test_process_detection_reads_names_without_signalling_processes(self):

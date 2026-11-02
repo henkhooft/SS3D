@@ -115,6 +115,7 @@ namespace SS3D.Editor
             if (!first) { night.Refusal = "Timed out: no answer after 15 s."; night.RefusalTime = "21:47"; }
             MainMenuPresentation model = new()
             {
+                MusicTitle = "Breach",
                 PlayerName = state == PreviewState.EmptyName ? "" : "jmoore",
                 Version = old ? "0.4.2" : "0.5.0", LatestVersion = "0.5.0", UpdateAvailable = old,
                 UpdateMessage = "1 server in your list needs it.", FirstLaunch = first,

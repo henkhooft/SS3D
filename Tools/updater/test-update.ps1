@@ -29,7 +29,12 @@ function Expect-Failure([scriptblock]$Action, [string]$Pattern) {
     }
     throw "Expected a failure matching $Pattern"
 }
-function Get-Process { param($Name, $ErrorAction) if ($script:running) { return 'fake SS3D process' } }
+function Get-Process {
+    param($Name, $Id, $ErrorAction)
+    if ($Id) { return $script:gameProcess }
+    if ($script:running) { return 'fake SS3D process' }
+}
+$script:gameProcess = $null
 # Like Windows PowerShell 5.1, emit the JSON array as a single pipeline object (unary comma).
 function Invoke-RestMethod { param($Uri, $Headers, $TimeoutSec, [switch]$UseBasicParsing) return ,@($script:releases) }
 function Invoke-WebRequest {
@@ -166,5 +171,13 @@ try {
     $null = $archive.CreateEntry('SS3D-Windows-v0.3.0/Game/SS3D.exe')
     $archive.Dispose()
     Expect-Failure { Expand-SS3DRelease $incomplete (Join-Path $testRoot 'incomplete-extract') 'v0.3.0' } 'Incomplete'
-    Write-Host 'PASS: stable release selection/promotion, check-only, process/lock refusal, download/hash/asset failures, swap rollback, data preservation, self-update, n-1 backup retention, repeat update, no downgrade, legacy update, unsafe/incomplete archives.'
+    # In-game Update: wait for the quitting game; a process that never exits is refused.
+    Wait-SS3DExit 4242
+    $script:gameProcess = [pscustomobject]@{ Exited = $true } |
+        Add-Member -MemberType ScriptMethod -Name WaitForExit -Value { param($ms) $this.Exited } -PassThru
+    Wait-SS3DExit 4242
+    $script:gameProcess.Exited = $false
+    Expect-Failure { Wait-SS3DExit 4242 1 } 'did not close'
+    $script:gameProcess = $null
+    Write-Host 'PASS: stable release selection/promotion, check-only, process/lock refusal, download/hash/asset failures, swap rollback, data preservation, self-update, n-1 backup retention, repeat update, no downgrade, legacy update, unsafe/incomplete archives, wait for the quitting game.'
 } finally { Remove-Item -LiteralPath $testRoot -Recurse -Force }

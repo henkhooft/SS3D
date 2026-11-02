@@ -88,6 +88,9 @@ published **stable** `vMAJOR.MINOR.PATCH` release, ignoring drafts, prereleases 
 Numbered releases publish as stable, so they reach the update channel immediately. To hold one
 back, mark it as a prerelease in GitHub; clearing the flag later promotes that exact artifact.
 `-CheckOnly` checks without downloading; a newer installed version is never downgraded.
+The main menu's **Update and restart** runs `Update_SS3D.ps1 -WaitPid <game pid> -Restart` in a
+visible console and quits: the script waits up to a minute for the game to exit, updates, then
+starts `Game/SS3D.exe` (also after a failure, once Enter is pressed, so the old build reopens).
 
 Updates require all SS3D processes closed. The script locks the installation against concurrent
 updates, downloads and checks GitHub's SHA-256 digest, checks archive paths and required files,
@@ -117,7 +120,8 @@ Windows download/update and backup launch are still required in first-release do
 preservation, `.ss3d-backups/` n-1 rollback and self-update contract as Windows
 (`update_ss3d.py` is replaced, the `update_ss3d.sh` launcher stays). Linux uses `flock` for the installation lock and reads `/proc/*/comm`
 before downloading and before swapping to refuse running `SS3D-Client` / `SS3D.x86_64`
-processes; it never signals or launches them. It rejects archive symlinks/special files and
+processes; it never signals them, and launches the client only with `--restart`. The main menu
+runs it detached with `--wait-pid <game pid> --restart`, logging to `update.log` in the release root. It rejects archive symlinks/special files and
 path traversal, refuses links in local data, preserves native helper execute bits and ensures
 the player and launch scripts are executable. Caught swap failures (including Ctrl+C) restore
 the old installation; interrupted/failed restoration retains staging and backup directories.

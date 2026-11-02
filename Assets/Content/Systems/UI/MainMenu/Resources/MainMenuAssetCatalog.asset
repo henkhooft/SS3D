@@ -21,3 +21,12 @@ MonoBehaviour:
   _wallpapers:
   - {fileID: 2800000, guid: 11f34a2347269a5f3bf7ad6b5e7b4d3d, type: 3}
   - {fileID: 2800000, guid: 9364b90cc962f9e7b9de9db1a9a14cd6, type: 3}
+  _musicIcon: {fileID: 2800000, guid: 625cf513ff7b3cb47b3b70e1db0b8e6e, type: 3}
+  _music:
+  - {fileID: 8300000, guid: 41d4341d4f61bd33ebc28420a47c280f, type: 3}
+  - {fileID: 8300000, guid: 3af126b3d82c5e0d3bb29839f1617d57, type: 3}
+  - {fileID: 8300000, guid: 100836e5ae0dc60a7a3a26a7a5528c7b, type: 3}
+  - {fileID: 8300000, guid: a28d9e5fdfda4c339bd46dc5cc152caa, type: 3}
+  - {fileID: 8300000, guid: ec8b849764a7e9147b2a565f81a1ca42, type: 3}
+  - {fileID: 8300000, guid: 3f51862f0b88a5243a8cceb97147489d, type: 3}
+  - {fileID: 8300000, guid: fd331e360db5fbb448e66367e41d1893, type: 3}

@@ -9,7 +9,8 @@ WINDOWS (SS3D-Windows-<version>.zip)
   Start_SS3D_Host.bat     host a game on this PC (server + your own client)
   Start_SS3D_Client.bat   join a game; asks for your name and the server IP
   Update_SS3D.bat         update this folder to the latest stable Windows release
-  Game\SS3D.exe           run on its own to get the launcher
+  Game\SS3D.exe           main menu: join a server (remembers the last five), play
+                          locally, and update when a new release is out
 
   Both bats also take arguments:
     Start_SS3D_Client.bat <name> <server ip> [port]
@@ -17,7 +18,10 @@ WINDOWS (SS3D-Windows-<version>.zip)
 
 UPDATING (WINDOWS)
 
-  Close all SS3D windows, then double-click Update_SS3D.bat. Keep Update_SS3D.ps1 next
+  The main menu shows a banner when a newer stable release exists; UPDATE AND RESTART
+  runs the updater below, waits for the game to close and starts it again afterwards.
+
+  Or close all SS3D windows, then double-click Update_SS3D.bat. Keep Update_SS3D.ps1 next
   to it. Requires Windows PowerShell 5.1 (included with Windows 10/11) and internet access.
   It follows stable numbered vX.Y.Z releases; prereleases and nightlies are ignored.
   The download is SHA-256 checked before installation. Failed downloads leave the game intact.
@@ -43,14 +47,16 @@ LINUX CLIENT (SS3D-Linux-Client-<version>.zip)
   ./start_ss3d_host.sh                         host a game on this machine
   ./start_ss3d_client.sh <server ip> [port] [name]
   ./update_ss3d.sh                            update this folder to the latest stable release
-  Game/SS3D-Client                             run on its own to get the launcher
+  Game/SS3D-Client                             main menu: join, play locally, update
 
   Close all Linux client windows before running ./update_ss3d.sh. Requires Python 3;
   keep update_ss3d.py beside the shell script. ./update_ss3d.sh --check-only checks
   without downloading or installing. Prereleases and nightlies are ignored.
   Local data preservation, SHA-256 verification and .ss3d-backups rollback work as on
   Windows above. Run the host/client script inside a backup to use the previous build
-  with its pre-update data. The updater never starts or stops a game process.
+  with its pre-update data. The updater never stops a game process. The main menu's
+  UPDATE AND RESTART runs it with --wait-pid/--restart in the background (output in
+  update.log next to this file) and the game starts again when it finishes.
   A stable release must include its Linux client zip; otherwise updating fails safely.
   No sudo, Unity, Git, curl, jq, or extra Python packages are needed.
 

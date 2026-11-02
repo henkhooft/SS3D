@@ -11,7 +11,9 @@ import re
 import shutil
 import stat
 import sys
+import subprocess
 import tempfile
+import time
 import urllib.request
 import uuid
 import zipfile
@@ -60,6 +62,26 @@ def assert_closed():
             continue
         if name in ("SS3D-Client", "SS3D.x86_64"):
             raise RuntimeError("Close all SS3D Linux client windows before updating. No process was stopped.")
+
+
+def wait_for_exit(pid, timeout=60.0, poll=0.25):
+    """The in-game Update button quits the game, then this waits for it before the closed check."""
+    deadline = time.monotonic() + timeout
+    while Path(f"/proc/{pid}").exists():
+        if time.monotonic() >= deadline:
+            raise RuntimeError("The game did not close within a minute. Close it and run the updater again.")
+        time.sleep(poll)
+
+
+def restart(root):
+    """Relaunch the client with no arguments, which opens the main menu. Never waits for it."""
+    game = root / "Game"
+    for name in ("SS3D-Client", "SS3D.x86_64"):
+        if (game / name).is_file():
+            subprocess.Popen([str(game / name)], cwd=game, start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+    print("Could not find the game to restart it.", file=sys.stderr)
 
 
 def sha256(path):
@@ -252,13 +274,22 @@ def update(root, check_only=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-only", action="store_true", help="Check the stable release without installing")
+    parser.add_argument("--wait-pid", type=int, default=0, help="Wait for this game process to exit first")
+    parser.add_argument("--restart", action="store_true",
+                        help="Relaunch the game afterwards, also when the update fails (the old version still runs)")
     args = parser.parse_args()
+    root = Path(__file__).parent
+    result = 0
     try:
-        update(Path(__file__).parent, args.check_only)
+        if args.wait_pid:
+            wait_for_exit(args.wait_pid)
+        update(root, args.check_only)
     except (Exception, KeyboardInterrupt) as error:
         print(f"Update failed: {error}", file=sys.stderr)
-        return 1
-    return 0
+        result = 1
+    if args.restart:
+        restart(root.resolve())
+    return result
 
 
 if __name__ == "__main__":

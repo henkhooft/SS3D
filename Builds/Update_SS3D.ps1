@@ -1,5 +1,5 @@
 #requires -Version 5.1
-param([switch]$CheckOnly)
+param([switch]$CheckOnly, [int]$WaitPid = 0, [switch]$Restart)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
@@ -28,6 +28,21 @@ function Assert-SS3DClosed {
     if (Get-Process -Name SS3D -ErrorAction SilentlyContinue) {
         throw 'Close all SS3D game windows before updating. No game process was stopped.'
     }
+}
+
+function Wait-SS3DExit([int]$ProcessId, [int]$TimeoutSeconds = 60) {
+    # The in-game Update button quits the game; wait for it before the closed check.
+    $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if (-not $process) { return }
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw 'The game did not close within a minute. Close it and run the updater again.'
+    }
+}
+
+function Start-SS3DGame([string]$Root) {
+    # No arguments: the game opens its main menu.
+    $game = Join-Path $Root 'Game'
+    Start-Process -FilePath (Join-Path $game 'SS3D.exe') -WorkingDirectory $game
 }
 
 function Expand-SS3DRelease([string]$Zip, [string]$Destination, [string]$Tag) {
@@ -214,6 +229,17 @@ function Update-SS3D([string]$Root, [switch]$CheckOnly) {
 
 # Dot-sourcing exposes functions to isolated tests without touching an installation.
 if ($MyInvocation.InvocationName -ne '.') {
-    try { Update-SS3D -Root $PSScriptRoot -CheckOnly:$CheckOnly }
-    catch { Write-Host "Update failed: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
+    $result = 0
+    try {
+        if ($WaitPid) { Wait-SS3DExit $WaitPid }
+        Update-SS3D -Root $PSScriptRoot -CheckOnly:$CheckOnly
+    }
+    catch {
+        Write-Host "Update failed: $($_.Exception.Message)" -ForegroundColor Red
+        $result = 1
+        # Launched from the game: keep the reason readable before the old version restarts.
+        if ($Restart) { Read-Host 'Press Enter to restart SS3D' | Out-Null }
+    }
+    if ($Restart) { Start-SS3DGame $PSScriptRoot }
+    exit $result
 }

@@ -1,11 +1,15 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 namespace SS3D.UI.Shell.MainMenu
 {
     /// <summary>
-    /// Unwired presentation of the supplied main-menu reference. Attach explicitly to a shell layer;
-    /// no bootstrap, networking, settings writes, URL launches or application lifecycle actions.
+    /// Presentation of the main-menu design. Attach explicitly to a shell layer. The view has no
+    /// gameplay effects of its own: buttons raise <see cref="CommandIssued"/> and edits raise
+    /// <see cref="FieldChanged"/>; the owner (<c>MainMenuSubSystem</c>, or the editor preview, which
+    /// ignores them) applies them and calls <see cref="Present"/> again.
     /// </summary>
     public sealed class MainMenuView : IUiSurface
     {
@@ -13,6 +17,13 @@ namespace SS3D.UI.Shell.MainMenu
         private readonly MainMenuAssetCatalog _catalog;
         private Texture2D _blurredWallpaper;
         private Texture2D _blurredSource;
+        private MainMenuPresentation _model = new();
+
+        /// <summary>A button or link; server commands pass the server id, others an empty string.</summary>
+        public event Action<MainMenuCommand, string> CommandIssued;
+
+        /// <summary>An edit: field, server id (server fields only) and the new value.</summary>
+        public event Action<MainMenuField, string, string> FieldChanged;
 
         public MainMenuView(MainMenuAssetCatalog catalog)
         {
@@ -21,12 +32,36 @@ namespace SS3D.UI.Shell.MainMenu
             Root.style.flexGrow = 1;
             Root.styleSheets.Add(catalog.Style);
             Root.Q("logo").style.backgroundImage = catalog.Logo;
+            Root.Q("music-icon").style.backgroundImage = catalog.MusicIcon;
             Root.Query(className: "main-menu__empty").ForEach(DashedBorder);
             Root.Q("main-menu").RegisterCallback<GeometryChangedEvent>(e =>
             {
                 Root.Q("main-menu").EnableInClassList("main-menu--compact", e.newRect.width < 1450);
                 Root.Q<ScrollView>("sidebar").contentContainer.style.minHeight = e.newRect.height;
             });
+            Command("join", MainMenuCommand.Join);
+            Command("local", MainMenuCommand.PlayLocally);
+            Command("advanced", MainMenuCommand.ToggleAdvanced);
+            Command("settings", MainMenuCommand.Settings);
+            Command("quit", MainMenuCommand.Quit);
+            Command("back", MainMenuCommand.Back);
+            Command("refresh", MainMenuCommand.Refresh);
+            Command("discord", MainMenuCommand.Discord);
+            Command("credits", MainMenuCommand.Credits);
+            Command("update", MainMenuCommand.Update);
+            Command("cancel", MainMenuCommand.Cancel);
+            Command("music-toggle", MainMenuCommand.ToggleMusic);
+            Command("music-next", MainMenuCommand.NextTrack);
+            Root.Q<Slider>("music-volume").RegisterValueChangedCallback(e => FieldChanged?.Invoke(
+                MainMenuField.MusicVolume, "", e.newValue.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Field("player-name", MainMenuField.PlayerName);
+            Field("port", MainMenuField.Port);
+            Root.RegisterCallback<KeyDownEvent>(e =>
+            {
+                if (e.keyCode != KeyCode.Escape) return;
+                Issue(MainMenuCommand.Back);
+                e.StopPropagation();
+            }, TrickleDown.TrickleDown);
         }
 
         public void Attach(VisualElement layerRoot) { Detach(); layerRoot.Add(Root); }
@@ -44,11 +79,23 @@ namespace SS3D.UI.Shell.MainMenu
 
         public void Present(MainMenuPresentation model)
         {
+            _model = model;
             Root.Q("wallpaper").style.backgroundImage = _catalog.Wallpaper(model.Wallpaper);
-            Root.Q<TextField>("player-name").SetValueWithoutNotify(model.PlayerName);
-            Root.Q<TextField>("port").SetValueWithoutNotify(model.Port);
+            SetText("player-name", model.PlayerName);
+            SetText("port", model.Port);
             Root.Q<Label>("version").text = $"v{model.Version} pre-alpha";
             Show("update-banner", model.UpdateAvailable);
+            bool hasMusic = !string.IsNullOrEmpty(model.MusicTitle);
+            Root.Q("music").EnableInClassList("main-menu__music--off", !model.MusicOn || !hasMusic);
+            Root.Q("music-toggle").EnableInClassList("main-menu__music-toggle--on", model.MusicOn && hasMusic);
+            Root.Q("music-toggle").tooltip = model.MusicOn ? "Turn music off" : "Turn music on";
+            string musicTitle = model.MusicOn ? model.MusicTitle : "Off";
+            Root.Q<Label>("music-title").text = hasMusic ? musicTitle : "No music";
+            Root.Q<Button>("music-next").SetEnabled(hasMusic);
+            Slider volume = Root.Q<Slider>("music-volume");
+            if (!Mathf.Approximately(volume.value, model.MusicVolume)) volume.SetValueWithoutNotify(model.MusicVolume);
+            Root.Q<Button>("update").text = model.CanSelfUpdate ? "UPDATE AND RESTART" : "DOWNLOAD";
+            Show("update-hint", model.CanSelfUpdate);
             Root.Q<Label>("update-copy").text = $"v{model.LatestVersion} is out; this is v{model.Version}. {model.UpdateMessage}";
             bool hasName = !string.IsNullOrWhiteSpace(model.PlayerName);
             Root.Q<Button>("join").SetEnabled(hasName);
@@ -58,7 +105,11 @@ namespace SS3D.UI.Shell.MainMenu
             else if (model.FirstLaunch) joinSubtitle = "Paste an address from Discord";
             else if (model.Recent.Count > 0) joinSubtitle = $"Last played: {model.Recent[0].Name}";
             Root.Q<Label>("join-subtitle").text = joinSubtitle;
-            Root.Q<Label>("local-subtitle").text = hasName ? $"Host on this computer, port {model.Port}" : "Needs a name";
+            Label localSubtitle = Root.Q<Label>("local-subtitle");
+            localSubtitle.text = hasName ? $"Host on this computer, port {model.Port}" : "Needs a name";
+            bool localError = hasName && !string.IsNullOrEmpty(model.LocalError);
+            if (localError) localSubtitle.text = model.LocalError;
+            localSubtitle.style.color = localError ? new StyleColor(ColorCode("#d17a7a")) : new StyleColor(StyleKeyword.Null);
             Show("name-hint", !hasName || model.FirstLaunch);
             Root.Q<Label>("name-hint").text = !hasName ? "Enter a name to join or play." : "Taken from this computer's user name. Change it any time.";
             Root.Q<Label>("name-hint").style.color = hasName ? new Color(0.667f, 0.667f, 0.667f) : new Color(0.941f, 0.769f, 0.49f);
@@ -119,9 +170,23 @@ namespace SS3D.UI.Shell.MainMenu
             Button connect = Action(row, "CONNECT", "main-menu__button--accent");
             connect.name = "connect";
             connect.SetEnabled(!string.IsNullOrWhiteSpace(model.Address) && !string.IsNullOrWhiteSpace(model.PlayerName));
+            connect.clicked += () => Issue(MainMenuCommand.Connect);
+            // Typing must not re-present: that would rebuild this field and drop focus.
+            address.RegisterValueChangedCallback(e =>
+            {
+                _model.Address = e.newValue;
+                connect.SetEnabled(!string.IsNullOrWhiteSpace(e.newValue) && !string.IsNullOrWhiteSpace(_model.PlayerName));
+                FieldChanged?.Invoke(MainMenuField.Address, "", e.newValue);
+            });
+            address.RegisterCallback<KeyDownEvent>(e =>
+            {
+                if (e.keyCode is not (KeyCode.Return or KeyCode.KeypadEnter) || !connect.enabledSelf) return;
+                Issue(MainMenuCommand.Connect);
+                e.StopPropagation();
+            }, TrickleDown.TrickleDown);
             if (!string.IsNullOrEmpty(model.AddressError))
                 Text(box, model.AddressError, "main-menu__wrap main-menu__hint").style.color = ColorCode("#d17a7a");
-            if (model.FirstLaunch) Action(box, "Open the SS3D Discord", "main-menu__link");
+            if (model.FirstLaunch) Action(box, "Open the SS3D Discord", "main-menu__link").clicked += () => Issue(MainMenuCommand.Discord);
         }
 
         private void Section(VisualElement parent, string title, System.Collections.Generic.IReadOnlyList<MainMenuServerPresentation> servers,
@@ -167,11 +232,12 @@ namespace SS3D.UI.Shell.MainMenu
             VisualElement card = Element(parent, "main-menu__server"); card.name = $"server-{server.Id}";
             VisualElement row = Element(card, "main-menu__server-row");
             string color = server.State switch { MainMenuServerState.Compatible => "#88b36a", MainMenuServerState.NeedsUpdate => "#e6ad53", MainMenuServerState.Full => "#e6ad53", MainMenuServerState.Offline => "#b13d3d", _ => "#717c7f" };
+            string id = server.Id;
             Element(row, "main-menu__dot").style.backgroundColor = ColorCode(color);
             VisualElement identity = Element(row, "main-menu__server-identity");
             Text(identity, server.Name, "main-menu__server-name");
             Text(identity, server.Address, "main-menu__server-address main-menu__mono");
-            string status = server.State switch { MainMenuServerState.Compatible => "Online", MainMenuServerState.NeedsUpdate => $"Needs v{server.RequiredVersion} — update", MainMenuServerState.Full => "Full", MainMenuServerState.OlderVersion => $"Runs v{server.RequiredVersion}, older than yours", _ => "Offline" };
+            string status = server.State switch { MainMenuServerState.Compatible => "Online", MainMenuServerState.NeedsUpdate => $"Needs v{server.RequiredVersion} — update", MainMenuServerState.Full => "Full", MainMenuServerState.OlderVersion => $"Runs v{server.RequiredVersion}, older than yours", MainMenuServerState.Checking => "Checking…", _ => "Offline" };
             string statusColor = "#aaaaaa";
             if (server.State == MainMenuServerState.Compatible) statusColor = "#a8cf8c";
             else if (server.State is MainMenuServerState.NeedsUpdate or MainMenuServerState.Full) statusColor = "#f0c47d";
@@ -180,13 +246,14 @@ namespace SS3D.UI.Shell.MainMenu
             if (server.State == MainMenuServerState.Full) players.style.color = ColorCode("#f0c47d");
             Text(row, server.Ping, "main-menu__ping main-menu__mono");
             VisualElement actions = Element(row, "main-menu__actions");
-            if (recent) Action(actions, server.Expanded ? "Hide" : "Details", "main-menu__details-button");
+            if (recent) Action(actions, server.Expanded ? "Hide" : "Details", "main-menu__details-button").clicked += () => Issue(MainMenuCommand.ServerDetails, id);
             bool update = server.State == MainMenuServerState.NeedsUpdate;
             string actionClass = "";
             if (update) actionClass = "main-menu__button--blue";
             else if (primary) actionClass = "main-menu__button--accent";
             Button join = Action(actions, update ? "UPDATE" : "JOIN", actionClass);
-            join.SetEnabled(hasName && (update || server.State == MainMenuServerState.Compatible));
+            join.SetEnabled(hasName && (update || server.State is MainMenuServerState.Compatible or MainMenuServerState.Checking));
+            join.clicked += () => Issue(update ? MainMenuCommand.ServerUpdate : MainMenuCommand.ServerJoin, id);
             if (!string.IsNullOrEmpty(server.Refusal))
             {
                 VisualElement refusal = Element(card, "main-menu__refusal");
@@ -196,20 +263,29 @@ namespace SS3D.UI.Shell.MainMenu
             if (recent && server.Expanded) Details(card, server);
         }
 
-        private static void Details(VisualElement parent, MainMenuServerPresentation server)
+        private void Details(VisualElement parent, MainMenuServerPresentation server)
         {
+            string id = server.Id;
             VisualElement details = Element(parent, "main-menu__details");
             VisualElement name = DetailRow(details, "Name");
-            Input(name, server.Name, "main-menu__detail-value").maxLength = 40;
+            TextField nameField = Input(name, server.Name, "main-menu__detail-value");
+            nameField.maxLength = 40;
+            nameField.RegisterValueChangedCallback(e => FieldChanged?.Invoke(MainMenuField.ServerName, id, e.newValue));
             Text(DetailRow(details, "Address"), server.Address, "main-menu__mono");
             VisualElement tokenRow = DetailRow(details, "Admin token");
             TextField token = Input(tokenRow, server.AdminToken, "main-menu__detail-value main-menu__mono");
             token.isPasswordField = true; token.textEdition.placeholder = "Optional";
-            Action(tokenRow, "Show", "main-menu__details-button");
+            token.RegisterValueChangedCallback(e => FieldChanged?.Invoke(MainMenuField.AdminToken, id, e.newValue));
+            Button show = Action(tokenRow, "Show", "main-menu__details-button");
+            show.clicked += () =>
+            {
+                token.isPasswordField = !token.isPasswordField;
+                show.text = token.isPasswordField ? "Show" : "Hide";
+            };
             VisualElement footer = DetailRow(details, "");
             Label hint = Text(footer, "Saved automatically. The token is sent when joining; admins join like everyone else.", "main-menu__secondary main-menu__tiny main-menu__wrap");
             hint.style.maxWidth = 420; hint.style.flexShrink = 1; hint.style.marginRight = 12;
-            Action(footer, "REMOVE", "main-menu__button--danger");
+            Action(footer, "REMOVE", "main-menu__button--danger").clicked += () => Issue(MainMenuCommand.ServerRemove, id);
         }
 
         private void Operation(MainMenuPresentation model)
@@ -240,6 +316,16 @@ namespace SS3D.UI.Shell.MainMenu
         }
 
         private void Show(string name, bool visible) => Root.Q(name).EnableInClassList("main-menu__hidden", !visible);
+        private void SetText(string name, string value)
+        {
+            // Only on change: rewriting the text being typed would move the caret.
+            TextField field = Root.Q<TextField>(name);
+            if (field.value != value) field.SetValueWithoutNotify(value);
+        }
+        private void Issue(MainMenuCommand command, string id = "") => CommandIssued?.Invoke(command, id);
+        private void Command(string name, MainMenuCommand command) => Root.Q<Button>(name).clicked += () => Issue(command);
+        private void Field(string name, MainMenuField field) =>
+            Root.Q<TextField>(name).RegisterValueChangedCallback(e => FieldChanged?.Invoke(field, "", e.newValue));
         private static Color ColorCode(string value) { ColorUtility.TryParseHtmlString(value, out Color color); return color; }
         private static void Classes(VisualElement element, string classes)
         { foreach (string value in classes.Split(' ')) if (value.Length > 0) element.AddToClassList(value); }

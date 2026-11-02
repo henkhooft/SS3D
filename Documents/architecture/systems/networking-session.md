@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Networking/, Assets/Scripts/SS3D/Editor/ServerBuildScript.cs, Assets/Scripts/SS3D/Editor/ClientBuildScript.cs, Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Entry points: NetworkSessionSubSystem, ClientConnectionRecovery, NetworkSystemsHub, SS3D.Systems.Testing.AutomationSubSystem
 > Status: partial
-> Verified: 81659fe3f — 2026-11-02
+> Verified: f21a4d0b4 — 2026-11-02
 
 # Networking (session)
 
@@ -15,7 +15,8 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Assets/Scripts/SS3D/Networking/ClientConnectionRecovery.cs` — DDOL session FSM owner; arms `Scenes.EmptyPath` offline after first Online; OnGUI Retry/Quit; suppresses `SubSystems.Get` Errors while WaitingForServer; spawns `NetworkSystemsHub` on server Online
 - `Assets/Scripts/SS3D/Networking/NetworkSessionSubSystem.cs` — session host/join; gates on `ClientConnectionRecovery.CanStart`; UNITY_SERVER auto-starts on `ApplicationInitializing`
 - `Assets/Scripts/SS3D/Networking/NetworkSystemsHub.cs` + `Assets/Resources/NetworkSystemsHub.prefab` — Online hub NetworkObject (all Game NetworkSubSystems)
-- `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again
+- `Assets/Scripts/SS3D/Networking/ServerConnectionView.cs` — Intro connection progress/fail UI; Retry calls `StartNetworkSession` again. Launches without args use the [main menu](ui-shell-main-menu.md) instead, which owns its failures (`ClientConnectionRecovery.FailureUiOwnedElsewhere`) and arms Empty before joining (`ArmEmptyOfflineScene`)
+- `Assets/Scripts/SS3D/Networking/Status/` + `Systems/Rounds/ServerStatusPublisher.cs` — pre-join status query answered on the game port through the `SS3D patch` in Tugboat's `ServerSocket.UnconnectedRequestHandler` (LiteNetLib unconnected messages; re-apply on FishNet upgrades)
 - `Assets/Scripts/SS3D/Networking/ProtocolVersionAuthenticator.cs` + `ProtocolVersion.cs` — FishNet authenticator (installed at runtime in `StartNetworkSession`, no scene wiring); rejects clients whose `ProtocolVersion.Current` differs; `LastRejection` feeds the fail UIs. When to bump: [2026-10_game-versioning](../2026-10_game-versioning.md)
 - `Assets/Scripts/SS3D/Systems/Bootstrap/SystemsBootstrap.cs` — DDOL process-wide (incl. NetworkSession via type name)
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — harness script runner (bootstrapped via SystemsBootstrap); Empty offline redirect never restores Boot
@@ -24,7 +25,7 @@ FishNet session management — host/join, network type and port settings. Distin
 - `Testing/multiplayer/run_loadtest.sh` — dedicated server + N real headless clients; configurable soak duration/stagger and `metrics.csv`
 - `Tools/build_client_and_server.sh` — batchmode Linux builds (installed Unity required; close the project Editor first)
 - `Builds/Update_SS3D.bat` / `Update_SS3D.ps1` — Windows in-place stable-release updater; packaging, data preservation and rollback contract in [CI release pipeline](../2026-07_ci-develop-release-pipeline.md#windows-release-updates).
-- `Builds/update_ss3d.sh` / `update_ss3d.py` — equivalent Linux client updater using Python 3; [Linux updater contract](../2026-07_ci-develop-release-pipeline.md#linux-client-release-updates).
+- `Builds/update_ss3d.sh` / `update_ss3d.py` — equivalent Linux client updater using Python 3; [Linux updater contract](../2026-07_ci-develop-release-pipeline.md#linux-client-release-updates). Both take wait-for-pid and restart options for the main menu's **Update and restart**.
 
 ## Extension points
 
