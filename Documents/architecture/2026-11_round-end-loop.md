@@ -2,7 +2,7 @@
 > Touches systems: rounds-lobby, gamemodes-roles-traits, entities, persistence, chat-audio-screens, screen-effects, ui-shell
 > Status: active
 
-**Progress:** P1 implemented (round outcome, summary overlay and banner, 30 s beat with admin hold, Last Round tab, auto-start defaults, round history fields); P2–P3 not started. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4.
+**Progress:** P1 implemented (round outcome, summary overlay and banner, 30 s beat with admin hold, Last Round tab, auto-start defaults, round history fields); P2 implemented (squad draw, Extended fallback, operative role and kit, marker spawn, team objective, briefing), its pilot not run; P3 not started. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4.
 
 # Round-end loop and thin Nuke Ops outcome (Nov 2026)
 
@@ -101,3 +101,15 @@ A round ends with a legible outcome, everyone sees a summary, and the server ret
 - **Admin hold** is a Hold Summary / Resume Summary pair in Server Settings → Round Controls, posted to Admin chat (Decision 5).
 - **The outcome reaches clients through a buffered `ObserversRpc`**, so a client connecting later still gets the last round. `fallbackMap` is written from a flag that P2's Extended fallback sets.
 - **Tab** is a code-defined `ToggleRoundSummary` system action, live in the Global, Gameplay, TileMenu and MapEditor contexts ([inputs](systems/inputs.md)).
+
+**P2 (2026-11-02).** Code: `Systems/Roles/SquadDraw.cs` (pure draw, `SquadDrawTests`), `RoleSubSystem.DrawSquad`, `RoundSubSystem.FallBackToExtended`, `Gamemodes/OperativeBriefing.cs`, `NukeGamemode`; data: `Roles/Operative.asset`, `Roles/Loadouts/OperativeLoadout.asset`. Divergences and choices:
+
+- **Antagonist roles live in `StartingRoles.asset`** with `RoleData._antagonistCategory` set. `RoleSubSystem` keeps them out of the replicated job list and rejects them as lobby job preferences.
+- **Squad size is at least the minimum:** max(minimum, ceil(ready / 4)), capped at 5, then limited by the opt-in count. The minimum is the **Minimum Operatives** field in Server Settings (1–5, default 1). Fewer opt-ins than the minimum gives an Extended round (`IsExtendedRound`) and a notice in Admin chat and the Server Settings status.
+- **Kit:** M4 in the right hand, engineering jumpsuit, gas mask, insulated gloves, jackboots, toolbelt, backpack; a plain ID and PDA with Maintenance access (no operative access level exists; vault access is M3). **No spare magazines:** ranged weapons reload without magazine items. Loadout hand items are now placed by `Hand.Side`, not list order.
+- **The operative's crew record** is created like any job's (Department None), so the crew manifest can list "Operative". Hiding it waits for a manifest pass.
+- **Several operatives share markers** round-robin; with one marker they spawn on the same tile.
+- **Objectives resolve at the trigger** (`GamemodeSubSystem.ResolveObjectives`, called from `BuildOutcome`). `Nuke.Detonate` ends the round before `NukeDetonateEvent` fires, so the team objective is met by `request.StationDestroyed`, not by the event. `ObjectiveStatus.Cancelled`, `GetItemObjective`, `GetNukeCard.asset`, `ItemPickedUpEvent` and late-join objectives are gone.
+- **Briefing** is a private line in the HUD radio feed (header BRIEFING) sent 3 s after round start, so the client's feed exists. `CommsSubSystem.SendPrivateFeed` sends it.
+- **Opt-in list** is `AntagonistCategories.All`, now Nuclear Operative only; Traitor is removed.
+- **Unverified:** the P2 pilot (opted-in host drawn, spawns at the marker with kit and briefing; non-opted remote client gets a job) has not run. EditMode is green (2455 tests).

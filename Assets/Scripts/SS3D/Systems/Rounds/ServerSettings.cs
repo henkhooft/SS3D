@@ -23,6 +23,8 @@ namespace SS3D.Systems.Rounds
         public bool AllowLateJoin;
         /// <summary>Ready players needed before the auto-start countdown runs (lobby.md §7).</summary>
         public int MinimumReady;
+        /// <summary>Nuclear Operative opt-ins a Nuke Ops round needs among ready players, 1–5; fewer runs Extended (Decision 10).</summary>
+        public int MinimumOperatives;
         public string ServerName;
         public string Motd;
 
@@ -47,6 +49,7 @@ namespace SS3D.Systems.Rounds
         public static ServerSettings Default => new()
         {
             Map = "", Mode = "Secret", PlayerCap = 32, RoundLengthMinutes = 90, AllowLateJoin = true, MinimumReady = 1,
+            MinimumOperatives = 1,
             ServerName = ServerInfoText.DefaultName, Motd = ServerInfoText.DefaultMotd,
             RespawnCooldownSeconds = 30, MapPersistence = true,
         };
@@ -60,6 +63,7 @@ namespace SS3D.Systems.Rounds
 
         public bool IsValid => PlayerCap is >= 1 and <= 256
             && MinimumReady is >= 1 and <= 256
+            && MinimumOperatives is >= 1 and <= Roles.SquadDraw.MaxSize
             && RoundLengthMinutes is >= 1 and <= 1440
             && RespawnCooldownSeconds is >= 0 and <= 3600;
 
@@ -81,7 +85,7 @@ namespace SS3D.Systems.Rounds
 
     public enum StationLoadState { NotLoaded, Loading, Initializing, Ready, Failed }
 
-    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin, ServerName, Motd, MinimumReady, AutoStart }
+    public enum ServerSetting { Map, Mode, PlayerCap, RoundLengthMinutes, AllowLateJoin, ServerName, Motd, MinimumReady, AutoStart, MinimumOperatives }
 
     public enum RoundAdminAction { Start, ForceStart, ExtendTimer, CancelCountdown, Stop, HoldEnd, ResumeEnd }
 
@@ -99,6 +103,9 @@ namespace SS3D.Systems.Rounds
         public bool AllowLateJoin => _allowLateJoin;
         public int PlayerCap => _serverSettings.PlayerCap;
         public ServerSettings SettingsForServer => _serverSettings;
+
+        /// <summary>Server: the configured mode runs Nuke Ops (Secret resolves to it, as in map validation).</summary>
+        public bool ModeDrawsOperatives => _serverSettings.Mode is "Secret" or "Nuclear Emergency";
         public ServerSettings AdminSettings { get; private set; } = ServerSettings.Default;
         public string[] AdminMaps { get; private set; } = Array.Empty<string>();
         public string AdminSettingsStatus { get; private set; } = "Loading server settings…";
@@ -151,6 +158,7 @@ namespace SS3D.Systems.Rounds
                 case ServerSetting.RoundLengthMinutes: updated.RoundLengthMinutes = value.RoundLengthMinutes; break;
                 case ServerSetting.AllowLateJoin: updated.AllowLateJoin = value.AllowLateJoin; break;
                 case ServerSetting.MinimumReady: updated.MinimumReady = value.MinimumReady; break;
+                case ServerSetting.MinimumOperatives: updated.MinimumOperatives = value.MinimumOperatives; break;
                 default: SendServerSettings(sender, "Unknown setting rejected."); return;
             }
             SaveServerSettings(updated, sender);

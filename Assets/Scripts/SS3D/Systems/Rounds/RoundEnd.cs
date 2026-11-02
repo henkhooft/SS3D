@@ -25,7 +25,7 @@ namespace SS3D.Systems.Rounds
     {
         private readonly RoundEndBeat _endBeat = new();
         private RoundOutcome _pendingOutcome;
-        /// <summary>Set by the P2 squad draw when Secret/Nuclear Emergency ran as Extended.</summary>
+        /// <summary>Set by the squad draw (<see cref="FallBackToExtended"/>) when Secret/Nuclear Emergency ran as Extended.</summary>
         private bool _roundFellBackToExtended;
 
         [SyncVar] private int _endSecondsLeft;
@@ -42,6 +42,23 @@ namespace SS3D.Systems.Rounds
 
         /// <summary>An admin is holding the summary beat.</summary>
         public bool EndHeld => _endHeld;
+
+        /// <summary>Server: this round runs without antagonists, configured as Extended or fallen back to it.</summary>
+        public bool IsExtendedRound => _serverSettings.Mode == "Extended" || _roundFellBackToExtended;
+
+        /// <summary>
+        /// The squad draw found too few opt-ins (Decision 11): the round runs as Extended, and admins hear
+        /// why in Admin chat and the Server Settings status. Round start only.
+        /// </summary>
+        [Server]
+        public void FallBackToExtended(string notice)
+        {
+            _roundFellBackToExtended = true;
+            _serverSettingsError = notice;
+            Log.Warning(this, notice, Logs.ServerOnly);
+            if (SubSystems.TryGet(out CommsSubSystem comms))
+                comms.PostOocSystem(OocChannel.Admin, notice);
+        }
 
         /// <summary>
         /// The single entry point for every round end (gamemode condition, timer, admin). The outcome is
@@ -60,9 +77,12 @@ namespace SS3D.Systems.Rounds
         [Server]
         private RoundOutcome BuildOutcome(RoundEndRequest request)
         {
-            string mode = SubSystems.TryGet(out GamemodeSubSystem gamemodes) ? gamemodes.CurrentGamemodeName : "";
+            bool hasGamemodes = SubSystems.TryGet(out GamemodeSubSystem gamemodes);
+            string mode = hasGamemodes ? gamemodes.CurrentGamemodeName : "";
+            // Objectives resolve here, at the trigger instant, like everything else on the outcome.
+            IEnumerable<RoundOutcomeObjective> objectives = hasGamemodes ? gamemodes.ResolveObjectives(request) : null;
             return RoundOutcomeBuilder.Build(request, _roundId, _serverSettings.Mode, ModeDisplayName(mode),
-                _stationName, RoundSeconds, CollectRoster());
+                _stationName, RoundSeconds, CollectRoster(), "Operatives", objectives);
         }
 
         /// <summary>The gamemode asset name, as players know the mode.</summary>
@@ -96,6 +116,7 @@ namespace SS3D.Systems.Rounds
                     Name = entity.Mind.DisplayName,
                     Job = roles != null && roles.TryGetRole(player, out RoleData role) ? role.Name : "",
                     Alive = entity.GetComponent<HumanoidGhostController>() == null,
+                    Antagonist = roles != null && roles.IsOperative(player),
                 });
             }
 
