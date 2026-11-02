@@ -6,7 +6,7 @@ Use this index when implementing a feature that needs art. Most game-ready asset
 live in [RE-SS3D/SS3D-Art](https://github.com/RE-SS3D/SS3D-Art) but are not yet
 imported into Unity.
 
-**Generated:** 2026-07-26T08:41:55.303236+00:00
+**Generated:** 2026-11-02T15:12:20.228005+00:00
 
 ## When to use
 
@@ -59,7 +59,7 @@ Full list: [`art-available-for-import.json`](art-available-for-import.json)
 | Metric | Count |
 |--------|------:|
 | Already imported (in-game + SS3D-Art) | 210 |
-| In-game only | 4996 |
+| In-game only | 5020 |
 | Available for import | 2045 |
 | Promotional artwork (not game-ready) | 215 |
 
@@ -94,4 +94,4 @@ Use `--refresh-cache` to force a new fetch from GitHub.
 ## Related
 
 - [SS3D art guide](https://ss3d.gitbook.io/art-guide/) — contribution workflow
-- [AGENTS.md](../AGENTS.md) — agent navigation
+- [AGENTS.md](../../AGENTS.md) — agent navigation

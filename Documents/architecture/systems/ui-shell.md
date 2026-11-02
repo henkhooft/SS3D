@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/UI/Shell/
 > Entry points: UiShellSubSystem, UiLayer, IUiSurface, UiShellAssetCatalog
 > Status: partial
-> Verified: ce69181d3 — 2026-11-01
+> Verified: ce8e651c2 — 2026-11-02
 
 # UI shell
 
@@ -34,8 +34,11 @@ The shell's own catalog (`UiShellAssetPaths` / `UiShellAssetCatalog`) and the lo
 
 **Bug report dialog** ([sandbox-server.md](../../design/sandbox-server.md) §7): `Systems/BugReports/BugReportSubSystem` self-bootstraps on clients (not batch mode) and attaches `BugReportView`, built from `Content/Systems/UI/BugReport/BugReport.uxml` / `.uss` via `BugReportAssetCatalog` (umbrella rebuild). The warmer v2 colours are scoped to this window, not the shared tokens. F8, a bare `/bug` and the menu's **Report a bug (F8)** open it; the context, round, position and screenshot are frozen first (one frame plus end-of-frame, so the closed Escape menu isn't in the shot). A client sends `BugReportSubmitMessage` and keeps the dialog open until `BugReportResultMessage` arrives (rate-limit refusals keep the text). An own host (or an offline player) saves a zip to `Data/Exports/` (`BugReportBundle`) and gets the saved screen with **Open Report Folder** / **Open GitHub Issue** (`BugReportIssueLink` pre-fills `Bug.yml` or `MapBug.yml`). **SS3D → UI → Preview Bug Report** drives the same view with sample data for each design state.
 
+**Unwired main menu:** [main menu visuals](ui-shell-main-menu.md) provides the supplied design as a reusable view and editor preview. It is not bootstrapped or attached during gameplay.
+
 ## Start here
 
+- [Main menu visuals](ui-shell-main-menu.md) — view, reference assets, preview states and integration boundary
 - `Assets/Scripts/SS3D/UI/Shell/UiShellSubSystem.cs` — `TryGetLayer(UiLayer, out VisualElement)` (preferred) / `GetLayer`
 - `Assets/Scripts/SS3D/UI/Shell/UiLayer.cs`, `IUiSurface.cs` — layer enum; surface contract implemented by the radial, armed, examine and lobby views
 - `Assets/Scripts/SS3D/UI/Shell/Catalog/UiAssetCatalogBase.cs`, `UiCatalogRuntimeLoader.cs` — shared catalog base
