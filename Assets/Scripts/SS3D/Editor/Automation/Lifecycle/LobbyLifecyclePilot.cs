@@ -103,7 +103,8 @@ namespace SS3D.Editor.Automation
 
         private static bool Remote => SessionState.GetString(ModeKey, "") == RemoteMode;
         private static bool Sandbox => SessionState.GetString(ModeKey, "") == SandboxMode
-            || SessionState.GetString(ModeKey, "") == HealthRegressionMode;
+            || SessionState.GetString(ModeKey, "") == HealthRegressionMode
+            || SessionState.GetString(ModeKey, "") == RoundResetRegressionMode;
 
         private static void Start(string mode)
         {
@@ -113,7 +114,7 @@ namespace SS3D.Editor.Automation
                 throw new InvalidOperationException("Fix compilation errors before starting the lobby lifecycle pilot.");
             if (SessionState.GetBool(ActiveKey, false)) RestoreEditorSettings();
             string prefix = mode switch { RemoteMode => "remote", SandboxMode => "sandbox",
-                HealthRegressionMode => "health-regressions", _ => "lifecycle" };
+                HealthRegressionMode => "health-regressions", RoundResetRegressionMode => "round-reset-regressions", _ => "lifecycle" };
             string output = Path.GetFullPath($"artifacts/ui/{prefix}-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
             Directory.CreateDirectory(output);
             try
@@ -151,6 +152,8 @@ namespace SS3D.Editor.Automation
                 else _steps = Sandbox ? BuildSandboxSteps() : BuildSteps();
                 if (SessionState.GetString(ModeKey, "") == HealthRegressionMode)
                     _steps = _steps.TakeWhile(step => step.Name != "/bug in chat saves a report with round and state").ToArray();
+                if (SessionState.GetString(ModeKey, "") == RoundResetRegressionMode)
+                    _steps = BuildRoundResetSteps();
                 _index = 0;
                 _entered = false;
                 _started = EditorApplication.timeSinceStartup;
@@ -1551,6 +1554,8 @@ namespace SS3D.Editor.Automation
 
         private static string ReportScope()
         {
+            if (SessionState.GetString(ModeKey, "") == RoundResetRegressionMode)
+                return "Focused editor Host checks: Stop clears blood/bullet decals; restarting the same station restores oxygen in a fresh atmos simulation. Remote clients are not covered.";
             if (SessionState.GetString(ModeKey, "") == HealthRegressionMode)
                 return "Focused editor Host checks: critical held-item drop and action refusal, recovery, world blackout with Escape menu, ghost FOV and respawn. No builds or remote multiplayer tests.";
             if (Sandbox) return SandboxScope;

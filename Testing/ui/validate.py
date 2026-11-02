@@ -429,7 +429,13 @@ async def step_smoke(editor, ctx):
     return Done(", ".join(results))
 
 
+async def step_round_reset(editor, ctx):
+    return await run_pilot(editor, "SS3D/Testing/Run Round Reset Regressions",
+                           "round-reset-regressions-*/status.json", 90, 300)
+
+
 STEPS = {name: globals()["step_" + name] for name in ORDER}
+STEPS["round-reset"] = step_round_reset
 
 
 async def main():

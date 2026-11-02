@@ -51,6 +51,7 @@ Testing/ui/validate.sh            # --quick (default): preflight, compile, EditM
 Testing/ui/validate.sh --full     # + PlayMode, sandbox pilot, client+server build if stale, remote pilot, multiplayer smoke
 Testing/ui/validate.sh --steps compile,visual   # any subset, in order
 Testing/ui/compile.sh             # = --steps compile
+Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
 ```
 
 Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It stops at the first
