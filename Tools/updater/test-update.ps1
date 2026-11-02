@@ -30,7 +30,8 @@ function Expect-Failure([scriptblock]$Action, [string]$Pattern) {
     throw "Expected a failure matching $Pattern"
 }
 function Get-Process { param($Name, $ErrorAction) if ($script:running) { return 'fake SS3D process' } }
-function Invoke-RestMethod { param($Uri, $Headers, $TimeoutSec, [switch]$UseBasicParsing) return $script:releases }
+# Like Windows PowerShell 5.1, emit the JSON array as a single pipeline object (unary comma).
+function Invoke-RestMethod { param($Uri, $Headers, $TimeoutSec, [switch]$UseBasicParsing) return ,@($script:releases) }
 function Invoke-WebRequest {
     param($Uri, $OutFile, $TimeoutSec, [switch]$UseBasicParsing)
     $script:downloads++

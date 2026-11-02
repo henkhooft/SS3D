@@ -9,7 +9,10 @@ function Get-SS3DRelease {
     $headers = @{ 'User-Agent' = 'SS3D-Updater'; Accept = 'application/vnd.github+json' }
     $releases = @()
     for ($page = 1; ; $page++) {
-        $batch = @(Invoke-RestMethod -Uri "https://api.github.com/repos/henkhooft/SS3D/releases?per_page=100&page=$page" -Headers $headers -TimeoutSec 30 -UseBasicParsing)
+        # Windows PowerShell 5.1 emits a JSON array as ONE pipeline object, so @(Invoke-RestMethod ...)
+        # would nest it (one item: the whole page). Assigning first unrolls it in 5.1 and 7 alike.
+        $response = Invoke-RestMethod -Uri "https://api.github.com/repos/henkhooft/SS3D/releases?per_page=100&page=$page" -Headers $headers -TimeoutSec 30 -UseBasicParsing
+        $batch = @($response)
         $releases += $batch
         if ($batch.Count -lt 100) { break }
     }
