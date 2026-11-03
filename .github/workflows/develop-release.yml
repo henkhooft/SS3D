@@ -275,6 +275,12 @@ jobs:
           fi
           exit $missing
       # One Editor session — two sequential unity-builder steps race PackageCache on TomNAS.
+      - name: Pre-create game-ci license dir as the runner user
+        # game-ci's entrypoint mkdirs $GITHUB_WORKSPACE/_activate-license~ as root, then su's to the
+        # host user (runAsHostUser), which cannot write UnityLicenseFile.ulf into it ("Permission
+        # denied"). mkdir -p keeps an existing dir, so creating it here gives the host user ownership.
+        if: needs.prepare.outputs.self_hosted == 'true'
+        run: rm -rf "$GITHUB_WORKSPACE/_activate-license~" && mkdir -p "$GITHUB_WORKSPACE/_activate-license~"
       - name: Build dedicated server and client
         uses: game-ci/unity-builder@v4
         env:
@@ -402,6 +408,12 @@ jobs:
           fi
           exit $missing
       # Default game-ci builder (not ClientBuildScript — that hardcodes StandaloneLinux64).
+      - name: Pre-create game-ci license dir as the runner user
+        # game-ci's entrypoint mkdirs $GITHUB_WORKSPACE/_activate-license~ as root, then su's to the
+        # host user (runAsHostUser), which cannot write UnityLicenseFile.ulf into it ("Permission
+        # denied"). mkdir -p keeps an existing dir, so creating it here gives the host user ownership.
+        if: needs.prepare.outputs.self_hosted == 'true'
+        run: rm -rf "$GITHUB_WORKSPACE/_activate-license~" && mkdir -p "$GITHUB_WORKSPACE/_activate-license~"
       - name: Build Windows client
         uses: game-ci/unity-builder@v4
         env:
