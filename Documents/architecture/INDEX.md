@@ -16,7 +16,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 |---|---|---|---|
 | admin-tools | [admin-tools](../design/admin-tools.md) | none yet | [ingame-console](systems/ingame-console.md) — partial |
 | ai-cyborgs | [ai-cyborgs](../design/ai-cyborgs.md) | none yet | none yet |
-| antagonist-content | [antagonist-content](../design/antagonist-content.md) | [round-end-loop](2026-11_round-end-loop.md) — planned (Nuke Ops first pass, thin) | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — partial |
+| antagonist-content | [antagonist-content](../design/antagonist-content.md) | [round-end-loop](2026-11_round-end-loop.md) — active (squad draw P2 implemented; win/lose rules P3) | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — partial |
 | area | [area](../design/area.md) | [area-foundation](../archive/architecture/2026-07_area-foundation.md) — shipped | [area](systems/area.md) — partial |
 | armor | [armor](../design/armor.md) | [combat plan](../plans/combat_implementation_plan.md) Phase 5 — in-progress | [combat](systems/combat.md) — partial |
 | atmospherics | [atmospherics](../design/atmospherics.md) | [atmos-ecs-foundation](../archive/architecture/2026-07_atmos-ecs-foundation.md) — shipped; [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — shipped; [metastation-scale-perf](../archive/architecture/2026-07_metastation-scale-perf.md) — shipped | [atmospherics](systems/atmospherics.md) — partial |
@@ -41,7 +41,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | lobby | [lobby](../design/lobby.md) | [lobby-uitk-redesign](../archive/architecture/2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | main-menu | [main-menu](../design/main-menu.md) | none yet | none yet (dev Launcher scene: [networking-session](systems/networking-session.md)) |
 | main-hud | [main-hud](../design/main-hud.md) | [machine-interface phase 1](../archive/architecture/2026-07_machine-interface-phase1-foundation.md), [2](../archive/architecture/2026-07_machine-interface-phase2-apc-networking.md), [3](../archive/architecture/2026-07_machine-interface-phase3-smes-generalization.md), [diegetic-screen-ui-framework](../archive/architecture/2026-07_diegetic-screen-ui-framework.md), [mi-path-catalog](../archive/architecture/2026-07_mi-path-catalog.md), [screen-space-effects](../archive/architecture/2026-07_screen-space-effects.md) — shipped; [ui-shell-consolidation](2026-07_ui-shell-consolidation.md) — shipped | [inventory](systems/inventory.md), [machine-interface](systems/machine-interface.md), [screen-effects](systems/screen-effects.md), [ui-shell](systems/ui-shell.md) |
-| networking | [networking](../design/networking.md) | [headless-dedicated-server](../archive/architecture/2026-07_headless-dedicated-server.md), [session-world-lifecycle](../archive/architecture/2026-07_session-world-lifecycle.md), [multiplayer-test-harness](../archive/architecture/2026-07_multiplayer-test-harness.md), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md), [game-versioning](2026-10_game-versioning.md) — shipped; [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress | [networking-session](systems/networking-session.md) — partial |
+| networking | [networking](../design/networking.md) | [headless-dedicated-server](../archive/architecture/2026-07_headless-dedicated-server.md), [session-world-lifecycle](../archive/architecture/2026-07_session-world-lifecycle.md), [multiplayer-test-harness](../archive/architecture/2026-07_multiplayer-test-harness.md), [ci-develop-release-pipeline](2026-07_ci-develop-release-pipeline.md), [game-versioning](2026-10_game-versioning.md), [test-harness-rework](../archive/architecture/2026-11_test-harness-rework.md) — shipped; [multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md) — in-progress | [networking-session](systems/networking-session.md) — partial |
 | objectives | [objectives](../design/objectives.md) | none yet | none yet |
 | observer | [observer](../design/observer.md) | none yet | none yet |
 | onboarding-tutorial | none yet | none yet | none yet |
@@ -51,7 +51,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | rd-material-economy | none yet | none yet | none yet |
 | rendering-lighting | [rendering-lighting](../design/rendering-lighting.md) | [srp-batcher-gpu-instancing](2026-07_srp-batcher-gpu-instancing.md) — shipped; [urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) — planned | [rendering](systems/rendering.md) — partial |
 | round-config | [round-config](../design/round-config.md) | [lobby-uitk-redesign](../archive/architecture/2026-08_lobby-uitk-redesign.md) — shipped | [rounds-lobby](systems/rounds-lobby.md) — partial |
-| round-end | [round-end](../design/round-end.md) | [round-end-loop](2026-11_round-end-loop.md) — active (P1 loop implemented; Nuke Ops outcome P2–P3) | [rounds-lobby](systems/rounds-lobby.md) — partial |
+| round-end | [round-end](../design/round-end.md) | [round-end-loop](2026-11_round-end-loop.md) — active (P1 loop and P2 squad implemented; Nuke Ops rules P3) | [rounds-lobby](systems/rounds-lobby.md) — partial |
 | sandbox-server | [sandbox-server](../design/sandbox-server.md) | [sandbox-server](2026-11_sandbox-server.md) — in-progress | [rounds-lobby](systems/rounds-lobby.md), [map-editor-creative-hooks](systems/map-editor-creative-hooks.md), [entities](systems/entities.md) — partial |
 | shuttles | [shuttles](../design/shuttles.md) | [shuttle plan](../plans/shuttle_system_design_a3dd2e04.plan.md) — planned | none yet |
 | stamina | [stamina](../design/stamina.md) | [inventory-storage-redesign](../archive/architecture/2026-07_inventory-storage-redesign.md) — shipped | [stamina](systems/stamina.md) — partial |
@@ -132,7 +132,8 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
 | [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
-| [2026-11_round-end-loop](2026-11_round-end-loop.md) | active (P1 implemented) |
+| [2026-11_round-end-loop](2026-11_round-end-loop.md) | active (P1–P2 implemented) |
+| [2026-11_testing-philosophy](2026-11_testing-philosophy.md) | shipped (standing policy) |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [combat_implementation_plan](../plans/combat_implementation_plan.md) | in-progress |
 | [health_implementation_plan](../plans/health_implementation_plan.md) | in-progress |
