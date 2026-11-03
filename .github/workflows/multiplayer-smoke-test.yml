@@ -109,7 +109,8 @@ jobs:
       - name: Checkout project code
         uses: actions/checkout@v4
         with:
-          lfs: true
+          # No LFS-tracked files; git lfs fetch fails ("missing object") in the reused partial-clone workspace.
+          lfs: false
       - name: Restore Unity Library stash
         run: |
           set -euo pipefail
