@@ -315,7 +315,21 @@ namespace SS3D.Systems.Testing
                     break;
 
                 case "console":
-                    RunConsoleCommand(instruction.ArgsJoined);
+                    RunConsoleCommand(ExpandVariables(instruction.ArgsJoined));
+                    break;
+
+                // Retries a console line until it stops throwing: waits on an Offline assert command
+                // (e.g. observesync) whose state another process changes.
+                case "wait_console":
+                    yield return WaitForConsole(ExpandVariables(instruction.ArgsJoined));
+                    TestSignal.Emit(this, "ConsoleCheckPassed", instruction.ArgsJoined);
+                    break;
+
+                // At least N player bodies are spawned, as this process sees them.
+                case "wait_players":
+                    int players = int.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture);
+                    yield return WaitUntil(() => CountSpawnedPlayers() >= players, _waitTimeoutSeconds, $"wait_players {players}");
+                    TestSignal.Emit(this, "PlayersSpawned", players.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     break;
 
                 // Server: the sandbox wrote at least N reset-health lines (one per round reset).
@@ -450,6 +464,61 @@ namespace SS3D.Systems.Testing
             StartClientConnectionFromSettings();
 
             yield return WaitUntil(() => _clientConnected, _waitTimeoutSeconds, "reconnect_started");
+        }
+
+        /// <summary>Replaces {ckey} with this connection's ckey, so scripts can target their own player.</summary>
+        private static string ExpandVariables(string commandLine)
+        {
+            if (!commandLine.Contains("{ckey}"))
+            {
+                return commandLine;
+            }
+
+            string ckey = SubSystems.Get<PlayerSubSystem>().GetCkey(InstanceFinder.ClientManager.Connection);
+            return commandLine.Replace("{ckey}", ckey);
+        }
+
+        private static int CountSpawnedPlayers()
+        {
+            int count = 0;
+            foreach (Entity entity in SubSystems.Get<EntitySubSystem>().SpawnedPlayers)
+            {
+                if (entity != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private IEnumerator WaitForConsole(string commandLine)
+        {
+            float startTime = Time.time;
+            while (true)
+            {
+                string failure = null;
+                try
+                {
+                    RunConsoleCommand(commandLine);
+                }
+                catch (Exception ex)
+                {
+                    failure = ex.Message;
+                }
+
+                if (failure == null)
+                {
+                    yield break;
+                }
+
+                if (Time.time - startTime > _waitTimeoutSeconds)
+                {
+                    throw new TimeoutException($"Timed out after {_waitTimeoutSeconds}s waiting for '{commandLine}': {failure}");
+                }
+
+                yield return new WaitForSeconds(0.25f);
+            }
         }
 
         private void RunConsoleCommand(string commandLine)

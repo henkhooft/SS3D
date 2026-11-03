@@ -53,7 +53,8 @@ Testing/ui/validate.sh --steps compile,editmode,scenarios:<category>   # PlayMod
 Testing/ui/validate.sh --steps compile,editmode,scenarios:Medical   # e.g. the medical scenarios; scenarios:Scenarios runs them all
 Testing/ui/compile.sh             # = --steps compile
 Testing/ui/validate.sh --nightly  # owner only: + PlayMode, client+server build if stale, multiplayer smoke
-Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, sandbox, build, remote pilots
+Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, build, remote pilots
+Testing/ui/validate.sh --steps compile,sandbox   # sandbox pilot on demand (not in --weekly)
 Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
 Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay visuals
 ```
@@ -68,9 +69,16 @@ Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It prin
 passed step and stops at the first failure, printing that step's details and report path. It lists
 screenshots only when the `visual` step ran. Every run writes `artifacts/ui/validate-<UTC>/summary.md`
 with the full table. Exit status is nonzero on any failure. Rough warm timings on tomnas: EditMode
-~40 s, PlayMode ~6.5 min, visual ~70 s, lifecycle ~85 s, sandbox ~4.5 min, build ~30 s, remote
-~50 s, smoke ~9 min. Agents run targeted steps, never `--nightly` or `--weekly` unless the owner
+~40 s, PlayMode ~6.5 min, visual ~70 s, lifecycle ~85 s, build ~30 s, remote ~50 s, smoke
+~9 min; the sandbox pilot is ~4.5 min on demand. Agents run targeted steps, never `--nightly` or `--weekly` unless the owner
 asks; see [2026-11_testing-philosophy.md](../../Documents/architecture/2026-11_testing-philosophy.md).
+
+Both run unattended on TomNAS. The nightly (`multiplayer-smoke-test.yml`) runs PlayMode in a
+batchmode editor (`Tools/run_playmode_tests.sh`, ~4–5 min) instead of through MCP, then builds and
+runs the smoke set. The weekly (`weekly-graphical.yml`, Sunday) opens an editor on the runner's
+checkout with `Tools/ci/editor_session.sh` (MCP on :8097) and runs `--weekly`; it refuses to start
+while another editor is open, so `ss3d-dev stop` when you're done. A red run opens or updates a
+`nightly-failure` / `weekly-failure` issue that the next green run closes.
 
 | Step | What it checks |
 |------|----------------|
@@ -81,9 +89,9 @@ asks; see [2026-11_testing-philosophy.md](../../Documents/architecture/2026-11_t
 | scenarios:&lt;category&gt; | The PlayMode tests in one NUnit category (MCP `run_tests` `category_names`), checked like `playmode`; `scenarios-<category>.json`. Fails if the category has no tests. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
-| sandbox | `--weekly`. The sandbox pilot below (~4.5 min). |
+| sandbox | On demand (`--steps sandbox`), not in `--weekly`: the reset loop is the nightly `sandbox-reset` smoke scenario, so the weekly only needs the graphical pilots. The pilot below (~4.5 min). |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
-| smoke | `--nightly`. `Testing/multiplayer/run_smoketest.sh` for basic-round, late-join (2 clients), reconnect and atmos-client-sync, the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
+| smoke | `--nightly`. `Testing/multiplayer/run_smoketest.sh` for each scenario in `Testing/multiplayer/smoke-set.txt` (late-join, reconnect, observer-sync, sandbox-reset), the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
 
 Each step has an expected duration and a timeout. Past the expected duration,
 `Testing/ui/watch-dialogs.sh` runs every 30 s; a modal dialog fails the step at once. On

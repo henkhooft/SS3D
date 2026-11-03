@@ -17,7 +17,7 @@ Expensive suites run nightly, and a regression caught there is acceptable for no
 | Tier | Proves | Doesn't do | Where it runs |
 |------|--------|------------|---------------|
 | **1. EditMode** | Given these inputs, expect these outputs: rules, state machines, calculations, data and asset validation. | Scenes, frames, networking. | Every change (whole suite, under ~1 min). CI on PRs. |
-| **2. Scenarios** | Behaviour that spans systems, in one Play Mode host: e.g. spawn a medkit in hand, hurt the player, apply the bandage (console + inventory + health). | Separate client/server processes. Lobby and round flow, except where that is the subject. | Targeted: the scenarios for the systems a change touched. All of them nightly. **Not built yet.** |
+| **2. Scenarios** | Behaviour that spans systems, in one Play Mode host: e.g. spawn a medkit in hand, hurt the player, apply the bandage (console + inventory + health). | Separate client/server processes. Lobby and round flow, except where that is the subject. | Targeted: the scenarios for the systems a change touched. All of them nightly. |
 | **3. Multiplayer** | What only breaks when client and server are separate processes: late join, reconnect and body reclaim, ownership, state syncing to observers. | Gameplay that a host scenario already proves. | Nightly (`multiplayer-smoke-test.yml`). Locally only when the change touches networking or session contracts. |
 | **4. Visual** | Rendered UI and screens look right. Screenshots are evidence for a human or agent to review. | Act as the pass/fail gate for logic. | Only when the change is visual (UI Toolkit, USS, rendering, screen effects). |
 
@@ -62,12 +62,14 @@ The rework that brings the harness in line with this policy is
 
 
 - **EditMode** fits tier 1 and is the most effective suite.
-- **PlayMode** (`Assets/Scripts/Tests/PlayMode`) is mostly round start/stop timing, which the
-  lifecycle and sandbox pilots and two smoke scenarios also cover. It is under review against rule 4.
-- **Pilots** (`LobbyUiPilot`, `LobbyLifecyclePilot` and its partial files) mix tier 2 and tier 4, and
-  the lifecycle pilot has absorbed feature validation (speech, ragdoll, reclaim, overlay, respawn).
-  They are under review against rules 2–4.
-- **Tier 2 scenarios** don't exist yet. The building blocks do: console commands
-  (`Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/`) and the `AutomationSubSystem` DSL.
-- **Nightly CI** runs the smoke set only. PlayMode and the pilots need a graphical editor and run
-  only through `validate.sh`.
+- **PlayMode** (`Assets/Scripts/Tests/PlayMode`) holds the tier 2 scenarios (one boot into the
+  `scenario-testroom` fixture) plus a few `Nightly` round start/stop races with no pure seam in the
+  round state machine. The old pilot partials (Speech, Ragdoll, Reclaim, Respawn) are gone.
+- **Pilots** (`LobbyUiPilot`, the `LobbyLifecyclePilot` core, and the sandbox, overlay and remote
+  client pilots) mix tier 2 and tier 4 checks. The lobby UI, lifecycle core and remote client pilots
+  run in the weekly graphical set; the sandbox pilot is on demand and its reset loop runs as the
+  nightly `sandbox-reset` smoke scenario. They are under review against rules 2–4.
+- **Tier 2 scenarios** exist (`Assets/Scripts/Tests/PlayMode/Scenarios`, one boot into the test room).
+- **Nightly CI** on TomNAS runs every PlayMode test in a batchmode editor, then the curated smoke
+  set; a weekly run drives the graphical pilots through `validate.sh --weekly`. Each prints its
+  time against its budget, and a red run keeps one `nightly-failure` / `weekly-failure` issue open.

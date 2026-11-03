@@ -80,6 +80,7 @@ namespace SS3D.Editor.Automation
         private static System.Diagnostics.Process _input;
         private const string ChatProbe = "remoteprobe real keyboard";
         private static double _settleUntil;
+        private static bool _pendingStartClick;
 
         private sealed class Step
         {
@@ -350,6 +351,8 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Reject out-of-range server configuration",
+                // A whole-form save round trip can lag behind the rapid UI edits on a small window.
+                Timeout = 120,
                 Enter = () => { ServerSettings invalid = Rounds().SettingsForServer; invalid.PlayerCap = 0; Rounds().CmdSaveServerSettings(invalid); },
                 Until = () => Rounds().AdminSettingsStatus.Contains("rejected"),
                 Verify = () => Require(Rounds().SettingsForServer.PlayerCap == 24, "Invalid request leaves authoritative settings unchanged"),
@@ -364,9 +367,22 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Invalid saved map blocks countdown with the full job list",
-                Enter = () => Click(Shell().Q<Button>("server-start")),
-                Until = () => Rounds().CurrentStationLoadState == StationLoadState.Failed
-                    && Rounds().AdminSettingsStatus.Contains("Missing job spawn"),
+                Enter = () => _pendingStartClick = true,
+                // The settings panel rebuilds after the map selection; clicking in the same frame
+                // can see a button with no layout yet. Wait for it, then click once.
+                Until = () =>
+                {
+                    if (_pendingStartClick)
+                    {
+                        Button start = Shell()?.Q<Button>("server-start");
+                        if (start == null || !start.enabledInHierarchy || start.worldBound.width <= 0)
+                            return false;
+                        Click(start);
+                        _pendingStartClick = false;
+                    }
+                    return Rounds().CurrentStationLoadState == StationLoadState.Failed
+                        && Rounds().AdminSettingsStatus.Contains("Missing job spawn");
+                },
                 Verify = () =>
                 {
                     Require(Rounds().CurrentRoundState == RoundState.Stopped && Rounds().CurrentTimerSeconds == 0
@@ -1016,7 +1032,8 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Remote non-admin start ignored, remote readies via UI",
-                Timeout = 90,
+                // The client's real OS click can take a while to reach the server on a busy runner.
+                Timeout = 180,
                 Until = () => ClientAlive() && RemoteReady() && CountLabel() == "1/2 ready",
                 Verify = () =>
                 {
@@ -1031,7 +1048,9 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Remote sends chat with real keyboard input",
-                Timeout = 60,
+                // The client script files its bug-report dialog (including a cooldown reopen) before
+                // the chat line; this step waits through that whole sequence.
+                Timeout = 240,
                 Until = () => ClientAlive() && ClientLog().Contains("Chat send (") && ClientLog().Contains(ChatProbe)
                     && HostChatContains(ChatProbe),
                 Verify = () =>
@@ -1142,6 +1161,31 @@ namespace SS3D.Editor.Automation
                 UseShellExecute = false,
             };
             info.Environment["SS3D_AUTOMATION_OUTPUT_DIR"] = OutputDir;
+            // Isolate and pin the player's resolution. The shared PlayerPrefs can leave the client
+            // fullscreen at the native 1920x1080 (changed by other runs), and the OsClick coordinates
+            // are in the client's UI space: a window whose size differs from the render makes every
+            // real input land off-target. XDG_CONFIG_HOME redirects only this process's prefs.
+            string configRoot = Path.Combine(OutputDir, "config");
+            string prefsDir = Path.Combine(configRoot, "unity3d", "CentCom Softworks", "SS3D");
+            Directory.CreateDirectory(prefsDir);
+            File.WriteAllText(Path.Combine(prefsDir, "prefs"),
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                + "<unity_prefs version_major=\"1\" version_minor=\"1\">\n"
+                + "  <pref name=\"Screenmanager Resolution Width\" type=\"int\">1600</pref>\n"
+                + "  <pref name=\"Screenmanager Resolution Height\" type=\"int\">900</pref>\n"
+                + "  <pref name=\"Screenmanager Resolution Use Native\" type=\"int\">0</pref>\n"
+                + "  <pref name=\"Screenmanager Fullscreen mode\" type=\"int\">3</pref>\n"
+                + "  <pref name=\"Screenmanager Is Fullscreen mode\" type=\"int\">0</pref>\n"
+                + "  <pref name=\"Screenmanager Window Position X\" type=\"int\">0</pref>\n"
+                + "  <pref name=\"Screenmanager Window Position Y\" type=\"int\">0</pref>\n"
+                + "</unity_prefs>\n");
+            // PlayerSettings defaults to Borderless/native, which ignores the window size flags and
+            // makes the render 1920x1080. Seed a windowed 1600x900 settings file in the isolated config.
+            string settingsDir = Path.Combine(prefsDir, "Settings");
+            Directory.CreateDirectory(settingsDir);
+            File.WriteAllText(Path.Combine(settingsDir, "settings.json"),
+                "{\"Version\":1,\"Display\":{\"ResolutionWidth\":1600,\"ResolutionHeight\":900,\"WindowMode\":2}}");
+            info.Environment["XDG_CONFIG_HOME"] = configRoot;
             _client = System.Diagnostics.Process.Start(info);
             Timeline.Add($"{Elapsed():0.0}s launched client pid {_client.Id} on port {port}");
         }
@@ -1201,7 +1245,11 @@ namespace SS3D.Editor.Automation
         {
             string[] windows = Xdotool($"search --onlyvisible --pid {_client.Id}").Split('\n', StringSplitOptions.RemoveEmptyEntries);
             if (windows.Length == 0) throw new InvalidOperationException($"No visible X11 window for client pid {_client.Id}");
-            return windows[^1].Trim();
+            string window = windows[^1].Trim();
+            // The client's frame can sit behind the editor; put it at the origin so the OsClick
+            // coordinates are root coordinates too. uinput_input.py raises the frame per click.
+            Xdotool($"windowmove {window} 0 0");
+            return window;
         }
 
         // Window lookup only: xdotool's XTEST input would raise GNOME's remote-interaction portal dialog every run.

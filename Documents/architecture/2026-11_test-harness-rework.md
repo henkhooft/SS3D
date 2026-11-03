@@ -2,7 +2,7 @@
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
 > Status: in-progress
 
-**Progress:** Phases 1–3 done (2026-11-03); Phase 4 next.
+**Progress:** Phases 1–4 done (2026-11-03); Phase 5 next.
 
 # Test harness rework (Nov 2026)
 
@@ -44,8 +44,8 @@ and expensive suites in the nightly on TomNAS.
       `--full` to `--nightly` (mirrors the CI nightly) and add `--weekly` (the graphical set). Update
       the usage line, the README step table and every doc that cites `--full`.
       Done: the default is `preflight,compile,editmode`. `--quick` is gone. `--nightly` runs editor
-      tests, PlayMode, builds and smoke; `--weekly` runs the visual, lifecycle, sandbox, build and
-      remote steps. Archived docs and dated incident notes keep `--full`.
+      tests, PlayMode, builds and smoke; `--weekly` runs the visual, lifecycle, build and remote
+      steps (the sandbox pilot stays on demand, D6). Archived docs and dated incident notes keep `--full`.
 - [x] `validate.py` output: one line per passed step; failure details and report paths only for
       failures; list screenshots only when a visual step ran.
 - [x] PlayMode triage: delete `Issue0990_PropagatingPocketProblem_HostPerspective` and
@@ -145,18 +145,45 @@ and re-entered its observer range (see [electricity](systems/electricity.md) Pit
 
 ## Phase 4 — Nightly
 
-- [ ] Batchmode PlayMode run (scenarios plus any nightly-only PlayMode tests) on TomNAS, added to
+- [x] Batchmode PlayMode run (scenarios plus any nightly-only PlayMode tests) on TomNAS, added to
       the nightly next to `multiplayer-smoke-test.yml`.
-- [ ] Smoke set per D5: fold `basic-round` into `late-join`, write `observer-sync`, retire
+      Done: `Tools/run_playmode_tests.sh` and the `playmode` job (host editor on `:0`, its own
+      Library stash shared with the weekly). It forces `-standaloneBuildSubtarget Player`, because a
+      server build otherwise leaves the editor compiling with `UNITY_SERVER`. Measured 17/17 in
+      285 s including a script recompile, against the 15 min budget.
+- [x] Smoke set per D5: fold `basic-round` into `late-join`, write `observer-sync`, retire
       `atmos-client-sync`, move `sandbox-reset` to nightly-only. The light-sync scenario planned in
       [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md)
       Phase 2 becomes a check inside `observer-sync`; its Phase 1 server-kill scenario stays a
       separate contract, within the smoke budget.
-- [ ] Budgets (D7): each nightly job prints its elapsed time against its budget.
-- [ ] `nightly-failure` issue (D9), and a session-start line in `AGENTS.md` telling agents to check
+      Done: one source of truth in `Testing/multiplayer/smoke-set.txt`, run by `run_smoke_set.sh`
+      (also used by `develop-release` and `validate.py`). `observer-sync` starts with the actor's
+      Assistant loadout toolbox as the held-item check, then hurt, door, area lights and atmos from
+      a second client. Measured 4/4 scenarios in 677 s (late-join 152, reconnect 138, observer-sync
+      182, sandbox-reset 205), against the 20 min budget.
+- [x] Budgets (D7): each nightly job prints its elapsed time against its budget.
+      Done: `Tools/ci/budget.sh` prints the elapsed/budget line, a warning annotation when over and a
+      job-summary row. Wired into the PlayMode (15 min), smoke (20 min) and weekly (20 min) jobs.
+- [x] `nightly-failure` issue (D9), and a session-start line in `AGENTS.md` telling agents to check
       the last nightly.
-- [ ] Weekly graphical run on TomNAS (forced HDMI output): `LobbyUiPilot`, lifecycle core, remote
+      Done: `Tools/ci/nightly_issue.sh` opens or comments on one labelled issue and closes it on the
+      next green scheduled run; the `report` jobs do this for the nightly and weekly. The AGENTS.md
+      line also tells agents to check `weekly-failure` before UI/session work.
+- [x] Weekly graphical run on TomNAS (forced HDMI output): `LobbyUiPilot`, lifecycle core, remote
       client pilot.
+      Done: `weekly-graphical.yml` runs `validate.sh --weekly` in an editor started by
+      `Tools/ci/editor_session.sh`. The editor stays **windowed** (1101×533): the remote client's
+      real OS clicks are screen coordinates, and a maximized editor covers the client. The remote
+      pilot isolates the client's config (`XDG_CONFIG_HOME`) and seeds windowed 1600×900 player
+      settings, so its 1600×900 screenshots and click coordinates line up. It also waits through the
+      bug-report dialog before the chat step and raises the client frame per click. Measured
+      5m30s with current builds (visual 140 checks, lifecycle 258, remote 33) and 14m49s when the
+      source stamp forces a client + server rebuild, against the 20 min budget.
+
+The sandbox pilot is no longer in `--weekly` (D6: its reset loop is the nightly `sandbox-reset`
+smoke; the bug-report dialog is on demand). The build step records the source hash after Unity's
+version stamp and ignores Unity's per-test-run `PerformanceTestRun*` files, so an editor test run
+no longer makes the stamp flap; a fresh checkout still rebuilds, which the weekly budget covers.
 
 ## Phase 5 — Multiplayer Play Mode spike (half a day)
 
@@ -185,6 +212,12 @@ and re-entered its observer range (see [electricity](systems/electricity.md) Pit
   inherit `UNITY_SERVER` assemblies (see the `IsHeadless` pitfall in
   [networking-session](systems/networking-session.md)). Run PlayMode before the server build, or in
   a fresh editor process.
+- **Graphical pilots and the editor window.** The remote client's `os_*` inputs are real pointer
+  events at screen coordinates. A maximized editor covers the client's frame, and the client's
+  player settings default to Borderless/native, so its render (and `OsClick` coordinates) can be
+  1920×1080 inside a smaller window. Keep the editor windowed and give the client an isolated
+  windowed 1600×900 config; `editor_session.sh` and `LobbyLifecyclePilot.LaunchClient` do this.
+
 - **Budget creep through "just one more" checks.** D7 exists for this; cull before adding.
 
 ## Related docs

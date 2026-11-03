@@ -2,7 +2,7 @@
 
 Default: preflight → compile → editmode. Add focused steps with --steps (e.g. compile,editmode,scenarios:Medical).
 --nightly mirrors the nightly: editor tests, PlayMode, client+server build, multiplayer smoke.
---weekly is the graphical set: lobby UI, lifecycle, sandbox and remote client pilots.
+--weekly is the graphical set: lobby UI, lifecycle and remote client pilots (sandbox is on demand).
 scenarios:<category> runs the PlayMode tests in one NUnit category. PlayMode failures in KnownIssueReproduction
 fixtures are reported separately against Testing/ui/playmode-known-issues.txt (expected failures), so known bugs
 neither fail the loop nor hide new failures. Every step has an expected duration and a timeout: past the
@@ -30,14 +30,23 @@ UI = ROOT / "artifacts/ui"
 EDITOR_LOG = UI / "editor.log"
 COMPILE_RESULT = UI / "compile-result.json"
 BUILD_RESULTS = {"client": UI / "client-build-result.json", "server": UI / "server-build-result.json"}
-# The scenarios and client counts of .github/workflows/multiplayer-smoke-test.yml, plus sandbox-reset.
-SMOKE_SCENARIOS = [("basic-round", 1), ("late-join", 2), ("reconnect", 1), ("atmos-client-sync", 1),
-                   ("sandbox-reset", 1)]
+
+
+def smoke_scenarios():
+    """(scenario, clients) pairs from Testing/multiplayer/smoke-set.txt, the set the nightly runs."""
+    pairs = []
+    for line in (ROOT / "Testing/multiplayer/smoke-set.txt").read_text().splitlines():
+        fields = line.split("#", 1)[0].split()
+        if fields:
+            pairs.append((fields[0], int(fields[1])))
+    return pairs
+
+
 LOG_ERROR = re.compile(r"(: error [A-Za-z]+\d+:|error CS\d+)")
 ORDER = ["preflight", "compile", "editmode", "playmode", "visual", "lifecycle", "sandbox", "build", "remote", "smoke"]
 DEFAULT = ["preflight", "compile", "editmode"]
 NIGHTLY = ["preflight", "compile", "editmode", "playmode", "build", "smoke"]
-WEEKLY = ["preflight", "compile", "visual", "lifecycle", "sandbox", "build", "remote"]
+WEEKLY = ["preflight", "compile", "visual", "lifecycle", "build", "remote"]
 SCENARIOS = "scenarios:"  # scenarios:<NUnit category>
 KNOWN_ISSUE_DIR = ROOT / "Assets/Scripts/Tests/KnownIssueReproduction"
 KNOWN_ISSUE_LIST = ROOT / "Testing/ui/playmode-known-issues.txt"
@@ -94,8 +103,12 @@ class Editor:
         except Exception as error:
             return f"bridge unavailable ({str(error).splitlines()[0][:120]})"
 
-    async def wait_ready(self, timeout=180):
-        """Out of Play Mode, not compiling or importing, bridge answering."""
+    async def wait_ready(self, timeout=300):
+        """Out of Play Mode, not compiling or importing, bridge answering.
+
+        The in-editor MCP plugin can take a few minutes to re-register after a long player build
+        (seen: ~3 min after the 6.5 min server build), so the default allows for that.
+        """
         deadline = time.monotonic() + timeout
         reason = "?"
         while time.monotonic() < deadline:
@@ -373,7 +386,8 @@ async def step_lifecycle(editor, ctx):
 
 
 async def step_sandbox(editor, ctx):
-    # Two automatic sandbox rounds (2 + 1 minutes plus countdowns): --weekly or on demand.
+    # Two automatic sandbox rounds (2 + 1 minutes plus countdowns): on demand (D6 keeps it out
+    # of --weekly; the nightly smoke covers the reset loop).
     return await run_pilot(editor, "SS3D/Testing/Run Sandbox Pilot", "sandbox-*/status.json", 300, 600)
 
 
@@ -425,7 +439,8 @@ async def step_smoke(editor, ctx):
             raise StepFailed(f"{stale}; run the build step first")
     script = ROOT / "Testing/multiplayer/run_smoketest.sh"
     results, failed = [], []
-    for scenario, clients in SMOKE_SCENARIOS:
+    scenarios = smoke_scenarios()
+    for scenario, clients in scenarios:
         log = ctx["out"] / f"smoke-{scenario}.log"
         started = time.monotonic()
         proc = await asyncio.create_subprocess_exec(
@@ -448,7 +463,7 @@ async def step_smoke(editor, ctx):
     lines = ["## Multiplayer smoke", "", *[f"- {r}" for r in results], ""]
     ctx["sections"].append("\n".join(lines))
     if failed:
-        raise StepFailed(f"Multiplayer smoke: {len(failed)}/{len(SMOKE_SCENARIOS)} scenarios failed\n  " + "\n  ".join(failed))
+        raise StepFailed(f"Multiplayer smoke: {len(failed)}/{len(scenarios)} scenarios failed\n  " + "\n  ".join(failed))
     return Done(", ".join(results))
 
 
@@ -488,7 +503,7 @@ async def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--steps", help="comma-separated subset, e.g. compile,editmode,round-reset or scenarios:<category>")
     mode.add_argument("--nightly", action="store_true", help="editor tests, PlayMode, client+server build, multiplayer smoke (~25 min)")
-    mode.add_argument("--weekly", action="store_true", help="graphical pilots: lobby UI, lifecycle, sandbox, remote client")
+    mode.add_argument("--weekly", action="store_true", help="graphical pilots: lobby UI, lifecycle, remote client")
     args = parser.parse_args()
     steps = args.steps.split(",") if args.steps else NIGHTLY if args.nightly else WEEKLY if args.weekly else DEFAULT
     retired = [f"{s} is now {RETIRED[s]}" for s in steps if s in RETIRED]

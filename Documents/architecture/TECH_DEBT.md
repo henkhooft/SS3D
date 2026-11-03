@@ -137,15 +137,17 @@ and HUD/MI visibility in one class with **no** decomposition plan — remains op
 **Current tooling:** [Tools/build_client_and_server.sh](../../Tools/build_client_and_server.sh)
 builds Linux client/server binaries via Unity batchmode (close the project's Editor first).
 With the Editor open, [Testing/ui/validate.sh](../../Testing/ui/validate.sh) `--nightly` drives compile,
-EditMode, PlayMode, stale client/server builds and the smoke scenarios; `--weekly` drives the
-visual, lifecycle, sandbox and remote-client pilots. Both paths require an installed Unity Editor; the scripts do not make
-runtime verification automatic at merge time.
+EditMode, PlayMode, stale client/server builds and the smoke set; `--weekly` drives the
+visual, lifecycle and remote-client pilots (the sandbox pilot is on demand). Both paths require an
+installed Unity Editor; the scripts do not make runtime verification automatic at merge time.
 
 **CI configuration:** [editmodetestrunner.yml](../../.github/workflows/editmodetestrunner.yml)
 runs EditMode; [multiplayer-smoke-test.yml](../../.github/workflows/multiplayer-smoke-test.yml)
-runs `basic-round`, `late-join`, `reconnect` and `atmos-client-sync` on manual dispatch, labeled PRs
-(`test:multiplayer`) and a nightly schedule. PlayMode is not a CI gate, and local full validation
-is not enforced before merge. The load/soak runner is local tooling, not a scheduled soak service
+runs PlayMode and then the smoke set (`late-join`, `reconnect`, `observer-sync`; `sandbox-reset`
+nightly only) against real client/server builds on manual dispatch, labeled PRs
+(`test:multiplayer`) and a nightly schedule. PlayMode and the smoke set are nightly gates, not
+merge gates, and local full validation is not enforced before merge. The load/soak runner is local
+tooling, not a scheduled soak service
 ([networking-session.md](systems/networking-session.md) §Tests).
 
 **Last recorded CI observation (2026-10-31):** no smoke pass since 2026-10-01; 10-05/06 failed,

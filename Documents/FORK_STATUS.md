@@ -91,8 +91,9 @@ were **removed** from this fork. Remaining workflows:
   `develop`, PRs (`pull_request_target`), and manual dispatch; forces Node 24 for JS actions;
   validates `UNITY_LICENSE` / `UNITY_SERIAL` secrets before running; TomNAS-prefer with GitHub
   fallback ([2026-07_multiplayer-testing-self-hosted-ci.md](architecture/2026-07_multiplayer-testing-self-hosted-ci.md))
-- [multiplayer-smoke-test.yml](../.github/workflows/multiplayer-smoke-test.yml) — opt-in headless
-  multiplayer smoke (`basic-round` / `late-join`) against a real dedicated-server + client build
+- [multiplayer-smoke-test.yml](../.github/workflows/multiplayer-smoke-test.yml) — nightly PlayMode
+  scenarios plus the headless smoke set (`late-join`, `reconnect`, `observer-sync`;
+  `sandbox-reset` nightly only) against real dedicated-server + client builds
 
 Doc layer redesign (coverage table, strip prototyping prompts from design docs) merged via PR #2.
 Agent-first composition policy and UI path-catalog conventions live under

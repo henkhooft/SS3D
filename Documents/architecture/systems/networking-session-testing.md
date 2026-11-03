@@ -16,6 +16,7 @@ client count, soak duration and server metrics. Graphical UI/session pilots have
 
 - `Tools/build_client_and_server.sh` — Unity batchmode Linux builds; installed Unity required, project Editor closed. Outputs `Builds/Game/SS3D.x86_64` and `Builds/GameServer/SS3D.x86_64`.
 - `Testing/multiplayer/run_smoketest.sh` — `<scenario> [client-count]`; server script is `<scenario>.txt`, client scripts prefer `<scenario>-client-N.txt`, then `<scenario>-client.txt`
+- `Testing/multiplayer/smoke-set.txt` + `run_smoke_set.sh` — the curated set the nightly, `develop-release` and `validate.sh` run; `--skip-nightly-only` drops `sandbox-reset`
 - `Testing/multiplayer/run_loadtest.sh` — `--clients N --duration SECONDS --stagger SECONDS`; defaults 8, 300 and 0
 - `Testing/multiplayer/lib/process.sh` — port allocation, build staging and process lifecycle
 - `Testing/multiplayer/lib/logwait.sh` — signal waits and log failure gates
@@ -23,11 +24,11 @@ client count, soak duration and server metrics. Graphical UI/session pilots have
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationSubSystem.cs` — code-bootstrapped DSL runner, enabled by `-testscript=<path>`
 - `Assets/Scripts/SS3D/Systems/Testing/AutomationScript.cs` — instruction parsing
 - `Assets/Scripts/SS3D/Systems/Testing/TestSignal.cs` — structured readiness/completion signals
-- `.github/workflows/multiplayer-smoke-test.yml` — manual, labeled-PR and nightly smoke
+- `.github/workflows/multiplayer-smoke-test.yml` — the nightly: PlayMode job, then build + smoke set, then the `nightly-failure` issue; also manual and labelled-PR
 
 ## Extension points
 
-- Add server/client scenario text under `Testing/multiplayer/scenarios/`. Use `wait_connected`, `ready`, `start_round`, `wait_round`, `embark`, `assert_embarked`, `reconnect`, `console`, `wait_timeout`, `wait_seconds`, `assert_reset_health` (server: N lines in `reset-health.jsonl`) and `disconnect`. A scenario's optional `scenarios/<name>.conf` (sourced) sets `SERVER_EXTRA_ARGS` and `CLIENT_TIMEOUT`; `embark` requests spawning, `assert_embarked` confirms control of a body.
+- Add server/client scenario text under `Testing/multiplayer/scenarios/`. Use `wait_connected`, `ready`, `start_round`, `wait_round`, `embark`, `assert_embarked`, `wait_players` (N bodies spawned, as this process sees them), `reconnect`, `console`, `wait_console` (retry a console line until it stops throwing), `wait_timeout`, `wait_seconds`, `assert_reset_health` (server: N lines in `reset-health.jsonl`) and `disconnect`. `{ckey}` in a `console`/`wait_console` line expands to the process's own ckey. A scenario's optional `scenarios/<name>.conf` (sourced) sets `SERVER_EXTRA_ARGS` and `CLIENT_TIMEOUT`; `embark` requests spawning, `assert_embarked` confirms control of a body.
 - Expose deterministic assertions through `console` commands or DSL instructions. Emit distinctive signals and throw on failed assertions so the runner emits `ScriptFailed`.
 - Graphical clients also accept `ui_wait`, `ui_text`, `ui_submit`, `os_click`, `os_type`, `os_key` and `screenshot`. `ui_submit` is synthetic navigation; the remote pilot services `os_*` through the OS-input bridge.
 - Override builds with `SS3D_SERVER_BUILD_DIR`, `SS3D_CLIENT_BUILD_DIR`, `SS3D_SERVER_BIN_NAME` and `SS3D_CLIENT_BIN_NAME`. Both runners accept `SS3D_TILEMAP_FIXTURES` and `SS3D_STATION_FIXTURES` for map data.
@@ -45,23 +46,26 @@ client count, soak duration and server metrics. Graphical UI/session pilots have
 
 ## Tests
 
-Run the smoke scenarios after building:
+Run the smoke set after building (or one scenario with `run_smoketest.sh`):
 
 ```bash
-./Testing/multiplayer/run_smoketest.sh basic-round
-./Testing/multiplayer/run_smoketest.sh late-join 2
-./Testing/multiplayer/run_smoketest.sh reconnect
-./Testing/multiplayer/run_smoketest.sh atmos-client-sync
-./Testing/multiplayer/run_smoketest.sh sandbox-reset
+./Testing/multiplayer/run_smoke_set.sh
+./Testing/multiplayer/run_smoketest.sh observer-sync 2
 ./Testing/multiplayer/tools/triage_run.sh latest
 ```
 
-`basic-round` covers connect/ready/start/embark and a console round trip; `late-join` covers
-embark after Ongoing; `reconnect` checks reclaiming a body; `atmos-client-sync` forces heat then
-asserts a client snapshot; `sandbox-reset` runs a `-sandbox` server with one-minute rounds and
-checks that a client that never readies joins two automatic rounds and the reset writes `reset-health.jsonl`. The CI workflow runs this set on dispatch, PR label `test:multiplayer`
-and a nightly schedule. GitHub disables scheduled workflows after 60 days without repo activity;
-check `gh workflow list --all` if nightly runs stop. Configured checks do not establish a current passing run.
+`late-join` (2 clients) covers connect/ready/start/embark, a console round trip and embarking
+after Ongoing (it absorbed `basic-round`); `reconnect` checks reclaiming a body; `observer-sync`
+(2 clients) has client 0 hurt itself, open the nearest airlock (`doordebug`), switch its area's
+lights off (`lightdebug`) and heat its tile, while client 1 checks each change arrived with
+`observesync` and `atmosclientstatus` — including the toolbox the Assistant loadout already puts
+in client 0's hand (it replaced `atmos-client-sync` and the planned light-sync scenario); `sandbox-reset` (nightly only) runs a
+`-sandbox` server with one-minute rounds and checks that a client that never readies joins two
+automatic rounds and the reset writes `reset-health.jsonl`. The nightly runs the set after the
+PlayMode job; PR label `test:multiplayer` runs both without the nightly-only scenarios. Budgets and
+the `nightly-failure` issue: [2026-11_test-harness-rework](../2026-11_test-harness-rework.md) Phase 4.
+GitHub disables scheduled workflows after 60 days without repo activity; check
+`gh workflow list --all` if nightly runs stop.
 
 The graphical remote pilot also files a bug report over client/server broadcasts, verifies the server-attributed JSONL and reduced JPEG, and checks the reopened dialog's cooldown; see the [UI runbook](../../../Testing/ui/README.md#lobby-remote-client-pilot).
 
