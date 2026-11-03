@@ -13,7 +13,7 @@ Three tracks run in parallel — an **operational** one that makes multiplayer p
 
 - **T1 shipped** — Release zips load and host (owner-verified on stable v0.3.x; no outside tester yet)
 - **T2 shipped** — Main menu with recent servers and one-click join (v0.5.0; owner joined the sandbox through it); public list follows when the sandbox goes public
-- **T3** — Session stability: doors under MP, remote drop/selection, remaining admin wedge tools (round controls + stop-cancels-start shipped), Nuke Ops happy-path smoke, test-station perf floor. Local `validate.sh --full` covers PlayMode/server build/smoke, but **CI smoke hasn't passed since 2026-10-01** (runner offline)
+- **T3** — Session stability: doors under MP, remote drop/selection, remaining admin wedge tools (round controls + stop-cancels-start shipped), Nuke Ops happy-path smoke, test-station perf floor. Nightly CI smoke runs on TomNAS; harness contracts (scenarios, curated smoke, nightly budgets): [testing philosophy](../architecture/2026-11_testing-philosophy.md#harness-contracts)
 - **T4** — End-game screen + restart (**shared with M5**), implemented on `claude/round-end` and awaiting merge; latejoin without softlock shipped, including after an earlier round
 - **T7 shipped** — Invite-only sandbox live on TomNAS (loop, `/bug`/F8, first-session fixes #111–#118); build caps wait on tester-session numbers and gate a public listing
 
