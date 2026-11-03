@@ -65,6 +65,7 @@ namespace SS3D.Systems.Entities.Humanoid
         private float _rangedAimBlend;
         private float _appliedAimYaw;
         private float _appliedAimPitch;
+        private readonly ReloadMagazineHandoff _magazineHandoff = new ReloadMagazineHandoff();
 
         private void Awake()
         {
@@ -180,7 +181,31 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetLookAtPosition(_smoothedLookTarget);
         }
 
+        private void OnDisable()
+        {
+            _magazineHandoff.Restore();
+        }
+
         private void LateUpdate()
+        {
+            ApplyRangedAimCorrection();
+            UpdateMagazineHandoff();
+        }
+
+        /// <summary>
+        /// Runs after the aim correction: the left hand rides the corrected chest, so the magazine
+        /// must be posed from the final bone positions.
+        /// </summary>
+        private void UpdateMagazineHandoff()
+        {
+            RangedWeaponItemExtension weapon = null;
+            bool canPose = _animator != null && _animator.enabled && _animator.isHuman
+                && TryGetWieldedWeapon(out weapon);
+            Transform leftHand = canPose ? _animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
+            _magazineHandoff.Apply(canPose ? weapon : null, leftHand, canPose ? UpperBodyReloadNormalizedTime() : -1f);
+        }
+
+        private void ApplyRangedAimCorrection()
         {
             bool wantCorrection = _rangedAimActive && _combatLookActive && _animator != null
                 && _animator.enabled && _animator.isHuman && !IsUpperBodyReloading();
@@ -272,20 +297,27 @@ namespace SS3D.Systems.Entities.Humanoid
             return _hands != null && TwoHandedWeaponRules.TryGetWieldedRangedWeapon(_hands, out _, out weapon) && weapon != null;
         }
 
-        private bool IsUpperBodyReloading()
+        private bool IsUpperBodyReloading() => UpperBodyReloadNormalizedTime() >= 0f;
+
+        /// <summary>Normalized time of the Upper Body reload state (entering it counts), or -1 when not reloading.</summary>
+        private float UpperBodyReloadNormalizedTime()
         {
             if (_animator == null || _animator.layerCount <= UpperBodyLayer)
             {
-                return false;
+                return -1f;
             }
 
-            if (_animator.GetCurrentAnimatorStateInfo(UpperBodyLayer).shortNameHash == ReloadRifleStateHash)
+            if (_animator.IsInTransition(UpperBodyLayer))
             {
-                return true;
+                AnimatorStateInfo next = _animator.GetNextAnimatorStateInfo(UpperBodyLayer);
+                if (next.shortNameHash == ReloadRifleStateHash)
+                {
+                    return next.normalizedTime;
+                }
             }
 
-            return _animator.IsInTransition(UpperBodyLayer)
-                && _animator.GetNextAnimatorStateInfo(UpperBodyLayer).shortNameHash == ReloadRifleStateHash;
+            AnimatorStateInfo current = _animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+            return current.shortNameHash == ReloadRifleStateHash ? current.normalizedTime : -1f;
         }
 
         private bool IsUpperBodyAttackSwing()

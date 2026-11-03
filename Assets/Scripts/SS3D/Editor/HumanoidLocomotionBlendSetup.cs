@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
+using SS3D.Systems.Combat;
 using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
 
@@ -598,7 +599,13 @@ namespace SS3D.Editor
             ClearTransitions(reloadState);
             if (aimIdle != null)
             {
-                EnsureExitToState(reloadState, aimIdle, hasExitTime: true, exitTime: 0.9f, duration: 0.15f);
+                // Exit when the hands are back in the aim pose: the same moment the reload completes.
+                EnsureExitToState(
+                    reloadState,
+                    aimIdle,
+                    hasExitTime: true,
+                    exitTime: RifleReloadClipTiming.Normalized(RifleReloadClipTiming.ReadySeconds),
+                    duration: 0.15f);
             }
         }
 
