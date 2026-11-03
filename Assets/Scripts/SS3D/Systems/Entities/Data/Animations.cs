@@ -11,6 +11,8 @@ namespace SS3D.Systems.Entities.Data
             public static readonly int VelX = Animator.StringToHash("VelX");
             public static readonly int VelZ = Animator.StringToHash("VelZ");
             public static readonly int Turn = Animator.StringToHash("Turn");
+            /// <summary>Base-layer locomotion playback multiplier (exhaustion); default 1 in the controller.</summary>
+            public static readonly int LocoRate = Animator.StringToHash("LocoRate");
             public static readonly int Floating = Animator.StringToHash("Floating");
             public static readonly int LimpSide = Animator.StringToHash("LimpSide");
             public static readonly int IsCrawling = Animator.StringToHash("IsCrawling");

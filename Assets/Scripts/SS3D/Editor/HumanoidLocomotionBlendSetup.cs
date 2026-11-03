@@ -8,7 +8,7 @@ namespace SS3D.Editor
 {
     /// <summary>
     /// Rebuilds Base Layer locomotion into Peaceful / Melee / Ranged / Injured
-    /// FreeformCartesian2D blend trees switched by CombatStance and LimpSide.
+    /// 2D locomotion blend trees (Peaceful/Injured Cartesian, Melee/Ranged Directional) switched by CombatStance and LimpSide.
     /// </summary>
     public static class HumanoidLocomotionBlendSetup
     {
@@ -37,41 +37,59 @@ namespace SS3D.Editor
             ("right strafe walking.fbx", "Mix_RightStrafeWalking", new Vector2(1f, 0f)),
         };
 
+        // Melee and Ranged are FreeformDirectional2D (M1m): one sample per direction per gait
+        // magnitude (walk 0.3, run 1.0) on the pure axes, idle at the centre. Diagonals blend the
+        // two neighbouring directions with no idle weight. Do not add strafe clips at corner
+        // positions like (±0.3, 0.3) — in a directional tree a corner means "diagonal", and a
+        // pure-strafe clip there makes diagonal walking slide sideways.
         private static readonly (string File, string ClipName, Vector2 Pos)[] MeleeClips =
         {
             ("standing idle.fbx", "Mix_StandingIdle", new Vector2(0f, 0f)),
             ("standing walk forward.fbx", "Mix_StandingWalkForward", new Vector2(0f, 0.3f)),
             ("standing walk back.fbx", "Mix_StandingWalkBack", new Vector2(0f, -0.3f)),
-            // Walk-magnitude strafes must sit at ±0.3 — VelX/VelZ use gait 0.3 for walk.
-            ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-0.3f, 0.3f)),
-            ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(0.3f, 0.3f)),
             ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-0.3f, 0f)),
             ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(0.3f, 0f)),
             ("standing run forward.fbx", "Mix_StandingRunForward", new Vector2(0f, 1f)),
             ("standing run back.fbx", "Mix_StandingRunBack", new Vector2(0f, -1f)),
-            // Run-magnitude strafe samples (pack has no dedicated run-strafe clips).
-            ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-1f, 1f)),
-            ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(1f, 1f)),
+            // Pack has no run-strafe clips: walk strafes at run magnitude, sped up by calibration.
             ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-1f, 0f)),
             ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(1f, 0f)),
         };
 
+        // Pro Rifle Pack (Mixamo full version of Basic Shooter): true 8-direction walk and run.
+        // Paths are relative to AnimationsRoot because the aiming idle stays in Basic Shooter Pack.
+        // Diagonals sit on the walk (0.3) and run (1.0) rings: 0.3 * cos 45° = 0.2121.
         private static readonly (string File, string ClipName, Vector2 Pos)[] RangedClips =
         {
-            ("rifle aiming idle.fbx", "Mix_AimingIdle", new Vector2(0f, 0f)),
-            ("walking.fbx", "Mix_RifleWalking", new Vector2(0f, 0.3f)),
-            ("walking backwards.fbx", "Mix_RifleWalkingBackwards", new Vector2(0f, -0.3f)),
-            ("strafe left.fbx", "Mix_RifleStrafeLeft", new Vector2(-0.3f, 0.3f)),
-            ("strafe right.fbx", "Mix_RifleStrafeRight", new Vector2(0.3f, 0.3f)),
-            ("strafe left.fbx", "Mix_RifleStrafeLeft", new Vector2(-0.3f, 0f)),
-            ("strafe right.fbx", "Mix_RifleStrafeRight", new Vector2(0.3f, 0f)),
-            ("strafe (2).fbx", "Mix_RifleStrafeLeftFast", new Vector2(-1f, 1f)),
-            ("strafe.fbx", "Mix_RifleStrafeRightFast", new Vector2(1f, 1f)),
-            ("strafe left.fbx", "Mix_RifleStrafeLeft", new Vector2(-1f, 0f)),
-            ("strafe right.fbx", "Mix_RifleStrafeRight", new Vector2(1f, 0f)),
-            ("rifle run.fbx", "Mix_RifleRun", new Vector2(0f, 1f)),
-            ("run backwards.fbx", "Mix_RunBackwards", new Vector2(0f, -1f)),
+            ("Basic Shooter Pack/rifle aiming idle.fbx", "Mix_AimingIdle", new Vector2(0f, 0f)),
+            ("Pro Rifle Pack/walk forward.fbx", "Mix_ProRifleWalkForward", new Vector2(0f, 0.3f)),
+            ("Pro Rifle Pack/walk forward right.fbx", "Mix_ProRifleWalkForwardRight", new Vector2(0.2121f, 0.2121f)),
+            ("Pro Rifle Pack/walk right.fbx", "Mix_ProRifleWalkRight", new Vector2(0.3f, 0f)),
+            ("Pro Rifle Pack/walk backward right.fbx", "Mix_ProRifleWalkBackwardRight", new Vector2(0.2121f, -0.2121f)),
+            ("Pro Rifle Pack/walk backward.fbx", "Mix_ProRifleWalkBackward", new Vector2(0f, -0.3f)),
+            ("Pro Rifle Pack/walk backward left.fbx", "Mix_ProRifleWalkBackwardLeft", new Vector2(-0.2121f, -0.2121f)),
+            ("Pro Rifle Pack/walk left.fbx", "Mix_ProRifleWalkLeft", new Vector2(-0.3f, 0f)),
+            ("Pro Rifle Pack/walk forward left.fbx", "Mix_ProRifleWalkForwardLeft", new Vector2(-0.2121f, 0.2121f)),
+            ("Pro Rifle Pack/run forward.fbx", "Mix_ProRifleRunForward", new Vector2(0f, 1f)),
+            ("Pro Rifle Pack/run forward right.fbx", "Mix_ProRifleRunForwardRight", new Vector2(0.7071f, 0.7071f)),
+            ("Pro Rifle Pack/run right.fbx", "Mix_ProRifleRunRight", new Vector2(1f, 0f)),
+            ("Pro Rifle Pack/run backward right.fbx", "Mix_ProRifleRunBackwardRight", new Vector2(0.7071f, -0.7071f)),
+            ("Pro Rifle Pack/run backward.fbx", "Mix_ProRifleRunBackward", new Vector2(0f, -1f)),
+            ("Pro Rifle Pack/run backward left.fbx", "Mix_ProRifleRunBackwardLeft", new Vector2(-0.7071f, -0.7071f)),
+            ("Pro Rifle Pack/run left.fbx", "Mix_ProRifleRunLeft", new Vector2(-1f, 0f)),
+            ("Pro Rifle Pack/run forward left.fbx", "Mix_ProRifleRunForwardLeft", new Vector2(-0.7071f, 0.7071f)),
         };
+
+        private const string AnimationsRoot = "Assets/Art/Animations";
+
+        private const string HumanPrefabPath = "Assets/Content/WorldObjects/Entities/Humanoids/Human/Human.prefab";
+
+        /// <summary>Base-layer locomotion playback multiplier (exhaustion), set by AnimationOrchestrator. Default 1.</summary>
+        private const string LocoRateParameter = "LocoRate";
+
+        /// <summary>Calibrated child timeScale bounds — beyond this the clip reads as slow-motion or frantic.</summary>
+        private const float MinCalibratedTimeScale = 0.5f;
+        private const float MaxCalibratedTimeScale = 2f;
 
         /// <summary>
         /// Male Injured Pack has no dedicated strafes — sample walk/run forward/back and reuse
@@ -126,6 +144,7 @@ namespace SS3D.Editor
             ("VelX", AnimatorControllerParameterType.Float),
             ("VelZ", AnimatorControllerParameterType.Float),
             ("Turn", AnimatorControllerParameterType.Float),
+            (LocoRateParameter, AnimatorControllerParameterType.Float),
             ("Jump", AnimatorControllerParameterType.Trigger),
             ("TurnLeft90", AnimatorControllerParameterType.Trigger),
             ("TurnRight90", AnimatorControllerParameterType.Trigger),
@@ -241,6 +260,19 @@ namespace SS3D.Editor
                 controller.AddParameter(required.Name, required.Type);
             }
 
+            // LocoRate multiplies locomotion state speed: a 0 default would freeze every animator
+            // that never sets it (preview booth, fresh spawns before the first orchestrator tick).
+            AnimatorControllerParameter[] withDefaults = controller.parameters;
+            for (int i = 0; i < withDefaults.Length; i++)
+            {
+                if (withDefaults[i].name == LocoRateParameter)
+                {
+                    withDefaults[i].defaultFloat = 1f;
+                }
+            }
+
+            controller.parameters = withDefaults;
+
             var after = controller.parameters.Select(p => $"{p.name}:{p.type}:{p.nameHash}").ToArray();
             Debug.Log($"[HumanoidLocomotionBlendSetup] Parameters after rebind ({after.Length}):\n - "
                       + string.Join("\n - ", after));
@@ -296,9 +328,23 @@ namespace SS3D.Editor
 
             AnimatorStateMachine baseMachine = controller.layers[0].stateMachine;
 
-            BlendTree peacefulTree = BuildBlendTree(controller, "Peaceful Locomotion 2D", LocomotionPack, PeacefulClips);
-            BlendTree meleeTree = BuildBlendTree(controller, "Melee Locomotion 2D", MeleePack, MeleeClips);
-            BlendTree rangedTree = BuildBlendTree(controller, "Ranged Locomotion 2D", ShooterPack, RangedClips);
+            if (!TryReadCombatGaitSpeeds(out float combatWalkSpeed, out float combatRunSpeed, out float humanScale, out string gaitError))
+            {
+                return gaitError;
+            }
+
+            float CombatTargetSpeed(Vector2 pos) => pos.magnitude <= 0.31f ? combatWalkSpeed : combatRunSpeed;
+            Debug.Log($"[HumanoidLocomotionBlendSetup] Combat gait targets: walk {combatWalkSpeed:F2} m/s, run {combatRunSpeed:F2} m/s.");
+
+            BlendTree peacefulTree = BuildBlendTree(
+                controller, "Peaceful Locomotion 2D", LocomotionPack, PeacefulClips,
+                BlendTreeType.FreeformCartesian2D, null, humanScale);
+            BlendTree meleeTree = BuildBlendTree(
+                controller, "Melee Locomotion 2D", MeleePack, MeleeClips,
+                BlendTreeType.FreeformDirectional2D, CombatTargetSpeed, humanScale);
+            BlendTree rangedTree = BuildBlendTree(
+                controller, "Ranged Locomotion 2D", AnimationsRoot, RangedClips,
+                BlendTreeType.FreeformDirectional2D, CombatTargetSpeed, humanScale);
             BlendTree injuredTree = BuildInjuredBlendTree(controller);
             if (peacefulTree == null || meleeTree == null || rangedTree == null || injuredTree == null)
             {
@@ -313,6 +359,11 @@ namespace SS3D.Editor
             melee.motion = meleeTree;
             ranged.motion = rangedTree;
             injured.motion = injuredTree;
+            foreach (AnimatorState locomotionState in new[] { peaceful, melee, ranged, injured })
+            {
+                locomotionState.speedParameter = LocoRateParameter;
+                locomotionState.speedParameterActive = true;
+            }
             baseMachine.defaultState = peaceful;
 
             // Retarget legacy Movement state if present.
@@ -964,16 +1015,62 @@ namespace SS3D.Editor
             EnsureExitToStateWithLimpGate(injuredWave, injured, requireLimping: true, combatStance: null);
         }
 
+        /// <summary>
+        /// World walk/run speeds in combat from the Human prefab's tuning, so calibration follows
+        /// <c>_movementSpeed</c> / <c>_combatWalkSpeedFactor</c> / <c>_combatRunSpeedFactor</c>.
+        /// Rebuild after changing those. humanScale converts humanoid clip speed to metres.
+        /// </summary>
+        private static bool TryReadCombatGaitSpeeds(out float walkSpeed, out float runSpeed, out float humanScale, out string error)
+        {
+            walkSpeed = runSpeed = humanScale = 0f;
+            error = null;
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
+            if (prefab == null)
+            {
+                error = $"ERROR: Missing {HumanPrefabPath} (needed for gait calibration).";
+                return false;
+            }
+
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            try
+            {
+                var controllerComponent = instance.GetComponent<SS3D.Systems.Entities.Humanoid.HumanoidLivingController>();
+                Animator animator = instance.GetComponent<Animator>();
+                if (controllerComponent == null || animator == null)
+                {
+                    error = "ERROR: Human prefab lacks HumanoidLivingController or Animator.";
+                    return false;
+                }
+
+                SerializedObject so = new SerializedObject(controllerComponent);
+                float speed = so.FindProperty("_movementSpeed").floatValue;
+                walkSpeed = speed * controllerComponent.WalkAnimatorValue * so.FindProperty("_combatWalkSpeedFactor").floatValue;
+                runSpeed = speed * controllerComponent.RunAnimatorValue * so.FindProperty("_combatRunSpeedFactor").floatValue;
+
+                animator.Rebind();
+                animator.Update(0f);
+                humanScale = animator.isHuman ? animator.humanScale : 1f;
+                return true;
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
         private static BlendTree BuildBlendTree(
             AnimatorController controller,
             string treeName,
             string packFolder,
-            (string File, string ClipName, Vector2 Pos)[] entries)
+            (string File, string ClipName, Vector2 Pos)[] entries,
+            BlendTreeType blendType,
+            System.Func<Vector2, float> targetWorldSpeed,
+            float humanScale)
         {
             BlendTree tree = new BlendTree
             {
                 name = treeName,
-                blendType = BlendTreeType.FreeformCartesian2D,
+                blendType = blendType,
                 blendParameter = "VelX",
                 blendParameterY = "VelZ",
                 useAutomaticThresholds = false,
@@ -991,8 +1088,45 @@ namespace SS3D.Editor
                 tree.AddChild(clip, entry.Pos);
             }
 
+            if (targetWorldSpeed != null)
+            {
+                CalibrateChildTimeScales(tree, targetWorldSpeed, humanScale);
+            }
+
             AssetDatabase.AddObjectToAsset(tree, controller);
             return tree;
+        }
+
+        /// <summary>
+        /// Per-child timeScale so each moving clip's root speed equals the world speed of its gait —
+        /// feet neither slide nor moonwalk. Mixamo strafes differ a lot (rifle strafe right covers
+        /// half the ground of strafe left per second), which is why this is measured, not hand-set.
+        /// </summary>
+        private static void CalibrateChildTimeScales(BlendTree tree, System.Func<Vector2, float> targetWorldSpeed, float humanScale)
+        {
+            ChildMotion[] children = tree.children;
+            var log = new System.Text.StringBuilder($"[HumanoidLocomotionBlendSetup] {tree.name} calibration (humanScale {humanScale:F3}):");
+            for (int i = 0; i < children.Length; i++)
+            {
+                if (children[i].position.sqrMagnitude < 0.0001f || !(children[i].motion is AnimationClip clip))
+                {
+                    continue;
+                }
+
+                Vector3 average = clip.averageSpeed;
+                float clipSpeed = new Vector2(average.x, average.z).magnitude * humanScale;
+                if (clipSpeed < 0.05f)
+                {
+                    continue;
+                }
+
+                float target = targetWorldSpeed(children[i].position);
+                children[i].timeScale = Mathf.Clamp(target / clipSpeed, MinCalibratedTimeScale, MaxCalibratedTimeScale);
+                log.Append($"\n - {clip.name} @ {children[i].position}: clip {clipSpeed:F2} m/s -> target {target:F2} m/s, timeScale {children[i].timeScale:F2}");
+            }
+
+            tree.children = children;
+            Debug.Log(log.ToString());
         }
 
         private static void WireStanceTransitions(AnimatorState from, AnimatorState otherA, AnimatorState otherB)

@@ -22,7 +22,13 @@ namespace SS3D.Systems.Entities.Humanoid
         [SerializeField] private HumanoidController _movementController;
         [SerializeField] private HumanoidBodyStateMachine _bodyStateMachine;
         [SerializeField] private Animator _animator;
-        [SerializeField] private float _lerpMultiplier = 2.4f;
+        /// <summary>
+        /// Remote-only smoothing of the replicated Speed SyncVar (arrives in tick-sized steps).
+        /// The owner's controller already ramps locomotion at M1m pace, so the owner applies it directly.
+        /// </summary>
+        [SerializeField] private float _remoteLocomotionLerp = 14f;
+        /// <summary>Smoothing for the per-frame yaw-delta Turn parameter, which is noisy frame to frame.</summary>
+        [SerializeField] private float _turnLerp = 10f;
         [SerializeField] private HumanoidIkController _ikController;
 
         private float _currentSpeed;
@@ -33,6 +39,10 @@ namespace SS3D.Systems.Entities.Humanoid
         private float _targetVelX;
         private float _targetVelZ;
         private float _targetTurn;
+        /// <summary>Set once the controller publishes VelX/VelZ; scalar Speed events then only carry stops.</summary>
+        private bool _controllerPublishesVelocity;
+        /// <summary>Other controllers (silicon, preview) may lack LocoRate; avoid the missing-parameter warning spam.</summary>
+        private bool _hasLocoRateParameter;
         private BodyAnimationSnapshot _lastSnapshot = BodyAnimationSnapshot.Default;
         private AnimationTriggerId _lastConsumedTrigger = AnimationTriggerId.None;
         private byte _lastTriggerSequence;
@@ -88,12 +98,14 @@ namespace SS3D.Systems.Entities.Humanoid
             EnsureAnimator();
 
             LogMissingAnimatorParametersOnce();
+            _hasLocoRateParameter = HasFloatParameter(Animations.Humanoid.LocoRate);
             SubscribeToEvents();
 
             if (_bodyStateMachine != null)
             {
                 _targetSpeed = _bodyStateMachine.Snapshot.MovementSpeed;
-                _targetVelZ = _targetSpeed;
+                _targetVelX = _bodyStateMachine.Snapshot.MovementVelX;
+                _targetVelZ = _bodyStateMachine.Snapshot.MovementVelZ;
                 ApplySnapshot(_bodyStateMachine.Snapshot);
             }
             else if (_animator != null)
@@ -104,6 +116,24 @@ namespace SS3D.Systems.Entities.Humanoid
                 _animator.SetFloat(Animations.Humanoid.VelZ, 0f);
                 _animator.SetFloat(Animations.Humanoid.Turn, 0f);
             }
+        }
+
+        private bool HasFloatParameter(int hash)
+        {
+            if (_animator == null || _animator.runtimeAnimatorController == null)
+            {
+                return false;
+            }
+
+            foreach (AnimatorControllerParameter parameter in _animator.parameters)
+            {
+                if (parameter.nameHash == hash && parameter.type == AnimatorControllerParameterType.Float)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void EnsureAnimator()
@@ -269,17 +299,32 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private void HandleSpeedChanged(float speed)
         {
+            // Controllers that publish VelX/VelZ (living, predicted) also fire the scalar gait
+            // first each frame; it must not overwrite their strafe axes. A zero still lands —
+            // HumanoidController sends only Speed 0 while the body cannot move.
+            if (_controllerPublishesVelocity && speed > 0.001f)
+            {
+                return;
+            }
+
             _targetSpeed = speed;
+            if (_controllerPublishesVelocity)
+            {
+                _targetVelX = 0f;
+                _targetVelZ = 0f;
+            }
+
             _bodyStateMachine?.SetLocomotionSpeed(speed);
         }
 
         private void HandleLocomotionVelocityChanged(float velX, float velZ, float turn)
         {
+            _controllerPublishesVelocity = true;
             _targetVelX = velX;
             _targetVelZ = velZ;
             _targetTurn = turn;
             _targetSpeed = new Vector2(velX, velZ).magnitude;
-            _bodyStateMachine?.SetLocomotionSpeed(_targetSpeed);
+            _bodyStateMachine?.SetLocomotionVelocity(velX, velZ);
         }
 
         /// <summary>
@@ -369,9 +414,8 @@ namespace SS3D.Systems.Entities.Humanoid
             if (!IsLocalMovementAuthority())
             {
                 _targetSpeed = snapshot.MovementSpeed;
-                // Remotes do not yet replicate strafe axes — approximate with forward gait.
-                _targetVelX = 0f;
-                _targetVelZ = snapshot.MovementSpeed;
+                _targetVelX = snapshot.MovementVelX;
+                _targetVelZ = snapshot.MovementVelZ;
                 _targetTurn = 0f;
             }
             ApplyLocomotion(snapshot);
@@ -403,43 +447,33 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private void ApplyLocomotionVelocity()
         {
-            float currentMag = Mathf.Sqrt(_currentVelX * _currentVelX + _currentVelZ * _currentVelZ);
-            float targetMag = Mathf.Sqrt(_targetVelX * _targetVelX + _targetVelZ * _targetVelZ);
-            bool leavingIdle = currentMag < 0.05f && targetMag > currentMag;
-            // Walk targets sit near 0.3; run is 1.0 — only snap the short idle→walk step.
-            bool leavingIdleToWalk = leavingIdle && targetMag <= 0.45f;
-
-            if (leavingIdleToWalk)
+            if (IsLocalMovementAuthority())
             {
+                // Controller publishes eased VelX/VelZ in step with world speed — no second lag here.
                 _currentVelX = _targetVelX;
                 _currentVelZ = _targetVelZ;
-                _currentTurn = _targetTurn;
                 _currentSpeed = _targetSpeed;
-            }
-            else if (leavingIdle)
-            {
-                // Idle → run: begin at walk gait so acceleration passes through the blend tree.
-                Vector2 target = new Vector2(_targetVelX, _targetVelZ);
-                Vector2 walkSeed = target.normalized * 0.3f;
-                _currentVelX = walkSeed.x;
-                _currentVelZ = walkSeed.y;
-                _currentTurn = _targetTurn;
-                _currentSpeed = 0.3f;
             }
             else
             {
-                bool slowingToIdle = targetMag < 0.05f;
-                float lerp = Time.deltaTime * (slowingToIdle ? _lerpMultiplier * 3f : _lerpMultiplier);
+                float lerp = Mathf.Clamp01(Time.deltaTime * _remoteLocomotionLerp);
                 _currentVelX = Mathf.Lerp(_currentVelX, _targetVelX, lerp);
                 _currentVelZ = Mathf.Lerp(_currentVelZ, _targetVelZ, lerp);
-                _currentTurn = Mathf.Lerp(_currentTurn, _targetTurn, lerp);
                 _currentSpeed = Mathf.Lerp(_currentSpeed, _targetSpeed, lerp);
             }
+
+            _currentTurn = Mathf.Lerp(_currentTurn, _targetTurn, Mathf.Clamp01(Time.deltaTime * _turnLerp));
 
             _animator.SetFloat(Animations.Humanoid.VelX, _currentVelX);
             _animator.SetFloat(Animations.Humanoid.VelZ, _currentVelZ);
             _animator.SetFloat(Animations.Humanoid.Turn, _currentTurn);
             _animator.SetFloat(Animations.Humanoid.MovementSpeed, _currentSpeed);
+            if (_hasLocoRateParameter)
+            {
+                _animator.SetFloat(
+                    Animations.Humanoid.LocoRate,
+                    _movementController != null ? _movementController.LocomotionPlaybackRate : 1f);
+            }
         }
 
         private void ApplyLocomotion(BodyAnimationSnapshot snapshot)
@@ -478,6 +512,7 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetFloat(Animations.Humanoid.AimYaw, snapshot.AimYaw);
             _animator.SetFloat(Animations.Humanoid.AimPitch, snapshot.AimPitch);
             _ikController?.SetCombatLookAt(inCombat, snapshot.AimYaw, snapshot.AimPitch);
+            _ikController?.SetRangedAimActive(snapshot.CombatMode == HumanoidCombatMode.Ranged && snapshot.State != BodyState.Ragdoll);
 
             // Hold Item/Weapon have no path to Rifle Aim Idle unless wired — CrossFade on stance
             // enter so a held gun doesn't show melee Hold Weapon until the first shot.

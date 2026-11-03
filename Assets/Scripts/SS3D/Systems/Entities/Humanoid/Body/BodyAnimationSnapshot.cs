@@ -19,7 +19,12 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public LimpSide LimpSide;
         public float AimYaw;
         public float AimPitch;
+        /// <summary>Planar gait magnitude (walk 0.3, run 1.0), derived from <see cref="MovementVelX"/>/<see cref="MovementVelZ"/>.</summary>
         public float MovementSpeed;
+        /// <summary>Body-local strafe axis in gait units.</summary>
+        public float MovementVelX;
+        /// <summary>Body-local forward axis in gait units (negative = backpedal).</summary>
+        public float MovementVelZ;
         public float InjuredArmLeft;
         public float InjuredArmRight;
         /// <summary>Max left/right leg brute fraction — drives limp idle severity and additive weight.</summary>
@@ -53,7 +58,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             uint packed,
             float aimYaw,
             float aimPitch,
-            float movementSpeed,
+            float movementVelX,
+            float movementVelZ,
             float injuredArmLeft,
             float injuredArmRight,
             float injuredLeg)
@@ -74,7 +80,9 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 MirrorUpperBody = (packed & (1u << 21)) != 0,
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
-                MovementSpeed = movementSpeed,
+                MovementSpeed = (float)Math.Sqrt(movementVelX * movementVelX + movementVelZ * movementVelZ),
+                MovementVelX = movementVelX,
+                MovementVelZ = movementVelZ,
                 InjuredArmLeft = injuredArmLeft,
                 InjuredArmRight = injuredArmRight,
                 InjuredLeg = injuredLeg,
@@ -86,7 +94,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             return Pack() == other.Pack()
                 && Math.Abs(AimYaw - other.AimYaw) < 0.01f
                 && Math.Abs(AimPitch - other.AimPitch) < 0.01f
-                && Math.Abs(MovementSpeed - other.MovementSpeed) < 0.01f
+                && Math.Abs(MovementVelX - other.MovementVelX) < 0.01f
+                && Math.Abs(MovementVelZ - other.MovementVelZ) < 0.01f
                 && Math.Abs(InjuredArmLeft - other.InjuredArmLeft) < 0.01f
                 && Math.Abs(InjuredArmRight - other.InjuredArmRight) < 0.01f
                 && Math.Abs(InjuredLeg - other.InjuredLeg) < 0.01f;

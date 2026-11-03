@@ -1,0 +1,31 @@
+using NUnit.Framework;
+using SS3D.Systems.Entities.Humanoid.Body;
+
+namespace SS3D.Tests.EditMode
+{
+    /// <summary>
+    /// Replicated locomotion axes: remotes must see strafes and backpedals, not forward gait (M1m).
+    /// </summary>
+    public class BodyAnimationSnapshotTests
+    {
+        [Test]
+        public void Unpack_CarriesStrafeAxes_AndDerivesSpeedMagnitude()
+        {
+            BodyAnimationSnapshot snapshot = BodyAnimationSnapshot.Unpack(0u, 0f, 0f, -0.6f, -0.8f, 0f, 0f, 0f);
+
+            Assert.AreEqual(-0.6f, snapshot.MovementVelX, 1e-5f);
+            Assert.AreEqual(-0.8f, snapshot.MovementVelZ, 1e-5f);
+            Assert.AreEqual(1f, snapshot.MovementSpeed, 1e-5f);
+        }
+
+        [Test]
+        public void Equals_DetectsDirectionChangeAtSameSpeed()
+        {
+            BodyAnimationSnapshot forward = BodyAnimationSnapshot.Unpack(0u, 0f, 0f, 0f, 0.3f, 0f, 0f, 0f);
+            BodyAnimationSnapshot strafe = BodyAnimationSnapshot.Unpack(0u, 0f, 0f, 0.3f, 0f, 0f, 0f, 0f);
+
+            Assert.AreEqual(forward.MovementSpeed, strafe.MovementSpeed, 1e-5f);
+            Assert.IsFalse(forward.Equals(strafe));
+        }
+    }
+}
