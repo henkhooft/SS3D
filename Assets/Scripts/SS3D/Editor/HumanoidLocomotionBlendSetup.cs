@@ -42,18 +42,21 @@ namespace SS3D.Editor
         // two neighbouring directions with no idle weight. Do not add strafe clips at corner
         // positions like (±0.3, 0.3) — in a directional tree a corner means "diagonal", and a
         // pure-strafe clip there makes diagonal walking slide sideways.
+        // Paths are relative to AnimationsRoot. Pro Melee Axe Pack has no run strafes, so the run
+        // ring's lateral samples come from Pro Sword and Shield Pack (Mixamo "strafe (3)/(4)",
+        // renamed run left/right). Melee keeps Upper Body at weight 1, which masks arms and spine,
+        // so the shield-arm pose in those clips never shows; only legs and hips come through.
         private static readonly (string File, string ClipName, Vector2 Pos)[] MeleeClips =
         {
-            ("standing idle.fbx", "Mix_StandingIdle", new Vector2(0f, 0f)),
-            ("standing walk forward.fbx", "Mix_StandingWalkForward", new Vector2(0f, 0.3f)),
-            ("standing walk back.fbx", "Mix_StandingWalkBack", new Vector2(0f, -0.3f)),
-            ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-0.3f, 0f)),
-            ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(0.3f, 0f)),
-            ("standing run forward.fbx", "Mix_StandingRunForward", new Vector2(0f, 1f)),
-            ("standing run back.fbx", "Mix_StandingRunBack", new Vector2(0f, -1f)),
-            // Pack has no run-strafe clips: walk strafes at run magnitude, sped up by calibration.
-            ("standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-1f, 0f)),
-            ("standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(1f, 0f)),
+            ("Pro Melee Axe Pack/standing idle.fbx", "Mix_StandingIdle", new Vector2(0f, 0f)),
+            ("Pro Melee Axe Pack/standing walk forward.fbx", "Mix_StandingWalkForward", new Vector2(0f, 0.3f)),
+            ("Pro Melee Axe Pack/standing walk back.fbx", "Mix_StandingWalkBack", new Vector2(0f, -0.3f)),
+            ("Pro Melee Axe Pack/standing walk left.fbx", "Mix_StandingWalkLeft", new Vector2(-0.3f, 0f)),
+            ("Pro Melee Axe Pack/standing walk right.fbx", "Mix_StandingWalkRight", new Vector2(0.3f, 0f)),
+            ("Pro Melee Axe Pack/standing run forward.fbx", "Mix_StandingRunForward", new Vector2(0f, 1f)),
+            ("Pro Melee Axe Pack/standing run back.fbx", "Mix_StandingRunBack", new Vector2(0f, -1f)),
+            ("Pro Sword and Shield Pack/run left.fbx", "Mix_SwordShieldRunLeft", new Vector2(-1f, 0f)),
+            ("Pro Sword and Shield Pack/run right.fbx", "Mix_SwordShieldRunRight", new Vector2(1f, 0f)),
         };
 
         // Pro Rifle Pack (Mixamo full version of Basic Shooter): true 8-direction walk and run.
@@ -326,6 +329,8 @@ namespace SS3D.Editor
 
             controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
 
+            RemoveGeneratedBlendTrees(controller);
+
             AnimatorStateMachine baseMachine = controller.layers[0].stateMachine;
 
             if (!TryReadCombatGaitSpeeds(out float combatWalkSpeed, out float combatRunSpeed, out float humanScale, out string gaitError))
@@ -340,7 +345,7 @@ namespace SS3D.Editor
                 controller, "Peaceful Locomotion 2D", LocomotionPack, PeacefulClips,
                 BlendTreeType.FreeformCartesian2D, null, humanScale);
             BlendTree meleeTree = BuildBlendTree(
-                controller, "Melee Locomotion 2D", MeleePack, MeleeClips,
+                controller, "Melee Locomotion 2D", AnimationsRoot, MeleeClips,
                 BlendTreeType.FreeformDirectional2D, CombatTargetSpeed, humanScale);
             BlendTree rangedTree = BuildBlendTree(
                 controller, "Ranged Locomotion 2D", AnimationsRoot, RangedClips,
@@ -1055,6 +1060,26 @@ namespace SS3D.Editor
             finally
             {
                 Object.DestroyImmediate(instance);
+            }
+        }
+
+        /// <summary>Blend trees this rebuild recreates. Each rebuild adds fresh sub-assets, so the
+        /// previous ones are deleted first or they pile up in the controller as orphans.</summary>
+        private static readonly string[] GeneratedBlendTreeNames =
+        {
+            "Peaceful Locomotion 2D", "Melee Locomotion 2D", "Ranged Locomotion 2D",
+            "Injured Locomotion 2D", "Injured Idle Severity", "Injured Jump Blend",
+        };
+
+        private static void RemoveGeneratedBlendTrees(AnimatorController controller)
+        {
+            foreach (Object subAsset in AssetDatabase.LoadAllAssetsAtPath(ControllerPath))
+            {
+                if (subAsset is BlendTree tree && System.Array.IndexOf(GeneratedBlendTreeNames, tree.name) >= 0)
+                {
+                    AssetDatabase.RemoveObjectFromAsset(tree);
+                    Object.DestroyImmediate(tree, true);
+                }
             }
         }
 
