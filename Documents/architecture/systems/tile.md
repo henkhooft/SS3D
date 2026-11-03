@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 259787487 — 2026-11-01
+> Verified: 0298b47ef — 2026-11-04
 
 # Tile / construction
 
@@ -24,7 +24,7 @@ WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 - `Assets/Scripts/SS3D/Systems/Tile/Observing/UnderfloorCoverCondition.cs` — FishNet host cover condition (AND with GridCondition on underfloor prefabs)
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
-- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts `ServerNotifyBlastDetonated` ObserversRpc for [structural-destruction](structural-destruction.md) VFX
+- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts blast and steel wall impact ObserversRpcs for [structural-destruction](structural-destruction.md) VFX
 - `Assets/Scripts/SS3D/Systems/Tile/TileMap.cs` — tilemap data and mutation
 - `Assets/Scripts/SS3D/Systems/Tile/Validation/` — offered-job/mode requirements; warnings on editor save, hard gate before countdown ([rounds-lobby](rounds-lobby.md)); only tracked map objects count
 - `Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/` — `SpawnPointRegistry`, records, editor pin view

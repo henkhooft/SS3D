@@ -229,7 +229,7 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 
 ### Phase 4
 
-- No cracked wall art in repo — provisional `MaterialPropertyBlock` `_Color` tint + `WindLight` hiss at Cracked.
+- Structural wall variants, including windows and the girder, use mesh overlays for dents and tears, with metal flecks and dust at confirmed combat contacts. Other supported surfaces use fallback tint, and Cracked retains the `WindLight` hiss. See the [system map](../architecture/systems/structural-destruction.md#overview).
 - Design slow-leak deferred: `IsAirtight=false` does not open `BlockedEdges`; room↔room gas still sealed until a permeability path exists.
 - Prefab wiring via **SS3D → Structural Damage → Setup Wall Integrity Presentation** (and **SS3D → Localization → Examine → Add Structural Integrity Template Keys**). Doors deferred until airlocks bake `PlacedTileObject`.
 

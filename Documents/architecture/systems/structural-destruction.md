@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/ (plus integrity stage, occupancy and blast VFX Rpc hooks in Systems/Tile/, mapped by [tile](tile.md))
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: f04093919 — 2026-10-31
+> Verified: 0298b47ef — 2026-11-04
 
 # Structural destruction
 
 ## Overview
 
-Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1–3: accumulate force → stages → Destroyed clear; melee StructuralForce; hop blast BFS + crew brute. Phase 4: wall stage MPB tint (Damaged/Cracked only — **Intact clears** the MPB for SRP Batcher) + Cracked hiss + examine. Blast detonation VFX: epicenter fireball wash (atmos-fire palette), point light, boom SFX, scorch decals, distance-scaled shake + blast screen flash — via `TileSubSystem` ObserversRpc. Explosive items and repair remaining: [station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md).
+Per-tile integrity for Turf walls, doors, and windows per [explosives-destruction.md](../../design/explosives-destruction.md) §3. Phase 1–3: accumulate force → stages → Destroyed clear; melee StructuralForce; hop blast BFS + crew brute. Phase 4: all structural wall variants, including windows and the girder, show a dent at Damaged and a torn seam at Cracked. Other supported surfaces use MPB tint. Cracked adds a hiss and examine feedback. Confirmed melee and ranged contacts with steel walls emit short metal flecks and dust. Blast detonation VFX: epicenter fireball wash (atmos-fire palette), point light, boom SFX, scorch decals, distance-scaled shake + blast screen flash — via `TileSubSystem` ObserversRpc. Explosive items and repair remaining: [station_structural_damage.plan.md](../../plans/station_structural_damage.plan.md).
 
 ## Start here
 
@@ -16,7 +16,8 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastResolutionService.cs` — BFS blast spread
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastVfxPresenter.cs` — client detonation FX (catalog-driven)
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastVfxCatalog.cs` — Resources catalog + falloff tuning
-- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityPresenter.cs` — Damaged/Cracked MPB tint + optional WindLight hiss
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityPresenter.cs` — stage overlays or fallback tint + optional WindLight hiss
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/SteelWallDamageVfx.cs` — mesh overlays and short contact particles using `Assets/Resources/StructuralDamage/SteelWallDamage.shader`
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityRules.cs` — provisional HP thresholds / stage fractions
 - `Assets/Scripts/SS3D/Systems/Tile/StructuralIntegrityStage.cs` — Intact / Damaged / Cracked / Destroyed
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — SyncVar integrity + `ServerSetIntegrity` → presenter
@@ -48,8 +49,9 @@ Per-tile integrity for Turf walls, doors, and windows per [explosives-destructio
 - **Blast hop checks mirror atmos `CanFlow` locally:** do not call `AtmosNeighbourBuilder` (`internal`); keep the BlockedEdges bit test in `BlastResolutionService`.
 - **Open blast hops require `HasPlenum`:** empty chunk cells still return occupancy with `BlockedEdges=0`; without a plenum gate the BFS floods the void and flanks doors/walls from the side (EditMode: door took 30+10, thin wall 65+35→Destroyed).
 - **Never assign integrity SyncVars without a spawned NetworkObject:** FishNet `SyncBase.IsNetworkInitialized` NREs when `_networkObjectCache` is null (common for door/floor prefabs that get `PlacedTileObject` via `AddComponent` at place time). `ServerSetIntegrity` falls back to local fields when the NB cache is missing or not spawned (same guard pattern as `SetDirection`). Server damage/clear still works; clients will not see stage SyncVars on those tiles until prefabs bake `PlacedTileObject`.
-- **Host SyncVar OnChange may skip:** `ServerSetIntegrity` always calls `StructuralIntegrityPresenter.Apply` so host tint/hiss updates without relying on FishNet OnChange.
+- **Host SyncVar OnChange may skip:** `ServerSetIntegrity` always calls `StructuralIntegrityPresenter.Apply` so host visuals and hiss update without relying on FishNet OnChange.
 - **Intact must clear MaterialPropertyBlocks:** writing a white tint on Intact breaks SRP Batcher on every undamaged wall. `Apply(Intact)` uses `SetPropertyBlock(null)`. Hit 2026-07-28.
+- **Steel walls swap meshes with adjacency:** refresh the overlay mesh after `WallAdjacencyConnector.ApplyEngineConnections`. Overlay renderers follow their source renderers’ visibility, including FishNet host visibility and girder construction meshes. Contact bursts are unbuffered and require a measured surface point and normal.
 - **Blast VFX Rpc must RunLocally and must not BufferLast:** one-shot boom; host needs `RunLocally = true`. Scorch decal materials stay **Opaque** (same URP Decal pitfall as blood).
 
 ## Depends on / Used by

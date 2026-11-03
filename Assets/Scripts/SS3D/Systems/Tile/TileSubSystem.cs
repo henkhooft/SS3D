@@ -314,6 +314,19 @@ namespace SS3D.Systems.Tile
             BlastVfxPresenter.Play(worldPosition, yield);
         }
 
+        [Server]
+        public void ServerNotifySteelWallImpact(Vector3 point, Vector3 normal)
+        {
+            RpcSteelWallImpact(point, normal);
+        }
+
+        [ObserversRpc(RunLocally = true)]
+        private void RpcSteelWallImpact(Vector3 point, Vector3 normal)
+        {
+            if (IsClient)
+                SteelWallDamageVfx.PlayImpact(point, normal);
+        }
+
         [Serializable]
         private struct SyncedFloorDecalChunk
         {

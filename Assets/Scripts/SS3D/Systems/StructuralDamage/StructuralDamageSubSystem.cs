@@ -52,10 +52,25 @@ namespace SS3D.Systems.StructuralDamage
             }
         }
 
-        public bool TryApplyStructuralDamage(TileCoord coord, float force, StructuralDamageSource source)
+        public bool TryApplyStructuralDamage(TileCoord coord, float force, StructuralDamageSource source,
+            Vector3 impactPoint = default, Vector3 impactNormal = default)
         {
             IStructuralDamageService service = Service;
-            return service != null && service.TryApplyStructuralDamage(coord, force, source);
+            if (service == null)
+                return false;
+
+            bool showImpact = impactNormal.sqrMagnitude > 0.0001f
+                && _boundQuery.TryGetOccupant(coord, TileLayer.Turf, Direction.North, out ITileOccupant occupant)
+                && occupant is PlacedTileObject placed
+                && SteelWallDamageVfx.IsSteelWall(placed);
+
+            if (!service.TryApplyStructuralDamage(coord, force, source))
+                return false;
+
+            if (showImpact && SubSystems.TryGet(out TileSubSystem tiles) && tiles.IsServer)
+                tiles.ServerNotifySteelWallImpact(impactPoint, impactNormal);
+
+            return true;
         }
 
         public bool TryGetIntegrity(TileCoord coord, out StructuralIntegrityStage stage, out float remaining, out float max)

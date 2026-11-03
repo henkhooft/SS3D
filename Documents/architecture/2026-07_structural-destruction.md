@@ -34,7 +34,7 @@ Ship per-tile structural integrity for Turf walls/doors/windows and hop-based bl
 
 ## Phase 4 shipped surface
 
-- `StructuralIntegrityPresenter` — MPB `_Color` tint (Damaged darken / Cracked red-brown) + optional `WindLight` loop at Cracked
+- `StructuralIntegrityPresenter` — steel wall overlays, fallback tint, and optional `WindLight` loop at Cracked
 - `PlacedTileObject` integrity SyncVar OnChange + explicit host `Apply` from `ServerSetIntegrity`
 - `StructuralIntegrityExaminable` — Damaged/Cracked examine sections (fallback English; table keys via Examine menu)
 - Editor: **SS3D → Structural Damage → Setup Wall Integrity Presentation** (walls/windows with baked `PlacedTileObject`)
@@ -53,7 +53,7 @@ Ship per-tile structural integrity for Turf walls/doors/windows and hop-based bl
 - Phase 1 Area recompute is **full reflood preserving metadata**, deferred one Update tick because `TileMap` notifies clear **before** occupant removal (same pitfall as atmos). True local flood fill is follow-up.
 - Debris/rubble spawn not wired (no art path yet).
 - Blast hop rules duplicate atmos `CanFlow` bit checks locally (avoid `AtmosNeighbourBuilder` internal coupling).
-- No cracked wall mesh/decal art yet — provisional MPB tint only.
+- Steel walls use shader overlays on their current adjacency meshes. See the [system map](systems/structural-destruction.md#overview) for coverage.
 - Blast VFX copies atmos fire *look* only — does not write `_AtmosFire` atlas or fake combustion.
 - Boom `AudioClip` on catalog left unassigned until SFX exists.
 - Doors: presentation/examine wait on baking `PlacedTileObject` onto airlock prefabs (Phase 1 SyncVar pitfall).
