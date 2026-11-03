@@ -53,9 +53,12 @@ namespace SS3D.Systems.Entities.Humanoid
         private float _additiveWeightTarget;
         private bool _posingSuppressed;
         private int _nextAttackVariant;
+        private bool _hasAttackRateParameter;
+        /// <summary>Time.time at which the active swing reaches its strike frame; AttackRate returns to 1 after.</summary>
+        private float _swingStrikeTime = float.NegativeInfinity;
 
         /// <summary>Horizontal / downward / backhand cycle for melee AttackSwing.</summary>
-        private const int MeleeSwingVariantCount = 3;
+        private static int MeleeSwingVariantCount => MeleeSwingAnimation.Variants.Length;
 
         /// <summary>Leg brute at/above this → stumble idle on injured blend; prefer base over arm additive.</summary>
         private const float StumbleLegThreshold = 0.65f;
@@ -99,6 +102,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
             LogMissingAnimatorParametersOnce();
             _hasLocoRateParameter = HasFloatParameter(Animations.Humanoid.LocoRate);
+            _hasAttackRateParameter = HasFloatParameter(Animations.Humanoid.AttackRate);
             SubscribeToEvents();
 
             if (_bodyStateMachine != null)
@@ -252,6 +256,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             ApplyLocomotionVelocity();
+            TickSwingTempo();
             TickUpperBodyWeight();
             TickAdditiveWeight();
         }
@@ -341,7 +346,7 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>
         /// Owner-side immediate attack playback. Returns the swing variant used (0–2) for AttackSwing.
         /// </summary>
-        public byte PlayAttackTrigger(AnimationTriggerId trigger)
+        public byte PlayAttackTrigger(AnimationTriggerId trigger, byte attackWindup = 0)
         {
             if (_animator == null)
             {
@@ -360,6 +365,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 variant = (byte)(_nextAttackVariant % MeleeSwingVariantCount);
                 _nextAttackVariant = (_nextAttackVariant + 1) % MeleeSwingVariantCount;
                 _animator.SetInteger(Animations.Humanoid.AttackVariant, variant);
+                BeginSwingTempo(variant, attackWindup);
             }
 
             _ownerPredictedAttack = true;
@@ -367,6 +373,36 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.ResetTrigger(hash);
             _animator.SetTrigger(hash);
             return variant;
+        }
+
+        /// <summary>
+        /// Plays the swing's wind-up at the rate that lands its strike frame at the weapon's effective
+        /// windup (when the server connects), then lets the follow-through run at natural speed.
+        /// </summary>
+        private void BeginSwingTempo(int variant, byte attackWindup)
+        {
+            if (!_hasAttackRateParameter)
+            {
+                return;
+            }
+
+            float windupSeconds = MeleeSwingAnimation.DequantizeWindup(attackWindup);
+            float rate = MeleeSwingAnimation.ComputeWindupRate(variant, windupSeconds);
+            _animator.SetFloat(Animations.Humanoid.AttackRate, rate);
+            _swingStrikeTime = MeleeSwingAnimation.TryGetSwing(variant, out MeleeSwingAnimation.Swing swing)
+                ? Time.time + swing.StrikeSeconds / rate
+                : float.NegativeInfinity;
+        }
+
+        private void TickSwingTempo()
+        {
+            if (!_hasAttackRateParameter || float.IsNegativeInfinity(_swingStrikeTime) || Time.time < _swingStrikeTime)
+            {
+                return;
+            }
+
+            _swingStrikeTime = float.NegativeInfinity;
+            _animator.SetFloat(Animations.Humanoid.AttackRate, 1f);
         }
 
         private void TickUpperBodyWeight()
@@ -439,7 +475,7 @@ namespace SS3D.Systems.Entities.Humanoid
                     }
                     else
                     {
-                        ConsumeTrigger(snapshot.ActiveTrigger, snapshot.AttackVariant);
+                        ConsumeTrigger(snapshot.ActiveTrigger, snapshot.AttackVariant, snapshot.AttackWindup);
                     }
                 }
             }
@@ -608,7 +644,7 @@ namespace SS3D.Systems.Entities.Humanoid
             _animator.SetLayerWeight(3, overrideWeight);
         }
 
-        private void ConsumeTrigger(AnimationTriggerId trigger, byte attackVariant = 0)
+        private void ConsumeTrigger(AnimationTriggerId trigger, byte attackVariant = 0, byte attackWindup = 0)
         {
             // Sequence already gates re-entry; allow the same trigger id to fire repeatedly (e.g. swing spam).
             if (trigger == AnimationTriggerId.None)
@@ -620,6 +656,7 @@ namespace SS3D.Systems.Entities.Humanoid
             if (trigger == AnimationTriggerId.AttackSwing)
             {
                 _animator.SetInteger(Animations.Humanoid.AttackVariant, attackVariant & 0x3);
+                BeginSwingTempo(attackVariant & 0x3, attackWindup);
             }
 
             int hash = Animations.Humanoid.GetTriggerHash(trigger);
@@ -634,7 +671,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
         public void FireLocalTrigger(AnimationTriggerId trigger)
         {
-            _bodyStateMachine?.CmdFireTrigger(trigger, 0);
+            _bodyStateMachine?.CmdFireTrigger(trigger, 0, 0);
         }
 
         private bool IsLocalMovementAuthority()

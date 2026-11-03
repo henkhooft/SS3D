@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
+using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
 
 namespace SS3D.Editor
@@ -90,6 +91,17 @@ namespace SS3D.Editor
         /// <summary>Base-layer locomotion playback multiplier (exhaustion), set by AnimationOrchestrator. Default 1.</summary>
         private const string LocoRateParameter = "LocoRate";
 
+        /// <summary>Melee swing state speed multiplier (wind-up tempo), set by AnimationOrchestrator. Default 1.</summary>
+        private const string AttackRateParameter = "AttackRate";
+
+        /// <summary>Avatar every Mixamo clip copies (CopyFromOther) so humanoid retargeting matches the rig.</summary>
+        private const string XBotAvatarPath = "Assets/Art/Animations/Locomotion Pack/X Bot.fbx";
+
+        /// <summary>Soft blend from a hold pose into the swing wind-up; 0.05 s read as a snap.</summary>
+        private const float SwingEntryDuration = 0.1f;
+        private const float SwingExitTime = 0.9f;
+        private const float SwingExitDuration = 0.15f;
+
         /// <summary>Calibrated child timeScale bounds — beyond this the clip reads as slow-motion or frantic.</summary>
         private const float MinCalibratedTimeScale = 0.5f;
         private const float MaxCalibratedTimeScale = 2f;
@@ -138,6 +150,7 @@ namespace SS3D.Editor
             ("AttackSwing", AnimatorControllerParameterType.Trigger),
             ("AttackStab", AnimatorControllerParameterType.Trigger),
             ("AttackVariant", AnimatorControllerParameterType.Int),
+            (AttackRateParameter, AnimatorControllerParameterType.Float),
             ("MirrorUpperBody", AnimatorControllerParameterType.Bool),
             ("Throw", AnimatorControllerParameterType.Trigger),
             ("Emote", AnimatorControllerParameterType.Trigger),
@@ -268,7 +281,7 @@ namespace SS3D.Editor
             AnimatorControllerParameter[] withDefaults = controller.parameters;
             for (int i = 0; i < withDefaults.Length; i++)
             {
-                if (withDefaults[i].name == LocoRateParameter)
+                if (withDefaults[i].name == LocoRateParameter || withDefaults[i].name == AttackRateParameter)
                 {
                     withDefaults[i].defaultFloat = 1f;
                 }
@@ -414,34 +427,47 @@ namespace SS3D.Editor
                 AnimatorStateMachine upper = controller.layers[1].stateMachine;
                 MuteAnyStateTrigger(upper, "AttackSwing");
 
-                (string StateName, string File, string ClipName, int Variant, Vector3 Pos)[] swings =
-                {
-                    ("Attack Swing", "standing melee attack horizontal.fbx",
-                        "Mix_StandingMeleeAttackHorizontal", 0, new Vector3(600, 40, 0)),
-                    ("Attack Swing Downward", "standing melee attack downward.fbx",
-                        "Mix_StandingMeleeAttackDownward", 1, new Vector3(600, 100, 0)),
-                    ("Attack Swing Backhand", "standing melee attack backhand.fbx",
-                        "Mix_StandingMeleeAttackBackhand", 2, new Vector3(600, 160, 0)),
-                };
-
+                ConfigureMeleeSwingImports();
                 AnimatorState holdDefault = FindState(upper, "Hold Default");
-                foreach ((string StateName, string File, string ClipName, int Variant, Vector3 Pos) swing in swings)
+                AnimatorState holdItemPose = FindState(upper, "Hold Item");
+                AnimatorState holdWeaponPose = FindState(upper, "Hold Weapon");
+                for (int variant = 0; variant < MeleeSwingAnimation.Variants.Length; variant++)
                 {
-                    AnimationClip attackClip = LoadPackClip($"{MeleePack}/{swing.File}", swing.ClipName);
-                    AnimatorState upperAttack = FindOrCreateState(upper, swing.StateName, swing.Pos);
+                    MeleeSwingAnimation.Swing swing = MeleeSwingAnimation.Variants[variant];
+                    AnimationClip attackClip = LoadPackClip($"{AnimationsRoot}/{swing.File}", swing.ClipName);
+                    AnimatorState upperAttack = FindOrCreateState(upper, swing.StateName, new Vector3(600, 40 + 60 * variant, 0));
                     if (attackClip != null)
                     {
                         upperAttack.motion = attackClip;
                         upperAttack.writeDefaultValues = true;
                     }
+                    else
+                    {
+                        Debug.LogError($"[HumanoidLocomotionBlendSetup] Missing swing clip '{swing.ClipName}' in {swing.File}");
+                    }
+
+                    // Wind-up tempo: AnimationOrchestrator sets AttackRate so the strike frame lands at connect.
+                    upperAttack.speed = 1f;
+                    upperAttack.speedParameterActive = true;
+                    upperAttack.speedParameter = AttackRateParameter;
 
                     EnableMirrorParameter(upperAttack, "MirrorUpperBody");
                     EnsureAnyStateTriggerWithInt(
-                        upper, upperAttack, "AttackSwing", "AttackVariant", swing.Variant, canTransitionToSelf: true);
-                    if (holdDefault != null)
+                        upper, upperAttack, "AttackSwing", "AttackVariant", variant, canTransitionToSelf: true);
+                    foreach (AnimatorStateTransition entry in upper.anyStateTransitions)
                     {
-                        EnsureExitToState(upperAttack, holdDefault, hasExitTime: true, exitTime: 0.85f, duration: 0.15f);
+                        if (entry.destinationState == upperAttack)
+                        {
+                            entry.hasFixedDuration = true;
+                            entry.duration = SwingEntryDuration;
+                        }
                     }
+
+                    // Return straight to the pose for what the hand holds, not via Hold Default (two blends).
+                    ClearTransitions(upperAttack);
+                    AddSwingExit(upperAttack, holdItemPose, armHold: 1);
+                    AddSwingExit(upperAttack, holdWeaponPose, armHold: 2);
+                    AddSwingExit(upperAttack, holdDefault, armHold: 0);
                 }
 
                 // Mixamo holds are authored for the right hand — mirror when active hand is left.
@@ -1070,6 +1096,81 @@ namespace SS3D.Editor
             "Peaceful Locomotion 2D", "Melee Locomotion 2D", "Ranged Locomotion 2D",
             "Injured Locomotion 2D", "Injured Idle Severity", "Injured Jump Blend",
         };
+
+        private static void AddSwingExit(AnimatorState swing, AnimatorState destination, int armHold)
+        {
+            if (destination == null)
+            {
+                return;
+            }
+
+            AnimatorStateTransition exit = swing.AddTransition(destination);
+            exit.hasExitTime = true;
+            exit.exitTime = SwingExitTime;
+            exit.hasFixedDuration = true;
+            exit.duration = SwingExitDuration;
+            exit.AddCondition(AnimatorConditionMode.Equals, armHold, "ArmHold");
+        }
+
+        /// <summary>
+        /// Humanoid import for the melee swing clips from <see cref="MeleeSwingAnimation.Variants"/>: X Bot
+        /// avatar, trimmed to the table's frame range, no loop, root baked into the pose. Reimports only on change.
+        /// </summary>
+        private static void ConfigureMeleeSwingImports()
+        {
+            Avatar xBot = AssetDatabase.LoadAllAssetsAtPath(XBotAvatarPath).OfType<Avatar>().FirstOrDefault();
+            if (xBot == null)
+            {
+                Debug.LogError($"[HumanoidLocomotionBlendSetup] Missing avatar in {XBotAvatarPath}");
+                return;
+            }
+
+            foreach (MeleeSwingAnimation.Swing swing in MeleeSwingAnimation.Variants)
+            {
+                string path = $"{AnimationsRoot}/{swing.File}";
+                if (AssetImporter.GetAtPath(path) is not ModelImporter importer)
+                {
+                    Debug.LogError($"[HumanoidLocomotionBlendSetup] Missing swing FBX {path}");
+                    continue;
+                }
+
+                ModelImporterClipAnimation[] clips = importer.clipAnimations;
+                ModelImporterClipAnimation clip = clips.Length > 0 ? clips[0] : importer.defaultClipAnimations[0];
+                bool unchanged = importer.animationType == ModelImporterAnimationType.Human
+                    && importer.avatarSetup == ModelImporterAvatarSetup.CopyFromOther
+                    && importer.sourceAvatar == xBot
+                    && clips.Length == 1
+                    && clip.name == swing.ClipName
+                    && Mathf.Approximately(clip.firstFrame, swing.FirstFrame)
+                    && Mathf.Approximately(clip.lastFrame, swing.LastFrame)
+                    && !clip.loopTime
+                    && clip.lockRootRotation && clip.lockRootHeightY && clip.lockRootPositionXZ;
+                if (unchanged)
+                {
+                    continue;
+                }
+
+                importer.animationType = ModelImporterAnimationType.Human;
+                importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+                importer.sourceAvatar = xBot;
+                importer.importAnimation = true;
+                clip.name = swing.ClipName;
+                clip.takeName = importer.defaultClipAnimations[0].takeName;
+                clip.firstFrame = swing.FirstFrame;
+                clip.lastFrame = swing.LastFrame;
+                clip.loopTime = false;
+                clip.lockRootRotation = true;
+                clip.lockRootHeightY = true;
+                clip.lockRootPositionXZ = true;
+                clip.keepOriginalOrientation = true;
+                clip.keepOriginalPositionY = true;
+                clip.keepOriginalPositionXZ = true;
+                clip.mirror = false;
+                importer.clipAnimations = new[] { clip };
+                importer.SaveAndReimport();
+                Debug.Log($"[HumanoidLocomotionBlendSetup] Imported swing {swing.ClipName} frames {swing.FirstFrame}-{swing.LastFrame}");
+            }
+        }
 
         private static void RemoveGeneratedBlendTrees(AnimatorController controller)
         {

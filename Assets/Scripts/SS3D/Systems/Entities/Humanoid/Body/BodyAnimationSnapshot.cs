@@ -15,6 +15,11 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public AnimationTriggerId ActiveTrigger;
         /// <summary>0–2 melee swing cycle index when <see cref="ActiveTrigger"/> is AttackSwing.</summary>
         public byte AttackVariant;
+        /// <summary>
+        /// Effective melee windup for the active AttackSwing, quantized by
+        /// <see cref="MeleeSwingAnimation.QuantizeWindup"/> (0 = unknown). Observers time the strike frame with it.
+        /// </summary>
+        public byte AttackWindup;
         public HumanoidCombatMode CombatMode;
         public LimpSide LimpSide;
         public float AimYaw;
@@ -51,6 +56,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (IsDragging) packed |= 1u << 18;
             packed |= ((uint)AttackVariant & 0x3) << 19;
             if (MirrorUpperBody) packed |= 1u << 21;
+            packed |= ((uint)AttackWindup & 0x1F) << 22;
             return packed;
         }
 
@@ -78,6 +84,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 IsDragging = (packed & (1u << 18)) != 0,
                 AttackVariant = (byte)((packed >> 19) & 0x3),
                 MirrorUpperBody = (packed & (1u << 21)) != 0,
+                AttackWindup = (byte)((packed >> 22) & 0x1F),
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
                 MovementSpeed = (float)Math.Sqrt(movementVelX * movementVelX + movementVelZ * movementVelZ),

@@ -27,5 +27,22 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(forward.MovementSpeed, strafe.MovementSpeed, 1e-5f);
             Assert.IsFalse(forward.Equals(strafe));
         }
+
+        [Test]
+        public void Pack_RoundTripsAttackWindup_WithoutDisturbingVariantOrMirror()
+        {
+            BodyAnimationSnapshot snapshot = BodyAnimationSnapshot.Default;
+            snapshot.ActiveTrigger = AnimationTriggerId.AttackSwing;
+            snapshot.AttackVariant = 2;
+            snapshot.AttackWindup = 31;
+            snapshot.MirrorUpperBody = true;
+
+            BodyAnimationSnapshot unpacked = BodyAnimationSnapshot.Unpack(snapshot.Pack(), 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+
+            Assert.AreEqual(31, unpacked.AttackWindup);
+            Assert.AreEqual(2, unpacked.AttackVariant);
+            Assert.IsTrue(unpacked.MirrorUpperBody);
+            Assert.AreEqual(AnimationTriggerId.AttackSwing, unpacked.ActiveTrigger);
+        }
     }
 }

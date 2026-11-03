@@ -340,10 +340,11 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         }
 
         [ServerRpc]
-        public void CmdFireTrigger(AnimationTriggerId trigger, byte attackVariant)
+        public void CmdFireTrigger(AnimationTriggerId trigger, byte attackVariant, byte attackWindup)
         {
             _snapshot.ActiveTrigger = trigger;
             _snapshot.AttackVariant = (byte)(attackVariant & 0x3);
+            _snapshot.AttackWindup = (byte)(attackWindup & MeleeSwingAnimation.WindupQuantizedMax);
             // Pack ActiveTrigger BEFORE bumping sequence — SyncVar OnChange rebuilds from
             // _packedSnapshot synchronously; sequence++ first wiped the trigger and remotes
             // never ConsumeTrigger (fire/reload invisible on host).
