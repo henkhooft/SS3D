@@ -47,6 +47,11 @@ namespace SS3D.Systems.Entities.Humanoid
         [SerializeField] protected float _combatWalkSpeedFactor = 0.7f;
         /// <summary>Combat run world speed factor (0.5 → 2.5 m/s). Melee/Ranged clip timeScales are calibrated from it: rerun SS3D → Animation → Rebuild Combat Stance Blend Trees after changing.</summary>
         [SerializeField] protected float _combatRunSpeedFactor = 0.5f;
+        /// <summary>
+        /// Peaceful run (sprint) world speed factor (0.8 → 4 m/s). Mix_Running is authored at ~3.9 m/s,
+        /// so this also keeps the feet planted; peaceful walk is unscaled (1.5 m/s vs the clip's 1.57).
+        /// </summary>
+        [SerializeField] protected float _peacefulRunSpeedFactor = 0.8f;
 
         [Header("Movement IK Targets")]
         [SerializeField] private Transform _movementTarget;

@@ -352,17 +352,11 @@ namespace SS3D.Systems.Entities.Humanoid
             float healthMultiplier = _healthController != null
                 ? _healthController.Snapshot.MovementSpeedMultiplier
                 : 1f;
-            float combatFactor = 1f;
-            if (IsCombatMode())
-            {
-                combatFactor = IsRunning ? _combatRunSpeedFactor : _combatWalkSpeedFactor;
-            }
-
             float exertionFactor = _staminaController != null
                 ? SprintExertion.MovementSpeedFactor(_staminaController.ExertionPenalty)
                 : 1f;
             float gait = FilterSpeed();
-            float speed = _movementSpeed * healthMultiplier * combatFactor * exertionFactor * gait;
+            float speed = _movementSpeed * healthMultiplier * GaitSpeedFactor() * exertionFactor * gait;
             return TargetMovement.normalized * speed;
         }
 
@@ -382,20 +376,26 @@ namespace SS3D.Systems.Entities.Humanoid
             float healthMultiplier = _healthController != null
                 ? _healthController.Snapshot.MovementSpeedMultiplier
                 : 1f;
-            float combatFactor = 1f;
-            // Combat walk/run clips are authored at the same cadence across stances (melee + ranged),
-            // so apply slow combat speed scaling for any combat mode.
-            if (IsCombatMode())
-            {
-                combatFactor = IsRunning ? _combatRunSpeedFactor : _combatWalkSpeedFactor;
-            }
-
             float exertionFactor = _staminaController != null
                 ? SprintExertion.MovementSpeedFactor(_staminaController.ExertionPenalty)
                 : 1f;
 
             _characterController.Move(
-                TargetMovement * (_movementSpeed * healthMultiplier * combatFactor * exertionFactor * Time.deltaTime));
+                TargetMovement * (_movementSpeed * healthMultiplier * GaitSpeedFactor() * exertionFactor * Time.deltaTime));
+        }
+
+        /// <summary>
+        /// World speed scale for the current stance and gait, so each matches its clips' cadence.
+        /// Combat walk/run clips share a cadence across melee and ranged; peaceful walk is unscaled.
+        /// </summary>
+        private float GaitSpeedFactor()
+        {
+            if (IsCombatMode())
+            {
+                return IsRunning ? _combatRunSpeedFactor : _combatWalkSpeedFactor;
+            }
+
+            return IsRunning ? _peacefulRunSpeedFactor : 1f;
         }
     }
 
