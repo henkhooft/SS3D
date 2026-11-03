@@ -62,7 +62,9 @@ Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay 
 Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It stops at the first
 failure, prints a summary table with report paths and the screenshots to review, and writes
 `artifacts/ui/validate-<UTC>/summary.md`. Exit status is nonzero on any failure. A full run takes
-~6 min warm (EditMode ~40 s, visual ~70 s, lifecycle ~85 s, build ~30 s, remote ~50 s).
+~25 min warm (EditMode ~40 s, PlayMode ~6.5 min, visual ~70 s, lifecycle ~85 s, sandbox ~4.5 min,
+build ~30 s, remote ~50 s, smoke ~9 min). Agents run targeted steps, not `--full`; see
+[2026-11_testing-philosophy.md](../../Documents/architecture/2026-11_testing-philosophy.md).
 
 | Step | What it checks |
 |------|----------------|

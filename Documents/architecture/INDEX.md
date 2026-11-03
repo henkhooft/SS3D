@@ -132,6 +132,8 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
 | [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
+| [2026-11_test-harness-rework](2026-11_test-harness-rework.md) | planned |
+| [2026-11_testing-philosophy](2026-11_testing-philosophy.md) | shipped (standing policy) |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [combat_implementation_plan](../plans/combat_implementation_plan.md) | in-progress |
 | [health_implementation_plan](../plans/health_implementation_plan.md) | in-progress |

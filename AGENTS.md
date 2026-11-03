@@ -68,7 +68,7 @@ Run the **`update-system-docs`** skill (`.cursor/skills/update-system-docs/SKILL
 
 **Versioning** — when a change breaks old saves or old clients, bump `PersistenceEnvelope.CurrentSchemaVersion` or `ProtocolVersion.Current`; when a commit completes a player-visible feature end to end, end its message with a `Version-Bump: minor` trailer. MAJOR stays the owner's call. Rules: [2026-10_game-versioning](Documents/architecture/2026-10_game-versioning.md).
 
-For UI/session work, run `Testing/ui/validate.sh` (`--full` when runtime/USS changed) with the editor open and review the listed screenshots; see [Testing/ui/README.md](Testing/ui/README.md).
+**Testing** — run targeted checks, not the full suite: `Testing/ui/validate.sh --steps compile,editmode` plus the focused steps for the systems you touched. Add `visual` (and read its screenshots) only for visual changes. Never run `--full` unless the owner asks; it takes ~25 min and runs nightly anyway. Which tier a test belongs in, and what expensive tests must justify: [2026-11_testing-philosophy.md](Documents/architecture/2026-11_testing-philosophy.md). Runbook: [Testing/ui/README.md](Testing/ui/README.md).
 
 ## Composition, prefabs, and UI
 

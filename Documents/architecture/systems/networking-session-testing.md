@@ -60,9 +60,8 @@ Run the smoke scenarios after building:
 embark after Ongoing; `reconnect` checks reclaiming a body; `atmos-client-sync` forces heat then
 asserts a client snapshot; `sandbox-reset` runs a `-sandbox` server with one-minute rounds and
 checks that a client that never readies joins two automatic rounds and the reset writes `reset-health.jsonl`. The CI workflow runs this set on dispatch, PR label `test:multiplayer`
-and a nightly schedule. GitHub disabled the workflow for inactivity after the 2026-10-19
-run (`gh workflow list --all` shows `disabled_inactivity`), so none of these triggers fire until it
-is re-enabled. Configured checks do not establish a current passing run.
+and a nightly schedule. GitHub disables scheduled workflows after 60 days without repo activity;
+check `gh workflow list --all` if nightly runs stop. Configured checks do not establish a current passing run.
 
 The graphical remote pilot also files a bug report over client/server broadcasts, verifies the server-attributed JSONL and reduced JPEG, and checks the reopened dialog's cooldown; see the [UI runbook](../../../Testing/ui/README.md#lobby-remote-client-pilot).
 
