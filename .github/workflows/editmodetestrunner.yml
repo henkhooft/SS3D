@@ -74,7 +74,9 @@ jobs:
       - name: Checkout project code
         uses: actions/checkout@v4
         with:
-          lfs: true
+          # No LFS-tracked files; git lfs fetch fails ("missing object") in the self-hosted
+          # runner's reused workspace, a partial clone left by develop-release's blob:none checkouts.
+          lfs: false
           # Explicit PR head (and its repo) so we never silently test the base branch.
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
