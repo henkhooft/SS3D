@@ -38,6 +38,11 @@ Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 - Objectives must resolve inside `RoundSubSystem.BuildOutcome`: `Nuke.Detonate` ends the round before `NukeDetonateEvent` fires, so an event-driven objective would still be pending when the outcome is fixed.
 - Assignment happens at round start (`ResolveRoundStartRoles`, called by `EntitySubSystem.SpawnReadyPlayers`) or at latejoin spawn, not on connect. `TryGetRole` is empty in the lobby.
 
+## Tests
+
+- `validate.sh --steps compile,editmode`: `GamemodeTests` (team objective assignment and resolution), `SquadDrawTests` (squad size, opt-ins only, Extended fallback, latejoiners never drawn), `RoundEndLoopTests` (objective results on the outcome).
+- No scenario category yet. The operative spawn (marker, kit, briefing, team objective) and both Nuke Ops outcomes become one tier-2 scenario fixture with a nuke, disk and operative marker in [2026-11_round-end-loop](../2026-11_round-end-loop.md) P3.
+
 ## Depends on / Used by
 
 - **Depends on:** [rounds-lobby](rounds-lobby.md), [entities](entities.md)

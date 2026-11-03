@@ -2,7 +2,7 @@
 > Touches systems: rounds-lobby, gamemodes-roles-traits, entities, persistence, chat-audio-screens, screen-effects, ui-shell
 > Status: active
 
-**Progress:** P1 implemented (round outcome, summary overlay and banner, 30 s beat with admin hold, Last Round tab, auto-start defaults, round history fields); P2 implemented (squad draw, Extended fallback, operative role and kit, marker spawn, team objective, briefing), its pilot not run; P3 not started. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4.
+**Progress:** P1 implemented and validated on 2026-11-03 (lifecycle pilot, nightly `sandbox-reset` smoke). P2 implemented with EditMode coverage; its spawn checks move into P3's scenario fixture. Both are in [#131](https://github.com/henkhooft/SS3D/pull/131). P3 (Nuke Ops rules) is next, in its own PR; P4 (the 24/7 Nuke Ops server profile) follows. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4 and T8. Tests follow the [testing philosophy](2026-11_testing-philosophy.md): each phase lists its checks by tier.
 
 # Round-end loop and thin Nuke Ops outcome (Nov 2026)
 
@@ -45,6 +45,9 @@ A round ends with a legible outcome, everyone sees a summary, and the server ret
 | 19 | **Detonation presentation:** a station-wide announcement plus a short white-out and screen shake for every client, then the summary. No `ResolveBlast` on the station. |
 | 20 | Nuke Ops default round length is **30 minutes** (server setting). Gamemode-specific lengths stay deferred. |
 | 21 | The gamemode-identity leak to clients (round-config §4 delta) stays parked; the summary shows the resolved mode regardless. |
+| 22 | **Nuclear Operative opt-in is on by default** (owner, 2026-11-03): a player who never opened the antagonist list is in the draw; they can opt out. Without it, a public server where nobody ticks the box runs every round as Extended. |
+| 23 | **Nuke Ops needs a minimum number of ready players** before the draw runs, a server setting the 24/7 profile sets to 4 ([test-server.md](../milestones/test-server.md) T8). Fewer runs the round as Extended with the same admin notice as Decision 11. Distinct from Decision 10's minimum squad size. |
+| 24 | **Tests stay in the cheapest tier** ([testing philosophy](2026-11_testing-philosophy.md)). Outcome rules, the draw and the beat are EditMode; behaviour across roles, spawning, inventory, comms and the round end is one tier-2 scenario fixture; client delivery is a nightly smoke line; screenshots only for the summary's visuals. Automation runs a 3 s beat (`SetEndBeatSecondsForTesting`) except where the summary is the subject. |
 
 ## Shape
 
@@ -64,24 +67,41 @@ A round ends with a legible outcome, everyone sees a summary, and the server ret
 - 30 s beat with admin hold (Decision 5); "Last round" lobby card (Decision 6).
 - `AutoStart` on by default, minimum-ready setting (Decision 7).
 - Round history fields (Decision 9).
-- Tests: EditMode for outcome construction per trigger and the beat/hold rules. `LobbyLifecyclePilot`: host + ghost + remote client see the summary (screenshots), everyone returns to the lobby, the second round starts from the ready countdown without an admin.
+- Tests (as shipped):
+  - **EditMode:** `RoundEndLoopTests`: outcome per trigger, roster, viewer row, beat and hold, countdown, minimum-ready auto-start, dedicated default.
+  - **Visual + host integration:** one round-end pass in the lifecycle pilot (overlay over a living player, admin hold reaching the UI, return to the lobby, Last Round tab), with a D8 header.
+  - **Multiplayer:** the nightly `sandbox-reset` smoke asserts that the outcome reaches a remote client and that the next automatic round starts.
+  - Not covered: a ghost viewer and a client connecting after the round ended (the buffered RPC). Add them to P3's fixture or the smoke only if they break.
 - Ships on its own: closes most of T4 without any Nuke Ops code.
 
 ### P2 — Squad
 
 - Opt-in list from enabled modes (Decision 15).
 - Draw, size, minimum and Extended fallback with admin notice (Decisions 10, 11).
-- Operative role, marker spawn, loadout (Decision 12).
+- Operative role, marker spawn, loadout (Decision 12). The kit (M4 rifle, engineering jumpsuit) is a **placeholder**: [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c gives operatives the C20R and Stechkin and the M4 to Security, and M0 adds the ops suit and a real Engineer job. Swap the kit when those land.
 - Team objective replaces legacy objectives (Decision 13); spawn briefing (Decision 14).
-- Tests: EditMode for the draw (size, opt-in only, fallback, latejoin excluded) and objective assignment. Pilot: an opted-in host is drawn, spawns at the operative marker with the kit and briefing; a non-opted remote client gets a job.
+- Tests (as shipped): **EditMode** `SquadDrawTests` (size, opt-in only, fallback, latejoiners never drawn) and `GamemodeTests` (team objective). "A non-opted player gets a job" is the draw plus `JobResolver`, both EditMode. The spawn path (drawn host → Operative role → marker → kit → briefing → team objective) is not a pilot. It becomes the first check in P3's Nuke Ops scenario fixture, which pays the same setup.
 
 ### P3 — Nuke Ops rules
 
 - Pure resolver for the §6 table with Decisions 8, 16 and 18; EditMode tests for every row plus SSD, ghosted, nested-bag and missing-disk cases.
 - Crew-win check on operative state change (Decision 17); timeout and admin-end resolution.
 - Detonation announcement, white-out and shake (Decision 19); 30 min default length (Decision 20).
-- Pilot: an ops-win scenario (detonation) and a crew-win scenario (squad killed), each followed by the automatic next round.
-- **Acceptance:** CI Multiplayer Smoke Test green on the branch (the TomNAS runner is back online as of 2026-11-02).
+- Tests:
+  - **EditMode:** the resolver, every §6 row plus SSD, ghosted, nested-bag and missing-disk cases; the timeout and admin-end mapping.
+  - **Tier 2:** a `NukeOps` scenario fixture. It boots a test room with a nuke, disk and operative marker in Nuclear Emergency mode, host opted in. Round flow is the subject here, so it goes through round start (rule 3). Checks: operative spawn, kit, briefing and team objective (P2); detonation → operatives win with the station destroyed; squad killed → crew wins at once. This is MVP1's "both outcomes proven reachable in the harness".
+  - **Visual:** the detonation white-out and shake, one capture, only when that code changes.
+  - **Multiplayer:** a `nukeops-round` line in `smoke-set.txt` (nightly) on the dedicated build: the draw on a real server, a remote operative spawning, the outcome reaching clients, and the next round auto-starting. Check the D7 smoke budget before adding it. The full happy path (breach, arm, end, restart) that closes T3 waits on M3.
+- **Acceptance:** EditMode and `scenarios:NukeOps` green on the branch; the smoke line green in a nightly run.
+
+### P4 — 24/7 Nuke Ops server profile
+
+Serves [test-server.md](../milestones/test-server.md) T8 and Playtest 1's "every round loops with no admin rescue".
+
+- A `-nukeops` server profile on the `-sandbox` pattern (`SandboxProfile`, [2026-11_sandbox-server](2026-11_sandbox-server.md)): mode Secret, `AutoStart`, 30 min rounds (Decision 20), no map editing or sandbox resets, persistence as a normal server.
+- Minimum ready players for Nuke Ops, 4 in the profile (Decision 23); Nuclear Operative opt-in on by default (Decision 22).
+- Hosting on TomNAS next to the sandbox is outside this repo; the profile and its arguments are what this effort ships.
+- Tests: **EditMode** for the profile settings and the ready-player threshold. **Multiplayer:** P3's `nukeops-round` smoke runs with `-nukeops` and a lowered threshold, so no new smoke line.
 
 ## Parked
 
@@ -112,4 +132,8 @@ A round ends with a legible outcome, everyone sees a summary, and the server ret
 - **Objectives resolve at the trigger** (`GamemodeSubSystem.ResolveObjectives`, called from `BuildOutcome`). `Nuke.Detonate` ends the round before `NukeDetonateEvent` fires, so the team objective is met by `request.StationDestroyed`, not by the event. `ObjectiveStatus.Cancelled`, `GetItemObjective`, `GetNukeCard.asset`, `ItemPickedUpEvent` and late-join objectives are gone.
 - **Briefing** is a private line in the HUD radio feed (header BRIEFING) sent 3 s after round start, so the client's feed exists. `CommsSubSystem.SendPrivateFeed` sends it.
 - **Opt-in list** is `AntagonistCategories.All`, now Nuclear Operative only; Traitor is removed.
-- **Unverified:** the P2 pilot (opted-in host drawn, spawns at the marker with kit and briefing; non-opted remote client gets a job) has not run. EditMode is green (2455 tests).
+- **Not yet exercised in a running round:** the spawn path. It is P3's first scenario check (see P2 Tests).
+
+**Tests (2026-11-03).** Brought in line with the testing philosophy after develop's harness rework (#129). The first pass added `RoundEndBeat.Seconds` to every PlayMode stop helper and raised pilot timeouts. That would have charged every scenario room reload 30 s against D7's nightly budget. Automation now shortens the beat instead (Decision 24). Validating the merge found two unrelated bugs, both fixed:
+- `TestRoomFixtureTests` counted the Operative role as a required job spawn.
+- Server Settings' once-a-second refresh wiped an admin action's result before it could be read.
