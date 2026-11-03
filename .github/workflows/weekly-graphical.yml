@@ -5,7 +5,7 @@
 # job's checkout, with the Library stash the nightly PlayMode job also uses.
 #
 # A failing run opens or updates one `weekly-failure` issue, closed by the next green run.
-# Budget: 20 min for the validate run (D7 in Documents/architecture/2026-11_test-harness-rework.md).
+# Budget: 20 min for the validate run (D7 in Documents/architecture/2026-11_testing-philosophy.md).
 name: Weekly Graphical Run
 on:
   workflow_dispatch: {}

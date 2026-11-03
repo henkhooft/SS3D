@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Keep one open GitHub issue per failing scheduled run family (D9 in
-# Documents/architecture/2026-11_test-harness-rework.md).
+# Documents/architecture/2026-11_testing-philosophy.md).
 #
 #   red:   open an issue labelled <label>, or comment on the one already open.
 #   green: close the open issue with a link to the passing run.

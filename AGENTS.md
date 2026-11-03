@@ -6,7 +6,7 @@ This file inlines the **tripwires** — the mistakes that are high-frequency, hi
 
 ## Session start: check the last nightly
 
-Run `gh issue list --label nightly-failure --state open` (and `--label weekly-failure` before UI or session work). An open issue means develop is already red: read it before you blame your change for a failure it lists, and don't add to a tier that is over its budget. The nightly opens these issues and closes them on the next green run; see [2026-11_test-harness-rework.md](Documents/architecture/2026-11_test-harness-rework.md) D7 and D9.
+Run `gh issue list --label nightly-failure --state open` (and `--label weekly-failure` before UI or session work). An open issue means develop is already red: read it before you blame your change for a failure it lists, and don't add to a tier that is over its budget. The nightly opens these issues and closes them on the next green run; see [testing philosophy](Documents/architecture/2026-11_testing-philosophy.md#harness-contracts) D7 and D9.
 
 ## Navigate docs before searching code
 

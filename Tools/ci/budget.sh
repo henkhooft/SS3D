@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Print a nightly/weekly phase's wall-clock time against its budget (D7 in
-# Documents/architecture/2026-11_test-harness-rework.md). Over budget is a warning, not a
+# Documents/architecture/2026-11_testing-philosophy.md). Over budget is a warning, not a
 # failure: it means "cull before this tier gets anything new".
 #
 # Usage: Tools/ci/budget.sh <label> <budget-minutes> <start-epoch-seconds>

@@ -150,3 +150,6 @@ __pycache__/
 /Assets/Resources/PerformanceTestRunInfo.json.meta
 /Assets/Resources/PerformanceTestRunSettings.json
 /Assets/Resources/PerformanceTestRunSettings.json.meta
+
+# Multiplayer Play Mode per-machine player tags
+ProjectSettings/VirtualProjectsConfig.json

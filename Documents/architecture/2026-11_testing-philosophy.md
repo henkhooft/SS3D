@@ -55,21 +55,34 @@ After a change, with the editor open:
 
 Don't run `--nightly` or `--weekly` unless the owner asks for it. The nightly set takes about 25 minutes warm.
 
+## Harness contracts
+
+These came out of the [test harness rework](../archive/architecture/2026-11_test-harness-rework.md)
+and stay in force. Code, CI and `AGENTS.md` cite them by number.
+
+| # | Contract |
+|---|----------|
+| D1 | Tier 2 scenarios are NUnit PlayMode tests: one boot per fixture into a test room, one `[UnityTest]` per scenario, selected by NUnit category (`validate.sh --steps scenarios:<category>`, batchmode `-runTests` nightly). |
+| D2 | The world is the checked-in `scenario-testroom` fixture. The host spawns straight into a body: no lobby, no ready. |
+| D3 | Isolation: a fresh body per scenario and tracked cleanup of everything it spawned; room reset only for scenarios that change the room. A scenario that only passes after another one has a cleanup bug. |
+| D4 | Scenarios drive their steps through the console helper so they stay portable to the DSL. Any logged error fails a scenario; intended ones are declared with `LogAssert.Expect`. |
+| D5 | The multiplayer smoke set is curated in one file, `Testing/multiplayer/smoke-set.txt`, and runs against the real dedicated-server build. |
+| D6 | Pilots run on demand; the lobby UI, lifecycle core and remote client pilots also run in the weekly graphical set. |
+| D7 | Wall-clock budgets on TomNAS (N100): nightly PlayMode 15 min, smoke 20 min, weekly graphical 20 min. Each job prints its time against its budget (`Tools/ci/budget.sh`). Over budget means cull before that tier gets anything new. |
+| D8 | Each tier 2–4 check has a header: `Guards: <contract or issue #> · Not cheaper because: <reason>` (rule 4). |
+| D9 | A red scheduled nightly or weekly opens or updates one issue labelled `nightly-failure` / `weekly-failure` (`Tools/ci/nightly_issue.sh`), closed by the next green run. Agents check it at session start. |
+| D10 | Each system map's **Tests** section names the validate step and scenario category for its domain. |
+| D11 | Multiplayer Play Mode (`validate.sh --steps mppm:<scenario>`) is for agent-local multiplayer checks only; the built smoke stays the nightly gate because it exercises `UNITY_SERVER` code paths. |
+
 ## Current state
-
-The rework that brings the harness in line with this policy is
-[2026-11_test-harness-rework.md](2026-11_test-harness-rework.md).
-
 
 - **EditMode** fits tier 1 and is the most effective suite.
 - **PlayMode** (`Assets/Scripts/Tests/PlayMode`) holds the tier 2 scenarios (one boot into the
   `scenario-testroom` fixture) plus a few `Nightly` round start/stop races with no pure seam in the
-  round state machine. The old pilot partials (Speech, Ragdoll, Reclaim, Respawn) are gone.
+  round state machine.
 - **Pilots** (`LobbyUiPilot`, the `LobbyLifecyclePilot` core, and the sandbox, overlay and remote
   client pilots) mix tier 2 and tier 4 checks. The lobby UI, lifecycle core and remote client pilots
   run in the weekly graphical set; the sandbox pilot is on demand and its reset loop runs as the
   nightly `sandbox-reset` smoke scenario. They are under review against rules 2–4.
-- **Tier 2 scenarios** exist (`Assets/Scripts/Tests/PlayMode/Scenarios`, one boot into the test room).
 - **Nightly CI** on TomNAS runs every PlayMode test in a batchmode editor, then the curated smoke
-  set; a weekly run drives the graphical pilots through `validate.sh --weekly`. Each prints its
-  time against its budget, and a red run keeps one `nightly-failure` / `weekly-failure` issue open.
+  set; a weekly run drives the graphical pilots through `validate.sh --weekly`.

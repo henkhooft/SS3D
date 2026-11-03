@@ -598,7 +598,7 @@ STEPS["round-reset"] = step_round_reset
 STEPS["interaction-overlay"] = step_interaction_overlay
 
 
-# Lifecycle pilot partials replaced by scenarios (2026-11_test-harness-rework Phase 3).
+# Lifecycle pilot partials replaced by scenarios (archived 2026-11_test-harness-rework Phase 3).
 RETIRED = {
     "ragdoll-space": "scenarios:Environment",
     "critical-reclaim": "scenarios:Environment",

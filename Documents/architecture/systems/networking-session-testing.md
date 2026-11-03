@@ -42,6 +42,7 @@ exercises the `UNITY_SERVER` code paths. Graphical UI/session pilots have a sepa
 
 ## Pitfalls
 
+- **Remote pilot clicks miss the client:** `os_*` inputs are real pointer events at screen coordinates. A maximized editor covers the client, and a client on default Borderless/native settings renders 1920×1080 inside a smaller window. Keep the editor windowed and give the client an isolated (`XDG_CONFIG_HOME`) windowed 1600×900 config; `Tools/ci/editor_session.sh` and `LobbyLifecyclePilot.LaunchClient` do this.
 - **Round starts before a client loaded Game (MPPM):** the clone's client can finish connecting
   before it has loaded Game. Starting the round in that window makes FishNet drop the round's scene
   objects for it (`SceneId ... not found in SceneObjects`, then missing
@@ -94,7 +95,7 @@ in client 0's hand (it replaced `atmos-client-sync` and the planned light-sync s
 `-sandbox` server with one-minute rounds and checks that a client that never readies joins two
 automatic rounds and the reset writes `reset-health.jsonl`. The nightly runs the set after the
 PlayMode job; PR label `test:multiplayer` runs both without the nightly-only scenarios. Budgets and
-the `nightly-failure` issue: [2026-11_test-harness-rework](../2026-11_test-harness-rework.md) Phase 4.
+the `nightly-failure` issue: [testing philosophy](../2026-11_testing-philosophy.md#harness-contracts) D7 and D9.
 GitHub disables scheduled workflows after 60 days without repo activity; check
 `gh workflow list --all` if nightly runs stop.
 

@@ -23,7 +23,7 @@ using Debug = UnityEngine.Debug;
 namespace SS3D.Tests
 {
     /// <summary>
-    /// Base for tier 2 scenarios (2026-11_test-harness-rework D1–D4). The first scenario of a run boots a Play
+    /// Base for tier 2 scenarios (2026-11_testing-philosophy D1–D4). The first scenario of a run boots a Play
     /// Mode host into the test room fixture with a body, and later fixtures reuse that boot; every scenario then gets a fresh body, and whatever
     /// items or entities it spawned are despawned afterwards. Logged errors fail the scenario
     /// (<c>LogAssert</c> stays at its default); declare intended ones with <c>LogAssert.Expect</c>.

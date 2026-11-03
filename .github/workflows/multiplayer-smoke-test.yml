@@ -6,7 +6,7 @@
 #      binary, then runs the curated smoke set (Testing/multiplayer/smoke-set.txt) against them.
 #   3. report (scheduled runs only): opens, updates or closes the `nightly-failure` issue.
 # Each job prints its wall-clock time against its budget (D7/D9 in
-# Documents/architecture/2026-11_test-harness-rework.md). Opt-in for PRs (label test:multiplayer;
+# Documents/architecture/2026-11_testing-philosophy.md). Opt-in for PRs (label test:multiplayer;
 # nightly-only smoke scenarios are skipped there), manual dispatch, and nightly on develop.
 #
 # Server+client are built in ONE Editor session (ClientAndServerBuildScript.BuildBothForCi).

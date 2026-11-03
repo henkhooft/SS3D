@@ -1,12 +1,12 @@
-> Implements: [2026-11_testing-philosophy.md](2026-11_testing-philosophy.md) (infrastructure; no design doc)
+> Implements: [2026-11_testing-philosophy.md](../../architecture/2026-11_testing-philosophy.md) (infrastructure; no design doc)
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
-> Status: in-progress
+> Status: shipped
 
-**Progress:** Phases 1–5 done (2026-11-03).
+**Progress:** Phases 1–5 done (2026-11-03). Live contracts (D1–D11) moved to [testing philosophy](../../architecture/2026-11_testing-philosophy.md#harness-contracts).
 
 # Test harness rework (Nov 2026)
 
-Bring the harness in line with the [testing philosophy](2026-11_testing-philosophy.md): a fast
+Bring the harness in line with the [testing philosophy](../../architecture/2026-11_testing-philosophy.md): a fast
 targeted loop for agents, cross-system scenarios in one Play Mode host, a curated multiplayer set,
 and expensive suites in the nightly on TomNAS.
 
@@ -141,7 +141,7 @@ Access ~10 s (most of it waiting to prove the door stays shut), plasma ~20 s, th
 The fixture now copes with death: cleanup keeps the host's current entity (ghost or respawned body),
 despawns a corpse left behind, and despawns loadout items that sit outside a container. The first
 full run surfaced a real bug: `SmesBattery` leaked an `OnTick` handler whenever a client left
-and re-entered its observer range (see [electricity](systems/electricity.md) Pitfalls).
+and re-entered its observer range (see [electricity](../../architecture/systems/electricity.md) Pitfalls).
 
 ## Phase 4 — Nightly
 
@@ -153,7 +153,7 @@ and re-entered its observer range (see [electricity](systems/electricity.md) Pit
       285 s including a script recompile, against the 15 min budget.
 - [x] Smoke set per D5: fold `basic-round` into `late-join`, write `observer-sync`, retire
       `atmos-client-sync`, move `sandbox-reset` to nightly-only. The light-sync scenario planned in
-      [2026-07_multiplayer-testing-self-hosted-ci](2026-07_multiplayer-testing-self-hosted-ci.md)
+      [2026-07_multiplayer-testing-self-hosted-ci](../../architecture/2026-07_multiplayer-testing-self-hosted-ci.md)
       Phase 2 becomes a check inside `observer-sync`; its Phase 1 server-kill scenario stays a
       separate contract, within the smoke budget.
       Done: one source of truth in `Testing/multiplayer/smoke-set.txt`, run by `run_smoke_set.sh`
@@ -203,7 +203,7 @@ no longer makes the stamp flap; a fresh checkout still rebuilds, which the weekl
       (it exercises `UNITY_SERVER` code paths).
       Done: the runbook points at `mppm:<scenario>` for agent-local checks. It is on demand only,
       never in `--nightly`/`--weekly`. Pitfalls for the MPPM path are in
-      [networking-session-testing](systems/networking-session-testing.md).
+      [networking-session-testing](../../architecture/systems/networking-session-testing.md).
 
 ## Pitfalls (anticipated)
 
@@ -222,7 +222,7 @@ no longer makes the stamp flap; a fresh checkout still rebuilds, which the weekl
   guard; a scenario that only passes when run after another one is a bug in its cleanup.
 - **Server-build subtarget leaks into the editor.** Batchmode nightly runs after a server build can
   inherit `UNITY_SERVER` assemblies (see the `IsHeadless` pitfall in
-  [networking-session](systems/networking-session.md)). Run PlayMode before the server build, or in
+  [networking-session](../../architecture/systems/networking-session.md)). Run PlayMode before the server build, or in
   a fresh editor process.
 - **Graphical pilots and the editor window.** The remote client's `os_*` inputs are real pointer
   events at screen coordinates. A maximized editor covers the client's frame, and the client's
@@ -234,7 +234,7 @@ no longer makes the stamp flap; a fresh checkout still rebuilds, which the weekl
 
 ## Related docs
 
-- [2026-11_testing-philosophy.md](2026-11_testing-philosophy.md): the policy this implements.
-- [Testing/ui/README.md](../../Testing/ui/README.md): `validate.sh` runbook.
-- [systems/networking-session-testing.md](systems/networking-session-testing.md): smoke harness.
-- [2026-07_multiplayer-testing-self-hosted-ci.md](2026-07_multiplayer-testing-self-hosted-ci.md): TomNAS runner and planned smoke scenarios.
+- [2026-11_testing-philosophy.md](../../architecture/2026-11_testing-philosophy.md): the policy this implements.
+- [Testing/ui/README.md](../../../Testing/ui/README.md): `validate.sh` runbook.
+- [systems/networking-session-testing.md](../../architecture/systems/networking-session-testing.md): smoke harness.
+- [2026-07_multiplayer-testing-self-hosted-ci.md](../../architecture/2026-07_multiplayer-testing-self-hosted-ci.md): TomNAS runner and planned smoke scenarios.

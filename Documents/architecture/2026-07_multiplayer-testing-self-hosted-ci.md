@@ -8,7 +8,7 @@
 - [x] `multiplayer-smoke-test.yml` on self-hosted + Library stash + nightly
 - [ ] `workflow_dispatch` smoke on TomNAS; confirm a warm second run
 - [ ] Phase 1: harness SIGKILL + DSL + server-kill scenarios
-- [x] Phase 2: folded into the `observer-sync` smoke scenario (2026-11): `lightdebug` switches the area lights, the observing client checks with `observesync lights-off` ([2026-11_test-harness-rework](2026-11_test-harness-rework.md) D5)
+- [x] Phase 2: folded into the `observer-sync` smoke scenario (2026-11): `lightdebug` switches the area lights, the observing client checks with `observesync lights-off` ([testing philosophy](2026-11_testing-philosophy.md#harness-contracts) D5)
 
 # Multiplayer testing on self-hosted CI (Jul 2026)
 
