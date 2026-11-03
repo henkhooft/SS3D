@@ -2,7 +2,7 @@
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
 > Status: in-progress
 
-**Progress:** Phase 1 done (2026-11-03); Phase 2 next.
+**Progress:** Phases 1 and 2 done (2026-11-03); Phase 3 next.
 
 # Test harness rework (Nov 2026)
 
@@ -67,18 +67,44 @@ and expensive suites in the nightly on TomNAS.
 
 ## Phase 2 — Scenario framework and the medical scenario
 
-- [ ] Test room fixture map under the existing fixtures (`SS3D_TILEMAP_FIXTURES` /
+- [x] Test room fixture map under the existing fixtures (`SS3D_TILEMAP_FIXTURES` /
       `SS3D_STATION_FIXTURES` locations), validated by `MapValidationTests`.
-- [ ] Direct-spawn path for a Play Mode host: load the fixture and give the host a body without lobby
+      Done: the owner built it in the map editor. It lives at `Testing/fixtures/stations/testroom.json`,
+      not under `Builds/Game/Data/StationTemplates`: the release workflow ships that folder and the
+      lobby lists it. Main room 5×5 (Assistant and Security spawns, table, lights) and side room 3×5
+      (Security area), joined by a `SecurityAirlock`. Each room has its own area and APC, fed by an
+      SMES, plus an unconnected vent and scrubber, so neither room's air can reach the other.
+      `TestRoomFixtureTests` (EditMode) checks Map Check for Extended, spawns on plenum, one Security
+      door and the Security area.
+- [x] Direct-spawn path for a Play Mode host: load the fixture and give the host a body without lobby
       or ready. Check first whether `RoundSubSystem.ApplyServerSettingsForTesting` (sandbox profile)
       already covers most of it.
-- [ ] `ScenarioFixture` base: one-time boot, fresh body per scenario, tracked spawn cleanup, optional
+      Done: `ScenarioFixture` copies the room in as `scenario-testroom`, applies Extended settings
+      with that map through `ApplyServerSettingsForTesting`, readies the host, starts the round and
+      skips warmup with the admin `ForceStart`. The sandbox profile itself wasn't needed.
+- [x] `ScenarioFixture` base: one-time boot, fresh body per scenario, tracked spawn cleanup, optional
       room reset, `LogAssert` left at its failing default.
-- [ ] Console helper that runs a command as the host and returns its output; thin helpers for "use
+      Done: one boot per run, shared by every scenario fixture. Fresh bodies come from the editor-only
+      `EntitySubSystem.DespawnBodyForTesting` / `SpawnBodyForTesting`, with both hands emptied of
+      the job loadout. Items and entities a scenario spawned are despawned afterwards. Setting
+      `ChangesRoom` (or calling `ReloadRoom()`) restarts the round. Added at the owner's request:
+      every load asserts both rooms hold standard station air (`ScenarioAtmos`), guarding the old
+      round start/stop atmos reset bug; a scenario that changes the air without declaring it fails;
+      breathing CO₂ past 0.5% triggers a reload.
+- [x] Console helper that runs a command as the host and returns its output; thin helpers for "use
       held item on self" and reading health.
-- [ ] **Medical** scenario: spawn a medkit in hand, `hurt`, apply a bandage, assert health improved.
-- [ ] Measure: boot cost and per-scenario cost. If one boot doesn't make scenarios cheap
+      Done: `ScenarioConsole` awaits `CommandsController.AnswerShown`. New `spawninhand <item>`
+      command. "Use held item" is the editor-only `InteractionController.RunInteractionForTesting`,
+      which sends the click RPC so the server revalidates. Health is read from `HumanHealthController.Snapshot`.
+- [x] **Medical** scenario: spawn a medkit in hand, `hurt`, apply a bandage, assert health improved.
+      Done as `MedicalScenarios.BandageOnSelf_StopsBleeding` (chest and left leg): `MedicalPatch`
+      in hand, `hurt` 30 brute, bandage with Help intent, bleeding stops. The bandage stops bleeding
+      but heals no brute, so "health improved" is "bleeding stopped".
+- [x] Measure: boot cost and per-scenario cost. If one boot doesn't make scenarios cheap
       (target: under ~10 s each after boot), stop and revisit D1 before Phase 3.
+      Measured on the dev box (2026-11-03): boot 6.2 s, fresh body 0.1–0.2 s, scenario 0.3–0.4 s,
+      room reload 4.5 s. All 11 PlayMode tests (scenarios, lifecycle, prerequisites) run in 96 s.
+      D1 stands.
 
 ## Phase 3 — First scenario set; retire pilot partials
 
@@ -116,6 +142,12 @@ and expensive suites in the nightly on TomNAS.
       [networking-session-testing](systems/networking-session-testing.md) Pitfalls.
 
 ## Pitfalls (anticipated)
+
+- **Despawning a host's body before its client spawned it.** On a Play Mode host, server lookups see a
+  new body at once, but the host's client spawns it a few ticks later. Despawning it in between
+  leaves the client processing a spawn with nested objects for an object already gone (FishNet
+  `could not be found for a nested spawn` errors). Wait for `NetworkObject.ClientInitialized`.
+  Hit 2026-11-03 in `ScenarioFixture`.
 
 - **Scenarios pass because of leftovers.** A shared boot leaks state between scenarios. D3 is the
   guard; a scenario that only passes when run after another one is a bug in its cleanup.

@@ -50,6 +50,7 @@ One command validates work in the open editor, unattended:
 Testing/ui/validate.sh            # default: preflight, compile, EditMode
 Testing/ui/validate.sh --steps compile,editmode,visual   # any subset, in order
 Testing/ui/validate.sh --steps compile,editmode,scenarios:<category>   # PlayMode tests in one NUnit category
+Testing/ui/validate.sh --steps compile,editmode,scenarios:Medical   # e.g. the medical scenarios; scenarios:Scenarios runs them all
 Testing/ui/compile.sh             # = --steps compile
 Testing/ui/validate.sh --nightly  # owner only: + PlayMode, client+server build if stale, multiplayer smoke
 Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, sandbox, build, remote pilots

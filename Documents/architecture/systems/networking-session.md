@@ -38,6 +38,8 @@ FishNet session management — host/join, network type and port settings. Distin
 
 ## Pitfalls
 
+- **Play Mode host: server sees a spawn before the host's client does.** Despawning a freshly spawned Human before its `NetworkObject.ClientInitialized` makes the host client fail its nested spawns (`could not be found for a nested spawn`). Automation that swaps bodies waits for it; see `ScenarioFixture`. Hit 2026-11-03.
+
 - **No nightly run record means no job reached a runner.** GitHub schedules may be delayed/dropped even while active; keep cron off the hour, refresh its registration with a cron edit, and use the [manual nightly recovery](../2026-07_ci-develop-release-pipeline.md#workflow-githubworkflowsdevelop-releaseyml) to restore downloads. Nightly publication moves the floating tag to the built commit before replacing assets.
 
 - **Smoke round drops from Preparing to Stopped with no error:** round start validates the station template against the mode (Map Check). `run_smoketest.sh` used to stage only `Data/Tilemaps`, so the server ran on whatever `StationTemplates/ministation.json` the GameServer tree held: a stale copy without spawn markers, which was refused. The script now stages `Builds/Game/Data/StationTemplates` too, and `RoundSubSystem.FailStationLoad` logs `Round start aborted: <reason>` on the server. Hit 2026-11-01.
