@@ -24,6 +24,8 @@ namespace SS3D.Systems.Rounds
     public sealed partial class RoundSubSystem
     {
         private readonly RoundEndBeat _endBeat = new();
+        /// <summary>Beat length for the next round end; only automation changes it (<c>SetEndBeatSecondsForTesting</c>).</summary>
+        private int _endBeatSeconds = RoundEndBeat.Seconds;
         private RoundOutcome _pendingOutcome;
         /// <summary>Set by the squad draw (<see cref="FallBackToExtended"/>) when Secret/Nuclear Emergency ran as Extended.</summary>
         private bool _roundFellBackToExtended;
@@ -137,7 +139,7 @@ namespace SS3D.Systems.Rounds
         [Server]
         private async UniTask RunEndBeat(CancellationToken cancellationToken)
         {
-            _endBeat.Begin();
+            _endBeat.Begin(_endBeatSeconds);
             SyncEndBeat();
             try
             {

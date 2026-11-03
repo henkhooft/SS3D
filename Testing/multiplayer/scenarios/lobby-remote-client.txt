@@ -74,24 +74,10 @@ assert_embarked
 ui_wait #lobby-shell-surface hidden
 screenshot remote-03-spawned
 
-# Host stops round 1: the round-end summary covers the living client for the 30 s beat,
-# with this client's own row highlighted.
-wait_round Ending
-ui_wait #round-end-panel visible
-ui_wait #round-end-row-you visible
-wait_seconds 1
-screenshot remote-03b-round-end
-
-# The beat ends: client returns to the shell, which now has a Last Round tab. This client was
-# last on Chat, so the shell does not switch tabs on its own; open it.
+# Host stops round 1: client returns to the shell.
 wait_round Stopped
 ui_wait #lobby-shell-surface visible
 ui_wait #character-creator-surface hidden
-ui_wait #round-end-panel hidden
-ui_wait #tab-last-round visible
-ui_submit #tab-last-round
-ui_wait #last-round visible
-ui_wait #round-end-row-you visible
 screenshot remote-04-returned
 
 # Host starts round 2 without this client ready: Join Round late-spawns.

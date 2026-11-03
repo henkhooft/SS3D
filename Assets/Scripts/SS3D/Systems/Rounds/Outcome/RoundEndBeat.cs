@@ -18,9 +18,10 @@ namespace SS3D.Systems.Rounds
 
         public bool Running { get; private set; }
 
-        public void Begin()
+        /// <param name="seconds">Beat length; <see cref="Seconds"/> in play. Automation shortens it (min 1).</param>
+        public void Begin(int seconds = Seconds)
         {
-            SecondsLeft = Seconds;
+            SecondsLeft = Math.Max(1, seconds);
             Held = false;
             Running = true;
         }

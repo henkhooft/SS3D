@@ -311,6 +311,14 @@ namespace SS3D.Systems.Rounds
             _motd = settings.Motd;
             ApplyServerRules();
         }
+
+        /// <summary>
+        /// Automation only: the round-end summary beat lasts <paramref name="seconds"/> instead of
+        /// <see cref="RoundEndBeat.Seconds"/>, so tests that stop rounds for set-up don't pay 30 s per stop.
+        /// Tests about the round end itself put it back. Lasts for this server session.
+        /// </summary>
+        [Server]
+        public void SetEndBeatSecondsForTesting(int seconds) => _endBeatSeconds = Math.Max(1, seconds);
 #endif
     }
 }

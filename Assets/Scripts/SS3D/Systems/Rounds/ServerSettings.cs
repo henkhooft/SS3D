@@ -109,6 +109,8 @@ namespace SS3D.Systems.Rounds
         public ServerSettings AdminSettings { get; private set; } = ServerSettings.Default;
         public string[] AdminMaps { get; private set; } = Array.Empty<string>();
         public string AdminSettingsStatus { get; private set; } = "Loading server settings…";
+        /// <summary>Client: replies to this admin's settings actions so far (not periodic refreshes).</summary>
+        public int AdminActionReplies { get; private set; }
         public bool HasAdminSettings { get; private set; }
 
         private bool IsAdministrator(NetworkConnection sender)
@@ -121,7 +123,7 @@ namespace SS3D.Systems.Rounds
         [ServerRpc(RequireOwnership = false)]
         public void CmdReadServerSettings(NetworkConnection sender = null)
         {
-            if (IsAdministrator(sender)) SendServerSettings(sender, "");
+            if (IsAdministrator(sender)) SendServerSettings(sender, "", refresh: true);
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -241,22 +243,28 @@ namespace SS3D.Systems.Rounds
         }
 
         [Server]
-        private void SendServerSettings(NetworkConnection sender, string status)
+        /// <param name="refresh">The lobby's periodic re-read: carries no action result of its own.</param>
+        private void SendServerSettings(NetworkConnection sender, string status, bool refresh = false)
         {
             string[] maps = SubSystems.Get<PersistenceSubSystem>().ListStationTemplates().ToArray();
             if (string.IsNullOrEmpty(_serverSettings.Map)) _serverSettings.Map = DefaultStation(maps);
-            TargetServerSettings(sender, _serverSettings, maps, string.IsNullOrEmpty(status) ? _serverSettingsError : status);
+            TargetServerSettings(sender, _serverSettings, maps, string.IsNullOrEmpty(status) ? _serverSettingsError : status, refresh);
         }
 
         private static string DefaultStation(string[] maps) => maps.Contains("ministation")
             ? "ministation" : maps.FirstOrDefault() ?? "";
 
         [TargetRpc]
-        private void TargetServerSettings(NetworkConnection target, ServerSettings settings, string[] maps, string status)
+        private void TargetServerSettings(NetworkConnection target, ServerSettings settings, string[] maps, string status, bool refresh)
         {
             AdminSettings = settings;
             AdminMaps = maps;
-            AdminSettingsStatus = status;
+            // A refresh with no server error keeps the last action's result ("Settings rejected…"), which the
+            // once-a-second re-read used to wipe before the admin could read it.
+            if (!refresh || !string.IsNullOrEmpty(status))
+                AdminSettingsStatus = status;
+            if (!refresh)
+                AdminActionReplies++;
             HasAdminSettings = true;
         }
     }

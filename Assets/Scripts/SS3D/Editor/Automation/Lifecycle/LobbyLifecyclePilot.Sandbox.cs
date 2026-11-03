@@ -182,7 +182,6 @@ namespace SS3D.Editor.Automation
                         SeedRoundResetRegressions();
                         Rounds().ChangeRoundStateMessageStubBroadcast(new SS3D.Systems.Rounds.Messages.ChangeRoundStateMessage(false));
                     },
-                    Timeout = 75,
                     Until = () => Rounds().CurrentRoundState == RoundState.Stopped && StationEmpty() && ResetLogged(),
                     Verify = () => Require(_roundDecals.All(decal => decal == null), "Both surface decals are destroyed on Stop"),
                 },
@@ -462,7 +461,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "First round ends on its own and the station is wiped",
-                Timeout = 130,
+                Timeout = 90,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty() && ResetLogged(),
                 Verify = () =>
                 {
@@ -498,7 +497,7 @@ namespace SS3D.Editor.Automation
             new Step
             {
                 Name = "Second round ends on its own",
-                Timeout = 160,
+                Timeout = 120,
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && StationEmpty() && ResetLogged(),
                 Verify = () =>
                 {

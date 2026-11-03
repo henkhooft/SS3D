@@ -68,10 +68,9 @@ namespace SS3D.Tests
             }
         }
 
-        /// <summary>Waits for Stopped; <paramref name="timeout"/> is on top of the 30 s round-end summary beat.</summary>
         public static IEnumerator WaitUntilStopped(float timeout = 30f)
         {
-            yield return WaitForRoundState(RoundState.Stopped, timeout + RoundEndBeat.Seconds);
+            yield return WaitForRoundState(RoundState.Stopped, timeout);
         }
 
         private static void HandleRoundStateUpdated(ref EventContext context, in RoundStateUpdated e)
