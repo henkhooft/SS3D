@@ -2,7 +2,7 @@
 > Touches systems: rounds-lobby, gamemodes-roles-traits, entities, persistence, chat-audio-screens, screen-effects, ui-shell
 > Status: active
 
-**Progress:** P1 implemented and validated on 2026-11-03 (lifecycle pilot, nightly `sandbox-reset` smoke). P2 implemented with EditMode coverage; its spawn checks move into P3's scenario fixture. Both are in [#131](https://github.com/henkhooft/SS3D/pull/131). P3 (Nuke Ops rules) is next, in its own PR; P4 (the 24/7 Nuke Ops server profile) follows. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4 and T8. Tests follow the [testing philosophy](2026-11_testing-philosophy.md): each phase lists its checks by tier.
+**Progress:** P1 implemented and validated on 2026-11-03 (lifecycle pilot, nightly `sandbox-reset` smoke). P2 implemented with EditMode coverage; its spawn checks move into P3's scenario fixture. Both merged to develop in [#131](https://github.com/henkhooft/SS3D/pull/131) (`360ab4d60`). P3 (Nuke Ops rules) is next, in its own PR; P4 (the 24/7 Nuke Ops server profile) follows. Advances [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M4 and M5 and [test-server.md](../milestones/test-server.md) T4 and T8. Tests follow the [testing philosophy](2026-11_testing-philosophy.md): each phase lists its checks by tier.
 
 # Round-end loop and thin Nuke Ops outcome (Nov 2026)
 
