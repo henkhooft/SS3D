@@ -11,6 +11,7 @@ using SS3D.Data;
 using SS3D.Data.Persistence;
 using SS3D.Networking;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.PlayerControl;
@@ -39,6 +40,7 @@ namespace SS3D.Tests
         public const string RoomStation = "scenario-testroom";
 
         private static bool _roomReady;
+        private bool _setUpDone;
         private readonly HashSet<int> _objectsBeforeScenario = new();
         private readonly Stopwatch _scenarioClock = new();
 
@@ -46,6 +48,9 @@ namespace SS3D.Tests
         protected Entity Body { get; private set; }
 
         protected Player Host => SubSystems.Get<PlayerSubSystem>().GetPlayer(ServerHelpers.LocalCkey);
+
+        /// <summary>The host's entity right now: <see cref="Body"/>, its ghost after a death, or a respawned body.</summary>
+        protected Entity HostEntity => SubSystems.Get<EntitySubSystem>().GetSpawnedEntity(Host);
 
         /// <summary>Set in a scenario that leaves the room changed (atmos, doors); the next scenario reboots it.</summary>
         protected bool ChangesRoom { get; set; }
@@ -60,6 +65,7 @@ namespace SS3D.Tests
         {
             ChangesRoom = false;
             Body = null;
+            _setUpDone = false;
             if (!_roomReady || !RoundRunning())
             {
                 Stopwatch boot = Stopwatch.StartNew();
@@ -73,13 +79,14 @@ namespace SS3D.Tests
             yield return GiveFreshBody();
             Debug.Log($"[Scenario] fresh body in {setUp.Elapsed.TotalSeconds:F1}s");
             SnapshotSpawnedObjects();
+            _setUpDone = true;
             _scenarioClock.Restart();
         }
 
         [UnityTearDown]
         public IEnumerator ScenarioTearDown()
         {
-            if (Body == null)
+            if (!_setUpDone)
             {
                 _roomReady = false; // set-up failed part-way; boot again next time
                 yield break;
@@ -155,6 +162,58 @@ namespace SS3D.Tests
             yield return ServerHelpers.EmbarkPlayer(ServerHelpers.LocalCkey, 20f);
         }
 
+        /// <summary>Waits until <paramref name="condition"/> holds; fails after <paramref name="timeout"/> seconds.</summary>
+        protected static IEnumerator WaitFor(System.Func<bool> condition, string what, float timeout = 5f)
+        {
+            float start = Time.time;
+            while (!condition())
+            {
+                Assert.Less(Time.time - start, timeout, $"Within {timeout}s: {what}");
+                yield return null;
+            }
+        }
+
+        /// <summary>Waits <paramref name="seconds"/> of game time, for checks that something does not happen.</summary>
+        protected static IEnumerator Hold(float seconds)
+        {
+            float start = Time.time;
+            while (Time.time - start < seconds)
+                yield return null;
+        }
+
+        /// <summary>
+        /// Puts the body into critical state at once with one toxin-loaded health tick. No console command
+        /// does this; scenarios that guard the atmos → health path use real gas instead.
+        /// </summary>
+        protected static void MakeCritical(Entity body)
+        {
+            HumanHealthController health = body.GetComponent<HumanHealthController>();
+            health.TickHealth(toxinIntake: HealthConstants.CriticalToxinConcentration + 5f);
+            Assert.AreEqual(HealthState.Critical, health.Snapshot.State, "A toxin overdose makes the body critical");
+        }
+
+        /// <summary>Fully heals the host's body through the <c>heal</c> console command.</summary>
+        protected IEnumerator HealFully() =>
+            Console.Expect($"heal {ServerHelpers.LocalCkey} all 999 999", "Player fully healed");
+
+        /// <summary>Deletes whatever the body holds; the job loadout fills a hand (Security's toolbox).</summary>
+        protected static void EmptyHands(Entity body)
+        {
+            foreach (Hand hand in body.GetComponentInParent<HumanInventory>().Hands.PlayerHands)
+                hand.ItemInHand?.Delete();
+        }
+
+        /// <summary>Moves a body to <paramref name="position"/> past its CharacterController, as an admin teleport would.</summary>
+        protected static void Teleport(Entity body, Vector3 position)
+        {
+            CharacterController controller = body.GetComponent<CharacterController>();
+            if (controller != null)
+                controller.enabled = false;
+            body.transform.position = position;
+            if (controller != null)
+                controller.enabled = true;
+        }
+
         private IEnumerator GiveFreshBody()
         {
             // On a host, server-side lookups see a body at once, but the host's client spawns it a few
@@ -169,9 +228,7 @@ namespace SS3D.Tests
             Assert.IsNotNull(body, "The host got a fresh body");
             yield return WaitForClientSpawn(body, "The host's client spawned the fresh body");
 
-            // The job loadout fills a hand (Security's toolbox); scenarios start empty-handed.
-            foreach (Hand hand in body.GetComponentInParent<HumanInventory>().Hands.PlayerHands)
-                hand.ItemInHand?.Delete();
+            EmptyHands(body);
             yield return null;
 
             Body = body;
@@ -194,20 +251,33 @@ namespace SS3D.Tests
                 _objectsBeforeScenario.Add(id);
         }
 
-        /// <summary>Despawns items and entities that appeared during the scenario (D3). The body stays for the next swap.</summary>
+        /// <summary>
+        /// Despawns items and entities that appeared during the scenario (D3). The host's current entity (body,
+        /// ghost or respawned body) stays for the next swap; a corpse the scenario left behind goes.
+        /// </summary>
         private void DespawnScenarioObjects()
         {
+            Entity current = HostEntity;
             List<NetworkObject> spawned = InstanceFinder.ServerManager.Objects.Spawned
                 .Where(pair => !_objectsBeforeScenario.Contains(pair.Key)).Select(pair => pair.Value).ToList();
             foreach (NetworkObject networkObject in spawned)
             {
                 if (networkObject == null || !networkObject.IsSpawned)
                     continue;
+                // A respawned body's loadout counts as spawned by the scenario too; some of it sits outside any container.
                 if (networkObject.TryGetComponent(out Item item))
-                    item.Delete();
-                else if (networkObject.TryGetComponent(out Entity entity) && entity != Body)
+                {
+                    if (item.Container != null)
+                        item.Delete();
+                    else
+                        InstanceFinder.ServerManager.Despawn(networkObject);
+                }
+                else if (networkObject.TryGetComponent(out Entity entity) && entity != Body && entity != current)
                     InstanceFinder.ServerManager.Despawn(networkObject);
             }
+
+            if (Body != null && Body != current && Body.IsSpawned)
+                InstanceFinder.ServerManager.Despawn(Body.NetworkObject);
         }
 
         private static string RoomStationFile() =>

@@ -2,7 +2,7 @@
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
 > Status: in-progress
 
-**Progress:** Phases 1 and 2 done (2026-11-03); Phase 3 next.
+**Progress:** Phases 1–3 done (2026-11-03); Phase 4 next.
 
 # Test harness rework (Nov 2026)
 
@@ -108,15 +108,40 @@ and expensive suites in the nightly on TomNAS.
 
 ## Phase 3 — First scenario set; retire pilot partials
 
-- [ ] **Access**: a door with an access requirement; denied without an ID, opens with a granted ID card.
-- [ ] **Environment**: vent or overheat the room; atmos damage reaches critical. Replaces
+- [x] **Access**: a door with an access requirement; denied without an ID, opens with a granted ID card.
+      Done as `AccessScenarios` (`Access`): the job ID is deleted and the door refuses by proximity
+      and by click; a spawned `IDCard` bound to a record with no access is refused too; after
+      `accessgrant Security` the door opens. The scenario revokes, steps back and waits for the door
+      to close, so it doesn't need a room reload.
+- [x] **Environment**: vent or overheat the room; atmos damage reaches critical. Replaces
       `LobbyLifecyclePilot.Ragdoll` and `.Reclaim`.
-- [ ] **Death and respawn**: kill, ghost, respawn, new body is controllable. Replaces `.Respawn`.
-- [ ] **Speech**: critical-state speech gates. Replaces `.Speech`.
-- [ ] Remove the replaced partials and their `validate.sh` focused steps (`ragdoll-space`,
+      Done as `EnvironmentScenarios` (`Environment`). Venting and heat are too slow (vacuum takes
+      ~60 s of oxy debt; burns don't make a body critical), so the scenario adds 10,000 mol of plasma
+      at the body's tile: critical from toxin after ~17 s, collapsed with ragdoll gravity on the deck.
+      That is the floor: intake is capped at 0.08/tick against 0.03/tick liver clearance. The ragdoll
+      space checks and the reclaim checks are their own scenarios, made critical by a direct toxin
+      tick (`ScenarioFixture.MakeCritical`), since no console command does it.
+      Follow-up: the plasma wait is now the slowest scenario. A faster way to reach the same effect
+      through the real atmos → health path would cut it; worth finding before Phase 4's budgets bite.
+- [x] **Death and respawn**: kill, ghost, respawn, new body is controllable. Replaces `.Respawn`.
+      Done as `RespawnScenarios` (`Respawn`), two cycles. "Controllable" is checked as: the host
+      owns the new body and `spawninhand` fills its hand.
+- [x] **Speech**: critical-state speech gates. Replaces `.Speech`.
+      Done as `SpeechScenarios` (`Speech`).
+- [x] Remove the replaced partials and their `validate.sh` focused steps (`ragdoll-space`,
       `respawn-cleanup`, `critical-speech`, `critical-reclaim`); point those step names at the
       scenario categories in the runbook.
-- [ ] Each touched system map names its scenario category under **Tests** (D10).
+      Done: `validate.sh` refuses the old names and says which category replaced each one.
+- [x] Each touched system map names its scenario category under **Tests** (D10).
+      Done for entities, chat-audio-screens, health and id-access.
+
+Measured on the dev box (2026-11-03): all nine scenarios in one run take 59–72 s, boot included.
+Access ~10 s (most of it waiting to prove the door stays shut), plasma ~20 s, the rest 0.4–7 s.
+
+The fixture now copes with death: cleanup keeps the host's current entity (ghost or respawned body),
+despawns a corpse left behind, and despawns loadout items that sit outside a container. The first
+full run surfaced a real bug: `SmesBattery` leaked an `OnTick` handler whenever a client left
+and re-entered its observer range (see [electricity](systems/electricity.md) Pitfalls).
 
 ## Phase 4 — Nightly
 
@@ -142,6 +167,11 @@ and expensive suites in the nightly on TomNAS.
       [networking-session-testing](systems/networking-session-testing.md) Pitfalls.
 
 ## Pitfalls (anticipated)
+
+- **Teleporting the host body far away changes what its client observes.** Objects out of range run
+  `OnStopClient`, and `OnStartClient` again on return. Handlers that subscribe on start and only
+  unsubscribe on destroy leak (`SmesBattery`, fixed). The errors show up in the *next* scenario's
+  set-up, after a room reload destroys the object, so suspect the previous scenario.
 
 - **Despawning a host's body before its client spawned it.** On a Play Mode host, server lookups see a
   new body at once, but the host's client spawns it a few ticks later. Despawning it in between

@@ -35,15 +35,5 @@ namespace SS3D.Tests
             Assert.IsNotNull(target, $"The body has a {zone} zone collider");
             return target.GetComponent<Collider>().bounds.center;
         }
-
-        private static IEnumerator WaitFor(System.Func<bool> condition, string what, float timeout = 5f)
-        {
-            float start = Time.time;
-            while (!condition())
-            {
-                Assert.Less(Time.time - start, timeout, $"Within {timeout}s: {what}");
-                yield return null;
-            }
-        }
     }
 }

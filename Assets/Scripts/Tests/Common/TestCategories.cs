@@ -15,5 +15,15 @@ namespace SS3D.Tests
         public const string Medical = "Medical";
 
         public const string Atmos = "Atmos";
+
+        public const string Access = "Access";
+
+        /// <summary>Atmos reaching a body: critical collapse, ragdoll physics on deck and in space, reclaim while critical.</summary>
+        public const string Environment = "Environment";
+
+        /// <summary>Death, ghost and respawn.</summary>
+        public const string Respawn = "Respawn";
+
+        public const string Speech = "Speech";
     }
 }

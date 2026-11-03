@@ -55,12 +55,14 @@ Testing/ui/compile.sh             # = --steps compile
 Testing/ui/validate.sh --nightly  # owner only: + PlayMode, client+server build if stale, multiplayer smoke
 Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, sandbox, build, remote pilots
 Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
-Testing/ui/validate.sh --steps compile,ragdoll-space # focused host critical/dead space physics
-Testing/ui/validate.sh --steps compile,respawn-cleanup # focused sandbox corpse cleanup
-Testing/ui/validate.sh --steps compile,critical-speech # focused server speech gates
-Testing/ui/validate.sh --steps compile,critical-reclaim # focused critical ownership/recovery
 Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay visuals
 ```
+
+Scenario categories (`scenarios:<category>`): `Medical`, `Atmos`, `Access`, `Environment`,
+`Respawn`, `Speech`; `Scenarios` runs them all. They replaced four lifecycle pilot steps, which
+`validate.sh` now refuses with the new name: `ragdoll-space` and `critical-reclaim` →
+`scenarios:Environment`, `respawn-cleanup` → `scenarios:Respawn`, `critical-speech` →
+`scenarios:Speech`.
 
 Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It prints one `ok` line per
 passed step and stops at the first failure, printing that step's details and report path. It lists

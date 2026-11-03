@@ -457,26 +457,6 @@ async def step_round_reset(editor, ctx):
                            "round-reset-regressions-*/status.json", 90, 300)
 
 
-async def step_ragdoll_space(editor, ctx):
-    return await run_pilot(editor, "SS3D/Testing/Run Ragdoll Space Regressions",
-                           "ragdoll-space-*/status.json", 90, 300)
-
-
-async def step_respawn_cleanup(editor, ctx):
-    return await run_pilot(editor, "SS3D/Testing/Run Respawn Cleanup Regressions",
-                           "respawn-cleanup-*/status.json", 90, 300)
-
-
-async def step_critical_speech(editor, ctx):
-    return await run_pilot(editor, "SS3D/Testing/Run Critical Speech Regressions",
-                           "critical-speech-*/status.json", 90, 300)
-
-
-async def step_critical_reclaim(editor, ctx):
-    return await run_pilot(editor, "SS3D/Testing/Run Critical Reclaim Regressions",
-                           "critical-reclaim-*/status.json", 90, 300)
-
-
 async def step_interaction_overlay(editor, ctx):
     return await run_pilot(editor, "SS3D/Testing/Run Interaction Overlay Regressions",
                            "interaction-overlay-*/status.json", 90, 300)
@@ -484,11 +464,16 @@ async def step_interaction_overlay(editor, ctx):
 
 STEPS = {name: globals()["step_" + name] for name in ORDER}
 STEPS["round-reset"] = step_round_reset
-STEPS["ragdoll-space"] = step_ragdoll_space
-STEPS["respawn-cleanup"] = step_respawn_cleanup
-STEPS["critical-speech"] = step_critical_speech
-STEPS["critical-reclaim"] = step_critical_reclaim
 STEPS["interaction-overlay"] = step_interaction_overlay
+
+
+# Lifecycle pilot partials replaced by scenarios (2026-11_test-harness-rework Phase 3).
+RETIRED = {
+    "ragdoll-space": "scenarios:Environment",
+    "critical-reclaim": "scenarios:Environment",
+    "respawn-cleanup": "scenarios:Respawn",
+    "critical-speech": "scenarios:Speech",
+}
 
 
 def step_for(name):
@@ -506,6 +491,9 @@ async def main():
     mode.add_argument("--weekly", action="store_true", help="graphical pilots: lobby UI, lifecycle, sandbox, remote client")
     args = parser.parse_args()
     steps = args.steps.split(",") if args.steps else NIGHTLY if args.nightly else WEEKLY if args.weekly else DEFAULT
+    retired = [f"{s} is now {RETIRED[s]}" for s in steps if s in RETIRED]
+    if retired:
+        parser.error("retired steps: " + "; ".join(retired))
     unknown = [s for s in steps if step_for(s) is None]
     if unknown:
         parser.error(f"unknown steps {unknown}; choose from {sorted(STEPS)} or {SCENARIOS}<category>")
