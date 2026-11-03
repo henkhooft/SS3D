@@ -12,7 +12,7 @@ Day-to-day dev runs through the Unity Editor. For a batchmode Linux client/serve
 
 - **Editor toolbar**: the fork adds Scene Switcher (left), Launcher toggle and Network Settings (right). If they're missing, right-click the toolbar and enable them under **Tools**.
 - **Tests**: EditMode and PlayMode suites live under `Assets/Scripts/Tests/` (`SS3D.Tests.EditMode`, `SS3D.Tests.PlayMode`, `AssetAudit`, shared `Common`). Run them from **Window > General > Test Runner**. CI runs EditMode via `.github/workflows/editmodetestrunner.yml`.
-- **Validation**: targeted by default (`--steps compile,editmode` + focused steps for what you touched; `visual` only for visual changes). No `--full` unless the owner asks. Policy: [2026-11_testing-philosophy.md](Documents/architecture/2026-11_testing-philosophy.md); runbook: [Testing/ui/README.md](Testing/ui/README.md).
+- **Validation**: targeted by default (`--steps compile,editmode` + focused steps for what you touched; `visual` only for visual changes). No `--nightly`/`--weekly` unless the owner asks. Policy: [2026-11_testing-philosophy.md](Documents/architecture/2026-11_testing-philosophy.md); runbook: [Testing/ui/README.md](Testing/ui/README.md).
 - **CI builds**: `.github/workflows/develop-release.yml` cuts a manual prerelease, Windows by default. See [2026-07_ci-develop-release-pipeline.md](Documents/architecture/2026-07_ci-develop-release-pipeline.md).
 - **Code style**: `.editorconfig` (ReSharper/Rider inspections): `_camelCase` private fields, `PascalCase` events, block-scoped namespaces. Match the surrounding code.
 

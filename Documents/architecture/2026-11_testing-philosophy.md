@@ -53,7 +53,7 @@ After a change, with the editor open:
 3. Run a multiplayer smoke scenario only when the change touches networking, spawning or session
    contracts: the one scenario that covers it, not the whole set.
 
-Don't run `--full` unless the owner asks for it. It takes about 25 minutes warm.
+Don't run `--nightly` or `--weekly` unless the owner asks for it. The nightly set takes about 25 minutes warm.
 
 ## Current state
 

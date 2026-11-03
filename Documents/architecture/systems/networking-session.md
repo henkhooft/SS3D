@@ -67,7 +67,7 @@ FishNet session management — host/join, network type and port settings. Distin
 ## Tests
 
 - [Multiplayer testing](networking-session-testing.md) owns smoke/load commands, DSL hooks, fixtures, log gates and coverage limits.
-- With the Editor open, `Testing/ui/validate.sh --full` also runs PlayMode and graphical pilots; [UI runbook](../../../Testing/ui/README.md).
+- With the Editor open, `Testing/ui/validate.sh --nightly` runs PlayMode, builds and smoke, and `--weekly` the graphical pilots; [UI runbook](../../../Testing/ui/README.md).
 - `Tools/updater/test-update.ps1` exercises stable release selection, download/hash refusal, data preservation, failed-swap restoration and runnable backups using temporary fake releases. Windows PowerShell 5.1 CI gates release publication; a real packaged Windows update/backup launch remains a manual release check.
 - `python3 -B Tools/updater/test_update_linux.py` covers the Linux equivalent, including executable permissions and archive/local-data link refusal. Runs in PR and release CI; native packaged game/backup launch remains manual.
 

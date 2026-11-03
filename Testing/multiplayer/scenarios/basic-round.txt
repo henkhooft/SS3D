@@ -1,3 +1,4 @@
+# Guards: a client joins a real dedicated server, starts a round, embarks and runs a console command · Not cheaper because: needs UNITY_SERVER builds and separate processes; folds into late-join (D5)
 # Dedicated-server side of the basic-round scenario. A real UNITY_SERVER build has no
 # ClientManager connection of its own, so this side only observes: wait for the transport to
 # come up, watch the round reach Ongoing once the client starts it, then stay up long enough

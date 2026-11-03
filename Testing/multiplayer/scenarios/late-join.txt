@@ -1,3 +1,4 @@
+# Guards: a second client late-joins an Ongoing round on a dedicated server · Not cheaper because: needs two client processes against a UNITY_SERVER build
 # Dedicated-server side of the late-join scenario. Same shape as basic-round.txt — stay up
 # after Ongoing so clients can finish embark/console before the server tears down.
 wait_connected

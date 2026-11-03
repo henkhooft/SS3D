@@ -95,9 +95,11 @@ namespace SS3D.Editor.Automation
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
         }
 
+        // Guards: host lobby lifecycle: ready, start, spawn, stop, late join, reconnect, character and settings persistence, map validation · Not cheaper because: drives the real lobby UI across whole rounds in one host; weekly graphical run
         [MenuItem("SS3D/Testing/Run Lobby Lifecycle Pilot")]
         public static void Run() => Start("lifecycle");
 
+        // Guards: a built non-admin client sees the lobby, readies, chats, spawns and files a bug report against the editor host · Not cheaper because: needs a separate client process with its own UI; weekly graphical run
         [MenuItem("SS3D/Testing/Run Lobby Remote Client Pilot")]
         public static void RunRemoteClient() => Start(RemoteMode);
 

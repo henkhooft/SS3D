@@ -136,9 +136,9 @@ and HUD/MI visibility in one class with **no** decomposition plan — remains op
 
 **Current tooling:** [Tools/build_client_and_server.sh](../../Tools/build_client_and_server.sh)
 builds Linux client/server binaries via Unity batchmode (close the project's Editor first).
-With the Editor open, [Testing/ui/validate.sh](../../Testing/ui/validate.sh) `--full` drives compile,
-EditMode, PlayMode, visual/lifecycle pilots, stale client/server builds, remote-client checks and
-four smoke scenarios. Both paths require an installed Unity Editor; the scripts do not make
+With the Editor open, [Testing/ui/validate.sh](../../Testing/ui/validate.sh) `--nightly` drives compile,
+EditMode, PlayMode, stale client/server builds and the smoke scenarios; `--weekly` drives the
+visual, lifecycle, sandbox and remote-client pilots. Both paths require an installed Unity Editor; the scripts do not make
 runtime verification automatic at merge time.
 
 **CI configuration:** [editmodetestrunner.yml](../../.github/workflows/editmodetestrunner.yml)

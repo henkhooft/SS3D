@@ -44,13 +44,15 @@ Native MCP clients can call `execute_menu_item` with that same menu path. Inspec
 
 ## Validation loop (agents: start here)
 
-One command validates UI/session work in the open editor, unattended:
+One command validates work in the open editor, unattended:
 
 ```bash
-Testing/ui/validate.sh            # --quick (default): preflight, compile, EditMode, visual, lifecycle
-Testing/ui/validate.sh --full     # + PlayMode, sandbox pilot, client+server build if stale, remote pilot, multiplayer smoke
-Testing/ui/validate.sh --steps compile,visual   # any subset, in order
+Testing/ui/validate.sh            # default: preflight, compile, EditMode
+Testing/ui/validate.sh --steps compile,editmode,visual   # any subset, in order
+Testing/ui/validate.sh --steps compile,editmode,scenarios:<category>   # PlayMode tests in one NUnit category
 Testing/ui/compile.sh             # = --steps compile
+Testing/ui/validate.sh --nightly  # owner only: + PlayMode, client+server build if stale, multiplayer smoke
+Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, sandbox, build, remote pilots
 Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
 Testing/ui/validate.sh --steps compile,ragdoll-space # focused host critical/dead space physics
 Testing/ui/validate.sh --steps compile,respawn-cleanup # focused sandbox corpse cleanup
@@ -59,24 +61,26 @@ Testing/ui/validate.sh --steps compile,critical-reclaim # focused critical owner
 Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay visuals
 ```
 
-Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It stops at the first
-failure, prints a summary table with report paths and the screenshots to review, and writes
-`artifacts/ui/validate-<UTC>/summary.md`. Exit status is nonzero on any failure. A full run takes
-~25 min warm (EditMode ~40 s, PlayMode ~6.5 min, visual ~70 s, lifecycle ~85 s, sandbox ~4.5 min,
-build ~30 s, remote ~50 s, smoke ~9 min). Agents run targeted steps, not `--full`; see
-[2026-11_testing-philosophy.md](../../Documents/architecture/2026-11_testing-philosophy.md).
+Run it outside the agent's Bash sandbox (the dialog watchdog needs X11). It prints one `ok` line per
+passed step and stops at the first failure, printing that step's details and report path. It lists
+screenshots only when the `visual` step ran. Every run writes `artifacts/ui/validate-<UTC>/summary.md`
+with the full table. Exit status is nonzero on any failure. Rough warm timings on tomnas: EditMode
+~40 s, PlayMode ~6.5 min, visual ~70 s, lifecycle ~85 s, sandbox ~4.5 min, build ~30 s, remote
+~50 s, smoke ~9 min. Agents run targeted steps, never `--nightly` or `--weekly` unless the owner
+asks; see [2026-11_testing-philosophy.md](../../Documents/architecture/2026-11_testing-philosophy.md).
 
 | Step | What it checks |
 |------|----------------|
 | preflight | `AutomationPreflight.Check()`: no dirty open scene, no leaked runtime root objects (`Chunk [`, `CharacterPreviewDummy`, `CharacterPreviewStaging`). Never saves or discards. |
 | compile | Refreshes, requests compilation, waits for `artifacts/ui/compile-result.json` (written by `AutomationCompileReport` from `CompilationPipeline`) newer than the request. Lists every compiler and analyzer error (`CS*`, `COIMBRA*`, `RCS*`) with file:line, plus `scriptCompilationFailed`. |
 | editmode | All EditMode tests via MCP `run_tests`; `editmode.json` in the validate folder. Then waits for the Test Runner to restore the scene setup and fails if tests left a dirty/polluted scene. |
-| playmode | `--full` only. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
+| playmode | `--nightly`. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
+| scenarios:&lt;category&gt; | The PlayMode tests in one NUnit category (MCP `run_tests` `category_names`), checked like `playmode`; `scenarios-<category>.json`. Fails if the category has no tests. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
-| sandbox | `--full` only. The sandbox pilot below (~4.5 min). |
+| sandbox | `--weekly`. The sandbox pilot below (~4.5 min). |
 | remote | The remote client pilot. Run directly with a stale build, it refuses with both hashes. |
-| smoke | `--full` only. `Testing/multiplayer/run_smoketest.sh` for basic-round, late-join (2 clients), reconnect and atmos-client-sync, the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
+| smoke | `--nightly`. `Testing/multiplayer/run_smoketest.sh` for basic-round, late-join (2 clients), reconnect and atmos-client-sync, the same set as `multiplayer-smoke-test.yml`. It runs a real headless dedicated server and clients from the current builds (refuses if either is stale). One log per scenario, `smoke-<scenario>.log` in the validate folder, which names the preserved `Testing/multiplayer/.runs/` directory. Runs every scenario, then fails if any failed. ~9 min on tomnas. |
 
 Each step has an expected duration and a timeout. Past the expected duration,
 `Testing/ui/watch-dialogs.sh` runs every 30 s; a modal dialog fails the step at once. On
@@ -103,7 +107,7 @@ Two editor behaviours the tooling works around:
 
 ### PlayMode step
 
-`playmode` (in `--full`, not `--quick`) runs every PlayMode test through MCP `run_tests` (~6.5 min on
+`playmode` (in `--nightly`) runs every PlayMode test through MCP `run_tests` (~6.5 min on
 tomnas) and writes `validate-*/playmode.json`. Failures are checked against
 [`playmode-known-issues.txt`](playmode-known-issues.txt), which lists expected failures:
 - a listed test that fails is reported and does not fail the step;
@@ -160,7 +164,7 @@ under `artifacts/ui/sandbox-<UTC>/`. Effort: [2026-11_sandbox-server](../../Docu
 ## Lobby remote client pilot
 
 **SS3D → Testing → Run Lobby Remote Client Pilot** needs a current client build at
-`Builds/Game/SS3D.x86_64`. `validate.sh --full` rebuilds it when stale; otherwise call
+`Builds/Game/SS3D.x86_64`. `validate.sh --steps build,remote` rebuilds it when stale; otherwise call
 `SS3D.Editor.Automation.AutomationBuild.BuildClient()` through `execute_code` and wait on
 `artifacts/ui/client-build-result.json` (not **SS3D → Build → Client (Linux)**, which opens a file
 manager and has no preflight). The client is a separate player, not the editor's assemblies. The

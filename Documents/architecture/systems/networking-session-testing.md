@@ -65,8 +65,8 @@ check `gh workflow list --all` if nightly runs stop. Configured checks do not es
 
 The graphical remote pilot also files a bug report over client/server broadcasts, verifies the server-attributed JSONL and reduced JPEG, and checks the reopened dialog's cooldown; see the [UI runbook](../../../Testing/ui/README.md#lobby-remote-client-pilot).
 
-With the Editor open, `Testing/ui/validate.sh --full` runs compile, EditMode, PlayMode, visual and
-lifecycle pilots, stale builds, remote pilot and smoke. Reports live under `artifacts/ui/`;
+With the Editor open, `Testing/ui/validate.sh --nightly` runs compile, EditMode, PlayMode, stale
+builds and smoke; `--weekly` runs the visual, lifecycle, sandbox and remote pilots. Reports live under `artifacts/ui/`;
 smoke logs are preserved under `Testing/multiplayer/.runs/`.
 
 Load example: `./Testing/multiplayer/run_loadtest.sh --clients 8 --duration 300 --stagger 2`.

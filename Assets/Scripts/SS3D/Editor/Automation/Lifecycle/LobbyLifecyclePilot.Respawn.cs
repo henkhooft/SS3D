@@ -13,6 +13,7 @@ namespace SS3D.Editor.Automation
         private const string RespawnCleanupMode = "respawn-cleanup";
         private static Human _respawnCorpse;
 
+        // Guards: death keeps the corpse during the respawn cooldown and respawn removes it when the rule says so · Not cheaper because: needs a live round with death and respawn; replaced by the Death and respawn scenario in Phase 3
         [MenuItem("SS3D/Testing/Run Respawn Cleanup Regressions")]
         public static void RunRespawnCleanupRegressions() => Start(RespawnCleanupMode);
 

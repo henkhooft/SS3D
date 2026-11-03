@@ -16,6 +16,7 @@ namespace SS3D.Editor.Automation
         private static Vector3 _deckPosition;
         private static float _spaceHipsHeight;
 
+        // Guards: critical and dead bodies in space keep ragdoll gravity off and stay near the deck · Not cheaper because: needs physics on a live body; replaced by the Environment scenario in Phase 3
         [MenuItem("SS3D/Testing/Run Ragdoll Space Regressions")]
         public static void RunRagdollSpaceRegressions() => Start(RagdollSpaceMode);
 

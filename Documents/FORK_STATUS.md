@@ -224,7 +224,7 @@ Upstream runs EditMode tests only. This fork adds (PRs #73–#84):
 - **PlayMode suite** repaired and extended, with server-side helpers and passing known-issue repros
   promoted into the regular suite
 - **One-command validation** (`Testing/ui/validate.sh`): compile check, EditMode, rendered UI pilots
-  through Unity MCP with real OS input, and with `--full` also PlayMode, a server build and smoke.
+  through Unity MCP with real OS input; `--nightly` adds PlayMode, client and server builds and smoke.
   See [Testing/ui/README.md](../Testing/ui/README.md)
 
 Architecture: [2026-07_multiplayer-test-harness.md](archive/architecture/2026-07_multiplayer-test-harness.md),

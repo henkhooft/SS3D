@@ -1,8 +1,8 @@
 > Implements: [2026-11_testing-philosophy.md](2026-11_testing-philosophy.md) (infrastructure; no design doc)
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
-> Status: planned
+> Status: in-progress
 
-**Progress:** Phase 1 next.
+**Progress:** Phase 1 done (2026-11-03); Phase 2 next.
 
 # Test harness rework (Nov 2026)
 
@@ -40,19 +40,29 @@ and expensive suites in the nightly on TomNAS.
 
 ## Phase 1 — Quick wins
 
-- [ ] `validate.sh`: default steps become `compile,editmode`. Add `scenarios:<category>`. Rename
+- [x] `validate.sh`: default steps become `compile,editmode`. Add `scenarios:<category>`. Rename
       `--full` to `--nightly` (mirrors the CI nightly) and add `--weekly` (the graphical set). Update
       the usage line, the README step table and every doc that cites `--full`.
-- [ ] `validate.py` output: one line per passed step; failure details and report paths only for
+      Done: the default is `preflight,compile,editmode`. `--quick` is gone. `--nightly` runs editor
+      tests, PlayMode, builds and smoke; `--weekly` runs the visual, lifecycle, sandbox, build and
+      remote steps. Archived docs and dated incident notes keep `--full`.
+- [x] `validate.py` output: one line per passed step; failure details and report paths only for
       failures; list screenshots only when a visual step ran.
-- [ ] PlayMode triage: delete `Issue0990_PropagatingPocketProblem_HostPerspective` and
+- [x] PlayMode triage: delete `Issue0990_PropagatingPocketProblem_HostPerspective` and
       `HostGameActions`. Move the four `RoundLifecycle_*` races to EditMode against the round state
       machine where a pure seam exists. Keep any that can't move as nightly-only, with
       `ignoreFailingMessages` removed.
-- [ ] Remove ParrelSync: delete `Assets/Scripts/External/ParrelSync` and its uses in
+      Done: the orphaned `IssueReproduction` and `PlaymodeTestRepository` went too. The only pure
+      seam was the start/stop gate, now `RoundRequestRules` with `RoundRequestRulesTests`. The
+      races themselves (cancellation, despawn, restart, late embark during Ending, gamemode end on
+      a dedicated server) stay in PlayMode, tagged `Nightly`. `PlayModePrerequisites` lost its
+      compiled-build check, a duplicate of the EditMode one.
+- [x] Remove ParrelSync: delete `Assets/Scripts/External/ParrelSync` and its uses in
       `SS3D.Data.asmdef`, `Paths.cs` and `NetworkSettings.cs`. FishNet's references sit behind the
       `PARRELSYNC` define and need no change.
-- [ ] Add a `Guards:` header (D8) to every remaining PlayMode test, pilot and smoke scenario, or
+      Done: `SS3D.Networking.asmdef` also referenced it by GUID. FishNet's asmdef GUID reference
+      is left dangling (vendor file).
+- [x] Add a `Guards:` header (D8) to every remaining PlayMode test, pilot and smoke scenario, or
       delete it if it can't justify its cost.
 
 ## Phase 2 — Scenario framework and the medical scenario

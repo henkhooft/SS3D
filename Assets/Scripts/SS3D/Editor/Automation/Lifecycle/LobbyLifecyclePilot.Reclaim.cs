@@ -17,6 +17,7 @@ namespace SS3D.Editor.Automation
         private static Human _reclaimBody;
         private static bool _reclaimAnimatorInitiallyEnabled;
 
+        // Guards: a critical owner keeps active ragdoll physics and recovers control when healed · Not cheaper because: needs a live body and ownership; replaced by the Environment scenario in Phase 3
         [MenuItem("SS3D/Testing/Run Critical Reclaim Regressions")]
         public static void RunCriticalReclaimRegressions() => Start(CriticalReclaimMode);
 

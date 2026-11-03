@@ -14,6 +14,7 @@ namespace SS3D.Editor.Automation
         private static int _speechProbeCount;
         private static Human _speechBody;
 
+        // Guards: critical-state speech gates for speak, whisper, shout, radio and announcements · Not cheaper because: needs a live body in critical state on the server; replaced by the Speech scenario in Phase 3
         [MenuItem("SS3D/Testing/Run Critical Speech Regressions")]
         public static void RunCriticalSpeechRegressions() => Start(CriticalSpeechMode);
 

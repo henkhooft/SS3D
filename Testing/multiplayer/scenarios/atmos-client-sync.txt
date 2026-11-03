@@ -1,3 +1,4 @@
+# Guards: atmos changes replicate to a client's own snapshot · Not cheaper because: needs client-side replication from a dedicated server; replaced by observer-sync (D5)
 # Dedicated-server side of the atmos-client-sync scenario. Same shape as basic-round.txt — stay
 # up long enough for the client to embark, force an atmos change, and check its own client-side
 # snapshot before we tear down.
