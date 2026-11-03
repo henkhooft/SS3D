@@ -3,7 +3,9 @@
 Default: preflight → compile → editmode. Add focused steps with --steps (e.g. compile,editmode,scenarios:Medical).
 --nightly mirrors the nightly: editor tests, PlayMode, client+server build, multiplayer smoke.
 --weekly is the graphical set: lobby UI, lifecycle and remote client pilots (sandbox is on demand).
-scenarios:<category> runs the PlayMode tests in one NUnit category. PlayMode failures in KnownIssueReproduction
+scenarios:<category> runs the PlayMode tests in one NUnit category. mppm:<scenario> runs a multiplayer
+smoke scenario inside Multiplayer Play Mode (main editor hosts, Player2..4 joins as clients) - on
+demand only, since the built smoke stays the nightly gate. PlayMode failures in KnownIssueReproduction
 fixtures are reported separately against Testing/ui/playmode-known-issues.txt (expected failures), so known bugs
 neither fail the loop nor hide new failures. Every step has an expected duration and a timeout: past the
 expected duration the dialog watchdog runs every 30 s (a modal dialog fails the step at once);
@@ -48,6 +50,14 @@ DEFAULT = ["preflight", "compile", "editmode"]
 NIGHTLY = ["preflight", "compile", "editmode", "playmode", "build", "smoke"]
 WEEKLY = ["preflight", "compile", "visual", "lifecycle", "build", "remote"]
 SCENARIOS = "scenarios:"  # scenarios:<NUnit category>
+MPPM = "mppm:"  # mppm:<scenario>, host + virtual players inside Multiplayer Play Mode
+# Scenario -> (host script for the main editor, client scripts for Player2..4). Scripts live in
+# Testing/multiplayer/mppm/ (MPPM-specific) or Testing/multiplayer/scenarios/ (shared with smoke).
+MPPM_SCENARIOS = {
+    "late-join": ("late-join-host", ["late-join-client-1"]),
+    "reconnect": ("reconnect-host", ["reconnect-client"]),
+}
+MPPM_RESULTS = ROOT / "Temp/mppm-automation"
 KNOWN_ISSUE_DIR = ROOT / "Assets/Scripts/Tests/KnownIssueReproduction"
 KNOWN_ISSUE_LIST = ROOT / "Testing/ui/playmode-known-issues.txt"
 PREFLIGHT = 'return string.Join("\\n", SS3D.Editor.Automation.AutomationPreflight.Check());'
@@ -467,6 +477,112 @@ async def step_smoke(editor, ctx):
     return Done(", ".join(results))
 
 
+async def mppm_players(editor):
+    """{player name: PlayerState} from the editor's Multiplayer Play Mode player list."""
+    text = await editor.execute("return SS3D.Editor.Automation.MultiplayerPlayModeSmoke.Status();") or ""
+    states = {}
+    for line in text.splitlines():
+        parts = line.split("|")
+        if len(parts) >= 2:
+            states[parts[0]] = parts[1]
+    return states
+
+
+def clone_logs_by_name():
+    """{MPPM player name: its virtual project's Editor.log} while MPPM has SystemData readable."""
+    try:
+        data = json.loads((ROOT / "Library/VP/SystemData.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    logs = {}
+    for player in (data.get("Data") or {}).values():
+        ident = (player.get("TypeDependentPlayerInfo") or {}).get("VirtualProjectIdentifier")
+        if player.get("Active") and ident:
+            logs[player.get("Name")] = (
+                ROOT / "Library/VP" / f"{ident['m_Prefix']}{ident['m_Id']}" / "Logs" / "Editor.log")
+    return logs
+
+
+def clone_processes():
+    proc = subprocess.run(["pgrep", "-fc", "editor-mode com.unity.mppm.clone"], capture_output=True, text=True)
+    return int(proc.stdout.strip() or 0)
+
+
+async def stop_play(editor):
+    await editor.execute('if (EditorApplication.isPlayingOrWillChangePlaymode) EditorApplication.isPlaying = false; return "stopping";')
+
+    async def stopped():
+        return True if await editor.busy() is None else None
+
+    await wait_for(stopped, 20, 120, "Play Mode to stop")
+
+
+async def step_mppm(editor, ctx, scenario):
+    """Host + virtual players in one editor process group (Multiplayer Play Mode), each running
+    the script its smoke: tag names. The main editor hosts; Player2..4 join as clients. Each
+    player writes its result under Temp/mppm-automation; any logged error fails the run."""
+    await editor.wait_ready()
+    host, clients = MPPM_SCENARIOS[scenario]
+
+    # Start from stopped clones: a clone reads its smoke: tag at boot, so a reused clone would run
+    # the previous scenario's script. Stopping also makes "the expected players are up" mean the
+    # ones this run launched.
+    await editor.execute("return SS3D.Editor.Automation.MultiplayerPlayModeSmoke.Finish(true);")
+    started = time.time()
+    arguments = ", ".join(f'"{script}"' for script in [host, *clients])
+    error = await editor.execute(f"return SS3D.Editor.Automation.MultiplayerPlayModeSmoke.Prepare({arguments});")
+    if error:
+        raise StepFailed(f"MPPM prepare: {error}")
+
+    expected = len(clients) + 1
+    try:
+        async def launched():
+            # PlayerState sticks at 'Launching' on Linux even for a healthy clone (MPPM 2.0.2),
+            # so the clone's process and Editor.log are the readiness signals.
+            if clone_processes() < len(clients):
+                return None
+            logs = {name: log for name, log in clone_logs_by_name().items() if name.startswith("Player")}
+            if len(logs) < len(clients):
+                return None
+            for log in logs.values():
+                try:
+                    if log.stat().st_mtime < started or "Loaded scene" not in log.read_text(errors="replace"):
+                        return None
+                except OSError:
+                    return None
+            return True
+
+        await wait_for(launched, 90, 420, "MPPM clone editors to launch")
+        await editor.execute('EditorApplication.EnterPlaymode(); return "entering";')
+
+        async def results():
+            found = {}
+            for path in MPPM_RESULTS.glob("*.json"):
+                try:
+                    found[path.stem] = json.loads(path.read_text())
+                except (OSError, json.JSONDecodeError):
+                    return None
+            return found if len(found) >= expected else None
+
+        data = await wait_for(results, 90, 420, "MPPM script results")
+    finally:
+        await stop_play(editor)
+        await editor.execute("return SS3D.Editor.Automation.MultiplayerPlayModeSmoke.Finish(true);")
+
+    problems, verdicts = [], []
+    for player, result in sorted(data.items()):
+        (ctx["out"] / f"mppm-{scenario}-{player.replace(' ', '-')}.json").write_text(json.dumps(result, indent=2))
+        signal = result.get("signal")
+        verdicts.append(f"{player}: {signal}")
+        if signal != "ScriptComplete":
+            problems.append(f"{player}: {signal} {result.get('reason', '')}".strip())
+        for logged in result.get("errors") or []:
+            problems.append(f"{player}: {logged.splitlines()[0]}")
+    if problems:
+        raise StepFailed(f"MPPM {scenario}: {len(problems)} problem(s)\n  " + "\n  ".join(problems[:20]))
+    return Done(f"{scenario}: " + ", ".join(verdicts))
+
+
 async def step_round_reset(editor, ctx):
     return await run_pilot(editor, "SS3D/Testing/Run Round Reset Regressions",
                            "round-reset-regressions-*/status.json", 90, 300)
@@ -495,6 +611,11 @@ def step_for(name):
     if name.startswith(SCENARIOS) and len(name) > len(SCENARIOS):
         category = name[len(SCENARIOS):]
         return lambda editor, ctx: step_playmode(editor, ctx, category)
+    if name.startswith(MPPM) and len(name) > len(MPPM):
+        scenario = name[len(MPPM):]
+        if scenario in MPPM_SCENARIOS:
+            return lambda editor, ctx: step_mppm(editor, ctx, scenario)
+        return None
     return STEPS.get(name)
 
 
@@ -511,7 +632,8 @@ async def main():
         parser.error("retired steps: " + "; ".join(retired))
     unknown = [s for s in steps if step_for(s) is None]
     if unknown:
-        parser.error(f"unknown steps {unknown}; choose from {sorted(STEPS)} or {SCENARIOS}<category>")
+        parser.error(f"unknown steps {unknown}; choose from {sorted(STEPS)}, {SCENARIOS}<category> "
+                     f"or {MPPM}<scenario> ({', '.join(sorted(MPPM_SCENARIOS))})")
 
     out = UI / ("validate-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S"))
     out.mkdir(parents=True, exist_ok=True)

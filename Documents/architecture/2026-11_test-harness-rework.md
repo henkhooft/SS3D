@@ -2,7 +2,7 @@
 > Touches systems: networking-session, rounds-lobby, health, inventory, id-access, atmospherics, ingame-console
 > Status: in-progress
 
-**Progress:** Phases 1–4 done (2026-11-03); Phase 5 next.
+**Progress:** Phases 1–5 done (2026-11-03).
 
 # Test harness rework (Nov 2026)
 
@@ -187,11 +187,23 @@ no longer makes the stamp flap; a fresh checkout still rebuilds, which the weekl
 
 ## Phase 5 — Multiplayer Play Mode spike (half a day)
 
-- [ ] Editor host plus one or two virtual players, FishNet, running `late-join` and `reconnect` to the
+- [x] Editor host plus one or two virtual players, FishNet, running `late-join` and `reconnect` to the
       same pass/fail as the built smoke run.
-- [ ] On success: agents use it for local multiplayer checks; built smoke stays the nightly gate
-      (it exercises `UNITY_SERVER` code paths). On failure: record why in
-      [networking-session-testing](systems/networking-session-testing.md) Pitfalls.
+      Done (2026-11-03): `Testing/ui/validate.sh --steps mppm:late-join` (~1 min warm) and
+      `mppm:reconnect` (~1 min) drive `MultiplayerPlayModeSmoke`; the main editor hosts, Player 2
+      joins as a client, and each player runs the script its `smoke:` tag names. Both scenarios pass
+      with `ScriptComplete` and no logged errors. The spike needed real ordering fixes, not just
+      wiring. The host must not start the round before the clone loaded Game (new `wait_clients <n>`
+      instruction), a clone must not connect before the host loaded Game (host-ready marker under
+      `Temp/mppm-automation/`, mirroring the built smoke's `ServerReady` gate), and an editor
+      automation host must not load Intro while FishNet loads its online scene (it now skips Intro,
+      like a dedicated server). Also fixed `MapEditorSubSystem.OnDestroyed` throwing when Game
+      unloads before `OnStart` ran (the reconnect scenario's disconnect).
+- [x] On success: agents use it for local multiplayer checks; built smoke stays the nightly gate
+      (it exercises `UNITY_SERVER` code paths).
+      Done: the runbook points at `mppm:<scenario>` for agent-local checks. It is on demand only,
+      never in `--nightly`/`--weekly`. Pitfalls for the MPPM path are in
+      [networking-session-testing](systems/networking-session-testing.md).
 
 ## Pitfalls (anticipated)
 

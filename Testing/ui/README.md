@@ -51,6 +51,8 @@ Testing/ui/validate.sh            # default: preflight, compile, EditMode
 Testing/ui/validate.sh --steps compile,editmode,visual   # any subset, in order
 Testing/ui/validate.sh --steps compile,editmode,scenarios:<category>   # PlayMode tests in one NUnit category
 Testing/ui/validate.sh --steps compile,editmode,scenarios:Medical   # e.g. the medical scenarios; scenarios:Scenarios runs them all
+Testing/ui/validate.sh --steps mppm:late-join   # multiplayer scenario in Multiplayer Play Mode (no build needed)
+Testing/ui/validate.sh --steps mppm:reconnect
 Testing/ui/compile.sh             # = --steps compile
 Testing/ui/validate.sh --nightly  # owner only: + PlayMode, client+server build if stale, multiplayer smoke
 Testing/ui/validate.sh --weekly   # owner only: compile, visual, lifecycle, build, remote pilots
@@ -58,6 +60,14 @@ Testing/ui/validate.sh --steps compile,sandbox   # sandbox pilot on demand (not 
 Testing/ui/validate.sh --steps compile,round-reset # focused host atmos + decal reset regression
 Testing/ui/validate.sh --steps compile,interaction-overlay # scaled CPR overlay visuals
 ```
+
+`mppm:<scenario>` needs the `com.unity.multiplayer.playmode` package and MPPM enabled in the
+editor (Window > Multiplayer Play Mode), with this project the only open SS3D editor. The step
+starts from stopped clones and launches Player 2 itself (~30–60 s warm), then runs the scenario in
+Play Mode and parks all players again. The clone's `PlayerState` can read `Launching` long after it
+is up; the driver uses the clone process and its `Editor.log` instead. `/tmp` style details and the
+scene-order pitfall are in
+[networking-session-testing](../../Documents/architecture/systems/networking-session-testing.md#pitfalls).
 
 Scenario categories (`scenarios:<category>`): `Medical`, `Atmos`, `Access`, `Environment`,
 `Respawn`, `Speech`; `Scenarios` runs them all. They replaced four lifecycle pilot steps, which
@@ -87,6 +97,7 @@ while another editor is open, so `ss3d-dev stop` when you're done. A red run ope
 | editmode | All EditMode tests via MCP `run_tests`; `editmode.json` in the validate folder. Then waits for the Test Runner to restore the scene setup and fails if tests left a dirty/polluted scene. |
 | playmode | `--nightly`. All PlayMode tests via MCP `run_tests`; failures are checked against `playmode-known-issues.txt` (see [PlayMode step](#playmode-step)). Same scene-restore check as editmode. |
 | scenarios:&lt;category&gt; | The PlayMode tests in one NUnit category (MCP `run_tests` `category_names`), checked like `playmode`; `scenarios-<category>.json`. Fails if the category has no tests. |
+| mppm:&lt;scenario&gt; | `late-join` or `reconnect` in Multiplayer Play Mode: MPPM tags the main editor with the host script and Player 2 with the client script, launches the clone, enters Play Mode, and waits for both players' `Temp/mppm-automation/*.json`. The host writes a `host-ready` marker once Game is loaded and the clone waits for it before connecting. Fails on anything but `ScriptComplete` or on any logged error (the smoke log gate). On demand only; the built `smoke` step stays the nightly gate. |
 | visual / lifecycle | The two pilots below. Each refuses on a failed preflight (a failed `status.json` at once) and, after Play exits and 3 s of settling, re-runs the check as a postcondition: a leaked `Chunk [` fails the report (`postconditions` field). Reports pass through `verifying` before `passed`/`failed`. |
 | build | Client and dedicated server, each skipped when its `Builds/{Game,GameServer}/ss3d-build-hash.txt` matches `python3 Testing/ui/source_hash.py`. Otherwise `AutomationBuild.BuildClient()` / `BuildServer()`: preflight, then the build on the next editor tick; the driver waits on `artifacts/ui/{client,server}-build-result.json` (`status`, `seconds`, `error`, `sourceHash`), since a build blocks the main thread and MCP. The server build restores the editor's standalone subtarget afterwards, so the editor never stays on UNITY_SERVER. Cold server build ~6.5 min on tomnas. |
 | sandbox | On demand (`--steps sandbox`), not in `--weekly`: the reset loop is the nightly `sandbox-reset` smoke scenario, so the weekly only needs the graphical pilots. The pilot below (~4.5 min). |
