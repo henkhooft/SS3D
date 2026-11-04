@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 45e9647dc — 2026-11-04
+> Verified: bf0356444 — 2026-11-04
 
 # Tile / construction
 
@@ -16,6 +16,8 @@ Server-authoritative tilemap with adjacency-driven mesh visuals, construction pl
 Session boot creates an empty tile container for Map Editor/AOI registration. It does not
 restore persisted station content. `RoundSubSystem` owns Start → selected-template restore →
 WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
+
+Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage.cs` owns the replicated session list and placement observer. `ClearSpawnPoints` also clears that list when `TileMap.Clear` resets the world. See [structural-destruction](structural-destruction.md).
 
 ## Start here
 

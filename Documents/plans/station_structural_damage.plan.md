@@ -218,7 +218,7 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 ### Phase 1
 
 - Area live recompute is **deferred one Update tick** then full `RefloodAllAreaTilesPreservingMetadata` (not a true local-region flood). Immediate reflood inside `OnTileCleared` would still see the wall because TileMap notifies before removal.
-- Debris spawn skipped (log only) until rubble art exists.
+- Steel walls and steel tables spawn session-only procedural folded-panel wreckage with a brief collapse animation, synced for late joiners. Other materials still await wreckage. No suitable steel rubble art is indexed.
 - EditMode tests could not be batch-run while the Unity Editor held the project lock; run `./Tools/run_editmode_tests.sh --filter StructuralDamageTests` (and `ClearingDoorBetweenRooms`) after closing the Editor.
 
 ### Phase 2

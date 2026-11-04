@@ -57,6 +57,7 @@ namespace SS3D.Systems.StructuralDamage
                             container.ReleaseForDestruction();
                     }
                 }
+                SteelWreckageRecord wreckage = SteelWreckageRecord.Capture(placed, coord);
                 placed.ServerSetIntegrity(0f, StructuralIntegrityStage.Destroyed);
                 Vector3 world = _query.TileToWorld(coord);
                 ClearResult clear = _construction.TryClearTile(world, placed.Layer, placed.Direction);
@@ -67,7 +68,9 @@ namespace SS3D.Systems.StructuralDamage
                         Logs.Generic, coord);
                 }
 
-                // Debris spawn deferred until rubble art exists.
+                if (clear.Success && wreckage.Kind != 0
+                    && SS3D.Core.SubSystems.TryGet(out TileSubSystem tiles) && tiles.IsServer)
+                    tiles.ServerAddSteelWreckage(wreckage);
                 Log.Information(nameof(StructuralDamageService),
                     "Structural Destroyed at {coord} via {source} (force {force})",
                     Logs.Generic, coord, source, force);

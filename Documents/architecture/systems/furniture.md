@@ -1,13 +1,15 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: 45e9647dc — 2026-11-04
+> Verified: bf0356444 — 2026-11-04
 
 # Furniture / world objects
 
 ## Overview
 
 Station furniture and interactable world objects — airlocks, lockers, disposal units, vending machines, jukebox, and related prefab behaviours. Steel/wood/glass tables, three locker variants, thirteen opted-in machines, and civilian/security airlocks share [structural damage](structural-destruction.md): tabletop dents/tears for steel, grain-following gouges/splits for wood, branching fractures for glass, side-casing damage on machines, and marks on moving door leaves, plus material-specific contact bursts. Destruction removes furniture without its floor; lockers/machines release stored items first, including through locked removal gates. Power consumption and visuals delegate to [electricity](electricity.md) consumers; airlock opening respects area APC power. Vending machines open a diegetic panel via [machine-interface](machine-interface.md) instead of a direct dispense interaction. Disposal chute/outlet gameplay lives under [disposal](disposal.md).
+
+Steel tables leave procedural collapsed tops and legs through [structural-destruction](structural-destruction.md); remains do not block movement and clear when rebuilt.
 
 ## Start here
 

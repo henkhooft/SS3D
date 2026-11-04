@@ -67,7 +67,7 @@ What already works, system by system, is listed in
 | 🟡 | M1m | Walking and running respond instantly, like a quick RPG |
 | 🟡 | M1c | Ops and Security each have their own guns, magazines, C4 and a stun baton (the rifle works) |
 | ✅ | M2 | Walls take damage and explosions tear through the station |
-| 🟡 | M3 | The nuke itself: breach the vault, arm or defuse, a station-wide warning, and blasts that tear up the floor (tables, lockers and supported machines take damage and can be destroyed) |
+| 🟡 | M3 | The nuke itself: breach the vault, arm or defuse, a station-wide warning, and blasts that tear up the floor (tables, lockers and supported machines take damage; steel walls and tables leave wreckage) |
 | 🟡 | M4 | Objectives exist and the round has a winner (an operative squad is drawn and briefed) |
 | ✅ | M5 | An end-of-round screen everyone sees, then the round restarts |
 | 🟡 | M8 | Space kills you, suits and internals protect you, and engineers can patch the hull (exposure damage works) |
