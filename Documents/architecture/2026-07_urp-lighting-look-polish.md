@@ -1,6 +1,8 @@
 > Implements: Documents/design/rendering-lighting.md
 > Touches systems: rendering, electricity
-> Status: planned
+> Status: in-progress
+
+**Progress:** Half-toon fixture color/intensity response and shadow attenuation corrected. Finite palette normal frames and a first fixture/grade candidate applied. Checked in the running ministation; owner visual acceptance remains open.
 
 # URP lighting look polish (Jul 2026)
 
@@ -28,6 +30,12 @@ reference screenshots — without breaking dark rooms, emergency cones, or inven
 | Icon preview lights | `RuntimePreviewGenerator` |
 
 ## Critical constraint — do not copy Built-in intensities
+
+Half-toon now multiplies albedo by fixture radiance instead of using the legacy
+`_AmbientCol` blend, which discarded light color and intensity on opaque palette
+materials. Reassess existing intensities before tuning falloff: the old values
+were authored against an intensity-insensitive diffuse response. The near-field
+limiter applies to distance attenuation before shadow visibility.
 
 PR #857 PointLight `2 / 10` at `z ≈ 0.36` only looked good because
 `UnityDeferredLibrary.cginc` applied a **custom near-field falloff** that capped
@@ -62,10 +70,13 @@ Prefer those over the brief 857-literal prefab numbers (wall-hug point + intensi
 
 ## Open tuning checklist
 
+- [x] Constant palette UVs retain finite normals (carpet/vendor lighting streaks)
+- [x] Half-toon preserves fixture radiance (color and intensity); no double light-color multiplication in specular
+- [x] Near-field limiter preserves partial shadow visibility
+- [ ] Visually accept the fixture candidate: tube spot/fill 3.0/0.85, bulb 2.5/0.65, warm ivory, 140° outer / 100° inner spot, soft shadows at medium resolution; fills remain unshadowed
 - [ ] PointFill: room center vs wall hotspot vs player-head plastic shine
 - [ ] Spot angle/range for contact shadows without washing walls
-- [ ] MKII grade on URP: bloom ~2.5 / threshold ~0.8; contrast/sat ~10; warm filter;
-      Custom tonemapper → nearest is Neutral or carefully used ACES (no Custom in URP)
+- [ ] Visually accept the grade candidate: Neutral tonemapping, bloom 1.3 / threshold 0.8, contrast/saturation 5, vignette 0.06; exposure remains 0.51
 - [x] SSAO intensity/radius vs muddy midtones — **SSAO disabled** Jul 2026 (design deprioritizes AO; little visual change under half-toon; DepthNormals kept for Decal Layers)
 - [ ] Floor specular vs prop `Palette` specular (keep characters `_SpecIntensity: 0`)
 - [ ] Confirm `NormalOnly` fixtures extinguish in Emergency; only `EmergencyCapable` stay on

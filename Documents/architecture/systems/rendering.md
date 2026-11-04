@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Rendering/, Assets/Content/Resources/Simple Toon/, Assets/Scripts/SS3D/Systems/Vision/, Assets/Content/Resources/Vision/
 > Entry points: SelectionPickRendererFeature, AtmosRendererFeature, VisionRendererFeature
 > Status: partial
-> Verified: 1fcbf4c0c — 2026-11-02 (decal technique pinned to DBuffer; CI-stripped decal pass)
+> Verified: 861910257 — 2026-11-04 (half-toon lighting, palette normals and fixture configuration)
 
 # Rendering
 
@@ -40,6 +40,10 @@ Client FOV / fog-of-war is a hard black mask driven by batched physics raycasts 
 
 ## Pitfalls
 
+- **Carpet/vendor surfaces break into streaks:** constant palette-swatch UVs produce zero derivatives in `ST_CotangentFrame`; unguarded `rsqrt(0)` creates NaN normals. Clamp the squared tangent length before reciprocal square root so flat normal maps retain geometric normals.
+
+- **Half-toon fixtures lose color and intensity:** legacy `_AmbientCol: 1` blends light radiance away in opaque materials. Half-toon must multiply albedo by `light.color`; keep the legacy color blend only for full toon. Specular uses the already-lit texture color once, avoiding squared light intensity.
+- **Near-light shadows wash out:** apply the soft-near distance limiter before multiplying shadow visibility; limiting their product brightens partial shadows. Fixture spots cast soft shadows at the medium resolution tier; PointFill stays unshadowed. Low quality disables additional-light shadows at the pipeline level.
 - **Ghost FOV:** `VisionSubSystem` clears its target and disables the composite on a `HumanoidGhostController` body. Map-editor suppression must not reactivate vision for a ghost; respawning into a living body restores targeting.
 - **Decal technique is pinned to DBuffer, not Automatic:** `SS3D_ForwardPlusRenderer` Decal feature `technique: 1`. Automatic resolves through URP's cached `SHADER_API_MOBILE` check, which differs between the headless CI editor and a desktop player: v0.3.3's CI build kept only `DecalScreenSpaceProjector`, the desktop player chose DBuffer, found no `DBufferProjector` pass, and URP's `DecalDrawErrorSystem` drew every bullet hole and blood decal with the magenta error material (#111). Local builds kept DBuffer, so they never showed it. `Shader Graphs/Decal` and `Hidden/SS3D/MultiplyTint` also stay in Always Included Shaders. To check a player build, run the `assert_bullet_decal` automation opcode (fails if the DBuffer pass is missing) or `stamp_bullet_holes` + `screenshot`. Hit 2026-11-02.
 - **Borderless below native resolution offsets the mouse:** `Screen.SetResolution` in `FullScreenWindow` at a smaller size stretches the swapchain to the desktop, but Linux/X11 still reports pointer coordinates in desktop pixels, so map editor and diegetic UI clicks land off-target. `PlayerDisplayApplier.ApplyWindow` always uses native size in Borderless; the saved resolution only applies to Fullscreen/Windowed. Hit 2026-10-31.

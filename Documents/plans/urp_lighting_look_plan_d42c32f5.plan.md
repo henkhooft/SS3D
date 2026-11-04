@@ -128,6 +128,11 @@ Goal: In-round scenes look like SS3D again — soft half-toon, pastel grade, blo
 
 ### 1b. Half-toon shader (URP forward rewrite)
 
+Half-toon radiance multiplication and distance-before-shadow limiting are implemented
+in `STLighting.hlsl`; preserve these when retuning the ramp/falloff. Palette UV derivative frames are guarded against zero length. Fixture spots now
+cast soft shadows, with weaker fills and a restrained gameplay grade; overall visual
+acceptance remains pending; see the [polish effort](../architecture/2026-07_urp-lighting-look-polish.md).
+
 Port the *visual intent* of upstream `DeferredShadingHalfToon.shader` (commit `5f7e737a`) into the existing Simple Toon URP stack under [Assets/Content/Resources/Simple Toon/Shaders/](Assets/Content/Resources/Simple%20Toon/Shaders/):
 
 
