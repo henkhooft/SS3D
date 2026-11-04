@@ -11,7 +11,7 @@ Per-tile integrity for Turf walls, doors, windows, and FurnitureBase steel/wood/
 
 Steel walls (including reinforced steel) and steel tables now leave deterministic procedural faceted folded-panel wreckage after a short accelerating fall with a small impact bounce. Breakup emits a soft mottled dust cloud followed by a wider ground-impact puff; both expand and fade within roughly 1.7 seconds and only play for live destruction, not late joins. No matching rubble models exist in the art indexes. Wreckage has no collision or occupancy, is replicated for late joiners, and is session-only (not saved or salvageable). Rebuilding on the same tile/layer removes it; map clear and disconnect clean it up. Other materials retain the existing removal behavior.
 
-Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md) now drives wind curls, pressure-driven knockdown and pull from the resulting gradient, without a separate destruction impulse.
+Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md) now drives wind streaks, pressure-driven knockdown and pull from the resulting gradient, without a separate destruction impulse.
 
 ## Start here
 

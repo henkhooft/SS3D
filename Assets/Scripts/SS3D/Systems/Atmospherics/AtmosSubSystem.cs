@@ -92,6 +92,9 @@ namespace SS3D.Systems.Atmospherics
         {
             base.OnStartClient();
 
+            if (!TryGetComponent<AtmosWindView>(out _))
+                gameObject.AddComponent<AtmosWindView>();
+
             // Hosts already get visuals through the server-side AtmosVisualizationBridge above;
             // only pure clients need to build their own atlas from networked chunk patches.
             if (IsServer)

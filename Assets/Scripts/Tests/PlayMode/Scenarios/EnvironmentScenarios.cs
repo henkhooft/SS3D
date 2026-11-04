@@ -5,10 +5,12 @@ using FishNet;
 using FishNet.Component.Animating;
 using NUnit.Framework;
 using SS3D.Core;
+using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
+using SS3D.Systems.Tile;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Debug = UnityEngine.Debug;
@@ -113,7 +115,7 @@ namespace SS3D.Tests
         {
             Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
             Vector3 start = ragdoll.WindSamplePosition;
-            ragdoll.ServerApplyWind(Vector3.right * 30f, 0.2f);
+            ragdoll.ServerApplyWind(Vector3.right * 30f);
             yield return WaitFor(() => ragdoll.Presentation == BodyPresentationState.Collapsed,
                 "a violent gust knocks the owner down");
             yield return Hold(0.25f);
@@ -122,6 +124,63 @@ namespace SS3D.Tests
             Assert.IsTrue(BonesKinematic(false), "Only the owner runs living ragdoll physics");
             yield return WaitFor(() => ragdoll.Presentation == BodyPresentationState.Locomotion,
                 "the conscious body recovers after the wind stops", 8f);
+        }
+
+        // Guards: wind wakes the disabled-by-prefab Ragdoll and pushes an upright body a little every
+        // frame instead of one jump per atmos tick.
+        // Not cheaper because: component enable state and CharacterController motion need a live body.
+        [UnityTest]
+        public IEnumerator GentleWind_DriftsUprightOwner_InSmallSteps()
+        {
+            Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
+            Vector3 start = Body.transform.position;
+            Vector3 previous = start;
+            float largestStep = 0f;
+            float nextUpdate = 0f;
+            for (float elapsed = 0f; elapsed < 1f; elapsed += Time.deltaTime)
+            {
+                if (elapsed >= nextUpdate)
+                {
+                    ragdoll.ServerApplyWind(Vector3.right * 5f);
+                    nextUpdate += AtmosConstants.TickInterval;
+                }
+
+                yield return null;
+                Vector3 position = Body.transform.position;
+                largestStep = Mathf.Max(largestStep, Vector3.Distance(position, previous));
+                previous = position;
+            }
+
+            Assert.That(ragdoll.Presentation, Is.EqualTo(BodyPresentationState.Locomotion), "below knockdown strength");
+            Assert.That(previous.x, Is.GreaterThan(start.x + 0.5f), "the body drifts with the wind");
+            Assert.That(largestStep, Is.LessThan(0.25f), "no per-tick jumps");
+        }
+
+        // Guards: a real hull breach reaches both consumers: the shared flow atlas shows wind toward the hole
+        // and client streaks appear from it, with no wind traffic of their own.
+        // Not cheaper because: needs the tile observer, the host atlas and the render context running together.
+        [UnityTest]
+        public IEnumerator HullBreach_FillsFlowAtlas_AndShowsWindStreaks()
+        {
+            ChangesRoom = true;
+            AtmosWindView view = SubSystems.Get<AtmosSubSystem>().GetComponent<AtmosWindView>();
+            Assert.IsNotNull(view, "Clients get a wind view");
+            Assert.That(view.VisibleStreaks, Is.Zero, "Sealed rooms have no wind");
+
+            var breach = new Vector3(ScenarioAtmos.MainRoom.xMin - 1, 0f, -1f);
+            Assert.IsTrue(SubSystems.Get<TileSubSystem>().Construction.TryClearTile(breach, TileLayer.Turf, Direction.North).Success,
+                "The hull wall is removed");
+
+            yield return WaitFor(() => view.VisibleStreaks > 0, "wind streaks appear after the breach", 5f);
+
+            Vector2 flow = view.SampleFlow(ScenarioAtmos.MainRoom.xMin, -1f);
+            Assert.That(flow.x, Is.LessThan(-0.1f), "Flow beside the hole points out through it");
+            Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
+            Vector3 bodyStart = ragdoll.WindSamplePosition;
+            yield return Hold(1.5f);
+            // The test room's chunk borders run through the body's tile, so this also guards border links.
+            Assert.That(Vector3.Distance(ragdoll.WindSamplePosition, bodyStart), Is.GreaterThan(0.3f),
+                "The wind carries the body toward the breach");
         }
 
         private bool BonesKinematic(bool kinematic) => Body.GetComponentsInChildren<RagdollPart>(true)

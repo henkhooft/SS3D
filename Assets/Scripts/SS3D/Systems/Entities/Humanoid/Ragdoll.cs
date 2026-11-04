@@ -208,6 +208,7 @@ namespace SS3D.Systems.Entities.Humanoid
                     ServerRecover();
                 }
             }
+            TickWind(Time.deltaTime);
             switch (_currentState)
             {
                 case RagdollState.Walking:
