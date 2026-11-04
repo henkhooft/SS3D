@@ -2,7 +2,7 @@
 > Touches systems: atmospherics, entities, rendering, networking-session
 > Status: in-progress
 
-**Progress:** Phase 0 done: fixtures pinned and budgets measured on a sealed map, under both lines on today's code (see [Phase 0 results](#phase-0-results)), so Decision 10 does not hold phase 1. Phase 1 not started. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
+**Progress:** Phases 0 and 1 done. Phase 0 pinned the fixtures and measured budgets on a sealed map, under both lines on today's code (see [Phase 0 results](#phase-0-results)). Phase 1 put edge flow in `ShareGasJob`, off by default until phase 2 (see [Phase 1 results](#phase-1-results)). Phase 2 is next. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
 
 # Atmos edge flow: pressure-driven wind on the tile grid (Nov 2026)
 
@@ -96,6 +96,27 @@ Two 6×6 rooms, door opening onto the evacuated one: 259 s to equalise within 5 
 **Gate:** today's code is under both lines, so Decision 10's rule does not put AOI ahead of phase 1. That passes only because diffusion is slow and touches few chunks at once. Edge flow is built to change the whole region quickly, and if every chunk of this region changes each tick it costs 737 KB/s, about 2.5× the budget, and the sim sits just over 4 ms before edge flow adds any cost. Expect network to be the line phase 3 fails: 300 KB/s covers about 9 chunks, roughly a 48×48 tile area, so AOI or smaller patches are likely needed by then.
 
 **Metastation is not a valid budget map.** With no breach, 128 air regions holding 2,509 of its 12,779 air cells touch vacuum, and it lost about 65,000 mol in 50 s, costing 11 ms per tick and about 2,050 KB/s at rest. The owner attributes this to exterior areas that spawn with air and to missing assets that leave gaps. With doors shut its largest region is 517 cells across 12 chunks, so Decision 6's reach depends heavily on which doors are open.
+
+## Phase 1 results
+
+Edge flow runs behind `AtmosFluxConstants.EdgeFlowEnabled`, which stays `false`, so the game and the Phase 0 baselines still use diffusion. Tests turn it on per simulation with `AtmosSimulation.UseEdgeFlow`, the part of the switch a constant alone could not give. Phase 2 deletes both. `AtmosEdgeFlowTests` covers phase 1's checks, plus gas ratio during a drain, a 4,000 K cell and breath pockets.
+
+First-pass constants, not tuned: wave speed 12 tiles/s, friction 8/s, vacuum edge limit 5 tiles/s, one-tile hole with the neck.
+
+| Case | Half pressure | 10% | Far-field onset (1 kPa) |
+|---|---|---|---|
+| 10×10 room | 19.8 s (diffusion 134 s) | 65 s (472 s) | 1.2 s (13 s) |
+| 40×8 corridor | 78 s (684 s) | 262 s (over 1,200 s) | 10.6 s (240 s) |
+
+The 10×10 room already meets Decision 5, but wind in these runs is still the slope-derived value, and sim cost and traffic with edge flow on are unmeasured. Both are phase 3 work.
+
+What phase 1 changed from the model above:
+
+- **Wave speed follows temperature.** Local `c` rises with `√T`, and any edge whose `c × dt` would pass 0.7 has its pressure drive scaled down. The same rule makes Decision 4's single calm substep stable: at 0.2 s, `c` is held to 3.5 tiles/s.
+- **Friction is 8/s, not the prototype's 2/s.** By calculation, not by a run at 2/s: a room of `L` tiles stops ringing when friction passes `2πc/L`, about 8/s for a 10-tile room, so smaller rooms can still ring briefly.
+- **Substeps run while any gap exceeds 0.5 kPa.** At 2 kPa a breach's tail dropped to the calm path, and a 6×6 room took 169 s to sleep rather than 120 s.
+- **Thin gas stops diffusing below `MinSimulationPressure`.** Otherwise it crept toward the hole for over 300 s, holding cells awake and chunks dirty. A drained room sleeps with a little gas left; the test only pins its mean below 5 kPa.
+- **The awake front still moves one tile per tick,** 5 tiles/s, below the wave speed. It limits far-field onset in big rooms, which is the corridor's 10.6 s. Review it in phase 3.
 
 ## Risks
 

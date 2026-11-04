@@ -45,6 +45,40 @@ namespace SS3D.Systems.Atmospherics.ECS
         public const float BreachPressureThreshold = 50f;
         public const int MaxBreachSubsteps = 4;
 
+        // --- Edge flow (bulk transport with momentum, Documents/architecture/2026-11_atmos-edge-flow.md) ---
+        // Temporary switch: the diffusion path stays the default until phase 2 moves wind onto
+        // edges, then this and the old path are deleted.
+        public const bool EdgeFlowEnabled = false;
+
+        // How fast a pressure wave crosses open tiles at EdgeFlowReferenceTemperature, tiles/s.
+        // Wave speed rises with the square root of temperature, as sound does.
+        public const float EdgeFlowWaveSpeed = 12f;
+        public const float EdgeFlowReferenceTemperature = 293.15f;
+
+        // Upper bound on (wave speed × dt)² for the explicit 2D update. An edge that would exceed
+        // it, because it is hot or runs on a long calm step, is stiffened no further.
+        public const float EdgeFlowStabilityLimit = 0.49f;
+
+        // Friction per second. Above 2π·c/L the longest mode of a room of L tiles stops ringing.
+        public const float EdgeFlowFriction = 8f;
+
+        // Fastest gas may cross an open edge, tiles/s. Flow is capped at this speed × upwind moles.
+        public const float EdgeFlowMaxSpeed = 30f;
+
+        // The same cap on an edge into vacuum; it stands in for choked flow.
+        public const float EdgeFlowVacuumMaxSpeed = 5f;
+
+        // Fraction of a cell's gas that may leave it in one substep, across all its edges.
+        public const float EdgeFlowMaxOutflowFraction = 0.5f;
+
+        // An edge below both of these has settled: its flow is zeroed so both cells can sleep.
+        public const float EdgeFlowSettledPressure = 0.1f;
+        public const float EdgeFlowSettledFlow = 1f;
+
+        // Above either of these anywhere in the active set, the tick runs MaxBreachSubsteps.
+        public const float EdgeFlowSubstepPressure = 0.5f;
+        public const float EdgeFlowSubstepFlow = 20f;
+
         // --- Near-vacuum temperature stabilization ---
         // Below this many moles a cell is treated as effectively empty and its temperature is
         // blended toward space temperature. This prevents the E / heatCapacity division from

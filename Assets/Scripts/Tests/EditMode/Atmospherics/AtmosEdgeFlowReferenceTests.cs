@@ -50,6 +50,16 @@ namespace EditorTests.Atmospherics
             AssertBaseline(metrics.PeakFar, 0.37f, "peak wind at the far end");
         }
 
+        // Not a tuning target yet: phase 3 turns these into Decision 5's numbers.
+        [Test]
+        public void EdgeFlow_DrainsFarFasterThanDiffusion()
+        {
+            Metrics room = RunBreach(10, 10, "edge flow room 10x10", edgeFlow: true);
+            Metrics corridor = RunBreach(40, 8, "edge flow corridor 40x8", edgeFlow: true);
+            Assert.That(room.SecondsToHalf, Is.GreaterThan(0f).And.LessThan(67f));
+            Assert.That(corridor.SecondsToHalf, Is.GreaterThan(0f).And.LessThan(340f));
+        }
+
         [Test]
         public void TwoRooms_DoorOpensOntoEvacuatedRoom()
         {
@@ -95,10 +105,11 @@ namespace EditorTests.Atmospherics
             AssertBaseline(onset, 5f, "far-field onset");
         }
 
-        private Metrics RunBreach(int width, int depth, string label)
+        private Metrics RunBreach(int width, int depth, string label, bool edgeFlow = false)
         {
             var context = TileMapTestUtilities.CreateContext(_objects);
             using var sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, width, depth, out int map);
+            sim.UseEdgeFlow = edgeFlow;
 
             int holeZ = depth / 2;
             var hole = new TileCoord(map, width + 1, holeZ);

@@ -33,6 +33,8 @@ namespace SS3D.Systems.Atmospherics
         private NativeArray<float> _molarMasses;
         private NativeArray<float> _energyScratch;
         private NativeArray<float> _burnIntensity;
+        private NativeArray<AtmosEdgeFlow> _edgeFlow;
+        private NativeArray<AtmosEdgeCellScratch> _edgeScratch;
         private NativeList<int> _activeCells;
         private NativeList<int> _workingSet;
 
@@ -43,6 +45,15 @@ namespace SS3D.Systems.Atmospherics
         public int GasTypeCount => _gasTypeCount;
         public int MapId => _mapId;
         public IReadOnlyList<TileChunkRef> Chunks => _chunks;
+
+        /// <summary>
+        /// Uses per-edge bulk flow instead of the old pressure-sharing path. Temporary, with
+        /// <see cref="AtmosFluxConstants.EdgeFlowEnabled"/>; set before the first tick.
+        /// </summary>
+        public bool UseEdgeFlow { get; set; } = AtmosFluxConstants.EdgeFlowEnabled;
+
+        /// <summary>Substeps the latest tick ran.</summary>
+        public int LastSubsteps { get; private set; }
 
         /// <summary>Indices of Active/Semiactive cells after the latest tick. Empty when disposed.</summary>
         public NativeArray<int> ActiveCells =>
@@ -59,6 +70,9 @@ namespace SS3D.Systems.Atmospherics
 
         public NativeArray<float>.ReadOnly BurnIntensity =>
             _burnIntensity.IsCreated ? _burnIntensity.AsReadOnly() : default;
+
+        public NativeArray<AtmosEdgeFlow>.ReadOnly EdgeFlow =>
+            _edgeFlow.IsCreated ? _edgeFlow.AsReadOnly() : default;
 
         public AtmosSimulation(ITileQueryService query, int mapId, int gasTypeCount, float[] specificHeats = null, float[] molarMasses = null)
         {
@@ -276,6 +290,7 @@ namespace SS3D.Systems.Atmospherics
                 return;
 
             InitCell(cellIndex, coord);
+            ClearEdgeFlows(cellIndex, coord);
             RebuildNeighboursAround(coord);
             ActivateRegion(coord, 1);
         }
@@ -326,7 +341,8 @@ namespace SS3D.Systems.Atmospherics
             BuildWorkingSet();
             ClearBurnIntensityActiveOnly();
 
-            int substeps = GetBreachSubsteps();
+            int substeps = UseEdgeFlow ? GetEdgeFlowSubsteps() : GetBreachSubsteps();
+            LastSubsteps = substeps;
             float subDelta = deltaTime / substeps;
 
             for (int step = 0; step < substeps; step++)
@@ -459,6 +475,8 @@ namespace SS3D.Systems.Atmospherics
             if (_neighbours.IsCreated) _neighbours.Dispose();
             if (_energyScratch.IsCreated) _energyScratch.Dispose();
             if (_burnIntensity.IsCreated) _burnIntensity.Dispose();
+            if (_edgeFlow.IsCreated) _edgeFlow.Dispose();
+            if (_edgeScratch.IsCreated) _edgeScratch.Dispose();
             if (_specificHeats.IsCreated) _specificHeats.Dispose();
             if (_molarMasses.IsCreated) _molarMasses.Dispose();
             if (_activeCells.IsCreated) _activeCells.Dispose();
@@ -506,6 +524,26 @@ namespace SS3D.Systems.Atmospherics
             _cellMeta[cellIndex] = meta;
             _cellMetaWrite[cellIndex] = meta;
             QueueActivate(cellIndex);
+        }
+
+        // A changed cell starts from rest: a door that opens later must not resume the old flow.
+        private void ClearEdgeFlows(int cellIndex, TileCoord coord)
+        {
+            _edgeFlow[cellIndex] = default;
+
+            if (_coordToIndex.TryGetValue(AtmosNeighbourBuilder.GetNeighbourCoord(coord, Direction.West), out int westIndex))
+            {
+                AtmosEdgeFlow west = _edgeFlow[westIndex];
+                west.East = 0f;
+                _edgeFlow[westIndex] = west;
+            }
+
+            if (_coordToIndex.TryGetValue(AtmosNeighbourBuilder.GetNeighbourCoord(coord, Direction.South), out int southIndex))
+            {
+                AtmosEdgeFlow south = _edgeFlow[southIndex];
+                south.North = 0f;
+                _edgeFlow[southIndex] = south;
+            }
         }
 
         private void RebuildChunkNeighbours(int baseIndex)
@@ -676,6 +714,42 @@ namespace SS3D.Systems.Atmospherics
                 AtmosFluxConstants.MaxBreachSubsteps);
         }
 
+        // Fixed count while anything is moving, so wave speed stays the same through a breach; a
+        // calm station keeps the cost of a single substep.
+        private int GetEdgeFlowSubsteps()
+        {
+            for (int i = 0; i < _activeCells.Length; i++)
+            {
+                int cellIndex = _activeCells[i];
+                float selfPressure = GetPressure(cellIndex, _cellMeta[cellIndex]);
+                AtmosEdgeFlow selfFlow = _edgeFlow[cellIndex];
+                if (Mathf.Abs(selfFlow.North) > AtmosFluxConstants.EdgeFlowSubstepFlow ||
+                    Mathf.Abs(selfFlow.East) > AtmosFluxConstants.EdgeFlowSubstepFlow)
+                {
+                    return AtmosFluxConstants.MaxBreachSubsteps;
+                }
+
+                for (int direction = 0; direction < 4; direction++)
+                {
+                    int neighbourIndex = _neighbours[cellIndex].Get(direction);
+                    if (neighbourIndex < 0 || _cellMeta[neighbourIndex].State == AtmosCellState.Blocked)
+                        continue;
+
+                    float neighbourPressure = GetPressure(neighbourIndex, _cellMeta[neighbourIndex]);
+                    if (Mathf.Abs(selfPressure - neighbourPressure) > AtmosFluxConstants.EdgeFlowSubstepPressure)
+                        return AtmosFluxConstants.MaxBreachSubsteps;
+
+                    if (direction >= 2 &&
+                        Mathf.Abs(_edgeFlow[neighbourIndex].Get(direction - 2)) > AtmosFluxConstants.EdgeFlowSubstepFlow)
+                    {
+                        return AtmosFluxConstants.MaxBreachSubsteps;
+                    }
+                }
+            }
+
+            return 1;
+        }
+
         private void RunShareGasJob(float deltaTime)
         {
             var job = new ShareGasJob
@@ -690,6 +764,9 @@ namespace SS3D.Systems.Atmospherics
                 SpecificHeat = _specificHeats,
                 EnergyScratch = _energyScratch,
                 BurnIntensity = _burnIntensity,
+                EdgeFlow = _edgeFlow,
+                EdgeScratch = _edgeScratch,
+                UseEdgeFlow = UseEdgeFlow,
                 MaxGasTypes = AtmosConstants.MaxGasTypes,
                 GasTypeCount = _gasTypeCount,
                 DeltaTime = deltaTime,
@@ -764,6 +841,8 @@ namespace SS3D.Systems.Atmospherics
             ResizeNativeArray(ref _neighbours, cellCount);
             ResizeNativeArray(ref _energyScratch, cellCount);
             ResizeNativeArray(ref _burnIntensity, cellCount);
+            ResizeNativeArray(ref _edgeFlow, cellCount);
+            ResizeNativeArray(ref _edgeScratch, cellCount);
         }
 
         private static void ResizeNativeArray<T>(ref NativeArray<T> array, int length) where T : struct
