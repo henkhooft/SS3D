@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Entities/
 > Entry points: EntitySubSystem, MindSubSystem, HumanoidBodyStateMachine
 > Status: partial
-> Verified: 5834bcdac — 2026-11-04 (remote space coast, root alignment fallback)
+> Verified: 6d309c079 — 2026-11-04 (remote space coast, root alignment fallback)
 
 # Entities
 
@@ -64,7 +64,7 @@ Humanoid/silicon entity spawning, minds, and join/round ordering with [rounds-lo
 - **Spaced ragdolls falling below the deck:** dynamic bones must update `useGravity` from plenum support, including after death transfers physics to the server. Unknown client occupancy preserves known Floating or probes nearby floor; never use an unlimited alignment ray or count bodies/items as floor.
 
 - **Remote client stops dead at the ledge:** a pure client never reads `Unsupported` (client AOI returns `Unknown`), so the server's Floating SyncVar arrives first and `TryProcessSpaceFloat` reached the coast branch with a zero `_coastVelocity`. Keep `_lastGroundedVelocity` from supported frames and adopt it when already floating with no local capture. Hit 2026-11-04 (#124).
-- **Recovered bodies sit ~1 m above the deck on the server:** `AlignToHips` started from the hips position and only replaced Y when `HasFloorSupport()` *and* the floor ray hit. A missed ray (server collider lag) left the root at hip height; nothing pulled a recovered living body back down. Keep the previous root Y when support is known but the ray misses; only unsupported bodies follow the hips. Hit 2026-11-04 (#127).
+- **`AlignToHips` keeps the previous root Y when support is known but the floor ray misses:** otherwise the root would stay at hip height with nothing pulling a recovered body down. Only unsupported bodies follow the hips. This does not explain the server/client height offset in #127: for a living owned body `AlignToHips` runs on the owner, not the server (`IsRagdollPhysicsAuthority`). The offset did not reproduce on a dedicated server after collapse and recovery or while floating (2026-11-04); #127 stays open.
 
 - **Critical movement:** the living movement loop also checks health presentation intent and clears pending movement when incapacitated; do not rely on component disabling alone (Coimbra update subscriptions can still fire).
 - **Ranged fire resets feet / snaps every shot:** FireRifle + Reload must stay on **Upper Body** (mask excludes hips/legs) — Base oneshots restart FreeformCartesian and pop foot phase. Keep Upper Body **weighted for the whole Ranged stance** on **Rifle Aim Idle**; oneshots return there. Pulsing layer weight 0→1→0 per shot (or exiting into Hold Default) is the arm snap/twitch.
