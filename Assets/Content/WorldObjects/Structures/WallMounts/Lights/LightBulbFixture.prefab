@@ -134,16 +134,16 @@ Light:
   serializedVersion: 12
   m_Type: 0
   m_Color: {r: 1, g: 0.96, b: 0.9, a: 1}
-  m_Intensity: 2.5
+  m_Intensity: 2.8
   m_Range: 12
-  m_SpotAngle: 140
-  m_InnerSpotAngle: 100
+  m_SpotAngle: 130
+  m_InnerSpotAngle: 70
   m_CookieSize2D: {x: 10, y: 10}
   m_Shadows:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.85
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
@@ -205,7 +205,7 @@ MonoBehaviour:
   m_CustomShadowLayers: 0
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 0
+  m_SoftShadowQuality: 3
   m_RenderingLayersMask:
     serializedVersion: 0
     m_Bits: 1
@@ -605,7 +605,7 @@ Transform:
   m_GameObject: {fileID: 8720000000000000001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.75, z: 2}
+  m_LocalPosition: {x: 0, y: 1.9, z: 1.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -622,7 +622,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.96, b: 0.9, a: 1}
-  m_Intensity: 0.65
+  m_Intensity: 0.6
   m_Range: 12
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208

@@ -32,12 +32,9 @@ void ST_BuildInputData(STSurfaceInput surface, float4 positionCS, out InputData 
 #endif
 }
 
-AmbientOcclusionFactor ST_GetDefaultAmbientOcclusion()
+AmbientOcclusionFactor ST_GetAmbientOcclusion(InputData inputData)
 {
-    AmbientOcclusionFactor aoFactor;
-    aoFactor.directAmbientOcclusion = half(1.0);
-    aoFactor.indirectAmbientOcclusion = half(1.0);
-    return aoFactor;
+    return GetScreenSpaceAmbientOcclusion(inputData.normalizedScreenSpaceUV);
 }
 
 float4 ST_EvaluateDirectLight(
@@ -160,7 +157,7 @@ float4 ST_EvaluateLighting(
     ST_BuildInputData(surface, positionCS, inputData);
 
     half4 shadowMask = CalculateShadowMask(inputData);
-    AmbientOcclusionFactor aoFactor = ST_GetDefaultAmbientOcclusion();
+    AmbientOcclusionFactor aoFactor = ST_GetAmbientOcclusion(inputData);
 
 #if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE) || defined(_MAIN_LIGHT_SHADOWS_SCREEN)
     Light mainLight = GetMainLight(inputData, shadowMask, aoFactor);
