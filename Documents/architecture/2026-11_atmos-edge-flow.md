@@ -2,7 +2,7 @@
 > Touches systems: atmospherics, entities, rendering, networking-session
 > Status: in-progress
 
-**Progress:** Phases 0 and 1 done. Phase 0 pinned the fixtures and measured budgets on a sealed map, under both lines on today's code (see [Phase 0 results](#phase-0-results)). Phase 1 put edge flow in `ShareGasJob`, off by default until phase 2 (see [Phase 1 results](#phase-1-results)). Phase 2 is next. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
+**Progress:** Phases 0 to 2 done. Phase 0 pinned the fixtures and measured budgets on a sealed map, under both lines on the code of that time (see [Phase 0 results](#phase-0-results)). Phase 1 put edge flow in `ShareGasJob` (see [Phase 1 results](#phase-1-results)). Phase 2 made it the only transport and moved wind onto edges, which leaves wind too weak to knock anyone down outside the hole tile (see [Phase 2 results](#phase-2-results)). Phase 3 is next and starts with that. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
 
 # Atmos edge flow: pressure-driven wind on the tile grid (Nov 2026)
 
@@ -118,14 +118,33 @@ What phase 1 changed from the model above:
 - **Thin gas stops diffusing below `MinSimulationPressure`.** Otherwise it crept toward the hole for over 300 s, holding cells awake and chunks dirty. A drained room sleeps with a little gas left; the test only pins its mean below 5 kPa.
 - **The awake front still moves one tile per tick,** 5 tiles/s, below the wave speed. It limits far-field onset in big rooms, which is the corridor's 10.6 s. Review it in phase 3.
 
+## Phase 2 results
+
+Edge flow is now the only bulk transport. `EdgeFlowEnabled`, `UseEdgeFlow`, the old share path and its substep rule are deleted. Wind at a tile is the mean flow through opposite edges per mole held, in m/s (`AtmosWind.SampleCell`), and the flow atlas encodes that value. `AtmosCellVisualEncoding.EncodeFlow` and `Ragdoll.ServerApplyWind` take wind in m/s.
+
+Moving wind out of kPa moved knockdown to Decision 7's 5 m/s ahead of phase 3. It is a unit change: the old 8 kPa line was 4.8 m/s. `MinSpeed` 0.3 m/s is the old 0.5 kPa line the same way. Tuning stays in phase 3.
+
+`AtmosEdgeFlowReferenceTests` could not keep the phase 0 baselines once diffusion was deleted, so it now pins edge flow's untuned numbers, still for phase 3 to replace.
+
+| Case | Peak wind, hole / beside it / middle / far (m/s) | Phase 0 peak, middle / far |
+|---|---|---|
+| 10×10 room | 5.09 / 3.01 / 0.30 / 0.06 | 2.2 / 0.7 |
+| 40×8 corridor | 5.09 / 3.01 / 0.20 / 0.05 | 0.9 / 0.37 |
+
+Door between two 6×6 rooms, one evacuated: 3.5 m/s at the door, 9.8 s to equalise.
+
+**Open question for phase 3: true air speed is much weaker than the old wind.** Decision 5's drain time fixes the volume leaving, so continuity fixes the speed: about 4 tiles²/s through the hole spreads over a half circle of about 9 tiles at 3 tiles from it, roughly 0.4 m/s. Faster gas cannot fix this without draining the room faster than Decision 5 asks. With Decision 7's 5 m/s line, only someone standing in the hole tile falls, and `MinSpeed` silences most of the room. `scenarios:Environment` and `mppm:breach` still pass, because they stand beside the hole. Phase 3 has to choose how felt wind relates to air speed, for example a gain between the two or a lower knockdown line.
+
+The atlas now reads still air on vacuum tiles, where the old slope still showed flow, so streaks stop at the hull. Review this with phase 3's screenshot.
+
 ## Risks
 
 - **Sloshing:** too little friction makes pressure ring between rooms and keeps cells awake. Phase 1's oscillation test catches it.
-- **Near-empty cells:** `Q / density` blows up as density approaches zero. Wind must clamp and fade below a floor density.
+- **Near-empty cells:** `Q / density` blows up as density approaches zero. `AtmosWind.MinDensityMoles` is the floor, and speed is clamped to `MaxSpeed`.
 - **Network:** a chunk patch is about 6 KB, so 20 changing chunks at 5 Hz is roughly 600 KB/s per client while AOI ([client sync](2026-07_atmos-client-visualization-sync.md) Phase 2) is unshipped. Faster breaches dirty more chunks at once, which puts T3 at risk.
 - **Reach:** one hole can empty every connected space (Decision 6). If a single C4 charge ruins whole rounds, firelocks need a design pass.
 - **Prediction:** if `HumanoidPredictedMovement` is ever enabled on `Human.prefab`, wind must move into its replicate step, or reconcile undoes it.
 
 ## Design changes
 
-The owner revised `atmospherics.md` §1, §2 and §6 on 2026-11-04 to allow bulk flow in open rooms, so this effort no longer deviates from the design. Until phase 2 ships, the code lags the revised sections: rooms still drain by diffusion.
+The owner revised `atmospherics.md` §1, §2 and §6 on 2026-11-04 to allow bulk flow in open rooms, so this effort no longer deviates from the design.
