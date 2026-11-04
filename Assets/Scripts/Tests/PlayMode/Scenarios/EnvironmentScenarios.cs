@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using Coimbra;
 using FishNet;
 using FishNet.Component.Animating;
@@ -12,7 +13,9 @@ using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
+using SS3D.Systems.ScreenEffects;
 using SS3D.Systems.Tile;
+using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Debug = UnityEngine.Debug;
@@ -195,6 +198,52 @@ namespace SS3D.Tests
             }
             finally
             {
+                AtmosRenderContext.ClearRequest();
+                cameraHost.Dispose(true);
+            }
+        }
+
+        // Guards: opening the map editor hides body feedback and wind without throwing, on the editor's own update loop, and closing restores both (#126, #147).
+        // Not cheaper because: needs the editor's open path, the screen effects update and the wind view running together.
+        [UnityTest]
+        public IEnumerator MapEditor_HidesFeedbackAndWind_ThenRestores()
+        {
+            ChangesRoom = true;
+            MapEditorSubSystem editor = SubSystems.Get<MapEditorSubSystem>();
+            ScreenEffectsSubSystem effects = SubSystems.Get<ScreenEffectsSubSystem>();
+            AtmosWindView view = Object.FindFirstObjectByType<AtmosWindView>();
+            MethodInfo setActive = typeof(MapEditorSubSystem).GetMethod("SetActive", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            GameObject cameraHost = new("Wind test camera");
+            cameraHost.transform.SetPositionAndRotation(new Vector3(0f, 5f, 0f), Quaternion.Euler(90f, 0f, 0f));
+            Camera camera = cameraHost.AddComponent<Camera>();
+            AtmosRenderContext.SetRequest(new AtmosRenderContext.Request { SourceCamera = camera });
+            try
+            {
+                var breach = new Vector3(ScenarioAtmos.MainRoom.xMin - 1, 0f, -1f);
+                Assert.IsTrue(SubSystems.Get<TileSubSystem>().Construction.TryClearTile(breach, TileLayer.Turf, Direction.North).Success,
+                    "The hull wall is removed");
+                yield return WaitFor(() => view.VisibleStreaks > 0, "wind streaks appear after the breach", 5f);
+
+                setActive.Invoke(editor, new object[] { true });
+                yield return Hold(0.5f);
+                Assert.IsTrue(effects.IsGameplayFeedbackSuppressed, "Body feedback is hidden in the editor");
+                Assert.IsTrue(AtmosRenderContext.IsRenderingSuppressed, "Atmos rendering is hidden in the editor");
+                Assert.That(view.VisibleStreaks, Is.Zero, "No wind streaks in the editor");
+
+                setActive.Invoke(editor, new object[] { false });
+                Assert.IsFalse(effects.IsGameplayFeedbackSuppressed, "Body feedback returns on close");
+                Assert.IsFalse(AtmosRenderContext.IsRenderingSuppressed, "Atmos rendering returns on close");
+                yield return WaitFor(() => view.VisibleStreaks > 0, "wind streaks resume after close", 5f);
+            }
+            finally
+            {
+                if (editor.IsActive)
+                    setActive.Invoke(editor, new object[] { false });
+
+                // The first open turns on the admin's session invincibility, which outlives the editor.
+                EntityInvincibility.ClearServer(InstanceFinder.ClientManager.Connection.ClientId);
+                EntityInvincibility.LocalPlayerInvincible = false;
                 AtmosRenderContext.ClearRequest();
                 cameraHost.Dispose(true);
             }

@@ -89,7 +89,7 @@ namespace SS3D.Systems.ScreenEffects
                 return;
             }
 
-            foreach (ScreenEffectType type in _currentIntensity.Keys)
+            foreach (ScreenEffectType type in _targetIntensity.Keys)
             {
                 _currentIntensity[type] = 0f;
             }
@@ -307,7 +307,7 @@ namespace SS3D.Systems.ScreenEffects
 
             if (_gameplayFeedbackSuppressed)
             {
-                foreach (ScreenEffectType type in _currentIntensity.Keys)
+                foreach (ScreenEffectType type in _targetIntensity.Keys)
                 {
                     _currentIntensity[type] = 0f;
                 }

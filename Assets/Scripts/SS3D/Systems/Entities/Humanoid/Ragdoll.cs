@@ -600,9 +600,9 @@ namespace SS3D.Systems.Entities.Humanoid
                 }
                 else
                 {
-                    // Support is known but the ray missed (server-side collider lag). Never lift
-                    // the root to the hips' height: that leaves a living body about a metre above
-                    // the deck after it recovers, with nothing pulling it back down (#127).
+                    // Support is known but the ray missed. Never lift the root to the hips' height:
+                    // that would leave a body about a metre above the deck after it recovers, with
+                    // nothing pulling it back down.
                     newPosition.y = previousRootPosition.y;
                 }
             }

@@ -234,13 +234,13 @@ namespace SS3D.Systems.Entities.Humanoid
                 // peer can see the open tile (remote clients never return Unsupported).
                 _lastGroundedVelocity = CaptureLivingCoastVelocity();
 
+                // Always clear: a pure client adopts a coast only while this is zero, so a value
+                // kept through landing would launch its next float in the old direction.
+                _coastVelocity = Vector3.zero;
+
                 if (wasFloating)
                 {
                     BodyStateMachine.SetFloating(false);
-                    if (Input.magnitude < 0.01f)
-                    {
-                        _coastVelocity = Vector3.zero;
-                    }
                 }
 
                 return false;
