@@ -79,4 +79,4 @@ Coasting velocity and fire rendering stay separate follow-ups. They read the sam
 
 ## Design changes
 
-The owner chose to revise `atmospherics.md` rather than deviate: §1 and §6 call an open room diffusion-limited, and bulk flow will now apply in rooms as well as pipes. Until the revision lands, this effort deviates from those two sections.
+The owner revised `atmospherics.md` §1, §2 and §6 on 2026-11-04 to allow bulk flow in open rooms, so this effort no longer deviates from the design. Until phase 2 ships, the code lags the revised sections: rooms still drain by diffusion.
