@@ -20,7 +20,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | area | [area](../design/area.md) | [area-foundation](../archive/architecture/2026-07_area-foundation.md) — shipped | [area](systems/area.md) — partial |
 | armor | [armor](../design/armor.md) | [combat plan](../plans/combat_implementation_plan.md) Phase 5 — in-progress | [combat](systems/combat.md) — partial |
 | atmospherics | [atmospherics](../design/atmospherics.md) | [atmos-ecs-foundation](../archive/architecture/2026-07_atmos-ecs-foundation.md) — shipped; [atmos-client-visualization-sync](2026-07_atmos-client-visualization-sync.md) — shipped; [atmos-edge-flow](2026-11_atmos-edge-flow.md) — in-progress; [metastation-scale-perf](../archive/architecture/2026-07_metastation-scale-perf.md) — shipped | [atmospherics](systems/atmospherics.md) — partial |
-| audio | [audio](../design/audio.md) | [audio-foundation](2026-07_audio-foundation.md) — in-progress | [audio](systems/audio.md) — partial |
+| audio | [audio](../design/audio.md) | [audio-foundation](2026-07_audio-foundation.md) — in-progress; [ambience-and-impact-audio](2026-11_ambience-and-impact-audio.md) — planned | [audio](systems/audio.md) — partial |
 | cargo | [cargo](../design/cargo.md) | none yet | none yet |
 | chemistry | [chemistry](../design/chemistry.md) | [substances-foundation](../archive/architecture/2026-07_substances-foundation.md) — shipped | [substances](systems/substances.md) — partial |
 | combat | [combat](../design/combat.md) | [combat plan](../plans/combat_implementation_plan.md) — in-progress; [player-body-animation](../archive/architecture/2026-07_player-body-animation.md), [animation-polish](../archive/architecture/2026-07_animation-polish.md) — shipped | [combat](systems/combat.md) — partial |
@@ -131,6 +131,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-07_urp-lighting-look-polish](2026-07_urp-lighting-look-polish.md) | in-progress |
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
+| [2026-11_ambience-and-impact-audio](2026-11_ambience-and-impact-audio.md) | planned |
 | [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
 | [2026-11_atmos-edge-flow](2026-11_atmos-edge-flow.md) | in-progress |
 | [2026-11_round-end-loop](2026-11_round-end-loop.md) | active (P1–P2 shipped) |
