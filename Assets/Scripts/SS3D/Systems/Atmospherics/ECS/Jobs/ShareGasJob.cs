@@ -6,12 +6,10 @@ using Unity.Mathematics;
 namespace SS3D.Systems.Atmospherics.ECS
 {
     /// <summary>
-    /// Pressure-driven mole sharing plus equal-pressure composition diffusion over the active
-    /// cell list. Only the <see cref="WorkingSet"/> (actives + their neighbours) is copied,
-    /// seeded, and temperature-resolved — passive cells stay untouched.
+    /// Bulk transport along per-edge flow with momentum, plus equal-pressure composition diffusion
+    /// over the active cell list. Only the <see cref="WorkingSet"/> (actives + their neighbours) is
+    /// copied, seeded, and temperature-resolved — passive cells stay untouched.
     /// Commits results back into the read buffers for the working set (no full-grid swap).
-    /// With <see cref="UseEdgeFlow"/>, bulk transport comes from per-edge flow with momentum and
-    /// only the equal-pressure diffusion path stays per cell.
     /// </summary>
     [BurstCompile]
     public struct ShareGasJob : IJob
@@ -36,7 +34,6 @@ namespace SS3D.Systems.Atmospherics.ECS
 
         public NativeArray<AtmosEdgeCellScratch> EdgeScratch;
 
-        public bool UseEdgeFlow;
         public int MaxGasTypes;
         public int GasTypeCount;
         public float DeltaTime;
@@ -60,8 +57,7 @@ namespace SS3D.Systems.Atmospherics.ECS
                 EnergyScratch[c] = heatCapacity * CellMeta[c].Temperature;
             }
 
-            if (UseEdgeFlow)
-                MoveBulkGasAlongEdges();
+            MoveBulkGasAlongEdges();
 
             for (int activeIndex = 0; activeIndex < ActiveCells.Length; activeIndex++)
             {
@@ -87,74 +83,17 @@ namespace SS3D.Systems.Atmospherics.ECS
                     float neighbourPressure = GetPressure(neighbourIndex, neighbour.Temperature, neighbour.Volume);
                     float pressureDiff = selfPressure - neighbourPressure;
 
-                    if (UseEdgeFlow)
-                    {
-                        if (IsEdgeUnsettled(cellIndex, direction, neighbourIndex, pressureDiff))
-                            transferred = true;
+                    if (IsEdgeUnsettled(cellIndex, direction, neighbourIndex, pressureDiff))
+                        transferred = true;
 
-                        // Thin gas stops diffusing: nobody breathes it, and it would otherwise
-                        // creep toward a breach for minutes, holding cells awake and dirty.
-                        if (neighbour.State != AtmosCellState.Vacuum &&
-                            selfPressure >= AtmosFluxConstants.MinSimulationPressure &&
-                            math.abs(pressureDiff) <= AtmosFluxConstants.PressureEpsilon &&
-                            TransferAlongPartialPressures(
-                                cellIndex,
-                                neighbourIndex,
-                                self,
-                                neighbour,
-                                AtmosFluxConstants.DiffusionSpeed,
-                                ventingToVacuum: false))
-                        {
-                            transferred = true;
-                        }
-
-                        continue;
-                    }
-
-                    // Neighbour holds notably more pressure: it will drive flow toward us next
-                    // tick, so wake it if it has gone dormant (otherwise the wave can't spread
-                    // inward from a breach).
-                    if (pressureDiff < -AtmosFluxConstants.PressureEpsilon)
-                    {
-                        WakeNeighbour(neighbourIndex, neighbour);
-                        continue;
-                    }
-
-                    bool ventingToVacuum = neighbour.State == AtmosCellState.Vacuum;
-
-                    // Equal-pressure composition diffusion: total P matched, but mole fractions
-                    // may still differ (breath O₂→CO₂ pockets). Vacuum edges never use this path.
-                    if (pressureDiff <= AtmosFluxConstants.PressureEpsilon)
-                    {
-                        if (ventingToVacuum)
-                            continue;
-
-                        if (TransferAlongPartialPressures(
-                                cellIndex,
-                                neighbourIndex,
-                                self,
-                                neighbour,
-                                AtmosFluxConstants.DiffusionSpeed,
-                                ventingToVacuum: false))
-                        {
-                            transferred = true;
-                        }
-
-                        continue;
-                    }
-
-                    // Bulk pressure flow (and vacuum venting).
-                    float speed = ventingToVacuum
-                        ? AtmosFluxConstants.VacuumVentSpeed
-                        : AtmosFluxConstants.SimSpeed;
-
-                    if (TransferAlongPartialPressures(
-                            cellIndex,
-                            neighbourIndex,
-                            self,
-                            neighbour,
-                            speed,
-                            ventingToVacuum))
+                    // Equal-pressure composition diffusion: total P matched, but mole fractions may
+                    // still differ (breath O₂→CO₂ pockets). Thin gas stops diffusing: nobody breathes
+                    // it, and it would otherwise creep toward a breach for minutes, holding cells
+                    // awake and dirty.
+                    if (neighbour.State != AtmosCellState.Vacuum &&
+                        selfPressure >= AtmosFluxConstants.MinSimulationPressure &&
+                        math.abs(pressureDiff) <= AtmosFluxConstants.PressureEpsilon &&
+                        DiffuseAlongPartialPressures(cellIndex, neighbourIndex, self, neighbour))
                     {
                         transferred = true;
                     }
@@ -171,8 +110,7 @@ namespace SS3D.Systems.Atmospherics.ECS
                         MolesWrite[GetMoleIndex(cellIndex, gasId)] = 0f;
 
                     EnergyScratch[cellIndex] = 0f;
-                    if (UseEdgeFlow)
-                        ClearEdges(cellIndex);
+                    ClearEdges(cellIndex);
 
                     AtmosCellMeta settled = CellMetaWrite[cellIndex];
                     settled.State = AtmosCellState.Inactive;
@@ -254,15 +192,12 @@ namespace SS3D.Systems.Atmospherics.ECS
                 CellMeta[c] = CellMetaWrite[c];
             }
 
-            if (UseEdgeFlow)
+            for (int activeIndex = 0; activeIndex < ActiveCells.Length; activeIndex++)
             {
-                for (int activeIndex = 0; activeIndex < ActiveCells.Length; activeIndex++)
-                {
-                    int c = ActiveCells[activeIndex];
-                    AtmosEdgeCellScratch scratch = EdgeScratch[c];
-                    scratch.Awake = false;
-                    EdgeScratch[c] = scratch;
-                }
+                int c = ActiveCells[activeIndex];
+                AtmosEdgeCellScratch scratch = EdgeScratch[c];
+                scratch.Awake = false;
+                EdgeScratch[c] = scratch;
             }
         }
 
@@ -504,16 +439,13 @@ namespace SS3D.Systems.Atmospherics.ECS
                 BurnIntensity[cellIndex] = 0f;
         }
 
-        private bool TransferAlongPartialPressures(
+        private bool DiffuseAlongPartialPressures(
             int cellIndex,
             int neighbourIndex,
             AtmosCellMeta self,
-            AtmosCellMeta neighbour,
-            float speed,
-            bool ventingToVacuum)
+            AtmosCellMeta neighbour)
         {
             bool transferred = false;
-            float partialFloor = ventingToVacuum ? 0f : AtmosFluxConstants.PartialPressureEpsilon;
 
             for (int gasId = 0; gasId < GasTypeCount; gasId++)
             {
@@ -523,22 +455,13 @@ namespace SS3D.Systems.Atmospherics.ECS
                 float selfPartial = GetPartialPressure(MolesRead[selfMoleIndex], self.Temperature, self.Volume);
                 float neighbourPartial = GetPartialPressure(MolesRead[neighbourMoleIndex], neighbour.Temperature, neighbour.Volume);
                 float partialDiff = selfPartial - neighbourPartial;
-                if (partialDiff <= partialFloor)
+                if (partialDiff <= AtmosFluxConstants.PartialPressureEpsilon)
                     continue;
 
                 float molesToTransfer = partialDiff * 1000f * self.Volume /
                     (self.Temperature * AtmosFluxConstants.GasConstant);
-                molesToTransfer *= speed * DeltaTime;
-
-                // Never dump an entire cell through a single vacuum edge in one tick. A cell that
-                // fully empties has ~zero heat capacity, so its temperature loses any stable
-                // basis and thrashes between space temperature and whatever a neighbour
-                // refills it with. Capping the fraction keeps a stable gas core so the
-                // temperature decays smoothly (still fast: an exponential drain to vacuum).
-                float maxTransfer = ventingToVacuum
-                    ? MolesWrite[selfMoleIndex] * AtmosFluxConstants.MaxVentFraction
-                    : MolesWrite[selfMoleIndex];
-                molesToTransfer = math.min(molesToTransfer, maxTransfer);
+                molesToTransfer *= AtmosFluxConstants.DiffusionSpeed * DeltaTime;
+                molesToTransfer = math.min(molesToTransfer, MolesWrite[selfMoleIndex]);
                 if (molesToTransfer <= 0f)
                     continue;
 
@@ -547,18 +470,11 @@ namespace SS3D.Systems.Atmospherics.ECS
 
                 MolesWrite[selfMoleIndex] -= molesToTransfer;
                 EnergyScratch[cellIndex] -= energyMoved;
-                if (!ventingToVacuum)
-                {
-                    MolesWrite[neighbourMoleIndex] += molesToTransfer;
-                    EnergyScratch[neighbourIndex] += energyMoved;
-                }
+                MolesWrite[neighbourMoleIndex] += molesToTransfer;
+                EnergyScratch[neighbourIndex] += energyMoved;
 
                 transferred = true;
-
-                AtmosCellMeta neighbourWrite = CellMetaWrite[neighbourIndex];
-                if (neighbourWrite.State != AtmosCellState.Vacuum)
-                    neighbourWrite.State = AtmosCellState.Active;
-                CellMetaWrite[neighbourIndex] = neighbourWrite;
+                SetActive(neighbourIndex);
             }
 
             return transferred;

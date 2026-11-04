@@ -46,12 +46,6 @@ namespace SS3D.Systems.Atmospherics
         public int MapId => _mapId;
         public IReadOnlyList<TileChunkRef> Chunks => _chunks;
 
-        /// <summary>
-        /// Uses per-edge bulk flow instead of the old pressure-sharing path. Temporary, with
-        /// <see cref="AtmosFluxConstants.EdgeFlowEnabled"/>; set before the first tick.
-        /// </summary>
-        public bool UseEdgeFlow { get; set; } = AtmosFluxConstants.EdgeFlowEnabled;
-
         /// <summary>Substeps the latest tick ran.</summary>
         public int LastSubsteps { get; private set; }
 
@@ -253,6 +247,19 @@ namespace SS3D.Systems.Atmospherics
             return GetPressure(cellIndex, _cellMeta[cellIndex]);
         }
 
+        public float GetCellMoles(int cellIndex)
+        {
+            if (cellIndex < 0 || cellIndex >= _cellCount)
+                return 0f;
+
+            float totalMoles = 0f;
+            int baseIndex = cellIndex * AtmosConstants.MaxGasTypes;
+            for (int gasId = 0; gasId < _gasTypeCount; gasId++)
+                totalMoles += _molesRead[baseIndex + gasId];
+
+            return totalMoles;
+        }
+
         public void CreateChunk(TileChunkRef chunkRef)
         {
             if (_chunkKeyToIndex.ContainsKey(chunkRef.ChunkKey))
@@ -341,7 +348,7 @@ namespace SS3D.Systems.Atmospherics
             BuildWorkingSet();
             ClearBurnIntensityActiveOnly();
 
-            int substeps = UseEdgeFlow ? GetEdgeFlowSubsteps() : GetBreachSubsteps();
+            int substeps = GetEdgeFlowSubsteps();
             LastSubsteps = substeps;
             float subDelta = deltaTime / substeps;
 
@@ -685,35 +692,6 @@ namespace SS3D.Systems.Atmospherics
             _pendingActivate.Add(cellIndex);
         }
 
-        private int GetBreachSubsteps()
-        {
-            float maxDeltaPressure = 0f;
-            for (int i = 0; i < _activeCells.Length; i++)
-            {
-                int cellIndex = _activeCells[i];
-                AtmosCellMeta self = _cellMeta[cellIndex];
-                float selfPressure = GetPressure(cellIndex, self);
-
-                for (int direction = 0; direction < 4; direction++)
-                {
-                    int neighbourIndex = _neighbours[cellIndex].Get(direction);
-                    if (neighbourIndex < 0)
-                        continue;
-
-                    float neighbourPressure = GetPressure(neighbourIndex, _cellMeta[neighbourIndex]);
-                    maxDeltaPressure = Mathf.Max(maxDeltaPressure, Mathf.Abs(selfPressure - neighbourPressure));
-                }
-            }
-
-            if (maxDeltaPressure <= AtmosFluxConstants.BreachPressureThreshold)
-                return 1;
-
-            return Mathf.Clamp(
-                Mathf.CeilToInt(maxDeltaPressure / AtmosFluxConstants.BreachPressureThreshold),
-                1,
-                AtmosFluxConstants.MaxBreachSubsteps);
-        }
-
         // Fixed count while anything is moving, so wave speed stays the same through a breach; a
         // calm station keeps the cost of a single substep.
         private int GetEdgeFlowSubsteps()
@@ -766,7 +744,6 @@ namespace SS3D.Systems.Atmospherics
                 BurnIntensity = _burnIntensity,
                 EdgeFlow = _edgeFlow,
                 EdgeScratch = _edgeScratch,
-                UseEdgeFlow = UseEdgeFlow,
                 MaxGasTypes = AtmosConstants.MaxGasTypes,
                 GasTypeCount = _gasTypeCount,
                 DeltaTime = deltaTime,
@@ -889,12 +866,7 @@ namespace SS3D.Systems.Atmospherics
             if (meta.Volume <= 0f || meta.Temperature <= 0f)
                 return 0f;
 
-            float totalMoles = 0f;
-            int baseIndex = cellIndex * AtmosConstants.MaxGasTypes;
-            for (int gasId = 0; gasId < _gasTypeCount; gasId++)
-                totalMoles += _molesRead[baseIndex + gasId];
-
-            return totalMoles * AtmosFluxConstants.GasConstant * meta.Temperature / meta.Volume / 1000f;
+            return GetCellMoles(cellIndex) * AtmosFluxConstants.GasConstant * meta.Temperature / meta.Volume / 1000f;
         }
 
         private TileCoord IndexToCoord(int cellIndex)

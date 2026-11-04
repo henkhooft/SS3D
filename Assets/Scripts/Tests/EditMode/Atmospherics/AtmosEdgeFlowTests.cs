@@ -173,7 +173,7 @@ namespace EditorTests.Atmospherics
             TileMapTestUtilities.BuildWalledRoom(context, originX, 0, 6, 2);
 
             int map = context.Map.MapId;
-            using var sim = new AtmosSimulation(context.Query, map, AtmosConstants.DefaultGasCount) { UseEdgeFlow = true };
+            using var sim = new AtmosSimulation(context.Query, map, AtmosConstants.DefaultGasCount);
             sim.CreateChunk(ChunkRef(map, firstChunk));
             sim.CreateChunk(ChunkRef(map, secondChunk));
             for (int x = 0; x < 8; x++)
@@ -287,9 +287,7 @@ namespace EditorTests.Atmospherics
 
         private static AtmosSimulation CreateRoom(TileMapTestUtilities.MapContext context, int width, int depth, out int map)
         {
-            AtmosSimulation sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, width, depth, out map);
-            sim.UseEdgeFlow = true;
-            return sim;
+            return AtmosTestFixtures.CreateSealedRoomSimulation(context, width, depth, out map);
         }
 
         // A real hull hole: the wall goes, the plenum stays, so an air tile sits between room and space.

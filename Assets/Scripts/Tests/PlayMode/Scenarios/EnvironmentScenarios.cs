@@ -141,7 +141,7 @@ namespace SS3D.Tests
             {
                 if (elapsed >= nextUpdate)
                 {
-                    ragdoll.ServerApplyWind(Vector3.right * 5f);
+                    ragdoll.ServerApplyWind(Vector3.right * 3f);
                     nextUpdate += AtmosConstants.TickInterval;
                 }
 

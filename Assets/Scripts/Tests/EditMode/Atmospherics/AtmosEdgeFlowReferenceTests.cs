@@ -33,31 +33,23 @@ namespace EditorTests.Atmospherics
         public void Room10x10_OneTileHole()
         {
             Metrics metrics = RunBreach(10, 10, "room 10x10");
-            AssertBaseline(metrics.SecondsToHalf, 134.2f, "time to half pressure");
-            AssertBaseline(metrics.SecondsToTenth, 471.6f, "time to a tenth of pressure");
-            AssertBaseline(metrics.FarOnset, 13f, "far-field onset");
-            AssertBaseline(metrics.PeakMiddle, 2.2f, "peak wind mid-room");
-            AssertBaseline(metrics.PeakFar, 0.7f, "peak wind at the far wall");
+            AssertBaseline(metrics.SecondsToHalf, 19.8f, "time to half pressure");
+            AssertBaseline(metrics.SecondsToTenth, 65.4f, "time to a tenth of pressure");
+            AssertBaseline(metrics.FarOnset, 1.2f, "far-field onset");
+            AssertBaseline(metrics.PeakHole, 5.09f, "peak wind in the hole");
+            AssertBaseline(metrics.PeakNear, 3.01f, "peak wind beside the hole");
+            AssertBaseline(metrics.PeakMiddle, 0.3f, "peak wind mid-room");
+            AssertBaseline(metrics.PeakFar, 0.06f, "peak wind at the far wall");
         }
 
         [Test]
         public void Corridor40x8_OneTileHole()
         {
             Metrics metrics = RunBreach(40, 8, "corridor 40x8");
-            AssertBaseline(metrics.SecondsToHalf, 683.8f, "time to half pressure");
-            AssertBaseline(metrics.FarOnset, 240.4f, "far-field onset");
-            AssertBaseline(metrics.PeakMiddle, 0.9f, "peak wind mid-corridor");
-            AssertBaseline(metrics.PeakFar, 0.37f, "peak wind at the far end");
-        }
-
-        // Not a tuning target yet: phase 3 turns these into Decision 5's numbers.
-        [Test]
-        public void EdgeFlow_DrainsFarFasterThanDiffusion()
-        {
-            Metrics room = RunBreach(10, 10, "edge flow room 10x10", edgeFlow: true);
-            Metrics corridor = RunBreach(40, 8, "edge flow corridor 40x8", edgeFlow: true);
-            Assert.That(room.SecondsToHalf, Is.GreaterThan(0f).And.LessThan(67f));
-            Assert.That(corridor.SecondsToHalf, Is.GreaterThan(0f).And.LessThan(340f));
+            AssertBaseline(metrics.SecondsToHalf, 77.8f, "time to half pressure");
+            AssertBaseline(metrics.FarOnset, 10.6f, "far-field onset");
+            AssertBaseline(metrics.PeakMiddle, 0.2f, "peak wind mid-corridor");
+            AssertBaseline(metrics.PeakFar, 0.046f, "peak wind at the far end");
         }
 
         [Test]
@@ -100,16 +92,16 @@ namespace EditorTests.Atmospherics
                 if (MeanPressure(sim, full) - MeanPressure(sim, empty) < 5f) settled = seconds;
             }
 
-            TestContext.WriteLine($"[edge-flow-ref] two rooms: settled={Show(settled)} farOnset={Show(onset)} doorWind={peakWind:F1} m/s");
-            AssertBaseline(settled, 259.2f, "time to equalise");
-            AssertBaseline(onset, 5f, "far-field onset");
+            TestContext.WriteLine($"[edge-flow-ref] two rooms: settled={Show(settled)} farOnset={Show(onset)} doorWind={peakWind:F2} m/s");
+            AssertBaseline(settled, 9.8f, "time to equalise");
+            AssertBaseline(onset, 0.6f, "far-field onset");
+            AssertBaseline(peakWind, 3.52f, "peak wind at the door");
         }
 
-        private Metrics RunBreach(int width, int depth, string label, bool edgeFlow = false)
+        private Metrics RunBreach(int width, int depth, string label)
         {
             var context = TileMapTestUtilities.CreateContext(_objects);
             using var sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, width, depth, out int map);
-            sim.UseEdgeFlow = edgeFlow;
 
             int holeZ = depth / 2;
             var hole = new TileCoord(map, width + 1, holeZ);
@@ -143,6 +135,7 @@ namespace EditorTests.Atmospherics
                 if (metrics.SecondsToHalfMoles < 0f && TotalMoles(sim, room) <= startMoles * 0.5f) metrics.SecondsToHalfMoles = seconds;
                 if (metrics.SecondsToTenth < 0f && pressure <= start * 0.1f) metrics.SecondsToTenth = seconds;
                 if (metrics.FarOnset < 0f && farStart - sim.GetCellPressure(far) >= OnsetDropKilopascals) metrics.FarOnset = seconds;
+                metrics.PeakHole = Mathf.Max(metrics.PeakHole, WindSpeed(sim, hole));
                 metrics.PeakNear = Mathf.Max(metrics.PeakNear, WindSpeed(sim, near));
                 metrics.PeakMiddle = Mathf.Max(metrics.PeakMiddle, WindSpeed(sim, middle));
                 metrics.PeakFar = Mathf.Max(metrics.PeakFar, WindSpeed(sim, far));
@@ -150,17 +143,17 @@ namespace EditorTests.Atmospherics
 
             TestContext.WriteLine(
                 $"[edge-flow-ref] {label}: half={Show(metrics.SecondsToHalf)} halfMoles={Show(metrics.SecondsToHalfMoles)} tenth={Show(metrics.SecondsToTenth)} " +
-                $"farOnset={Show(metrics.FarOnset)} wind near/mid/far={metrics.PeakNear:F1}/{metrics.PeakMiddle:F1}/{metrics.PeakFar:F1} m/s");
+                $"farOnset={Show(metrics.FarOnset)} wind hole/near/mid/far={metrics.PeakHole:F2}/{metrics.PeakNear:F2}/{metrics.PeakMiddle:F2}/{metrics.PeakFar:F2} m/s");
             return metrics;
         }
 
-        // Today's diffusion numbers. Edge flow is meant to break these: phase 3 replaces them with
+        // Edge flow's untuned numbers. Tuning is meant to break these: phase 3 replaces them with
         // Decision 5's targets rather than widening the band.
         private static void AssertBaseline(float measured, float baseline, string what) =>
             Assert.That(measured, Is.EqualTo(baseline).Within(BaselineTolerance).Percent, what);
 
         private static float WindSpeed(AtmosSimulation sim, TileCoord coord) =>
-            AtmosWind.Velocity(AtmosWind.Sample(sim, coord)).magnitude;
+            AtmosWind.Sample(sim, coord).magnitude;
 
         private static List<TileCoord> Interior(int map, int minX, int width, int depth)
         {
@@ -197,6 +190,7 @@ namespace EditorTests.Atmospherics
             public float SecondsToHalfMoles;
             public float SecondsToTenth;
             public float FarOnset;
+            public float PeakHole;
             public float PeakNear;
             public float PeakMiddle;
             public float PeakFar;
