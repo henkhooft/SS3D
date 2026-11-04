@@ -17,6 +17,39 @@ namespace SS3D.Systems.StructuralDamage
             return wall.tileObjectSO != null && wall.GenericType == TileObjectGenericType.Wall;
         }
 
+        public static bool SupportsOverlay(PlacedTileObject placed)
+        {
+            return IsSteelWall(placed) || StructuralIntegrityRules.IsSteelTable(placed.tileObjectSO)
+                || (placed.tileObjectSO != null && placed.GenericType == TileObjectGenericType.Door);
+        }
+
+        public static bool IsDamageSurface(MeshRenderer renderer, PlacedTileObject placed)
+        {
+            if (SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(renderer)
+                || renderer.name == "Steel wall damage overlay")
+                return false;
+
+            // Airlock control panels and the generated floor must retain their own presentation.
+            return placed.GenericType != TileObjectGenericType.Door
+                || renderer.name == "LeftDoor" || renderer.name == "RightDoor"
+                || renderer.name == "Left Airlock" || renderer.name == "Right Airlock";
+        }
+
+        public static void ConfigureSurface(MeshRenderer overlay, Mesh mesh, PlacedTileObject placed)
+        {
+            if (IsSteelWall(placed))
+                return;
+
+            var block = new MaterialPropertyBlock();
+            block.SetFloat("_SurfaceMode", StructuralIntegrityRules.IsSteelTable(placed.tileObjectSO) ? 1f : 2f);
+            block.SetVector("_SurfaceCenter", mesh.bounds.center);
+            block.SetVector("_SurfaceExtents", mesh.bounds.extents);
+            // Stable per tile, shared across stages and clients. Never animate the mark's position.
+            float variation = Mathf.Repeat(placed.WorldOrigin.x * 0.618f + placed.WorldOrigin.y * 0.414f, 1f);
+            block.SetFloat("_Variation", variation);
+            overlay.SetPropertyBlock(block);
+        }
+
         public static MeshRenderer CreateOverlay(MeshRenderer surface)
         {
             if (!surface.TryGetComponent(out MeshFilter source) || source.sharedMesh == null)

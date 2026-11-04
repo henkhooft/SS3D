@@ -10,6 +10,7 @@ namespace SS3D.Systems.StructuralDamage
         public const float DefaultWallMaxIntegrity = 100f;
         public const float DefaultDoorMaxIntegrity = 80f;
         public const float DefaultWindowMaxIntegrity = 50f;
+        public const float DefaultSteelTableMaxIntegrity = 100f;
 
         /// <summary>Remaining fraction at or below which the tile becomes Damaged.</summary>
         public const float DamagedFraction = 0.7f;
@@ -19,20 +20,37 @@ namespace SS3D.Systems.StructuralDamage
 
         public static bool IsStructural(PlacedTileObject placed)
         {
-            if (placed == null || placed.Layer != TileLayer.Turf)
-                return false;
-
-            TileObjectGenericType generic = placed.GenericType;
-            return generic == TileObjectGenericType.Wall || generic == TileObjectGenericType.Door;
+            return placed != null && IsStructural(placed.tileObjectSO);
         }
 
-        public static bool IsStructural(TileObjectSo tileObjectSo)
+        public static bool IsSteelTable(TileObjectSo so)
         {
-            if (tileObjectSo == null || tileObjectSo.layer != TileLayer.Turf)
+            return so != null && so.layer == TileLayer.FurnitureBase
+                && so.genericType == TileObjectGenericType.Table
+                && so.specificType == TileObjectSpecificType.Steel;
+        }
+
+        public static bool IsStructural(TileObjectSo so)
+        {
+            return so != null && (IsSteelTable(so) || (so.layer == TileLayer.Turf
+                && (so.genericType == TileObjectGenericType.Wall || so.genericType == TileObjectGenericType.Door)));
+        }
+
+        /// <summary>Prefer structural turf, then supported furniture; flooring is never a damage target.</summary>
+        public static bool TryGetTarget(ITileQueryService query, TileCoord coord, out PlacedTileObject placed)
+        {
+            placed = null;
+            if (query == null)
                 return false;
 
-            return tileObjectSo.genericType == TileObjectGenericType.Wall
-                || tileObjectSo.genericType == TileObjectGenericType.Door;
+            if (query.TryGetOccupant(coord, TileLayer.Turf, Direction.North, out ITileOccupant turf)
+                && turf is PlacedTileObject structure && IsStructural(structure))
+                placed = structure;
+            else if (query.TryGetOccupant(coord, TileLayer.FurnitureBase, Direction.North, out ITileOccupant furniture)
+                && furniture is PlacedTileObject table && IsSteelTable(table.tileObjectSO))
+                placed = table;
+
+            return placed != null;
         }
 
         public static float ResolveMaxIntegrity(TileObjectSo tileObjectSo)
@@ -42,6 +60,9 @@ namespace SS3D.Systems.StructuralDamage
 
             if (tileObjectSo.structuralMaxIntegrity > 0f)
                 return tileObjectSo.structuralMaxIntegrity;
+
+            if (IsSteelTable(tileObjectSo))
+                return DefaultSteelTableMaxIntegrity;
 
             if (tileObjectSo.genericType == TileObjectGenericType.Door)
                 return DefaultDoorMaxIntegrity;

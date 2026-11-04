@@ -22,6 +22,9 @@ namespace SS3D.Systems.StructuralDamage.Editor
             "Assets/Content/WorldObjects/Structures/Walls/SteelWindow.prefab",
             "Assets/Content/WorldObjects/Structures/Walls/SteelWindowReinforced.prefab",
             "Assets/Content/WorldObjects/Structures/Walls/SteelGirder.prefab",
+            "Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableSteel.prefab",
+            "Assets/Content/WorldObjects/Structures/Doors/CivillianAirlock.prefab",
+            "Assets/Content/WorldObjects/Structures/Doors/SecurityAirlock.prefab",
         };
 
         /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.StructuralIntegrityPrefabSetup.SetupBatch</c>
@@ -76,7 +79,7 @@ namespace SS3D.Systems.StructuralDamage.Editor
 
                 SerializedObject presenterSo = new SerializedObject(presenter);
                 SerializedProperty clipProp = presenterSo.FindProperty("_crackedHiss");
-                if (clipProp != null && clipProp.objectReferenceValue == null && hiss != null)
+                if (path.Contains("/Walls/") && clipProp != null && clipProp.objectReferenceValue == null && hiss != null)
                 {
                     clipProp.objectReferenceValue = hiss;
                     presenterSo.ApplyModifiedPropertiesWithoutUndo();

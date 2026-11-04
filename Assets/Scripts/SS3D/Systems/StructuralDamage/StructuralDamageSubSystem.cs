@@ -60,9 +60,8 @@ namespace SS3D.Systems.StructuralDamage
                 return false;
 
             bool showImpact = impactNormal.sqrMagnitude > 0.0001f
-                && _boundQuery.TryGetOccupant(coord, TileLayer.Turf, Direction.North, out ITileOccupant occupant)
-                && occupant is PlacedTileObject placed
-                && SteelWallDamageVfx.IsSteelWall(placed);
+                && StructuralIntegrityRules.TryGetTarget(_boundQuery, coord, out PlacedTileObject placed)
+                && SteelWallDamageVfx.SupportsOverlay(placed);
 
             if (!service.TryApplyStructuralDamage(coord, force, source))
                 return false;

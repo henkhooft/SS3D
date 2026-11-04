@@ -30,11 +30,13 @@ namespace SS3D.Systems.Examine
 
             if (stage == StructuralIntegrityStage.Cracked)
             {
+                bool metalObject = placed.GenericType == TileObjectGenericType.Door
+                    || SS3D.Systems.StructuralDamage.StructuralIntegrityRules.IsSteelTable(placed.tileObjectSO);
                 sections.Add(new ExamineSection(LocalizedTextService.GetFormattedString(
                     ExamineCanonicalKeyGenerator.ExamineTableName,
-                    ExamineStructuralIntegrityKeys.Cracked,
+                    metalObject ? ExamineStructuralIntegrityKeys.TornMetal : ExamineStructuralIntegrityKeys.Cracked,
                     null,
-                    ExamineStructuralIntegrityKeys.CrackedFallback)));
+                    metalObject ? ExamineStructuralIntegrityKeys.TornMetalFallback : ExamineStructuralIntegrityKeys.CrackedFallback)));
             }
         }
     }

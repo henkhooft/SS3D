@@ -1,5 +1,4 @@
 ﻿using SS3D.Core;
-using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile.Connections.AdjacencyTypes;
 using UnityEngine;
 
@@ -15,13 +14,6 @@ namespace SS3D.Systems.Tile.Connections
         [SerializeField] private AdvancedConnector _advancedAdjacency;
 
         protected override IMeshAndDirectionResolver AdjacencyResolver => _advancedAdjacency;
-
-        protected override void ApplyEngineConnections(byte connections)
-        {
-            base.ApplyEngineConnections(connections);
-            if (TryGetComponent(out StructuralIntegrityPresenter integrity))
-                integrity.RefreshWallOverlayMesh();
-        }
 
         public override IConnectionRule ConnectionRule
         {

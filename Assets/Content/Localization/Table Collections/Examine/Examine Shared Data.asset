@@ -1351,6 +1351,10 @@ MonoBehaviour:
     m_Key: examine.health.feel.limb_useless
     m_Metadata:
       m_Items: []
+  - m_Id: 295629502976073728
+    m_Key: examine.structural.torn_metal
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

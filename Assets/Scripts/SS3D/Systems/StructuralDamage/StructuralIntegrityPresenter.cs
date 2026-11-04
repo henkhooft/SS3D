@@ -65,7 +65,7 @@ namespace SS3D.Systems.StructuralDamage
 
             _applied = stage;
 
-            if (TryGetComponent(out PlacedTileObject wall) && SteelWallDamageVfx.IsSteelWall(wall))
+            if (TryGetComponent(out PlacedTileObject wall) && SteelWallDamageVfx.SupportsOverlay(wall))
             {
                 ApplyWallOverlays(stage);
                 UpdateHiss(stage);
@@ -112,7 +112,10 @@ namespace SS3D.Systems.StructuralDamage
                 _wallOverlays = new();
                 foreach (Renderer renderer in _renderers)
                 {
-                    if (renderer is MeshRenderer surface && SteelWallDamageVfx.CreateOverlay(surface) is { } overlay)
+                    if (renderer is MeshRenderer surface
+                        && TryGetComponent(out PlacedTileObject placed)
+                        && SteelWallDamageVfx.IsDamageSurface(surface, placed)
+                        && SteelWallDamageVfx.CreateOverlay(surface) is { } overlay)
                         _wallOverlays.Add((surface, overlay));
                 }
             }
@@ -134,7 +137,11 @@ namespace SS3D.Systems.StructuralDamage
             foreach (var (surface, overlay) in _wallOverlays)
             {
                 if (surface.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null)
+                {
                     SteelWallDamageVfx.SetStage(overlay, filter.sharedMesh, _applied == StructuralIntegrityStage.Cracked);
+                    if (TryGetComponent(out PlacedTileObject placed))
+                        SteelWallDamageVfx.ConfigureSurface(overlay, filter.sharedMesh, placed);
+                }
             }
 
             SyncWallOverlayVisibility();
@@ -158,7 +165,8 @@ namespace SS3D.Systems.StructuralDamage
 
         private void UpdateHiss(StructuralIntegrityStage stage)
         {
-            if (stage == StructuralIntegrityStage.Cracked)
+            if (stage == StructuralIntegrityStage.Cracked
+                && TryGetComponent(out PlacedTileObject placed) && placed.GenericType == TileObjectGenericType.Wall)
                 EnsureHissPlaying();
             else
                 StopHiss();

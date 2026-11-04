@@ -4,6 +4,10 @@ Shader "SS3D/Steel Wall Damage"
     {
         _Cracked("Cracked", Float) = 0
         _Particle("Particle", Float) = 0
+        _SurfaceMode("Surface mode", Float) = 0
+        _SurfaceCenter("Surface center", Vector) = (0,0,0,0)
+        _SurfaceExtents("Surface extents", Vector) = (1,1,1,0)
+        _Variation("Variation", Float) = 0
     }
     SubShader
     {
@@ -22,6 +26,10 @@ Shader "SS3D/Steel Wall Damage"
             CBUFFER_START(UnityPerMaterial)
             float _Cracked;
             float _Particle;
+            float _SurfaceMode;
+            float4 _SurfaceCenter;
+            float4 _SurfaceExtents;
+            float _Variation;
             CBUFFER_END
 
             struct Attributes
@@ -70,12 +78,32 @@ Shader "SS3D/Steel Wall Damage"
                 }
 
                 float3 normal = normalize(input.normal);
-                clip(0.65 - abs(normal.y));
+                if (_SurfaceMode < 0.5 || _SurfaceMode > 1.5)
+                    clip(0.65 - abs(normal.y));
                 bool alongX = abs(normal.z) > abs(normal.x);
                 float side = alongX ? normal.z : normal.x;
                 float2 p = float2((alongX ? input.local.x : input.local.z) * sign(side),
                     input.local.y - 1.22);
                 p.x += alongX ? 0.045 : -0.065;
+                if (_SurfaceMode > 0.5)
+                {
+                    float3 q = (input.local - _SurfaceCenter.xyz) / max(_SurfaceExtents.xyz, 0.001);
+                    if (_SurfaceMode < 1.5)
+                    {
+                        // Tabletop only: no repeated marks on legs, underside or narrow side faces.
+                        clip(normal.y - 0.65);
+                        clip(q.y - 0.55);
+                        p = q.xz * 0.52;
+                    }
+                    else
+                    {
+                        // Each leaf owns its overlay, so the scar travels with the opening door.
+                        p = float2(alongX ? q.x : q.z, q.y) * float2(0.48, 0.58);
+                    }
+                    p -= float2((_Variation - 0.5) * 0.12, (_Variation - 0.5) * 0.08);
+                    p.x *= _Variation > 0.5 ? -1 : 1;
+                }
+
 
                 // Compressed paint, then a thin exposed-metal lip around the dent.
                 float2 dent = float2(p.x + p.y * 0.24, p.y) / float2(0.24, 0.19);

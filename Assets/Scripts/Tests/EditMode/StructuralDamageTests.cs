@@ -23,6 +23,49 @@ namespace EditorTests
         }
 
         [Test]
+        public void SteelTable_DamageAndDestructionPreserveFloorAndPlenum()
+        {
+            var context = TileMapTestUtilities.CreateContext(_instantiated);
+            Vector3 position = new Vector3(8, 0, 8);
+            TileMapTestUtilities.PlacePlenum(context, position);
+            var floor = TileMapTestUtilities.CreateTileSo(TileLayer.Turf, "TestFloor");
+            Assert.IsTrue(context.Map.PlaceTileObject(floor, position, Direction.North, true, false, false, out _));
+            var table = TileMapTestUtilities.CreateTileSo(TileLayer.FurnitureBase, "TableSteel");
+            table.genericType = TileObjectGenericType.Table;
+            table.specificType = TileObjectSpecificType.Steel;
+            Assert.IsTrue(context.Map.PlaceTileObject(table, position, Direction.North, true, false, false, out _));
+            TileCoord coord = context.Query.WorldToTile(position);
+            var service = new StructuralDamageService(context.Query, context.Construction);
+
+            Assert.IsTrue(service.TryApplyStructuralDamage(coord, 30, StructuralDamageSource.Melee));
+            Assert.IsTrue(service.TryGetIntegrity(coord, out var stage, out _, out _));
+            Assert.AreEqual(StructuralIntegrityStage.Damaged, stage);
+            Assert.IsTrue(service.TryApplyStructuralDamage(coord, 35, StructuralDamageSource.Ranged));
+            Assert.IsTrue(service.TryGetIntegrity(coord, out stage, out _, out _));
+            Assert.AreEqual(StructuralIntegrityStage.Cracked, stage);
+            Assert.IsTrue(service.TryApplyStructuralDamage(coord, 35, StructuralDamageSource.Blast));
+            Assert.IsFalse(context.Query.TryGetOccupant(coord, TileLayer.FurnitureBase, Direction.North, out _));
+            Assert.IsTrue(context.Query.TryGetOccupant(coord, TileLayer.Turf, Direction.North, out _));
+            Assert.IsTrue(context.Query.TryGetOccupant(coord, TileLayer.Plenum, Direction.North, out _));
+        }
+
+        [TestCase(TileObjectSpecificType.Wood, false)]
+        [TestCase(TileObjectSpecificType.Glass, false)]
+        [TestCase(TileObjectSpecificType.Steel, true)]
+        public void TableDamage_OnlySupportsSteel(TileObjectSpecificType material, bool supported)
+        {
+            var so = ScriptableObject.CreateInstance<TileObjectSo>();
+            try
+            {
+                so.layer = TileLayer.FurnitureBase;
+                so.genericType = TileObjectGenericType.Table;
+                so.specificType = material;
+                Assert.AreEqual(supported, StructuralIntegrityRules.IsStructural(so));
+            }
+            finally { Object.DestroyImmediate(so); }
+        }
+
+        [Test]
         public void StageFromRemaining_UsesProvisionalFractions()
         {
             const float max = 100f;

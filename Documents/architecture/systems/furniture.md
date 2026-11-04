@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Furniture/, Assets/Content/WorldObjects/Furniture/
 > Entry points: (various world object behaviours); AirLockProximityService
 > Status: partial
-> Verified: 73a838a3b — 2026-11-01
+> Verified: 0a2544956 — 2026-11-04
 
 # Furniture / world objects
 
 ## Overview
 
-Station furniture and interactable world objects — airlocks, lockers, disposal units, vending machines, jukebox, and related prefab behaviours. Power consumption and visuals delegate to [electricity](electricity.md) consumers; airlock opening respects area APC power. Vending machines open a diegetic panel via [machine-interface](machine-interface.md) instead of a direct dispense interaction. Disposal chute/outlet gameplay lives under [disposal](disposal.md).
+Station furniture and interactable world objects — airlocks, lockers, disposal units, vending machines, jukebox, and related prefab behaviours. Steel tables and civilian/security airlocks share [structural damage](structural-destruction.md): tabletop dents/tears and marks on moving door leaves, plus metal contact bursts. Destruction removes a table without its floor. Power consumption and visuals delegate to [electricity](electricity.md) consumers; airlock opening respects area APC power. Vending machines open a diegetic panel via [machine-interface](machine-interface.md) instead of a direct dispense interaction. Disposal chute/outlet gameplay lives under [disposal](disposal.md).
 
 ## Start here
 
@@ -21,6 +21,8 @@ Station furniture and interactable world objects — airlocks, lockers, disposal
 - `Assets/Scripts/SS3D/Systems/Audio/Boombox.cs` — jukebox toggle; stops audio on power loss
 - `Assets/Content/WorldObjects/Furniture/Machines/Vendors/` — vending machine prefabs
 - Disposal: see [disposal](disposal.md) (`DisposalBin`, `DisposalOutlet`, `DisposalSubSystem`)
+
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/StructuralIntegrityPrefabSetup.cs` — tier-B presentation/examine recipe for steel tables and civilian/security airlocks
 
 ## Extension points
 

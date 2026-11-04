@@ -28,6 +28,7 @@ namespace SS3D.Systems.Examine.Editor
             UpsertEntry(englishTable, ExamineIdentificationKeys.RoleLine, ExamineIdentificationKeys.RoleFallback);
             UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Damaged, ExamineStructuralIntegrityKeys.DamagedFallback);
             UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Cracked, ExamineStructuralIntegrityKeys.CrackedFallback);
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.TornMetal, ExamineStructuralIntegrityKeys.TornMetalFallback);
 
             EditorUtility.SetDirty(englishTable);
             EditorUtility.SetDirty(englishTable.SharedData);
@@ -55,6 +56,7 @@ namespace SS3D.Systems.Examine.Editor
 
             UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Damaged, ExamineStructuralIntegrityKeys.DamagedFallback);
             UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.Cracked, ExamineStructuralIntegrityKeys.CrackedFallback);
+            UpsertEntry(englishTable, ExamineStructuralIntegrityKeys.TornMetal, ExamineStructuralIntegrityKeys.TornMetalFallback);
 
             EditorUtility.SetDirty(englishTable);
             EditorUtility.SetDirty(englishTable.SharedData);
