@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Linq;
+using Coimbra;
 using FishNet;
 using FishNet.Component.Animating;
 using NUnit.Framework;
 using SS3D.Core;
+using SS3D.Rendering.URP;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
@@ -167,20 +169,35 @@ namespace SS3D.Tests
             Assert.IsNotNull(view, "Clients get a wind view");
             Assert.That(view.VisibleStreaks, Is.Zero, "Sealed rooms have no wind");
 
-            var breach = new Vector3(ScenarioAtmos.MainRoom.xMin - 1, 0f, -1f);
-            Assert.IsTrue(SubSystems.Get<TileSubSystem>().Construction.TryClearTile(breach, TileLayer.Turf, Direction.North).Success,
-                "The hull wall is removed");
+            // The scenario harness runs without a rendering player camera, so nothing registers an
+            // AtmosRenderContext request the way AtmosCamera does in play. Register a look-down test
+            // camera over the room so the streak spawner has a focus; clear it in the finally.
+            GameObject cameraHost = new("Wind test camera");
+            cameraHost.transform.SetPositionAndRotation(new Vector3(0f, 5f, 0f), Quaternion.Euler(90f, 0f, 0f));
+            Camera camera = cameraHost.AddComponent<Camera>();
+            AtmosRenderContext.SetRequest(new AtmosRenderContext.Request { SourceCamera = camera });
+            try
+            {
+                var breach = new Vector3(ScenarioAtmos.MainRoom.xMin - 1, 0f, -1f);
+                Assert.IsTrue(SubSystems.Get<TileSubSystem>().Construction.TryClearTile(breach, TileLayer.Turf, Direction.North).Success,
+                    "The hull wall is removed");
 
-            yield return WaitFor(() => view.VisibleStreaks > 0, "wind streaks appear after the breach", 5f);
+                yield return WaitFor(() => view.VisibleStreaks > 0, "wind streaks appear after the breach", 5f);
 
-            Vector2 flow = view.SampleFlow(ScenarioAtmos.MainRoom.xMin, -1f);
-            Assert.That(flow.x, Is.LessThan(-0.1f), "Flow beside the hole points out through it");
-            Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
-            Vector3 bodyStart = ragdoll.WindSamplePosition;
-            yield return Hold(1.5f);
-            // The test room's chunk borders run through the body's tile, so this also guards border links.
-            Assert.That(Vector3.Distance(ragdoll.WindSamplePosition, bodyStart), Is.GreaterThan(0.3f),
-                "The wind carries the body toward the breach");
+                Vector2 flow = view.SampleFlow(ScenarioAtmos.MainRoom.xMin, -1f);
+                Assert.That(flow.x, Is.LessThan(-0.1f), "Flow beside the hole points out through it");
+                Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
+                Vector3 bodyStart = ragdoll.WindSamplePosition;
+                yield return Hold(1.5f);
+                // The test room's chunk borders run through the body's tile, so this also guards border links.
+                Assert.That(Vector3.Distance(ragdoll.WindSamplePosition, bodyStart), Is.GreaterThan(0.3f),
+                    "The wind carries the body toward the breach");
+            }
+            finally
+            {
+                AtmosRenderContext.ClearRequest();
+                cameraHost.Dispose(true);
+            }
         }
 
         private bool BonesKinematic(bool kinematic) => Body.GetComponentsInChildren<RagdollPart>(true)
