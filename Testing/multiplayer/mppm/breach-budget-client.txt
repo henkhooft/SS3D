@@ -6,5 +6,5 @@ wait_seconds 1
 ready
 embark
 assert_embarked
-wait_seconds 55
+client_traffic 55
 disconnect

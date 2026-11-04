@@ -5,11 +5,13 @@ using FishNet;
 using FishNet.Component.Animating;
 using NUnit.Framework;
 using SS3D.Core;
+using SS3D.Data.Generated;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Tile;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -181,6 +183,26 @@ namespace SS3D.Tests
             // The test room's chunk borders run through the body's tile, so this also guards border links.
             Assert.That(Vector3.Distance(ragdoll.WindSamplePosition, bodyStart), Is.GreaterThan(0.3f),
                 "The wind carries the body toward the breach");
+        }
+
+        // Guards: a loose item beside a real hull breach is carried out through the hole and comes to rest adrift in space, sending no more traffic (Decision 11).
+        // Not cheaper because: needs item physics on the server, the tile collider under the hole and the live wind field together.
+        [UnityTest]
+        public IEnumerator HullBreach_BlowsLooseItemIntoSpace_WhereItComesToRest()
+        {
+            ChangesRoom = true;
+            var breach = new Vector3(ScenarioAtmos.MainRoom.xMin - 1, 0f, -1f);
+            Item item = SubSystems.Get<ItemSubSystem>().SpawnItem(Items.Wrench, breach + new Vector3(1.5f, 0.2f, 0f), Quaternion.identity);
+            Rigidbody body = item.GetComponent<Rigidbody>();
+            yield return Hold(0.5f);
+            Assert.IsTrue(SubSystems.Get<TileSubSystem>().Construction.TryClearTile(breach, TileLayer.Turf, Direction.North).Success,
+                "The hull wall is removed");
+
+            yield return WaitFor(() => body.position.x < breach.x - 1f, "the wind carries the item out through the hole", 10f);
+            yield return WaitFor(() => !body.useGravity, "the item loses gravity past the deck", 3f);
+            float height = body.position.y;
+            yield return WaitFor(() => body.linearVelocity.magnitude < 0.05f, "drag brings the item to rest", 20f);
+            Assert.That(body.position.y, Is.EqualTo(height).Within(0.2f), "It drifts rather than falling away");
         }
 
         private bool BonesKinematic(bool kinematic) => Body.GetComponentsInChildren<RagdollPart>(true)

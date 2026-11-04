@@ -2,6 +2,7 @@ using Coimbra;
 using Coimbra.Services.Events;
 using FishNet;
 using FishNet.Managing;
+using FishNet.Managing.Statistic;
 using FishNet.Transporting;
 using SS3D.Application;
 using SS3D.Application.Events;
@@ -17,6 +18,7 @@ using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.IngameConsoleSystem;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
@@ -525,9 +527,20 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "BreachOpened", BreachHull());
                     break;
 
+                // Server: spawns this many loose items on the air tiles nearest the last breach_hull.
+                case "scatter_items":
+                    ScatterItems(int.Parse(instruction.Args[0]));
+                    TestSignal.Emit(this, "ItemsScattered");
+                    break;
+
                 // Server: records atmos tick cost and patch traffic for this many seconds.
                 case "atmos_budget":
                     yield return SampleAtmosBudget(float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+
+                // Client: records the bytes this process really received from the server for this many seconds.
+                case "client_traffic":
+                    yield return SampleClientTraffic(float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture));
                     break;
 
                 // Client: this process drew wind streaks and its own body was pushed by the wind.
@@ -683,6 +696,24 @@ namespace SS3D.Systems.Testing
             rounds.CmdUpdateServerSetting(ServerSetting.Mode, settings);
         }
 
+        private static Vector3 _lastBreach;
+
+        private static void ScatterItems(int count)
+        {
+            AtmosSimulation simulation = SubSystems.Get<AtmosSubSystem>().Simulation;
+            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+            ItemSubSystem items = SubSystems.Get<ItemSubSystem>();
+            var open = new List<Vector3>();
+            simulation.ForEachCell((coord, index) =>
+            {
+                if (simulation.CellMeta[index].State != AtmosCellState.Vacuum && simulation.CellMeta[index].State != AtmosCellState.Blocked)
+                    open.Add(tiles.QueryService.TileToWorld(coord));
+            });
+            open.Sort((a, b) => (a - _lastBreach).sqrMagnitude.CompareTo((b - _lastBreach).sqrMagnitude));
+            for (int i = 0; i < count; i++)
+                items.SpawnItem(Items.Wrench, open[i % open.Count] + Vector3.up * 0.2f, Quaternion.identity);
+        }
+
         private static string BreachHull()
         {
             AtmosSimulation simulation = SubSystems.Get<AtmosSubSystem>().Simulation;
@@ -694,7 +725,9 @@ namespace SS3D.Systems.Testing
                 if (hole != null || !IsHullBetweenAirAndSpace(simulation, coord, index)) return;
                 candidates++;
                 Vector3 world = tiles.QueryService.TileToWorld(coord);
-                if (tiles.Construction.TryClearTile(world, TileLayer.Turf, Direction.North).Success) hole = world.ToString();
+                if (!tiles.Construction.TryClearTile(world, TileLayer.Turf, Direction.North).Success) return;
+                hole = world.ToString();
+                _lastBreach = world;
             });
             return hole ?? throw new InvalidOperationException($"breach_hull: {candidates} hull walls between air and space, none cleared");
         }
@@ -722,6 +755,11 @@ namespace SS3D.Systems.Testing
             var sim = new List<float>();
             var chunks = new List<int>();
             int maxActive = 0;
+            int maxPushed = 0;
+            var sent = new List<float>();
+            void OnTraffic(NetworkTrafficArgs traffic) => sent.Add(traffic.FromServerBytes / 1024f);
+            NetworkTraficStatistics statistics = InstanceFinder.NetworkManager.StatisticsManager.NetworkTraffic;
+            statistics.OnServerNetworkTraffic += OnTraffic;
             int lastTick = atmos.TickCount;
             float end = Time.realtimeSinceStartup + seconds;
             while (Time.realtimeSinceStartup < end)
@@ -733,8 +771,10 @@ namespace SS3D.Systems.Testing
                 sim.Add(atmos.LastSimulationMilliseconds);
                 chunks.Add(atmos.LastPatchChunks);
                 maxActive = Mathf.Max(maxActive, atmos.Simulation.ActiveCellCount);
+                maxPushed = Mathf.Max(maxPushed, atmos.LooseBodies.PushedCount);
             }
 
+            statistics.OnServerNetworkTraffic -= OnTraffic;
             int totalChunks = 0;
             int maxChunks = 0;
             foreach (int count in chunks)
@@ -747,9 +787,24 @@ namespace SS3D.Systems.Testing
             string report = $"ticks={tick.Count} tick p50/max={Percentile(tick, 0.5f):F2}/{Percentile(tick, 1f):F2} ms " +
                 $"sim p50/max={Percentile(sim, 0.5f):F2}/{Percentile(sim, 1f):F2} ms active max={maxActive} " +
                 $"chunks mean/max={(float)totalChunks / Mathf.Max(tick.Count, 1):F1}/{maxChunks} " +
-                $"traffic mean/max={bytesPerSecond * totalChunks / Mathf.Max(tick.Count, 1) / 1024f:F0}/{bytesPerSecond * maxChunks / 1024f:F0} KB/s";
+                $"traffic mean/max={bytesPerSecond * totalChunks / Mathf.Max(tick.Count, 1) / 1024f:F0}/{bytesPerSecond * maxChunks / 1024f:F0} KB/s " +
+                $"sent to all connections p50/max={Percentile(sent, 0.5f):F0}/{Percentile(sent, 1f):F0} KB/s pushed max={maxPushed} adrift={atmos.LooseBodies.AdriftCount}";
             Debug.Log($"[atmos-budget] {report}");
             TestSignal.Emit(this, "AtmosBudget", report);
+        }
+
+        private IEnumerator SampleClientTraffic(float seconds)
+        {
+            var received = new List<float>();
+            void OnTraffic(NetworkTrafficArgs traffic) => received.Add(traffic.FromServerBytes / 1024f);
+            NetworkTraficStatistics statistics = InstanceFinder.NetworkManager.StatisticsManager.NetworkTraffic;
+            statistics.OnClientNetworkTraffic += OnTraffic;
+            yield return new WaitForSeconds(seconds);
+            statistics.OnClientNetworkTraffic -= OnTraffic;
+            string series = string.Join(" ", received.ConvertAll(kilobytes => kilobytes.ToString("F0")));
+            string report = $"received p50/p90/max={Percentile(received, 0.5f):F0}/{Percentile(received, 0.9f):F0}/{Percentile(received, 1f):F0} KB/s";
+            Debug.Log($"[atmos-budget] client {report} per second: {series}");
+            TestSignal.Emit(this, "ClientTraffic", report);
         }
 
         private static float Percentile(List<float> samples, float fraction)

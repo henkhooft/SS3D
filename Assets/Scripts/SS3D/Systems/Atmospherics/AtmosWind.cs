@@ -102,6 +102,13 @@ namespace SS3D.Systems.Atmospherics
         }
 
         /// <summary>
+        /// <see cref="DragAcceleration"/> for a loose object: the same push moves a 1 kg item at full
+        /// rate, and lighter or heavier ones in proportion.
+        /// </summary>
+        public static Vector3 LooseBodyAcceleration(Vector3 wind, Vector3 bodyVelocity, float mass) =>
+            Vector3.ClampMagnitude(DragAcceleration(wind, bodyVelocity) / mass, MaxAcceleration);
+
+        /// <summary>
         /// Wind at a tile centre: the mean flow through opposite edges, per mole held here, scaled by
         /// <see cref="AirSpeedGain"/>.
         /// </summary>
