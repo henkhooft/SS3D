@@ -1,8 +1,8 @@
 > Implements: Documents/design/audio.md §1 (wind, sound needs air), §2 (layered ambience), §3 (impacts, destruction, machines); Documents/design/area.md §2, §3, §5 (departments, ambience override); Documents/design/atmospherics.md §4 (an alarm alarms)
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
-> Status: planned
+> Status: in-progress
 
-**Progress:** No phase started. Phase order is D, A, B, C, one PR each.
+**Progress:** D1 is built, with compile and EditMode green. `mppm:breach`, targeted smoke and the traffic measurement weren't run for it. D2, A, B and C haven't started. Phase order is D, A, B, C, one PR each.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -32,9 +32,9 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 
 | # | Decision |
 |---|---|
-| 1 | Destruction sounds play on clients from existing messages (`RpcStructuralImpact`, `RpcSteelBreakup`, the blast RPC), through a new client-side play path on the occluded pool. Breaks and blasts add no messages, which protects [test-server.md](../milestones/test-server.md) T3. Only a client can choose the debris nearest its listener. |
-| 2 | `RpcStructuralImpact` fires for every landed hit, not only overlay-capable targets. Measure the traffic. A changed signature bumps `ProtocolVersion`. |
-| 3 | One pure function derives metal, glass or wood from `genericType` and `specificType`. `TileObjectSo` gets an optional override for exceptions. Unknown objects are metal. |
+| 1 | Destruction sounds play on clients from existing messages (`RpcStructuralImpact`, `RpcSteelBreakup`, the blast RPC), through a new client-side play path on the occluded pool, which protects [test-server.md](../milestones/test-server.md) T3. Only a client can choose the debris nearest its listener. Only steel has a breakup, so any other break sends one `RpcStructuralImpact` with no surface: a new use of an existing message, one per destroyed tile. |
+| 2 | `RpcStructuralImpact` fires for every landed melee, ranged or console hit, not only overlay-capable targets, and gains a one-byte `StructuralImpactCue` (protocol 17). Blast hops still send nothing per hit. A shot on a structure drops its `RpcPlayAudioSource`, so gunfire traffic should fall. Measure the traffic. |
+| 3 | One pure function derives metal, glass or wood from `genericType` and `specificType`. `TileObjectSo.impactMaterial` overrides it for exceptions, which today are the two windows, typed `Wall`/`Steel`. Unknown objects are metal. |
 | 4 | Machine loops use a client-local `AmbientLoopSource`, added by prefab recipes and driven by synced power or alarm state. Only the nearest 12 or so play. It reuses `AudioSourceOcclusion`. |
 | 5 | Room tone lives in `AmbienceProfile` assets in a catalog: bed, occasional clips, a power-gated flag. Each has a readable id such as `engineering`, which also fixes the `areaambience` GUID problem. |
 | 6 | `ParentTag` stays a string, validated against the fixed list from [area.md](../design/area.md) §2. Saved values match case-insensitively; anything else loads as no department. |
@@ -43,15 +43,19 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 9 | Muffling is per source in `AudioSourceOcclusion`, because a mixer filter can't exempt sounds within one tile. Ambience takes the same factor. Personal audio doesn't. |
 | 10 | Ad-hoc emitters that should muffle move onto the pool, including `BlastExplosionEffect` and the cracked-wall hiss. |
 | 11 | Sound effects may be CC0, CC-BY, CC-BY-SA or CC-BY-NC, each with an `ATTRIBUTIONS.md` row. A commercial release would have to replace the NC clips. Custom-licensed music stays out. |
+| 12 | Bullets on metal keep the ricochet set, because melee can't share it. Wood and glass use one set for every source. |
+| 13 | A client holds each break 50 ms so a blast can claim it as debris. The server sends breakups before the blast message, and reversing that would run the scorch raycast against furniture about to be destroyed. |
 
 ## Clips
 
 | Use | First cut | License |
 |---|---|---|
 | Blast | SS14 `explosion1–3`, `explosionfar` | CC-BY-SA-3.0 |
-| Metal break | SS14 `metal_break*`, `metal_crunch`, `metal_glass_break*` | CC-BY-NC-4.0 |
+| Metal break | SS14 `metal_break*`, `metal_crunch` | CC-BY-NC-4.0 |
 | Glass break | SS14 `glass_break*`, `window_shatter*` | CC-BY-SA-3.0 |
 | Wood break | SS14 `wood_destroy*` | CC-BY-SA-3.0 |
+| Hit and strain | SS14 `metal_scrape*`, `glass_smack`, `glass_crack*`; SS3D-Art metal and wood hits | CC-BY-SA-3.0; project assets |
+| Wreckage thud | SS14 `metal_thud*` | CC-BY-SA-3.0 |
 | Item collisions | SS3D-Art `World/Collisions` metal, wood, plastic | Project assets |
 | Machine loops | SS14 `Ambience/Objects` | Check per file |
 | Engineering | `ambitech*`, `ambiatmos*` | CC-BY-SA-3.0 |
@@ -62,7 +66,7 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | Bed candidates | `PowerHum`, `AirStagnant`, SS14 `shipambience` | Check per file |
 | Wind | `WindLight`, `WindHeavy`, `WindViolent`, SS14 `Effects/Weather/wind_*` | Check per file |
 
-Confirm each license in SS14's `attributions.yml` at import, and confirm `metal_slam*` there before using it. The owner auditions beds in-game, because seams and repetition need a human ear.
+Confirm each license in SS14's `attributions.yml` at import. `metal_slam1–3` are CC-BY-SA-3.0 and `metal_slam5` is CC-BY-NC-4.0. `metal_slam4`, `glass_knock` and `airlock_creaking` have no entry, so leave them out. The owner auditions beds in-game, because seams and repetition need a human ear.
 
 ## Phases
 

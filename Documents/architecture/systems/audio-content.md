@@ -19,14 +19,15 @@ How sound clips are found, registered and named in code, plus which registered c
   - `Systems/Furniture/AirlockAudioTrackIds.cs` — airlock deny (`AirLockOpener.ServerPlayAccessDenied`); open/close use generated `Sounds.AirlockOpen` / `AirlockClose`
   - `Systems/Comms/CommsAudioTrackIds.cs` — `Announce.ogg` chime, optional `Welcome.ogg` follow-up
   - `CombatAudioTrackIds` (incl. `FleshHit`), `HealthAudioTrackIds` (gasp / choke / scream)
+  - `Systems/StructuralDamage/StructuralAudioTrackIds.cs` — hit, strain and break sets per material, wreckage thud, blast near and far, under `Assets/Art/Sound/World/Destruction/`
 - Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md)
 
 ## Extension points
 
 - **Find a clip first** in [art-asset-index.md](../../art-asset-index.md) → `art-available-for-import.json`. SS3D-Art has hundreds of unimported sounds, and some imported ones aren't registered yet.
 - **Register a clip:** create an `ObjectAssetReference` under `Assets/Content/Data/ObjectAssetReferences/` with `Id = <clip asset GUID>` and `Database = AssetDatabases.Sounds`'s `DatabaseID`. Then add a matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000, guid: <clip guid>, type: 3}`). Name it in the owning domain's `*AudioTrackIds` class. For a third-party import, add a row to ATTRIBUTIONS.
-- **Registered but not wired (content decides):** `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant`, `WindHeavy/Light/Violent` and `PowerHum` are candidate `areaambience` track ids. `MetalHit1-2`, `GrilleHit`, `Rod1`, `Tap`, `TrayHit1-2` and `WoodHit1` are for `NoisyCollision`, which no prefab uses yet.
-- **Ad-hoc `AudioSource` users that skip occlusion:** `AirlockStateMachine`, `StructuralIntegrityPresenter`, `BlastExplosionEffect`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`. Moving the positional ones onto `PlayAudioSource` is deferred content work ([audio-foundation](../2026-07_audio-foundation.md)). UI chimes (`CommsFeedController` announce/welcome) stay client-local and non-spatial on purpose.
+- **Registered but not wired (content decides):** `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant`, `WindHeavy/Light/Violent` and `PowerHum` are candidate `areaambience` track ids. `GrilleHit`, `Rod1`, `Tap` and `TrayHit1-2` are for `NoisyCollision`, which no prefab uses yet.
+- **Ad-hoc `AudioSource` users that skip occlusion:** `AirlockStateMachine`, `StructuralIntegrityPresenter`, `BikeHorn`, `VendingMachineController`, `FuelPowerGenerator`. Moving the positional ones onto `PlayAudioSource` is deferred content work ([audio-foundation](../2026-07_audio-foundation.md)). UI chimes (`CommsFeedController` announce/welcome) stay client-local and non-spatial on purpose.
 
 ## Depends on / Used by
 

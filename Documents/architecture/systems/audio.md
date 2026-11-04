@@ -32,6 +32,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Extension points
 
 - Positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId, position, parent, ...)` (server-only). Route anything that should occlude through the pool.
+- Positional sound a client derives from a message it already has: `PlayLocalAudioSource` plays on the same pool with no message, as `StructuralAudioPresenter` does. Listener position: `AudioSourceOcclusion.TryGetListenerPosition`.
 - Area ambience: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server). In game, the `areaambience (trackId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
 - Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
 - Code-built `AudioSource`: set `outputAudioMixerGroup = MainAudioMixer.FindGroup(...)` so the player's category slider reaches it. Unrouted sources play under Master only (`CommsFeedController`'s announce source still does).
@@ -102,7 +103,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Depends on / Used by
 
 - **Depends on:** [area](area.md) (`AreaRecord.AmbienceTrackId`, `TryResolveAreaIdForWorldPosition`, `TryGetAmbienceTrackId`), [electricity](electricity.md) (`MachinePowerConsumer` gates Boombox), [entities](entities.md) (`LocalPlayerObjectChanged` — `ListenerPosition` / `AmbienceSubSystem`)
-- **Used by:** [chat-audio-screens](chat-audio-screens.md); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); [furniture](furniture.md) (airlock open/close/deny + boombox; structural-destruction ad-hoc emitters are consolidation candidates)
+- **Used by:** [chat-audio-screens](chat-audio-screens.md); [health](health.md) (`HealthPersonalAudioMapper`, hit/gasp/blood via pool); [stamina](stamina.md) (`StaminaPersonalAudioMapper`); [inventory](inventory.md) (`AlertStackAudioMapper` / `MainHudSubSystem.PushAlertState`); [combat](combat.md) (gunfire/reload + `FleshHit`); [furniture](furniture.md) (airlock open/close/deny + boombox; the cracked-wall hiss is a consolidation candidate); [structural-destruction](structural-destruction.md) (impacts, breaks, blasts via `PlayLocalAudioSource`)
 
 ## Related docs
 

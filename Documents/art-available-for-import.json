@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-03T21:27:50.483197+00:00",
+  "generated_at": "2026-11-04T21:45:16.002986+00:00",
   "purpose": "Game-ready SS3D-Art assets not yet imported into Assets/Art/.",
-  "count": 2041,
+  "count": 2034,
   "assets": [
     {
       "name": "HumanAnimRig.ma",
@@ -13612,42 +13612,6 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Metal Thin/Light Hit Metal Thin4.wav"
     },
     {
-      "name": "Medium Hit Metal Thin1.wav",
-      "stem": "medium hit metal thin1",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Metal Thin",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin1.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin1.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin1.wav"
-    },
-    {
-      "name": "Medium Hit Metal Thin2.wav",
-      "stem": "medium hit metal thin2",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Metal Thin",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin2.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin2.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin2.wav"
-    },
-    {
-      "name": "Medium Hit Metal Thin3.wav",
-      "stem": "medium hit metal thin3",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Metal Thin",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin3.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin3.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin3.wav"
-    },
-    {
-      "name": "Medium Hit Metal Thin4.wav",
-      "stem": "medium hit metal thin4",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Metal Thin",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin4.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin4.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Metal Thin/Medium Hit Metal Thin4.wav"
-    },
-    {
       "name": "Dropping Plastic1.wav",
       "stem": "dropping plastic1",
       "extension": "wav",
@@ -13727,33 +13691,6 @@
       "ss3d_art_path": "Assets/Sound/World/Collisions/Wood/Light Hit Wood on Thin Metal1.wav",
       "import_target_path": "Assets/Art/Sound/World/Collisions/Wood/Light Hit Wood on Thin Metal1.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Wood/Light Hit Wood on Thin Metal1.wav"
-    },
-    {
-      "name": "Light Hit Wood1.wav",
-      "stem": "light hit wood1",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Wood",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Wood/Light Hit Wood1.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Wood/Light Hit Wood1.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Wood/Light Hit Wood1.wav"
-    },
-    {
-      "name": "Light Hit Wood2.wav",
-      "stem": "light hit wood2",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Wood",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Wood/Light Hit Wood2.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Wood/Light Hit Wood2.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Wood/Light Hit Wood2.wav"
-    },
-    {
-      "name": "Medium Hit Wood1.wav",
-      "stem": "medium hit wood1",
-      "extension": "wav",
-      "category": "Sound/World/Collisions/Wood",
-      "ss3d_art_path": "Assets/Sound/World/Collisions/Wood/Medium Hit Wood1.wav",
-      "import_target_path": "Assets/Art/Sound/World/Collisions/Wood/Medium Hit Wood1.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Collisions/Wood/Medium Hit Wood1.wav"
     },
     {
       "name": "Palette.png",

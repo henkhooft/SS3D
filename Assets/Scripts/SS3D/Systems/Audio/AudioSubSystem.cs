@@ -107,6 +107,26 @@ namespace SS3D.Systems.Audio
         public void RpcPlayAudioSource(AudioType type, string audioClipID, Vector3 position, NetworkObject parent,
             bool isLooping = false, float volume = 0.7f, float pitch = 1f, float minRange = 1f, float maxRange = 500f)
         {
+            PlayOnPool(type, audioClipID, position, parent, isLooping, volume, pitch, minRange, maxRange);
+        }
+
+        /// <summary>
+        /// Plays a one-shot on this client's own pool, with no message. For sounds a client derives
+        /// from a message it already received, and for choices only it can make, such as which
+        /// debris is nearest its listener. Does nothing where no pool exists, like a headless server.
+        /// </summary>
+        public void PlayLocalAudioSource(AudioType type, string audioClipId, Vector3 position,
+            float volume = 0.7f, float pitch = 1f, float minRange = 1f, float maxRange = 500f)
+        {
+            if (_audioSourcesLists != null)
+            {
+                PlayOnPool(type, audioClipId, position, null, false, volume, pitch, minRange, maxRange);
+            }
+        }
+
+        private void PlayOnPool(AudioType type, string audioClipID, Vector3 position, NetworkObject parent,
+            bool isLooping, float volume, float pitch, float minRange, float maxRange)
+        {
             AudioSource audioSource = FindAvailableAudioSource(type);
 
             audioSource.gameObject.transform.position = position;

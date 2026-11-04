@@ -54,6 +54,25 @@ namespace SS3D.Systems.Audio
             }
         }
 
+        /// <summary>Where this client hears from, which is not always where its camera is.</summary>
+        public static bool TryGetListenerPosition(out Vector3 position)
+        {
+            if (s_listener == null)
+            {
+                AudioListener listener = FindAnyObjectByType<AudioListener>();
+                if (listener == null)
+                {
+                    position = default;
+                    return false;
+                }
+
+                s_listener = listener.transform;
+            }
+
+            position = s_listener.position;
+            return true;
+        }
+
         private void Awake()
         {
             _source = GetComponent<AudioSource>();
@@ -90,20 +109,14 @@ namespace SS3D.Systems.Audio
                 return;
             }
 
-            if (s_listener == null)
+            if (!TryGetListenerPosition(out Vector3 listenerPosition))
             {
-                AudioListener listener = FindAnyObjectByType<AudioListener>();
-                if (listener == null)
-                {
-                    return;
-                }
-
-                s_listener = listener.transform;
+                return;
             }
 
             // Unity's own rolloff already silences sources past maxDistance — skip the raycast
             // and filter update entirely rather than sampling occlusion for inaudible sources.
-            if (Vector3.Distance(s_listener.position, transform.position) > _source.maxDistance)
+            if (Vector3.Distance(listenerPosition, transform.position) > _source.maxDistance)
             {
                 return;
             }
@@ -112,7 +125,7 @@ namespace SS3D.Systems.Audio
             {
                 _nextSampleTime = Time.time + SampleInterval;
 
-                float distance = Vector3.Distance(s_listener.position, transform.position);
+                float distance = Vector3.Distance(listenerPosition, transform.position);
                 // Own footsteps / point-blank sources: never occlude (ray length ~0 also false-hits
                 // nearby Default colliders on the body/tile).
                 if (distance < 1.5f)
@@ -122,7 +135,7 @@ namespace SS3D.Systems.Audio
                 else
                 {
                     // Planar sample at chest height — walls still intersect; floors/plenums do not.
-                    Vector3 origin = s_listener.position;
+                    Vector3 origin = listenerPosition;
                     origin.y += OcclusionSampleHeight;
                     Vector3 end = transform.position;
                     end.y = origin.y;
