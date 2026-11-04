@@ -17,6 +17,7 @@ using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using SS3D.Systems.Selection;
 using SS3D.Utils;
@@ -71,6 +72,14 @@ namespace SS3D.Systems.Inventory.Items
         [SerializeField] private List<Trait> _startingTraits;
 
         [SerializeField] private Rigidbody _rigidbody;
+
+        /// <summary>
+        /// How often a loose server-simulated item re-checks floor support to decide whether it
+        /// should fall. Items rest for long stretches, so this does not need to run per frame.
+        /// </summary>
+        private const float SupportCheckInterval = 0.25f;
+
+        private float _nextSupportCheckTime;
 
         private Sprite _sprite;
 
@@ -274,6 +283,56 @@ namespace SS3D.Systems.Inventory.Items
             base.OnStopServer();
         }
 
+        public override void Update()
+        {
+            base.Update();
+
+            if (!IsServer || _rigidbody == null || _rigidbody.isKinematic)
+            {
+                return;
+            }
+
+            float now = Time.time;
+            if (now < _nextSupportCheckTime)
+            {
+                return;
+            }
+
+            _nextSupportCheckTime = now + SupportCheckInterval;
+            ApplySupportGravity();
+        }
+
+        /// <summary>
+        /// Loose items follow the same zero-g rule as ragdolls: gravity only over floor support.
+        /// Unknown support (no map yet / AOI lag) leaves the current setting alone.
+        /// </summary>
+        public static bool? UseGravityForSupport(HumanoidSupportState support) => support switch
+        {
+            HumanoidSupportState.Supported => true,
+            HumanoidSupportState.Unsupported => false,
+            _ => null,
+        };
+
+        [Server]
+        private void ApplySupportGravity()
+        {
+            bool? useGravity = UseGravityForSupport(HumanoidSpaceSupport.GetSupportAt(transform.position));
+            if (!useGravity.HasValue || _rigidbody.useGravity == useGravity.Value)
+            {
+                return;
+            }
+
+            if (!useGravity.Value)
+            {
+                // Do not carry deck-settling fall speed into zero-g drift.
+                Vector3 velocity = _rigidbody.linearVelocity;
+                velocity.y = 0f;
+                _rigidbody.linearVelocity = velocity;
+            }
+
+            _rigidbody.useGravity = useGravity.Value;
+        }
+
 
         [ServerOrClient]
         private Sprite InventorySprite()
@@ -329,7 +388,13 @@ namespace SS3D.Systems.Inventory.Items
             if (_rigidbody != null)
             {
                 if (IsServer)
+                {
                     _rigidbody.isKinematic = false;
+                    // Take effect on the first physics step, before the item can start falling
+                    // through deep space; Update's throttled check keeps it current afterwards.
+                    ApplySupportGravity();
+                    _nextSupportCheckTime = Time.time + SupportCheckInterval;
+                }
             }
             ToggleCollider(true);
         }
