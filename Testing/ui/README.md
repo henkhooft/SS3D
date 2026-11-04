@@ -71,7 +71,7 @@ scene-order pitfall are in
 [networking-session-testing](../../Documents/architecture/systems/networking-session-testing.md#pitfalls).
 
 Scenario categories (`scenarios:<category>`): `Medical`, `Atmos`, `Access`, `Environment`,
-`Respawn`, `Speech`; `Scenarios` runs them all. They replaced four lifecycle pilot steps, which
+`Respawn`, `Speech`, `MapEditor`; `Scenarios` runs them all. They replaced four lifecycle pilot steps, which
 `validate.sh` now refuses with the new name: `ragdoll-space` and `critical-reclaim` →
 `scenarios:Environment`, `respawn-cleanup` → `scenarios:Respawn`, `critical-speech` →
 `scenarios:Speech`.
