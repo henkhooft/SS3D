@@ -315,16 +315,16 @@ namespace SS3D.Systems.Tile
         }
 
         [Server]
-        public void ServerNotifySteelWallImpact(Vector3 point, Vector3 normal)
+        public void ServerNotifyStructuralImpact(Vector3 point, Vector3 normal, byte material)
         {
-            RpcSteelWallImpact(point, normal);
+            RpcStructuralImpact(point, normal, material);
         }
 
         [ObserversRpc(RunLocally = true)]
-        private void RpcSteelWallImpact(Vector3 point, Vector3 normal)
+        private void RpcStructuralImpact(Vector3 point, Vector3 normal, byte material)
         {
             if (IsClient)
-                SteelWallDamageVfx.PlayImpact(point, normal);
+                SteelWallDamageVfx.PlayImpact(point, normal, material);
         }
 
         [Serializable]

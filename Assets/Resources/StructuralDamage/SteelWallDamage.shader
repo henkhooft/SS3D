@@ -8,6 +8,8 @@ Shader "SS3D/Steel Wall Damage"
         _SurfaceCenter("Surface center", Vector) = (0,0,0,0)
         _SurfaceExtents("Surface extents", Vector) = (1,1,1,0)
         _Variation("Variation", Float) = 0
+        _Wood("Wood", Float) = 0
+        _Glass("Glass", Float) = 0
     }
     SubShader
     {
@@ -30,6 +32,8 @@ Shader "SS3D/Steel Wall Damage"
             float4 _SurfaceCenter;
             float4 _SurfaceExtents;
             float _Variation;
+            float _Wood;
+            float _Glass;
             CBUFFER_END
 
             struct Attributes
@@ -100,10 +104,70 @@ Shader "SS3D/Steel Wall Damage"
                         // Each leaf owns its overlay, so the scar travels with the opening door.
                         p = float2(alongX ? q.x : q.z, q.y) * float2(0.48, 0.58);
                     }
+                    if (_SurfaceMode > 2.5)
+                    {
+                        // Machine side casings: preserve the front display and controls.
+                        clip(abs(normal.x) - 0.65);
+                        p = q.zy * float2(0.52, 0.58);
+                    }
                     p -= float2((_Variation - 0.5) * 0.12, (_Variation - 0.5) * 0.08);
                     p.x *= _Variation > 0.5 ? -1 : 1;
                 }
 
+
+                if (_Glass > 0.5)
+                {
+                    // A small impact star grows into branching fractures, with no metal dent.
+                    float radius = _Cracked > 0.5 ? 1 : 0.4;
+                    float2 g = p / radius;
+                    float fracture = Stroke(g, float2(0, 0), float2(-0.21, 0.28), 0.003);
+                    fracture = max(fracture, Stroke(g, float2(0, 0), float2(0.32, 0.12), 0.003));
+                    fracture = max(fracture, Stroke(g, float2(0, 0), float2(0.11, -0.34), 0.004));
+                    fracture = max(fracture, Stroke(g, float2(0, 0), float2(-0.29, -0.16), 0.003));
+                    fracture = max(fracture, Stroke(g, float2(0, 0), float2(-0.03, 0.4), 0.002));
+                    if (_Cracked > 0.5)
+                    {
+                        fracture = max(fracture, Stroke(g, float2(-0.12, 0.16), float2(-0.3, 0.18), 0.002));
+                        fracture = max(fracture, Stroke(g, float2(0.19, 0.07), float2(0.3, 0.3), 0.002));
+                        fracture = max(fracture, Stroke(g, float2(0.06, -0.18), float2(0.28, -0.3), 0.002));
+                        fracture = max(fracture, Stroke(g, float2(-0.16, -0.09), float2(-0.19, -0.35), 0.002));
+                    }
+                    float chip = 1 - smoothstep(0.008, 0.025, length(p));
+                    float opacity = saturate(fracture * 0.88 + chip * 0.55);
+                    clip(opacity - 0.015);
+                    return half4(0.73, 0.86, 0.89, opacity);
+                }
+
+                if (_Wood > 0.5)
+                {
+                    // Long gouges and splits run with the tabletop grain, exposing pale fibres.
+                    float2 grain = p + float2(sin(p.y * 83) * 0.004, 0);
+                    float gouge = Stroke(grain, float2(-0.10, -0.17), float2(-0.075, 0.16), 0.010);
+                    gouge = max(gouge, Stroke(grain, float2(0.08, -0.09), float2(0.09, 0.12), 0.006));
+                    float fibres = Stroke(grain, float2(-0.10, -0.17), float2(-0.075, 0.16), 0.018);
+                    fibres = max(fibres, Stroke(grain, float2(0.08, -0.09), float2(0.09, 0.12), 0.012));
+                    float split = 0;
+                    float edge = 0;
+                    if (_Cracked > 0.5)
+                    {
+                        float2 a = float2(-0.025, -0.41);
+                        float2 b = float2(0.005, -0.06);
+                        float2 c = float2(-0.018, 0.13);
+                        float2 d = float2(0.008, 0.41);
+                        split = max(Stroke(grain, a, b, 0.006), Stroke(grain, b, c, 0.016));
+                        split = max(split, Stroke(grain, c, d, 0.008));
+                        split = max(split, Stroke(grain, b, float2(0.095, 0.24), 0.004));
+                        edge = max(Stroke(grain, a, b, 0.012), Stroke(grain, b, c, 0.025));
+                        edge = max(edge, Stroke(grain, c, d, 0.015));
+                        edge = max(edge, Stroke(grain, b, float2(0.095, 0.24), 0.009));
+                    }
+                    float darkWood = max(gouge * 0.65, split * 0.96);
+                    float exposed = saturate(max(fibres, edge) - max(gouge, split));
+                    float opacity = saturate(darkWood + exposed * 0.85);
+                    clip(opacity - 0.015);
+                    float3 color = lerp(float3(0.10, 0.055, 0.025), float3(0.66, 0.44, 0.23), exposed);
+                    return half4(color, opacity);
+                }
 
                 // Compressed paint, then a thin exposed-metal lip around the dent.
                 float2 dent = float2(p.x + p.y * 0.24, p.y) / float2(0.24, 0.19);

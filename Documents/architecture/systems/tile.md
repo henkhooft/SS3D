@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 0a2544956 — 2026-11-04
+> Verified: 45e9647dc — 2026-11-04
 
 # Tile / construction
 
@@ -9,7 +9,7 @@
 
 Server-authoritative tilemap with adjacency-driven mesh visuals, construction placement, and FishNet HashGrid AOI replication. The adjacency engine queues recompute for walls, doors, pipes, cables, disposal, and furniture connectors. Tile identity sync uses a compact ushort asset catalog. Station template save/load delegates to [persistence](persistence.md) (`PersistenceSubSystem`) with legacy flat-JSON fallback. The in-game **Map Editor** (full-screen UI Toolkit) replaces the legacy TileMap Creator for admin map authoring. Floor department corners are Area-driven mesh stripes (not a tile layer); sparse authored stickers use per-chunk `floorDecalIds`. Job/antag **spawn markers** live in `TileSubSystem.SpawnPoints` (not NetworkObjects) and ride station templates via the `spawn-points` contributor. At spawn / `OnStartClient`, tile renderers OR-in `DecalRenderingLayers.ReceiveWorldDecals` so floor blood Decals can target tiles without painting characters. Play-mode **underfloor occlusion** uses FishNet `UnderfloorCoverCondition` on the host (covered → fail observer → `SetRenderersVisible(false)`) plus local `forceRenderingOff` for remotes that must keep the NetworkObject for occupancy; Map Editor keeps underfloor visible. **SS13 DMM import** places structural shell, infrastructure (cables/pipes/disposals/vents/scrubbers/APCs/lights), lattices/catwalks, tables, and SMES (see Extension points).
 
-**Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed), including FurnitureBase steel tables, live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
+**Fork deviation from** [construction.md](../../design/construction.md) **§1:** design's core decision is a staged build ladder (Open → Framed → Plated → Sealed), each stage with distinct system effects (occlusion, atmosphere leak, area-boundary status, §2). `ConstructionService.TryPlaceTile` is a single atomic call that places a finished `TileObjectSo` in one step — no ladder-stage enum or partial states exist anywhere in this folder. Status is `partial`, not `shipped`, because of that gap; the staged ladder is scheduled as follow-up work. Structural **damage** stages (Intact/Damaged/Cracked/Destroyed), including FurnitureBase steel/wood/glass tables and opted-in metal furniture, live on `PlacedTileObject` via [structural-destruction](structural-destruction.md) — separate from the construction ladder.
 
 **Condemned UI:** TileMap Creator uGUI — do not extend; Map Editor (UI Toolkit) replaces it for admin authoring. Scripts were removed with the Map Editor; orphan `Assets/Content/Systems/UI/Systems/Construction/` prefabs (`ConstructionMenu`, slots, `DeleteIndicator`) and their `DefaultPrefabObjects` entry were purged so AssetAudit no longer sees missing scripts. Tile simulation is **not** condemned ([agent-first composition](../2026-07_agent-first-composition.md)).
 
@@ -24,7 +24,7 @@ WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 - `Assets/Scripts/SS3D/Systems/Tile/Observing/UnderfloorCoverCondition.cs` — FishNet host cover condition (AND with GridCondition on underfloor prefabs)
 - `Assets/Scripts/SS3D/Systems/Tile/TileCoord.cs` — map+grid key; `IEquatable` required for dictionary use without boxing
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — per-cell tile NetworkBehaviour; stamps `ReceiveWorldDecals` on renderers
-- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts blast and steel wall impact ObserversRpcs for [structural-destruction](structural-destruction.md) VFX
+- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — subsystem entry point; owns `SpawnPoints` registry; also hosts blast and material-specific structural impact ObserversRpcs for [structural-destruction](structural-destruction.md) VFX
 - `Assets/Scripts/SS3D/Systems/Tile/TileMap.cs` — tilemap data and mutation
 - `Assets/Scripts/SS3D/Systems/Tile/Validation/` — offered-job/mode requirements; warnings on editor save, hard gate before countdown ([rounds-lobby](rounds-lobby.md)); only tracked map objects count
 - `Assets/Scripts/SS3D/Systems/Tile/SpawnPoints/` — `SpawnPointRegistry`, records, editor pin view

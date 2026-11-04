@@ -19,7 +19,8 @@ namespace SS3D.Systems.StructuralDamage
 
         public static bool SupportsOverlay(PlacedTileObject placed)
         {
-            return IsSteelWall(placed) || StructuralIntegrityRules.IsSteelTable(placed.tileObjectSO)
+            return IsSteelWall(placed) || StructuralIntegrityRules.IsSupportedTable(placed.tileObjectSO)
+                || StructuralIntegrityRules.IsMetalFurniture(placed.tileObjectSO)
                 || (placed.tileObjectSO != null && placed.GenericType == TileObjectGenericType.Door);
         }
 
@@ -28,6 +29,20 @@ namespace SS3D.Systems.StructuralDamage
             if (SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(renderer)
                 || renderer.name == "Steel wall damage overlay")
                 return false;
+
+            // Never mark stored items or nested independent tile objects.
+            if (renderer.GetComponentInParent<SS3D.Systems.Inventory.Items.Item>() != null
+                || renderer.GetComponentInParent<PlacedTileObject>() != placed)
+                return false;
+
+            if (StructuralIntegrityRules.IsMetalFurniture(placed.tileObjectSO))
+            {
+                if (placed.TryGetComponent(out SS3D.Systems.Furniture.Locker locker))
+                    return renderer.name == "Body" || renderer.name == "Door";
+                return renderer.transform == placed.transform || renderer.name == "Body"
+                    || renderer.name == "Paint" || renderer.name == "GibberBase"
+                    || renderer.name == placed.name.Replace("(Clone)", "");
+            }
 
             // Airlock control panels and the generated floor must retain their own presentation.
             return placed.GenericType != TileObjectGenericType.Door
@@ -41,7 +56,11 @@ namespace SS3D.Systems.StructuralDamage
                 return;
 
             var block = new MaterialPropertyBlock();
-            block.SetFloat("_SurfaceMode", StructuralIntegrityRules.IsSteelTable(placed.tileObjectSO) ? 1f : 2f);
+            block.SetFloat("_SurfaceMode", StructuralIntegrityRules.IsSupportedTable(placed.tileObjectSO) ? 1f
+                : StructuralIntegrityRules.IsMetalFurniture(placed.tileObjectSO)
+                    && !placed.TryGetComponent(out SS3D.Systems.Furniture.Locker _) ? 3f : 2f);
+            block.SetFloat("_Glass", StructuralIntegrityRules.IsGlassTable(placed.tileObjectSO) ? 1f : 0f);
+            block.SetFloat("_Wood", StructuralIntegrityRules.IsWoodTable(placed.tileObjectSO) ? 1f : 0f);
             block.SetVector("_SurfaceCenter", mesh.bounds.center);
             block.SetVector("_SurfaceExtents", mesh.bounds.extents);
             // Stable per tile, shared across stages and clients. Never animate the mark's position.
@@ -79,13 +98,29 @@ namespace SS3D.Systems.StructuralDamage
             overlay.sharedMaterials = materials;
         }
 
-        public static void PlayImpact(Vector3 point, Vector3 normal)
+        public static void PlayImpact(Vector3 point, Vector3 normal, byte material = 0)
         {
             if (!EnsureMaterials())
                 return;
 
             Vector3 origin = point + normal * 0.025f;
             Quaternion rotation = Quaternion.LookRotation(normal);
+            if (material == 2)
+            {
+                Emit(origin, rotation, "Glass chips", 10, 1.8f, 0.27f, 0.035f, 0.8f,
+                    new Color(0.7f, 0.88f, 0.9f, 0.8f), ParticleSystemRenderMode.Stretch);
+                return;
+            }
+
+            if (material == 1)
+            {
+                Emit(origin, rotation, "Wood chips", 8, 1.5f, 0.3f, 0.055f, 0.8f,
+                    new Color(0.65f, 0.43f, 0.22f, 1f), ParticleSystemRenderMode.Stretch);
+                Emit(origin, rotation, "Wood dust", 7, 0.45f, 0.3f, 0.1f, 0f,
+                    new Color(0.52f, 0.36f, 0.2f, 0.45f), ParticleSystemRenderMode.Billboard);
+                return;
+            }
+
             Emit(origin, rotation, "Metal flecks", 10, 2.6f, 0.17f, 0.042f, 0.65f,
                 new Color(0.95f, 0.79f, 0.52f, 1f), ParticleSystemRenderMode.Stretch);
             Emit(origin, rotation, "Dust", 9, 0.63f, 0.25f, 0.13f, 0f,

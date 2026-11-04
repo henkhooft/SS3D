@@ -23,8 +23,21 @@ namespace SS3D.Systems.StructuralDamage.Editor
             "Assets/Content/WorldObjects/Structures/Walls/SteelWindowReinforced.prefab",
             "Assets/Content/WorldObjects/Structures/Walls/SteelGirder.prefab",
             "Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableSteel.prefab",
+            "Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableWood.prefab",
+            "Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableGlass.prefab",
             "Assets/Content/WorldObjects/Structures/Doors/CivillianAirlock.prefab",
             "Assets/Content/WorldObjects/Structures/Doors/SecurityAirlock.prefab",
+        };
+
+        private static readonly string[] MetalFurnitureDefinitions =
+        {
+            "Storage/Lockers/Locker", "Storage/Lockers/SecureLocker", "Storage/Lockers/SecurityLocker",
+            "Machines/Vendors/VendorYouTool", "Machines/Vendors/VendorSecTech",
+            "Machines/Vendors/VendorRobustSoftdrinks", "Machines/Vendors/VendorHotDrinks",
+            "Machines/Engineering/SMES", "Machines/Engineering/PacManGenerator",
+            "Machines/Engineering/PowerCellCharger", "Machines/Medical/ChemicalDispenser",
+            "Machines/Kitchen/Microwave", "Machines/Kitchen/Blender", "Machines/Kitchen/Gibber",
+            "Machines/Kitchen/TableBoozeDispenser", "Machines/Generic/SlotMachine",
         };
 
         /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.StructuralDamage.Editor.StructuralIntegrityPrefabSetup.SetupBatch</c>
@@ -44,6 +57,26 @@ namespace SS3D.Systems.StructuralDamage.Editor
             for (int i = 0; i < PrefabPaths.Length; i++)
             {
                 if (SetupPrefab(PrefabPaths[i], hiss))
+                    updated++;
+            }
+
+            foreach (string definition in MetalFurnitureDefinitions)
+            {
+                string assetPath = $"Assets/Content/Data/TileMap/Resources/Furniture/{definition}.asset";
+                TileObjectSo so = AssetDatabase.LoadAssetAtPath<TileObjectSo>(assetPath);
+                if (so == null)
+                {
+                    Debug.LogError($"[StructuralIntegrityPrefabSetup] Missing {assetPath}");
+                    continue;
+                }
+                if (!so.structuralDamageEnabled)
+                {
+                    so.structuralDamageEnabled = true;
+                    EditorUtility.SetDirty(so);
+                }
+                string prefabDefinition = definition == "Storage/Lockers/SecureLocker"
+                    ? "Storage/Lockers/LockerSecure" : definition;
+                if (SetupPrefab($"Assets/Content/WorldObjects/Furniture/{prefabDefinition}.prefab", null))
                     updated++;
             }
 

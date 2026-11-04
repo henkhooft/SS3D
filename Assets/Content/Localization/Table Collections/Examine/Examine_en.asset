@@ -1369,6 +1369,22 @@ MonoBehaviour:
     m_Localized: The metal is deeply dented and torn.
     m_Metadata:
       m_Items: []
+  - m_Id: 295631575918551040
+    m_Localized: The wood is gouged and chipped.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 295631575939522560
+    m_Localized: Deep splits run along the wood grain, exposing splintered fibres.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 295634111387901952
+    m_Localized: The glass is chipped, with a small star of cracks.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 295634111404679168
+    m_Localized: Branching fractures spread across the glass.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

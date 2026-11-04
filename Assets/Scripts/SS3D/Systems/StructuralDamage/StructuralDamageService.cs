@@ -48,6 +48,15 @@ namespace SS3D.Systems.StructuralDamage
 
             if (stage == StructuralIntegrityStage.Destroyed)
             {
+                if (placed.Layer == TileLayer.FurnitureBase)
+                {
+                    foreach (var container in placed.GetComponentsInChildren<SS3D.Systems.Inventory.Containers.AttachedContainer>(true))
+                    {
+                        // A stored backpack's contents belong to the backpack, not to this casing.
+                        if (container.GetComponentInParent<SS3D.Systems.Inventory.Items.Item>() == null)
+                            container.ReleaseForDestruction();
+                    }
+                }
                 placed.ServerSetIntegrity(0f, StructuralIntegrityStage.Destroyed);
                 Vector3 world = _query.TileToWorld(coord);
                 ClearResult clear = _construction.TryClearTile(world, placed.Layer, placed.Direction);

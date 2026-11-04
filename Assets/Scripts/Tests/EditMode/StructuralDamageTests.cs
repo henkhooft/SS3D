@@ -22,8 +22,9 @@ namespace EditorTests
             _instantiated.Clear();
         }
 
-        [Test]
-        public void SteelTable_DamageAndDestructionPreserveFloorAndPlenum()
+        [TestCase(TileObjectSpecificType.Steel)]
+        [TestCase(TileObjectSpecificType.Wood)]
+        public void Table_DamageAndDestructionPreserveFloorAndPlenum(TileObjectSpecificType material)
         {
             var context = TileMapTestUtilities.CreateContext(_instantiated);
             Vector3 position = new Vector3(8, 0, 8);
@@ -32,7 +33,7 @@ namespace EditorTests
             Assert.IsTrue(context.Map.PlaceTileObject(floor, position, Direction.North, true, false, false, out _));
             var table = TileMapTestUtilities.CreateTileSo(TileLayer.FurnitureBase, "TableSteel");
             table.genericType = TileObjectGenericType.Table;
-            table.specificType = TileObjectSpecificType.Steel;
+            table.specificType = material;
             Assert.IsTrue(context.Map.PlaceTileObject(table, position, Direction.North, true, false, false, out _));
             TileCoord coord = context.Query.WorldToTile(position);
             var service = new StructuralDamageService(context.Query, context.Construction);
@@ -49,10 +50,11 @@ namespace EditorTests
             Assert.IsTrue(context.Query.TryGetOccupant(coord, TileLayer.Plenum, Direction.North, out _));
         }
 
-        [TestCase(TileObjectSpecificType.Wood, false)]
-        [TestCase(TileObjectSpecificType.Glass, false)]
+        [TestCase(TileObjectSpecificType.Wood, true)]
+        [TestCase(TileObjectSpecificType.Glass, true)]
+        [TestCase(TileObjectSpecificType.Poker, false)]
         [TestCase(TileObjectSpecificType.Steel, true)]
-        public void TableDamage_OnlySupportsSteel(TileObjectSpecificType material, bool supported)
+        public void TableDamage_OnlySupportsSelectedMaterials(TileObjectSpecificType material, bool supported)
         {
             var so = ScriptableObject.CreateInstance<TileObjectSo>();
             try

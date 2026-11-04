@@ -59,15 +59,17 @@ namespace SS3D.Systems.StructuralDamage
             if (service == null)
                 return false;
 
-            bool showImpact = impactNormal.sqrMagnitude > 0.0001f
-                && StructuralIntegrityRules.TryGetTarget(_boundQuery, coord, out PlacedTileObject placed)
+            StructuralIntegrityRules.TryGetTarget(_boundQuery, coord, out PlacedTileObject placed);
+            bool showImpact = placed != null && impactNormal.sqrMagnitude > 0.0001f
                 && SteelWallDamageVfx.SupportsOverlay(placed);
+            byte material = placed != null && StructuralIntegrityRules.IsWoodTable(placed.tileObjectSO) ? (byte)1
+                : placed != null && StructuralIntegrityRules.IsGlassTable(placed.tileObjectSO) ? (byte)2 : (byte)0;
 
             if (!service.TryApplyStructuralDamage(coord, force, source))
                 return false;
 
             if (showImpact && SubSystems.TryGet(out TileSubSystem tiles) && tiles.IsServer)
-                tiles.ServerNotifySteelWallImpact(impactPoint, impactNormal);
+                tiles.ServerNotifyStructuralImpact(impactPoint, impactNormal, material);
 
             return true;
         }

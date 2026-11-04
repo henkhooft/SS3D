@@ -37,7 +37,7 @@ isProject: false
 | [area.md](Documents/design/area.md) §3 | Areas don't change during a round: a breach connects air, not departments (revised 2026-10; the shipped full reflood now deviates — see [REVIEW_2026-10](Documents/design/REVIEW_2026-10.md) Known delta) |
 | [combat.md](Documents/design/combat.md) / [health.md](Documents/design/health.md) | Melee as a damage *source*; blast crew damage reuses limb brute |
 
-**Scope for this effort:** Turf-layer structural objects only (`TileObjectGenericType.Wall` / `Door`, including windows via existing `IsWindow`). Steel tables additionally use this integrity/presentation path; other furniture and machines remain out.
+**Scope for this effort:** Turf-layer structural objects (`TileObjectGenericType.Wall` / `Door`, including windows via existing `IsWindow`). Steel/wood/glass tables and recipe-opted-in lockers/machines additionally use this integrity/presentation path; other furniture remains out.
 
 **Explicitly deferred:** staged build ladder (Open→Framed→Plated→Sealed), deconstruction, deck plating, furniture integrity, floor/ceiling/z-level, balance numbers, explosive crafting recipes. Repair (Phase 6) is in-plan but **blocked** until construction/crafting freeform ships.
 
@@ -229,9 +229,9 @@ Run `.cursor/skills/update-system-docs/SKILL.md`: map `structural-destruction.md
 
 ### Phase 4
 
-- Structural wall variants, including windows and the girder, use mesh overlays for dents and tears, with metal flecks and dust at confirmed combat contacts. Steel tables add tabletop-only overlays; civilian/security airlocks mark their moving leaves. Cracked retains the `WindLight` hiss on walls only. See the [system map](../architecture/systems/structural-destruction.md#overview).
+- Structural wall variants, including windows and the girder, use mesh overlays for dents and tears, with metal flecks and dust at confirmed combat contacts. Steel/wood/glass tables add tabletop-only overlays with material-specific dents/tears, gouges/grain splits, or branching fractures; opted-in lockers and machines show metal casing damage; civilian/security airlocks mark their moving leaves. Cracked retains the `WindLight` hiss on walls only. See the [system map](../architecture/systems/structural-destruction.md#overview).
 - Design slow-leak deferred: `IsAirtight=false` does not open `BlockedEdges`; room↔room gas still sealed until a permeability path exists.
-- Prefab wiring uses **SS3D → Structural Damage → Run Content Prefab Recipes** for walls, steel tables and civilian/security airlocks. `PlacedTileObject` also ensures the non-networked presenter at runtime, including late joins. Examine localization seeds include torn-metal feedback for tables/airlocks.
+- Prefab wiring uses **SS3D → Structural Damage → Run Content Prefab Recipes** for walls, supported tables, lockers, machines and civilian/security airlocks. `PlacedTileObject` also ensures the non-networked presenter at runtime, including late joins. Examine localization seeds include torn-metal feedback for steel tables/airlocks gouged/split wood feedback for wooden tables, and chipped/fractured glass feedback for glass tables.
 
 ### Blast detonation VFX
 

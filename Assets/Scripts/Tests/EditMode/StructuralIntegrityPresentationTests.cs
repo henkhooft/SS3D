@@ -128,7 +128,9 @@ namespace EditorTests
         [TestCase("Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableSteel.prefab", "Assets/Content/Data/TileMap/Resources/Furniture/Generic/Surfaces/Tables/TableSteel.asset", 1, 1f)]
         [TestCase("Assets/Content/WorldObjects/Structures/Doors/CivillianAirlock.prefab", "Assets/Content/Data/TileMap/Resources/Structures/Doors/AirlockCivilian.asset", 2, 2f)]
         [TestCase("Assets/Content/WorldObjects/Structures/Doors/SecurityAirlock.prefab", "Assets/Content/Data/TileMap/Resources/Structures/Doors/AirlockSecurity.asset", 2, 2f)]
-        public void MetalObjects_OverlayFollowsSurfaceAndClearsOnRepair(string prefabPath, string soPath, int count, float mode)
+        [TestCase("Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableWood.prefab", "Assets/Content/Data/TileMap/Resources/Furniture/Generic/Surfaces/Tables/TableWood.asset", 1, 1f)]
+        [TestCase("Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableGlass.prefab", "Assets/Content/Data/TileMap/Resources/Furniture/Generic/Surfaces/Tables/TableGlass.asset", 1, 1f)]
+        public void Objects_OverlayFollowsSurfaceAndClearsOnRepair(string prefabPath, string soPath, int count, float mode)
         {
             var root = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
             _instantiated.Add(root);
@@ -148,6 +150,8 @@ namespace EditorTests
                 var block = new MaterialPropertyBlock();
                 overlay.GetPropertyBlock(block);
                 Assert.AreEqual(mode, block.GetFloat("_SurfaceMode"));
+                Assert.AreEqual(soPath.Contains("TableWood") ? 1f : 0f, block.GetFloat("_Wood"));
+                Assert.AreEqual(soPath.Contains("TableGlass") ? 1f : 0f, block.GetFloat("_Glass"));
                 Transform surface = overlay.transform.parent;
                 Assert.AreSame(surface.GetComponent<MeshFilter>().sharedMesh, overlay.GetComponent<MeshFilter>().sharedMesh);
                 Vector3 original = overlay.transform.position;
