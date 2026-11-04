@@ -2,7 +2,7 @@
 > Touches systems: atmospherics, entities, rendering, networking-session
 > Status: in-progress
 
-**Progress:** Phase 0 fixtures done. Budgets still need a sealed test map, because Metastation leaks at rest (see [Phase 0 results](#phase-0-results)); Decision 10's gate holds phase 1 until then. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
+**Progress:** Phase 0 done: fixtures pinned and budgets measured on a sealed map, under both lines on today's code (see [Phase 0 results](#phase-0-results)), so Decision 10 does not hold phase 1. Phase 1 not started. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
 
 # Atmos edge flow: pressure-driven wind on the tile grid (Nov 2026)
 
@@ -83,21 +83,19 @@ Measured 2026-11-04 on `d2ecb34e1`.
 
 Two 6×6 rooms, door opening onto the evacuated one: 259 s to equalise within 5 kPa, 5 s until the far wall of the empty room reads 1 kPa.
 
-**Budgets** come from one Metastation host in Editor Play Mode, with Burst on and safety checks and the jobs debugger on, so absolute times read high. Bandwidth is dirty chunks × 6.4 KB × 5 Hz per client; no real clients were connected. Decision 10's 8-client line was not run.
+**Budgets** were measured on `Testing/fixtures/stations/atmostest.json`, an owner-built sealed map: 3,387 air cells in one connected region across 23 chunks. At rest it passes the sleep check: nothing open to vacuum, gas constant at 352,105 mol, 25–39 cells awake. It was run as one host in Editor Play Mode with Burst, safety checks and the jobs debugger on, so absolute times read high. Bandwidth is dirty chunks × 6.4 KB × 5 Hz per client; no real clients were connected, so Decision 10's 8-client line was not run.
 
-| Measure | Idle, no breach | During breach | Budget |
-|---|---|---|---|
-| Atmos tick, whole `LastTickMilliseconds` | 11 ms | 11 ms p50, 12 ms max | 4 ms |
-| `AtmosSimulation.Tick` alone | 5.8 ms p50 | not separated | 4 ms |
-| Active cells | about 4,650 of 12,779 air cells | about 4,700 | none |
-| Dirty chunks per tick | 64 | 62 | about 9 fit the budget |
-| Patch traffic per client | about 2,050 KB/s | about 2,000 KB/s | 300 KB/s |
+| Measure | Idle | Breach, today's code | Whole region awake | Budget |
+|---|---|---|---|---|
+| Atmos tick, whole `LastTickMilliseconds` | 1.8 ms | 2.3 ms p50, 3.0 ms max | not measured | 4 ms |
+| `AtmosSimulation.Tick` alone | not measured | 0.84 ms p50, 1.1 ms max | 4.5 ms p50, 4.9 ms max | 4 ms |
+| Active cells | 25–39 | up to 529 | 3,388 | none |
+| Dirty chunks per tick | 0.1 | 4 average, 7 max | not measured | about 9 |
+| Patch traffic per client | about 3 KB/s | 127 KB/s average, 224 KB/s max | 737 KB/s if all 23 chunks change | 300 KB/s |
 
-**These budget figures are not valid for a breach.** Metastation leaks at rest: with no breach, 128 air regions holding 2,509 of its 12,779 air cells already touch vacuum, and total gas fell from 1,029,053 to 963,531 mol in 50 s. The owner attributes this to exterior areas that spawn with air and to missing assets that leave gaps, which fits, though no individual gap was checked. The breach adds nothing visible on top, so the table measures the leak.
+**Gate:** today's code is under both lines, so Decision 10's rule does not put AOI ahead of phase 1. That passes only because diffusion is slow and touches few chunks at once. Edge flow is built to change the whole region quickly, and if every chunk of this region changes each tick it costs 737 KB/s, about 2.5× the budget, and the sim sits just over 4 ms before edge flow adds any cost. Expect network to be the line phase 3 fails: 300 KB/s covers about 9 chunks, roughly a 48×48 tile area, so AOI or smaller patches are likely needed by then.
 
-**Connected spaces are the real driver.** At 6.4 KB × 5 Hz, a chunk costs 32 KB/s per client, so 300 KB/s covers about 9 changing chunks, roughly a 48×48 tile area. Any larger connected space changing every tick goes over budget without AOI or smaller patches, whatever the map. Metastation's largest region, 517 cells across 12 chunks, would cost 385 KB/s, but its doors and gaps make that indicative only.
-
-**Gate:** Decision 10 stays open until the budgets are re-measured on a sealed map with no resting leak.
+**Metastation is not a valid budget map.** With no breach, 128 air regions holding 2,509 of its 12,779 air cells touch vacuum, and it lost about 65,000 mol in 50 s, costing 11 ms per tick and about 2,050 KB/s at rest. The owner attributes this to exterior areas that spawn with air and to missing assets that leave gaps. With doors shut its largest region is 517 cells across 12 chunks, so Decision 6's reach depends heavily on which doors are open.
 
 ## Risks
 
