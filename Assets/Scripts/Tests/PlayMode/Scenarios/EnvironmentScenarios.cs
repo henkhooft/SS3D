@@ -84,7 +84,7 @@ namespace SS3D.Tests
             Body.Mind.RemoveOwnership();
             yield return WaitFor(() => !Body.IsOwner, "the host loses ownership");
             yield return Hold(0.5f);
-            Assert.IsTrue(BonesKinematic(true), "Without ownership the bones stay kinematic");
+            Assert.IsTrue(BonesKinematic(false), "Without an owner the server simulates the collapsed bones");
             Assert.IsFalse(Body.GetComponent<Animator>().enabled, "A collapsed body does not resume animation without an owner");
 
             Assert.IsTrue(SubSystems.Get<EntitySubSystem>().TryReclaimEntity(Host, InstanceFinder.ClientManager.Connection),
