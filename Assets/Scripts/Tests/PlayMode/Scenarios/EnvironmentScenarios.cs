@@ -106,6 +106,24 @@ namespace SS3D.Tests
                 "Recovery restores the NetworkAnimator as it was");
         }
 
+        // Guards: server wind reaches the physics owner, collapses a standing body and accelerates its bones.
+        // Not cheaper because: FishNet TargetRpc delivery and non-kinematic ragdoll ownership are runtime contracts.
+        [UnityTest]
+        public IEnumerator ViolentGust_KnocksDownAndPullsOwner_ThenRecovers()
+        {
+            Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
+            Vector3 start = ragdoll.WindSamplePosition;
+            ragdoll.ServerApplyWind(Vector3.right * 30f, 0.2f);
+            yield return WaitFor(() => ragdoll.Presentation == BodyPresentationState.Collapsed,
+                "a violent gust knocks the owner down");
+            yield return Hold(0.25f);
+            Assert.That(ragdoll.WindSamplePosition.x, Is.GreaterThan(start.x + 0.1f),
+                "the owning ragdoll moves with the gust");
+            Assert.IsTrue(BonesKinematic(false), "Only the owner runs living ragdoll physics");
+            yield return WaitFor(() => ragdoll.Presentation == BodyPresentationState.Locomotion,
+                "the conscious body recovers after the wind stops", 8f);
+        }
+
         private bool BonesKinematic(bool kinematic) => Body.GetComponentsInChildren<RagdollPart>(true)
             .All(part => part.GetComponent<Rigidbody>().isKinematic == kinematic);
 

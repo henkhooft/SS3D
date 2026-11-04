@@ -22,7 +22,7 @@ namespace SS3D.Systems.Atmospherics
     /// <summary>
     /// Server-authoritative atmospherics coordinator. Owns the ECS simulation world and tick loop.
     /// </summary>
-    public sealed class AtmosSubSystem : NetworkSubSystem, IWorldReady
+    public sealed partial class AtmosSubSystem : NetworkSubSystem, IWorldReady
     {
         private static readonly ProfilerMarker SimPerformanceMarker = new("SS3D.Atmos.Sim");
         private static readonly ProfilerMarker UploadPerformanceMarker = new("SS3D.Atmos.Upload");
@@ -319,6 +319,7 @@ namespace SS3D.Systems.Atmospherics
                 _simulation.Tick(AtmosConstants.TickInterval);
                 _pipeSimulation?.Tick(AtmosConstants.TickInterval);
                 _portRegistry.TickDevices(_pipeSimulation, _simulation, AtmosConstants.TickInterval);
+                TickWind();
             }
 
             using (UploadPerformanceMarker.Auto())

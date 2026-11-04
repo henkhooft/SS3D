@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: 4f732584a — 2026-11-02
+> Verified: 319a1db1b — 2026-11-04
 
 # Atmospherics
 
@@ -9,9 +9,12 @@
 
 Server-authoritative open-tile gas simulation on the turf grid. Each walkable cell holds a sparse gas mixture; pressure equalizes between neighbours via ideal-gas-law sharing, and when total pressures already match, composition still mixes via slower partial-pressure diffusion (`DiffusionSpeed`). Heat conducts per gas specific heat, and plasma burns with oxygen into CO₂. Runs in a dedicated ECS world with Burst jobs, driven by tilemap mutation notifications. GPU textures feed URP scatter/glow/distortion passes for fog, fire, and plasma visuals. **Pipe layer:** vents, scrubbers, and pumps register with `AtmosPortRegistry` and exchange gas with turf cells after pipe bulk sim; ports cache network IDs against `GasPipeNetworkRegistry.TopologyVersion` so steady ticks do not re-walk the tilemap. **Air alarms** sample the turf cell in front of the wall mount (APC-style tile resolution), discover area vents/scrubbers via a mutation-driven `areaId → ports` index (`AtmosAreaPortIndex`, invalidated on port register/unregister and area reflood), and dispatch preset modes to real port devices. Port commands are validated against the air alarm’s resolved area to avoid cross-area toggles on shared wall tiles. **Client VFX:** Phase 1 dirty-chunk sync shipped ([2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)) — pure clients build atlases from `AtmosChunkPatch` RPCs via `AtmosClientVisualizationBridge`; late-join bootstrap / AOI remain Phase 2.
 
+Destroyed walls automatically produce pressure-driven wind through open gas edges. `AtmosWind` samples downhill pressure on the server; strong gusts collapse bodies and pull their ragdoll bones toward lower pressure. Wind decays with the gas gradient and respects closed edges. Client wind curls are pooled, capped at 96 cells per tick, and expire when updates stop; protocol 15 adds field and owner-force RPCs. Wind affects humanoids; loose item wind physics remains open.
+
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSubSystem.cs` — tick loop; `IWorldReady`; awaits `TileMapLoaded` then notifies `AtmosReady` (`SS3D.Atmos.Sim` / `Upload` markers)
+- `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosWind.cs` / `AtmosSubSystem.Wind.cs` / `AtmosWindView.cs` — edge-aware gust sampling, body force dispatch and pooled client curls
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosSimulation.cs` — native cell buffers, active-cell scheduling, job dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Bridge/AtmosTileObserver.cs` — `ITileMutationObserver`; refreshes cells on placement, clear, and door state
 - `Assets/Scripts/SS3D/Systems/Atmospherics/ECS/Jobs/ShareGasJob.cs` — pressure-driven mole sharing + equal-pressure composition diffusion
@@ -65,6 +68,8 @@ Server-authoritative open-tile gas simulation on the turf grid. Each walkable ce
 - **Equal-pressure breath pockets:** a 1:1 O₂→CO₂ swap does not change total pressure, so pressure-only sharing never diluted the tile. `ShareGasJob` must run equal-P partial-pressure diffusion (`DiffusionSpeed`); composition gradients keep cells awake until the room mixes, then sleep again. Vacuum edges stay pressure-vent only.
 
 ## Tests
+
+- `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade and acceleration caps. `scenarios:Environment` covers owner gust knockdown, pull and recovery. Wind tuning is in `AtmosWind`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
 
 - `Testing/ui/validate.sh --steps compile,round-reset` runs a focused host stop/restart, depletes a cell before Stop and checks oxygen returns in a fresh simulation. The sandbox pilot also carries this regression. Remote dedicated-server replay remains required for release acceptance.
 
