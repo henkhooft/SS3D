@@ -5,15 +5,23 @@ using UnityEngine;
 namespace SS3D.Systems.Atmospherics
 {
     /// <summary>
-    /// Wind is the air speed the simulation's edge flows imply, in metres per second. The simulation
-    /// owns the field per tile; everything here turns it into something continuous in space and time.
+    /// Wind is what the simulation's edge flows do to whatever stands in them, in metres per second:
+    /// their air speed times <see cref="AirSpeedGain"/>. The simulation owns the field per tile;
+    /// everything here turns it into something continuous in space and time.
     /// </summary>
     public static class AtmosWind
     {
         /// <summary>Run speed. Below this, wind adds to movement and can be fought.</summary>
         public const float KnockdownSpeed = 5f;
 
-        /// <summary>Bodies ignore air slower than this.</summary>
+        /// <summary>
+        /// Felt wind per metre per second of air. A room's drain time fixes how much air leaves, so
+        /// true air speed is too low to feel past the hole: 0.3 m/s mid-room in a 10x10 breach. This
+        /// is the one place that gap is bridged, and it scales distance from a breach, not drain time.
+        /// </summary>
+        public const float AirSpeedGain = 3f;
+
+        /// <summary>Bodies ignore wind slower than this.</summary>
         public const float MinSpeed = 0.3f;
 
         public const float MaxAcceleration = 35f;
@@ -94,7 +102,8 @@ namespace SS3D.Systems.Atmospherics
         }
 
         /// <summary>
-        /// Air speed at a tile centre: the mean flow through opposite edges, per mole held here.
+        /// Wind at a tile centre: the mean flow through opposite edges, per mole held here, scaled by
+        /// <see cref="AirSpeedGain"/>.
         /// </summary>
         public static Vector3 SampleCell(AtmosSimulation simulation, int index)
         {
@@ -110,7 +119,7 @@ namespace SS3D.Systems.Atmospherics
             float east = own.East + (west >= 0 ? simulation.EdgeFlow[west].East : 0f);
 
             float density = Mathf.Max(simulation.GetCellMoles(index), MinDensityMoles);
-            return Vector3.ClampMagnitude(new Vector3(east, 0f, north) * (0.5f / density), MaxSpeed);
+            return Vector3.ClampMagnitude(new Vector3(east, 0f, north) * (0.5f * AirSpeedGain / density), MaxSpeed);
         }
 
         private static int OpenNeighbour(AtmosSimulation simulation, int index, int direction)

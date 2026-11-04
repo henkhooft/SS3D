@@ -10,15 +10,14 @@ using Object = UnityEngine.Object;
 namespace EditorTests.Atmospherics
 {
     /// <summary>
-    /// Room-scale reference cases for the atmos edge-flow effort. Each case reports how a real
-    /// <see cref="AtmosSimulation"/> behaves, so a change to gas transport shows up as a change in
-    /// these numbers. See Documents/architecture/2026-11_atmos-edge-flow.md.
+    /// Room-scale targets for gas transport, run on a real <see cref="AtmosSimulation"/>: how fast a
+    /// breach drains a room and how far its wind reaches. Numbers are logged as [edge-flow-ref].
+    /// See Documents/architecture/2026-11_atmos-edge-flow.md.
     /// </summary>
     public class AtmosEdgeFlowReferenceTests
     {
         private const float MaxSeconds = 1200f;
         private const float OnsetDropKilopascals = 1f;
-        private const float BaselineTolerance = 5f;
 
         private readonly List<GameObject> _objects = new();
 
@@ -29,27 +28,27 @@ namespace EditorTests.Atmospherics
             _objects.Clear();
         }
 
+        // Decision 5's drain time and Decision 7's knockdown line: the design's "a tug across the room,
+        // irresistible close to a breach".
         [Test]
-        public void Room10x10_OneTileHole()
+        public void Room10x10_OneTileHole_DrainsAndPullsToDesign()
         {
             Metrics metrics = RunBreach(10, 10, "room 10x10");
-            AssertBaseline(metrics.SecondsToHalf, 19.8f, "time to half pressure");
-            AssertBaseline(metrics.SecondsToTenth, 65.4f, "time to a tenth of pressure");
-            AssertBaseline(metrics.FarOnset, 1.2f, "far-field onset");
-            AssertBaseline(metrics.PeakHole, 5.09f, "peak wind in the hole");
-            AssertBaseline(metrics.PeakNear, 3.01f, "peak wind beside the hole");
-            AssertBaseline(metrics.PeakMiddle, 0.3f, "peak wind mid-room");
-            AssertBaseline(metrics.PeakFar, 0.06f, "peak wind at the far wall");
+            Assert.That(metrics.SecondsToHalf, Is.InRange(15f, 20f), "time to half pressure");
+            Assert.That(metrics.SecondsToTenth, Is.LessThan(80f), "a breached room empties");
+            Assert.That(metrics.FarOnset, Is.LessThan(3f), "the far wall feels the breach within seconds");
+            Assert.That(metrics.PeakByDistance[1], Is.GreaterThanOrEqualTo(AtmosWind.KnockdownSpeed), "beside the hole is irresistible");
+            Assert.That(metrics.PeakByDistance[3], Is.LessThan(AtmosWind.KnockdownSpeed), "three tiles out can still be fought");
+            Assert.That(metrics.PeakByDistance[5], Is.GreaterThan(AtmosWind.MinSpeed * 2f), "mid-room feels a tug");
         }
 
         [Test]
-        public void Corridor40x8_OneTileHole()
+        public void Corridor40x8_OneTileHole_DrainsSlowerThanARoomButStillPulls()
         {
             Metrics metrics = RunBreach(40, 8, "corridor 40x8");
-            AssertBaseline(metrics.SecondsToHalf, 77.8f, "time to half pressure");
-            AssertBaseline(metrics.FarOnset, 10.6f, "far-field onset");
-            AssertBaseline(metrics.PeakMiddle, 0.2f, "peak wind mid-corridor");
-            AssertBaseline(metrics.PeakFar, 0.046f, "peak wind at the far end");
+            Assert.That(metrics.SecondsToHalf, Is.LessThan(100f), "time to half pressure");
+            Assert.That(metrics.FarOnset, Is.LessThan(15f), "the far end feels the breach within seconds");
+            Assert.That(metrics.PeakByDistance[5], Is.GreaterThan(AtmosWind.MinSpeed * 2f), "five tiles out feels a tug");
         }
 
         [Test]
@@ -92,10 +91,10 @@ namespace EditorTests.Atmospherics
                 if (MeanPressure(sim, full) - MeanPressure(sim, empty) < 5f) settled = seconds;
             }
 
-            TestContext.WriteLine($"[edge-flow-ref] two rooms: settled={Show(settled)} farOnset={Show(onset)} doorWind={peakWind:F2} m/s");
-            AssertBaseline(settled, 9.8f, "time to equalise");
-            AssertBaseline(onset, 0.6f, "far-field onset");
-            AssertBaseline(peakWind, 3.52f, "peak wind at the door");
+            Debug.Log($"[edge-flow-ref] two rooms: settled={Show(settled)} farOnset={Show(onset)} doorWind={peakWind:F2} m/s");
+            Assert.That(settled, Is.InRange(0f, 15f), "an opened door gusts rather than seeps");
+            Assert.That(onset, Is.InRange(0f, 2f), "far-field onset");
+            Assert.That(peakWind, Is.GreaterThanOrEqualTo(AtmosWind.KnockdownSpeed), "the gust at the door knocks down");
         }
 
         private Metrics RunBreach(int width, int depth, string label)
@@ -119,12 +118,11 @@ namespace EditorTests.Atmospherics
             List<TileCoord> room = Interior(map, 1, width, depth);
             float start = MeanPressure(sim, room);
             float startMoles = TotalMoles(sim, room);
-            var near = new TileCoord(map, width, holeZ);
-            var middle = new TileCoord(map, 1 + width / 2, holeZ);
             var far = new TileCoord(map, 1, holeZ);
             float farStart = sim.GetCellPressure(far);
 
             var metrics = new Metrics { SecondsToHalf = -1f, SecondsToTenth = -1f, SecondsToHalfMoles = -1f, FarOnset = -1f };
+            metrics.PeakByDistance = new float[6];
             int ticks = Mathf.CeilToInt(MaxSeconds / AtmosConstants.TickInterval);
             for (int tick = 1; tick <= ticks && metrics.SecondsToTenth < 0f; tick++)
             {
@@ -135,22 +133,19 @@ namespace EditorTests.Atmospherics
                 if (metrics.SecondsToHalfMoles < 0f && TotalMoles(sim, room) <= startMoles * 0.5f) metrics.SecondsToHalfMoles = seconds;
                 if (metrics.SecondsToTenth < 0f && pressure <= start * 0.1f) metrics.SecondsToTenth = seconds;
                 if (metrics.FarOnset < 0f && farStart - sim.GetCellPressure(far) >= OnsetDropKilopascals) metrics.FarOnset = seconds;
-                metrics.PeakHole = Mathf.Max(metrics.PeakHole, WindSpeed(sim, hole));
-                metrics.PeakNear = Mathf.Max(metrics.PeakNear, WindSpeed(sim, near));
-                metrics.PeakMiddle = Mathf.Max(metrics.PeakMiddle, WindSpeed(sim, middle));
-                metrics.PeakFar = Mathf.Max(metrics.PeakFar, WindSpeed(sim, far));
+                for (int distance = 1; distance <= 5; distance++)
+                {
+                    var cell = new TileCoord(map, width + 1 - distance, holeZ);
+                    metrics.PeakByDistance[distance] = Mathf.Max(metrics.PeakByDistance[distance], WindSpeed(sim, cell));
+                }
             }
 
-            TestContext.WriteLine(
+
+            Debug.Log(
                 $"[edge-flow-ref] {label}: half={Show(metrics.SecondsToHalf)} halfMoles={Show(metrics.SecondsToHalfMoles)} tenth={Show(metrics.SecondsToTenth)} " +
-                $"farOnset={Show(metrics.FarOnset)} wind hole/near/mid/far={metrics.PeakHole:F2}/{metrics.PeakNear:F2}/{metrics.PeakMiddle:F2}/{metrics.PeakFar:F2} m/s");
+                $"farOnset={Show(metrics.FarOnset)} wind by distance {string.Join(" ", metrics.PeakByDistance.Skip(1).Select(v => v.ToString("F2")))} m/s");
             return metrics;
         }
-
-        // Edge flow's untuned numbers. Tuning is meant to break these: phase 3 replaces them with
-        // Decision 5's targets rather than widening the band.
-        private static void AssertBaseline(float measured, float baseline, string what) =>
-            Assert.That(measured, Is.EqualTo(baseline).Within(BaselineTolerance).Percent, what);
 
         private static float WindSpeed(AtmosSimulation sim, TileCoord coord) =>
             AtmosWind.Sample(sim, coord).magnitude;
@@ -190,10 +185,9 @@ namespace EditorTests.Atmospherics
             public float SecondsToHalfMoles;
             public float SecondsToTenth;
             public float FarOnset;
-            public float PeakHole;
-            public float PeakNear;
-            public float PeakMiddle;
-            public float PeakFar;
+
+            // Index is tiles into the room from the wall, along the line through the hole.
+            public float[] PeakByDistance;
         }
     }
 }

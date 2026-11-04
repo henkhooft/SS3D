@@ -2,7 +2,7 @@
 > Touches systems: atmospherics, entities, rendering, networking-session
 > Status: in-progress
 
-**Progress:** Phases 0 to 2 done. Phase 0 pinned the fixtures and measured budgets on a sealed map, under both lines on the code of that time (see [Phase 0 results](#phase-0-results)). Phase 1 put edge flow in `ShareGasJob` (see [Phase 1 results](#phase-1-results)). Phase 2 made it the only transport and moved wind onto edges, which leaves wind too weak to knock anyone down outside the hole tile (see [Phase 2 results](#phase-2-results)). Phase 3 is next and starts with that. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
+**Progress:** Phases 0 to 3 done, except Decision 10's 8-client line, which has only been run with one client (see [Phase 3 results](#phase-3-results)). Phase 0 pinned fixtures and budgets, phase 1 put edge flow in `ShareGasJob`, phase 2 made it the only transport, and phase 3 tuned drain time and felt wind and brought patch traffic under budget. Phase 4, loose items, is next. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
 
 # Atmos edge flow: pressure-driven wind on the tile grid (Nov 2026)
 
@@ -57,6 +57,7 @@ Settled in an implementation grill on 2026-11-04.
 | 9 | Fire changes from moving air are accepted. Tests pin design §5's rules, not today's burn numbers. |
 | 10 | Budgets during a Metastation breach: at most 4 ms per atmos tick, and at most 300 KB/s per client with 8 clients. Phase 0 measures both. Over on network puts [client sync](2026-07_atmos-client-visualization-sync.md) Phase 2 AOI ahead of phase 1; over on sim reviews the substep rule first. |
 | 11 | Loose items are phase 4: anything with a free server `Rigidbody`, drag scaled by mass, with a cap on how many respond at once. Placed furniture stays put. Item physics is already server-only, so no prefab or ownership changes. |
+| 12 | Felt wind is air speed × `AtmosWind.AirSpeedGain` (3). Decision 5's drain time fixes true air speed, so a gain closes the gap and Decision 7's 5 m/s line stands. Chosen in phase 3 and open to the owner's review. |
 
 Coasting velocity and fire rendering stay separate follow-ups. They read the same field and do not block this effort.
 
@@ -74,7 +75,7 @@ Coasting velocity and fire rendering stay separate follow-ups. They read the sam
 
 Measured 2026-11-04 on `d2ecb34e1`.
 
-**Reference fixtures** are `AtmosEdgeFlowReferenceTests`. They pin today's diffusion numbers within 5%, so any transport change has to show up there. Phase 3 replaces them with Decision 5's targets rather than widening the band. Wind is today's slope-derived speed, which caps at 7 m/s beside the hole in every case.
+**Reference fixtures** are `AtmosEdgeFlowReferenceTests`. They pin today's diffusion numbers within 5%, so any transport change has to show up there. Phase 3 replaced them with Decision 5's targets. Wind is today's slope-derived speed, which caps at 7 m/s beside the hole in every case.
 
 | Case | Half pressure | 10% | Far-field onset (1 kPa) | Peak wind, middle / far |
 |---|---|---|---|---|
@@ -137,11 +138,42 @@ Door between two 6×6 rooms, one evacuated: 3.5 m/s at the door, 9.8 s to equali
 
 The atlas now reads still air on vacuum tiles, where the old slope still showed flow, so streaks stop at the hull. Review this with phase 3's screenshot.
 
+## Phase 3 results
+
+Measured 2026-11-04. The felt-wind question closed as Decision 12. `AtmosEdgeFlowReferenceTests` now asserts these targets instead of pinning numbers.
+
+**Drain and reach.** `EdgeFlowVacuumMaxSpeed` went from 5 to 6 tiles/s, which moves the 10×10 room from the edge of Decision 5's band to the middle of it. True air speed barely fades during the drain: at half pressure it is still about 90% of its peak at every distance measured, so the pull lasts.
+
+| Case | Half pressure | 10% | Far-field onset | Peak wind by tiles from the wall, 1 / 2 / 3 / 4 / 5 (m/s) |
+|---|---|---|---|---|
+| 10×10 room | 17.6 s | 58.6 s | 1.0 s | 7.0 / 3.7 / 1.9 / 1.2 / 0.9 |
+| 40×8 corridor | 71.2 s | 240 s | 10.0 s | 7.0 / 5.6 / 2.3 / 1.8 / 1.5 |
+
+Knockdown therefore fires beside the hole and not three tiles out, and mid-room is a tug of about 1 m/s. Wind caps at `MaxSpeed`, 7 m/s. The door between two 6×6 rooms still equalises in 9.8 s, and its gust now knocks down. The awake front stays at 5 tiles/s: the corridor's 10 s onset reads as a telegraph, so it was left alone.
+
+**Budgets** are now a repeatable run, `Testing/ui/validate.sh --steps mppm:breach-budget`, which logs `[atmos-budget]`: the sealed map, a true hull hole and one real remote client, sampled for 45 s after the breach.
+
+| Stage | Tick p50 / max | `AtmosSimulation.Tick` p50 / max | Traffic mean / max |
+|---|---|---|---|
+| Start of phase 3 | 4.09 / 7.93 ms | 2.98 / 7.23 ms | 281 / 470 KB/s, undercounted |
+| Reaction and heat once per tick, new wire format, cap | 3.64 / 7.05 ms | 2.51 / 5.82 ms | 138 / 241 KB/s |
+| Cell pass once per tick | 3.32 / 6.20 ms | 2.29 / 5.36 ms | 140 / 241 KB/s |
+| Same, Burst safety checks and jobs debugger off | 1.69 / 6.05 ms | 0.50 / 1.32 ms | 140 / 241 KB/s |
+
+Active cells peaked near 1,440 of 3,387, and dirty chunks at 16, the cap. Traffic is computed as patches × `WireBytes`, so transport overhead is not in it.
+
+- **Network passes.** Patches went from 6.4 KB to 3.1 KB (half floats and bytes; protocol 16). `MaxPatchesPerTick` (16) caps traffic however much of the station changes, with waiting chunks sent oldest first, so AOI did not have to come first. Client sync's AOI and late-join work stay open.
+- **The old traffic number was low.** `AtmosDirtyChunkTracker` compared each cell with the previous tick, so a slow drain never crossed its threshold and far chunks went stale on clients. It now compares with what it last reported, and tracks wind.
+- **The sim passes; the tick does not, at peak.** With checks off, as a build runs, `AtmosSimulation.Tick` peaks at 1.32 ms, but the whole tick still peaks at 6.05 ms against Decision 10's 4 ms. The p50 is under the line. That peak is outside `AtmosSimulation.Tick`, in pipes, ports, wind dispatch or host upload, and the owner deferred finding it to a profiler session on 2026-11-04.
+- **Not run:** Decision 10's 8-client line. MPPM had one remote client, and the times are from an Editor host, not a dedicated server. `AtmosClientAtlas` also re-uploads its textures for every patch it applies, so a client's cost grows with patch count, and nothing here measured it.
+
+**Screenshot review:** `mppm:breach` now saves one from the client. The remote owner lies knocked down beside the hole with streaks crossing the room. That breach is the bare-vacuum one, so it does not settle phase 2's note about streaks stopping at the hull.
+
 ## Risks
 
 - **Sloshing:** too little friction makes pressure ring between rooms and keeps cells awake. Phase 1's oscillation test catches it.
 - **Near-empty cells:** `Q / density` blows up as density approaches zero. `AtmosWind.MinDensityMoles` is the floor, and speed is clamped to `MaxSpeed`.
-- **Network:** a chunk patch is about 6 KB, so 20 changing chunks at 5 Hz is roughly 600 KB/s per client while AOI ([client sync](2026-07_atmos-client-visualization-sync.md) Phase 2) is unshipped. Faster breaches dirty more chunks at once, which puts T3 at risk.
+- **Network:** `MaxPatchesPerTick` holds traffic at about 240 KB/s per client, so a big breach makes far chunks lag rather than overrun. Eight clients are unmeasured, and the server sends that traffic to each of them. AOI ([client sync](2026-07_atmos-client-visualization-sync.md) Phase 2) is still unshipped, which puts T3 at risk.
 - **Reach:** one hole can empty every connected space (Decision 6). If a single C4 charge ruins whole rounds, firelocks need a design pass.
 - **Prediction:** if `HumanoidPredictedMovement` is ever enabled on `Human.prefab`, wind must move into its replicate step, or reconcile undoes it.
 

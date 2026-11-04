@@ -51,7 +51,7 @@ namespace SS3D.Systems.Atmospherics.ECS
         public const float EdgeFlowMaxSpeed = 30f;
 
         // The same cap on an edge into vacuum; it stands in for choked flow.
-        public const float EdgeFlowVacuumMaxSpeed = 5f;
+        public const float EdgeFlowVacuumMaxSpeed = 6f;
 
         // Fraction of a cell's gas that may leave it in one substep, across all its edges. A cell
         // that fully empties has ~zero heat capacity, and its temperature loses any stable basis.

@@ -352,12 +352,12 @@ namespace SS3D.Systems.Atmospherics
             LastSubsteps = substeps;
             float subDelta = deltaTime / substeps;
 
+            // Only edge flow has a wave to keep stable. Everything else runs once, as on a calm tick.
             for (int step = 0; step < substeps; step++)
-            {
-                RunShareGasJob(subDelta);
-                RunReactJob(subDelta);
-                RunConductHeatJob(subDelta);
-            }
+                RunShareGasJob(subDelta, step == substeps - 1 ? deltaTime : 0f);
+
+            RunReactJob(deltaTime);
+            RunConductHeatJob(deltaTime);
 
             RefreshActiveListFromWorkingSet();
         }
@@ -728,7 +728,7 @@ namespace SS3D.Systems.Atmospherics
             return 1;
         }
 
-        private void RunShareGasJob(float deltaTime)
+        private void RunShareGasJob(float deltaTime, float cellPassDeltaTime)
         {
             var job = new ShareGasJob
             {
@@ -747,6 +747,7 @@ namespace SS3D.Systems.Atmospherics
                 MaxGasTypes = AtmosConstants.MaxGasTypes,
                 GasTypeCount = _gasTypeCount,
                 DeltaTime = deltaTime,
+                CellPassDeltaTime = cellPassDeltaTime,
                 SpaceTemperature = AtmosConstants.SpaceTemperature,
             };
 

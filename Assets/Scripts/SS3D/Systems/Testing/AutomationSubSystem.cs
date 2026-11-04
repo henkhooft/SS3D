@@ -12,6 +12,8 @@ using SS3D.Data.Generated;
 using SS3D.Networking;
 using SS3D.Networking.Settings;
 using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Atmospherics.ECS;
+using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.IngameConsoleSystem;
@@ -511,6 +513,23 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "BreachOpened", BreachBesideClient());
                     break;
 
+                // Host: the next round loads this map and mode. Map names may not contain spaces here.
+                case "use_station":
+                    UseStation(instruction.Args[0], instruction.Args[1]);
+                    yield return new WaitForSeconds(1);
+                    break;
+
+                // Server: opens a one-tile hole in the hull, the way destruction does: the wall goes
+                // and the plenum stays, so the hole is a neck between the air and space.
+                case "breach_hull":
+                    TestSignal.Emit(this, "BreachOpened", BreachHull());
+                    break;
+
+                // Server: records atmos tick cost and patch traffic for this many seconds.
+                case "atmos_budget":
+                    yield return SampleAtmosBudget(float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+
                 // Client: this process drew wind streaks and its own body was pushed by the wind.
                 case "assert_wind_felt":
                     yield return AssertWindFelt();
@@ -652,6 +671,92 @@ namespace SS3D.Systems.Testing
             }
 
             throw new InvalidOperationException("breach_beside_client: no remote body");
+        }
+
+        private static void UseStation(string map, string mode)
+        {
+            RoundSubSystem rounds = SubSystems.Get<RoundSubSystem>();
+            ServerSettings settings = rounds.SettingsForServer;
+            settings.Map = map;
+            settings.Mode = mode;
+            rounds.CmdUpdateServerSetting(ServerSetting.Map, settings);
+            rounds.CmdUpdateServerSetting(ServerSetting.Mode, settings);
+        }
+
+        private static string BreachHull()
+        {
+            AtmosSimulation simulation = SubSystems.Get<AtmosSubSystem>().Simulation;
+            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+            string hole = null;
+            int candidates = 0;
+            simulation.ForEachCell((coord, index) =>
+            {
+                if (hole != null || !IsHullBetweenAirAndSpace(simulation, coord, index)) return;
+                candidates++;
+                Vector3 world = tiles.QueryService.TileToWorld(coord);
+                if (tiles.Construction.TryClearTile(world, TileLayer.Turf, Direction.North).Success) hole = world.ToString();
+            });
+            return hole ?? throw new InvalidOperationException($"breach_hull: {candidates} hull walls between air and space, none cleared");
+        }
+
+        private static bool IsHullBetweenAirAndSpace(AtmosSimulation simulation, TileCoord coord, int index)
+        {
+            if (simulation.CellMeta[index].State != AtmosCellState.Blocked) return false;
+            return IsAirAcross(simulation, coord, 1, 0) || IsAirAcross(simulation, coord, 0, 1);
+        }
+
+        private static bool IsAirAcross(AtmosSimulation simulation, TileCoord coord, int x, int z)
+        {
+            var east = new TileCoord(simulation.MapId, coord.Grid.x + x, coord.Grid.y + z);
+            var west = new TileCoord(simulation.MapId, coord.Grid.x - x, coord.Grid.y - z);
+            if (!simulation.TryGetCellIndex(east, out int a) || !simulation.TryGetCellIndex(west, out int b)) return false;
+            AtmosCellMeta metaA = simulation.CellMeta[a];
+            AtmosCellMeta metaB = simulation.CellMeta[b];
+            return (metaA.State == AtmosCellState.Vacuum && metaB.IsSimulated) || (metaB.State == AtmosCellState.Vacuum && metaA.IsSimulated);
+        }
+
+        private IEnumerator SampleAtmosBudget(float seconds)
+        {
+            AtmosSubSystem atmos = SubSystems.Get<AtmosSubSystem>();
+            var tick = new List<float>();
+            var sim = new List<float>();
+            var chunks = new List<int>();
+            int maxActive = 0;
+            int lastTick = atmos.TickCount;
+            float end = Time.realtimeSinceStartup + seconds;
+            while (Time.realtimeSinceStartup < end)
+            {
+                yield return null;
+                if (atmos.TickCount == lastTick) continue;
+                lastTick = atmos.TickCount;
+                tick.Add(atmos.LastTickMilliseconds);
+                sim.Add(atmos.LastSimulationMilliseconds);
+                chunks.Add(atmos.LastPatchChunks);
+                maxActive = Mathf.Max(maxActive, atmos.Simulation.ActiveCellCount);
+            }
+
+            int totalChunks = 0;
+            int maxChunks = 0;
+            foreach (int count in chunks)
+            {
+                totalChunks += count;
+                maxChunks = Mathf.Max(maxChunks, count);
+            }
+
+            float bytesPerSecond = AtmosChunkPatch.WireBytes / AtmosConstants.TickInterval;
+            string report = $"ticks={tick.Count} tick p50/max={Percentile(tick, 0.5f):F2}/{Percentile(tick, 1f):F2} ms " +
+                $"sim p50/max={Percentile(sim, 0.5f):F2}/{Percentile(sim, 1f):F2} ms active max={maxActive} " +
+                $"chunks mean/max={(float)totalChunks / Mathf.Max(tick.Count, 1):F1}/{maxChunks} " +
+                $"traffic mean/max={bytesPerSecond * totalChunks / Mathf.Max(tick.Count, 1) / 1024f:F0}/{bytesPerSecond * maxChunks / 1024f:F0} KB/s";
+            Debug.Log($"[atmos-budget] {report}");
+            TestSignal.Emit(this, "AtmosBudget", report);
+        }
+
+        private static float Percentile(List<float> samples, float fraction)
+        {
+            if (samples.Count == 0) return 0f;
+            samples.Sort();
+            return samples[Mathf.Clamp(Mathf.CeilToInt(samples.Count * fraction) - 1, 0, samples.Count - 1)];
         }
 
         private IEnumerator AssertWindFelt()

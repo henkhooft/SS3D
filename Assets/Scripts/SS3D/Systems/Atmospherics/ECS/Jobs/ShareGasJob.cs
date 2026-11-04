@@ -39,6 +39,12 @@ namespace SS3D.Systems.Atmospherics.ECS
         public float DeltaTime;
         public float SpaceTemperature;
 
+        /// <summary>
+        /// Time since the cell pass last ran, or zero to skip it. Only edge flow needs substeps, so
+        /// diffusion, settling and sleep run once a tick, on the last substep.
+        /// </summary>
+        public float CellPassDeltaTime;
+
         public void Execute()
         {
             for (int w = 0; w < WorkingSet.Length; w++)
@@ -59,7 +65,8 @@ namespace SS3D.Systems.Atmospherics.ECS
 
             MoveBulkGasAlongEdges();
 
-            for (int activeIndex = 0; activeIndex < ActiveCells.Length; activeIndex++)
+            int cellPassCount = CellPassDeltaTime > 0f ? ActiveCells.Length : 0;
+            for (int activeIndex = 0; activeIndex < cellPassCount; activeIndex++)
             {
                 int cellIndex = ActiveCells[activeIndex];
                 AtmosCellMeta self = CellMeta[cellIndex];
@@ -460,7 +467,7 @@ namespace SS3D.Systems.Atmospherics.ECS
 
                 float molesToTransfer = partialDiff * 1000f * self.Volume /
                     (self.Temperature * AtmosFluxConstants.GasConstant);
-                molesToTransfer *= AtmosFluxConstants.DiffusionSpeed * DeltaTime;
+                molesToTransfer *= AtmosFluxConstants.DiffusionSpeed * CellPassDeltaTime;
                 molesToTransfer = math.min(molesToTransfer, MolesWrite[selfMoleIndex]);
                 if (molesToTransfer <= 0f)
                     continue;
