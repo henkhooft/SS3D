@@ -10,7 +10,6 @@ namespace SS3D.Systems.Entities.Humanoid
     {
         internal static readonly HashSet<Ragdoll> WindBodies = new();
         private bool _windKnockdown;
-        private bool _serverWindPhysics;
         private Vector3 _windTarget;
         private Vector3 _windFelt;
         private float _windExpires;
@@ -27,7 +26,6 @@ namespace SS3D.Systems.Entities.Humanoid
         public void ServerApplyWind(Vector3 gradient)
         {
             if (gradient.sqrMagnitude < AtmosWind.MinPressure * AtmosWind.MinPressure) return;
-            _serverWindPhysics = !Owner.IsValid;
             // Do not convert an existing health-owned timeless collapse to a timed knockdown.
             if (!IsKnockedDown && gradient.magnitude >= AtmosWind.KnockdownPressure)
             {

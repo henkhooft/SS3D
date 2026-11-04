@@ -268,7 +268,6 @@ namespace SS3D.Systems.Entities.Humanoid
                 _isKnockdownTimed = false;
                 _knockdownTimer = 0f;
                 _windKnockdown = false;
-                _serverWindPhysics = false;
             }
 
             EnsureAnimatorCached();
@@ -491,7 +490,15 @@ namespace SS3D.Systems.Entities.Humanoid
                 return IsServer;
             }
 
-            return IsOwner || (IsServer && _serverWindPhysics && !Owner.IsValid);
+            // Mindless bodies (combat dummies) have no owning client to simulate a living
+            // knockdown; without a server fallback the bones stay kinematic and the body
+            // freezes in its last animated pose. Observers must still stay kinematic.
+            if (!Owner.IsValid)
+            {
+                return IsServer;
+            }
+
+            return IsOwner;
         }
 
         private void RagdollBehavior()
