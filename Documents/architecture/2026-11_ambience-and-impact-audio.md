@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 is built, with compile and EditMode green. `mppm:breach`, targeted smoke and the traffic measurement weren't run for it. D2, A, B and C haven't started. Phase order is D, A, B, C, one PR each.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A, B and C haven't started. Phase order is D, A, B, C, one PR each.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -17,7 +17,7 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | Melee on a structure | No positional sound. `ServerNotifyMeleeConnectHit` only reaches the attacker |
 | Bullet on a non-living target | The same six clips for every material (`CombatAudioTrackIds.SurfaceHit`) |
 | Material data | `RpcStructuralImpact` carries a byte, but only for overlay-capable targets and only wood and glass tables differ from the default |
-| Items hitting things | `NoisyCollision` exists; no prefab uses it |
+| Items hitting things | `NoisyCollision` exists; only `SodaCanGeneric` and its variants use it |
 | Machines | Air alarm and vents have real state and no sound. `FireAlarm.prefab` has no controller |
 | Room tone | `AmbienceSubSystem` crossfades one looped clip per area. No area has a track |
 | Authoring | `AmbienceTrackId` isn't saved. `areaambience` needs a raw GUID. Department is free text |
@@ -45,6 +45,8 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 11 | Sound effects may be CC0, CC-BY, CC-BY-SA or CC-BY-NC, each with an `ATTRIBUTIONS.md` row. A commercial release would have to replace the NC clips. Custom-licensed music stays out. |
 | 12 | Bullets on metal keep the ricochet set, because melee can't share it. Wood and glass use one set for every source. |
 | 13 | A client holds each break 50 ms so a blast can claim it as debris. The server sends breakups before the blast message, and reversing that would run the scorch raycast against furniture about to be destroyed. |
+| 14 | Item collisions stay server messages, because clients keep items kinematic and get no collision events. `CollisionSoundLimiter` caps them with a 0.25 s cooldown per item and a shared budget of 5 at once, refilling at 5 per second. No protocol change. |
+| 15 | `NoisyCollision` takes one material and draws on `ItemCollisionAudioTrackIds`, instead of clip lists on every prefab. Speed sets volume, not a light or hard clip set. `AudioContentPrefabRecipes` holds the item lists, and a test fails if an item is in neither. Soft items such as clothing, patches and food stay silent, because there are no soft clips. Body parts and organs are left out. |
 
 ## Clips
 

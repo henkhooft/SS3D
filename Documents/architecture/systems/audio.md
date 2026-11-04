@@ -24,7 +24,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — Phase 3 owner-only heartbeat, breathing and alert ding (§4), non-positional. Driven by `HealthPersonalAudioMapper` / `StaminaPersonalAudioMapper` from each domain's existing local-owner hook.
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
 - `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs` — footwear footsteps on a **client-local** loop, not the pool (host `Move(default)` clears server locomotion every tick); skips while floating
-- `Boombox.cs`, `NoisyCollision.cs`, `ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs` — jukebox, collision SFX, music swap, listener follow, `Sfx`/`Music`/`Ambient` enum
+- `Assets/Scripts/SS3D/Systems/Audio/NoisyCollision.cs` — server-side item collision sounds; `CollisionSoundLimiter.cs` caps them per item and overall, through `AudioSubSystem.TryPlayCollisionSound`
+- `Boombox.cs`, `ChangeMusicInteraction.cs`, `ListenerPosition.cs`, `AudioType.cs` — jukebox, music swap, listener follow, `Sfx`/`Music`/`Ambient` enum
 - `Assets/Content/Systems/Audio/Resources/MainMixer.mixer` — `Master` → `Music`/`SFX`/`Ambience`/`Personal` groups, each with an exposed volume (`MasterVolume`, `MusicVolume`, `SFXVolume`, `AmbienceVolume`, `PersonalVolume`) driven by `PlayerSettingsSubSystem` ([2026-10_player-settings](../2026-10_player-settings.md)). Pool prefabs (`SFXAudioSource.prefab`, `MusicAudioSource.prefab`) target their groups by reference.
 - `Assets/Scripts/SS3D/Systems/Audio/MainAudioMixer.cs` — runtime handle on the mixer (`Resources.Load`) plus group/parameter names; code-built sources (ambience, personal, footsteps) set `outputAudioMixerGroup` through `FindGroup`
 - Clips, track ids and registration: child map [audio-content](audio-content.md)
@@ -33,6 +34,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 - Positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId, position, parent, ...)` (server-only). Route anything that should occlude through the pool.
 - Positional sound a client derives from a message it already has: `PlayLocalAudioSource` plays on the same pool with no message, as `StructuralAudioPresenter` does. Listener position: `AudioSourceOcclusion.TryGetListenerPosition`.
+- A new item's collision sound: add it to `Materials` or `SilentItems` in `Audio/Editor/AudioContentPrefabRecipes.cs`, then call `SetupItemCollisions` (or **SS3D → Audio → Run Content Prefab Recipes**). `ItemPrefabs_MatchTheRecipeLists` fails until you do. A prefab variant inherits its base's entry.
 - Area ambience: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server). In game, the `areaambience (trackId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
 - Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
 - Code-built `AudioSource`: set `outputAudioMixerGroup = MainAudioMixer.FindGroup(...)` so the player's category slider reaches it. Unrouted sources play under Master only (`CommsFeedController`'s announce source still does).
@@ -52,6 +54,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   plenum/airlock-tile colliders on `Default` top out near y=0 — a root-height ray false-positives on
   the floor and muffles every pooled SFX. Sample planar LOS at chest height
   (`AudioSourceOcclusion.OcclusionSampleHeight`) so walls still block and floors don't.
+- **Item collision sounds can't be client-side.** `Item.OnStart` makes rigidbodies kinematic on client-only peers, so `OnCollisionEnter` only fires on the server. Each sound is a message, which is why `CollisionSoundLimiter` runs there; don't call `PlayAudioSource` from a new collision path without it.
 - **`AudioMixer.SetFloat` is ignored when called from `Awake`.** `PlayerSettingsSubSystem` loads in
   `OnAwake` but first applies volumes in `OnStart`; an exposed parameter set any earlier silently keeps
   its snapshot value.
