@@ -1,8 +1,8 @@
 > Implements: Documents/design/atmospherics.md §2 (open-tile simulation), §5 (fire), §9 (what you see); Documents/design/explosives-destruction.md §4 (breach into atmosphere)
 > Touches systems: atmospherics, entities, rendering, networking-session
-> Status: planned
+> Status: in-progress
 
-**Progress:** Plan grilled and settled 2026-11-04, not started; scheduled in M8's slot. The consumer smoothing it builds on shipped on `codex/violent-decompression`. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
+**Progress:** Phase 0 fixtures done. Budgets still need a sealed test map, because Metastation leaks at rest (see [Phase 0 results](#phase-0-results)); Decision 10's gate holds phase 1 until then. Scheduled in M8's slot. The consumer smoothing it builds on shipped in #143. Serves [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M8 and must hold [test-server.md](../milestones/test-server.md) T3's 8-client breach line. Tests follow the [testing philosophy](2026-11_testing-philosophy.md).
 
 # Atmos edge flow: pressure-driven wind on the tile grid (Nov 2026)
 
@@ -11,7 +11,7 @@ A hull breach should pull air, bodies and loose objects out of a room within sec
 ## Starting state (2026-11-04, `ab8e396ec` plus the working tree)
 
 - **Transport:** `ShareGasJob` moves `Δn × speed × dt` per edge, about 1 tile²/s of diffusion. Substeps divide `dt`, so they add stability and no speed. Drain time grows with the square of room size.
-- **Measured on the real `AtmosSimulation`,** one-tile hole in a sealed square room:
+- **Measured on the real `AtmosSimulation`,** one-tile hole in the middle of a wall of a sealed square room:
 
 | Room | Time to 50% | Time to 10% |
 |---|---|---|
@@ -19,6 +19,7 @@ A hull breach should pull air, bodies and loose objects out of a room within sec
 | 10×10 | 134 s | 472 s |
 | 13×13 | 239 s | over 600 s |
 
+- **A real hole is a neck.** Destruction clears only the wall's own layer, so the plenum stays and the hole is an air tile between the room and space. The table includes that. With the hole tile bare vacuum, as `breach_beside_client` makes it, 10×10 halves in 71 s rather than 134 s, so the neck alone costs a factor of two. Tune Decision 5 against the neck.
 - **Prototype:** a Python edge-flow model (wave speed 12 tiles/s, friction 2/s, hole limited to 30 tiles/s) reached 50% in 3 s for 10×10 and 13 s for 20×20. These are a direction, not targets. The prototype has no temperature, composition, doors or sleeping.
 - **Consumers are already continuous.** `AtmosWind.SampleAt` blends through open edges, bodies follow the field per frame by drag, and `AtmosWindView` streaks and the gas shaders read the shared flow atlas. Only the source of the field changes here.
 - **Chunk borders were one-way valves until this branch** (see the atmospherics map Pitfalls). Connected air spaces now really connect, so a breach can reach further than any earlier measurement implied.
@@ -68,6 +69,35 @@ Coasting velocity and fire rendering stay separate follow-ups. They read the sam
 | 2 | `AtmosWind` and flow encoding read edges. Old path deleted. Fire and breath regressions. | EditMode plus `scenarios:Environment` and `scenarios:Atmos` |
 | 3 | Tuning and budget: a 10×10 room drains in Decision 5's time; knockdown moves to Decision 7's rule; `SS3D.Atmos.Sim` and patch bandwidth meet Decision 10. | `mppm:breach`, targeted perf run, screenshot review of a live breach |
 | 4 | Loose items ride the wind (Decision 11). | EditMode for drag and the cap, `scenarios:Environment`, patch and `NetworkTransform` bandwidth re-measured |
+
+## Phase 0 results
+
+Measured 2026-11-04 on `d2ecb34e1`.
+
+**Reference fixtures** are `AtmosEdgeFlowReferenceTests`. They pin today's diffusion numbers within 5%, so any transport change has to show up there. Phase 3 replaces them with Decision 5's targets rather than widening the band. Wind is today's slope-derived speed, which caps at 7 m/s beside the hole in every case.
+
+| Case | Half pressure | 10% | Far-field onset (1 kPa) | Peak wind, middle / far |
+|---|---|---|---|---|
+| 10×10 room | 134 s | 472 s | 13 s | 2.2 / 0.7 m/s |
+| 40×8 corridor, hole in the end wall | 684 s | over 1,200 s | 240 s | 0.9 / 0.37 m/s |
+
+Two 6×6 rooms, door opening onto the evacuated one: 259 s to equalise within 5 kPa, 5 s until the far wall of the empty room reads 1 kPa.
+
+**Budgets** come from one Metastation host in Editor Play Mode, with Burst on and safety checks and the jobs debugger on, so absolute times read high. Bandwidth is dirty chunks × 6.4 KB × 5 Hz per client; no real clients were connected. Decision 10's 8-client line was not run.
+
+| Measure | Idle, no breach | During breach | Budget |
+|---|---|---|---|
+| Atmos tick, whole `LastTickMilliseconds` | 11 ms | 11 ms p50, 12 ms max | 4 ms |
+| `AtmosSimulation.Tick` alone | 5.8 ms p50 | not separated | 4 ms |
+| Active cells | about 4,650 of 12,779 air cells | about 4,700 | none |
+| Dirty chunks per tick | 64 | 62 | about 9 fit the budget |
+| Patch traffic per client | about 2,050 KB/s | about 2,000 KB/s | 300 KB/s |
+
+**These budget figures are not valid for a breach.** Metastation leaks at rest: with no breach, 128 air regions holding 2,509 of its 12,779 air cells already touch vacuum, and total gas fell from 1,029,053 to 963,531 mol in 50 s. The owner attributes this to exterior areas that spawn with air and to missing assets that leave gaps, which fits, though no individual gap was checked. The breach adds nothing visible on top, so the table measures the leak.
+
+**Connected spaces are the real driver.** At 6.4 KB × 5 Hz, a chunk costs 32 KB/s per client, so 300 KB/s covers about 9 changing chunks, roughly a 48×48 tile area. Any larger connected space changing every tick goes over budget without AOI or smaller patches, whatever the map. Metastation's largest region, 517 cells across 12 chunks, would cost 385 KB/s, but its doors and gaps make that indicative only.
+
+**Gate:** Decision 10 stays open until the budgets are re-measured on a sealed map with no resting leak.
 
 ## Risks
 

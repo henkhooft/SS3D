@@ -52,6 +52,7 @@ Destroyed walls automatically produce pressure-driven wind through open gas edge
 
 ## Pitfalls
 
+- **A destroyed wall leaves an air tile, not vacuum:** destruction clears only the wall's layer and the plenum stays, so the hole is a neck between room and space that about doubles drain time. Clear `TileLayer.Turf` alone to match a real breach; clearing the plenum too halves a 10×10 room in 71 s instead of the real 134 s. Hit 2026-11-04.
 - **Chunk borders were one-way valves:** `CreateChunk` linked a new chunk to existing ones, but existing border cells never linked back, and a cell only pushes gas through its own links. Rooms crossing a border stayed at full pressure beside a depleted row, with no error. `RebuildBordersAround` now refreshes them. Compare both directions of `Neighbours` when gas stops at a straight line on a multiple of 16. Hit 2026-11-04.
 - **Flow atlas must fill before it reads neighbours:** the AOI path wrote flow in the same pass as pressure, so +X/+Z neighbours read empty and host flow became a constant diagonal. Flow also used to be normalized, uphill and treated walls as 0 kPa. Encode through `AtmosCellVisualEncoding.EncodeFlow`, passing the cell's own pressure for walls.
 - **A green streak count is not visible streaks:** `VisibleStreaks` passed while one-pixel streaks were invisible, then near-camera ones became planks. Review a live breach screenshot after changing `AtmosWindView` tuning.
@@ -73,7 +74,7 @@ Destroyed walls automatically produce pressure-driven wind through open gas edge
 
 ## Tests
 
-- `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `scenarios:Environment` covers owner gust knockdown, upright drift, and a live hull breach through to streaks and pull. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
+- `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `AtmosEdgeFlowReferenceTests` pins room-scale drain times, far-field onset and wind at distance, so a change to gas transport has to move them on purpose. `scenarios:Environment` covers owner gust knockdown, upright drift, and a live hull breach through to streaks and pull. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
 
 - `Testing/ui/validate.sh --steps compile,round-reset` runs a focused host stop/restart, depletes a cell before Stop and checks oxygen returns in a fresh simulation. The sandbox pilot also carries this regression. Remote dedicated-server replay remains required for release acceptance.
 
@@ -88,7 +89,7 @@ Destroyed walls automatically produce pressure-driven wind through open gas edge
 - Design (read-only): [Documents/design/atmospherics.md](../../design/atmospherics.md)
 - Effort: [2026-07_atmos-ecs-foundation.md](../../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md)
-- Effort: [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md) — planned; room-scale bulk flow
+- Effort: [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md) — in-progress; room-scale bulk flow
 - Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring
