@@ -188,7 +188,7 @@ namespace SS3D.Systems.Atmospherics
                 gasTypeCount,
                 specificHeats,
                 molarMasses);
-            LooseBodies = new AtmosLooseBodies(tileSubSystem.QueryService);
+            LooseBodies = new AtmosLooseBodies();
             _tileObserver = new AtmosTileObserver(_simulation);
             tileSubSystem.RegisterTileMutationObserver(_tileObserver);
 

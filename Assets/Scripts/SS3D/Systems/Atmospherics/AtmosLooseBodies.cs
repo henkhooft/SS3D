@@ -18,21 +18,18 @@ namespace SS3D.Systems.Atmospherics
         /// </summary>
         public const int MaxPushed = 32;
 
-        /// <summary>Falling faster than this with no floor below means a body has left the deck.</summary>
-        public const float FallSpeed = 1f;
-
-        /// <summary>Slows a body in space, per second, so it comes to rest and stops sending traffic.</summary>
+        /// <summary>
+        /// Slows a body with no gravity, per second. <see cref="Inventory.Items.Item"/> turns gravity off
+        /// in space; this brings the item to rest there, so it stops sending traffic.
+        /// </summary>
         public const float DriftDamping = 0.5f;
 
         private static readonly HashSet<Rigidbody> Bodies = new();
         private static readonly System.Comparison<Push> StrongestFirst = (a, b) => b.Speed.CompareTo(a.Speed);
 
-        private readonly ITileQueryService _tiles;
         private readonly List<Push> _pushed = new();
         private readonly Dictionary<Rigidbody, float> _adrift = new();
         private readonly List<Rigidbody> _settled = new();
-
-        public AtmosLooseBodies(ITileQueryService tiles) => _tiles = tiles;
 
         public int PushedCount => _pushed.Count;
         public int AdriftCount => _adrift.Count;
@@ -47,23 +44,23 @@ namespace SS3D.Systems.Atmospherics
             return false;
         }
 
-        /// <summary>Once per atmos tick: chooses who the wind moves and who has left or rejoined the deck.</summary>
+        /// <summary>Once per atmos tick: chooses who the wind moves and who drifts.</summary>
         public void Tick(AtmosSimulation simulation)
         {
             _pushed.Clear();
-            ReturnToDeck(simulation.MapId);
+            ReturnToDeck();
 
             foreach (Rigidbody body in Bodies)
             {
                 if (body == null || body.isKinematic) continue;
-                Vector3 position = body.position;
 
-                if (body.useGravity && body.linearVelocity.y < -FallSpeed && !HasFloor(position, simulation.MapId))
+                if (!body.useGravity)
                 {
                     SetAdrift(body);
                     continue;
                 }
 
+                Vector3 position = body.position;
                 // A sleeping cell has no flow, and most of a station is asleep. This is what keeps the
                 // scan cheap: a tile lookup per body instead of a blended wind sample.
                 var coord = new TileCoord(simulation.MapId, Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z));
@@ -93,16 +90,11 @@ namespace SS3D.Systems.Atmospherics
 
         private void SetAdrift(Rigidbody body)
         {
-            _adrift[body] = body.linearDamping;
-            // Do not carry the fall into space, as Ragdoll does for a body's bones.
-            Vector3 velocity = body.linearVelocity;
-            velocity.y = 0f;
-            body.linearVelocity = velocity;
-            body.useGravity = false;
+            if (!_adrift.TryAdd(body, body.linearDamping)) return;
             body.linearDamping = Mathf.Max(body.linearDamping, DriftDamping);
         }
 
-        private void ReturnToDeck(int mapId)
+        private void ReturnToDeck()
         {
             foreach (KeyValuePair<Rigidbody, float> adrift in _adrift)
             {
@@ -110,9 +102,8 @@ namespace SS3D.Systems.Atmospherics
                 {
                     _settled.Add(adrift.Key);
                 }
-                else if (HasFloor(adrift.Key.position, mapId))
+                else if (adrift.Key.useGravity)
                 {
-                    adrift.Key.useGravity = true;
                     adrift.Key.linearDamping = adrift.Value;
                     _settled.Add(adrift.Key);
                 }
@@ -121,9 +112,6 @@ namespace SS3D.Systems.Atmospherics
             foreach (Rigidbody body in _settled) _adrift.Remove(body);
             _settled.Clear();
         }
-
-        private bool HasFloor(Vector3 position, int mapId) =>
-            _tiles.TryGetOccupancy(_tiles.WorldToTile(position, mapId), out TileOccupancy occupancy) && occupancy.HasPlenum;
 
         private readonly struct Push
         {

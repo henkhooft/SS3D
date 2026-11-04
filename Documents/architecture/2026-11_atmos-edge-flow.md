@@ -58,7 +58,7 @@ Settled in an implementation grill on 2026-11-04.
 | 10 | Budgets during a Metastation breach: at most 4 ms per atmos tick, and at most 300 KB/s per client with 8 clients. Phase 0 measures both. Over on network puts [client sync](2026-07_atmos-client-visualization-sync.md) Phase 2 AOI ahead of phase 1; over on sim reviews the substep rule first. |
 | 11 | Loose items are phase 4: anything with a free server `Rigidbody`, drag scaled by mass, with a cap on how many respond at once. Placed furniture stays put. Item physics is already server-only, so no prefab or ownership changes. |
 | 12 | Felt wind is air speed × `AtmosWind.AirSpeedGain` (3). Decision 5's drain time fixes true air speed, so a gain closes the gap and Decision 7's 5 m/s line stands. Chosen in phase 3 and open to the owner's review. |
-| 13 | An item that leaves the deck loses gravity and slows to rest in space, as `AtmosLooseBodies.DriftDamping` sets. It is never deleted, because design treats something ejected as still out there (disposal §6) and the authentication disk can go this way. Chosen in phase 4 and open to the owner's review. |
+| 13 | An item in space slows to rest, as `AtmosLooseBodies.DriftDamping` sets; `Item` already drops its gravity there (#123). It is never deleted, because design treats something ejected as still out there (disposal §6) and the authentication disk can go this way. Chosen in phase 4 and open to the owner's review. |
 
 Coasting velocity and fire rendering stay separate follow-ups. They read the same field and do not block this effort.
 
@@ -176,7 +176,7 @@ Measured 2026-11-04. `AtmosLooseBodies` ticks with the wind: it picks the `MaxPu
 
 Most item prefabs have the default 1 kg mass, so most items respond alike. Boombox (5 kg) and patches (0.08 kg) differ.
 
-**Bodies past the hull.** There is no kill plane, so an item blown off the deck would fall forever and send `NetworkTransform` traffic forever. Decision 13 covers this. Ragdolls already float; items also get damping, so they stop sending. A body falling faster than `FallSpeed` with no plenum below goes adrift, and gets gravity and damping back over a plenum.
+**Bodies past the hull.** `Item` turns gravity off in space (#123), and an item that keeps its velocity sends `NetworkTransform` traffic forever. Decision 13 covers this: `AtmosLooseBodies` damps any registered body without gravity until it rests, and restores its damping when gravity returns. This also applies to items dropped in space, not only blown ones.
 
 **Budgets:** `mppm:breach-budget` now scatters 64 wrenches around the hole. `scatter_items` is its new step, and `client_traffic` reads what the remote client really received, so the number includes everything the server sends rather than patches alone. Burst safety checks were on, so compare these with phase 3's first three rows, not its last.
 
@@ -185,9 +185,11 @@ Most item prefabs have the default 1 kg mass, so most items respond alike. Boomb
 | No items | 3.21 / 6.52 ms | 2.17 / 5.46 ms | 146 / 243 KB/s | 0 |
 | 64 items | 3.36 / 7.09 ms | 2.09 / 5.84 ms | 166 / 259 KB/s | 32 |
 
+A final run after merging develop's item gravity read 183 / 259 KB/s and 3.81 / 7.64 ms, with `AtmosSimulation.Tick` at 2.18 / 6.01 ms. That is within the table's run-to-run spread.
+
 - **Network passes.** 32 moving items add about 20–26 KB/s, or 0.7 KB/s each. Patches stop at the cap, so the steady ceiling is about 240 + 26 KB/s against the 300 KB/s line. Received traffic climbs for the whole 45 s, reaching 258 KB/s at the end.
 - **Phase 3's calculated numbers hold.** Real bytes match patches × `WireBytes` closely. FishNet's server-side total reads about double because it sums every connection, including the host's own, so don't compare it with Decision 10.
-- **Two one-second readings are unexplained:** 693–763 KB/s about 21 s into the sample and 463–531 KB/s about 31 s in. They land at the same points with and without items, and the server-side total never shows them: its peak in the paired 64-item run is 447 KB/s across both connections. That suggests the client's stats window spanning a hitch, but this was not proven. Check it in the 8-client run.
+- **Two one-second readings are unexplained:** 693–788 KB/s about 20 s into the sample and 463–531 KB/s about 30 s in. They land at about the same points with and without items, and the server-side total never shows them: its peak in the paired 64-item run is 447 KB/s across both connections. That suggests the client's stats window spanning a hitch, but this was not proven. Check it in the 8-client run.
 - **Tick cost rose.** Over five Editor runs, p50 was 3.36–3.76 ms with items and 3.01–3.21 ms without, and peak was 7.09–7.68 ms against 6.28–6.52 ms. So items add about 0.4 ms at p50 and 1 ms at peak, with safety checks on. `AtmosSimulation.Tick` is unchanged. The whole tick's peak was already over 4 ms, as phase 3 records, and this widens that gap.
 - **Not measured:** the scan on a map with thousands of items, and 8 clients.
 

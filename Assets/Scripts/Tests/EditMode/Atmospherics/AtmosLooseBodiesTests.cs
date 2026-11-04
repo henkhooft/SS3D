@@ -47,7 +47,7 @@ namespace EditorTests.Atmospherics
                 }
             }
 
-            var loose = new AtmosLooseBodies(context.Query);
+            var loose = new AtmosLooseBodies();
             Tick(sim, loose, 10);
 
             Assert.That(loose.PushedCount, Is.EqualTo(AtmosLooseBodies.MaxPushed));
@@ -60,7 +60,7 @@ namespace EditorTests.Atmospherics
             var context = TileMapTestUtilities.CreateContext(_objects);
             using AtmosSimulation sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, RoomSize, out _);
             Rigidbody still = AddBody(new Vector3(5f, 0.2f, 5f));
-            var loose = new AtmosLooseBodies(context.Query);
+            var loose = new AtmosLooseBodies();
             Tick(sim, loose, 10);
             Assert.IsFalse(loose.IsPushed(still), "A sealed room has no wind");
 
@@ -70,50 +70,32 @@ namespace EditorTests.Atmospherics
             Rigidbody free = AddBody(new Vector3(RoomSize, 0.2f, hole));
             Rigidbody held = AddBody(new Vector3(RoomSize, 0.2f, hole));
             held.isKinematic = true;
-            var windy = new AtmosLooseBodies(breachedContext.Query);
+            var windy = new AtmosLooseBodies();
             Tick(breached, windy, 10);
             Assert.IsTrue(windy.IsPushed(free));
             Assert.IsFalse(windy.IsPushed(held), "Kinematic bodies are held or stored");
         }
 
         [Test]
-        public void FallingPastTheDeckGoesAdrift_AndTheDeckGivesGravityBack()
+        public void BodyWithoutGravitySlowsToRest_AndGravityGivesItsDampingBack()
         {
             var context = TileMapTestUtilities.CreateContext(_objects);
             using AtmosSimulation sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, RoomSize, out _);
-            Rigidbody body = AddBody(new Vector3(-20f, -0.2f, -20f));
+            Rigidbody body = AddBody(new Vector3(-20f, 0f, -20f));
             body.linearDamping = 0.1f;
-            body.linearVelocity = new Vector3(4f, -3f, 0f);
-            var loose = new AtmosLooseBodies(context.Query);
+            body.useGravity = false;
+            var loose = new AtmosLooseBodies();
 
             loose.Tick(sim);
 
             Assert.That(loose.AdriftCount, Is.EqualTo(1));
-            Assert.IsFalse(body.useGravity);
             Assert.That(body.linearDamping, Is.EqualTo(AtmosLooseBodies.DriftDamping));
-            Assert.That(body.linearVelocity, Is.EqualTo(new Vector3(4f, 0f, 0f)), "The fall is not carried into space");
 
-            body.position = new Vector3(5f, 0.2f, 5f);
+            body.useGravity = true;
             loose.Tick(sim);
 
             Assert.That(loose.AdriftCount, Is.Zero);
-            Assert.IsTrue(body.useGravity);
             Assert.That(body.linearDamping, Is.EqualTo(0.1f));
-        }
-
-        [Test]
-        public void FallingOntoTheDeckStaysUnderGravity()
-        {
-            var context = TileMapTestUtilities.CreateContext(_objects);
-            using AtmosSimulation sim = AtmosTestFixtures.CreateSealedRoomSimulation(context, RoomSize, out _);
-            Rigidbody body = AddBody(new Vector3(5f, 1f, 5f));
-            body.linearVelocity = new Vector3(0f, -3f, 0f);
-            var loose = new AtmosLooseBodies(context.Query);
-
-            loose.Tick(sim);
-
-            Assert.That(loose.AdriftCount, Is.Zero);
-            Assert.IsTrue(body.useGravity);
         }
 
         private static AtmosSimulation Breached(TileMapTestUtilities.MapContext context, out int hole)
