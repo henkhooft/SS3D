@@ -2,8 +2,6 @@ using Coimbra.Services.Events;
 using Coimbra.Services.PlayerLoopEvents;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
-using SS3D.Data;
-using SS3D.Data.Generated;
 using SS3D.Systems.Area;
 using SS3D.Systems.Entities.Events;
 using UnityEngine;
@@ -14,7 +12,8 @@ namespace SS3D.Systems.Audio
     /// Client-local per-Area ambience crossfade (audio.md §2). Tracks the local player's current
     /// Area — the same one-tile lookup every Area-driven system uses
     /// (<see cref="AreaSubSystem.TryResolveAreaIdForWorldPosition"/>) — and crossfades between two
-    /// non-positional 2D sources whenever <see cref="AreaRecord.AmbienceTrackId"/> changes.
+    /// non-positional 2D sources whenever the area's <see cref="AmbienceProfile"/> changes. Inside an
+    /// area with no profile of its own that's the generic one; outside any area it's silence.
     /// Self-bootstrapped by <c>SystemsBootstrap</c> (process-wide DDOL), same as
     /// <c>ScreenEffectsSubSystem</c>.
     /// </summary>
@@ -27,8 +26,7 @@ namespace SS3D.Systems.Audio
         private AudioSource _inactiveSource;
 
         private GameObject _listenerTarget;
-        private string _currentTrackId = string.Empty;
-        private AreaId? _lastResolvedAreaId;
+        private AmbienceProfile _currentProfile;
         private float _nextPollTime;
 
         protected override void OnAwake()
@@ -62,13 +60,10 @@ namespace SS3D.Systems.Audio
 
             if (_listenerTarget == null)
             {
-                // No body to be "in an area" — fade to silence and forget the last-resolved area
-                // so the next spawn (a fresh map's AreaIds can numerically collide with the old
-                // ones) always re-resolves instead of assuming nothing changed. Mirrors
-                // HealthScreenEffectMapper.Clear on HumanHealthController's own destroy/ownership
-                // loss: the driving consumer clears the shared presentation state it was pushing.
-                _lastResolvedAreaId = null;
-                BeginCrossfade(string.Empty);
+                // No body to be "in an area" — fade to silence. Mirrors HealthScreenEffectMapper.Clear
+                // on HumanHealthController's own destroy/ownership loss: the driving consumer clears
+                // the shared presentation state it was pushing.
+                BeginCrossfade(null);
             }
         }
 
@@ -83,6 +78,10 @@ namespace SS3D.Systems.Audio
             DriveCrossfade();
         }
 
+        /// <summary>
+        /// Resolves every poll rather than on area change, so a track authored while the player
+        /// stands in the room applies without them leaving it.
+        /// </summary>
         private void PollCurrentArea()
         {
             if (!SubSystems.TryGet(out AreaSubSystem areaSubSystem))
@@ -90,46 +89,33 @@ namespace SS3D.Systems.Audio
                 return;
             }
 
-            AreaId? resolvedAreaId = areaSubSystem.TryResolveAreaIdForWorldPosition(_listenerTarget.transform.position, out AreaId areaId)
-                ? areaId
-                : null;
-
-            bool areaUnchanged = resolvedAreaId.HasValue == _lastResolvedAreaId.HasValue
-                && (!resolvedAreaId.HasValue || resolvedAreaId.Value.Equals(_lastResolvedAreaId.Value));
-
-            if (areaUnchanged)
+            if (!areaSubSystem.TryResolveAreaIdForWorldPosition(_listenerTarget.transform.position, out AreaId areaId))
             {
+                BeginCrossfade(null);
                 return;
             }
 
-            _lastResolvedAreaId = resolvedAreaId;
-
-            string trackId = string.Empty;
-            if (resolvedAreaId.HasValue && areaSubSystem.TryGetAmbienceTrackId(resolvedAreaId.Value, out string resolvedTrackId))
-            {
-                trackId = resolvedTrackId;
-            }
-
-            BeginCrossfade(trackId);
+            areaSubSystem.TryGetAmbienceProfileId(areaId, out string profileId);
+            BeginCrossfade(AmbienceProfileCatalog.Instance.Resolve(profileId));
         }
 
-        private void BeginCrossfade(string newTrackId)
+        private void BeginCrossfade(AmbienceProfile profile)
         {
-            if (newTrackId == _currentTrackId)
+            if (profile == _currentProfile)
             {
                 return;
             }
 
-            _currentTrackId = newTrackId;
+            _currentProfile = profile;
 
             // The previously active source fades out into silence and becomes the next
             // inactive slot; the previously inactive source takes the new clip and fades in.
             AudioSource incoming = _inactiveSource;
             AudioSource outgoing = _activeSource;
 
-            if (!string.IsNullOrEmpty(newTrackId) && Assets.TryGet(AssetDatabases.Sounds, newTrackId, out AudioClip clip))
+            if (profile != null && profile.Bed != null)
             {
-                incoming.clip = clip;
+                incoming.clip = profile.Bed;
                 incoming.time = 0f;
                 incoming.Play();
             }
@@ -146,7 +132,7 @@ namespace SS3D.Systems.Audio
         private void DriveCrossfade()
         {
             float step = CrossfadeVolumePerSecond * Time.deltaTime;
-            float activeTarget = string.IsNullOrEmpty(_currentTrackId) ? 0f : 1f;
+            float activeTarget = _currentProfile != null ? _currentProfile.BedVolume : 0f;
 
             _activeSource.volume = Mathf.MoveTowards(_activeSource.volume, activeTarget, step);
             _inactiveSource.volume = Mathf.MoveTowards(_inactiveSource.volume, 0f, step);

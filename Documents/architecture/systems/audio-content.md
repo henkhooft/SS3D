@@ -24,6 +24,7 @@ How sound clips are found, registered and named in code, plus which registered c
   - `Systems/Audio/ItemCollisionAudioTrackIds.cs` — clip sets per `ItemCollisionMaterial` (metal, heavy metal, can, wood, plastic, glass) for `NoisyCollision`
   - `Systems/StructuralDamage/StructuralAudioTrackIds.cs` — hit, strain and break sets per material, wreckage thud, blast near and far, under `Assets/Art/Sound/World/Destruction/`
 - `Assets/Scripts/SS3D/Data/Generated/Sounds.cs` — generated constants for the older clips (airlock open/close, bike horn, cans, generator, title stings)
+- `Assets/Resources/AmbienceProfileCatalog.asset` lists the `AmbienceProfile` assets in `Assets/Content/Data/Ambience/`. Profiles reference their `AudioClip`s directly, so room tone needs no `Sounds.asset` entry.
 - Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md)
 
 ## Extension points

@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B and C haven't started. Phase order is D, A, B, C, one PR each.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 is built, with compile, EditMode and `scenarios:MapEditor` green, and hasn't been heard. B2 and C haven't started. Phase order is D, A, B, C, all in one PR once the plan is done.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -49,6 +49,10 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 15 | `NoisyCollision` takes one material and draws on `ItemCollisionAudioTrackIds`, instead of clip lists on every prefab. Speed sets volume, not a light or hard clip set. `AudioContentPrefabRecipes` holds the item lists, and a test fails if an item is in neither. Soft items such as clothing, patches and food stay silent, because there are no soft clips. Body parts and organs are left out. |
 | 16 | Voices belong to `AmbientLoopSubSystem`, not to machines: 12 `AudioSource`s, each following the nearest running `AmbientLoopSource`. A station's machines cost no audio sources or occlusion rays until they're in reach. Each kind's clip, level and reach live in `AmbientLoopTrackIds`, so tuning touches no prefab. |
 | 17 | Vents, scrubbers and pumps sound while gas is moving (`IsPortFlowing`), not merely while switched on. The APC hums while it holds charge, the SMES while it's on and charged, a vendor while powered, and an air alarm while powered and alarming. |
+| 19 | Clients get one resolved profile id per area, not the department. The id is the override, else the department in lower case, and `AmbienceProfileCatalog.Resolve` falls back to `station`. A department with no profile yet sounds generic, and outside any area is silence. |
+| 20 | `Maintenance` and `Hallways` join the dropdown and `Civilian` leaves it, matching [area.md](../design/area.md) §2. Neither new department has default access. |
+| 21 | The room form gets an Ambience dropdown, which the plan left to `areaambience`. That command targets a spawned body, so it can't reach a room in the Map Editor. |
+| 22 | `classic-ministation` replaces `ministation` as the map to tag, because `ministation` has two rooms and #163 removed Metastation. The owner tags and renames its rooms in the Map Editor. |
 | 18 | SS14's `vending_machine_hum`, `engine_hum` and `light_hum` have no attribution entry, so they're out. Vendors and APCs use `PowerHum` and the SMES uses SS3D-Art `Machinery2`. The air alarm uses SS3D-Art `Alarm 1` instead of SS14 `alarm.ogg`. The generator keeps the loop it gets in `develop` from #159, so A leaves it alone. |
 
 ## Clips
@@ -81,7 +85,7 @@ Confirm each license in SS14's `attributions.yml` at import. `metal_slam1–3` a
 | D2 | Thrown and dropped items through `NoisyCollision`, with a rate cap so a breach doesn't turn into clatter. | EditMode for the cap; `scenarios:Environment` |
 | A | `AmbientLoopSource` on air alarms, vendors, APCs, SMES, vents, scrubbers, gas pumps and generators, power-gated and occluded. Confirm each has a real state and cut any that doesn't. The fire alarm is out until it has a controller. | EditMode for nearest-source selection; targeted smoke |
 | B1 | Fixed department list and Map Editor dropdown. Starting areas get neutral names instead of the APC title. `AmbienceProfile` catalog, `SavedAreaRecord` override, friendly `areaambience`, live track changes. Generic bed for untagged areas. | EditMode for save round trip and profile lookup; map editor scenario |
-| B2 | Bed plus occasional clips in `AmbienceSubSystem`, the thin air bed, Equipment-channel fading, then department profiles. Paint and tag `ministation`. | EditMode for the scheduler; owner audition on `ministation` |
+| B2 | Bed plus occasional clips in `AmbienceSubSystem`, the thin air bed, Equipment-channel fading, then department profiles. Owner tags `classic-ministation`. | EditMode for the scheduler; owner audition on `classic-ministation` |
 | C | CPU pressure copy. Wind bed from `FlowData`. Per-source muffling with the one-tile exception. Space bed away from the hull, near-silence and breathing elsewhere. | EditMode for the muffle curve; `mppm:breach`; T3 8-client line unchanged |
 
 Validate each phase with `Testing/ui/validate.sh --steps compile,editmode` plus the focused steps above ([testing philosophy](2026-11_testing-philosophy.md)). Prefab and asset work needs the Editor open with UnityMCP connected. Run `update-system-docs` as each PR lands.
@@ -89,7 +93,6 @@ Validate each phase with `Testing/ui/validate.sh --steps compile,editmode` plus 
 ## Not in this effort
 
 - Lobby music, which stays in [2026-07_audio-foundation](2026-07_audio-foundation.md) Phase 5
-- Tagging Metastation's 82 areas
 - Sounds for light fixtures, which stay silent by design. A wall switch clicks when it toggles
 - Fire alarm behaviour
 - Volume balancing beyond what's needed to audition ([audio.md](../design/audio.md) §10)
