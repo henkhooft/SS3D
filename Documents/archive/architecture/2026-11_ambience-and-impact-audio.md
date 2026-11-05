@@ -1,12 +1,12 @@
 > Implements: Documents/design/audio.md §1 (wind, sound needs air), §2 (layered ambience), §3 (impacts, destruction, machines); Documents/design/area.md §2, §3, §5 (departments, ambience override); Documents/design/atmospherics.md §4 (an alarm alarms)
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
-> Status: in-progress
+> Status: shipped
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. Targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green. The owner tagged `classic-ministation` in the Map Editor and approved the clips in a playtest on 2026-11-05. C is built, with compile, EditMode and `mppm:breach` green, and the breach run also covers D1's line in the table below. C's sounds haven't been auditioned. It adds no messages, so the T3 8-client line stands. Phase order is D, A, B, C, all in one PR once the plan is done.
+**Progress:** All phases shipped. Compile, EditMode and `mppm:breach` are green on the merged tree, and the owner auditioned D2, A, B and C. The owner dropped the targeted smoke (D1, A) and the D1 traffic measurement; the open traffic question is in [TECH_DEBT](../../architecture/TECH_DEBT.md).
 
 # Ambience and impact audio (Nov 2026)
 
-The station sounds empty. Explosions, wall breaks and melee hits on structures make no world sound, machines are mostly silent, and no area has ambience. This effort adds those sounds in the order that pays off soonest: impacts first because they need no map authoring and C4 is silent in a Playtest 1 slice, room tone third because it depends on tagged areas. [2026-07_audio-foundation](2026-07_audio-foundation.md) built the mechanisms and keeps only its lobby music phase.
+The station sounds empty. Explosions, wall breaks and melee hits on structures make no world sound, machines are mostly silent, and no area has ambience. This effort adds those sounds in the order that pays off soonest: impacts first because they need no map authoring and C4 is silent in a Playtest 1 slice, room tone third because it depends on tagged areas. [2026-07_audio-foundation](../../architecture/2026-07_audio-foundation.md) built the mechanisms and keeps only its lobby music phase.
 
 ## Starting state (2026-11-04, `a2f75673d`)
 
@@ -32,12 +32,12 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 
 | # | Decision |
 |---|---|
-| 1 | Destruction sounds play on clients from existing messages (`RpcStructuralImpact`, `RpcSteelBreakup`, the blast RPC), through a new client-side play path on the occluded pool, which protects [test-server.md](../milestones/test-server.md) T3. Only a client can choose the debris nearest its listener. Only steel has a breakup, so any other break sends one `RpcStructuralImpact` with no surface: a new use of an existing message, one per destroyed tile. |
+| 1 | Destruction sounds play on clients from existing messages (`RpcStructuralImpact`, `RpcSteelBreakup`, the blast RPC), through a new client-side play path on the occluded pool, which protects [test-server.md](../../milestones/test-server.md) T3. Only a client can choose the debris nearest its listener. Only steel has a breakup, so any other break sends one `RpcStructuralImpact` with no surface: a new use of an existing message, one per destroyed tile. |
 | 2 | `RpcStructuralImpact` fires for every landed melee, ranged or console hit, not only overlay-capable targets, and gains a one-byte `StructuralImpactCue` (protocol 17). Blast hops still send nothing per hit. A shot on a structure drops its `RpcPlayAudioSource`, so gunfire traffic should fall. Measure the traffic. |
 | 3 | One pure function derives metal, glass or wood from `genericType` and `specificType`. `TileObjectSo.impactMaterial` overrides it for exceptions, which today are the two windows, typed `Wall`/`Steel`. Unknown objects are metal. |
 | 4 | Machine loops use a client-local `AmbientLoopSource`, added by prefab recipes and driven by synced power or alarm state. Only the nearest 12 or so play. It reuses `AudioSourceOcclusion`. |
 | 5 | Room tone lives in `AmbienceProfile` assets in a catalog: bed, occasional clips, a power-gated flag. Each has a readable id such as `engineering`, which also fixes the `areaambience` GUID problem. |
-| 6 | `ParentTag` stays a string, validated against the fixed list from [area.md](../design/area.md) §2. Saved values match case-insensitively; anything else loads as no department. |
+| 6 | `ParentTag` stays a string, validated against the fixed list from [area.md](../../design/area.md) §2. Saved values match case-insensitively; anything else loads as no department. |
 | 7 | A power-gated bed follows the Area's Equipment channel. `SyncedAreaLighting` is the existing client path and can carry it. |
 | 8 | Clients get a CPU copy of pressure beside `FlowData`. Wind and pressure are sampled locally with no new messages. |
 | 9 | Muffling is per source in `AudioSourceOcclusion`, because a mixer filter can't exempt sounds within one tile. Ambience takes the same factor. Personal audio doesn't. |
@@ -50,14 +50,14 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 16 | Voices belong to `AmbientLoopSubSystem`, not to machines: 12 `AudioSource`s, each following the nearest running `AmbientLoopSource`. A station's machines cost no audio sources or occlusion rays until they're in reach. Each kind's clip, level and reach live in `AmbientLoopTrackIds`, so tuning touches no prefab. |
 | 17 | Vents, scrubbers and pumps sound while gas is moving (`IsPortFlowing`), not merely while switched on. The APC hums while it holds charge, the SMES while it's on and charged, a vendor while powered, and an air alarm while powered and alarming. |
 | 19 | Clients get one resolved profile id per area, not the department. The id is the override, else the department in lower case, and `AmbienceProfileCatalog.Resolve` falls back to `station`. A department with no profile yet sounds generic, and outside any area is silence. |
-| 20 | `Maintenance` and `Hallways` join the dropdown and `Civilian` leaves it, matching [area.md](../design/area.md) §2. Neither new department has default access. |
+| 20 | `Maintenance` and `Hallways` join the dropdown and `Civilian` leaves it, matching [area.md](../../design/area.md) §2. Neither new department has default access. |
 | 21 | The room form gets an Ambience dropdown, which the plan left to `areaambience`. That command targets a spawned body, so it can't reach a room in the Map Editor. |
 | 22 | `classic-ministation` replaces `ministation` as the map to tag, because `ministation` has two rooms and #163 removed Metastation. The owner tags and renames its rooms in the Map Editor. |
 | 23 | A bed's Equipment fade needs the channel on and the grid covering the load. A battery carries only the lights, so the hum goes first. It rides the lighting snapshot as one more field, with no new message. Protocol 18, because develop is also on 17 with a different wire shape. |
 | 24 | Only `engineering` is power-gated, because `PowerHum` implies a machine. Command, Security, Science, Service, Cargo and Hallways play `station`, because there are no distinct clips for them yet. `morgue` is available as an override. |
 | 25 | One clock schedules occasional sounds across rooms, with 25 to 70 s gaps from the end of the last one, so walking through short rooms can't put them off forever. The air bed plays in any area until C ties it to real air. |
 | 26 | Air is the one tile under the listener, not a blend, because a blend would read walls as low pressure and leak vacuum through the hull. Hearing runs from full at 70 kPa to nothing at 5 kPa. A wall tile keeps the last reading. |
-| 27 | A tile with no data counts as air unless the server's `IsFloating` says the body is in open space. A pure client only holds chunks that changed since it joined, so missing data can't mean vacuum. A late joiner who missed a settled breach therefore hears air in that room until [atmos client sync](2026-07_atmos-client-visualization-sync.md) Phase 2 sends a late-join bootstrap. |
+| 27 | A tile with no data counts as air unless the server's `IsFloating` says the body is in open space. A pure client only holds chunks that changed since it joined, so missing data can't mean vacuum. A late joiner who missed a settled breach therefore hears air in that room until [atmos client sync](../../architecture/2026-07_atmos-client-visualization-sync.md) Phase 2 sends a late-join bootstrap. |
 | 28 | Everything positional takes the muffle through `AudioSourceOcclusion`, so footsteps and the cracked-wall hiss gain it, and with it wall occlusion. The Music pool takes air only (`IgnoresWalls`), which keeps the jukebox clear of the wall lowpass. The hiss stays on its own source rather than moving to the pool as Decision 10 planned. |
 | 29 | Wind is three looped layers, `WindLight`, `WindHeavy` and `WindViolent`, crossfaded by speed in `AudioAirState.WindGain`. The clips are SS3D-Art and sit about 18 dB apart, so moving up the layers is what makes wind louder. Space uses `SpaceAmbience2`, the attributed clip. |
 | 30 | The air bed now plays wherever there's air, in or out of an area. `Breathing.wav`, imported earlier and unused, is the calm breath below 20% air, on its own source, and heavy breathing takes over from it. "Well away from the hull" reads loaded tiles within 6, because the atlas may not hold them. A ghost hears the air on its tile, with no breathing. |
@@ -97,16 +97,16 @@ Confirm each license in SS14's `attributions.yml` at import. `metal_slam1–3` a
 | B2 | Bed plus occasional clips in `AmbienceSubSystem`, the thin air bed, Equipment-channel fading, then department profiles. Owner tags `classic-ministation`. | EditMode for the scheduler; owner audition on `classic-ministation` |
 | C | CPU pressure copy. Wind bed from `FlowData`. Per-source muffling with the one-tile exception. Space bed away from the hull, near-silence and breathing elsewhere. | EditMode for the muffle curve; `mppm:breach`; T3 8-client line unchanged |
 
-Validate each phase with `Testing/ui/validate.sh --steps compile,editmode` plus the focused steps above ([testing philosophy](2026-11_testing-philosophy.md)). Prefab and asset work needs the Editor open with UnityMCP connected. Run `update-system-docs` as each PR lands.
+Validate each phase with `Testing/ui/validate.sh --steps compile,editmode` plus the focused steps above ([testing philosophy](../../architecture/2026-11_testing-philosophy.md)). Prefab and asset work needs the Editor open with UnityMCP connected. Run `update-system-docs` as each PR lands.
 
 ## Not in this effort
 
-- Lobby music, which stays in [2026-07_audio-foundation](2026-07_audio-foundation.md) Phase 5
+- Lobby music, which stays in [2026-07_audio-foundation](../../architecture/2026-07_audio-foundation.md) Phase 5
 - Sounds for light fixtures, which stay silent by design. A wall switch clicks when it toggles
 - Fire alarm behaviour
-- Volume balancing beyond what's needed to audition ([audio.md](../design/audio.md) §10)
+- Volume balancing beyond what's needed to audition ([audio.md](../../design/audio.md) §10)
 
 ## Related docs
 
-- Maps: [audio](systems/audio.md), [audio-content](systems/audio-content.md), [area](systems/area.md), [structural-destruction](systems/structural-destruction.md), [atmospherics](systems/atmospherics.md)
-- Milestone: [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c, M8
+- Maps: [audio](../../architecture/systems/audio.md), [audio-content](../../architecture/systems/audio-content.md), [area](../../architecture/systems/area.md), [structural-destruction](../../architecture/systems/structural-destruction.md), [atmospherics](../../architecture/systems/atmospherics.md)
+- Milestone: [mvp1-nuke-ops.md](../../milestones/mvp1-nuke-ops.md) M1c, M8

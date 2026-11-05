@@ -1,7 +1,7 @@
 > Parent map: [networking-session.md](networking-session.md)
 > Code paths: Assets/Scripts/SS3D/Systems/Testing/, Testing/multiplayer/
 > Status: partial
-> Verified: e2f86cf20 — 2026-11-05
+> Verified: 25802878f — 2026-11-05
 
 # Multiplayer testing
 

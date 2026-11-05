@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: e2f86cf20 — 2026-11-05
+> Verified: 25802878f — 2026-11-05
 
 # Audio
 
@@ -42,6 +42,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
 - Code-built `AudioSource`: set `outputAudioMixerGroup = MainAudioMixer.FindGroup(...)` so the player's category slider reaches it (ambience, personal, footsteps, blast, structural hiss, the comms chime and main-menu music all do). Unrouted sources play under Master only.
 - Looping machine sound (e.g. `FuelPowerGenerator`): sync the running state with an `[ObserversRpc(BufferLast = true)]` that calls `PlayAudioSourceLocal` / `StopAudioSourceLocal`.
+- New positional source: add `AudioSourceOcclusion` and call `PrepareForPlayback` before `Play()`, or it ignores walls and keeps playing in vacuum. Set `IgnoresWalls` for one that should only take the air.
 - Volume settings: `SubSystems.Get<PlayerSettingsSubSystem>().SetVolume(PlayerVolume, linear)`; never `SetFloat` the exposed volumes from elsewhere, the next settings apply overwrites them.
 - Main-menu music is `SS3D.Launcher.MainMenuMusic` (non-positional, Music group, tracks from the main-menu catalog), outside this folder.
 - Not built yet: PDA notification cues, in-game lobby music bed (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
@@ -49,7 +50,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Pitfalls
 
 - **A prefab recipe save bakes `[RequireComponent]` into the prefab.** `SaveAsPrefabAsset` added `PlacedTileObject` and `AuthLogDeviceBehaviour`, both `NetworkBehaviour`s, to GasPump, AirAlarm and APC when `SetupMachineLoops` first ran, and refreshed stale fields. The machine loops went in by text to keep those out. Read the prefab diff after any recipe run.
-- **Missing atmos data is not vacuum.** A pure client's atlas holds only chunks that changed since it joined, so `MaskEmpty` or a tile outside the atlas means unknown. Reading it as 0 kPa silences every late joiner with no error. `AudioAirState.ResolveAir` calls it air unless the server's `IsFloating` says open space. Designed around 2026-11-05.
+- **Missing atmos data is not vacuum.** A pure client's atlas holds only chunks that changed since it joined, so `MaskEmpty` or a tile outside the atlas means unknown. Reading it as 0 kPa silences every late joiner with no error. `AudioAirState.ResolveAir` calls it air unless the server's `IsFloating` says open space, so a late joiner who missed a settled breach hears air there until [atmos client sync](../2026-07_atmos-client-visualization-sync.md) Phase 2 sends a late-join bootstrap. Designed around 2026-11-05.
 - **`AudioSourceOcclusion` can be asked to play where `Awake` never ran.** EditMode tests drive `StructuralIntegrityPresenter`, so `AddComponent` then `PrepareForPlayback` must work with no `Awake`; it caches its components itself. Hit 2026-11-05.
 - **Occlusion is client-local — do not gate it behind `[Server]`/RPC.** The listener position only
   exists on each client; baking a muffled/clear decision into the server RPC would require per-observer
@@ -118,5 +119,5 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Related docs
 
 - Design (read-only): [Documents/design/audio.md](../../design/audio.md)
-- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); health feel clip registration also in [2026-07_health-env-feel](../../archive/architecture/2026-07_health-env-feel.md)
+- Architecture effort: [2026-07_audio-foundation](../2026-07_audio-foundation.md); [ambience-and-impact-audio](../../archive/architecture/2026-11_ambience-and-impact-audio.md); health feel clip registration also in [2026-07_health-env-feel](../../archive/architecture/2026-07_health-env-feel.md)
 - Precedent: [2026-07_screen-space-effects](../../archive/architecture/2026-07_screen-space-effects.md) (client-local snapshot-mapper pattern)
