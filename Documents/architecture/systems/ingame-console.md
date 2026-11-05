@@ -27,6 +27,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosDebugCommand.cs` — server `atmosdebug (heat|gas|wake)`, headless equivalent of `AtmosDebugController`'s GUI buttons, targets the caller's own tile
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/AtmosClientStatusCommand.cs` — offline `atmosclientstatus [assert]`, reports/asserts this process's `AtmosRenderContext` snapshot validity (multiplayer test harness use)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/DoorDebugCommand.cs` / `LightDebugCommand.cs` — admin `doordebug open|close` (nearest airlock, bypasses access) and `lightdebug on|off` (caller's area switch) for headless automation
+- `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/DiskCommand.cs` — admin `disk` lists every authentication disk and its holder; `disk here` / `disk (ckey)` takes it out of any hand or bag and drops it at that body's feet, with a server log line naming the admin (playtest wedge tool, [test-server](../../milestones/test-server.md) T3)
 - `Assets/Scripts/SS3D/Systems/IngameConsoleSystem/Commands/ObserveSyncCommand.cs` — offline `observesync …` asserts another player's actions replicated here; throws until they hold, so the harness's `wait_console` retries it (observer-sync smoke)
 - `Assets/Scripts/SS3D/UI/MainHud/Commands/AlertStackCommand.cs` — client `alertstack` hazard override (MainHud asm)
 
