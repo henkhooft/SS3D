@@ -17,7 +17,7 @@ Round objectives, job roles/loadouts, and character traits (e.g. ID permissions)
 - `Assets/Scripts/SS3D/Systems/Roles/AntagonistCategories.cs` — lobby antagonist opt-in keys (Nuclear Operative only). `IsOptedIn`: on by default, so a player who never sent preferences is in the draw (round-end loop Decision 22); the lobby list starts ticked
 - `Assets/Scripts/SS3D/Systems/Roles/SquadDraw.cs` — pure Nuke Ops squad draw; `RoleSubSystem.DrawSquad` runs it before `JobResolver` and calls `RoundSubSystem.FallBackToExtended` on too few opt-ins, or when Secret has fewer than `MinimumReadyForNukeOps` ready players (`HasEnoughReady`, Decision 23, default 4; Nuclear Emergency is not gated)
 - `Assets/Scripts/SS3D/Systems/Gamemodes/Modes/NukeGamemode.cs` — one shared team objective for the squad, resolved at the round-end trigger; `OperativeBriefing` is the spawn briefing
-- `Assets/Scripts/SS3D/Systems/Gamemodes/NukeOpsRules.cs` — pure §6 win/lose table ([2026-11_round-end-loop](../2026-11_round-end-loop.md) P3): crew win when the squad is out, timer/admin end resolved by who holds the disk, container-tree walk; `NukeOpsRulesTests`
+- `Assets/Scripts/SS3D/Systems/Gamemodes/NukeOpsRules.cs` — pure §6 win/lose table ([round-end loop](../../archive/architecture/2026-11_round-end-loop.md) P3): crew win when the squad is out, timer/admin end resolved by who holds the disk, container-tree walk; `NukeOpsRulesTests`
 - `Assets/Scripts/SS3D/Systems/Gamemodes/NukeOpsWorld.cs` — server adapter: reads each operative's entity (dead, ghost, gone, SSD) and the disk's carrier into a `NukeOpsSnapshot`
 - `Assets/Content/Data/Roles/StartingRoles.asset` — available roles and slot caps (0 = unlimited)
 - `GamemodeObjectivePanelView` — legacy uGUI panel hidden (no Tab hotkey; PDA tab later)
@@ -43,6 +43,8 @@ The operative loadout includes the Syndicate hardsuit (ExoSuit) and helmet (Head
 - Objectives must resolve inside `RoundSubSystem.BuildOutcome`: `Nuke.Detonate` ends the round before `NukeDetonateEvent` fires, so an event-driven objective would still be pending when the outcome is fixed.
 - `ServerSpawnedPlayersChanged` fires while a death is half done: the ghost is in `SpawnedPlayers` before `MindSubSystem.SwapMinds` gives it the mind. Find an operative's entity null-safely by mind (`NukeOpsWorld`); `EntitySubSystem.GetSpawnedEntity` dereferences `Mind` and throws on that ghost.
 - There is no voluntary ghost-out: a ghost always means the body died, so Decision 16's "ghosted-out bodies count as alive" has no case yet. An SSD body keeps its mind and counts as up.
+- **Design deviations** ([antagonist-content.md](../../design/antagonist-content.md) §6): an operative is out when dead or destroyed; restraint is ignored until restraints exist (handcuffs are MVP2). An admin end in a Nuke Ops round resolves as a timeout, so it still gets a winner. The ready threshold gates Secret only and has no admin form field; `-nukeops-min-ready=N` sets it.
+- The operative kit (M4, engineering jumpsuit) is a placeholder: MVP1 M1c gives operatives the C20R and Stechkin. Swap `OperativeLoadout.asset` when those land.
 - Assignment happens at round start (`ResolveRoundStartRoles`, called by `EntitySubSystem.SpawnReadyPlayers`) or at latejoin spawn, not on connect. `TryGetRole` is empty in the lobby.
 
 ## Tests

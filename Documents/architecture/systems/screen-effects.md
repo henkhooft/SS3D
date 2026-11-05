@@ -18,7 +18,7 @@ Bootstraps itself with `RuntimeInitializeOnLoadMethod` (not in Boot.unity) so it
 ## Start here
 
 - `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectsSubSystem.cs` — Volume + world blackout + ember/frost particles; `SetEffect` / `TriggerHitFlash` / `TriggerBlastFlash` / `TriggerWhiteout` (post-exposure burn to white plus a white vignette) / `SetUiBackdropBlur`
-- `Assets/Scripts/SS3D/Systems/ScreenEffects/StationDetonationPresentation.cs` — station detonation ([2026-11_round-end-loop](../2026-11_round-end-loop.md) Decision 19): white-out plus a heavy `CameraFollow.AddImpulse`; the round-end overlay waits while `IsPlaying`
+- `Assets/Scripts/SS3D/Systems/ScreenEffects/StationDetonationPresentation.cs` — station detonation ([2026-11_round-end-loop](../../archive/architecture/2026-11_round-end-loop.md) Decision 19): white-out plus a heavy `CameraFollow.AddImpulse`; the round-end overlay waits while `IsPlaying`
 - `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectType.cs` — sustained effect enum
 - `Assets/Scripts/SS3D/Systems/Health/HealthScreenEffectMapper.cs` — `HealthSnapshot` → health-driven intensities
 - `Assets/Scripts/SS3D/Systems/ScreenEffects/ScreenEffectsDebugMenuView.cs` — Screen Effects tool opened from F1 (lazy uGUI build)
