@@ -128,6 +128,36 @@ namespace EditorTests
             Assert.IsFalse(InteractionExtensions.RangeCheck(new InteractionEvent(source, farTarget, new Vector3(1.11f, 0f, 0f), Vector3.left)));
         }
 
+        [Test]
+        public void RangeCheck_BlockerIsATargetWithoutGameObjectProvider_IsReachable()
+        {
+            StubInteractionSource source = CreateSourceAtOrigin();
+            GameObject door = CreateWall(new Vector3(1f, 0f, 0f), blocksReach: true);
+            BareTargetComponent target = door.AddComponent<BareTargetComponent>();
+            Physics.SyncTransforms();
+
+            // A point inside the door, past its near face, as an airlock click gives.
+            Assert.IsTrue(InteractionExtensions.RangeCheck(new InteractionEvent(source, target, new Vector3(1f, 0f, 0f), Vector3.left)));
+        }
+
+        [Test]
+        public void RangeCheck_MountInsideWallSolid_ReachableOnlyFromItsFace()
+        {
+            // Mount at the wall's centre, facing the source; wall spans x 0.9..1.1.
+            StubInteractionSource source = CreateSourceAtOrigin();
+            CreateWall(new Vector3(1f, 0f, 0f), blocksReach: true);
+            CreateGameObject(out GameObject facingUs, out SurfaceTargetComponent facingTarget);
+            facingUs.transform.position = new Vector3(1f, 0f, 0f);
+            facingTarget.Face = new Vector3(0.9f, 0f, 0f);
+            CreateGameObject(out GameObject facingAway, out SurfaceTargetComponent awayTarget);
+            facingAway.transform.position = new Vector3(1f, 0f, 0f);
+            awayTarget.Face = new Vector3(1.1f, 0f, 0f);
+            Physics.SyncTransforms();
+
+            Assert.IsTrue(InteractionExtensions.RangeCheck(new InteractionEvent(source, facingTarget, new Vector3(1f, 0f, 0f), Vector3.left)));
+            Assert.IsFalse(InteractionExtensions.RangeCheck(new InteractionEvent(source, awayTarget, new Vector3(1f, 0f, 0f), Vector3.left)));
+        }
+
         private StubInteractionSource CreateSourceAtOrigin()
         {
             CreateGameObject(out GameObject sourceObject, out RangeLimitBehaviour rangeLimit);
@@ -146,6 +176,21 @@ namespace EditorTests
             BoxCollider box = wall.AddComponent<BoxCollider>();
             box.size = new Vector3(0.2f, 2f, 2f);
             return wall;
+        }
+
+        /// <summary>Like an airlock: a target that isn't an <see cref="IGameObjectProvider"/>.</summary>
+        private sealed class BareTargetComponent : MonoBehaviour, IInteractionTarget
+        {
+            public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => System.Array.Empty<IInteraction>();
+        }
+
+        private sealed class SurfaceTargetComponent : MonoBehaviour, IInteractionTarget, IReachSurface
+        {
+            public Vector3 Face;
+
+            public Vector3 GetReachPoint(Vector3 point) => Face;
+
+            public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent) => System.Array.Empty<IInteraction>();
         }
 
         private sealed class ReachBlockerBehaviour : MonoBehaviour, IReachBlocker

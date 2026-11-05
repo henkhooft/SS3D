@@ -25,7 +25,7 @@ namespace SS3D.Systems.Tile
     /// <summary>
     /// Component that is added to every tile object that is part of the tilemap. Tiles are more restrictive and need to have an origin, fixed grid position and direction to face.
     /// </summary>
-    public class PlacedTileObject: NetworkBehaviour, IWorldObjectAsset, ITileOccupant, IReachBlocker
+    public class PlacedTileObject: NetworkBehaviour, IWorldObjectAsset, ITileOccupant, IReachBlocker, IReachSurface
     {
         /// <summary>
         /// Creates a new PlacedTileObject from a TileObjectSO at a given position and direction. 
@@ -72,6 +72,9 @@ namespace SS3D.Systems.Tile
 
             return placedObject;
         }
+
+        /// <summary>Distance from a wall tile's centre to its face.</summary>
+        private const float WallFaceOffset = 0.5f;
 
         [SerializeField]
 #if UNITY_EDITOR
@@ -143,6 +146,22 @@ namespace SS3D.Systems.Tile
         public bool BlocksReach =>
             _tileObjectSo != null &&
             _tileObjectSo.genericType is TileObjectGenericType.Wall or TileObjectGenericType.Door;
+
+        /// <summary>
+        /// A wall mount shares its wall's tile, so its colliders sit inside the wall's solid and its
+        /// points can't be reached as they are. Reach goes to the wall face on the side the mount faces,
+        /// which build rules keep clear of walls; a hand on the far side still has the wall in the way.
+        /// </summary>
+        public Vector3 GetReachPoint(Vector3 point)
+        {
+            if (_tileObjectSo == null || _tileObjectSo.layer is not (TileLayer.WallMountHigh or TileLayer.WallMountLow))
+            {
+                return point;
+            }
+
+            Vector3 facing = transform.forward;
+            return point + (facing * (Vector3.Dot(transform.position - point, facing) + WallFaceOffset));
+        }
 
         public Direction Direction => _dir;
 

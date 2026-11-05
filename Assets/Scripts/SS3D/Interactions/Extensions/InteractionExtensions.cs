@@ -87,6 +87,16 @@ namespace SS3D.Interactions.Extensions
         /// </summary>
         public static bool IsReachUnobstructed(Vector3 origin, Vector3 reachPoint, IInteractionTarget target)
         {
+            Transform targetRoot = GetTargetTransform(target);
+            if (targetRoot != null)
+            {
+                IReachSurface surface = targetRoot.GetComponentInParent<IReachSurface>();
+                if (surface != null)
+                {
+                    reachPoint = surface.GetReachPoint(reachPoint);
+                }
+            }
+
             Vector3 delta = reachPoint - origin;
             float distance = delta.magnitude;
             if (distance <= ReachEndTolerance)
@@ -96,11 +106,24 @@ namespace SS3D.Interactions.Extensions
 
             Vector3 direction = delta / distance;
             float castLength = distance - ReachEndTolerance;
-            GameObject targetObject = target != null ? target.GetGameObject() : null;
-            Transform targetRoot = targetObject != null ? targetObject.transform : null;
 
             return !HasBlockingHit(origin, direction, castLength, targetRoot)
                 && !HasBlockingHit(reachPoint, -direction, castLength, targetRoot);
+        }
+
+        /// <summary>
+        /// The target's transform. Not every target is an <see cref="IGameObjectProvider"/> (airlocks,
+        /// lockers), so <see cref="InteractionTargetExtensions.GetGameObject"/> alone can't exempt them.
+        /// </summary>
+        private static Transform GetTargetTransform(IInteractionTarget target)
+        {
+            GameObject targetObject = target?.GetGameObject();
+            if (targetObject != null)
+            {
+                return targetObject.transform;
+            }
+
+            return target is Component component && component != null ? component.transform : null;
         }
 
         private static bool HasBlockingHit(Vector3 origin, Vector3 direction, float length, Transform targetRoot)
