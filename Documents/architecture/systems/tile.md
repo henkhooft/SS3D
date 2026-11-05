@@ -17,7 +17,7 @@ Session boot creates an empty tile container for Map Editor/AOI registration. It
 restore persisted station content. `RoundSubSystem` owns Start → selected-template restore →
 WorldReady → countdown; explicit Map Editor/Tile load APIs remain available.
 
-Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage.cs` owns the replicated session list and placement observer. `ClearSpawnPoints` also clears that list when `TileMap.Clear` resets the world. See [structural-destruction](structural-destruction.md).
+Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage.cs` owns the replicated session list and placement observer. `ClearMarkers` also clears that list when `TileMap.Clear` resets the world. See [structural-destruction](structural-destruction.md).
 
 ## Start here
 
@@ -82,7 +82,6 @@ Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage
 - **Blank library icons (TileGrey/TileWhite):** `Unlit/ObjectIcon` outputs `texture.a * _Color.a`; some floor materials ship `_Color.a = 0`, which the opaque toon shader ignores. `IconPreviewGenerator` forces alpha 1 for opaque-queue materials. Hit 2026-10-31.
 - **`TileMap.StructureVersion`:** bumped on place/clear/chunk/clear-map and when bulk mutation ends — not on door `NotifyTileStateChanged`. [area](area.md) device→area cache keys off this; do not bump on cosmetic state or every adjacency refresh.
 - **Adjacency must assign `sharedMesh`, not `.mesh`:** `_filter.mesh =` unique-copies the FBX and blocks GPU Instancing on walls/plenum/pipes/carpet. Use `sharedMesh`. Hit 2026-07-28 (Metastation).
-- **Map logic tile objects:** set `TileObjectSo.mapEditorOnly` and give the prefab no collider. `PlacedTileObject` hides it with the underfloor cover path (`forceRenderingOff`) except while authoring.
 - **Underfloor hide must not fight FishNet `MeshRenderer.enabled`:** host cover uses `UnderfloorCoverCondition` (AND with `GridCondition` on Plenum/Wire/Disposal/PipeLeft|Middle|Right prefabs). Covered host fails the condition → removed from Observers → `SetRenderersVisible(false)`. Remotes always pass the cover condition (keep NO for client occupancy) and use `Renderer.forceRenderingOff` + disable `Selectable` — do **not** `SetActive(false)` the root or set `.enabled` for cover. Never call `SetRenderersVisible(true)` while covered. Turf place/clear must `RebuildObservers` via `RefreshUnderfloorAt` (timed alone is too slow). Template/DMM load: `RebuildObservers` + `RefreshAllHostVisibility` after turfs exist. Map Editor skips hide. `PipeSurface` and `PipeManifold` stay visible. Hit 2026-07-28 / fixed 2026-07-29 (Metastation `Render.Mesh`).
 - **`OnDestroyed` before `OnStart`:** a client disconnecting while Game unloads can destroy
   `MapEditorSubSystem` before `OnStart` set `_controls`; the unconditional unsubscribe threw a

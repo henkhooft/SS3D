@@ -36,8 +36,9 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/GasPipeNetworkRegistry.cs` — pipe networks; `TopologyVersion` invalidates port caches
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPortControllerBase.cs` — vent/scrubber tick + cached network resolve
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosDevicePipeResolver.cs` — which lines each device attaches to; Map Check reads the same `PipeLayers`
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosGasSource.cs` — hidden tile object that holds its cell at a fixed mix, making a sealed room a storage chamber; ticks as a port
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosLineFill.cs` — hidden tile object that fills one line's network once, right after `RebuildAll`
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosGasMarkers.cs` — puts a map's [gas markers](map-editor-creative-hooks.md) into the sim: line fills after `RebuildAll`, room air once cells exist, sources every tick
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosGasMix.cs` — a mix as relative amounts indexed by gas id
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosRoomFlood.cs` — the room around a tile, bounded by walls and doors; room air and Map Check share it
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaDeviceQuery.cs` — air-alarm / preset queries over indexed area ports (not full registry scan)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AirAlarmController.cs` — tile-in-front sampling, preset mode dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaSampler.cs` — area aggregate and single-tile sampling
@@ -52,7 +53,6 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 ## Extension points
 
 - New inline devices: subclass `AtmosInlineDeviceBase` and report through `RecordFlow`, then add to `AtmosInlineDeviceSetup.Run` (tier B static — no MenuItem), which builds from `GasPump.prefab`. Rerunning it needs no examine step; new names need examine strings and `AssetDatabasesCodeGenerator`. Add catalog rows by hand: `MapEditorCatalogRegenerator` also rewrites unrelated entries.
-- New supply mixes or line variants: extend `AtmosSupplyMix`, then rerun `AtmosSupplySetup.Run` (tier B static — no MenuItem), which rebuilds the prefabs and their `TileObjectSo` assets.
 - Air alarm power/alarm visuals use `Electricity/EmissiveMaterialSlots` to preserve each material slot's authored emission/luminance; avoid one renderer-wide baseline for mixed-material meshes.
 
 - New gases: add `GasDefinition` assets under `Assets/Content/Systems/Atmospherics/Gases/`; call `AtmosRegistryGenerator.CreateCoreGasRegistry` (tier B static — no MenuItem) to refresh registry slots.
@@ -63,7 +63,8 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Pitfalls
 
-- **A held cell shows up as new gas:** `AtmosGasSource` adds moles every tick by design, so whole-map conservation checks don't hold on a map with a source. Hit 2026-11-05.
+- **A held cell shows up as new gas:** A gas source marker adds moles every tick by design, so whole-map conservation checks don't hold on a map with a source. Hit 2026-11-05.
+- **Line fills and room air only apply when atmos starts:** `AtmosGasMarkers` runs them once from `InitializeWhenMapReady`, so placing one mid-round changes nothing until the next round or map load. Sources are different: they follow the registry and apply on the next tick. Hit 2026-11-05.
 - **A new chamber intake must be `ScrubberIntake`:** a plain `Scrubber` takes CO₂ only, so on a chamber it moves nothing and the line runs dry with no error. Templates can't store filter state, so the prefab sets it. Hit 2026-11-05.
 - **Pipes on a manifold's tile aren't part of it:** a manifold connects to pipes on the tiles at its front and back. A pipe on its own tile just sits on its line, and a branch must leave from a neighbouring tile. Hit 2026-11-05.
 - **A pipe's same-layer neighbours never show a manifold:** it lives on its own layer, so visuals go through `ICrossLayerConnectionRule` and networks through `TryGetManifoldPort`. Anything new that attaches to lines has to ask for a manifold port too. Hit 2026-11-05.

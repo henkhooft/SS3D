@@ -16,7 +16,7 @@ todos:
     status: pending
   - id: gas-markers
     content: "Atmospherics rail in the Map Editor: gas source, line fill and room air as saved markers like spawn points, replacing the AtmosSource and AtmosFill tile objects"
-    status: pending
+    status: completed
   - id: optional-extras
     content: "Optional, if effort allows: Ignitor, ConnectorPort with canisters and Connector pipes, pipe rupture, pipe gas temperature"
     status: pending
@@ -108,7 +108,7 @@ PR 1 adds one thing the plan didn't list: the pump caps a tick's flow at the mol
 PR 2 differs from the plan in four ways:
 
 - `classic-ministation` carries its distribution line on Mixed, not Supply. Supply can't be reached from a scrubber until PR 3's manifolds, and Mixed is the one line a scrubber and a vent both attach to. Move it to Supply when pumps and manifolds reach the room, and bring the intake up through them.
-- The atmos room has one air chamber. Separate O₂ and N₂ chambers need PR 4's mixer, since two intakes on one line would give a 50/50 mix. The `AtmosSourceOxygen` and `AtmosSourceNitrogen` variants exist for that.
+- The atmos room has one air chamber. Separate O₂ and N₂ chambers need PR 4's mixer, since two intakes on one line would give a 50/50 mix. Gas markers now cover that.
 - A catwalk run joins the east and west halves of the line, which were separate networks.
 - Scrubbers now share their budget across selected gases by mole fraction. They used to fill it from the first gas in filter order, so an intake sent pure O₂ and CO₂ never moved while oxygen was on the tile. Not in the plan, but the intake can't carry air without it.
 
@@ -127,6 +127,17 @@ PR 3 differs from the plan in five ways:
 - The manual valve shows `ValveManualHandle`, in line with the pipe while open and across it while closed. It snaps, with no animation.
 - `IAmbientLoopState` moved from `AtmosPortControllerBase` onto vents, scrubbers and pumps, so valves need no sound.
 
+The gas markers PR came before PR 4, at the owner's call, and differs from the plan in six ways:
+
+- Room air floods the marker's room with `AtmosRoomFlood` rather than using areas, because a chamber with no APC has no area. Doors bound the room, open or not, so an open door can't fill the station. Map Check reads the same flood.
+- Map Check also warns about a room air marker outside a sealed room, not only a source.
+- Markers sync to clients. Spawn points don't, which leaves a remote editor with no pins; the same gap here would have blocked sandbox players, who may place gas markers.
+- Sources follow the registry during a round. Line fills and room air apply when atmos starts.
+- One marker per tile across all kinds, so a line fill can't share a tile with a source.
+- `TileObjectSo.mapEditorOnly` went too, since only these objects used it. Seven tile assets still carry `mapEditorOnly: 0`, which Unity drops on their next save.
+
+A scenario sends a marker through the real command RPC and checks its pin and its removal. Mouse placement, the hologram, and Select and Dropper on a marker have not been run, by test or by hand, and neither have the form's looks, since no `visual` step covers them.
+
 ## Implementation notes
 
 - `classic-ministation.json` holds 240 pipe entries over 189 distinct saved placements. It loads as 240 segments in 4 networks: 120 Supply and 120 Waste, one per line on each tile. Read the map by tile and line, not by saved placement.
@@ -135,7 +146,6 @@ PR 3 differs from the plan in five ways:
 - Dynamic device state doesn't survive template saves; `SavedPlacedTileObject` holds name, origin and direction only.
 - Reimport changes in the main checkout wait for the editor to be free.
 - `MapEditorCatalog.asset` names a script GUID (`3b7298e7…`) that matches no script, on develop too; `MapEditorCatalogSo.cs.meta` is `16071b6e…`. Rerunning the regenerator rewrites the asset with the right GUID and reshuffles unrelated entries. PR 3 left the GUID alone and added its rows by hand.
-- `AtmosFillMixed` is out of the map now; the prefab stays for other maps.
 - Open: `HullBreach_BlowsLooseItemIntoSpace_WhereItComesToRest` in `scenarios:Environment` failed 3 of 10 runs after PR 1 and 0 of 6 on a2bf3a24a, timing out at "the wind carries the item out through the hole". The test room has no pipes and no causal path was found, so this is neither a confirmed regression nor a confirmed flake. Passing runs take about 10.6 s against a 10 s wait; log the wrench's exit time on both commits to compare.
 
 ## Tests
