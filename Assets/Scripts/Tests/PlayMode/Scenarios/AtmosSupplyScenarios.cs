@@ -1,12 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using SS3D.Core;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.GasMarkers;
+using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile.MapEditor.Commands;
+using SS3D.Systems.Tile.TileMapCreator;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -189,6 +193,58 @@ namespace SS3D.Tests
             Assert.IsTrue(co2 && !o2 && !n2 && !plasma, "Normal goes back to CO₂");
             Assert.AreEqual(AtmosPortConstants.ScrubberNormalFlowRate, scrubber.FlowRate);
         }
+
+        // Guards: a gas marker survives the real ServerRpc with its gas fractions, draws a pin under the Scripts layer, and clears again (MapEditorSubSystem.RpcExecuteCommands, MapEditorCommandDto, MapMarkerEditorView) · Not cheaper because: FishNet's generated serializer for the command and the host's editor session need a real spawn, which EditMode has not
+        [UnityTest]
+        public IEnumerator GasMarker_PlacedThroughTheEditor_DrawsAPin_AndClears()
+        {
+            ChangesRoom = true;
+            MapEditorSubSystem editor = SubSystems.Get<MapEditorSubSystem>();
+            GasMarkerRegistry markers = SubSystems.Get<TileSubSystem>().GasMarkers;
+            var tile = new Vector3(VentedRoom.xMin, 0f, VentedRoom.yMin);
+            GasMarkerRecord sent = GasMarkerRecord.Default(GasMarkerKind.RoomAir);
+            sent.Position = tile;
+            sent.GasFractions = AtmosGasMix.Pure(AtmosConstants.Plasma);
+
+            SetEditorActive(editor, true);
+            bool scriptsWereVisible = TileLayerVisibilityService.IsGroupVisible(TileLayerCategory.Scripts);
+            TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts, true);
+            try
+            {
+                editor.SubmitCommands(new[]
+                {
+                    new MapEditorCommandDto
+                    {
+                        Kind = MapEditorCommandKind.PlaceGasMarker,
+                        AssetName = MapEditorGasMarkerCatalog.Encode(sent.Kind),
+                        Position = tile,
+                        GasMarker = sent,
+                    },
+                });
+                yield return WaitFor(() => markers.HasAt(tile), "the server takes the marker", 5f);
+
+                markers.TryGetAt(tile, out GasMarkerRecord placed);
+                Assert.AreEqual(sent.GasFractions, placed.GasFractions, "The mix crosses the RPC intact");
+                Assert.AreEqual(1, PinCount(), "The marker draws one pin");
+
+                editor.SubmitCommands(new[] { new MapEditorCommandDto { Kind = MapEditorCommandKind.ClearGasMarker, Position = tile } });
+                yield return WaitFor(() => !markers.HasAt(tile), "the marker clears", 5f);
+                Assert.AreEqual(0, PinCount(), "Clearing removes the pin");
+            }
+            finally
+            {
+                markers.TryClearAt(tile, out _);
+                TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts, scriptsWereVisible);
+                SetEditorActive(editor, false);
+            }
+        }
+
+        // The chamber and Supply fill draw pins too; this counts room air only.
+        private static int PinCount() => Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+            .Count(pin => pin.name.StartsWith("MarkerPin_Room air"));
+
+        private static void SetEditorActive(MapEditorSubSystem editor, bool active) =>
+            typeof(MapEditorSubSystem).GetMethod("SetActive", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(editor, new object[] { active });
 
         private static void DrainRoom()
         {
