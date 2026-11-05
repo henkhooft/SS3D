@@ -56,6 +56,18 @@ namespace AssetAudit
         }
 
         /// <summary>
+        /// A rigid helmet has no folded form, so every view of it shows one mesh.
+        /// </summary>
+        [Test]
+        public void HardsuitHelmetLooksTheSameWornAndHeld()
+        {
+            Transform helmet = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/WorldObjects/Items/Clothing/SyndicateHardsuitHelmet.prefab").transform;
+            Assert.AreEqual(
+                helmet.Find("WornShape").GetComponent<MeshFilter>().sharedMesh,
+                helmet.Find("WorldShape").GetComponent<MeshFilter>().sharedMesh);
+        }
+
+        /// <summary>
         /// Interaction targets must be shader-pickable via Selectable on the same object or a parent.
         /// </summary>
         [Test, TestCaseSource(nameof(AllPrefabs))]

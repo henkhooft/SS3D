@@ -82,10 +82,12 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             {
                 root.name = name;
                 var preview = SaveMesh(BakePreview(model, source, name + "Preview"), Art + name + "Preview.asset");
+                // A helmet does not fold, so it looks the same on the head, in the hand and on the floor.
                 var folded = foldedName != null
                     ? model.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == foldedName)
-                    : DB.LoadAssetAtPath<GameObject>(Art + "HardsuitHelmet.fbx").GetComponentInChildren<MeshFilter>();
-                ReplaceShapes(root, preview, folded.sharedMesh, folded.transform, materials, out var worn, out var world, out var attachment);
+                    : null;
+                ReplaceShapes(root, preview, folded != null ? folded.sharedMesh : preview, folded != null ? folded.transform : root.transform,
+                    materials, out var worn, out var world, out var attachment);
                 var item = root.GetComponent<Item>();
                 var itemSo = new SerializedObject(item);
                 itemSo.FindProperty("_name").stringValue = type == ClothType.Head ? "Syndicate Hardsuit Helmet" : "Syndicate Hardsuit";
