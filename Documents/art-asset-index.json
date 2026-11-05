@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-04T21:59:20.982265+00:00",
+  "generated_at": "2026-11-05T14:29:37.010350+00:00",
   "purpose": "Agent reference for locating SS3D art assets and determining import status.",
   "sources": {
     "in_game": {
       "root": "Assets/Art",
-      "file_count": 5302
+      "file_count": 5307
     },
     "ss3d_art": {
       "repo": "https://github.com/RE-SS3D/SS3D-Art",
@@ -13,13 +13,13 @@
     }
   },
   "summary": {
-    "in_game_files": 5302,
+    "in_game_files": 5307,
     "ss3d_art_files": 2480,
-    "unique_assets": 7543,
-    "imported": 239,
-    "in_game_only": 5073,
-    "ss3d_art_only": 2231,
-    "available_for_import": 2016,
+    "unique_assets": 7546,
+    "imported": 241,
+    "in_game_only": 5076,
+    "ss3d_art_only": 2229,
+    "available_for_import": 2014,
     "artwork_only": 215
   },
   "categories": [
@@ -81,11 +81,11 @@
     },
     {
       "path": "Sound",
-      "in_game": 150,
+      "in_game": 155,
       "ss3d_art": 218,
-      "imported": 87,
-      "in_game_only": 63,
-      "ss3d_art_only": 131
+      "imported": 89,
+      "in_game_only": 66,
+      "ss3d_art_only": 129
     },
     {
       "path": "Textures",
@@ -2082,12 +2082,20 @@
       "ss3d_art_only": 1
     },
     {
+      "path": "Sound/Furniture/Machines/Atmospherics",
+      "in_game": 3,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 3,
+      "ss3d_art_only": 0
+    },
+    {
       "path": "Sound/Furniture/Machines/Engineering",
-      "in_game": 1,
+      "in_game": 2,
       "ss3d_art": 3,
-      "imported": 1,
+      "imported": 2,
       "in_game_only": 0,
-      "ss3d_art_only": 2
+      "ss3d_art_only": 1
     },
     {
       "path": "Sound/Furniture/Machines/Interacting Sounds",
@@ -2251,11 +2259,11 @@
     },
     {
       "path": "Sound/World/Ambience/Alarms",
-      "in_game": 0,
+      "in_game": 1,
       "ss3d_art": 1,
-      "imported": 0,
+      "imported": 1,
       "in_game_only": 0,
-      "ss3d_art_only": 1
+      "ss3d_art_only": 0
     },
     {
       "path": "Sound/World/Ambience/Power",
@@ -2904,7 +2912,7 @@
     "blend": 677,
     "fbx": 245,
     "wav": 159,
-    "ogg": 104,
+    "ogg": 107,
     "mp3": 18,
     "ma": 13,
     "mp4": 12,
@@ -77045,6 +77053,39 @@
       "status": "ss3d_art_only"
     },
     {
+      "name": "GasPump.ogg",
+      "stem": "gaspump",
+      "extension": "ogg",
+      "category": "Sound/Furniture/Machines/Atmospherics",
+      "in_game_path": "Assets/Art/Sound/Furniture/Machines/Atmospherics/GasPump.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "GasVent.ogg",
+      "stem": "gasvent",
+      "extension": "ogg",
+      "category": "Sound/Furniture/Machines/Atmospherics",
+      "in_game_path": "Assets/Art/Sound/Furniture/Machines/Atmospherics/GasVent.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "PortableScrubber.ogg",
+      "stem": "portablescrubber",
+      "extension": "ogg",
+      "category": "Sound/Furniture/Machines/Atmospherics",
+      "in_game_path": "Assets/Art/Sound/Furniture/Machines/Atmospherics/PortableScrubber.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
       "name": "FuelPowerGenerator.ogg",
       "stem": "fuelpowergenerator",
       "extension": "ogg",
@@ -77071,11 +77112,11 @@
       "stem": "machinery2",
       "extension": "wav",
       "category": "Sound/Furniture/Machines/Engineering",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/Furniture/Machines/Engineering/Machinery2.wav",
       "ss3d_art_path": "Assets/Sound/Furniture/Machines/Engineering/Machinery2.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Furniture/Machines/Engineering/Machinery2.wav",
       "import_target_path": "Assets/Art/Sound/Furniture/Machines/Engineering/Machinery2.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "Knob Clicks.wav",
@@ -77907,11 +77948,11 @@
       "stem": "alarm 1",
       "extension": "wav",
       "category": "Sound/World/Ambience/Alarms",
-      "in_game_path": null,
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Alarms/Alarm 1.wav",
       "ss3d_art_path": "Assets/Sound/World/Ambience/Alarms/Alarm 1.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Ambience/Alarms/Alarm 1.wav",
       "import_target_path": "Assets/Art/Sound/World/Ambience/Alarms/Alarm 1.wav",
-      "status": "ss3d_art_only"
+      "status": "imported"
     },
     {
       "name": "PowerHum.wav",

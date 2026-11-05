@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A, B and C haven't started. Phase order is D, A, B, C, one PR each.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B and C haven't started. Phase order is D, A, B, C, one PR each.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -47,6 +47,9 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 13 | A client holds each break 50 ms so a blast can claim it as debris. The server sends breakups before the blast message, and reversing that would run the scorch raycast against furniture about to be destroyed. |
 | 14 | Item collisions stay server messages, because clients keep items kinematic and get no collision events. `CollisionSoundLimiter` caps them with a 0.25 s cooldown per item and a shared budget of 5 at once, refilling at 5 per second. No protocol change. |
 | 15 | `NoisyCollision` takes one material and draws on `ItemCollisionAudioTrackIds`, instead of clip lists on every prefab. Speed sets volume, not a light or hard clip set. `AudioContentPrefabRecipes` holds the item lists, and a test fails if an item is in neither. Soft items such as clothing, patches and food stay silent, because there are no soft clips. Body parts and organs are left out. |
+| 16 | Voices belong to `AmbientLoopSubSystem`, not to machines: 12 `AudioSource`s, each following the nearest running `AmbientLoopSource`. A station's machines cost no audio sources or occlusion rays until they're in reach. Each kind's clip, level and reach live in `AmbientLoopTrackIds`, so tuning touches no prefab. |
+| 17 | Vents, scrubbers and pumps sound while gas is moving (`IsPortFlowing`), not merely while switched on. The APC hums while it holds charge, the SMES while it's on and charged, a vendor while powered, and an air alarm while powered and alarming. |
+| 18 | SS14's `vending_machine_hum`, `engine_hum` and `light_hum` have no attribution entry, so they're out. Vendors and APCs use `PowerHum` and the SMES uses SS3D-Art `Machinery2`. The air alarm uses SS3D-Art `Alarm 1` instead of SS14 `alarm.ogg`. The generator keeps the loop it gets in `develop` from #159, so A leaves it alone. |
 
 ## Clips
 
@@ -59,7 +62,7 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | Hit and strain | SS14 `metal_scrape*`, `glass_smack`, `glass_crack*`; SS3D-Art metal and wood hits | CC-BY-SA-3.0; project assets |
 | Wreckage thud | SS14 `metal_thud*` | CC-BY-SA-3.0 |
 | Item collisions | SS3D-Art `World/Collisions` metal, wood, plastic | Project assets |
-| Machine loops | SS14 `Ambience/Objects` | Check per file |
+| Machine loops | SS14 `gas_vent`, `portable_scrubber`, `gas_pump`; SS3D-Art `Machinery2`, `Alarm 1`, `PowerHum` | CC0-1.0; project assets |
 | Engineering | `ambitech*`, `ambiatmos*` | CC-BY-SA-3.0 |
 | Medical | `ambinice` | CC-BY-SA-3.0 |
 | Maintenance | `ambimaint*`, `maintambience` | CC-BY-SA-3.0 |

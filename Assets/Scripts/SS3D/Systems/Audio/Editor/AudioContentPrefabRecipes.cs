@@ -68,17 +68,32 @@ namespace SS3D.Systems.Audio.Editor
             "MedicalPatch", "Poster", "ShoeHiTops", "ShoeJackboots", "Toolbelt", "TruckerCap",
         };
 
+        private static readonly Dictionary<string, AmbientLoopKind> MachineLoops = new()
+        {
+            { "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Vent/Vent.prefab", AmbientLoopKind.Vent },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/Scrubber.prefab", AmbientLoopKind.Scrubber },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/GasPump/GasPump.prefab", AmbientLoopKind.GasPump },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Engineering/SMES.prefab", AmbientLoopKind.Smes },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Vendors/VendorHotDrinks.prefab", AmbientLoopKind.Vendor },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Vendors/VendorRobustSoftdrinks.prefab", AmbientLoopKind.Vendor },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Vendors/VendorSecTech.prefab", AmbientLoopKind.Vendor },
+            { "Assets/Content/WorldObjects/Furniture/Machines/Vendors/VendorYouTool.prefab", AmbientLoopKind.Vendor },
+            { "Assets/Content/WorldObjects/Structures/WallMounts/APC.prefab", AmbientLoopKind.Apc },
+            { "Assets/Content/WorldObjects/Structures/WallMounts/AirAlarm.prefab", AmbientLoopKind.AirAlarm },
+        };
+
         [MenuItem("SS3D/Audio/Run Content Prefab Recipes")]
         public static void RunAllMenu()
         {
-            int updated = SetupItemCollisions();
-            EditorUtility.DisplayDialog("Audio Content Prefab Recipes", $"Item prefabs updated: {updated}.", "OK");
+            int items = SetupItemCollisions();
+            int machines = SetupMachineLoops();
+            EditorUtility.DisplayDialog("Audio Content Prefab Recipes", $"Item prefabs updated: {items}. Machine prefabs updated: {machines}.", "OK");
         }
 
         /// <summary>BatchMode: <c>-executeMethod SS3D.Systems.Audio.Editor.AudioContentPrefabRecipes.RunAllBatch</c></summary>
         public static void RunAllBatch()
         {
-            Debug.Log($"[AudioContentPrefabRecipes] items={SetupItemCollisions()}");
+            Debug.Log($"[AudioContentPrefabRecipes] items={SetupItemCollisions()} machines={SetupMachineLoops()}");
             if (UnityEngine.Application.isBatchMode)
             {
                 EditorApplication.Exit(0);
@@ -99,6 +114,73 @@ namespace SS3D.Systems.Audio.Editor
             }
 
             return updated;
+        }
+
+        /// <summary>Gives each listed machine its loop. Returns how many prefabs changed.</summary>
+        public static int SetupMachineLoops()
+        {
+            int updated = 0;
+            foreach (KeyValuePair<string, AmbientLoopKind> machine in MachineLoops)
+            {
+                if (SetLoop(machine.Key, machine.Value))
+                {
+                    updated++;
+                }
+            }
+
+            return updated;
+        }
+
+        /// <summary>Describes each machine prefab that doesn't match <see cref="MachineLoops"/>.</summary>
+        public static List<string> FindMachineLoopDrift()
+        {
+            var drift = new List<string>();
+            foreach (KeyValuePair<string, AmbientLoopKind> machine in MachineLoops)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(machine.Key);
+                if (prefab == null)
+                {
+                    drift.Add($"{machine.Key} doesn't exist");
+                    continue;
+                }
+
+                AmbientLoopSource source = prefab.GetComponent<AmbientLoopSource>();
+                if (source == null || source.Kind != machine.Value)
+                {
+                    drift.Add($"{prefab.name} should have a {machine.Value} loop; run the audio prefab recipes");
+                }
+
+                if (prefab.GetComponentInChildren<IAmbientLoopState>(true) == null)
+                {
+                    drift.Add($"{prefab.name} has nothing that says when its loop runs");
+                }
+            }
+
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Content/WorldObjects" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab.GetComponentInChildren<IAmbientLoopState>(true) != null && !IsListedMachine(prefab))
+                {
+                    drift.Add($"{prefab.name} can run a loop but isn't in {nameof(MachineLoops)}");
+                }
+            }
+
+            return drift;
+        }
+
+        /// <summary>The prefab or its nearest base is in <see cref="MachineLoops"/>.</summary>
+        private static bool IsListedMachine(GameObject prefab)
+        {
+            for (GameObject current = prefab; current != null; current = PrefabUtility.GetCorrespondingObjectFromSource(current))
+            {
+                if (MachineLoops.ContainsKey(AssetDatabase.GetAssetPath(current)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>Describes each item prefab that doesn't match the lists above.</summary>
@@ -153,6 +235,32 @@ namespace SS3D.Systems.Audio.Editor
                 {
                     yield return path;
                 }
+            }
+        }
+
+        private static bool SetLoop(string path, AmbientLoopKind kind)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                if (!root.TryGetComponent(out AmbientLoopSource source))
+                {
+                    source = root.AddComponent<AmbientLoopSource>();
+                }
+                else if (source.Kind == kind)
+                {
+                    return false;
+                }
+
+                var serialized = new SerializedObject(source);
+                serialized.FindProperty("_kind").enumValueIndex = (int)kind;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                return true;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
 

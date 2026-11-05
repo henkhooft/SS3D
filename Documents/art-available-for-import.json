@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-04T21:59:20.982265+00:00",
+  "generated_at": "2026-11-05T14:29:37.010350+00:00",
   "purpose": "Game-ready SS3D-Art assets not yet imported into Assets/Art/.",
-  "count": 2016,
+  "count": 2014,
   "assets": [
     {
       "name": "HumanAnimRig.ma",
@@ -12991,15 +12991,6 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Furniture/Machines/Engineering/Machinery1.wav"
     },
     {
-      "name": "Machinery2.wav",
-      "stem": "machinery2",
-      "extension": "wav",
-      "category": "Sound/Furniture/Machines/Engineering",
-      "ss3d_art_path": "Assets/Sound/Furniture/Machines/Engineering/Machinery2.wav",
-      "import_target_path": "Assets/Art/Sound/Furniture/Machines/Engineering/Machinery2.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/Furniture/Machines/Engineering/Machinery2.wav"
-    },
-    {
       "name": "Knob Clicks.wav",
       "stem": "knob clicks",
       "extension": "wav",
@@ -13358,15 +13349,6 @@
       "ss3d_art_path": "Assets/Sound/World/Ambience/Air/Pipe Hiss Low.wav",
       "import_target_path": "Assets/Art/Sound/World/Ambience/Air/Pipe Hiss Low.wav",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Ambience/Air/Pipe Hiss Low.wav"
-    },
-    {
-      "name": "Alarm 1.wav",
-      "stem": "alarm 1",
-      "extension": "wav",
-      "category": "Sound/World/Ambience/Alarms",
-      "ss3d_art_path": "Assets/Sound/World/Ambience/Alarms/Alarm 1.wav",
-      "import_target_path": "Assets/Art/Sound/World/Ambience/Alarms/Alarm 1.wav",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Ambience/Alarms/Alarm 1.wav"
     },
     {
       "name": "Dropping Metal Thin11.wav",

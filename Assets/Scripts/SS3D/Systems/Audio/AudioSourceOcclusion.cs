@@ -102,6 +102,12 @@ namespace SS3D.Systems.Audio
             _lowPass.enabled = false;
         }
 
+        /// <summary>Changes the unoccluded volume of a source that is already playing, as in a fade.</summary>
+        public void SetBaseVolume(float volume)
+        {
+            _baseVolume = volume;
+        }
+
         private void Update()
         {
             if (!_source.isPlaying)

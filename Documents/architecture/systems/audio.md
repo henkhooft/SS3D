@@ -21,6 +21,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); pool sizing and periodic purge
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
 - `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Replaces legacy `AmbienceHandler.cs`.
+- `Assets/Scripts/SS3D/Systems/Audio/AmbientLoopSubSystem.cs` — machine hums (§3): 12 client-local voices lent to the nearest running `AmbientLoopSource`s, each occluded through `AudioSourceOcclusion`; choice is pure in `AmbientLoopSelection.cs`, and each kind's clip, level and reach in `AmbientLoopTrackIds.cs`
 - `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — Phase 3 owner-only heartbeat, breathing and alert ding (§4), non-positional. Driven by `HealthPersonalAudioMapper` / `StaminaPersonalAudioMapper` from each domain's existing local-owner hook.
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
 - `Assets/Scripts/SS3D/Systems/Audio/FootstepAudio.cs` — footwear footsteps on a **client-local** loop, not the pool (host `Move(default)` clears server locomotion every tick); skips while floating
@@ -36,6 +37,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - Positional sound a client derives from a message it already has: `PlayLocalAudioSource` plays on the same pool with no message, as `StructuralAudioPresenter` does. Listener position: `AudioSourceOcclusion.TryGetListenerPosition`.
 - A new item's collision sound: add it to `Materials` or `SilentItems` in `Audio/Editor/AudioContentPrefabRecipes.cs`, then call `SetupItemCollisions` (or **SS3D → Audio → Run Content Prefab Recipes**). `ItemPrefabs_MatchTheRecipeLists` fails until you do. A prefab variant inherits its base's entry.
 - Area ambience: `AreaSubSystem.SetAreaAmbienceTrackId(areaId, trackId)` (server). In game, the `areaambience (trackId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
+- Machine hum: implement `IAmbientLoopState` from synced state, add an `AmbientLoopKind`, and list the prefab in `AudioContentPrefabRecipes.MachineLoops`. `MachinePrefabs_MatchTheRecipeList` fails if a prefab with that state isn't listed.
 - Personal cues (e.g. virology symptoms, audio.md §4): `SetHeartbeatIntensity`, `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` (max-merge). Build no parallel non-positional path.
 - Code-built `AudioSource`: set `outputAudioMixerGroup = MainAudioMixer.FindGroup(...)` so the player's category slider reaches it. Unrouted sources play under Master only (`CommsFeedController`'s announce source still does).
 - Volume settings: `SubSystems.Get<PlayerSettingsSubSystem>().SetVolume(PlayerVolume, linear)`; never `SetFloat` the exposed volumes from elsewhere, the next settings apply overwrites them.
@@ -43,6 +45,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Pitfalls
 
+- **A prefab recipe save bakes `[RequireComponent]` into the prefab.** `SaveAsPrefabAsset` added `PlacedTileObject` and `AuthLogDeviceBehaviour`, both `NetworkBehaviour`s, to GasPump, AirAlarm and APC when `SetupMachineLoops` first ran, and refreshed stale fields. The machine loops went in by text to keep those out. Read the prefab diff after any recipe run.
 - **Occlusion is client-local — do not gate it behind `[Server]`/RPC.** The listener position only
   exists on each client; baking a muffled/clear decision into the server RPC would require per-observer
   variants of every play call. `AudioSourceOcclusion.Update()` runs unconditionally on whichever machine

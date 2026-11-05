@@ -81,6 +81,9 @@ not original SS3D / SS3D-Art work. Keep paths relative to the repo root.
 
 SS3D-Art vocals under `Assets/Art/Sound/Entities/Humanoids/Human/Vocal/` (Choke&Gasp, Scream)
 default to [Documents/LICENSE-ASSETS.md](../../Documents/LICENSE-ASSETS.md) (CC BY-NC-SA 4.0).
+| `Assets/Art/Sound/Furniture/Machines/Atmospherics/GasVent.ogg` | CC0-1.0 | By kyles; via Space Station 14 Ambience/Objects | [Freesound 453642](https://freesound.org/people/kyles/sounds/453642/); SS14 `Resources/Audio/Ambience/Objects/gas_vent.ogg` |
+| `Assets/Art/Sound/Furniture/Machines/Atmospherics/PortableScrubber.ogg` | CC0-1.0 | By Beethovenboy; via Space Station 14 Ambience/Objects | [Freesound 384335](https://freesound.org/people/Beethovenboy/sounds/384335/); SS14 `Resources/Audio/Ambience/Objects/portable_scrubber.ogg` |
+| `Assets/Art/Sound/Furniture/Machines/Atmospherics/GasPump.ogg` | CC0-1.0 | By karinalarasart; via Space Station 14 Ambience/Objects | [Freesound 441419](https://freesound.org/people/karinalarasart/sounds/441419/); SS14 `Resources/Audio/Ambience/Objects/gas_pump.ogg` |
 
 Project-owned art defaults to [Documents/LICENSE-ASSETS.md](../../Documents/LICENSE-ASSETS.md)
 (CC BY-NC-SA 4.0) unless listed here or beside the asset.
