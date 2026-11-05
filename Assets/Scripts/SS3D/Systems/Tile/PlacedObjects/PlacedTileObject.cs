@@ -7,6 +7,7 @@ using SS3D.Attributes;
 using SS3D.Core;
 using SS3D.Data;
 using SS3D.Data.AssetDatabases;
+using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Rendering.URP;
 using SS3D.Systems.StructuralDamage;
@@ -24,7 +25,7 @@ namespace SS3D.Systems.Tile
     /// <summary>
     /// Component that is added to every tile object that is part of the tilemap. Tiles are more restrictive and need to have an origin, fixed grid position and direction to face.
     /// </summary>
-    public class PlacedTileObject: NetworkBehaviour, IWorldObjectAsset, ITileOccupant
+    public class PlacedTileObject: NetworkBehaviour, IWorldObjectAsset, ITileOccupant, IReachBlocker
     {
         /// <summary>
         /// Creates a new PlacedTileObject from a TileObjectSO at a given position and direction. 
@@ -134,6 +135,14 @@ namespace SS3D.Systems.Tile
         public TileObjectSpecificType SpecificType => _tileObjectSo.specificType;
 
         public TileLayer Layer => _tileObjectSo.layer;
+
+        /// <summary>
+        /// Walls, windows, girders and airlocks stop a hand reaching past them. An open airlock's
+        /// panels slide out of the way, so only its solid colliders still in the path block.
+        /// </summary>
+        public bool BlocksReach =>
+            _tileObjectSo != null &&
+            _tileObjectSo.genericType is TileObjectGenericType.Wall or TileObjectGenericType.Door;
 
         public Direction Direction => _dir;
 
