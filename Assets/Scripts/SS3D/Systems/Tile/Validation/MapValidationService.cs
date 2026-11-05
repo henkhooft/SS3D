@@ -3,6 +3,7 @@ using System.Linq;
 using SS3D.Core;
 using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics.Pipes;
+using SS3D.Systems.Electricity;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Items.Generic;
 using SS3D.Systems.Roles;
@@ -43,36 +44,47 @@ namespace SS3D.Systems.Tile.Validation
                         spawn.Position, true);
                 }
             }
-            CheckAirAlarmCoverage(report, tileObjects);
+            CheckRoomDevices(report, map, tileObjects);
             return report;
         }
 
-        private static void CheckAirAlarmCoverage(MapValidationReport report, IEnumerable<PlacedTileObject> tileObjects)
+        private static void CheckRoomDevices(MapValidationReport report, TileMap map, IEnumerable<PlacedTileObject> tileObjects)
         {
             if (!SubSystems.TryGet(out AreaSubSystem areas))
                 return;
 
-            List<AtmosDeviceRecord> devices = new();
-            HashSet<ushort> alarmedAreas = new();
+            List<RoomDeviceRecord> devices = new();
             foreach (PlacedTileObject placed in tileObjects)
             {
-                string kind = placed.TryGetComponent(out VentController _) ? "Vent"
-                    : placed.TryGetComponent(out ScrubberController _) ? "Scrubber" : null;
-                bool isAlarm = placed.TryGetComponent(out AirAlarmController _);
-                if (kind == null && !isAlarm)
+                if (!TryGetRoomDeviceKind(placed, out RoomDeviceKind kind))
                     continue;
 
-                // The same lookup the air alarm and its area port index use at runtime.
+                // The same lookup these devices use at runtime, so a wall mount counts for the room it faces.
                 bool inRoom = areas.TryGetAreaForDevice(placed, out AreaRecord room) && !room.Id.IsNone;
-                if (isAlarm && inRoom)
-                    alarmedAreas.Add(room.Id.Value);
-                if (kind == null)
-                    continue;
                 string roomName = !inRoom ? null
-                    : string.IsNullOrWhiteSpace(room.DisplayName) ? $"room {room.Id.Value}" : room.DisplayName;
-                devices.Add(new AtmosDeviceRecord(kind, placed.transform.position, inRoom ? room.Id.Value : AreaId.None, roomName));
+                    : string.IsNullOrWhiteSpace(room.DisplayName) ? "Unnamed room" : room.DisplayName;
+                bool isPort = kind is RoomDeviceKind.Vent or RoomDeviceKind.Scrubber;
+                devices.Add(new RoomDeviceRecord(kind, placed.transform.position, inRoom ? room.Id.Value : AreaId.None, roomName,
+                    inRoom && areas.TryGetAreaApc(room.Id, out _),
+                    !isPort || AtmosDevicePipeResolver.HasPipeSegment(map, new TileCoord(placed.MapId, placed.WorldOrigin))));
             }
-            MapValidator.AddAirAlarmCoverage(report, devices, alarmedAreas);
+            MapValidator.AddRoomDeviceChecks(report, devices, areas.HasAuthoredAreas);
+        }
+
+        private static bool TryGetRoomDeviceKind(PlacedTileObject placed, out RoomDeviceKind kind)
+        {
+            kind = default;
+            if (placed.TryGetComponent(out VentController _))
+                kind = RoomDeviceKind.Vent;
+            else if (placed.TryGetComponent(out ScrubberController _))
+                kind = RoomDeviceKind.Scrubber;
+            else if (placed.TryGetComponent(out AirAlarmController _))
+                kind = RoomDeviceKind.AirAlarm;
+            else if (placed.TryGetComponent(out LightPower _) || placed.TryGetComponent(out LightSwitchController _))
+                kind = RoomDeviceKind.Light;
+            else
+                return false;
+            return true;
         }
     }
 }
