@@ -17,6 +17,8 @@ Phase 0–1 melee + Phase 3 ranged + Phase 5 armor slice per [combat_implementat
 
 **Syndicate armor content:** the operative suit and helmet use `ArmorItemExtension` through [inventory content recipes](inventory.md#overview), with provisional absorption/integrity values. The suit covers the existing SecurityJumpsuit zones and the helmet covers Head. Environmental sealing remains separate.
 
+**Syndicate armor content:** the operative suit and helmet use `ArmorItemExtension` through [inventory content recipes](inventory.md#overview), with provisional absorption/integrity values. The suit covers the existing SecurityJumpsuit zones and the helmet covers Head. Environmental sealing remains separate.
+
 **Intent ↔ stance:** Harm → Melee/Ranged from inventory (`RangedWeaponItemExtension` preferred over trait name); Help → Peaceful. Harm never falls through to Drop/Open/MI.
 
 **Combat stamina drains (Phase 4, fire done, block deferred):** Ranged fire drains
