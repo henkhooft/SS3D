@@ -90,7 +90,7 @@ Validate each phase with `Testing/ui/validate.sh --steps compile,editmode` plus 
 
 - Lobby music, which stays in [2026-07_audio-foundation](2026-07_audio-foundation.md) Phase 5
 - Tagging Metastation's 82 areas
-- Sounds for lights, which stay silent by design
+- Sounds for light fixtures, which stay silent by design. A wall switch clicks when it toggles
 - Fire alarm behaviour
 - Volume balancing beyond what's needed to audition ([audio.md](../design/audio.md) §10)
 

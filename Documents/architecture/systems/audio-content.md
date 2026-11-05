@@ -16,6 +16,7 @@ How sound clips are found, registered and named in code, plus which registered c
   - `Systems/Audio/AudioTrackIds.cs` — personal audio (`Heartbeat`, `HeavyBreathing`, `AlertCue`)
   - `Systems/Audio/FootstepAudioTrackIds.cs` — Socks / Shoes / Boots under `Assets/Art/Sound/Entities/Humanoid/Footsteps/`
   - `Systems/Audio/AmbientLoopTrackIds.cs` — machine loops, with each `AmbientLoopKind`'s level and reach
+  - `Systems/Area/LightSwitchAudioTrackIds.cs` — wall switch click (`LightSwitchController.Toggle`)
   - `Systems/Audio/VendorAudioTrackIds.cs` — vending dispense (`VendingMachineController.PlayVendSound`)
   - `Systems/Furniture/AirlockAudioTrackIds.cs` — airlock deny (`AirLockOpener.ServerPlayAccessDenied`); open/close use generated `Sounds.AirlockOpen` / `AirlockClose`
   - `Systems/Comms/CommsAudioTrackIds.cs` — `Announce.ogg` chime, optional `Welcome.ogg` follow-up
