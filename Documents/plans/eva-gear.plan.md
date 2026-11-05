@@ -33,7 +33,7 @@ Implements `Documents/design/armor.md` §1, §3, §6, `Documents/design/inventor
 
 **Tanks:** `GasTankItemExtension` holds server-side moles per gas and syncs a fill fraction. There is no pressure model or atmos link. Breathing uses the tank's mix. No CO₂ is exhaled while on internals, so tanks never wake atmos cells.
 
-**Body state:** one `EvaGearController` on `Human`, built by recipe, holds the internals and magboot toggles. The server turns internals off when the mask, helmet or tank goes away. Tank priority is suit storage, pocket, hand. Magboots need both feet, because shoes are one item per foot.
+**Body state:** one `EvaGearController` on `Human`, built by recipe, holds the internals and magboot toggles. The server turns internals off when the mask, helmet or tank goes away. Tank priority is suit storage, pocket, hand. Magboots need both feet, and shoes are one item per pair.
 
 **Suit storage:** `ContainerType.SuitStorage` is appended to the enum and gated by `IStorageCondition`. A suit cannot be removed while storage holds a tank, following the belt and jumpsuit rule. `EquipmentGrid` shows the slot only while a suit is worn. Loadouts spawn it after the suit.
 
@@ -79,7 +79,7 @@ The breach alert is a warning while the air is safe and critical once pressure o
 
 Internals draw `0.05 mol/s` scaled by lung function. The low-tank alert warns at 25% and turns critical at 10%, while internals are on. A dry tank stays selected until it is moved, so a spare in a pocket does not take over from a dry tank in suit storage.
 
-A pair of magboots is two Items, because each foot is a slot. Both must be worn, and the switch turns off when either goes. The switch stays on while the wearer is down or floating, and the boots hold again once upright over a floor. Slowing also scales clip playback, so feet stay planted.
+A pair of magboots is one Item. It needs both feet, and the switch turns off when the pair comes off or a foot goes. The switch stays on while the wearer is down or floating, and the boots hold again once upright over a floor. Slowing also scales clip playback, so feet stay planted.
 
 ## Tests
 

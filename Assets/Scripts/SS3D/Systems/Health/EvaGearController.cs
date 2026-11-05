@@ -13,8 +13,8 @@ namespace SS3D.Systems.Health
 {
     /// <summary>
     /// The body's EVA switches (Documents/design/armor.md §3, §6). Internals need a tank plus a mask
-    /// or sealed helmet, and the server turns them off the moment either goes away. Magboots need a
-    /// boot on both feet, and hold only while the body is upright over a floor. Switches stay where
+    /// or sealed helmet, and the server turns them off the moment either goes away. Magboots need
+    /// both feet, and hold only while the body is upright over a floor. Switches stay where
     /// they are once the body can no longer work them.
     /// </summary>
     public class EvaGearController : NetworkActor
@@ -163,7 +163,7 @@ namespace SS3D.Systems.Health
         {
             _internalsAvailable = FindTank() != null && HasBreathingGear();
             _internalsOn = _internalsOn && _internalsAvailable;
-            _magbootsAvailable = Wears<MagbootItemExtension>(ContainerType.ShoeLeft) && Wears<MagbootItemExtension>(ContainerType.ShoeRight);
+            _magbootsAvailable = Wears<MagbootItemExtension>(ContainerType.ShoeLeft) && _inventory.TryGetTypeContainer(ContainerType.ShoeRight, 0, out _);
             _magbootsOn = _magbootsOn && _magbootsAvailable;
         }
 

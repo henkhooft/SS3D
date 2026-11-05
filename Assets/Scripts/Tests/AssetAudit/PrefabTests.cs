@@ -5,6 +5,8 @@ using NUnit.Framework;
 using SS3D.Attributes;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Examine;
+using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Roles;
 using SS3D.Systems.Selection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -53,6 +55,20 @@ namespace AssetAudit
             Assert.IsNull(prefab.GetComponent<MeshRenderer>(), "The root still draws the template's mesh");
             Object key = new SerializedObject(prefab.GetComponent<SimpleExaminable>()).FindProperty("key").objectReferenceValue;
             Assert.AreEqual(name, key.name, "Examine still reads as the template");
+        }
+
+        /// <summary>
+        /// Shoes and gloves are one item kept on the left side, so a loadout filling the right side would spawn a second pair.
+        /// </summary>
+        [Test]
+        public void LoadoutsDoNotFillTheSecondSideOfAPair()
+        {
+            foreach (string guid in AssetDatabase.FindAssets("t:RoleLoadout"))
+            {
+                RoleLoadout loadout = AssetDatabase.LoadAssetAtPath<RoleLoadout>(AssetDatabase.GUIDToAssetPath(guid));
+                Assert.IsFalse(loadout.EquipmentAssets.ContainsKey(ContainerType.ShoeRight), loadout.name);
+                Assert.IsFalse(loadout.EquipmentAssets.ContainsKey(ContainerType.GloveRight), loadout.name);
+            }
         }
 
         /// <summary>

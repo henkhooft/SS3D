@@ -56,7 +56,6 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             loadout.EquipmentAssets[ContainerType.ExoSuit] = suit;
             loadout.EquipmentAssets[ContainerType.Head] = helmet;
             loadout.EquipmentAssets[ContainerType.ShoeLeft] = magboot;
-            loadout.EquipmentAssets[ContainerType.ShoeRight] = magboot;
             EditorUtility.SetDirty(loadout);
             DB.SaveAssets();
             return 3;
@@ -131,7 +130,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             return reference;
         }
 
-        /// <summary>One prefab fills either foot, like every shoe; the pair in the FBX becomes a mesh per side.</summary>
+        /// <summary>One Item is the whole pair, like every shoe; the pair in the FBX becomes a mesh per side.</summary>
         private static ObjectAssetReference BuildMagboot(GameObject model, SkinnedMeshRenderer target, Material[] materials)
         {
             const string name = "SyndicateMagboots";
@@ -147,16 +146,14 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             try
             {
                 root.name = name;
-                var pair = BakePreview(model, source, name + "Preview");
-                var preview = SaveMesh(KeepVertices(pair, i => left[i], pair.name), Art + name + "Preview.asset");
-                UnityEngine.Object.DestroyImmediate(pair);
+                // The worn stance puts the boots in line with the icon camera, so both forms use the item pose.
                 var item = model.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == name + "Item");
-                var pairVertices = item.sharedMesh.vertices;
-                var folded = SaveMesh(KeepVertices(item.sharedMesh, i => pairVertices[i].x > 0f, name + "Item"), Art + name + "Item.asset");
-                ReplaceShapes(root, preview, folded, item.transform, materials, out var worn, out var world, out var attachment);
+                ReplaceShapes(root, item.sharedMesh, item.sharedMesh, item.transform, materials, out var worn, out var world, out var attachment);
+                worn.transform.SetLocalPositionAndRotation(world.transform.localPosition, world.transform.localRotation);
+                worn.transform.localScale = world.transform.localScale;
 
                 var itemSo = new SerializedObject(root.GetComponent<Item>());
-                itemSo.FindProperty("_name").stringValue = "Syndicate Magboot";
+                itemSo.FindProperty("_name").stringValue = "Syndicate Magboots";
                 itemSo.FindProperty("_asset").objectReferenceValue = reference;
                 itemSo.FindProperty("_weight").floatValue = 2f;
                 itemSo.FindProperty("AttachmentPoint").objectReferenceValue = attachment.transform;

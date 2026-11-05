@@ -29,6 +29,7 @@ namespace SS3D.Tests
         private const string OxygenTank = "5479411218b869144b7d09d6db6dc58e";
         private const string EmergencyTank = "e220e4181141f914aa994d7672ed6ec5";
         private const string Magboots = "2ba59995b958400888f44509d7530731";
+        private const string InsulatedGloves = "65679cf5a30d6dd458666804af7c3ca3";
 
         [UnityTest]
         public IEnumerator HitPastTheSuit_BreachesTheSeal()
@@ -141,19 +142,11 @@ namespace SS3D.Tests
             EvaGearController gear = Body.GetComponent<EvaGearController>();
             Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
             HumanoidLivingController movement = Body.GetComponent<HumanoidLivingController>();
-            AttachedContainer left = Worn(ContainerType.ShoeLeft);
-            AttachedContainer right = Worn(ContainerType.ShoeRight);
-            left.Dump();
-            right.Dump();
+            AttachedContainer feet = Worn(ContainerType.ShoeLeft);
+            feet.Dump();
 
-            Wear(Magboots, ContainerType.ShoeLeft);
-            yield return null;
-            Assert.IsFalse(gear.MagbootsAvailable, "One boot anchors nothing");
-            gear.ServerSetMagboots(true);
-            Assert.IsFalse(gear.MagbootsOn);
-
-            Item rightBoot = Wear(Magboots, ContainerType.ShoeRight);
-            yield return WaitFor(() => gear.MagbootsAvailable, "a pair offers magboots");
+            Item boots = Wear(Magboots, ContainerType.ShoeLeft);
+            yield return WaitFor(() => gear.MagbootsAvailable, "the pair offers magboots");
             Assert.IsFalse(gear.MagbootsOn, "Magboots are a deliberate switch");
             gear.ServerSetMagboots(true);
             yield return WaitFor(() => gear.MagbootsAnchored, "the boots hold");
@@ -176,8 +169,8 @@ namespace SS3D.Tests
             Assert.That(ragdoll.WindSamplePosition.x, Is.GreaterThan(start.x + 0.1f), "The wind takes a floored wearer");
             yield return WaitFor(() => !ragdoll.IsKnockedDown, "the wearer recovers", 10f);
 
-            right.RemoveItem(rightBoot);
-            yield return WaitFor(() => !gear.MagbootsOn, "losing a boot turns them off");
+            feet.RemoveItem(boots);
+            yield return WaitFor(() => !gear.MagbootsOn, "taking the pair off turns them off");
             Assert.IsFalse(gear.MagbootsAvailable);
         }
 
@@ -187,10 +180,8 @@ namespace SS3D.Tests
             EvaGearController gear = Body.GetComponent<EvaGearController>();
             HumanoidBodyStateMachine bodyState = Body.GetComponent<HumanoidBodyStateMachine>();
             Worn(ContainerType.ShoeLeft).Dump();
-            Worn(ContainerType.ShoeRight).Dump();
             Wear(Magboots, ContainerType.ShoeLeft);
-            Wear(Magboots, ContainerType.ShoeRight);
-            yield return WaitFor(() => gear.MagbootsAvailable, "a pair offers magboots");
+            yield return WaitFor(() => gear.MagbootsAvailable, "the pair offers magboots");
 
             gear.ServerSetMagboots(true);
             Assert.IsTrue(gear.MagbootsAnchored);
@@ -201,17 +192,47 @@ namespace SS3D.Tests
         }
 
         [UnityTest]
+        public IEnumerator Boots_AreOneItemOnBothFeet()
+        {
+            return PairDressesBothSides(Magboots, ContainerType.ShoeLeft, ContainerType.ShoeRight, ClothType.ShoeLeft, ClothType.ShoeRight);
+        }
+
+        [UnityTest]
+        public IEnumerator Gloves_AreOneItemOnBothHands()
+        {
+            return PairDressesBothSides(InsulatedGloves, ContainerType.GloveLeft, ContainerType.GloveRight, ClothType.GloveLeft, ClothType.GloveRight);
+        }
+
+        private IEnumerator PairDressesBothSides(string pair, ContainerType first, ContainerType second, ClothType firstCloth, ClothType secondCloth)
+        {
+            ClothedBodyPart[] parts = Body.GetComponentsInChildren<ClothedBodyPart>(true);
+            GameObject firstPart = parts.Single(part => part.Type == firstCloth).gameObject;
+            GameObject secondPart = parts.Single(part => part.Type == secondCloth).gameObject;
+            AttachedContainer worn = Worn(first);
+            worn.Dump();
+
+            Item item = Wear(pair, first);
+            SS3D.Systems.Inventory.Containers.Cloth cloth = item.GetComponent<SS3D.Systems.Inventory.Containers.Cloth>();
+            yield return WaitFor(
+                () => firstPart.GetComponent<SkinnedMeshRenderer>().sharedMesh == cloth.GetClothMesh(firstCloth)
+                    && secondPart.GetComponent<SkinnedMeshRenderer>().sharedMesh == cloth.GetClothMesh(secondCloth),
+                "one item dresses both sides");
+            Assert.IsFalse(Worn(second).CanContainItem(item), "The second side takes nothing while the first is on the body");
+
+            worn.RemoveItem(item);
+            yield return WaitFor(() => !firstPart.activeSelf && !secondPart.activeSelf, "taking it off bares both sides");
+        }
+
+        [UnityTest]
         public IEnumerator CriticalBody_CannotWorkItsSwitches()
         {
             HumanHealthController health = Body.GetComponent<HumanHealthController>();
             EvaGearController gear = Body.GetComponent<EvaGearController>();
             Worn(ContainerType.Pocket).Dump();
             Worn(ContainerType.ShoeLeft).Dump();
-            Worn(ContainerType.ShoeRight).Dump();
             Wear(GasMask, ContainerType.Mask);
             Wear(EmergencyTank, ContainerType.Pocket);
             Wear(Magboots, ContainerType.ShoeLeft);
-            Wear(Magboots, ContainerType.ShoeRight);
             yield return WaitFor(() => gear.InternalsAvailable && gear.MagbootsAvailable, "the gear offers both switches");
 
             gear.ClientToggleInternals();
