@@ -36,6 +36,21 @@ namespace EditorTests
         }
 
         [Test]
+        public void SealedVacuumRaisesOnlyLowOxygen()
+        {
+            HealthEnvironmentState env = HealthEnvironmentExposure.FromVacuumCell(
+                AtmosConstants.SpaceTemperature,
+                burnIntensity: 0f);
+            env.IsSealed = true;
+
+            AtmosAlertStackMapper.AtmosAlertSignals signals = AtmosAlertStackMapper.Compute(env);
+
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.None, signals.LowPressure);
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.None, signals.Cold);
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.Critical, signals.LowOxygen);
+        }
+
+        [Test]
         public void HotRoomRaisesHotAlert()
         {
             HealthEnvironmentState env = HealthEnvironmentState.SafeDefault;

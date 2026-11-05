@@ -66,6 +66,10 @@ Starting values, reviewed after Playtest 1.
 - Magboots get a chip beside the internals chip. Deviates from `armor.md` §6, which names only the internals chip, because the boots need a visible on/off state.
 - No milestone or design text relies on locker contents any more: `savedItemList` in station templates stores no container contents, so crew gear comes from loadouts.
 
+## Implementation notes
+
+PR 1 still needs the breach alert and the seal line on examine (`armor.md` §6). Breach through `ApplyArmorAbsorption` has pure tests only, so it needs a PlayMode or remote check.
+
 ## Tests
 
 EditMode first: resolver, breach order, tank drain and storage rules. A remote scenario through `run_smoketest.sh` covers toggle sync and magboot wind on a real client. Visual checks happen in the editor, because graphical release clients crash on tomnas after embark.

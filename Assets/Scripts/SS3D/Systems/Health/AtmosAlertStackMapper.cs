@@ -36,9 +36,9 @@ namespace SS3D.Systems.Health
             {
                 Fire = ComputeFire(env),
                 Hot = ComputeHot(env),
-                Cold = ComputeCold(env),
-                LowPressure = ComputeLowPressure(env),
-                HighPressure = ComputeHighPressure(env),
+                Cold = env.IsSealed ? Severity.None : ComputeCold(env),
+                LowPressure = env.IsSealed ? Severity.None : ComputeLowPressure(env),
+                HighPressure = env.IsSealed ? Severity.None : ComputeHighPressure(env),
                 LowOxygen = ComputeLowOxygen(env),
             };
         }
