@@ -663,8 +663,11 @@ namespace SS3D.Systems.Health
         [Server]
         private HealthEnvironmentState ApplyWornSeal(HealthEnvironmentState env)
         {
-            if (TryGetIntactSeal(ContainerType.ExoSuit, out SealedGearItemExtension suit)
-                && TryGetIntactSeal(ContainerType.Head, out SealedGearItemExtension helmet))
+            SealedGearItemExtension suit = FindWornSeal(ContainerType.ExoSuit);
+            SealedGearItemExtension helmet = FindWornSeal(ContainerType.Head);
+
+            env.IsBreached = (suit != null && suit.IsBreached) || (helmet != null && helmet.IsBreached);
+            if (suit != null && helmet != null && !env.IsBreached)
             {
                 env.IsSealed = true;
                 env.HeatProtection = Mathf.Min(suit.HeatProtection, helmet.HeatProtection);
@@ -673,12 +676,11 @@ namespace SS3D.Systems.Health
             return env;
         }
 
-        private bool TryGetIntactSeal(ContainerType slot, out SealedGearItemExtension seal)
+        private SealedGearItemExtension FindWornSeal(ContainerType slot)
         {
-            seal = null;
             if (_inventory == null)
             {
-                return false;
+                return null;
             }
 
             foreach (AttachedContainer container in _inventory.Containers)
@@ -690,15 +692,14 @@ namespace SS3D.Systems.Health
 
                 foreach (Item item in container.Items)
                 {
-                    if (item.TryGetComponent(out seal) && !seal.IsBreached)
+                    if (item.TryGetComponent(out SealedGearItemExtension seal))
                     {
-                        return true;
+                        return seal;
                     }
                 }
             }
 
-            seal = null;
-            return false;
+            return null;
         }
 
         [Server]

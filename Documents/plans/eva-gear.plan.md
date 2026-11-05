@@ -4,7 +4,7 @@ overview: Hardsuit seal and breach, internals with gas tanks and suit storage, a
 todos:
   - id: seal-breach
     content: "PR 1: outside-in armor order, SealedGearItemExtension, breach, pure exposure resolver, alerts and screen effects read effective exposure"
-    status: pending
+    status: completed
   - id: internals
     content: "PR 2: GasTankItemExtension, EvaGearController internals, SuitStorage slot, internals chip, tank content, crew pocket loadouts, oxygen treatment draws from the tank"
     status: pending
@@ -68,7 +68,7 @@ Starting values, reviewed after Playtest 1.
 
 ## Implementation notes
 
-PR 1 still needs the breach alert and the seal line on examine (`armor.md` §6). Breach through `ApplyArmorAbsorption` has pure tests only, so it needs a PlayMode or remote check.
+The breach alert is a warning while the air is safe and critical once pressure or cold would reach the body. It clears when the breached piece comes off. Breach through `ApplyArmorAbsorption` is covered by a PlayMode scenario.
 
 ## Tests
 
