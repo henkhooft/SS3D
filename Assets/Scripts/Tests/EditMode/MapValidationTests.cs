@@ -205,7 +205,14 @@ namespace EditorTests
         public void PortWithoutAPipeWarnsEvenInACompleteRoom()
         {
             MapValidationReport report = RoomChecks(Device(RoomDeviceKind.Vent, 1, 3, pipe: false), Scrubber(2, 3), Alarm(3, 3));
-            StringAssert.Contains("Vent at (1, 2) has no pipe", report.Issues.Single().Title);
+            StringAssert.Contains("Vent at (1, 2) has no Supply or Mixed pipe on its tile", report.Issues.Single().Title);
+        }
+
+        [Test]
+        public void GasPumpWithoutASurfacePipeWarnsWithoutCountingAsARoomPort()
+        {
+            MapValidationReport report = RoomChecks(Device(RoomDeviceKind.GasPump, 1, 3, pipe: false), Alarm(2, 3));
+            StringAssert.Contains("Gas pump at (1, 2) has no Surface pipe on its tile", report.Issues.Single().Title);
         }
 
         [Test]

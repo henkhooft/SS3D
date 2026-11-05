@@ -131,6 +131,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
             SetPortFlowing(flowed);
         }
 
+        /// <summary>
+        /// The pipe lines this device attaches to, in order, on its own tile.
+        /// </summary>
+        public abstract TileLayer[] PipeLayers { get; }
+
         protected abstract bool RunPortTick(
             AtmosPipeSimulation pipeSimulation,
             AtmosSimulation turfSimulation,
@@ -162,7 +167,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
             AtmosDevicePipeResolver.TryResolveNetwork(
                 tileSubSystem.CurrentMap,
                 registry,
-                _tileObject,
+                new TileCoord(_tileObject.MapId, _tileObject.WorldOrigin),
+                PipeLayers,
                 out _networkId,
                 out _);
             _resolvedTopologyVersion = topologyVersion;

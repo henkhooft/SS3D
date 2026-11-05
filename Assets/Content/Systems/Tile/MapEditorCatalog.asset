@@ -33,25 +33,25 @@ MonoBehaviour:
     SearchTags:
     - wall mount
     IsEraser: 0
-  - AssetName: AtmosPipesL1
+  - AssetName: AtmosPipesMixed
     Mode: 1
     Subcategory: 6
     SearchTags:
     - pipe
     IsEraser: 0
-  - AssetName: AtmosPipesL2
+  - AssetName: AtmosPipesSupply
     Mode: 1
     Subcategory: 6
     SearchTags:
     - pipe
     IsEraser: 0
-  - AssetName: AtmosPipesL3
+  - AssetName: AtmosPipesSurface
     Mode: 1
     Subcategory: 6
     SearchTags:
     - pipe
     IsEraser: 0
-  - AssetName: AtmosPipesL4
+  - AssetName: AtmosPipesWaste
     Mode: 1
     Subcategory: 6
     SearchTags:

@@ -192,7 +192,7 @@ namespace SS3D.Systems.Atmospherics
             _tileObserver = new AtmosTileObserver(_simulation);
             tileSubSystem.RegisterTileMutationObserver(_tileObserver);
 
-            _pipeRegistry = new GasPipeNetworkRegistry(gasTypeCount);
+            _pipeRegistry = new GasPipeNetworkRegistry(gasTypeCount, specificHeats);
             _pipeRegistry.RebuildAll(tileSubSystem.CurrentMap);
             _pipeObserver = new AtmosPipeObserver(tileSubSystem.CurrentMap, _pipeRegistry);
             tileSubSystem.RegisterTileMutationObserver(_pipeObserver);

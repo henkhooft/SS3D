@@ -878,32 +878,32 @@
             "EnDescription": "Planks of wood combined into a floor tile."
         },
         {
-            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesL1.asset",
+            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesSupply.asset",
             "NameKey": "structures.pipes.atmos_pipe.name",
-            "DescriptionKey": "structures.pipes.atmos_pipes_l1.desc",
+            "DescriptionKey": "structures.pipes.atmos_pipes_supply.desc",
             "EnName": "Atmospheric Pipe",
-            "EnDescription": "An atmospheric pipe positioned on the 1st layer."
+            "EnDescription": "An atmospheric pipe on the supply line. Vents connect to it."
         },
         {
-            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesL2.asset",
+            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesMixed.asset",
             "NameKey": "structures.pipes.atmos_pipe.name",
-            "DescriptionKey": "structures.pipes.atmos_pipes_l2.desc",
+            "DescriptionKey": "structures.pipes.atmos_pipes_mixed.desc",
             "EnName": "Atmospheric Pipe",
-            "EnDescription": "An atmospheric pipe positioned on the 2nd layer."
+            "EnDescription": "An atmospheric pipe on the mixed line. Vents and scrubbers both connect to it."
         },
         {
-            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesL3.asset",
+            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesWaste.asset",
             "NameKey": "structures.pipes.atmos_pipe.name",
-            "DescriptionKey": "structures.pipes.atmos_pipes_l3.desc",
+            "DescriptionKey": "structures.pipes.atmos_pipes_waste.desc",
             "EnName": "Atmospheric Pipe",
-            "EnDescription": "An atmospheric pipe positioned on the 3rd layer."
+            "EnDescription": "An atmospheric pipe on the waste line. Scrubbers connect to it."
         },
         {
-            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesL4.asset",
+            "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/AtmosPipesSurface.asset",
             "NameKey": "structures.pipes.atmos_pipe.name",
-            "DescriptionKey": "structures.pipes.atmos_pipes_l4.desc",
+            "DescriptionKey": "structures.pipes.atmos_pipes_surface.desc",
             "EnName": "Atmospheric Pipe",
-            "EnDescription": "An atmospheric pipe positioned on the 4th layer."
+            "EnDescription": "An atmospheric pipe on the floor. Only inline devices connect to it."
         },
         {
             "AssetPath": "Assets/Content/Data/Examine/String/Structures/Pipes/DisposalPipes.asset",

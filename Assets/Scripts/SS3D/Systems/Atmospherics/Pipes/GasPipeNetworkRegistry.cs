@@ -12,12 +12,15 @@ namespace SS3D.Systems.Atmospherics.Pipes
         private readonly Dictionary<GasPipeSegmentKey, GasPipeNetworkId> _segmentNetworks = new();
         private readonly Dictionary<GasPipeNetworkId, GasPipeNetworkRecord> _networks = new();
         private ushort _nextNetworkId = GasPipeNetworkId.NoneValue + 1;
+        private readonly List<PipeGasRelease> _pendingReleases = new();
         private readonly int _gasTypeCount;
+        private readonly float[] _specificHeats;
         private int _topologyVersion;
 
-        public GasPipeNetworkRegistry(int gasTypeCount)
+        public GasPipeNetworkRegistry(int gasTypeCount, float[] specificHeats = null)
         {
             _gasTypeCount = gasTypeCount;
+            _specificHeats = specificHeats ?? DefaultSpecificHeats(gasTypeCount);
         }
 
         public IReadOnlyDictionary<GasPipeNetworkId, GasPipeNetworkRecord> Networks => _networks;
@@ -28,6 +31,13 @@ namespace SS3D.Systems.Atmospherics.Pipes
         /// Incremented whenever network topology is rebuilt. Ports cache resolutions against this.
         /// </summary>
         public int TopologyVersion => _topologyVersion;
+
+        /// <summary>
+        /// Gas from removed segments, waiting for <see cref="AtmosPipeSimulation"/> to put it on its tiles.
+        /// </summary>
+        public IReadOnlyList<PipeGasRelease> PendingReleases => _pendingReleases;
+
+        public void ClearPendingReleases() => _pendingReleases.Clear();
 
         public bool TryGetNetwork(GasPipeNetworkId id, out GasPipeNetworkRecord record) =>
             _networks.TryGetValue(id, out record);
@@ -70,6 +80,13 @@ namespace SS3D.Systems.Atmospherics.Pipes
             var segmentsToReprocess = new HashSet<GasPipeSegmentKey>();
             var networkIdsToClear = new HashSet<GasPipeNetworkId>();
 
+            // A removed segment with no neighbours left can only be found through its key.
+            foreach (KeyValuePair<GasPipeSegmentKey, GasPipeNetworkId> pair in _segmentNetworks)
+            {
+                if (pair.Key.Coord.Equals(coord))
+                    networkIdsToClear.Add(pair.Value);
+            }
+
             foreach (TileCoord affectedCoord in AtmosPipeConnectivity.EnumerateCoordsAround(map, coord))
             {
                 foreach (TileLayer layer in AtmosPipeConnectivity.GasPipeLayers)
@@ -85,11 +102,13 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 }
             }
 
+            var previousNetworks = new List<GasPipeNetworkRecord>(networkIdsToClear.Count);
             foreach (GasPipeNetworkId networkId in networkIdsToClear)
             {
                 if (!_networks.TryGetValue(networkId, out GasPipeNetworkRecord record))
                     continue;
 
+                previousNetworks.Add(record);
                 foreach (GasPipeSegmentKey segmentKey in record.Segments)
                     segmentsToReprocess.Add(segmentKey);
             }
@@ -109,7 +128,66 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 CreateNetworkFromSeed(map, segment, assigned);
             }
 
+            foreach (GasPipeNetworkRecord previous in previousNetworks)
+                RedistributeGas(previous);
+
             _topologyVersion++;
+        }
+
+        /// <summary>
+        /// Hands a replaced network's gas on by segment count: each surviving segment carries its
+        /// share into its new network, and each removed one releases its share on its tile.
+        /// </summary>
+        private void RedistributeGas(GasPipeNetworkRecord previous)
+        {
+            if (previous.GetTotalMoles(_gasTypeCount) <= 0f)
+                return;
+
+            var survivingSegments = new Dictionary<GasPipeNetworkRecord, int>();
+            float share = 1f / previous.Segments.Count;
+
+            foreach (GasPipeSegmentKey key in previous.Segments)
+            {
+                if (TryGetNetworkForSegment(key, out _, out GasPipeNetworkRecord record))
+                {
+                    survivingSegments.TryGetValue(record, out int count);
+                    survivingSegments[record] = count + 1;
+                    continue;
+                }
+
+                var released = new float[_gasTypeCount];
+                for (int gasId = 0; gasId < _gasTypeCount; gasId++)
+                    released[gasId] = previous.Moles[gasId] * share;
+
+                _pendingReleases.Add(new PipeGasRelease(key.Coord, released, previous.Temperature));
+            }
+
+            foreach (KeyValuePair<GasPipeNetworkRecord, int> pair in survivingSegments)
+                AddGas(pair.Key, previous, pair.Value * share);
+        }
+
+        private void AddGas(GasPipeNetworkRecord target, GasPipeNetworkRecord source, float fraction)
+        {
+            float targetCapacity = target.GetHeatCapacity(_specificHeats, _gasTypeCount);
+            float addedCapacity = source.GetHeatCapacity(_specificHeats, _gasTypeCount) * fraction;
+
+            for (int gasId = 0; gasId < _gasTypeCount; gasId++)
+                target.Moles[gasId] += source.Moles[gasId] * fraction;
+
+            target.Temperature = AtmosPipeThermo.BlendTemperature(
+                target.Temperature,
+                targetCapacity,
+                source.Temperature,
+                addedCapacity);
+        }
+
+        private static float[] DefaultSpecificHeats(int gasTypeCount)
+        {
+            var specificHeats = new float[gasTypeCount];
+            for (int gasId = 0; gasId < gasTypeCount; gasId++)
+                specificHeats[gasId] = 1f;
+
+            return specificHeats;
         }
 
         private void CreateNetworkFromSeed(TileMap map, PlacedTileObject seed, HashSet<GasPipeSegmentKey> assigned)
@@ -147,6 +225,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
         {
             _segmentNetworks.Clear();
             _networks.Clear();
+            _pendingReleases.Clear();
             _nextNetworkId = GasPipeNetworkId.NoneValue + 1;
         }
     }

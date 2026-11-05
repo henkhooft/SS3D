@@ -1012,19 +1012,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239992
-    m_Key: structures.pipes.atmos_pipes_l1.desc
+    m_Key: structures.pipes.atmos_pipes_supply.desc
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239993
-    m_Key: structures.pipes.atmos_pipes_l2.desc
+    m_Key: structures.pipes.atmos_pipes_mixed.desc
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239994
-    m_Key: structures.pipes.atmos_pipes_l3.desc
+    m_Key: structures.pipes.atmos_pipes_waste.desc
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239995
-    m_Key: structures.pipes.atmos_pipes_l4.desc
+    m_Key: structures.pipes.atmos_pipes_surface.desc
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239996

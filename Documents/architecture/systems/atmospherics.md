@@ -1,13 +1,13 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: 25802878f — 2026-11-05
+> Verified: 41fd036ed — 2026-11-05
 
 # Atmospherics
 
 ## Overview
 
-Server-authoritative open-tile gas simulation on the turf grid. Each walkable cell holds a sparse gas mixture. Pressure moves gas along per-edge flows with momentum, and when total pressures already match, composition still mixes via slower partial-pressure diffusion (`DiffusionSpeed`). Heat conducts per gas specific heat, and plasma burns with oxygen into CO₂. Runs in a dedicated ECS world with Burst jobs, driven by tilemap mutation notifications. GPU textures feed URP scatter/glow/distortion passes for fog, fire, and plasma visuals. **Pipe layer:** vents, scrubbers, and pumps register with `AtmosPortRegistry` and exchange gas with turf cells after pipe bulk sim; ports cache network IDs against `GasPipeNetworkRegistry.TopologyVersion` so steady ticks do not re-walk the tilemap. **Air alarms** sample the turf cell in front of the wall mount (APC-style tile resolution), discover area vents/scrubbers via a mutation-driven `areaId → ports` index (`AtmosAreaPortIndex`, invalidated on port register/unregister and area reflood), and dispatch preset modes to real port devices. Port commands are validated against the air alarm’s resolved area to avoid cross-area toggles on shared wall tiles. **Client VFX:** Phase 1 dirty-chunk sync shipped ([2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)) — pure clients build atlases from `AtmosChunkPatch` RPCs via `AtmosClientVisualizationBridge`, capped at `MaxPatchesPerTick` with waiting chunks sent oldest first; late-join bootstrap / AOI remain Phase 2.
+Server-authoritative open-tile gas simulation on the turf grid. Each walkable cell holds a sparse gas mixture. Pressure moves gas along per-edge flows with momentum, and when total pressures already match, composition still mixes via slower partial-pressure diffusion (`DiffusionSpeed`). Heat conducts per gas specific heat, and plasma burns with oxygen into CO₂. Runs in a dedicated ECS world with Burst jobs, driven by tilemap mutation notifications. GPU textures feed URP scatter/glow/distortion passes for fog, fire, and plasma visuals. **Pipe layer:** vents, scrubbers, and pumps register with `AtmosPortRegistry` and exchange gas with turf cells after pipe bulk sim; ports cache network IDs against `GasPipeNetworkRegistry.TopologyVersion` so steady ticks do not re-walk the tilemap. Four pipe lines share a tile without joining: Supply (`PipeLeft`), Mixed (`PipeMiddle`), Waste (`PipeRight`) and Surface (`PipeSurface`). A device attaches on its own tile only, to the first line it accepts: vents take Supply then Mixed, scrubbers Waste then Mixed, and pumps Surface. Pipe edits keep gas: merges add moles and blend temperature, splits divide by segment count, and a removed segment releases its share onto its tile. **Air alarms** sample the turf cell in front of the wall mount (APC-style tile resolution), discover area vents/scrubbers via a mutation-driven `areaId → ports` index (`AtmosAreaPortIndex`, invalidated on port register/unregister and area reflood), and dispatch preset modes to real port devices. Port commands are validated against the air alarm’s resolved area to avoid cross-area toggles on shared wall tiles. **Client VFX:** Phase 1 dirty-chunk sync shipped ([2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md)) — pure clients build atlases from `AtmosChunkPatch` RPCs via `AtmosClientVisualizationBridge`, capped at `MaxPatchesPerTick` with waiting chunks sent oldest first; late-join bootstrap / AOI remain Phase 2.
 
 Destroyed walls automatically produce wind, because wind is the air speed the edge flows imply, in m/s, times `AtmosWind.AirSpeedGain`. The server samples `AtmosWind.SampleAt` per body, blended through open edges; wind at `KnockdownSpeed` collapses bodies, and bodies ease toward wind speed every frame. Clients draw wind as `AtmosWindView` streaks from the same flow atlas the gas shaders read, so wind visuals add no traffic of their own; atlas flow keeps direction and strength. Wind dies with the flow and respects closed edges. Protocol 15 adds the owner wind RPC. Wind moves humanoids and loose items: `AtmosLooseBodies` pushes the `MaxPushed` free bodies in the strongest wind, scaled by mass, and items in space slow to rest. A 10×10 room halves in about 18 s; knockdown fires beside a one-tile hole, and mid-room feels about 1 m/s. See [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md#phase-3-results).
 
@@ -35,12 +35,13 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaPortIndex.cs` — `areaId → vents/scrubbers`; dirty on register/unregister + area reflood
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/GasPipeNetworkRegistry.cs` — pipe networks; `TopologyVersion` invalidates port caches
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPortControllerBase.cs` — vent/scrubber tick + cached network resolve
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosDevicePipeResolver.cs` — which lines each device attaches to; Map Check reads the same `PipeLayers`
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaDeviceQuery.cs` — air-alarm / preset queries over indexed area ports (not full registry scan)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AirAlarmController.cs` — tile-in-front sampling, preset mode dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaSampler.cs` — area aggregate and single-tile sampling
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/ScrubberController.cs` — per-gas filter scrubbing into pipe networks; flow rate scales rated throughput
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/VentController.cs` — network→turf venting with target-pressure cutoff
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPumpController.cs` — turf→pipe pump with target outlet pressure; not area-linked
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPumpController.cs` — turf→pipe pump with target outlet pressure; rated flow until backpressure tapers it to a stall at max differential; not area-linked
 - `Assets/Scripts/Tests/EditMode/Atmospherics/` — flux, combustion, neighbour, GPU, visual-metrics, air-alarm sampler tests
 
 ## Extension points
@@ -55,6 +56,8 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Pitfalls
 
+- **Pipe tile assets are saved by name:** `TileMap` drops names it can't resolve, so renaming a pipe prefab without an entry in `RenamedTileObjects` deletes those pipes from every saved map, with only a log warning. `TileAssetCatalog` indices also follow sorted names, so a rename needs a `ProtocolVersion` bump. Hit 2026-11-05.
+- **Network records are replaced on every pipe edit:** `RebuildAround` builds new records, so never hold a `GasPipeNetworkRecord` across a tick, and new per-network state must be carried over in `RedistributeGas`. Gas released from a removed segment waits in `PendingReleases` until the next pipe tick. Hit 2026-11-05.
 - **Atmos early-outs live in two places:** the fullscreen passes march every pixel, so `AtmosVisualActivity.IsCalm` skips them for plain room air (about 2 ms of GPU at 1440p). Its thresholds mirror the early-outs in `AtmosCommon.hlsl`. If a shader starts reacting to something new, widen `IsCalm` too, or the effect silently never draws. Unknown gas profiles count as not calm. Hit 2026-11-05.
 - **FishNet's server traffic total counts every connection:** `OnServerNetworkTraffic` sums what went to each client, the host's own included, so one remote client reads about double what it receives. Compare Decision 10 with `client_traffic`, which reads the client's own count. Hit 2026-11-04.
 - **Nothing stops an object in space by itself:** `Item` turns gravity off there, but a body keeps its velocity, so it sends transform traffic forever with no error. `AtmosLooseBodies` damps registered bodies to rest. A new kind of free rigidbody must call `Register`, or the wind ignores it and space never stops it. Hit 2026-11-04.
@@ -91,6 +94,8 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 - `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `AtmosEdgeFlowTests` covers edge flow's conservation, stability, sleep, doors and chunk borders. `AtmosEdgeFlowReferenceTests` asserts room-scale drain time, far-field onset and knockdown reach against the design targets, and logs the numbers as `[edge-flow-ref]`. `Testing/fixtures/stations/atmostest.json` is the sealed map for atmos budget runs. `AtmosLooseBodiesTests` covers mass scaling, the cap, held bodies and drift. `scenarios:Environment` covers owner gust knockdown, upright drift, a live hull breach through to streaks and pull, and an item blown through the hole to rest in space. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner, including wind and thin air in what it hears, and saves `breach-wind.png` from the client. `--steps mppm:breach-budget` measures tick cost and traffic on that map with 64 loose items and a real client, logged as `[atmos-budget]`, with what the client really received in Player 2's log. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
 
+- `AtmosPipeTests` covers gas conservation across merges, splits and removal, and line attachment. `AtmosPortDeviceTests` covers the pump curve. `RenamedTileObjectsTests` checks each saved-name rename lands on a real asset.
+
 - `Testing/ui/validate.sh --steps compile,round-reset` runs a focused host stop/restart, depletes a cell before Stop and checks oxygen returns in a fresh simulation. The sandbox pilot also carries this regression. Remote dedicated-server replay remains required for release acceptance.
 
 ## Depends on / Used by
@@ -105,7 +110,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - Effort: [2026-07_atmos-ecs-foundation.md](../../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md)
 - Effort: [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md) — in-progress; all phases built; 8 clients, tick peak and owner review open
-- Plan: [atmos-machinery.plan.md](../../plans/atmos-machinery.plan.md) — planned; pipe lines, gas supply, inline devices
+- Plan: [atmos-machinery.plan.md](../../plans/atmos-machinery.plan.md) — in progress; PR 1 foundation built, gas supply and inline devices next
 - Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring

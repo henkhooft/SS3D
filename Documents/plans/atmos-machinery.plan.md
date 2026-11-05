@@ -4,7 +4,7 @@ overview: Named pipe lines, real gas supply and inline pipe devices, so a statio
 todos:
   - id: foundation
     content: "PR 1: keep gas across topology changes, pump curve, pipe rename with loader name table, line-based device attachment, stricter Map Check"
-    status: pending
+    status: completed
   - id: supply
     content: "PR 2: infinite gas source, starting network fill, small atmos room in classic-ministation through the importer"
     status: pending
@@ -96,11 +96,14 @@ Left out: `Vertical` pipes and the 8 pipe colour variants from `AtmosphericPipes
 
 ## Deviations
 
-None. `atmospherics.md` was revised with this plan: §6 gained pipe lines, air supply and pipe devices, and §7 and example C now describe backpressure.
+`atmospherics.md` was revised with this plan: §6 gained pipe lines, air supply and pipe devices, and §7 and example C now describe backpressure.
+
+PR 1 adds one thing the plan didn't list: the pump caps a tick's flow at the moles left to reach its target. Rated flow at equal pressure would otherwise overshoot by up to 974 kPa per tick on a one-segment run. `GasPump` stays turf-to-pipe furniture until PR 3, and attaches to Surface on its own tile.
 
 ## Implementation notes
 
-- `classic-ministation.json` holds 240 pipe entries over 189 distinct saved placements. Check how the loader treats the repeats before building on the map.
+- `classic-ministation.json` holds 240 pipe entries over 189 distinct saved placements. It loads as 240 segments in 4 networks: 120 Supply and 120 Waste, one per line on each tile. Read the map by tile and line, not by saved placement.
+- The SS13 importer still maps `/scrubbers` to Mixed, not Waste. Imported maps work because vents try Supply first, but a vent on a tile with only a scrubber pipe would join it.
 - Keep port ticks allocation-free and cache networks against `TopologyVersion`, as `AtmosPortControllerBase` does.
 - Dynamic device state doesn't survive template saves; `SavedPlacedTileObject` holds name, origin and direction only.
 - Reimport changes in the main checkout wait for the editor to be free.

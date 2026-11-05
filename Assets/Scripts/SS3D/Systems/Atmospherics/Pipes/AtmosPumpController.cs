@@ -54,6 +54,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
             _targetOutletPressureKpa = Mathf.Clamp(targetKpa, 0, 9000);
         }
 
+        public override TileLayer[] PipeLayers => AtmosDevicePipeResolver.InlineLayers;
+
         protected override bool ShouldAnimateWhileIdle() => false;
 
         protected override bool RunPortTick(
@@ -93,6 +95,12 @@ namespace SS3D.Systems.Atmospherics.Pipes
             _lastDifferentialKpa = differentialKpa;
             _lastStalled = stalled;
             _lastFlowMolesPerSecond = deltaTime > 0f ? budgetMoles / deltaTime : 0f;
+
+            // Rated flow would otherwise overshoot the target by a whole tick's worth on a short run.
+            budgetMoles = Mathf.Min(budgetMoles, AtmosPipeThermo.GetMolesForPressure(
+                _targetOutletPressureKpa - outletPressure,
+                network.Temperature,
+                network.Volume));
 
             if (budgetMoles <= 0f)
                 return false;

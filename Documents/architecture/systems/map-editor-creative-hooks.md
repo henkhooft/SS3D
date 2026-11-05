@@ -36,7 +36,7 @@ Sandbox lockdown ([2026-11_sandbox-server](../2026-11_sandbox-server.md)): `-san
 
 Save validation uses `Tile/Validation/MapValidationService` for the server's selected mode after saving.
 Incomplete maps remain saveable; errors and soft warnings open an author-only scrollable Map validation popover
-(with no timed dismissal). Unknown job markers, markers without plenum flooring, and devices that cannot do their job are soft warnings: vents or scrubbers with no air alarm (a room with none, or a device outside every room) or no pipe, an air alarm facing no room, a room with vents but no scrubbers or the reverse, and a painted room whose devices have no APC. "Room" means an [area](area.md): one APC's flood fill bounded by walls and doors, or a painted room on an authored map. It is not always one physical room, and APC default names repeat, so these warnings carry a position.
+(with no timed dismissal). Unknown job markers, markers without plenum flooring, and devices that cannot do their job are soft warnings: vents or scrubbers with no air alarm (a room with none, or a device outside every room), vents, scrubbers or gas pumps with no pipe on a line they attach to on their own tile, an air alarm facing no room, a room with vents but no scrubbers or the reverse, and a painted room whose devices have no APC. "Room" means an [area](area.md): one APC's flood fill bounded by walls and doors, or a painted room on an authored map. It is not always one physical room, and APC default names repeat, so these warnings carry a position.
 The same policy blocks round Start; see [rounds-lobby](rounds-lobby.md). Validation does not implement job-to-spawn assignment.
 
 ## Extension points

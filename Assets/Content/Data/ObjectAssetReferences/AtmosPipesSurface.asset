@@ -9,14 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4584c35d672b8a74797cc5efa123ce16, type: 3}
-  m_Name: AtmosphericsPipesL2
+  m_Script: {fileID: 11500000, guid: d8ba336da0014235becfe02dce35b6ca, type: 3}
+  m_Name: AtmosPipesSurface
   m_EditorClassIdentifier: 
-  PrefabAsset: {fileID: 11400000, guid: 654481f628e6c374da829aa5f008d7dd, type: 2}
-  icon: {fileID: 0}
-  layer: 9
-  genericType: 1
-  specificType: 0
-  width: 1
-  height: 1
-  isLarge: 0
+  Id: 48efd00c91c310e4bb965d025c63b3ba
+  Database: c2644d7b34e956743a0bc485e7ca5e37

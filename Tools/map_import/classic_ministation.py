@@ -40,7 +40,7 @@ LAYERS = {
     "PlasticChair": 7, "PlasticChairGrey": 7, "SMES": 7, "Scrubber": 7, "TableBoozeDispenser": 7, "TableGlass": 7,
     "TablePoker": 7, "TableSteel": 7, "TableWood": 7, "VendorHotDrinks": 7, "VendorRobustSoftdrinks": 7,
     "VendorSecTech": 7, "VendorYouTool": 7, "Vent": 7,
-    "AtmosPipesL1": 10, "AtmosPipesL3": 11,
+    "AtmosPipesSupply": 10, "AtmosPipesWaste": 11,
 }
 
 TILE_RENAMES = {
@@ -49,7 +49,7 @@ TILE_RENAMES = {
     "BarStool": "PlasticChairGrey", "BoozeVendor": "TableBoozeDispenser", "ChemicalHeater": "MachineFrame",
     "CigaretteVendor": "VendorYouTool", "ConsoleCrewMonitor": "MachineFrame", "ConsoleOff": "MachineFrame",
     "Cryotube - Blue": "Cryotube", "FilingCabinet": "Locker", "Jukebox": "JukeboxBlueGreen",
-    "PipesLayer1": "AtmosPipesL1", "PipesLayer3": "AtmosPipesL3", "SnackVendor": "VendorHotDrinks",
+    "PipesLayer1": "AtmosPipesSupply", "PipesLayer3": "AtmosPipesWaste", "SnackVendor": "VendorHotDrinks",
     "SodaVendor": "VendorRobustSoftdrinks", "Stove": "Microwave", "fridge": "Locker",
 }
 # No current asset is close enough to stand in.

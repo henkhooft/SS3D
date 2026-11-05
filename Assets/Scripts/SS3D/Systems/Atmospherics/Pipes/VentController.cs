@@ -26,6 +26,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
             _targetPressureKpa = Mathf.Clamp(targetKpa, 0, 200);
         }
 
+        public override TileLayer[] PipeLayers => AtmosDevicePipeResolver.VentLayers;
+
         protected override bool RunPortTick(
             AtmosPipeSimulation pipeSimulation,
             AtmosSimulation turfSimulation,

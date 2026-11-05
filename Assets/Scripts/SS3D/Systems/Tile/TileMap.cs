@@ -805,7 +805,7 @@ namespace SS3D.Systems.Tile
                 {
                     foreach (SavedPlacedTileObject savedObject in savedTile.GetPlacedObjects())
                     {
-                        TileObjectSo toBePlaced = tileSystem.GetAsset(savedObject.tileObjectSOName) as TileObjectSo;
+                        TileObjectSo toBePlaced = tileSystem.GetAsset(RenamedTileObjects.Resolve(savedObject.tileObjectSOName)) as TileObjectSo;
                         if (toBePlaced == null)
                         {
                             Log.Warning(this,

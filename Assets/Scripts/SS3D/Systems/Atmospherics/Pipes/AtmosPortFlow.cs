@@ -26,7 +26,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
         }
 
         /// <summary>
-        /// Pump flow with motor stall above <paramref name="maxDifferentialKpa"/> (design §7).
+        /// Pump flow from backpressure (design §7): rated flow while the inlet is at or above the
+        /// outlet, tapering to zero at <paramref name="maxDifferentialKpa"/>, where the motor stalls.
         /// </summary>
         public static float ComputePumpFlowMoles(
             float sourcePressureKpa,
@@ -46,21 +47,14 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 return 0f;
             }
 
-            float absDifferential = Mathf.Abs(differentialKpa);
-            if (absDifferential <= 0f)
-            {
-                differentialKpa = 0f;
-                return 0f;
-            }
-
-            if (absDifferential > maxDifferentialKpa)
+            float backpressure = Mathf.Max(0f, -differentialKpa);
+            if (backpressure >= maxDifferentialKpa)
             {
                 stalled = true;
                 return 0f;
             }
 
-            float factor = absDifferential / maxDifferentialKpa;
-            return ratedMaxFlowMolesPerSecond * deltaTime * factor;
+            return ratedMaxFlowMolesPerSecond * deltaTime * (1f - backpressure / maxDifferentialKpa);
         }
     }
 }

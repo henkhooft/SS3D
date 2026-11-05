@@ -269,6 +269,7 @@ namespace EditorTests.Atmospherics
                 context.Map,
                 registry,
                 deviceCoord,
+                AtmosDevicePipeResolver.VentLayers,
                 out GasPipeNetworkId networkId,
                 out GasPipeSegmentKey segmentKey));
             Assert.IsFalse(networkId.IsNone);
@@ -291,7 +292,7 @@ namespace EditorTests.Atmospherics
         }
 
         [Test]
-        public void AtmosDevicePipeResolver_FindsNetworkOnAdjacentTile()
+        public void AtmosDevicePipeResolver_IgnoresPipesOnNeighbouringTiles()
         {
             TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
             PlacedTileObject pipe = CreateGasPipeAt(new Vector2Int(6, 5), TileLayer.PipeMiddle);
@@ -301,14 +302,196 @@ namespace EditorTests.Atmospherics
             registry.RebuildAll(context.Map);
 
             TileCoord deviceCoord = new TileCoord(context.Map.MapId, 5, 5);
-            Assert.IsTrue(AtmosDevicePipeResolver.TryResolveNetwork(
+            Assert.IsFalse(AtmosDevicePipeResolver.TryResolveNetwork(
                 context.Map,
                 registry,
                 deviceCoord,
-                out GasPipeNetworkId networkId,
+                AtmosDevicePipeResolver.VentLayers,
+                out _,
+                out _));
+            Assert.IsFalse(AtmosDevicePipeResolver.HasPipeSegment(context.Map, deviceCoord, AtmosDevicePipeResolver.VentLayers));
+        }
+
+        [Test]
+        public void DeviceLines_VentsPreferSupplyAndScrubbersPreferWaste()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            GasPipeNetworkRegistry registry = RegistryWithPipesOn(context, TileLayer.PipeLeft, TileLayer.PipeMiddle, TileLayer.PipeRight);
+
+            Assert.AreEqual(TileLayer.PipeLeft, ResolvedLayer(context, registry, AtmosDevicePipeResolver.VentLayers));
+            Assert.AreEqual(TileLayer.PipeRight, ResolvedLayer(context, registry, AtmosDevicePipeResolver.ScrubberLayers));
+        }
+
+        [Test]
+        public void DeviceLines_VentsAndScrubbersBothFallBackToMixed()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            GasPipeNetworkRegistry registry = RegistryWithPipesOn(context, TileLayer.PipeMiddle);
+
+            Assert.AreEqual(TileLayer.PipeMiddle, ResolvedLayer(context, registry, AtmosDevicePipeResolver.VentLayers));
+            Assert.AreEqual(TileLayer.PipeMiddle, ResolvedLayer(context, registry, AtmosDevicePipeResolver.ScrubberLayers));
+        }
+
+        [Test]
+        public void DeviceLines_EachDeviceIgnoresTheOtherLines()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            GasPipeNetworkRegistry registry = RegistryWithPipesOn(context, TileLayer.PipeRight, TileLayer.PipeSurface);
+            TileCoord coord = new TileCoord(context.Map.MapId, 5, 5);
+
+            Assert.IsFalse(AtmosDevicePipeResolver.TryResolveNetwork(
+                context.Map, registry, coord, AtmosDevicePipeResolver.VentLayers, out _, out _));
+            Assert.AreEqual(TileLayer.PipeSurface, ResolvedLayer(context, registry, AtmosDevicePipeResolver.InlineLayers));
+
+            TileMapTestUtilities.MapContext other = TileMapTestUtilities.CreateContext(_instantiated);
+            GasPipeNetworkRegistry supplyOnly = RegistryWithPipesOn(other, TileLayer.PipeLeft);
+            Assert.IsFalse(AtmosDevicePipeResolver.TryResolveNetwork(
+                other.Map, supplyOnly, new TileCoord(other.Map.MapId, 5, 5), AtmosDevicePipeResolver.ScrubberLayers, out _, out _));
+        }
+
+        [Test]
+        public void JoiningTwoNetworks_AddsMolesAndBlendsTemperatureByHeatCapacity()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject western = CreateGasPipeAt(new Vector2Int(5, 5), TileLayer.PipeMiddle);
+            PlacedTileObject eastern = CreateGasPipeAt(new Vector2Int(7, 5), TileLayer.PipeMiddle);
+            RegisterOnMap(context.Map, western, TileLayer.PipeMiddle, new Vector3(5, 0, 5));
+            RegisterOnMap(context.Map, eastern, TileLayer.PipeMiddle, new Vector3(7, 0, 5));
+            RecomputeAdjacency(context.Map, western, eastern);
+
+            float[] specificHeats = { 1f, 3f, 1f, 1f };
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount, specificHeats);
+            registry.RebuildAll(context.Map);
+            Assert.AreEqual(2, registry.NetworkCount);
+
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(western), out _, out GasPipeNetworkRecord westernNetwork);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(eastern), out _, out GasPipeNetworkRecord easternNetwork);
+            westernNetwork.Moles[0] = 10f;
+            westernNetwork.Temperature = 300f;
+            easternNetwork.Moles[1] = 10f;
+            easternNetwork.Temperature = 400f;
+
+            PlacedTileObject center = CreateGasPipeAt(new Vector2Int(6, 5), TileLayer.PipeMiddle);
+            RegisterOnMap(context.Map, center, TileLayer.PipeMiddle, new Vector3(6, 0, 5));
+            RecomputeAdjacency(context.Map, western, center, eastern);
+            registry.RebuildAround(context.Map, new TileCoord(context.Map.MapId, 6, 5));
+
+            Assert.AreEqual(1, registry.NetworkCount);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(center), out _, out GasPipeNetworkRecord merged);
+            Assert.AreEqual(10f, merged.Moles[0], 0.001f);
+            Assert.AreEqual(10f, merged.Moles[1], 0.001f);
+            Assert.AreEqual(3 * AtmosPipeConstants.SegmentVolume, merged.Volume, 0.001f);
+            Assert.AreEqual(375f, merged.Temperature, 0.01f);
+            Assert.AreEqual(0, registry.PendingReleases.Count);
+        }
+
+        [Test]
+        public void SplittingANetwork_DividesGasBySegmentCount_AndReleasesTheRemovedShare()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            var origins = new[] { 4, 5, 6, 7 };
+            var pipes = new PlacedTileObject[origins.Length];
+            for (int i = 0; i < origins.Length; i++)
+            {
+                pipes[i] = CreateGasPipeAt(new Vector2Int(origins[i], 5), TileLayer.PipeMiddle);
+                RegisterOnMap(context.Map, pipes[i], TileLayer.PipeMiddle, new Vector3(origins[i], 0, 5));
+                TileMapTestUtilities.PlacePlenum(context, new Vector3(origins[i], 0, 5));
+            }
+
+            RecomputeAdjacency(context.Map, pipes);
+
+            AtmosSimulation turf = CreateTurf(context, origins);
+            using (turf)
+            {
+                var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+                registry.RebuildAll(context.Map);
+                registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(pipes[0]), out _, out GasPipeNetworkRecord network);
+                network.Moles[AtmosConstants.Plasma.Value] = 40f;
+
+                var observer = new AtmosPipeObserver(context.Map, registry);
+                var pipeSimulation = new AtmosPipeSimulation(registry, turf, null, AtmosConstants.DefaultGasCount, observer);
+
+                GasPipeSegmentKey west = GasPipeSegmentKey.From(pipes[0]);
+                GasPipeSegmentKey east = GasPipeSegmentKey.From(pipes[3]);
+                TileCoord removed = new TileCoord(context.Map.MapId, 6, 5);
+                float turfPlasmaBefore = turf.DebugGetMoles(removed, AtmosConstants.Plasma);
+
+                context.Map.GetOrCreateTileLocation(TileLayer.PipeMiddle, new Vector3(6, 0, 5)).ClearAllPlacedObject();
+                observer.OnTileCleared(null, removed, TileLayer.PipeMiddle);
+                pipeSimulation.Tick(AtmosConstants.TickInterval);
+
+                Assert.AreEqual(2, registry.NetworkCount);
+                registry.TryGetNetworkForSegment(west, out _, out GasPipeNetworkRecord westernNetwork);
+                registry.TryGetNetworkForSegment(east, out _, out GasPipeNetworkRecord easternNetwork);
+                Assert.AreEqual(20f, westernNetwork.Moles[AtmosConstants.Plasma.Value], 0.001f, "two of four segments");
+                Assert.AreEqual(10f, easternNetwork.Moles[AtmosConstants.Plasma.Value], 0.001f, "one of four segments");
+                Assert.AreEqual(10f, turf.DebugGetMoles(removed, AtmosConstants.Plasma) - turfPlasmaBefore, 0.001f);
+                Assert.AreEqual(0, registry.PendingReleases.Count);
+            }
+        }
+
+        [Test]
+        public void RemovingALoneSegment_ReleasesAllItsGasAndDropsTheNetwork()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            TileMapTestUtilities.PlacePlenum(context, new Vector3(5, 0, 5));
+            PlacedTileObject pipe = CreateGasPipeAt(new Vector2Int(5, 5), TileLayer.PipeMiddle);
+            RegisterOnMap(context.Map, pipe, TileLayer.PipeMiddle, new Vector3(5, 0, 5));
+
+            using AtmosSimulation turf = CreateTurf(context, 5);
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(pipe), out _, out GasPipeNetworkRecord network);
+            network.Moles[AtmosConstants.Plasma.Value] = 12f;
+
+            var observer = new AtmosPipeObserver(context.Map, registry);
+            var pipeSimulation = new AtmosPipeSimulation(registry, turf, null, AtmosConstants.DefaultGasCount, observer);
+
+            TileCoord coord = new TileCoord(context.Map.MapId, 5, 5);
+            context.Map.GetOrCreateTileLocation(TileLayer.PipeMiddle, new Vector3(5, 0, 5)).ClearAllPlacedObject();
+            observer.OnTileCleared(null, coord, TileLayer.PipeMiddle);
+            pipeSimulation.Tick(AtmosConstants.TickInterval);
+
+            Assert.AreEqual(0, registry.NetworkCount);
+            Assert.AreEqual(12f, turf.DebugGetMoles(coord, AtmosConstants.Plasma), 0.001f);
+        }
+
+        private AtmosSimulation CreateTurf(TileMapTestUtilities.MapContext context, params int[] originsOnRow5)
+        {
+            var turf = new AtmosSimulation(context.Query, context.Map.MapId, AtmosConstants.DefaultGasCount);
+            turf.CreateChunk(new TileChunkRef
+            {
+                MapId = context.Map.MapId,
+                ChunkKey = Vector2Int.zero,
+                Origin = Vector3.zero,
+            });
+
+            foreach (int x in originsOnRow5)
+                turf.UpdateCell(new TileCoord(context.Map.MapId, x, 5));
+
+            return turf;
+        }
+
+        private GasPipeNetworkRegistry RegistryWithPipesOn(TileMapTestUtilities.MapContext context, params TileLayer[] layers)
+        {
+            foreach (TileLayer layer in layers)
+                RegisterOnMap(context.Map, CreateGasPipeAt(new Vector2Int(5, 5), layer), layer, new Vector3(5, 0, 5));
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            return registry;
+        }
+
+        private static TileLayer ResolvedLayer(TileMapTestUtilities.MapContext context, GasPipeNetworkRegistry registry, TileLayer[] layers)
+        {
+            Assert.IsTrue(AtmosDevicePipeResolver.TryResolveNetwork(
+                context.Map,
+                registry,
+                new TileCoord(context.Map.MapId, 5, 5),
+                layers,
+                out _,
                 out GasPipeSegmentKey segmentKey));
-            Assert.IsFalse(networkId.IsNone);
-            Assert.AreEqual(new TileCoord(context.Map.MapId, 6, 5), segmentKey.Coord);
+            return segmentKey.Layer;
         }
 
         private PlacedTileObject CreateGasPipeAt(Vector2Int worldOrigin, TileLayer layer)

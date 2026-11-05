@@ -5,10 +5,10 @@ namespace SS3D.Data.Generated
     {
         public const string AirAlarm = "11a2276338ebc64429dfc565b491e437";
         public const string APC = "4c966398d6624164c910cd29c1faa980";
-        public const string AtmosPipesL1 = "de6f06ad18d50134295959f438ba9c5d";
-        public const string AtmosPipesL2 = "251dc2a5fbda518429c8205c3b62165f";
-        public const string AtmosPipesL3 = "adc07a7f0fee8304691f45a201509b13";
-        public const string AtmosPipesL4 = "48efd00c91c310e4bb965d025c63b3ba";
+        public const string AtmosPipesMixed = "251dc2a5fbda518429c8205c3b62165f";
+        public const string AtmosPipesSupply = "de6f06ad18d50134295959f438ba9c5d";
+        public const string AtmosPipesSurface = "48efd00c91c310e4bb965d025c63b3ba";
+        public const string AtmosPipesWaste = "adc07a7f0fee8304691f45a201509b13";
         public const string Backpack = "ddaa28fac1956b2428aff1dac1d89707";
         public const string BikeHorn = "11f824c472e04854e95065dda095e8f4";
         public const string Blender = "5a09b3e93f0022b468da150e3c4a78c6";

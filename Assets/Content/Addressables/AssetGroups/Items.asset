@@ -136,7 +136,7 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 251dc2a5fbda518429c8205c3b62165f
-    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesL2.prefab
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesMixed.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -231,7 +231,7 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 48efd00c91c310e4bb965d025c63b3ba
-    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesL4.prefab
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesSurface.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -611,7 +611,7 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: adc07a7f0fee8304691f45a201509b13
-    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesL3.prefab
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesWaste.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -766,7 +766,7 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: de6f06ad18d50134295959f438ba9c5d
-    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesL1.prefab
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/AtmosPipesSupply.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

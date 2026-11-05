@@ -1024,19 +1024,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239992
-    m_Localized: An atmospheric pipe positioned on the 1st layer.
+    m_Localized: An atmospheric pipe on the supply line. Vents connect to it.
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239993
-    m_Localized: An atmospheric pipe positioned on the 2nd layer.
+    m_Localized: An atmospheric pipe on the mixed line. Vents and scrubbers both connect to it.
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239994
-    m_Localized: An atmospheric pipe positioned on the 3rd layer.
+    m_Localized: An atmospheric pipe on the waste line. Scrubbers connect to it.
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239995
-    m_Localized: An atmospheric pipe positioned on the 4th layer.
+    m_Localized: An atmospheric pipe on the floor. Only inline devices connect to it.
     m_Metadata:
       m_Items: []
   - m_Id: 252934895022239996

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4584c35d672b8a74797cc5efa123ce16, type: 3}
-  m_Name: AtmosphericsPipesL3
+  m_Name: AtmosphericsPipesWaste
   m_EditorClassIdentifier: 
   PrefabAsset: {fileID: 11400000, guid: 0ad56fda1bd23c84e87f2ffa176cfe45, type: 2}
   icon: {fileID: 0}

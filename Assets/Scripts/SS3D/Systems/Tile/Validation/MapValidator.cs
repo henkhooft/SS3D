@@ -104,10 +104,10 @@ namespace SS3D.Systems.Tile.Validation
                 Vector2Int cell = SpawnPointRegistry.TileKey(device.Position);
                 string name = KindName(device.Kind);
                 string place = $"{cell.x}:{cell.y}";
-                if (IsPort(device.Kind) && !device.HasPipe)
+                if (!device.HasPipe)
                     AddWarning(report, $"pipe:{device.Kind}:{place}", device,
-                        $"{name} at ({cell.x}, {cell.y}) has no pipe",
-                        "so it can't move any gas. Run a pipe to it.");
+                        $"{name} at ({cell.x}, {cell.y}) has no {PipeLineName(device.Kind)} pipe on its tile",
+                        "so it can't move any gas. Run one under it.");
                 if (device.AreaId == 0 && device.Kind == RoomDeviceKind.AirAlarm)
                     AddWarning(report, $"alarm-room:{place}", device,
                         $"{name} at ({cell.x}, {cell.y}) faces no room",
@@ -151,10 +151,18 @@ namespace SS3D.Systems.Tile.Validation
 
         private static bool IsPort(RoomDeviceKind kind) => kind is RoomDeviceKind.Vent or RoomDeviceKind.Scrubber;
 
+        private static string PipeLineName(RoomDeviceKind kind) => kind switch
+        {
+            RoomDeviceKind.Vent => "Supply or Mixed",
+            RoomDeviceKind.Scrubber => "Waste or Mixed",
+            _ => "Surface",
+        };
+
         private static string KindName(RoomDeviceKind kind) => kind switch
         {
             RoomDeviceKind.Vent => "Vent",
             RoomDeviceKind.Scrubber => "Scrubber",
+            RoomDeviceKind.GasPump => "Gas pump",
             RoomDeviceKind.AirAlarm => "Air alarm",
             _ => "Light",
         };
@@ -180,6 +188,7 @@ namespace SS3D.Systems.Tile.Validation
     {
         Vent,
         Scrubber,
+        GasPump,
         AirAlarm,
         Light,
     }
