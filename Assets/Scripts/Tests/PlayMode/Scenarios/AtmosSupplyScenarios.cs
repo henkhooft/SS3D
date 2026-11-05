@@ -194,7 +194,7 @@ namespace SS3D.Tests
             Assert.AreEqual(AtmosPortConstants.ScrubberNormalFlowRate, scrubber.FlowRate);
         }
 
-        // Guards: a gas marker survives the real ServerRpc with its gas fractions, draws a pin under the Scripts layer, and clears again (MapEditorSubSystem.RpcExecuteCommands, MapEditorCommandDto, MapMarkerEditorView) · Not cheaper because: FishNet's generated serializer for the command and the host's editor session need a real spawn, which EditMode has not
+        // Guards: a gas marker survives the real ServerRpc with its gas fractions, draws a pin under the Scripts layer, clears again and undoes (MapEditorSubSystem.RpcExecuteCommands, RpcUndo, MapEditorCommandDto, MapMarkerEditorView) · Not cheaper because: FishNet's generated serializer for the command and the host's editor session need a real spawn, which EditMode has not
         [UnityTest]
         public IEnumerator GasMarker_PlacedThroughTheEditor_DrawsAPin_AndClears()
         {
@@ -225,11 +225,18 @@ namespace SS3D.Tests
 
                 markers.TryGetAt(tile, out GasMarkerRecord placed);
                 Assert.AreEqual(sent.GasFractions, placed.GasFractions, "The mix crosses the RPC intact");
-                Assert.AreEqual(1, PinCount(), "The marker draws one pin");
+                yield return WaitFor(() => PinCount() == 1, "the marker draws one pin", 5f);
 
                 editor.SubmitCommands(new[] { new MapEditorCommandDto { Kind = MapEditorCommandKind.ClearGasMarker, Position = tile } });
                 yield return WaitFor(() => !markers.HasAt(tile), "the marker clears", 5f);
-                Assert.AreEqual(0, PinCount(), "Clearing removes the pin");
+                yield return WaitFor(() => PinCount() == 0, "clearing removes the pin", 5f);
+
+                // Undoing both returns to the save point, or the round's end autosaves the test's edits as a map.
+                Undo(editor);
+                yield return WaitFor(() => markers.HasAt(tile), "undo restores the marker", 5f);
+                Undo(editor);
+                yield return WaitFor(() => !markers.HasAt(tile), "undo removes the marker", 5f);
+                Assert.IsFalse(editor.HasUnsavedChanges, "The editor is back at its save point");
             }
             finally
             {
@@ -242,6 +249,9 @@ namespace SS3D.Tests
         // The chamber and Supply fill draw pins too; this counts room air only.
         private static int PinCount() => Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
             .Count(pin => pin.name.StartsWith("MarkerPin_Room air"));
+
+        private static void Undo(MapEditorSubSystem editor) =>
+            typeof(MapEditorSubSystem).GetMethod("RpcUndo", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(editor, new object[] { editor.LocalConnection });
 
         private static void SetEditorActive(MapEditorSubSystem editor, bool active) =>
             typeof(MapEditorSubSystem).GetMethod("SetActive", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(editor, new object[] { active });
