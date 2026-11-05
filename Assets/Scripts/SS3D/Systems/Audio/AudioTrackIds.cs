@@ -18,6 +18,8 @@ namespace SS3D.Systems.Audio
         /// <summary>World/Collisions/MetalHit1.wav, pitched down, for the magboot toggle (armor.md §6).</summary>
         public const string MagbootClunk = "3cd350866d2be174584b9acd88c39bc6";
 
+        /// <summary>FreeSound ckvoiceover 401336 — calm breathing, heard in a suit with no air around it.</summary>
+
         /// <summary>SS14 Effects/beep1.ogg — new alert-stack chip ding.</summary>
         public const string AlertCue = "9c25cbf72a814b7daecb30325916da0a";
     }
