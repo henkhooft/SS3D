@@ -107,6 +107,7 @@ PR 1 adds one thing the plan didn't list: the pump caps a tick's flow at the mol
 - Keep port ticks allocation-free and cache networks against `TopologyVersion`, as `AtmosPortControllerBase` does.
 - Dynamic device state doesn't survive template saves; `SavedPlacedTileObject` holds name, origin and direction only.
 - Reimport changes in the main checkout wait for the editor to be free.
+- Open: `HullBreach_BlowsLooseItemIntoSpace_WhereItComesToRest` in `scenarios:Environment` failed 3 of 10 runs after PR 1 and 0 of 6 on a2bf3a24a, timing out at "the wind carries the item out through the hole". The test room has no pipes and no causal path was found, so this is neither a confirmed regression nor a confirmed flake. Passing runs take about 10.6 s against a 10 s wait; log the wrench's exit time on both commits to compare.
 
 ## Tests
 
