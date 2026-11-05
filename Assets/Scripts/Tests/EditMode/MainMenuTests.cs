@@ -5,12 +5,71 @@ using NUnit.Framework;
 using SS3D.Launcher;
 using SS3D.Networking.Status;
 using SS3D.UI.Shell.MainMenu;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Video;
 
 namespace SS3D.Tests.EditMode
 {
     public sealed class MainMenuTests
     {
+        [Test]
+        public void WallpaperPick_CoversStillsThenVideos_AndEveryVideoHasAFallbackStill()
+        {
+            MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);
+            bool seenVideo = false;
+            for (int index = 0; index < catalog.WallpaperCount; index++)
+            {
+                Assert.IsNotNull(catalog.Wallpaper(index), $"index {index} has no still");
+                bool isVideo = catalog.WallpaperVideo(index) != null;
+                Assert.IsFalse(seenVideo && !isVideo, $"stills come first (index {index})");
+                seenVideo |= isVideo;
+            }
+
+            Assert.IsTrue(seenVideo, "no videos in the catalog; run Rebuild All UI Catalogs");
+            Assert.IsNull(catalog.WallpaperVideo(catalog.WallpaperCount));
+        }
+
+        [Test]
+        public void PickWallpaper_SplitsLaunchesBetweenVideosAndStills_AndStaysInRange()
+        {
+            MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);
+            Assert.IsNotNull(catalog.WallpaperVideo(catalog.PickWallpaper(0.49f, 0f)), "low roll is a video");
+            Assert.IsNotNull(catalog.WallpaperVideo(catalog.PickWallpaper(0.49f, 1f)), "top of the video range");
+            Assert.IsNull(catalog.WallpaperVideo(catalog.PickWallpaper(0.5f, 0f)), "high roll is a still");
+            Assert.IsNull(catalog.WallpaperVideo(catalog.PickWallpaper(1f, 1f)), "top of the still range");
+            Assert.AreEqual(catalog.WallpaperCount - 1, catalog.PickWallpaper(0f, 1f), "last video");
+            Assert.AreNotEqual(catalog.PickWallpaper(1f, 0f), catalog.PickWallpaper(1f, 0.9f), "item roll chooses");
+        }
+
+        [Test]
+        public void Wallpapers_Are1080pAndCompressed()
+        {
+            MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);
+            for (int index = 0; index < catalog.WallpaperCount && catalog.WallpaperVideo(index) == null; index++)
+            {
+                Texture2D wallpaper = catalog.Wallpaper(index);
+                string path = AssetDatabase.GetAssetPath(wallpaper);
+                Assert.AreEqual(new Vector2Int(1920, 1080), new Vector2Int(wallpaper.width, wallpaper.height), path);
+                Assert.AreEqual(TextureImporterCompression.CompressedHQ, ((TextureImporter)AssetImporter.GetAtPath(path)).textureCompression, path);
+            }
+        }
+
+        /// <summary>VP8 is the one codec Unity decodes itself on every target; H.264 would rely on the OS.</summary>
+        [Test]
+        public void WallpaperVideos_AreSilentUntranscodedVp8()
+        {
+            MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);
+            for (int index = 0; index < catalog.WallpaperCount; index++)
+            {
+                if (catalog.WallpaperVideo(index) is not { } video) continue;
+                string path = AssetDatabase.GetAssetPath(video);
+                StringAssert.EndsWith(".webm", path);
+                Assert.AreEqual((ushort)0, video.audioTrackCount, $"{path}: audio would fight the menu music");
+                Assert.IsFalse(((VideoClipImporter)AssetImporter.GetAtPath(path)).defaultTargetSettings.enableTranscoding, path);
+            }
+        }
+
         [Test]
         public void StatusReply_RoundTrips_AndRejectsOtherPackets()
         {

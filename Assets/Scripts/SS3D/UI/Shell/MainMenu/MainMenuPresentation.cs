@@ -58,6 +58,8 @@ namespace SS3D.UI.Shell.MainMenu
         public string AddressError = "";
         public string CheckedText = "Checked just now";
         public int Wallpaper;
+        /// <summary>Live frame of a video wallpaper; null shows the still for <see cref="Wallpaper"/>.</summary>
+        public UnityEngine.Texture VideoWallpaper;
         public MainMenuPublicListState PublicList;
         public IReadOnlyList<MainMenuServerPresentation> Recent = Array.Empty<MainMenuServerPresentation>();
         public IReadOnlyList<MainMenuServerPresentation> Public = Array.Empty<MainMenuServerPresentation>();

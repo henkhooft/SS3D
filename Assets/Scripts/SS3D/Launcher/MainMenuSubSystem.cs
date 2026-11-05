@@ -60,6 +60,7 @@ namespace SS3D.Launcher
         private DateTime? _checkedAt;
         private bool _presentPending;
         private MainMenuMusic _music;
+        private MainMenuVideoWallpaper _video;
         private AudioListener _listener;
         private float _nextListenerCheck;
 #if UNITY_EDITOR
@@ -139,6 +140,11 @@ namespace SS3D.Launcher
                 RequestPresent();
             }
 
+            if (_video != null && _video.Tick())
+            {
+                RequestPresent();
+            }
+
             _query?.Tick();
             if (_presentPending && !IsEditingServerList())
             {
@@ -174,7 +180,11 @@ namespace SS3D.Launcher
                 }
 
                 _portText = _state.LocalPort.ToString();
-                _model.Wallpaper = _catalog.WallpaperCount > 0 ? Random.Range(0, _catalog.WallpaperCount) : 0;
+                _model.Wallpaper = _catalog.PickWallpaper(Random.value, Random.value);
+                if (_catalog.WallpaperVideo(_model.Wallpaper) is { } video)
+                {
+                    _video = new MainMenuVideoWallpaper(gameObject, video);
+                }
             }
 
             ClientConnectionRecovery.FailureUiOwnedElsewhere = true;
@@ -201,6 +211,7 @@ namespace SS3D.Launcher
         {
             Unsubscribe();
             _music?.SetAudible(false);
+            _video?.Stop();
             if (_listener != null)
             {
                 Destroy(_listener);
@@ -715,6 +726,7 @@ namespace SS3D.Launcher
             }
 
             UpdateMusic();
+            UpdateVideo();
             _model.MusicOn = _state.MusicOn;
             _model.MusicTitle = _music?.Title ?? "";
             _model.MusicVolume = SubSystems.TryGet(out PlayerSettingsSubSystem playerSettings) ? playerSettings.Settings.Audio.Music : 0.8f;
@@ -764,6 +776,13 @@ namespace SS3D.Launcher
         {
             bool screen = _model.Screen is MainMenuScreen.Menu or MainMenuScreen.Servers or MainMenuScreen.Settings or MainMenuScreen.Connecting;
             _music?.SetAudible(_view != null && _state.MusicOn && screen);
+        }
+
+        /// <summary>Video plays behind the menu; the operation dialogs hold its frame for their blurred backdrop.</summary>
+        private void UpdateVideo()
+        {
+            _video?.SetPlaying(_model.Screen is MainMenuScreen.Menu or MainMenuScreen.Servers or MainMenuScreen.Settings);
+            _model.VideoWallpaper = _video?.Frame;
         }
 
         /// <summary>A failed join swaps the Launcher scene (and its camera's listener) for Empty; keep the music audible.</summary>

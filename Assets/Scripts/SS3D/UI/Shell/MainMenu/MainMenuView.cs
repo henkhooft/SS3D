@@ -16,7 +16,7 @@ namespace SS3D.UI.Shell.MainMenu
         public VisualElement Root { get; }
         private readonly MainMenuAssetCatalog _catalog;
         private Texture2D _blurredWallpaper;
-        private Texture2D _blurredSource;
+        private Texture _blurredSource;
         private MainMenuPresentation _model = new();
 
         /// <summary>A button or link; server commands pass the server id, others an empty string.</summary>
@@ -77,17 +77,27 @@ namespace SS3D.UI.Shell.MainMenu
             Root.Q("music-volume-fill").style.width = Length.Percent(Mathf.Clamp01(value) * 100f);
         }
 
+        private void PresentVideo(Texture frame, bool operation)
+        {
+            VisualElement video = Root.Q("video-wallpaper");
+            if (frame is RenderTexture target) video.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(target));
+            video.EnableInClassList("main-menu__video-wallpaper--visible", frame != null && !operation);
+        }
+
         public void Attach(VisualElement layerRoot) { Detach(); layerRoot.Add(Root); }
         public void Detach()
         {
             Root.RemoveFromHierarchy();
-            if (_blurredWallpaper != null)
-            {
-                if (UnityEngine.Application.isPlaying) Object.Destroy(_blurredWallpaper);
-                else Object.DestroyImmediate(_blurredWallpaper);
-                _blurredWallpaper = null;
-                _blurredSource = null;
-            }
+            DestroyBlur();
+        }
+
+        private void DestroyBlur()
+        {
+            if (_blurredWallpaper == null) return;
+            if (UnityEngine.Application.isPlaying) Object.Destroy(_blurredWallpaper);
+            else Object.DestroyImmediate(_blurredWallpaper);
+            _blurredWallpaper = null;
+            _blurredSource = null;
         }
 
         public void Present(MainMenuPresentation model)
@@ -135,19 +145,20 @@ namespace SS3D.UI.Shell.MainMenu
             bool operation = model.Screen is MainMenuScreen.Connecting or MainMenuScreen.Hosting or MainMenuScreen.Updating;
             if (operation)
             {
-                Texture2D source = _catalog.Wallpaper(model.Wallpaper);
+                Texture source = model.VideoWallpaper != null ? model.VideoWallpaper : _catalog.Wallpaper(model.Wallpaper);
                 if (_blurredWallpaper == null || _blurredSource != source)
                 {
-                    if (_blurredWallpaper != null)
-                    {
-                        if (UnityEngine.Application.isPlaying) Object.Destroy(_blurredWallpaper);
-                        else Object.DestroyImmediate(_blurredWallpaper);
-                    }
+                    DestroyBlur();
                     _blurredSource = source;
                     _blurredWallpaper = MainMenuWallpaper.Blur(source);
                 }
                 Root.Q("wallpaper").style.backgroundImage = _blurredWallpaper;
             }
+            else
+            {
+                DestroyBlur(); // A video has moved on by the next dialog.
+            }
+            PresentVideo(model.VideoWallpaper, operation);
             Show("sidebar", !operation);
             Show("side-panel", servers || settings);
             Show("server-scroll", servers);
