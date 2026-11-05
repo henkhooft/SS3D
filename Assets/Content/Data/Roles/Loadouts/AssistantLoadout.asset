@@ -27,3 +27,6 @@ MonoBehaviour:
     - _key: 4096
       _value: {fileID: 11400000, guid: 55deb25596d5d314b8b7dd58eafb8aec, type: 2}
     _new: 0
+  PocketAssets:
+  - {fileID: 11400000, guid: 4f4a376e135b3e46dbe041dbca673357, type: 2}
+  - {fileID: 11400000, guid: 4a50e327a934cd3438e1b88d2bb547cb, type: 2}

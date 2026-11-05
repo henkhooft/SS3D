@@ -28,6 +28,7 @@ using SS3D.UI.MainHud.Components;
 using SS3D.UI.MachineInterface.Components;
 using SS3D.UI.StoragePanel;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace SS3D.UI.MainHud
@@ -91,6 +92,7 @@ namespace SS3D.UI.MainHud
         private AlertStackState _lastAlertState;
         private GameObject _localPlayer;
         private HumanHealthController _healthController;
+        private EvaGearController _evaGear;
         private StaminaController _stamina;
         private HumanInventory _inventory;
         private Hands _hands;
@@ -240,6 +242,7 @@ namespace SS3D.UI.MainHud
             RefreshActiveHand();
             RefreshIntent();
             RefreshZoneReticle();
+            _view.SetInternals(_evaGear != null && _evaGear.InternalsAvailable, _evaGear != null && _evaGear.InternalsOn);
         }
 
         private void RefreshZoneReticle()
@@ -417,6 +420,7 @@ namespace SS3D.UI.MainHud
             _view.GearDragStarted += HandleGearDragStarted;
             _view.GearDragMoved += HandleHudDragMoved;
             _view.GearDragEnded += HandleHudDragEnded;
+            _view.InternalsToggleRequested += HandleToggleInternals;
             _view.HandDragStarted += HandleHandDragStarted;
             _view.HandDragMoved += HandleHudDragMoved;
             _view.HandDragEnded += HandleHudDragEnded;
@@ -525,6 +529,7 @@ namespace SS3D.UI.MainHud
                 LowPressure = ToAlertSeverity(atmos.LowPressure),
                 HighPressure = ToAlertSeverity(atmos.HighPressure),
                 SealBreach = ToAlertSeverity(atmos.SealBreach),
+                TankLow = ToAlertSeverity(atmos.TankLow),
             };
         }
 
@@ -641,6 +646,7 @@ namespace SS3D.UI.MainHud
             _localPlayer = playerObject;
             _healthController = _localPlayer.GetComponent<HumanHealthController>()
                 ?? _localPlayer.GetComponentInChildren<HumanHealthController>();
+            _evaGear = _localPlayer.GetComponent<EvaGearController>();
             _stamina = _localPlayer.GetComponent<StaminaController>()
                 ?? _localPlayer.GetComponentInChildren<StaminaController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
@@ -666,9 +672,24 @@ namespace SS3D.UI.MainHud
                 }
             }
 
+            if (SubSystems.TryGet(out InputSubSystem input))
+            {
+                input.Inputs.Hotkeys.ToggleInternals.performed += HandleToggleInternals;
+            }
+
             RefreshEquipmentAndGear();
             RefreshIntent();
             RefreshAlerts();
+        }
+
+        private void HandleToggleInternals(InputAction.CallbackContext context) => HandleToggleInternals();
+
+        private void HandleToggleInternals()
+        {
+            if (_evaGear != null && _evaGear.InternalsAvailable)
+            {
+                _evaGear.ClientToggleInternals();
+            }
         }
 
         private void UnbindLocalPlayer()
@@ -691,8 +712,15 @@ namespace SS3D.UI.MainHud
                 panelHost.UnbindContainerViewer();
             }
 
+            if (SubSystems.TryGet(out InputSubSystem input))
+            {
+                input.Inputs.Hotkeys.ToggleInternals.performed -= HandleToggleInternals;
+            }
+
+            _view?.SetInternals(false, false);
             _localPlayer = null;
             _healthController = null;
+            _evaGear = null;
             _stamina = null;
             _inventory = null;
             _hands = null;
@@ -1160,6 +1188,7 @@ namespace SS3D.UI.MainHud
             EquipmentGrid.Slot.Gloves => ContainerType.GloveLeft,
             EquipmentGrid.Slot.Shirt => ContainerType.Jumpsuit,
             EquipmentGrid.Slot.Suit => ContainerType.ExoSuit,
+            EquipmentGrid.Slot.SuitStorage => ContainerType.SuitStorage,
             EquipmentGrid.Slot.Feet => ContainerType.ShoeLeft,
             _ => ContainerType.None,
         };
@@ -1243,6 +1272,8 @@ namespace SS3D.UI.MainHud
                 ContainerType.GloveRight);
             SetEquipment(EquipmentGrid.Slot.Shirt, ContainerType.Jumpsuit);
             SetEquipment(EquipmentGrid.Slot.Suit, ContainerType.ExoSuit);
+            SetEquipment(EquipmentGrid.Slot.SuitStorage, ContainerType.SuitStorage);
+            _view.Equipment.SetSuitStorageVisible(ItemIn(ContainerType.ExoSuit) != null);
             SetEquipmentAlternate(
                 EquipmentGrid.Slot.Feet,
                 ContainerType.ShoeLeft,
@@ -1511,6 +1542,8 @@ namespace SS3D.UI.MainHud
                     Bleeding = LoadAlertSprite("bleeding-droplet"),
                     CardiacArrest = LoadAlertSprite("cardiac-arrest"),
                     SealBreach = LoadAlertSprite("seal-breach"),
+                    TankLow = LoadAlertSprite("tank-low"),
+                    Internals = LoadAlertSprite("internals"),
                 };
             }
 

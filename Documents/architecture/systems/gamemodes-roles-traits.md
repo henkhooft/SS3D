@@ -29,7 +29,7 @@ Map validation uses the same Secret → nuclear mapping and requires all offered
 Weighted mode pools remain deferred; see [rounds-lobby](rounds-lobby.md).
 The `-nukeops` server profile (`Rounds/NukeOpsProfile.cs`, [rounds-lobby](rounds-lobby.md)) runs 30-minute Secret rounds and sets the ready threshold in memory at boot.
 
-The operative loadout includes the Syndicate hardsuit (ExoSuit) and helmet (Head), authored by the [inventory content recipe](inventory.md#overview). Armor absorption is wired; these items do not yet provide a vacuum seal.
+The operative loadout includes the Syndicate hardsuit (ExoSuit) and helmet (Head), authored by the [inventory content recipe](inventory.md#overview). The suit and helmet seal against pressure and cold, and a full oxygen tank starts in suit storage with internals off. `RoleSubSystem` spawns suit storage after the suit. Crew roles carry an emergency tank and a gas mask through `RoleLoadout.PocketAssets`.
 
 ## Extension points
 

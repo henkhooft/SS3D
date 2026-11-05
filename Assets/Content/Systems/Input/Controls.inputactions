@@ -524,6 +524,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Toggle Internals",
+                    "type": "Button",
+                    "id": "7d3f6c1e-52a8-4b0e-9a64-2e1c8f40b7d5",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -568,6 +577,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Toggle Internal Clothing",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c4e8a917-6f2d-4d35-b1a7-93d05e7c2f16",
+                    "path": "<Keyboard>/n",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Toggle Internals",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

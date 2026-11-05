@@ -780,6 +780,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e220e4181141f914aa994d7672ed6ec5
+    m_Address: EmergencyOxygenTank
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e2a06f02e6a7e0348bdc535344bfe1f3
     m_Address: Assets/Content/WorldObjects/Items/Functional/Materials/GlassSheet.prefab
     m_ReadOnly: 0

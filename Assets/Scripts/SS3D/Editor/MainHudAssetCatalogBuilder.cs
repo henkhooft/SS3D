@@ -61,6 +61,8 @@ namespace SS3D.Editor
                 Bleeding = LoadRequiredAlertSprite("bleeding-droplet", missing),
                 CardiacArrest = LoadRequiredAlertSprite("cardiac-arrest", missing),
                 SealBreach = LoadRequiredAlertSprite("seal-breach", missing),
+                TankLow = LoadRequiredAlertSprite("tank-low", missing),
+                Internals = LoadRequiredAlertSprite("internals", missing),
             };
 
             if (missing.Count > 0)

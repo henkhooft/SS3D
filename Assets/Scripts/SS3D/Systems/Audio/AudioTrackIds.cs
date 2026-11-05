@@ -12,6 +12,8 @@ namespace SS3D.Systems.Audio
 
         /// <summary>FreeSound Under7dude 163383 — heavy breathing (stamina + health max-merge).</summary>
         public const string HeavyBreathing = "b17ea6aba01249a183507785b28ca73c";
+        /// <summary>Calm loop heard through the mask while on internals (armor.md §6).</summary>
+        public const string Breathing = "d6487a9829df4ceaa6afc34160b91d3c";
 
         /// <summary>SS14 Effects/beep1.ogg — new alert-stack chip ding.</summary>
         public const string AlertCue = "9c25cbf72a814b7daecb30325916da0a";

@@ -28,12 +28,14 @@ namespace SS3D.Systems.Audio
 
         private AudioSource _heartbeatSource;
         private AudioSource _breathingSource;
+        private AudioSource _internalsSource;
         private AudioSource _alertCueSource;
 
         private float _heartbeatTarget;
         private float _staminaBreathingTarget;
         private float _healthBreathingTarget;
         private float _breathingTarget;
+        private float _internalsTarget;
         private float _nextAlertCueTime;
 
         protected override void OnAwake()
@@ -42,6 +44,7 @@ namespace SS3D.Systems.Audio
 
             _heartbeatSource = BuildPersonalSource("HeartbeatSource");
             _breathingSource = BuildPersonalSource("BreathingSource");
+            _internalsSource = BuildPersonalSource("InternalsSource");
             _alertCueSource = BuildPersonalSource("AlertCueSource", loop: false);
 
             AddHandle(UpdateEvent.AddListener(HandleUpdate));
@@ -98,6 +101,15 @@ namespace SS3D.Systems.Audio
             SetHealthBreathingIntensity(0f);
         }
 
+        /// <summary>
+        /// Calm breathing through the mask while on internals, alongside any labored breathing.
+        /// </summary>
+        public void SetInternalsBreathingIntensity(float intensity)
+        {
+            _internalsTarget = Mathf.Clamp01(intensity);
+            EnsurePlayingIfAudible(_internalsSource, AudioTrackIds.Breathing, _internalsTarget);
+        }
+
         private void RefreshBreathingTarget()
         {
             _breathingTarget = Mathf.Max(_staminaBreathingTarget, _healthBreathingTarget);
@@ -145,9 +157,11 @@ namespace SS3D.Systems.Audio
 
             _heartbeatSource.volume = Mathf.MoveTowards(_heartbeatSource.volume, _heartbeatTarget, step);
             _breathingSource.volume = Mathf.MoveTowards(_breathingSource.volume, _breathingTarget, step);
+            _internalsSource.volume = Mathf.MoveTowards(_internalsSource.volume, _internalsTarget, step);
 
             StopIfSilent(_heartbeatSource, _heartbeatTarget);
             StopIfSilent(_breathingSource, _breathingTarget);
+            StopIfSilent(_internalsSource, _internalsTarget);
         }
 
         private static void StopIfSilent(AudioSource source, float target)

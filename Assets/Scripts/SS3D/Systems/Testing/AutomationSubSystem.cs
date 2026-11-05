@@ -17,6 +17,7 @@ using SS3D.Systems.Atmospherics.ECS;
 using SS3D.Systems.Atmospherics.Visualization;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Health;
 using SS3D.Systems.IngameConsoleSystem;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.PlayerControl;
@@ -549,6 +550,12 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "WindFelt");
                     break;
 
+                // Client: the owned body's gear offers internals, and a toggle from this process reaches the server.
+                case "assert_internals_toggle":
+                    yield return AssertInternalsToggle();
+                    TestSignal.Emit(this, "InternalsToggled");
+                    break;
+
                 case "wait_seconds":
                     yield return new WaitForSeconds(float.Parse(instruction.Args[0]));
                     break;
@@ -827,6 +834,27 @@ namespace SS3D.Systems.Testing
                 sawStreaks |= view != null && view.VisibleStreaks > 0;
                 return sawStreaks && Vector3.Distance(body.WindSamplePosition, start) > 0.3f;
             }, _waitTimeoutSeconds, "assert_wind_felt");
+        }
+
+        private IEnumerator AssertInternalsToggle()
+        {
+            yield return WaitUntil(IsEmbarked, _waitTimeoutSeconds, "assert_internals_toggle embarked");
+            SubSystems.Get<EntitySubSystem>().TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity);
+            EvaGearController gear = entity.GetComponent<EvaGearController>();
+            HumanHealthController health = entity.GetComponent<HumanHealthController>();
+            yield return WaitUntil(() => gear.InternalsAvailable, _waitTimeoutSeconds, "assert_internals_toggle available");
+
+            gear.ClientToggleInternals();
+            yield return WaitUntil(
+                () => gear.InternalsOn && health.Snapshot.Environment.OnInternals && health.Snapshot.Environment.TankFill < 1f,
+                _waitTimeoutSeconds,
+                "assert_internals_toggle on");
+
+            gear.ClientToggleInternals();
+            yield return WaitUntil(
+                () => !gear.InternalsOn && !health.Snapshot.Environment.OnInternals,
+                _waitTimeoutSeconds,
+                "assert_internals_toggle off");
         }
 
         private bool IsEmbarked()

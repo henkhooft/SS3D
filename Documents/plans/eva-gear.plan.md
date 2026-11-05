@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: internals
     content: "PR 2: GasTankItemExtension, EvaGearController internals, SuitStorage slot, internals chip, tank content, crew pocket loadouts, oxygen treatment draws from the tank"
-    status: pending
+    status: completed
   - id: magboots
     content: "PR 3: SyndicateMagboots content with per-foot split, EvaGearController anchor, wind early-out, movement cost, chip, audio"
     status: pending
@@ -66,9 +66,15 @@ Starting values, reviewed after Playtest 1.
 - Magboots get a chip beside the internals chip. Deviates from `armor.md` §6, which names only the internals chip, because the boots need a visible on/off state.
 - No milestone or design text relies on locker contents any more: `savedItemList` in station templates stores no container contents, so crew gear comes from loadouts.
 
+- Pockets drop from `Huge` to `Small`. `armor.md` §3 only allows a tank in a pocket "if it is small enough", so this also stops every larger item fitting a pocket. The gas mask becomes `Small` so crew can carry it.
+- Internals toggle with `N`, and the character paperdoll gains a suit storage well, because the tank would otherwise block looting the suit.
+- The emergency tank shares the oxygen tank's examine text.
+
 ## Implementation notes
 
 The breach alert is a warning while the air is safe and critical once pressure or cold would reach the body. It clears when the breached piece comes off. Breach through `ApplyArmorAbsorption` is covered by a PlayMode scenario.
+
+Internals draw `0.05 mol/s` scaled by lung function. The low-tank alert warns at 25% and turns critical at 10%, while internals are on. A dry tank stays selected until it is moved, so a spare in a pocket does not take over from a dry tank in suit storage.
 
 ## Tests
 

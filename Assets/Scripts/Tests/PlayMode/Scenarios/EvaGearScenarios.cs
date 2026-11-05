@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using SS3D.Core;
+using SS3D.Interactions;
 using SS3D.Systems.Combat;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Health;
+using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace SS3D.Tests
@@ -20,6 +23,9 @@ namespace SS3D.Tests
         // Prefab GUIDs, the keys of the Items database.
         private const string Hardsuit = "e5e035169e67c766b8bc119007b84634";
         private const string HardsuitHelmet = "9ae653f88306f6f55bc8000fcbfc2b67";
+        private const string GasMask = "bf177f8bab26bc84b87fd9a971004418";
+        private const string OxygenTank = "5479411218b869144b7d09d6db6dc58e";
+        private const string EmergencyTank = "e220e4181141f914aa994d7672ed6ec5";
 
         [UnityTest]
         public IEnumerator HitPastTheSuit_BreachesTheSeal()
@@ -45,6 +51,84 @@ namespace SS3D.Tests
                 AtmosAlertStackMapper.Compute(health.Snapshot.Environment).SealBreach,
                 "Room air makes the breach a warning");
             Assert.AreEqual(ExamineSealKeys.BreachedFallback, ExamineLine(seal));
+        }
+
+        [UnityTest]
+        public IEnumerator Internals_FeedFromSuitStorageUntilTheTankLeaves()
+        {
+            HumanHealthController health = Body.GetComponent<HumanHealthController>();
+            EvaGearController gear = Body.GetComponent<EvaGearController>();
+            HumanInventory inventory = Body.GetComponent<HumanInventory>();
+            AttachedContainer storage = inventory.Containers.Single(worn => worn.ContainerType == ContainerType.SuitStorage);
+            inventory.Containers.Single(worn => worn.ContainerType == ContainerType.Pocket).Dump();
+            Item tank = SubSystems.Get<ItemSubSystem>().SpawnItem(OxygenTank, Vector3.up, Quaternion.identity);
+            Assert.IsFalse(storage.CanContainItem(tank), "Suit storage needs a worn suit");
+
+            Item suit = Wear(Hardsuit, ContainerType.ExoSuit);
+            Wear(HardsuitHelmet, ContainerType.Head);
+            storage.AddItem(tank);
+            GasTankItemExtension supply = tank.GetComponent<GasTankItemExtension>();
+            yield return WaitFor(() => gear.InternalsAvailable, "a sealed helmet and a tank offer internals");
+            Assert.IsFalse(gear.InternalsOn, "Internals are a deliberate switch");
+            Assert.IsFalse(suit.Container.CanRemoveItem(suit), "A suit stays on while its storage holds a tank");
+
+            gear.ServerSetInternals(true);
+            yield return WaitFor(() => health.Snapshot.Environment.OnInternals, "the breath comes from the tank");
+            yield return WaitFor(() => supply.Fill < 1f, "breathing draws on the tank");
+
+            supply.ServerDraw(supply.Contents.TotalMoles);
+            yield return WaitFor(() => health.Snapshot.Environment.TankFill <= 0f, "the snapshot sees the empty tank");
+            AtmosAlertStackMapper.AtmosAlertSignals alerts = AtmosAlertStackMapper.Compute(health.Snapshot.Environment);
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.Critical, alerts.LowOxygen, "An empty tank is not room air");
+            Assert.AreEqual(AtmosAlertStackMapper.Severity.Critical, alerts.TankLow);
+
+            storage.RemoveItem(tank);
+            yield return WaitFor(() => !gear.InternalsOn, "losing the tank turns internals off");
+            Assert.IsFalse(gear.InternalsAvailable);
+            Assert.IsTrue(suit.Container.CanRemoveItem(suit), "An empty slot frees the suit");
+        }
+
+        [UnityTest]
+        public IEnumerator Mask_NeedsASmallTankInThePocket()
+        {
+            EvaGearController gear = Body.GetComponent<EvaGearController>();
+            AttachedContainer pocket = Body.GetComponent<HumanInventory>().Containers.Single(worn => worn.ContainerType == ContainerType.Pocket);
+            pocket.Dump();
+            Item full = SubSystems.Get<ItemSubSystem>().SpawnItem(OxygenTank, Vector3.up, Quaternion.identity);
+            Assert.IsFalse(pocket.CanContainItem(full), "A full tank is too big for a pocket");
+
+            Wear(GasMask, ContainerType.Mask);
+            yield return null;
+            Assert.IsFalse(gear.InternalsAvailable, "A mask alone connects to nothing");
+
+            SubSystems.Get<ItemSubSystem>().SpawnItemInContainer(EmergencyTank, pocket);
+            yield return WaitFor(() => gear.InternalsAvailable, "a mask and a pocket tank offer internals");
+        }
+
+        [UnityTest]
+        public IEnumerator ApplyOxygen_DrawsFromTheTankUntilItIsEmpty()
+        {
+            HumanHealthController health = Body.GetComponent<HumanHealthController>();
+            yield return Console.Expect("spawninhand OxygenTank", "spawned in hand");
+            GasTankItemExtension tank = Body.GetComponent<Hands>().SelectedHand.ItemInHand.GetComponent<GasTankItemExtension>();
+            while (health.Snapshot.Pools.OxyDebt < HealthConstants.TreatmentOxyDebtThreshold)
+            {
+                health.TickHealth(atmosphereO2: 0f);
+            }
+
+            InteractionController interactions = Body.GetComponent<InteractionController>();
+            Vector3 head = Body.GetComponentsInChildren<ZoneTargetCollider>(true)
+                .First(target => target.Zone == BodyZone.Head)
+                .GetComponent<Collider>().bounds.center;
+            string refusal = interactions.RunInteractionForTesting(Body.gameObject, head, "Apply oxygen", IntentType.Help);
+            Assert.IsNull(refusal, refusal);
+            yield return WaitFor(() => tank.Fill < 1f, "the treatment draws on the tank");
+
+            tank.ServerDraw(tank.Contents.TotalMoles);
+            yield return null;
+            Assert.IsNotNull(
+                interactions.RunInteractionForTesting(Body.gameObject, head, "Apply oxygen", IntentType.Help),
+                "An empty tank treats nobody");
         }
 
         private Item Wear(string item, ContainerType slot)

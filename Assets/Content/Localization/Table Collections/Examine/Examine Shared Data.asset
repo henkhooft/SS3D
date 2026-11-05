@@ -1379,6 +1379,10 @@ MonoBehaviour:
     m_Key: examine.seal.breached
     m_Metadata:
       m_Items: []
+  - m_Id: 296089487001546752
+    m_Key: examine.tank.fill
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
