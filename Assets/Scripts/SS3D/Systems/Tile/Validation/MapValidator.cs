@@ -155,6 +155,7 @@ namespace SS3D.Systems.Tile.Validation
         {
             RoomDeviceKind.Vent => "Supply or Mixed",
             RoomDeviceKind.Scrubber => "Waste or Mixed",
+            RoomDeviceKind.LineFill => "matching",
             _ => "Surface",
         };
 
@@ -163,6 +164,7 @@ namespace SS3D.Systems.Tile.Validation
             RoomDeviceKind.Vent => "Vent",
             RoomDeviceKind.Scrubber => "Scrubber",
             RoomDeviceKind.GasPump => "Gas pump",
+            RoomDeviceKind.LineFill => "Line fill",
             RoomDeviceKind.AirAlarm => "Air alarm",
             _ => "Light",
         };
@@ -191,6 +193,7 @@ namespace SS3D.Systems.Tile.Validation
         GasPump,
         AirAlarm,
         Light,
+        LineFill,
     }
 
     /// <summary>A placed device and the room it belongs to (area 0 means no room).</summary>

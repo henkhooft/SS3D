@@ -209,6 +209,13 @@ namespace EditorTests
         }
 
         [Test]
+        public void LineFillWithoutItsPipeWarnsWithoutCountingAsARoomPort()
+        {
+            MapValidationReport report = RoomChecks(Device(RoomDeviceKind.LineFill, 1, 3, pipe: false));
+            StringAssert.Contains("Line fill at (1, 2) has no matching pipe on its tile", report.Issues.Single().Title);
+        }
+
+        [Test]
         public void GasPumpWithoutASurfacePipeWarnsWithoutCountingAsARoomPort()
         {
             MapValidationReport report = RoomChecks(Device(RoomDeviceKind.GasPump, 1, 3, pipe: false), Alarm(2, 3));

@@ -33,6 +33,20 @@ MonoBehaviour:
     SearchTags:
     - wall mount
     IsEraser: 0
+  - AssetName: AtmosFillMixed
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - atmos
+    - line fill
+    IsEraser: 0
+  - AssetName: AtmosFillSupply
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - atmos
+    - line fill
+    IsEraser: 0
   - AssetName: AtmosPipesMixed
     Mode: 1
     Subcategory: 6
@@ -56,6 +70,27 @@ MonoBehaviour:
     Subcategory: 6
     SearchTags:
     - pipe
+    IsEraser: 0
+  - AssetName: AtmosSourceAir
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - atmos
+    - gas source
+    IsEraser: 0
+  - AssetName: AtmosSourceNitrogen
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - atmos
+    - gas source
+    IsEraser: 0
+  - AssetName: AtmosSourceOxygen
+    Mode: 0
+    Subcategory: 4
+    SearchTags:
+    - atmos
+    - gas source
     IsEraser: 0
   - AssetName: Backpack
     Mode: 2

@@ -122,33 +122,38 @@ namespace SS3D.Systems.Atmospherics.Pipes
             if (budgetMoles <= 0f)
                 return false;
 
-            bool movedAny = false;
-            float remainingBudget = budgetMoles;
+            // "Toxins" is currently treated as an alias of plasma in the core gas set.
+            bool filterPlasma = _filterPlasma || _filterToxins;
+            float selected = SelectedMoles(turfSimulation, turfCell, AtmosConstants.Oxygen, _filterO2)
+                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.Nitrogen, _filterN2)
+                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.CarbonDioxide, _filterCo2)
+                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.Plasma, filterPlasma);
+            if (selected <= 0f)
+                return false;
+
+            // Each gas moves in proportion to its share of the tile, so an intake carries the mix it
+            // sits in and a trace of CO₂ isn't starved by the air around it.
+            float fraction = Mathf.Min(budgetMoles / selected, 1f);
 
             // Unrolled filters — do not use yield/IEnumerable (allocates a state machine per scrubber per tick).
+            bool movedAny = false;
             if (_filterO2)
-            {
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Oxygen, ref remainingBudget);
-            }
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Oxygen, fraction);
 
-            if (_filterN2 && remainingBudget > 0f)
-            {
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Nitrogen, ref remainingBudget);
-            }
+            if (_filterN2)
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Nitrogen, fraction);
 
-            if (_filterCo2 && remainingBudget > 0f)
-            {
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.CarbonDioxide, ref remainingBudget);
-            }
+            if (_filterCo2)
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.CarbonDioxide, fraction);
 
-            // "Toxins" is currently treated as an alias of plasma in the core gas set.
-            if ((_filterPlasma || _filterToxins) && remainingBudget > 0f)
-            {
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Plasma, ref remainingBudget);
-            }
+            if (filterPlasma)
+                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Plasma, fraction);
 
             return movedAny;
         }
+
+        private static float SelectedMoles(AtmosSimulation turfSimulation, TileCoord turfCell, GasId gasId, bool selected) =>
+            selected && turfSimulation.TryGetGasMoles(turfCell, gasId, out float moles) ? moles : 0f;
 
         private static bool TryScrubGas(
             AtmosPipeSimulation pipeSimulation,
@@ -156,30 +161,18 @@ namespace SS3D.Systems.Atmospherics.Pipes
             GasPipeNetworkId networkId,
             TileCoord turfCell,
             GasId gasId,
-            ref float remainingBudget)
+            float fraction)
         {
-            if (remainingBudget <= 0f
-                || !turfSimulation.TryGetGasMoles(turfCell, gasId, out float available)
-                || available <= 0f)
-            {
-                return false;
-            }
-
-            float request = Mathf.Min(remainingBudget, available);
-            if (!pipeSimulation.TryTransferMoles(
+            return turfSimulation.TryGetGasMoles(turfCell, gasId, out float available)
+                && available > 0f
+                && pipeSimulation.TryTransferMoles(
                     networkId,
                     gasId,
-                    request,
+                    available * fraction,
                     turfCell,
                     PipeTransferDirection.ToNetwork,
                     out float moved)
-                || moved <= 0f)
-            {
-                return false;
-            }
-
-            remainingBudget -= moved;
-            return true;
+                && moved > 0f;
         }
 
         protected override void ApplyDeviceSpecificAnimatorState(bool flowing)

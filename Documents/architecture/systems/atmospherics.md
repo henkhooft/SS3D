@@ -36,16 +36,19 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/GasPipeNetworkRegistry.cs` — pipe networks; `TopologyVersion` invalidates port caches
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPortControllerBase.cs` — vent/scrubber tick + cached network resolve
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosDevicePipeResolver.cs` — which lines each device attaches to; Map Check reads the same `PipeLayers`
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosGasSource.cs` — hidden tile object that holds its cell at a fixed mix, making a sealed room a storage chamber; ticks as a port
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosLineFill.cs` — hidden tile object that fills one line's network once, right after `RebuildAll`
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaDeviceQuery.cs` — air-alarm / preset queries over indexed area ports (not full registry scan)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AirAlarmController.cs` — tile-in-front sampling, preset mode dispatch
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosAreaSampler.cs` — area aggregate and single-tile sampling
-- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/ScrubberController.cs` — per-gas filter scrubbing into pipe networks; flow rate scales rated throughput
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/ScrubberController.cs` — per-gas filter scrubbing into pipe networks; flow rate scales rated throughput, shared by mole fraction across selected gases
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/VentController.cs` — network→turf venting with target-pressure cutoff
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPumpController.cs` — turf→pipe pump with target outlet pressure; rated flow until backpressure tapers it to a stall at max differential; not area-linked
 - `Assets/Scripts/Tests/EditMode/Atmospherics/` — flux, combustion, neighbour, GPU, visual-metrics, air-alarm sampler tests
 
 ## Extension points
 
+- New supply mixes or line variants: extend `AtmosSupplyMix`, then rerun `AtmosSupplySetup.Run` (tier B static — no MenuItem), which rebuilds the prefabs and their `TileObjectSo` assets.
 - Air alarm power/alarm visuals use `Electricity/EmissiveMaterialSlots` to preserve each material slot's authored emission/luminance; avoid one renderer-wide baseline for mixed-material meshes.
 
 - New gases: add `GasDefinition` assets under `Assets/Content/Systems/Atmospherics/Gases/`; call `AtmosRegistryGenerator.CreateCoreGasRegistry` (tier B static — no MenuItem) to refresh registry slots.
@@ -56,6 +59,9 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Pitfalls
 
+- **A vent can only reach a scrubber through Mixed until manifolds exist:** intake scrubbers try Waste then Mixed, and vents try Supply then Mixed, so a chamber feeding Supply moves nothing, with no error. `classic-ministation` runs its distribution on Mixed for this. A Waste pipe on the intake's tile would also take the gas away from it. Hit 2026-11-05.
+- **A held cell shows up as new gas:** `AtmosGasSource` adds moles every tick by design, so whole-map conservation checks don't hold on a map with a source. Hit 2026-11-05.
+- **Waste has no outlet yet:** scrubbers stall once it reaches room pressure plus `PortMaxDifferentialKpa`, about 202 kPa, and `IsPortFlowing` then reads false. On default filters that takes about 50 s of a `classic-ministation` round. Hit 2026-11-05.
 - **Pipe tile assets are saved by name:** `TileMap` drops names it can't resolve, so renaming a pipe prefab without an entry in `RenamedTileObjects` deletes those pipes from every saved map, with only a log warning. `TileAssetCatalog` indices also follow sorted names, so a rename needs a `ProtocolVersion` bump. Hit 2026-11-05.
 - **Network records are replaced on every pipe edit:** `RebuildAround` builds new records, so never hold a `GasPipeNetworkRecord` across a tick, and new per-network state must be carried over in `RedistributeGas`. Gas released from a removed segment waits in `PendingReleases` until the next pipe tick. Hit 2026-11-05.
 - **Atmos early-outs live in two places:** the fullscreen passes march every pixel, so `AtmosVisualActivity.IsCalm` skips them for plain room air (about 2 ms of GPU at 1440p). Its thresholds mirror the early-outs in `AtmosCommon.hlsl`. If a shader starts reacting to something new, widen `IsCalm` too, or the effect silently never draws. Unknown gas profiles count as not calm. Hit 2026-11-05.
@@ -94,7 +100,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 - `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `AtmosEdgeFlowTests` covers edge flow's conservation, stability, sleep, doors and chunk borders. `AtmosEdgeFlowReferenceTests` asserts room-scale drain time, far-field onset and knockdown reach against the design targets, and logs the numbers as `[edge-flow-ref]`. `Testing/fixtures/stations/atmostest.json` is the sealed map for atmos budget runs. `AtmosLooseBodiesTests` covers mass scaling, the cap, held bodies and drift. `scenarios:Environment` covers owner gust knockdown, upright drift, a live hull breach through to streaks and pull, and an item blown through the hole to rest in space. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner, including wind and thin air in what it hears, and saves `breach-wind.png` from the client. `--steps mppm:breach-budget` measures tick cost and traffic on that map with 64 loose items and a real client, logged as `[atmos-budget]`, with what the client really received in Player 2's log. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
 
-- `AtmosPipeTests` covers gas conservation across merges, splits and removal, and line attachment. `AtmosPortDeviceTests` covers the pump curve. `RenamedTileObjectsTests` checks each saved-name rename lands on a real asset.
+- `AtmosPipeTests` covers gas conservation across merges, splits and removal, and line attachment. `AtmosPortDeviceTests` covers the pump curve. `AtmosGasSupplyTests` covers held cells and mixes. `AtmosSupplyScenarios` runs `classic-ministation`: lines wired, chamber to room through a vent, CO₂ to Waste, and sources hidden outside the map editor. `RenamedTileObjectsTests` checks each saved-name rename lands on a real asset.
 
 - `Testing/ui/validate.sh --steps compile,round-reset` runs a focused host stop/restart, depletes a cell before Stop and checks oxygen returns in a fresh simulation. The sandbox pilot also carries this regression. Remote dedicated-server replay remains required for release acceptance.
 
@@ -110,7 +116,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - Effort: [2026-07_atmos-ecs-foundation.md](../../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md)
 - Effort: [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md) — in-progress; all phases built; 8 clients, tick peak and owner review open
-- Plan: [atmos-machinery.plan.md](../../plans/atmos-machinery.plan.md) — in progress; PR 1 foundation built, gas supply and inline devices next
+- Plan: [atmos-machinery.plan.md](../../plans/atmos-machinery.plan.md) — in progress; foundation and gas supply built, inline devices next
 - Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring

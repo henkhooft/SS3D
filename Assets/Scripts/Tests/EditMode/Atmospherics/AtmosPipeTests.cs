@@ -54,6 +54,26 @@ namespace EditorTests.Atmospherics
         }
 
         [Test]
+        public void LineFill_FillsOnlyItsNetwork_ToThePressureAsked()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject mixed = CreateGasPipeAt(new Vector2Int(5, 5), TileLayer.PipeMiddle);
+            PlacedTileObject waste = CreateGasPipeAt(new Vector2Int(5, 5), TileLayer.PipeRight);
+            RegisterOnMap(context.Map, mixed, TileLayer.PipeMiddle, new Vector3(5, 0, 5));
+            RegisterOnMap(context.Map, waste, TileLayer.PipeRight, new Vector3(5, 0, 5));
+            RecomputeAdjacency(context.Map, mixed, waste);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            Assert.IsTrue(registry.TryFillNetwork(GasPipeSegmentKey.From(mixed), AtmosSupplyMix.Air, 300f));
+
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(mixed), out _, out GasPipeNetworkRecord filled);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(waste), out _, out GasPipeNetworkRecord other);
+            Assert.That(filled.GetPressure(AtmosConstants.DefaultGasCount), Is.EqualTo(300f).Within(0.5f));
+            Assert.AreEqual(0f, other.GetTotalMoles(AtmosConstants.DefaultGasCount));
+        }
+
+        [Test]
         public void OffsetPipeLayers_OnSameTile_DoNotShareNetwork()
         {
             TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);

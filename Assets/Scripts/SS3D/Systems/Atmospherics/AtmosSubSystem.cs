@@ -194,6 +194,7 @@ namespace SS3D.Systems.Atmospherics
 
             _pipeRegistry = new GasPipeNetworkRegistry(gasTypeCount, specificHeats);
             _pipeRegistry.RebuildAll(tileSubSystem.CurrentMap);
+            AtmosLineFill.ApplyAll(tileSubSystem.CurrentMap, _pipeRegistry);
             _pipeObserver = new AtmosPipeObserver(tileSubSystem.CurrentMap, _pipeRegistry);
             tileSubSystem.RegisterTileMutationObserver(_pipeObserver);
             _pipeSimulation = new AtmosPipeSimulation(

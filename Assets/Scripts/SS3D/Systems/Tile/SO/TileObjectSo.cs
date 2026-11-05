@@ -36,6 +36,9 @@ namespace SS3D.Systems.Tile
         [Tooltip("Sound and debris material when this differs from what genericType and specificType imply, e.g. a window typed as a steel wall.")]
         public StructuralMaterialOverride impactMaterial;
 
+        [Tooltip("Draw this object only in the map editor. For map logic such as gas sources; give it no collider.")]
+        public bool mapEditorOnly;
+
         /// <summary>
         /// World position for a tile grid anchor, including any placement height offset.
         /// </summary>

@@ -85,6 +85,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1a4300a1832dd26c083bb8702031cc01
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Supply/AtmosFillSupply.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1ae18785d74e9fa4699b6f6de889c243
     m_Address: Assets/Content/WorldObjects/Items/Functional/Tools/Command/NuclearAuthenticationDisk.prefab
     m_ReadOnly: 0
@@ -152,6 +157,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2a63163a4db141744a802f3ff67087db
     m_Address: Assets/Content/WorldObjects/Items/Functional/Identification/SecurityPDA.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b5b0d2410c2f4c13a8a9cba048ca521
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Supply/AtmosSourceOxygen.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -455,6 +465,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8460657a2ccb5c877a55295b74742174
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Supply/AtmosSourceAir.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 84a5596b28f449e49bb34741abf89d30
     m_Address: Assets/Content/WorldObjects/Structures/Doors/CivillianAirlock.prefab
     m_ReadOnly: 0
@@ -492,6 +507,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8dc5399c58290d54f9a6cc2f6c1c9d9f
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/JukeboxBlueGreen.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8f020a802a52332cfaf8f0ca567ee5aa
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Supply/AtmosFillMixed.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -677,6 +697,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c69ed93dc225ea049bbf1a02662c48c0
     m_Address: Assets/Content/WorldObjects/Items/Functional/Parts/PowerCells/PowerCellAdmin.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c6b22d7cad04fce9e9bc8f15340c4260
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Supply/AtmosSourceNitrogen.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

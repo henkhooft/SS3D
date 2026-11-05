@@ -3,7 +3,8 @@
 
 The source map was deleted in c8c0997dc, so it is read from git history: tiles from the
 old save file, loose items from the old scene. Everything the source lacks and a round
-needs today (power plant, cable runs, spawn markers, nuke, disk) is listed in ADDED_*.
+needs today (power plant, atmos room, cable runs, spawn markers, nuke, disk) is listed in
+ADDED_* and add_atmos_room.
 
     python3 Tools/map_import/classic_ministation.py [--check]
 
@@ -40,7 +41,7 @@ LAYERS = {
     "PlasticChair": 7, "PlasticChairGrey": 7, "SMES": 7, "Scrubber": 7, "TableBoozeDispenser": 7, "TableGlass": 7,
     "TablePoker": 7, "TableSteel": 7, "TableWood": 7, "VendorHotDrinks": 7, "VendorRobustSoftdrinks": 7,
     "VendorSecTech": 7, "VendorYouTool": 7, "Vent": 7,
-    "AtmosPipesSupply": 10, "AtmosPipesWaste": 11,
+    "AtmosPipesMixed": 9, "AtmosPipesWaste": 11, "AtmosSourceAir": 7, "AtmosFillMixed": 7,
 }
 
 TILE_RENAMES = {
@@ -49,7 +50,7 @@ TILE_RENAMES = {
     "BarStool": "PlasticChairGrey", "BoozeVendor": "TableBoozeDispenser", "ChemicalHeater": "MachineFrame",
     "CigaretteVendor": "VendorYouTool", "ConsoleCrewMonitor": "MachineFrame", "ConsoleOff": "MachineFrame",
     "Cryotube - Blue": "Cryotube", "FilingCabinet": "Locker", "Jukebox": "JukeboxBlueGreen",
-    "PipesLayer1": "AtmosPipesSupply", "PipesLayer3": "AtmosPipesWaste", "SnackVendor": "VendorHotDrinks",
+    "PipesLayer1": "AtmosPipesMixed", "PipesLayer3": "AtmosPipesWaste", "SnackVendor": "VendorHotDrinks",
     "SodaVendor": "VendorRobustSoftdrinks", "Stove": "Microwave", "fridge": "Locker",
 }
 # No current asset is close enough to stand in.
@@ -72,6 +73,28 @@ ADDED_TILES = [
     ("SMES", -11, 12, 0), ("SMES", -11, 11, 0),
     ("DisposalOutlet", -11, -8, 4),  # the old pipe run ends here, at the maintenance edge
     ("NukeCart", 7, 11, 4),
+]
+# South of the corridor: a 7x3 atmos room, a wall with windows, then a sealed 7x2 air chamber.
+ROOM_COLUMNS = range(-1, 6)
+ROOM_FLOOR_ROWS = range(-8, -5)
+CHAMBER_FLOOR_ROWS = range(-11, -9)
+ROOM_DOOR = (2, -5)
+ROOM_WINDOWS = {(0, -9), (4, -9)}
+ROOM_SHELL = sorted(
+    {(x, y) for x in range(-2, 7) for y in (-9, -12)} | {(x, y) for x in (-2, 6) for y in range(-12, -5)}
+)
+ADDED_MIXED_PIPES = [
+    *((x, -3) for x in range(8, 16)),  # over the catwalk to the east wing
+    *((2, y) for y in range(-4, -12, -1)),  # from the corridor down to the chamber
+    (3, -7), (4, -7),
+]
+ADDED_ATMOS_TILES = [
+    ("Scrubber", 2, -10, 0),  # the chamber's intake
+    ("AtmosSourceAir", 3, -10, 0),
+    ("AtmosFillMixed", 2, -11, 0),
+    ("Vent", 4, -7, 0),
+    ("APC", 1, -9, 4), ("APC", 3, -9, 0),
+    ("LightBulbFixture", -2, -7, 2), ("LightBulbFixture", 6, -7, 6), ("LightBulbFixture", -2, -10, 2),
 ]
 ADDED_ITEMS = [
     ("NuclearAuthenticationDisk", 5.0, 0.8, 7.0),
@@ -159,6 +182,29 @@ def convert_tiles(source, report):
                 new_name = "VendorSecTech"
             cells[cell].append((new_name, direction))
     return cells
+
+
+def add_atmos_room(cells):
+    """Air chamber and atmos room south of the corridor, with the air distribution line fed from the chamber.
+
+    The distribution line runs on Mixed, the one line both a scrubber and a vent attach to, so the
+    chamber's intake scrubber can feed the vents with no pump between them. The catwalk run joins the
+    east wing to it.
+    """
+    for x, y in ROOM_SHELL:
+        wall = "SteelWindowReinforced" if (x, y) in ROOM_WINDOWS else "SteelWallReinforced"
+        cells[(x, y)] = [("Plenum", 0), (wall, 0)]
+    for y in ROOM_FLOOR_ROWS:
+        for x in ROOM_COLUMNS:
+            cells[(x, y)] = [("Plenum", 0), ("TileGreyDark", 0)]
+    for y in CHAMBER_FLOOR_ROWS:
+        for x in ROOM_COLUMNS:
+            cells[(x, y)] = [("Plenum", 0), ("TileReinforced", 0)]
+    cells[ROOM_DOOR] = [("Plenum", 0), ("CivillianAirlock", 0)]
+    for cell in ADDED_MIXED_PIPES:
+        cells[cell].append(("AtmosPipesMixed", 0))
+    for name, x, y, direction in ADDED_ATMOS_TILES:
+        cells[(x, y)].append((name, direction))
 
 
 def is_solid(cells, cell):
@@ -295,6 +341,7 @@ def main():
     cells = convert_tiles(read_tiles(), report)
     for name, x, y, direction in ADDED_TILES:
         cells[(x, y)].append((name, direction))
+    add_atmos_room(cells)
     orient_doors(cells)
     cable_count = route_cables(cells)
 

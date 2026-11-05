@@ -63,8 +63,10 @@ namespace SS3D.Systems.Tile.Validation
                 bool inRoom = areas.TryGetAreaForDevice(placed, out AreaRecord room) && !room.Id.IsNone;
                 string roomName = !inRoom ? null
                     : string.IsNullOrWhiteSpace(room.DisplayName) ? "Unnamed room" : room.DisplayName;
-                bool hasPipe = !placed.TryGetComponent(out AtmosPortControllerBase port)
-                    || AtmosDevicePipeResolver.HasPipeSegment(map, new TileCoord(placed.MapId, placed.WorldOrigin), port.PipeLayers);
+                TileLayer[] lines = placed.TryGetComponent(out AtmosPortControllerBase port) ? port.PipeLayers
+                    : placed.TryGetComponent(out AtmosLineFill fill) ? fill.Lines : null;
+                bool hasPipe = lines == null
+                    || AtmosDevicePipeResolver.HasPipeSegment(map, new TileCoord(placed.MapId, placed.WorldOrigin), lines);
                 devices.Add(new RoomDeviceRecord(kind, placed.transform.position, inRoom ? room.Id.Value : AreaId.None, roomName,
                     inRoom && areas.TryGetAreaApc(room.Id, out _),
                     hasPipe));
@@ -81,6 +83,8 @@ namespace SS3D.Systems.Tile.Validation
                 kind = RoomDeviceKind.Scrubber;
             else if (placed.TryGetComponent(out AtmosPumpController _))
                 kind = RoomDeviceKind.GasPump;
+            else if (placed.TryGetComponent(out AtmosLineFill _))
+                kind = RoomDeviceKind.LineFill;
             else if (placed.TryGetComponent(out AirAlarmController _))
                 kind = RoomDeviceKind.AirAlarm;
             else if (placed.TryGetComponent(out LightPower _) || placed.TryGetComponent(out LightSwitchController _))

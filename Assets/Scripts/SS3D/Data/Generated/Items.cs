@@ -5,10 +5,15 @@ namespace SS3D.Data.Generated
     {
         public const string AirAlarm = "11a2276338ebc64429dfc565b491e437";
         public const string APC = "4c966398d6624164c910cd29c1faa980";
+        public const string AtmosFillMixed = "8f020a802a52332cfaf8f0ca567ee5aa";
+        public const string AtmosFillSupply = "1a4300a1832dd26c083bb8702031cc01";
         public const string AtmosPipesMixed = "251dc2a5fbda518429c8205c3b62165f";
         public const string AtmosPipesSupply = "de6f06ad18d50134295959f438ba9c5d";
         public const string AtmosPipesSurface = "48efd00c91c310e4bb965d025c63b3ba";
         public const string AtmosPipesWaste = "adc07a7f0fee8304691f45a201509b13";
+        public const string AtmosSourceAir = "8460657a2ccb5c877a55295b74742174";
+        public const string AtmosSourceNitrogen = "c6b22d7cad04fce9e9bc8f15340c4260";
+        public const string AtmosSourceOxygen = "2b5b0d2410c2f4c13a8a9cba048ca521";
         public const string Backpack = "ddaa28fac1956b2428aff1dac1d89707";
         public const string BikeHorn = "11f824c472e04854e95065dda095e8f4";
         public const string Blender = "5a09b3e93f0022b468da150e3c4a78c6";
@@ -35,6 +40,7 @@ namespace SS3D.Data.Generated
         public const string FlashlightBlue = "781dd9024aaa53444bc3deeaa9708fbb";
         public const string FloorTile = "404443f7c306fc8469698745624fa3bf";
         public const string FuelTank = "852d57bdb0508494fb6047f36e813c69";
+        public const string GasPump = "cb3c5f7550674ca4895c24c93c9a7eb4";
         public const string Gibber = "ad055c3d74a711a4b9d9b31217883a03";
         public const string GlassReinforcedSheet = "a1a7407e08bb2914c97f431063bf83e2";
         public const string GlassShard = "5cab1a9f6c7f74948b84d0d625319efe";
@@ -140,6 +146,8 @@ namespace SS3D.Data.Generated
         public const string SteelWindow = "b9c224febb4233f4e912745553097652";
         public const string SteelWindowReinforced = "f2493b5478dd8e946ba98861f533362e";
         public const string Sunglasses = "9b9f6bd470226a74b903e74dbe9e423a";
+        public const string SyndicateHardsuit = "e5e035169e67c766b8bc119007b84634";
+        public const string SyndicateHardsuitHelmet = "9ae653f88306f6f55bc8000fcbfc2b67";
         public const string TableBoozeDispenser = "7b74e45100446b440b4b0a12cd6d05ef";
         public const string TableFrameSteel = "e9009aff81f29eb429148fd71961539f";
         public const string TableFrameWood = "672b544ba53de0144aab307a16b085cb";

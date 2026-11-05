@@ -13,6 +13,9 @@ namespace SS3D.Systems.Atmospherics
     /// </summary>
     public sealed class AtmosSimulation : System.IDisposable
     {
+        // Moles or kelvin a held cell may drift before it is reset, so a settled chamber can sleep.
+        private const float HoldTolerance = 0.01f;
+
         private readonly ITileQueryService _query;
         private readonly int _mapId;
         private readonly int _gasTypeCount;
@@ -205,6 +208,40 @@ namespace SS3D.Systems.Atmospherics
             _cellMetaWrite[cellIndex] = meta;
             ActivateRegion(coord, 0);
             return true;
+        }
+
+        /// <summary>
+        /// Sets a cell to a fixed mix and temperature. Sleeping cells stay asleep while they already hold it.
+        /// </summary>
+        public void HoldCell(TileCoord coord, float[] moles, float temperature)
+        {
+            if (!_coordToIndex.TryGetValue(coord, out int cellIndex))
+                return;
+
+            AtmosCellMeta meta = _cellMeta[cellIndex];
+            if (meta.State is AtmosCellState.Blocked)
+                return;
+
+            int baseIndex = cellIndex * AtmosConstants.MaxGasTypes;
+            bool changed = Mathf.Abs(meta.Temperature - temperature) > HoldTolerance;
+            for (int id = 0; id < _gasTypeCount && !changed; id++)
+                changed = Mathf.Abs(_molesRead[baseIndex + id] - (id < moles.Length ? moles[id] : 0f)) > HoldTolerance;
+
+            if (!changed)
+                return;
+
+            for (int id = 0; id < _gasTypeCount; id++)
+            {
+                float held = id < moles.Length ? moles[id] : 0f;
+                _molesRead[baseIndex + id] = held;
+                _molesWrite[baseIndex + id] = held;
+            }
+
+            meta.Temperature = temperature;
+            PromoteCellForGas(ref meta);
+            _cellMeta[cellIndex] = meta;
+            _cellMetaWrite[cellIndex] = meta;
+            ActivateRegion(coord, 0);
         }
 
         private static void PromoteCellForGas(ref AtmosCellMeta meta)

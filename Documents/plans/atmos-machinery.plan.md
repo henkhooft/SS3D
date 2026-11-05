@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: supply
     content: "PR 2: infinite gas source, starting network fill, small atmos room in classic-ministation through the importer"
-    status: pending
+    status: completed
   - id: inline-devices
     content: "PR 3: two-network device base on PipeSurface, pumps, valves, manifolds on a new PipeManifold layer, GasPump replaced"
     status: pending
@@ -100,6 +100,13 @@ Left out: `Vertical` pipes and the 8 pipe colour variants from `AtmosphericPipes
 
 PR 1 adds one thing the plan didn't list: the pump caps a tick's flow at the moles left to reach its target. Rated flow at equal pressure would otherwise overshoot by up to 974 kPa per tick on a one-segment run. `GasPump` stays turf-to-pipe furniture until PR 3, and attaches to Surface on its own tile.
 
+PR 2 differs from the plan in four ways:
+
+- `classic-ministation` carries its distribution line on Mixed, not Supply. Supply can't be reached from a scrubber until PR 3's manifolds, and Mixed is the one line a scrubber and a vent both attach to. Move it to Supply when pumps and manifolds reach the room, and bring the intake up through them.
+- The atmos room has one air chamber. Separate O₂ and N₂ chambers need PR 4's mixer, since two intakes on one line would give a 50/50 mix. The `AtmosSourceOxygen` and `AtmosSourceNitrogen` variants exist for that.
+- A catwalk run joins the east and west halves of the line, which were separate networks.
+- Scrubbers now share their budget across selected gases by mole fraction. They used to fill it from the first gas in filter order, so an intake sent pure O₂ and CO₂ never moved while oxygen was on the tile. Not in the plan, but the intake can't carry air without it.
+
 ## Implementation notes
 
 - `classic-ministation.json` holds 240 pipe entries over 189 distinct saved placements. It loads as 240 segments in 4 networks: 120 Supply and 120 Waste, one per line on each tile. Read the map by tile and line, not by saved placement.
@@ -107,6 +114,8 @@ PR 1 adds one thing the plan didn't list: the pump caps a tick's flow at the mol
 - Keep port ticks allocation-free and cache networks against `TopologyVersion`, as `AtmosPortControllerBase` does.
 - Dynamic device state doesn't survive template saves; `SavedPlacedTileObject` holds name, origin and direction only.
 - Reimport changes in the main checkout wait for the editor to be free.
+- PR 4: the intake must keep pulling O₂ and N₂ when scrubber defaults become CO₂ + Toxins, and templates can't store filter state, so it needs its own prefab or a saved default on the scrubber.
+- Open until PR 3 gives Waste an outlet: with default filters scrubbers fill Waste with room air until it backs up at 202 kPa, about 50 s into a round, and then stall. New CO₂ stays in the rooms from then on. Room pressure holds at 101 kPa throughout, with vents covering what Waste took from the line's starting fill.
 - Open: `HullBreach_BlowsLooseItemIntoSpace_WhereItComesToRest` in `scenarios:Environment` failed 3 of 10 runs after PR 1 and 0 of 6 on a2bf3a24a, timing out at "the wind carries the item out through the hole". The test room has no pipes and no causal path was found, so this is neither a confirmed regression nor a confirmed flake. Passing runs take about 10.6 s against a 10 s wait; log the wrench's exit time on both commits to compare.
 
 ## Tests

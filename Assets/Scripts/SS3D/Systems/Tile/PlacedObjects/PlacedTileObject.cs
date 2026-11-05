@@ -371,6 +371,9 @@ namespace SS3D.Systems.Tile
 
         private bool ShouldHideUnderfloorMeshes()
         {
+            if (_tileObjectSo != null && _tileObjectSo.mapEditorOnly)
+                return !IsMapEditorAuthoring();
+
             if (_tileObjectSo == null || !TileUnderfloorVisibility.IsUnderfloorLayer(Layer))
                 return false;
 
