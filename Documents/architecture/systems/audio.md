@@ -20,7 +20,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
-- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Plays the `AmbienceProfile` for the area's resolved id (`AmbienceProfileCatalog`, loaded from Resources), or the generic `station` profile; outside any area, silence. Replaces legacy `AmbienceHandler.cs`.
+- `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Plays the `AmbienceProfile` for the area's resolved id (`AmbienceProfileCatalog`, loaded from Resources), or the generic `station` profile: a bed, occasional clips timed by `AmbienceScheduler`, and the catalog's thin air bed underneath. A `PowerGated` bed fades with `AreaSubSystem.IsAreaEquipmentPowered`. Outside any area, silence. Replaces legacy `AmbienceHandler.cs`.
 - `Assets/Scripts/SS3D/Systems/Audio/AmbientLoopSubSystem.cs` — machine hums (§3): 12 client-local voices lent to the nearest running `AmbientLoopSource`s, each occluded through `AudioSourceOcclusion`; choice is pure in `AmbientLoopSelection.cs`, and each kind's clip, level and reach in `AmbientLoopTrackIds.cs`
 - `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — Phase 3 owner-only heartbeat, breathing and alert ding (§4), non-positional. Driven by `HealthPersonalAudioMapper` / `StaminaPersonalAudioMapper` from each domain's existing local-owner hook.
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
@@ -43,7 +43,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - Looping machine sound (e.g. `FuelPowerGenerator`): sync the running state with an `[ObserversRpc(BufferLast = true)]` that calls `PlayAudioSourceLocal` / `StopAudioSourceLocal`.
 - Volume settings: `SubSystems.Get<PlayerSettingsSubSystem>().SetVolume(PlayerVolume, linear)`; never `SetFloat` the exposed volumes from elsewhere, the next settings apply overwrites them.
 - Main-menu music is `SS3D.Launcher.MainMenuMusic` (non-positional, Music group, tracks from the main-menu catalog), outside this folder.
-- Not built yet: power-gated ambience, PDA notification cues, in-game lobby music bed (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
+- Not built yet: PDA notification cues, in-game lobby music bed (Phase 5); see [audio-foundation](../2026-07_audio-foundation.md).
 
 ## Pitfalls
 
@@ -78,12 +78,6 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - **`AmbienceHandler` is legacy — do not wire new features onto it.** No `AreaSubSystem` awareness, no
   power gating; `AmbienceSubSystem` (Phase 2) replaces it wholesale rather than extending its
   `_air`/`_windiness` fields.
-- **No per-track power-gating data field yet.** `audio.md` §2 says "some tracks are honestly
-  power-dependent, not all of them" — that needs a per-track opt-in (mirroring
-  `AreaRecord.HasDepartmentalLightTint`) before `AmbienceSubSystem` can silence a hum on `Dark`. Not
-  built here on purpose: inventing the flag without an authoring surface or content decision on which
-  tracks use it would be dead schema. `AreaSubSystem.OnAreaLightingStateChanged` /
-  `TryGetLightingStateForTile` are the signal to consume once the flag exists.
 - **Breathing contributors must max-merge:** stamina and health both drive heavy breathing. Use
   `SetStaminaBreathingIntensity` / `SetHealthBreathingIntensity` — a single setter lets the last
   writer silence the other domain's cue.

@@ -13,8 +13,17 @@ namespace SS3D.Systems.Audio
         [SerializeField] private AudioClip _bed;
         [SerializeField, Range(0f, 1f)] private float _bedVolume = 1f;
 
+        [Tooltip("The bed implies a running machine, so it fades when the area's Equipment channel goes off.")]
+        [SerializeField] private bool _powerGated;
+
+        [SerializeField] private AudioClip[] _occasional = System.Array.Empty<AudioClip>();
+        [SerializeField, Range(0f, 1f)] private float _occasionalVolume = 0.5f;
+
         public string Id => _id;
         public AudioClip Bed => _bed;
         public float BedVolume => _bedVolume;
+        public bool PowerGated => _powerGated;
+        public AudioClip[] Occasional => _occasional;
+        public float OccasionalVolume => _occasionalVolume;
     }
 }

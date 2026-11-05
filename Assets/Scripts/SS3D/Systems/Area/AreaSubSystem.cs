@@ -35,6 +35,7 @@ namespace SS3D.Systems.Area
         private readonly List<IAreaApcOrigin> _registeredApcs = new();
         private readonly HashSet<IAreaApcOrigin> _overlapFlaggedApcs = new();
         private readonly Dictionary<AreaId, AreaLightingState> _lightingStates = new();
+        private readonly Dictionary<AreaId, bool> _equipmentPowered = new();
         private readonly Dictionary<AreaId, bool> _lightingSwitchOn = new();
         private readonly Dictionary<PlacedTileObject, AreaId> _deviceAreaIdCache = new();
         private int _deviceAreaCacheStructureVersion = -1;
@@ -163,6 +164,10 @@ namespace SS3D.Systems.Area
 
             return TryGetLightingState(record.Id, out state);
         }
+
+        /// <summary>False only when the area is known to have no Equipment power. Works on clients.</summary>
+        public bool IsAreaEquipmentPowered(AreaId areaId) =>
+            !_equipmentPowered.TryGetValue(areaId, out bool powered) || powered;
 
         public bool TryGetAreaLightingSwitchOn(AreaId areaId, out bool on)
         {
@@ -518,6 +523,7 @@ namespace SS3D.Systems.Area
             _registry.Clear();
             _overlapFlaggedApcs.Clear();
             _lightingStates.Clear();
+            _equipmentPowered.Clear();
             _lightingSwitchOn.Clear();
 
             List<IAreaApcOrigin> apcs = _registeredApcs
@@ -995,6 +1001,7 @@ namespace SS3D.Systems.Area
                 if (record.Apc is not IApcChannelSource areaApc || record.Apc is not IElectricDevice)
                 {
                     if (HasAuthoredAreas && ApplyLightingStateChange(record.Id, AreaLightingState.Dark)) anyChanged = true;
+                    if (HasAuthoredAreas && ApplyEquipmentPowerChange(record.Id, false)) anyChanged = true;
                     continue;
                 }
 
@@ -1006,6 +1013,11 @@ namespace SS3D.Systems.Area
 
                 AreaLightingState newState = AreaLightingStateDeriver.Derive(stats, areaApc.Channels, record.LightingSwitchOn);
                 if (ApplyLightingStateChange(record.Id, newState))
+                {
+                    anyChanged = true;
+                }
+
+                if (ApplyEquipmentPowerChange(record.Id, AreaLightingStateDeriver.DeriveEquipmentPowered(stats, areaApc.Channels)))
                 {
                     anyChanged = true;
                 }
@@ -1033,6 +1045,18 @@ namespace SS3D.Systems.Area
 
             _lightingStates[areaId] = newState;
             OnAreaLightingStateChanged?.Invoke(areaId, newState);
+            return true;
+        }
+
+        /// <returns>True when the stored state changed.</returns>
+        private bool ApplyEquipmentPowerChange(AreaId areaId, bool powered)
+        {
+            if (_equipmentPowered.TryGetValue(areaId, out bool previous) && previous == powered)
+            {
+                return false;
+            }
+
+            _equipmentPowered[areaId] = powered;
             return true;
         }
 
@@ -1064,6 +1088,7 @@ namespace SS3D.Systems.Area
                     areaId = areaId.Value,
                     state = state,
                     lightingSwitchOn = switchOn,
+                    equipmentPowered = IsAreaEquipmentPowered(areaId),
                 };
             }
 
@@ -1084,6 +1109,7 @@ namespace SS3D.Systems.Area
 
             var nextStates = new Dictionary<AreaId, AreaLightingState>();
             var nextSwitches = new Dictionary<AreaId, bool>();
+            _equipmentPowered.Clear();
             if (entries != null)
             {
                 foreach (SyncedAreaLighting entry in entries)
@@ -1091,6 +1117,7 @@ namespace SS3D.Systems.Area
                     var areaId = new AreaId(entry.areaId);
                     nextStates[areaId] = entry.state;
                     nextSwitches[areaId] = entry.lightingSwitchOn;
+                    _equipmentPowered[areaId] = entry.equipmentPowered;
                 }
             }
 
@@ -1320,6 +1347,7 @@ namespace SS3D.Systems.Area
             public ushort areaId;
             public AreaLightingState state;
             public bool lightingSwitchOn;
+            public bool equipmentPowered;
         }
 
         [Serializable]

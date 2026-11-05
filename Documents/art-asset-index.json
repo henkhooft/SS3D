@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-05T14:54:33.662448+00:00",
+  "generated_at": "2026-11-05T15:30:49.330029+00:00",
   "purpose": "Agent reference for locating SS3D art assets and determining import status.",
   "sources": {
     "in_game": {
       "root": "Assets/Art",
-      "file_count": 5355
+      "file_count": 5370
     },
     "ss3d_art": {
       "repo": "https://github.com/RE-SS3D/SS3D-Art",
@@ -13,11 +13,11 @@
     }
   },
   "summary": {
-    "in_game_files": 5355,
+    "in_game_files": 5370,
     "ss3d_art_files": 2480,
-    "unique_assets": 7594,
+    "unique_assets": 7609,
     "imported": 241,
-    "in_game_only": 5124,
+    "in_game_only": 5139,
     "ss3d_art_only": 2229,
     "available_for_import": 2014,
     "artwork_only": 215
@@ -81,10 +81,10 @@
     },
     {
       "path": "Sound",
-      "in_game": 156,
+      "in_game": 171,
       "ss3d_art": 218,
       "imported": 89,
-      "in_game_only": 67,
+      "in_game_only": 82,
       "ss3d_art_only": 129
     },
     {
@@ -2290,6 +2290,38 @@
       "ss3d_art_only": 0
     },
     {
+      "path": "Sound/World/Ambience/Engineering",
+      "in_game": 5,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 5,
+      "ss3d_art_only": 0
+    },
+    {
+      "path": "Sound/World/Ambience/Maintenance",
+      "in_game": 6,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 6,
+      "ss3d_art_only": 0
+    },
+    {
+      "path": "Sound/World/Ambience/Medical",
+      "in_game": 1,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 1,
+      "ss3d_art_only": 0
+    },
+    {
+      "path": "Sound/World/Ambience/Morgue",
+      "in_game": 2,
+      "ss3d_art": 0,
+      "imported": 0,
+      "in_game_only": 2,
+      "ss3d_art_only": 0
+    },
+    {
       "path": "Sound/World/Ambience/Power",
       "in_game": 1,
       "ss3d_art": 1,
@@ -2307,10 +2339,10 @@
     },
     {
       "path": "Sound/World/Ambience/Station",
-      "in_game": 15,
+      "in_game": 16,
       "ss3d_art": 14,
       "imported": 14,
-      "in_game_only": 1,
+      "in_game_only": 2,
       "ss3d_art_only": 0
     },
     {
@@ -2944,7 +2976,7 @@
     "blend": 677,
     "fbx": 247,
     "wav": 159,
-    "ogg": 108,
+    "ogg": 123,
     "mp3": 18,
     "ma": 13,
     "mp4": 12,
@@ -78021,6 +78053,160 @@
       "status": "imported"
     },
     {
+      "name": "AmbiAtmos1.ogg",
+      "stem": "ambiatmos1",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Engineering",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Engineering/AmbiAtmos1.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiAtmos2.ogg",
+      "stem": "ambiatmos2",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Engineering",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Engineering/AmbiAtmos2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiTech1.ogg",
+      "stem": "ambitech1",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Engineering",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Engineering/AmbiTech1.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiTech2.ogg",
+      "stem": "ambitech2",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Engineering",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Engineering/AmbiTech2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiTech3.ogg",
+      "stem": "ambitech3",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Engineering",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Engineering/AmbiTech3.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMaint1.ogg",
+      "stem": "ambimaint1",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint1.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMaint2.ogg",
+      "stem": "ambimaint2",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMaint3.ogg",
+      "stem": "ambimaint3",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint3.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMaint4.ogg",
+      "stem": "ambimaint4",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint4.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMaint5.ogg",
+      "stem": "ambimaint5",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint5.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "MaintAmbience.ogg",
+      "stem": "maintambience",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Maintenance",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Maintenance/MaintAmbience.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiNice.ogg",
+      "stem": "ambinice",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Medical",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Medical/AmbiNice.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMo1.ogg",
+      "stem": "ambimo1",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Morgue",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Morgue/AmbiMo1.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "AmbiMo2.ogg",
+      "stem": "ambimo2",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Morgue",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Morgue/AmbiMo2.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
       "name": "PowerHum.wav",
       "stem": "powerhum",
       "extension": "wav",
@@ -78063,6 +78249,17 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Sound/World/Ambience/Space/SpaceAmbience3.ogg",
       "import_target_path": "Assets/Art/Sound/World/Ambience/Space/SpaceAmbience3.ogg",
       "status": "imported"
+    },
+    {
+      "name": "ShipAmbience.ogg",
+      "stem": "shipambience",
+      "extension": "ogg",
+      "category": "Sound/World/Ambience/Station",
+      "in_game_path": "Assets/Art/Sound/World/Ambience/Station/ShipAmbience.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
     },
     {
       "name": "StationAmbience1.ogg",

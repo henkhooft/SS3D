@@ -24,14 +24,14 @@ How sound clips are found, registered and named in code, plus which registered c
   - `Systems/Audio/ItemCollisionAudioTrackIds.cs` — clip sets per `ItemCollisionMaterial` (metal, heavy metal, can, wood, plastic, glass) for `NoisyCollision`
   - `Systems/StructuralDamage/StructuralAudioTrackIds.cs` — hit, strain and break sets per material, wreckage thud, blast near and far, under `Assets/Art/Sound/World/Destruction/`
 - `Assets/Scripts/SS3D/Data/Generated/Sounds.cs` — generated constants for the older clips (airlock open/close, bike horn, cans, generator, title stings)
-- `Assets/Resources/AmbienceProfileCatalog.asset` lists the `AmbienceProfile` assets in `Assets/Content/Data/Ambience/`. Profiles reference their `AudioClip`s directly, so room tone needs no `Sounds.asset` entry.
+- `Assets/Resources/AmbienceProfileCatalog.asset` lists the `AmbienceProfile` assets in `Assets/Content/Data/Ambience/`. Profiles reference their `AudioClip`s directly, so room tone needs no `Sounds.asset` entry. Clips live under `Assets/Art/Sound/World/Ambience/`, and long ones import as Compressed In Memory, because the catalog holds them all.
 - Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md)
 
 ## Extension points
 
 - **Find a clip first** in [art-asset-index.md](../../art-asset-index.md) → `art-available-for-import.json`. SS3D-Art has hundreds of unimported sounds, and some imported ones aren't registered yet.
 - **Register a clip:** create an `ObjectAssetReference` under `Assets/Content/Data/ObjectAssetReferences/` with `Id = <clip asset GUID>` and `Database = AssetDatabases.Sounds`'s `DatabaseID`. Then add a matching `_key`/`_value` entry to `Sounds.asset`'s `Assets._list` (`_value` is `{fileID: 8300000, guid: <clip guid>, type: 3}`). Name it in the owning domain's `*AudioTrackIds` class. For a third-party import, add a row to ATTRIBUTIONS.
-- **Registered but not wired (content decides):** `StationAmbience1-15`, `SpaceAmbience1-3`, `AirStagnant` and `WindHeavy/Light/Violent` are candidate `areaambience` track ids. `GrilleHit`, `Rod1` and `TrayHit1-2` aren't in any `NoisyCollision` set.
+- **Registered but not wired (content decides):** `SpaceAmbience1-3` and `WindHeavy/Light/Violent` wait for phase C of [ambience-and-impact-audio](../2026-11_ambience-and-impact-audio.md). `GrilleHit`, `Rod1` and `TrayHit1-2` aren't in any `NoisyCollision` set.
 - **Ad-hoc `AudioSource` users that skip occlusion:** `StructuralIntegrityPresenter` (hiss), routed to the SFX group. Moving it onto `PlayAudioSource` is deferred content work ([audio-foundation](../2026-07_audio-foundation.md)). Airlocks, bike horn, vending and the fuel generator already use the pool. UI chimes (`CommsFeedController` announce/welcome) and main-menu music stay client-local and non-spatial on purpose.
 
 ## Depends on / Used by

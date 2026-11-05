@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 is built, with compile, EditMode and `scenarios:MapEditor` green, and hasn't been heard. B2 and C haven't started. Phase order is D, A, B, C, all in one PR once the plan is done.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green, and haven't been heard. The owner tagged `classic-ministation` in the Map Editor. C hasn't started. Phase order is D, A, B, C, all in one PR once the plan is done.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -53,6 +53,9 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 20 | `Maintenance` and `Hallways` join the dropdown and `Civilian` leaves it, matching [area.md](../design/area.md) §2. Neither new department has default access. |
 | 21 | The room form gets an Ambience dropdown, which the plan left to `areaambience`. That command targets a spawned body, so it can't reach a room in the Map Editor. |
 | 22 | `classic-ministation` replaces `ministation` as the map to tag, because `ministation` has two rooms and #163 removed Metastation. The owner tags and renames its rooms in the Map Editor. |
+| 23 | A bed's Equipment fade needs the channel on and the grid covering the load. A battery carries only the lights, so the hum goes first. It rides the lighting snapshot as one more field, with no new message. Protocol 18, because develop is also on 17 with a different wire shape. |
+| 24 | Only `engineering` is power-gated, because `PowerHum` implies a machine. Command, Security, Science, Service, Cargo and Hallways play `station`, because there are no distinct clips for them yet. `morgue` is available as an override. |
+| 25 | One clock schedules occasional sounds across rooms, with 25 to 70 s gaps from the end of the last one, so walking through short rooms can't put them off forever. The air bed plays in any area until C ties it to real air. |
 | 18 | SS14's `vending_machine_hum`, `engine_hum` and `light_hum` have no attribution entry, so they're out. Vendors and APCs use `PowerHum` and the SMES uses SS3D-Art `Machinery2`. The air alarm uses SS3D-Art `Alarm 1` instead of SS14 `alarm.ogg`. The generator keeps the loop it gets in `develop` from #159, so A leaves it alone. |
 
 ## Clips

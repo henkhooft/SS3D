@@ -12,6 +12,8 @@ namespace SS3D.Systems.Audio
         public const string GenericProfileId = "station";
 
         [SerializeField] private AmbienceProfile[] _profiles = Array.Empty<AmbienceProfile>();
+        [SerializeField] private AudioClip _airBed;
+        [SerializeField, Range(0f, 1f)] private float _airBedVolume = 0.15f;
 
         private static AmbienceProfileCatalog _instance;
 
@@ -27,6 +29,10 @@ namespace SS3D.Systems.Audio
                 return _instance;
             }
         }
+
+        /// <summary>Plays under every room, so a dark room sounds dead rather than broken (audio.md §2).</summary>
+        public AudioClip AirBed => _airBed;
+        public float AirBedVolume => _airBedVolume;
 
         public IEnumerable<string> ProfileIds => _profiles.Select(profile => profile.Id);
 

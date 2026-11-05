@@ -22,11 +22,17 @@ namespace SS3D.Systems.Audio
         private const float PollInterval = 0.5f;
         private const float CrossfadeVolumePerSecond = 0.4f;
 
+        private readonly AmbienceScheduler _scheduler = new(new System.Random());
+
         private AudioSource _activeSource;
         private AudioSource _inactiveSource;
+        private AudioSource _airSource;
+        private AudioSource _occasionalSource;
 
         private GameObject _listenerTarget;
         private AmbienceProfile _currentProfile;
+        private bool _inArea;
+        private bool _equipmentPowered = true;
         private float _nextPollTime;
 
         protected override void OnAwake()
@@ -35,6 +41,9 @@ namespace SS3D.Systems.Audio
 
             _activeSource = BuildAmbienceSource("AmbienceSourceA");
             _inactiveSource = BuildAmbienceSource("AmbienceSourceB");
+            _airSource = BuildAmbienceSource("AmbienceAirBed");
+            _occasionalSource = BuildAmbienceSource("AmbienceOccasional");
+            _occasionalSource.loop = false;
 
             AddHandle(LocalPlayerObjectChanged.AddListener(HandlePlayerObjectChanged));
             AddHandle(UpdateEvent.AddListener(HandleUpdate));
@@ -63,6 +72,7 @@ namespace SS3D.Systems.Audio
                 // No body to be "in an area" — fade to silence. Mirrors HealthScreenEffectMapper.Clear
                 // on HumanHealthController's own destroy/ownership loss: the driving consumer clears
                 // the shared presentation state it was pushing.
+                _inArea = false;
                 BeginCrossfade(null);
             }
         }
@@ -76,6 +86,8 @@ namespace SS3D.Systems.Audio
             }
 
             DriveCrossfade();
+            DriveAirBed();
+            DriveOccasionalSounds();
         }
 
         /// <summary>
@@ -91,10 +103,13 @@ namespace SS3D.Systems.Audio
 
             if (!areaSubSystem.TryResolveAreaIdForWorldPosition(_listenerTarget.transform.position, out AreaId areaId))
             {
+                _inArea = false;
                 BeginCrossfade(null);
                 return;
             }
 
+            _inArea = true;
+            _equipmentPowered = areaSubSystem.IsAreaEquipmentPowered(areaId);
             areaSubSystem.TryGetAmbienceProfileId(areaId, out string profileId);
             BeginCrossfade(AmbienceProfileCatalog.Instance.Resolve(profileId));
         }
@@ -132,7 +147,8 @@ namespace SS3D.Systems.Audio
         private void DriveCrossfade()
         {
             float step = CrossfadeVolumePerSecond * Time.deltaTime;
-            float activeTarget = _currentProfile != null ? _currentProfile.BedVolume : 0f;
+            bool bedRunning = _currentProfile != null && (_equipmentPowered || !_currentProfile.PowerGated);
+            float activeTarget = bedRunning ? _currentProfile.BedVolume : 0f;
 
             _activeSource.volume = Mathf.MoveTowards(_activeSource.volume, activeTarget, step);
             _inactiveSource.volume = Mathf.MoveTowards(_inactiveSource.volume, 0f, step);
@@ -141,6 +157,40 @@ namespace SS3D.Systems.Audio
             {
                 _inactiveSource.Stop();
             }
+        }
+
+        /// <summary>The air bed only knows whether you're in a room; phase C ties it to the air itself.</summary>
+        private void DriveAirBed()
+        {
+            AmbienceProfileCatalog catalog = AmbienceProfileCatalog.Instance;
+            _airSource.volume = Mathf.MoveTowards(_airSource.volume, _inArea ? catalog.AirBedVolume : 0f,
+                CrossfadeVolumePerSecond * Time.deltaTime);
+
+            if (_airSource.volume > 0f && !_airSource.isPlaying)
+            {
+                _airSource.clip = catalog.AirBed;
+                _airSource.Play();
+            }
+            else if (_airSource.volume <= 0f && _airSource.isPlaying)
+            {
+                _airSource.Stop();
+            }
+        }
+
+        /// <summary>One clock across rooms, so a walk through short rooms can't keep putting a sound off.</summary>
+        private void DriveOccasionalSounds()
+        {
+            if (_currentProfile == null || _occasionalSource.isPlaying
+                || !_scheduler.TryPick(Time.time, _currentProfile.Occasional.Length, out int index))
+            {
+                return;
+            }
+
+            AudioClip clip = _currentProfile.Occasional[index];
+            _occasionalSource.clip = clip;
+            _occasionalSource.volume = _currentProfile.OccasionalVolume;
+            _occasionalSource.Play();
+            _scheduler.ScheduleAfter(Time.time + clip.length);
         }
     }
 }

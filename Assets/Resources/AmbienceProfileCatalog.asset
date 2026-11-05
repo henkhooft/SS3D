@@ -14,3 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Audio.AmbienceProfileCatalog
   _profiles:
   - {fileID: 11400000, guid: d28d4fc4b1d4bbb708a361933b69f28e, type: 2}
+  - {fileID: 11400000, guid: 6a8e2e3710b435d63a15c64322b52792, type: 2}
+  - {fileID: 11400000, guid: 4d3d49532302e82b0b0e33d6d571fcfa, type: 2}
+  - {fileID: 11400000, guid: 8ad0e6caa046a7816baf3418335556aa, type: 2}
+  - {fileID: 11400000, guid: ecd4614364cd91f378d30404373190f0, type: 2}
+  _airBed: {fileID: 8300000, guid: d9621c4533c1d4842babaf04e7c8993c, type: 3}
+  _airBedVolume: 0.15

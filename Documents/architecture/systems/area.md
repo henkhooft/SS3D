@@ -52,6 +52,7 @@ Per-consumer power gating and **area-scoped APC cell drain** via [electricity](e
 - Subscribe to area lighting transitions: `OnAreaLightingStateChanged` (do **not** gate on obsolete `IsSetUp` — use `IWorldReady` / lighting snapshot; pure clients never flood).
 - World readiness: after `EndDeferredAreaFlood`, notify `WorldReadinessSubSystem.NotifyAreasFlooded` — consumers await `AreasFlooded` / `WorldReady`, not `OnMapCreated`.
 - Toggle area fixture lighting: `ToggleAreaLightingSwitch` via `LightSwitchController` (separate from APC lighting breaker in MI).
+- Client-safe Equipment power for presentation: `IsAreaEquipmentPowered`, carried in the lighting snapshot (`AreaLightingStateDeriver.DeriveEquipmentPowered`).
 - Subscribe to wall-switch changes: `OnAreaLightingSwitchChanged`.
 - Departmental tint API: `SetDepartmentalLightTint` / `ClearDepartmentalLightTint` (server); clients read via `TryGetDepartmentalLightTint`.
 - Ambience ([audio](audio.md)): `AreaRecord.ParentTag` holds a department from `AreaDepartments.All` or nothing (`AreaDepartments.Normalize`, on set and on load). `AmbienceProfileId` is an optional saved override, set through `SetAreaAmbienceProfileId`, the Map Editor room form or the `areaambience` console command. `TryGetAmbienceProfileId` returns the override or the lower-case department, from the live registry (host) or the synced `RpcSyncAreaAmbience` snapshot (clients), same two-tier pattern as tint.

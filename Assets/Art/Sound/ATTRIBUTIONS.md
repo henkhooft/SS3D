@@ -78,6 +78,20 @@ not original SS3D / SS3D-Art work. Keep paths relative to the repo root.
 | `Assets/Art/Sound/World/Ambience/Station/StationAmbience14.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | [tgstation ae97676](https://github.com/tgstation/tgstation/tree/ae9767664701396501af5dcef8e34c4b5add3d47/sound/ambience); SS14 `Resources/Audio/Ambience/ambigen14.ogg` |
 | `Assets/Art/Sound/World/Ambience/Station/StationAmbience15.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | [tgstation ae97676](https://github.com/tgstation/tgstation/tree/ae9767664701396501af5dcef8e34c4b5add3d47/sound/ambience); SS14 `Resources/Audio/Ambience/ambigen15.ogg` |
 | `Assets/Art/Sound/World/Ambience/Station/ShipAmbience.ogg` | CC-BY-SA-3.0 | Taken from /tg/station, which took it from CEV Eris; via Space Station 14 Ambience | [tgstation 66a625e](https://github.com/tgstation/tgstation/blob/66a625e6df15eaa97e599248a2281c74238ce26e/sound/ambience/shipambience.ogg); SS14 `Resources/Audio/Ambience/shipambience.ogg` |
+| `Assets/Art/Sound/World/Ambience/Engineering/AmbiTech1.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambitech.ogg` |
+| `Assets/Art/Sound/World/Ambience/Engineering/AmbiTech2.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambitech2.ogg` |
+| `Assets/Art/Sound/World/Ambience/Engineering/AmbiTech3.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambitech3.ogg` |
+| `Assets/Art/Sound/World/Ambience/Engineering/AmbiAtmos1.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambiatmos.ogg` |
+| `Assets/Art/Sound/World/Ambience/Engineering/AmbiAtmos2.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambiatmos2.ogg` |
+| `Assets/Art/Sound/World/Ambience/Medical/AmbiNice.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambinice.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint1.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimaint1.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint2.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimaint2.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint3.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimaint3.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint4.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimaint4.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/AmbiMaint5.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimaint5.ogg` |
+| `Assets/Art/Sound/World/Ambience/Maintenance/MaintAmbience.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/maintambience.ogg` |
+| `Assets/Art/Sound/World/Ambience/Morgue/AmbiMo1.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimo1.ogg` |
+| `Assets/Art/Sound/World/Ambience/Morgue/AmbiMo2.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | SS14 `Resources/Audio/Ambience/ambimo2.ogg` |
 | `Assets/Art/Sound/World/Ambience/Space/SpaceAmbience2.ogg` | CC-BY-SA-3.0 | Taken from /tg/station; via Space Station 14 Ambience | [tgstation ae97676](https://github.com/tgstation/tgstation/tree/ae9767664701396501af5dcef8e34c4b5add3d47/sound/ambience); SS14 `Resources/Audio/Ambience/ambispace2.ogg` |
 
 SS3D-Art vocals under `Assets/Art/Sound/Entities/Humanoids/Human/Vocal/` (Choke&Gasp, Scream)
