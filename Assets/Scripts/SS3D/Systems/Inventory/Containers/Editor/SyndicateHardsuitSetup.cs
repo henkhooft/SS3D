@@ -3,12 +3,14 @@ using System;
 using System.Linq;
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Combat;
+using SS3D.Systems.Examine;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Roles;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEngine;
+using UnityEngine.Localization;
 using DB = UnityEditor.AssetDatabase;
 
 namespace SS3D.Systems.Inventory.Containers.Editor
@@ -118,6 +120,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 so.FindProperty("_profile.CoveredZones").intValue = (int)(type == ClothType.Head ? BodyZoneMask.Head : ArmorProfile.SecurityJumpsuit.CoveredZones);
                 so.ApplyModifiedPropertiesWithoutUndo();
                 if (root.GetComponent<SealedGearItemExtension>() == null) root.AddComponent<SealedGearItemExtension>();
+                WireExamine(root, name, type == ClothType.Head ? "syndicate_hardsuit_helmet" : "syndicate_hardsuit");
                 StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<FishNet.Object.NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
@@ -142,9 +145,6 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             try
             {
                 root.name = name;
-                // Unlike clothing templates, the shoe draws on its root; the shape children replace that.
-                UnityEngine.Object.DestroyImmediate(root.GetComponent<MeshRenderer>());
-                UnityEngine.Object.DestroyImmediate(root.GetComponent<MeshFilter>());
                 var pair = BakePreview(model, source, name + "Preview");
                 var preview = SaveMesh(KeepVertices(pair, i => left[i], pair.name), Art + name + "Preview.asset");
                 UnityEngine.Object.DestroyImmediate(pair);
@@ -175,9 +175,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
 
                 WirePresentation(root, world, worn);
                 if (root.GetComponent<MagbootItemExtension>() == null) root.AddComponent<MagbootItemExtension>();
-                var examine = new SerializedObject(root.GetComponent<SS3D.Systems.Examine.SimpleExaminable>());
-                examine.FindProperty("key").objectReferenceValue = DB.LoadAssetAtPath<ScriptableObject>("Assets/Content/Data/Examine/String/Items/Clothing/" + name + ".asset");
-                examine.ApplyModifiedPropertiesWithoutUndo();
+                WireExamine(root, name, "syndicate_magboots");
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
@@ -213,6 +211,9 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             foreach (Transform child in root.transform.Cast<Transform>().ToArray())
                 UnityEngine.Object.DestroyImmediate(child.gameObject);
             foreach (var collider in root.GetComponents<Collider>()) UnityEngine.Object.DestroyImmediate(collider);
+            // Some templates draw on their root, and that mesh would stay on over the new shapes.
+            foreach (var renderer in root.GetComponents<MeshRenderer>()) UnityEngine.Object.DestroyImmediate(renderer);
+            foreach (var filter in root.GetComponents<MeshFilter>()) UnityEngine.Object.DestroyImmediate(filter);
             worn = new GameObject("WornShape");
             worn.transform.SetParent(root.transform, false);
             worn.AddComponent<MeshFilter>().sharedMesh = preview;
@@ -221,11 +222,23 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             world.transform.localScale = worldPose.lossyScale;
             world.transform.localRotation = worldPose.rotation;
             world.AddComponent<MeshFilter>().sharedMesh = worldMesh;
-            var renderer = world.AddComponent<MeshRenderer>(); renderer.sharedMaterials = materials;
-            world.transform.position -= renderer.bounds.center - root.transform.position;
+            var worldRenderer = world.AddComponent<MeshRenderer>(); worldRenderer.sharedMaterials = materials;
+            world.transform.position -= worldRenderer.bounds.center - root.transform.position;
             var box = root.AddComponent<BoxCollider>();
-            box.center = Vector3.zero; box.size = renderer.bounds.size;
+            box.center = Vector3.zero; box.size = worldRenderer.bounds.size;
             attachment = new GameObject("Attachment"); attachment.transform.SetParent(root.transform, false);
+        }
+
+        /// <summary>The template's key names the template, so each piece gets its own. Text lives in ExamineIdentificationKeySetup.</summary>
+        private static void WireExamine(GameObject root, string name, string key)
+        {
+            var data = EnsureAsset<ExamineData>("Assets/Content/Data/Examine/String/Items/Clothing/" + name + ".asset");
+            data.Name = new LocalizedString("Examine", "items.clothing." + key + ".name");
+            data.Description = new LocalizedString("Examine", "items.clothing." + key + ".desc");
+            EditorUtility.SetDirty(data);
+            var examine = new SerializedObject(root.GetComponent<SimpleExaminable>());
+            examine.FindProperty("key").objectReferenceValue = data;
+            examine.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void WirePresentation(GameObject root, GameObject world, GameObject worn)

@@ -36,6 +36,10 @@ namespace SS3D.Systems.Examine.Editor
             UpsertEntry(englishTable, ExamineSealKeys.Intact, ExamineSealKeys.IntactFallback);
             UpsertEntry(englishTable, ExamineSealKeys.Breached, ExamineSealKeys.BreachedFallback);
             UpsertEntry(englishTable, ExamineTankKeys.Fill, ExamineTankKeys.FillFallback);
+            UpsertEntry(englishTable, "items.clothing.syndicate_hardsuit.name", "Syndicate Hardsuit");
+            UpsertEntry(englishTable, "items.clothing.syndicate_hardsuit.desc", "Armored pressure suit. Sealed with its helmet it keeps out vacuum and cold, but it does not supply air.");
+            UpsertEntry(englishTable, "items.clothing.syndicate_hardsuit_helmet.name", "Syndicate Hardsuit Helmet");
+            UpsertEntry(englishTable, "items.clothing.syndicate_hardsuit_helmet.desc", "Armored sealed helmet. It completes the hardsuit's seal and doubles as a mask for internals.");
             UpsertEntry(englishTable, "items.clothing.syndicate_magboots.name", "Syndicate Magboot");
             UpsertEntry(englishTable, "items.clothing.syndicate_magboots.desc", "Magnetic boot for a foot. Worn in a pair and switched on, they hold you to the deck against moving air.");
 

@@ -1406,6 +1406,24 @@ MonoBehaviour:
       you to the deck against moving air.
     m_Metadata:
       m_Items: []
+  - m_Id: 296137613293887488
+    m_Localized: Syndicate Hardsuit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296137613323247616
+    m_Localized: Armored pressure suit. Sealed with its helmet it keeps out vacuum
+      and cold, but it does not supply air.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296137613323247617
+    m_Localized: Syndicate Hardsuit Helmet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296137613323247618
+    m_Localized: Armored sealed helmet. It completes the hardsuit's seal and doubles
+      as a mask for internals.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

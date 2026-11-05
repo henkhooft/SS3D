@@ -4,6 +4,7 @@ using System.Text;
 using NUnit.Framework;
 using SS3D.Attributes;
 using SS3D.Interactions.Interfaces;
+using SS3D.Systems.Examine;
 using SS3D.Systems.Selection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -38,6 +39,20 @@ namespace AssetAudit
             StringBuilder sb = new();
             bool allScriptsExist = AssetAuditUtilities.CheckGameObjectForMissingScripts(prefab, ref sb);
             Assert.IsTrue(allScriptsExist, sb.ToString());
+        }
+
+        /// <summary>
+        /// These pieces start as copies of plain clothing, so the recipe must replace the template's root mesh and examine key.
+        /// </summary>
+        [TestCase("SyndicateHardsuit")]
+        [TestCase("SyndicateHardsuitHelmet")]
+        [TestCase("SyndicateMagboots")]
+        public void HardsuitPiecesKeepNothingOfTheirTemplate(string name)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Content/WorldObjects/Items/Clothing/{name}.prefab");
+            Assert.IsNull(prefab.GetComponent<MeshRenderer>(), "The root still draws the template's mesh");
+            Object key = new SerializedObject(prefab.GetComponent<SimpleExaminable>()).FindProperty("key").objectReferenceValue;
+            Assert.AreEqual(name, key.name, "Examine still reads as the template");
         }
 
         /// <summary>
