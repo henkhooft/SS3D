@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-05T18:32:38.058791+00:00",
+  "generated_at": "2026-11-05T20:20:22.354157+00:00",
   "purpose": "Agent reference for locating icon assets under Assets/Art/Icons/ (plus Phase 2 InteractionIcons scatter; see asset-file-structure-taxonomy).",
   "sources": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "source": "alert-stack",
-      "count": 15,
+      "count": 18,
       "root": "Assets/Art/Icons/Alerts"
     },
     {
@@ -44,7 +44,7 @@
     }
   ],
   "summary": {
-    "total_icons": 4796,
+    "total_icons": 4799,
     "source_count": 8,
     "pack_count": 36,
     "svg_count": 4219
@@ -55853,6 +55853,17 @@
       ]
     },
     {
+      "name": "internals.png",
+      "stem": "internals",
+      "extension": "png",
+      "source": "alert-stack",
+      "pack": "Alerts",
+      "path": "Assets/Art/Icons/Alerts/internals.png",
+      "tags": [
+        "internals"
+      ]
+    },
+    {
       "name": "low-oxygen.png",
       "stem": "low-oxygen",
       "extension": "png",
@@ -55862,6 +55873,17 @@
       "tags": [
         "low",
         "oxygen"
+      ]
+    },
+    {
+      "name": "magboots.png",
+      "stem": "magboots",
+      "extension": "png",
+      "source": "alert-stack",
+      "pack": "Alerts",
+      "path": "Assets/Art/Icons/Alerts/magboots.png",
+      "tags": [
+        "magboots"
       ]
     },
     {
@@ -55933,6 +55955,18 @@
       "tags": [
         "seal",
         "breach"
+      ]
+    },
+    {
+      "name": "tank-low.png",
+      "stem": "tank-low",
+      "extension": "png",
+      "source": "alert-stack",
+      "pack": "Alerts",
+      "path": "Assets/Art/Icons/Alerts/tank-low.png",
+      "tags": [
+        "tank",
+        "low"
       ]
     },
     {
