@@ -66,7 +66,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 
 | Map | Status | Covers |
 |---|---|---|
-| [application](systems/application.md) | stub | `ApplicationInitializerSubSystem`; Boot as launch pad |
+| [application](systems/application.md) | partial | `ApplicationInitializerSubSystem`; Boot as launch pad |
 | [area](systems/area.md) | partial | APC default areas, authored painting ([area-authoring](systems/area-authoring.md)), lighting snapshot |
 | [asset-organization](systems/asset-organization.md) | partial | Art/Content/Data folder taxonomy, icon placement |
 | [atmospherics](systems/atmospherics.md) | partial | ECS turf gas sim, pressure-driven wind/knockdown, loose items in wind, client VFX sync, host AOI |
@@ -99,7 +99,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [player-control](systems/player-control.md) | partial | Connect/authorize/disconnect, reconnect-to-body |
 | [rendering](systems/rendering.md) | partial | URP features, selection pick, living-body Vision FOV, decals, world-only health blackout |
 | [rounds-lobby](systems/rounds-lobby.md) | partial | Round state machine, UITK lobby, Server Settings, pre-countdown map validation |
-| [scene-management](systems/scene-management.md) | stub | `SceneSubSystem`, scene transitions |
+| [scene-management](systems/scene-management.md) | partial | `SceneSubSystem`, scene transitions |
 | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays driven by health/atmos |
 | [selection](systems/selection.md) | shipped | Shader-ID mesh picking, pick-grid index |
 | [stamina](systems/stamina.md) | partial | Regen, encumbrance, sprint, exertion |
