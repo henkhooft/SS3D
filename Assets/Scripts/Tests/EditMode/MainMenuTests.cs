@@ -43,6 +43,64 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
+        public void PickOtherWallpaper_NeverRepeatsThePrevious()
+        {
+            MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);
+            int previous = catalog.PickWallpaper(0f, 0f);
+            Assert.AreNotEqual(previous, MainMenuSubSystem.PickOtherWallpaper(catalog, previous, () => 0f));
+            float[] rolls = { 0f, 0f, 0f, 0f, 1f, 0f };
+            int roll = 0;
+            Assert.AreEqual(catalog.PickWallpaper(1f, 0f), MainMenuSubSystem.PickOtherWallpaper(catalog, previous, () => rolls[roll++]), "rerolls past a repeat");
+        }
+
+        [Test]
+        public void Rotation_HoldsThenDipsSwapsAndLifts()
+        {
+            MainMenuWallpaperRotation rotation = new(0f);
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(59f, true, true));
+            Assert.AreEqual(MainMenuWallpaperStep.FadeOut, rotation.Tick(60f, true, true));
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(60.2f, true, true), "still fading");
+            Assert.AreEqual(MainMenuWallpaperStep.Swap, rotation.Tick(60.5f, true, false));
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(60.6f, true, false), "video has no frame yet");
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(60.7f, true, true), "video layer still crossfading");
+            Assert.AreEqual(MainMenuWallpaperStep.FadeIn, rotation.Tick(61.2f, true, true));
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(120f, true, true), "a new hold starts at the lift");
+            Assert.AreEqual(MainMenuWallpaperStep.FadeOut, rotation.Tick(121.2f, true, true));
+        }
+
+        [Test]
+        public void Rotation_LiftsTheVeilWhenAVideoNeverLoads()
+        {
+            MainMenuWallpaperRotation rotation = new(0f);
+            rotation.Tick(60f, true, false);
+            rotation.Tick(60.5f, true, false);
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(61.9f, true, false));
+            Assert.AreEqual(MainMenuWallpaperStep.FadeIn, rotation.Tick(62f, true, false));
+        }
+
+        [Test]
+        public void Rotation_RevealWaitsForTheVideoThenStartsAFullHold()
+        {
+            MainMenuWallpaperRotation rotation = new(0f);
+            rotation.Reveal(0f);
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(0.1f, true, false), "no frame yet");
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(0.2f, true, true), "video layer crossfading");
+            Assert.AreEqual(MainMenuWallpaperStep.FadeIn, rotation.Tick(0.7f, true, true));
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(60f, true, true));
+            Assert.AreEqual(MainMenuWallpaperStep.FadeOut, rotation.Tick(60.7f, true, true));
+        }
+
+        [Test]
+        public void Rotation_WaitsOutDialogs_AndLiftsIfOneOpensMidDip()
+        {
+            MainMenuWallpaperRotation rotation = new(0f);
+            Assert.AreEqual(MainMenuWallpaperStep.None, rotation.Tick(300f, false, true), "no dip behind a dialog");
+            Assert.AreEqual(MainMenuWallpaperStep.FadeOut, rotation.Tick(301f, true, true), "due as soon as it closes");
+            Assert.AreEqual(MainMenuWallpaperStep.Swap, rotation.Tick(301.5f, false, true), "the swap still lands");
+            Assert.AreEqual(MainMenuWallpaperStep.FadeIn, rotation.Tick(301.6f, false, true), "no black behind the dialog");
+        }
+
+        [Test]
         public void Wallpapers_Are1080pAndCompressed()
         {
             MainMenuAssetCatalog catalog = Resources.Load<MainMenuAssetCatalog>(MainMenuAssetPaths.ResourcesCatalogName);

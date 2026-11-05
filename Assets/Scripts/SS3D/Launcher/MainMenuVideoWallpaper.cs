@@ -5,31 +5,38 @@ using UnityEngine.Video;
 namespace SS3D.Launcher
 {
     /// <summary>
-    /// One looping, silent video behind the main menu, decoded into a render texture the view shows.
+    /// The looping, silent video behind the main menu, if the current wallpaper is one, decoded into a render texture the view shows.
     /// <see cref="Frame"/> stays null until a frame exists and after a decode error, so the menu keeps
     /// showing a still instead of black. Call <see cref="Tick"/> every frame.
     /// </summary>
     public sealed class MainMenuVideoWallpaper
     {
         private readonly VideoPlayer _player;
-        private readonly VideoClip _clip;
+        private VideoClip _clip;
         private RenderTexture _target;
         private bool _hasFrame;
         private bool _presented;
         private bool _failed;
 
-        public MainMenuVideoWallpaper(GameObject host, VideoClip clip)
+        public MainMenuVideoWallpaper(GameObject host)
         {
-            _clip = clip;
             _player = host.AddComponent<VideoPlayer>();
             _player.playOnAwake = false;
             _player.isLooping = true;
             _player.skipOnDrop = true;
             _player.audioOutputMode = VideoAudioOutputMode.None;
             _player.renderMode = VideoRenderMode.RenderTexture;
-            _player.clip = clip;
             _player.errorReceived += HandleError;
-            Log.Information(this, "Main menu video wallpaper: {clip}", Logs.Important, clip.name);
+        }
+
+        /// <summary>Stops the current clip and selects another; null means no video.</summary>
+        public void Load(VideoClip clip)
+        {
+            Stop();
+            _clip = clip;
+            _failed = false;
+            if (_player != null) _player.clip = clip;
+            if (clip != null) Log.Information(this, "Main menu video wallpaper: {clip}", Logs.Important, clip.name);
         }
 
         /// <summary>The live frame, or null while there is none to show.</summary>
@@ -38,7 +45,7 @@ namespace SS3D.Launcher
         /// <summary>Play, or hold the current frame. Safe to call repeatedly.</summary>
         public void SetPlaying(bool playing)
         {
-            if (_failed || _player == null)
+            if (_failed || _clip == null || _player == null)
             {
                 return;
             }
