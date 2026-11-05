@@ -64,6 +64,7 @@ Starting values, reviewed after Playtest 1.
 ## Deviations
 
 - Magboots get a chip beside the internals chip. Deviates from `armor.md` §6, which names only the internals chip, because the boots need a visible on/off state.
+- The chips sit to the right of the hands, not beside the alert stack, because they are buttons and the stack is status only. Both switches need `CanUseArms`, so a critical body keeps whatever state it collapsed in.
 - No milestone or design text relies on locker contents any more: `savedItemList` in station templates stores no container contents, so crew gear comes from loadouts.
 
 - Pockets drop from `Huge` to `Small`. `armor.md` §3 only allows a tank in a pocket "if it is small enough", so this also stops every larger item fitting a pocket. The gas mask becomes `Small` so crew can carry it.

@@ -57,19 +57,3 @@
 .alert-chip--hovered .alert-chip__label {
     opacity: 1;
 }
-
-.gear-chip .alert-chip__box {
-    border-color: var(--ss3d-text-secondary);
-}
-
-.gear-chip .alert-chip__glyph {
-    -unity-background-image-tint-color: var(--ss3d-text-secondary);
-}
-
-.gear-chip--on .alert-chip__box {
-    border-color: var(--ss3d-feedback-success);
-}
-
-.gear-chip--on .alert-chip__glyph {
-    -unity-background-image-tint-color: var(--ss3d-feedback-success);
-}

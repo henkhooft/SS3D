@@ -133,6 +133,13 @@ namespace SS3D.UI.MainHud
             _magbootsChip.SetState(available, on);
         }
 
+        /// <summary>Greys the EVA switches while the body cannot work them.</summary>
+        public void SetGearLocked(bool locked)
+        {
+            _internalsChip.SetLocked(locked);
+            _magbootsChip.SetLocked(locked);
+        }
+
         public void SetIntent(IntentType intent)
         {
             _intentModule.SetIntent(intent);
@@ -330,14 +337,6 @@ namespace SS3D.UI.MainHud
             _alertStack = new AlertIconStack(_alertIcons);
             VisualElement alertZone = BuildZone("main-hud__zone--alerts", _alertStack);
 
-            _internalsChip = new GearToggleChip(_alertIcons.Internals, "Internals");
-            _internalsChip.Clicked += () => InternalsToggleRequested?.Invoke();
-            alertZone.Add(_internalsChip);
-
-            _magbootsChip = new GearToggleChip(_alertIcons.Magboots, "Magboots");
-            _magbootsChip.Clicked += () => MagbootsToggleRequested?.Invoke();
-            alertZone.Add(_magbootsChip);
-
             _equipmentGrid = new EquipmentGrid(_icons);
             _equipmentGrid.SlotClicked += slot => EquipmentSlotClicked?.Invoke(slot);
             _equipmentGrid.SlotDragStarted += (slot, pos) => EquipmentDragStarted?.Invoke(slot, pos);
@@ -355,6 +354,20 @@ namespace SS3D.UI.MainHud
             _handsGearStrip.HandDragMoved += (slot, pos) => HandDragMoved?.Invoke(slot, pos);
             _handsGearStrip.HandDragEnded += (slot, pos) => HandDragEnded?.Invoke(slot, pos);
             VisualElement handsGearZone = BuildZone("main-hud__zone--hands-gear", _handsGearStrip);
+
+            _internalsChip = new GearToggleChip(_alertIcons.Internals, "Internals");
+            _internalsChip.Clicked += () => InternalsToggleRequested?.Invoke();
+
+            _magbootsChip = new GearToggleChip(_alertIcons.Magboots, "Magboots");
+            _magbootsChip.Clicked += () => MagbootsToggleRequested?.Invoke();
+
+            // Absolute, so the strip stays centered when a chip appears.
+            VisualElement gearToggles = new();
+            gearToggles.AddToClassList("gear-toggles");
+            gearToggles.pickingMode = PickingMode.Ignore;
+            gearToggles.Add(_internalsChip);
+            gearToggles.Add(_magbootsChip);
+            handsGearZone.Add(gearToggles);
 
             _intentModule = new IntentModule();
             _intentModule.ToggleRequested += () => IntentToggleRequested?.Invoke();

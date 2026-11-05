@@ -14,7 +14,8 @@ namespace SS3D.Systems.Health
     /// <summary>
     /// The body's EVA switches (Documents/design/armor.md §3, §6). Internals need a tank plus a mask
     /// or sealed helmet, and the server turns them off the moment either goes away. Magboots need a
-    /// boot on both feet, and hold only while the body is upright over a floor.
+    /// boot on both feet, and hold only while the body is upright over a floor. Switches stay where
+    /// they are once the body can no longer work them.
     /// </summary>
     public class EvaGearController : NetworkActor
     {
@@ -46,6 +47,10 @@ namespace SS3D.Systems.Health
         private HumanInventory _inventory;
         private Ragdoll _ragdoll;
         private HumanoidBodyStateMachine _bodyState;
+        private HumanHealthController _health;
+
+        /// <summary>Whether this body can work its switches. <see cref="HealthSnapshot.IsConscious"/> stays true in critical, so it cannot answer this.</summary>
+        public bool CanSwitch => _health != null && _health.Snapshot.CanUseArms;
 
         public bool InternalsAvailable => _internalsAvailable;
 
@@ -66,6 +71,7 @@ namespace SS3D.Systems.Health
             base.OnAwake();
             _ragdoll = GetComponent<Ragdoll>();
             _bodyState = GetComponent<HumanoidBodyStateMachine>();
+            _health = GetComponent<HumanHealthController>();
         }
 
         public override void OnStartServer()
@@ -91,7 +97,7 @@ namespace SS3D.Systems.Health
         [ServerRpc]
         private void CmdToggleInternals()
         {
-            if (TryGetComponent(out HumanHealthController health) && health.Snapshot.IsConscious)
+            if (CanSwitch)
             {
                 ServerSetInternals(!_internalsOn);
             }
@@ -109,7 +115,7 @@ namespace SS3D.Systems.Health
         [ServerRpc]
         private void CmdToggleMagboots()
         {
-            if (TryGetComponent(out HumanHealthController health) && health.Snapshot.IsConscious)
+            if (CanSwitch)
             {
                 ServerSetMagboots(!_magbootsOn);
             }

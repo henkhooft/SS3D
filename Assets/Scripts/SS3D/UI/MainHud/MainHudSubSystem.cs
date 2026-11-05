@@ -244,6 +244,7 @@ namespace SS3D.UI.MainHud
             RefreshZoneReticle();
             _view.SetInternals(_evaGear != null && _evaGear.InternalsAvailable, _evaGear != null && _evaGear.InternalsOn);
             _view.SetMagboots(_evaGear != null && _evaGear.MagbootsAvailable, _evaGear != null && _evaGear.MagbootsOn);
+            _view.SetGearLocked(_evaGear != null && !_evaGear.CanSwitch);
         }
 
         private void RefreshZoneReticle()
@@ -689,7 +690,7 @@ namespace SS3D.UI.MainHud
 
         private void HandleToggleInternals()
         {
-            if (_evaGear != null && _evaGear.InternalsAvailable)
+            if (_evaGear != null && _evaGear.InternalsAvailable && _evaGear.CanSwitch)
             {
                 _evaGear.ClientToggleInternals();
             }
@@ -699,7 +700,7 @@ namespace SS3D.UI.MainHud
 
         private void HandleToggleMagboots()
         {
-            if (_evaGear != null && _evaGear.MagbootsAvailable)
+            if (_evaGear != null && _evaGear.MagbootsAvailable && _evaGear.CanSwitch)
             {
                 _evaGear.ClientToggleMagboots();
             }

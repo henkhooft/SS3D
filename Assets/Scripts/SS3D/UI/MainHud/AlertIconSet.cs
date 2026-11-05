@@ -27,10 +27,10 @@ namespace SS3D.UI.MainHud
         public Sprite SealBreach;
         public Sprite TankLow;
 
-        /// <summary>The internals chip beside the stack; it is not a hazard.</summary>
+        /// <summary>The internals chip beside the hands; it is not a hazard.</summary>
         public Sprite Internals;
 
-        /// <summary>The magboots chip beside the stack; it is not a hazard.</summary>
+        /// <summary>The magboots chip beside the hands; it is not a hazard.</summary>
         public Sprite Magboots;
 
         public Sprite this[Components.AlertHazard hazard] => hazard switch

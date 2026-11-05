@@ -200,6 +200,37 @@ namespace SS3D.Tests
             bodyState.SetFloating(false);
         }
 
+        [UnityTest]
+        public IEnumerator CriticalBody_CannotWorkItsSwitches()
+        {
+            HumanHealthController health = Body.GetComponent<HumanHealthController>();
+            EvaGearController gear = Body.GetComponent<EvaGearController>();
+            Worn(ContainerType.Pocket).Dump();
+            Worn(ContainerType.ShoeLeft).Dump();
+            Worn(ContainerType.ShoeRight).Dump();
+            Wear(GasMask, ContainerType.Mask);
+            Wear(EmergencyTank, ContainerType.Pocket);
+            Wear(Magboots, ContainerType.ShoeLeft);
+            Wear(Magboots, ContainerType.ShoeRight);
+            yield return WaitFor(() => gear.InternalsAvailable && gear.MagbootsAvailable, "the gear offers both switches");
+
+            gear.ClientToggleInternals();
+            yield return WaitFor(() => gear.InternalsOn, "a healthy body works the switch");
+
+            while (health.Snapshot.State != HealthState.Critical)
+            {
+                health.TickHealth(atmosphereO2: 0f);
+            }
+
+            Assert.IsTrue(health.Snapshot.IsConscious, "Critical is still conscious, so consciousness cannot be the gate");
+            Assert.IsFalse(gear.CanSwitch);
+            gear.ClientToggleInternals();
+            gear.ClientToggleMagboots();
+            yield return Hold(0.5f);
+            Assert.IsTrue(gear.InternalsOn, "A critical body cannot switch internals off");
+            Assert.IsFalse(gear.MagbootsOn, "Nor switch magboots on");
+        }
+
         private AttachedContainer Worn(ContainerType slot) => Body.GetComponent<HumanInventory>().Containers.Single(worn => worn.ContainerType == slot);
 
         private Item Wear(string item, ContainerType slot)
