@@ -58,18 +58,18 @@
     opacity: 1;
 }
 
-.internals-chip .alert-chip__box {
+.gear-chip .alert-chip__box {
     border-color: var(--ss3d-text-secondary);
 }
 
-.internals-chip .alert-chip__glyph {
+.gear-chip .alert-chip__glyph {
     -unity-background-image-tint-color: var(--ss3d-text-secondary);
 }
 
-.internals-chip--on .alert-chip__box {
+.gear-chip--on .alert-chip__box {
     border-color: var(--ss3d-feedback-success);
 }
 
-.internals-chip--on .alert-chip__glyph {
+.gear-chip--on .alert-chip__glyph {
     -unity-background-image-tint-color: var(--ss3d-feedback-success);
 }

@@ -1383,6 +1383,14 @@ MonoBehaviour:
     m_Key: examine.tank.fill
     m_Metadata:
       m_Items: []
+  - m_Id: 296112289708535808
+    m_Key: items.clothing.syndicate_magboots.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296112289742090240
+    m_Key: items.clothing.syndicate_magboots.desc
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

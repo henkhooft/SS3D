@@ -49,3 +49,4 @@ MonoBehaviour:
   _alertSealBreach: {fileID: 21300000, guid: 7cb5d8629ed9460d8345de5043b28aff, type: 3}
   _alertTankLow: {fileID: 21300000, guid: e4de13b1211b4ac0b9d1eb97b634a4cc, type: 3}
   _internals: {fileID: 21300000, guid: ad3b1a0ac7854491b9e4e977594d3bc9, type: 3}
+  _magboots: {fileID: 21300000, guid: 908e6fd9eeb04607bd6bb7fb1d999e91, type: 3}

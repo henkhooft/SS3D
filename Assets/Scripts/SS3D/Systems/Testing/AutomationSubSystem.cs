@@ -556,6 +556,19 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "InternalsToggled");
                     break;
 
+                // Server: blows this speed at every remote body for this many seconds, reversing every 2 s so a wall cannot end the test.
+                case "wind_on_clients":
+                    yield return BlowWindOnClients(
+                        float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(instruction.Args[1], System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+
+                // Client: the wind moves the owned body, boots switched on from this process stop it, and off lets it move again.
+                case "assert_magboots_wind":
+                    yield return AssertMagbootsWind();
+                    TestSignal.Emit(this, "MagbootsHeld");
+                    break;
+
                 case "wait_seconds":
                     yield return new WaitForSeconds(float.Parse(instruction.Args[0]));
                     break;
@@ -855,6 +868,55 @@ namespace SS3D.Systems.Testing
                 () => !gear.InternalsOn && !health.Snapshot.Environment.OnInternals,
                 _waitTimeoutSeconds,
                 "assert_internals_toggle off");
+        }
+
+        private static IEnumerator BlowWindOnClients(float speed, float seconds)
+        {
+            for (float elapsed = 0f; elapsed < seconds; elapsed += AtmosConstants.TickInterval)
+            {
+                float direction = Mathf.Repeat(elapsed, 4f) < 2f ? 1f : -1f;
+                foreach (Entity body in SubSystems.Get<EntitySubSystem>().SpawnedPlayers)
+                {
+                    if (body != null && !body.IsOwner && body.TryGetComponent(out Ragdoll ragdoll))
+                    {
+                        ragdoll.ServerApplyWind(Vector3.right * (speed * direction));
+                    }
+                }
+
+                yield return new WaitForSeconds(AtmosConstants.TickInterval);
+            }
+        }
+
+        private IEnumerator AssertMagbootsWind()
+        {
+            const float settleSeconds = 2f;
+            const float holdSeconds = 5f;
+            const float movedMetres = 0.3f;
+            const float heldMetres = 0.05f;
+
+            yield return WaitUntil(IsEmbarked, _waitTimeoutSeconds, "assert_magboots_wind embarked");
+            SubSystems.Get<EntitySubSystem>().TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity);
+            EvaGearController gear = entity.GetComponent<EvaGearController>();
+            Ragdoll body = entity.GetComponent<Ragdoll>();
+            yield return WaitUntil(() => gear.MagbootsAvailable, _waitTimeoutSeconds, "assert_magboots_wind available");
+
+            Vector3 start = body.WindSamplePosition;
+            yield return WaitUntil(() => Vector3.Distance(body.WindSamplePosition, start) > movedMetres, _waitTimeoutSeconds, "assert_magboots_wind blown");
+
+            gear.ClientToggleMagboots();
+            yield return WaitUntil(() => gear.MagbootsOn, _waitTimeoutSeconds, "assert_magboots_wind on");
+            yield return new WaitForSeconds(settleSeconds);
+            Vector3 anchored = body.WindSamplePosition;
+            yield return new WaitForSeconds(holdSeconds);
+            float drift = Vector3.Distance(body.WindSamplePosition, anchored);
+            if (drift > heldMetres)
+            {
+                throw new InvalidOperationException($"assert_magboots_wind: the anchored body drifted {drift} m");
+            }
+
+            gear.ClientToggleMagboots();
+            yield return WaitUntil(() => !gear.MagbootsOn, _waitTimeoutSeconds, "assert_magboots_wind off");
+            yield return WaitUntil(() => Vector3.Distance(body.WindSamplePosition, anchored) > movedMetres, _waitTimeoutSeconds, "assert_magboots_wind blown again");
         }
 
         private bool IsEmbarked()

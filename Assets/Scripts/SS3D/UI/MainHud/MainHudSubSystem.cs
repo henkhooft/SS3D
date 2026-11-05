@@ -243,6 +243,7 @@ namespace SS3D.UI.MainHud
             RefreshIntent();
             RefreshZoneReticle();
             _view.SetInternals(_evaGear != null && _evaGear.InternalsAvailable, _evaGear != null && _evaGear.InternalsOn);
+            _view.SetMagboots(_evaGear != null && _evaGear.MagbootsAvailable, _evaGear != null && _evaGear.MagbootsOn);
         }
 
         private void RefreshZoneReticle()
@@ -421,6 +422,7 @@ namespace SS3D.UI.MainHud
             _view.GearDragMoved += HandleHudDragMoved;
             _view.GearDragEnded += HandleHudDragEnded;
             _view.InternalsToggleRequested += HandleToggleInternals;
+            _view.MagbootsToggleRequested += HandleToggleMagboots;
             _view.HandDragStarted += HandleHandDragStarted;
             _view.HandDragMoved += HandleHudDragMoved;
             _view.HandDragEnded += HandleHudDragEnded;
@@ -675,6 +677,7 @@ namespace SS3D.UI.MainHud
             if (SubSystems.TryGet(out InputSubSystem input))
             {
                 input.Inputs.Hotkeys.ToggleInternals.performed += HandleToggleInternals;
+                input.Inputs.Hotkeys.ToggleMagboots.performed += HandleToggleMagboots;
             }
 
             RefreshEquipmentAndGear();
@@ -689,6 +692,16 @@ namespace SS3D.UI.MainHud
             if (_evaGear != null && _evaGear.InternalsAvailable)
             {
                 _evaGear.ClientToggleInternals();
+            }
+        }
+
+        private void HandleToggleMagboots(InputAction.CallbackContext context) => HandleToggleMagboots();
+
+        private void HandleToggleMagboots()
+        {
+            if (_evaGear != null && _evaGear.MagbootsAvailable)
+            {
+                _evaGear.ClientToggleMagboots();
             }
         }
 
@@ -715,9 +728,11 @@ namespace SS3D.UI.MainHud
             if (SubSystems.TryGet(out InputSubSystem input))
             {
                 input.Inputs.Hotkeys.ToggleInternals.performed -= HandleToggleInternals;
+                input.Inputs.Hotkeys.ToggleMagboots.performed -= HandleToggleMagboots;
             }
 
             _view?.SetInternals(false, false);
+            _view?.SetMagboots(false, false);
             _localPlayer = null;
             _healthController = null;
             _evaGear = null;
@@ -1544,6 +1559,7 @@ namespace SS3D.UI.MainHud
                     SealBreach = LoadAlertSprite("seal-breach"),
                     TankLow = LoadAlertSprite("tank-low"),
                     Internals = LoadAlertSprite("internals"),
+                    Magboots = LoadAlertSprite("magboots"),
                 };
             }
 

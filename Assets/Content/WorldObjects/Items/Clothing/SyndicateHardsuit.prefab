@@ -357,7 +357,9 @@ MonoBehaviour:
   _profile:
     BruteAbsorption: 8
     BurnAbsorption: 5
-    MaxIntegri
+    MaxIntegrity: 160
+    CoveredZones: 126
+  _integrity: 0
 --- !u!114 &1045516776610113379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -374,9 +376,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 2527334834019670621}
   _networkObjectCache: {fileID: 2527334834019670621}
   _heatProtection: 0.7
-  _breached: 0ty: 160
-    CoveredZones: 126
-  _integrity: 0
+  _breached: 0
 --- !u!65 &6678069017833801228
 BoxCollider:
   m_ObjectHideFlags: 0

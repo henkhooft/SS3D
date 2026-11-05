@@ -5,21 +5,23 @@ using UnityEngine.UIElements;
 namespace SS3D.UI.MainHud.Components
 {
     /// <summary>
-    /// Hidden until a tank and a mask or sealed helmet are worn. Shows whether internals are on, and
-    /// a click toggles them (Documents/design/armor.md §6).
+    /// An EVA switch beside the alert stack: hidden until its gear is worn, shows on or off, and a
+    /// click toggles it (Documents/design/armor.md §6).
     /// </summary>
-    public sealed class InternalsChip : VisualElement
+    public sealed class GearToggleChip : VisualElement
     {
         private readonly Label _label;
+        private readonly string _name;
         private bool _available;
         private bool _on;
 
         public event Action Clicked;
 
-        public InternalsChip(Sprite icon)
+        public GearToggleChip(Sprite icon, string name)
         {
+            _name = name;
             AddToClassList("alert-chip");
-            AddToClassList("internals-chip");
+            AddToClassList("gear-chip");
             style.display = DisplayStyle.None;
 
             VisualElement box = new();
@@ -64,8 +66,8 @@ namespace SS3D.UI.MainHud.Components
         private void Refresh()
         {
             style.display = _available ? DisplayStyle.Flex : DisplayStyle.None;
-            EnableInClassList("internals-chip--on", _on);
-            _label.text = _on ? "Internals On" : "Internals Off";
+            EnableInClassList("gear-chip--on", _on);
+            _label.text = _on ? $"{_name} On" : $"{_name} Off";
         }
     }
 }

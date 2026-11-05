@@ -5,6 +5,8 @@ using NUnit.Framework;
 using SS3D.Core;
 using SS3D.Interactions;
 using SS3D.Systems.Combat;
+using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Health;
 using SS3D.Systems.Interactions;
@@ -26,6 +28,7 @@ namespace SS3D.Tests
         private const string GasMask = "bf177f8bab26bc84b87fd9a971004418";
         private const string OxygenTank = "5479411218b869144b7d09d6db6dc58e";
         private const string EmergencyTank = "e220e4181141f914aa994d7672ed6ec5";
+        private const string Magboots = "2ba59995b958400888f44509d7530731";
 
         [UnityTest]
         public IEnumerator HitPastTheSuit_BreachesTheSeal()
@@ -34,6 +37,7 @@ namespace SS3D.Tests
             Item suit = Wear(Hardsuit, ContainerType.ExoSuit);
             Wear(HardsuitHelmet, ContainerType.Head);
             SealedGearItemExtension seal = suit.GetComponent<SealedGearItemExtension>();
+            Assert.AreEqual(160f, suit.GetComponent<ArmorItemExtension>().Integrity, "The suit starts at its authored integrity");
             yield return WaitFor(() => health.Snapshot.Environment.IsSealed, "the worn suit and helmet seal");
             Assert.AreEqual(ExamineSealKeys.IntactFallback, ExamineLine(seal));
 
@@ -130,6 +134,73 @@ namespace SS3D.Tests
                 interactions.RunInteractionForTesting(Body.gameObject, head, "Apply oxygen", IntentType.Help),
                 "An empty tank treats nobody");
         }
+
+        [UnityTest]
+        public IEnumerator Magboots_NeedBothFeetAndHoldAgainstWindUntilOnTheFloor()
+        {
+            EvaGearController gear = Body.GetComponent<EvaGearController>();
+            Ragdoll ragdoll = Body.GetComponent<Ragdoll>();
+            HumanoidLivingController movement = Body.GetComponent<HumanoidLivingController>();
+            AttachedContainer left = Worn(ContainerType.ShoeLeft);
+            AttachedContainer right = Worn(ContainerType.ShoeRight);
+            left.Dump();
+            right.Dump();
+
+            Wear(Magboots, ContainerType.ShoeLeft);
+            yield return null;
+            Assert.IsFalse(gear.MagbootsAvailable, "One boot anchors nothing");
+            gear.ServerSetMagboots(true);
+            Assert.IsFalse(gear.MagbootsOn);
+
+            Item rightBoot = Wear(Magboots, ContainerType.ShoeRight);
+            yield return WaitFor(() => gear.MagbootsAvailable, "a pair offers magboots");
+            Assert.IsFalse(gear.MagbootsOn, "Magboots are a deliberate switch");
+            gear.ServerSetMagboots(true);
+            yield return WaitFor(() => gear.MagbootsAnchored, "the boots hold");
+            Assert.AreEqual(HealthConstants.MagbootSpeedFactor, movement.GearSpeedFactor, "Holding on costs speed");
+            Assert.AreEqual(HealthConstants.MagbootSpeedFactor, movement.LocomotionPlaybackRate, 0.001f, "The gait slows with the body");
+
+            Vector3 start = ragdoll.WindSamplePosition;
+            ragdoll.ServerApplyWind(Vector3.right * 30f);
+            yield return Hold(0.5f);
+            Assert.AreEqual(BodyPresentationState.Locomotion, ragdoll.Presentation, "A violent gust cannot knock an anchored body down");
+            Assert.That(Vector3.Distance(ragdoll.WindSamplePosition, start), Is.LessThan(0.01f), "Nor pull it");
+
+            ragdoll.ServerKnockdown(1f);
+            yield return WaitFor(() => ragdoll.IsKnockedDown, "something else floors the wearer");
+            Assert.IsFalse(gear.MagbootsAnchored, "Boots on the floor hold nothing");
+            Assert.AreEqual(1f, movement.GearSpeedFactor);
+            start = ragdoll.WindSamplePosition;
+            ragdoll.ServerApplyWind(Vector3.right * 30f);
+            yield return Hold(0.5f);
+            Assert.That(ragdoll.WindSamplePosition.x, Is.GreaterThan(start.x + 0.1f), "The wind takes a floored wearer");
+            yield return WaitFor(() => !ragdoll.IsKnockedDown, "the wearer recovers", 10f);
+
+            right.RemoveItem(rightBoot);
+            yield return WaitFor(() => !gear.MagbootsOn, "losing a boot turns them off");
+            Assert.IsFalse(gear.MagbootsAvailable);
+        }
+
+        [UnityTest]
+        public IEnumerator Magboots_DoNothingOverOpenSpace()
+        {
+            EvaGearController gear = Body.GetComponent<EvaGearController>();
+            HumanoidBodyStateMachine bodyState = Body.GetComponent<HumanoidBodyStateMachine>();
+            Worn(ContainerType.ShoeLeft).Dump();
+            Worn(ContainerType.ShoeRight).Dump();
+            Wear(Magboots, ContainerType.ShoeLeft);
+            Wear(Magboots, ContainerType.ShoeRight);
+            yield return WaitFor(() => gear.MagbootsAvailable, "a pair offers magboots");
+
+            gear.ServerSetMagboots(true);
+            Assert.IsTrue(gear.MagbootsAnchored);
+            bodyState.SetFloating(true);
+            Assert.IsTrue(gear.MagbootsOn, "The switch stays where it is");
+            Assert.IsFalse(gear.ServerAnchored(), "Nothing to hold on to");
+            bodyState.SetFloating(false);
+        }
+
+        private AttachedContainer Worn(ContainerType slot) => Body.GetComponent<HumanInventory>().Containers.Single(worn => worn.ContainerType == slot);
 
         private Item Wear(string item, ContainerType slot)
         {

@@ -1,7 +1,11 @@
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using SS3D.Core;
 using SS3D.Core.Behaviours;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Combat;
+using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 
@@ -9,11 +13,17 @@ namespace SS3D.Systems.Health
 {
     /// <summary>
     /// The body's EVA switches (Documents/design/armor.md §3, §6). Internals need a tank plus a mask
-    /// or sealed helmet, and the server turns them off the moment either goes away.
+    /// or sealed helmet, and the server turns them off the moment either goes away. Magboots need a
+    /// boot on both feet, and hold only while the body is upright over a floor.
     /// </summary>
     public class EvaGearController : NetworkActor
     {
         /// <summary>Where a tank can feed internals from, best first. Bags do not count.</summary>
+        private const float ClunkVolume = 0.7f;
+        private const float ClunkPitchOn = 0.7f;
+        private const float ClunkPitchOff = 0.9f;
+        private const float ClunkRange = 10f;
+
         private static readonly ContainerType[] TankSlots =
         {
             ContainerType.SuitStorage,
@@ -27,11 +37,36 @@ namespace SS3D.Systems.Health
         [SyncVar]
         private bool _internalsOn;
 
+        [SyncVar]
+        private bool _magbootsAvailable;
+
+        [SyncVar]
+        private bool _magbootsOn;
+
         private HumanInventory _inventory;
+        private Ragdoll _ragdoll;
+        private HumanoidBodyStateMachine _bodyState;
 
         public bool InternalsAvailable => _internalsAvailable;
 
         public bool InternalsOn => _internalsOn;
+
+        public bool MagbootsAvailable => _magbootsAvailable;
+
+        public bool MagbootsOn => _magbootsOn;
+
+        /// <summary>Whether the boots hold right now. Built from synced state, so it reads the same on every peer.</summary>
+        public bool MagbootsAnchored => _magbootsOn && !_ragdoll.IsKnockedDown && !_bodyState.Snapshot.IsFloating;
+
+        /// <summary>World speed and clip playback scale while the boots hold.</summary>
+        public float MovementSpeedFactor => MagbootsAnchored ? HealthConstants.MagbootSpeedFactor : 1f;
+
+        protected override void OnAwake()
+        {
+            base.OnAwake();
+            _ragdoll = GetComponent<Ragdoll>();
+            _bodyState = GetComponent<HumanoidBodyStateMachine>();
+        }
 
         public override void OnStartServer()
         {
@@ -69,6 +104,40 @@ namespace SS3D.Systems.Health
             _internalsOn = on && _internalsAvailable;
         }
 
+        public void ClientToggleMagboots() => CmdToggleMagboots();
+
+        [ServerRpc]
+        private void CmdToggleMagboots()
+        {
+            if (TryGetComponent(out HumanHealthController health) && health.Snapshot.IsConscious)
+            {
+                ServerSetMagboots(!_magbootsOn);
+            }
+        }
+
+        [Server]
+        public void ServerSetMagboots(bool on)
+        {
+            ServerRefresh();
+            bool next = on && _magbootsAvailable;
+            if (next == _magbootsOn)
+            {
+                return;
+            }
+
+            _magbootsOn = next;
+            SubSystems.Get<AudioSubSystem>().PlayAudioSource(
+                AudioType.Sfx, AudioTrackIds.MagbootClunk, Transform.position, NetworkObject, false, ClunkVolume, next ? ClunkPitchOn : ClunkPitchOff, 1f, ClunkRange);
+        }
+
+        /// <summary>Whether wind should leave this body alone. A lost foot takes its boot without a content change.</summary>
+        [Server]
+        public bool ServerAnchored()
+        {
+            ServerRefresh();
+            return MagbootsAnchored;
+        }
+
         /// <summary>The tank being breathed from, or null while internals are off.</summary>
         [Server]
         public GasTankItemExtension ServerBreathingTank()
@@ -88,6 +157,8 @@ namespace SS3D.Systems.Health
         {
             _internalsAvailable = FindTank() != null && HasBreathingGear();
             _internalsOn = _internalsOn && _internalsAvailable;
+            _magbootsAvailable = Wears<MagbootItemExtension>(ContainerType.ShoeLeft) && Wears<MagbootItemExtension>(ContainerType.ShoeRight);
+            _magbootsOn = _magbootsOn && _magbootsAvailable;
         }
 
         private GasTankItemExtension FindTank()

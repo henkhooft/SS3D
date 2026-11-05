@@ -63,6 +63,7 @@ namespace SS3D.Editor
                 SealBreach = LoadRequiredAlertSprite("seal-breach", missing),
                 TankLow = LoadRequiredAlertSprite("tank-low", missing),
                 Internals = LoadRequiredAlertSprite("internals", missing),
+                Magboots = LoadRequiredAlertSprite("magboots", missing),
             };
 
             if (missing.Count > 0)

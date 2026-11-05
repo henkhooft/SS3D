@@ -1397,6 +1397,15 @@ MonoBehaviour:
     m_Localized: 'Tank: {0}% full.'
     m_Metadata:
       m_Items: []
+  - m_Id: 296112289708535808
+    m_Localized: Syndicate Magboot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296112289742090240
+    m_Localized: Magnetic boot for a foot. Worn in a pair and switched on, they hold
+      you to the deck against moving air.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

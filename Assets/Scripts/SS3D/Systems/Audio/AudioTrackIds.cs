@@ -15,6 +15,9 @@ namespace SS3D.Systems.Audio
         /// <summary>Calm loop heard through the mask while on internals (armor.md §6).</summary>
         public const string Breathing = "d6487a9829df4ceaa6afc34160b91d3c";
 
+        /// <summary>World/Collisions/MetalHit1.wav, pitched down, for the magboot toggle (armor.md §6).</summary>
+        public const string MagbootClunk = "3cd350866d2be174584b9acd88c39bc6";
+
         /// <summary>SS14 Effects/beep1.ogg — new alert-stack chip ding.</summary>
         public const string AlertCue = "9c25cbf72a814b7daecb30325916da0a";
     }

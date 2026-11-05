@@ -10,10 +10,10 @@ todos:
     status: completed
   - id: magboots
     content: "PR 3: SyndicateMagboots content with per-foot split, EvaGearController anchor, wind early-out, movement cost, chip, audio"
-    status: pending
+    status: completed
   - id: docs-sync
     content: "Each PR: update-system-docs for touched maps; M8 milestone row when the slice ships"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -69,12 +69,16 @@ Starting values, reviewed after Playtest 1.
 - Pockets drop from `Huge` to `Small`. `armor.md` §3 only allows a tank in a pocket "if it is small enough", so this also stops every larger item fitting a pocket. The gas mask becomes `Small` so crew can carry it.
 - Internals toggle with `N`, and the character paperdoll gains a suit storage well, because the tank would otherwise block looting the suit.
 - The emergency tank shares the oxygen tank's examine text.
+- Magboots toggle with `G`, and the Controls tab lists both EVA toggles. The internals key was reserved but could not be rebound until this PR.
+- There is no new footstep clip: while the boots hold, the boots clip plays at the speed factor, so steps slow with the gait and land lower. The toggle clunk is `MetalHit1` pitched down.
 
 ## Implementation notes
 
 The breach alert is a warning while the air is safe and critical once pressure or cold would reach the body. It clears when the breached piece comes off. Breach through `ApplyArmorAbsorption` is covered by a PlayMode scenario.
 
 Internals draw `0.05 mol/s` scaled by lung function. The low-tank alert warns at 25% and turns critical at 10%, while internals are on. A dry tank stays selected until it is moved, so a spare in a pocket does not take over from a dry tank in suit storage.
+
+A pair of magboots is two Items, because each foot is a slot. Both must be worn, and the switch turns off when either goes. The switch stays on while the wearer is down or floating, and the boots hold again once upright over a floor. Slowing also scales clip playback, so feet stay planted.
 
 ## Tests
 

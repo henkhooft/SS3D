@@ -42,6 +42,9 @@
         /// <summary>Tank share at which the low-tank alert warns, then turns critical (armor.md §6).</summary>
         public const float TankLowFill = 0.25f;
         public const float TankCriticalFill = 0.1f;
+
+        /// <summary>World speed scale while magboots hold (armor.md §3).</summary>
+        public const float MagbootSpeedFactor = 0.6f;
         public const float PlasmaToxinIntakeScale = 0.08f;
         public const float ColdWarningTemperatureKelvin = 273.15f;
         public const float ColdDamageTemperatureKelvin = 260f;

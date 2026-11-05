@@ -36,6 +36,8 @@ namespace SS3D.Systems.Examine.Editor
             UpsertEntry(englishTable, ExamineSealKeys.Intact, ExamineSealKeys.IntactFallback);
             UpsertEntry(englishTable, ExamineSealKeys.Breached, ExamineSealKeys.BreachedFallback);
             UpsertEntry(englishTable, ExamineTankKeys.Fill, ExamineTankKeys.FillFallback);
+            UpsertEntry(englishTable, "items.clothing.syndicate_magboots.name", "Syndicate Magboot");
+            UpsertEntry(englishTable, "items.clothing.syndicate_magboots.desc", "Magnetic boot for a foot. Worn in a pair and switched on, they hold you to the deck against moving air.");
 
             EditorUtility.SetDirty(englishTable);
             EditorUtility.SetDirty(englishTable.SharedData);

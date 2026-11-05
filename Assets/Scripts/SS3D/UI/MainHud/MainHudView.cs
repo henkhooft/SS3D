@@ -22,6 +22,7 @@ namespace SS3D.UI.MainHud
 
         /// <summary>The internals chip was clicked.</summary>
         public event Action InternalsToggleRequested;
+        public event Action MagbootsToggleRequested;
 
         /// <summary>
         /// Fired when a hand well is clicked. Argument is true for the left (first) hand slot.
@@ -52,7 +53,8 @@ namespace SS3D.UI.MainHud
 
         private VisualElement _root;
         private AlertIconStack _alertStack;
-        private InternalsChip _internalsChip;
+        private GearToggleChip _internalsChip;
+        private GearToggleChip _magbootsChip;
         private EquipmentGrid _equipmentGrid;
         private HandsGearStrip _handsGearStrip;
         private IntentModule _intentModule;
@@ -124,6 +126,11 @@ namespace SS3D.UI.MainHud
         public void SetInternals(bool available, bool on)
         {
             _internalsChip.SetState(available, on);
+        }
+
+        public void SetMagboots(bool available, bool on)
+        {
+            _magbootsChip.SetState(available, on);
         }
 
         public void SetIntent(IntentType intent)
@@ -323,9 +330,13 @@ namespace SS3D.UI.MainHud
             _alertStack = new AlertIconStack(_alertIcons);
             VisualElement alertZone = BuildZone("main-hud__zone--alerts", _alertStack);
 
-            _internalsChip = new InternalsChip(_alertIcons.Internals);
+            _internalsChip = new GearToggleChip(_alertIcons.Internals, "Internals");
             _internalsChip.Clicked += () => InternalsToggleRequested?.Invoke();
             alertZone.Add(_internalsChip);
+
+            _magbootsChip = new GearToggleChip(_alertIcons.Magboots, "Magboots");
+            _magbootsChip.Clicked += () => MagbootsToggleRequested?.Invoke();
+            alertZone.Add(_magbootsChip);
 
             _equipmentGrid = new EquipmentGrid(_icons);
             _equipmentGrid.SlotClicked += slot => EquipmentSlotClicked?.Invoke(slot);
