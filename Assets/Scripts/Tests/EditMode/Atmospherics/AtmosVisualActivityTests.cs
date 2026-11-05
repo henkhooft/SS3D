@@ -63,6 +63,12 @@ namespace EditorTests.Atmospherics
         }
 
         [Test]
+        public void UnknownProfiles_KeepThePassesRunning()
+        {
+            Assert.IsFalse(AtmosVisualActivity.IsCalm(new[] { 293.15f }, new[] { Air }, new[] { 0f }, default));
+        }
+
+        [Test]
         public void OneActiveTileAmongCalmOnes_IsNotCalm()
         {
             Assert.IsFalse(AtmosVisualActivity.IsCalm(new[] { 293.15f, 293.15f }, new[] { Air, Air }, new[] { 0f, 1f }, Profiles()));

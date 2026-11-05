@@ -15,6 +15,8 @@ namespace SS3D.Systems.Atmospherics.Visualization
 
         public static bool IsCalm(float[] temperature, Color32[] composition, float[] fire, GasVisualProfileBuilder.GpuSet profiles)
         {
+            if (profiles.Scatter == null || profiles.Emission == null || profiles.Misc == null) return false;
+
             for (int i = 0; i < fire.Length; i++)
             {
                 if (fire[i] > VisibleFire || temperature[i] >= DistortionTemperature) return false;
