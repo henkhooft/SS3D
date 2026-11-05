@@ -126,6 +126,59 @@ namespace EditorTests
             Assert.AreEqual("Nuclear device", nuclear.Checks.Single(check => !check.IsMet).Label);
         }
 
+        private static AtmosDeviceRecord Device(string kind, float x, ushort area, string room = "Bar") =>
+            new(kind, new Vector3(x, 0, 2), area, room);
+
+        private static MapValidationReport Coverage(AtmosDeviceRecord[] devices, params ushort[] alarmedAreas)
+        {
+            MapValidationReport report = new();
+            MapValidator.AddAirAlarmCoverage(report, devices, alarmedAreas);
+            return report;
+        }
+
+        [Test]
+        public void DevicesInARoomWithAnAirAlarmRaiseNoWarning()
+        {
+            Assert.IsFalse(Coverage(new[] { Device("Vent", 1, 3), Device("Scrubber", 2, 3) }, 3).HasIssues);
+        }
+
+        [Test]
+        public void RoomWithoutAnAirAlarmWarnsOnceAndLocatesADevice()
+        {
+            MapValidationReport report = Coverage(new[]
+            {
+                Device("Vent", 4, 3), Device("Vent", 1, 3), Device("Scrubber", 2, 3),
+            });
+            MapValidationIssue issue = report.Issues.Single();
+            Assert.IsTrue(issue.IsWarning);
+            Assert.IsTrue(report.CanStart);
+            Assert.AreEqual("No air alarm in Bar", issue.Title);
+            StringAssert.Contains("2 vents and 1 scrubber", issue.Body);
+            Assert.IsTrue(issue.HasPosition);
+            Assert.AreEqual(1f, issue.Position.x);
+        }
+
+        [Test]
+        public void AnAirAlarmOnlyCoversItsOwnRoom()
+        {
+            MapValidationReport report = Coverage(new[]
+            {
+                Device("Vent", 1, 3, "Bar"), Device("Vent", 2, 4, "Kitchen"),
+            }, 3);
+            Assert.AreEqual("No air alarm in Kitchen", report.Issues.Single().Title);
+        }
+
+        [Test]
+        public void DevicesOutsideEveryRoomEachWarnEvenWhenRoomsAreAlarmed()
+        {
+            MapValidationReport report = Coverage(new[] { Device("Vent", 1, 0, null), Device("Scrubber", 2, 0, null) }, 3);
+            Assert.AreEqual(2, report.Warnings.Count);
+            Assert.IsTrue(report.CanStart);
+            Assert.AreEqual(2, report.Issues.Select(issue => issue.Id).Distinct().Count());
+            StringAssert.Contains("Vent at (1, 2)", report.Issues[0].Title);
+            Assert.IsTrue(report.Issues.All(issue => issue.HasPosition));
+        }
+
         [Test]
         public void MapCheckFiltersIgnoresWarningsAndRestoresWithoutChangingServerPolicy()
         {

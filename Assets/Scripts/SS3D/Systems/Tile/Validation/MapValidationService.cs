@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using SS3D.Core;
+using SS3D.Systems.Area;
+using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Items.Generic;
 using SS3D.Systems.Roles;
@@ -21,8 +24,9 @@ namespace SS3D.Systems.Tile.Validation
             }
 
             TileMap map = tiles.CurrentMap;
-            bool hasNuke = map.GetAllChunks().SelectMany(chunk => chunk.GetAllTilePlacedObjects())
-                .Any(placed => placed != null && placed.GetComponentInChildren<Nuke>(true) != null);
+            PlacedTileObject[] tileObjects = map.GetAllChunks().SelectMany(chunk => chunk.GetAllTilePlacedObjects())
+                .Where(placed => placed != null).ToArray();
+            bool hasNuke = tileObjects.Any(placed => placed.GetComponentInChildren<Nuke>(true) != null);
             bool hasDisk = map.PlacedItems.Any(placed => placed != null
                 && placed.GetComponentInChildren<NukeCard>(true) != null);
             string[] jobs = SubSystems.TryGet(out RoleSubSystem roles)
@@ -39,7 +43,36 @@ namespace SS3D.Systems.Tile.Validation
                         spawn.Position, true);
                 }
             }
+            CheckAirAlarmCoverage(report, tileObjects);
             return report;
+        }
+
+        private static void CheckAirAlarmCoverage(MapValidationReport report, IEnumerable<PlacedTileObject> tileObjects)
+        {
+            if (!SubSystems.TryGet(out AreaSubSystem areas))
+                return;
+
+            List<AtmosDeviceRecord> devices = new();
+            HashSet<ushort> alarmedAreas = new();
+            foreach (PlacedTileObject placed in tileObjects)
+            {
+                string kind = placed.TryGetComponent(out VentController _) ? "Vent"
+                    : placed.TryGetComponent(out ScrubberController _) ? "Scrubber" : null;
+                bool isAlarm = placed.TryGetComponent(out AirAlarmController _);
+                if (kind == null && !isAlarm)
+                    continue;
+
+                // The same lookup the air alarm and its area port index use at runtime.
+                bool inRoom = areas.TryGetAreaForDevice(placed, out AreaRecord room) && !room.Id.IsNone;
+                if (isAlarm && inRoom)
+                    alarmedAreas.Add(room.Id.Value);
+                if (kind == null)
+                    continue;
+                string roomName = !inRoom ? null
+                    : string.IsNullOrWhiteSpace(room.DisplayName) ? $"room {room.Id.Value}" : room.DisplayName;
+                devices.Add(new AtmosDeviceRecord(kind, placed.transform.position, inRoom ? room.Id.Value : AreaId.None, roomName));
+            }
+            MapValidator.AddAirAlarmCoverage(report, devices, alarmedAreas);
         }
     }
 }

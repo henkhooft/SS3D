@@ -84,6 +84,55 @@ namespace SS3D.Systems.Tile.Validation
             }
             return report;
         }
+
+        /// <summary>
+        /// Warns about vents and scrubbers no air alarm can control: an alarm drives every device
+        /// in its own room, so one warning per room covers all of that room's devices.
+        /// </summary>
+        public static void AddAirAlarmCoverage(MapValidationReport report,
+            IEnumerable<AtmosDeviceRecord> devices, ICollection<ushort> alarmedAreas)
+        {
+            AtmosDeviceRecord[] ordered = devices
+                .OrderBy(device => device.Position.x).ThenBy(device => device.Position.z).ToArray();
+            foreach (AtmosDeviceRecord device in ordered.Where(device => device.AreaId == 0))
+            {
+                Vector2Int cell = SpawnPointRegistry.TileKey(device.Position);
+                string title = $"{device.Kind} at ({cell.x}, {cell.y}) is outside every room";
+                report.AddIssue($"air-alarm-room:{device.Kind}:{cell.x}:{cell.y}", true, "Atmos", title,
+                    $"{title}, so no air alarm can control it. Add its tile to a room.",
+                    device.Position, true);
+            }
+
+            foreach (IGrouping<ushort, AtmosDeviceRecord> room in ordered
+                .Where(device => device.AreaId != 0 && !alarmedAreas.Contains(device.AreaId))
+                .GroupBy(device => device.AreaId).OrderBy(room => room.Key))
+            {
+                AtmosDeviceRecord first = room.First();
+                string counts = string.Join(" and ", room.GroupBy(device => device.Kind)
+                    .OrderByDescending(kind => kind.Key, StringComparer.Ordinal)
+                    .Select(kind => $"{kind.Count()} {kind.Key.ToLowerInvariant()}{(kind.Count() == 1 ? "" : "s")}"));
+                report.AddIssue($"air-alarm:{room.Key}", true, "Atmos", $"No air alarm in {first.AreaName}",
+                    $"No air alarm in {first.AreaName}, so nothing controls its {counts}. "
+                    + "Place one on a wall facing into the room.", first.Position, true);
+            }
+        }
+    }
+
+    /// <summary>A placed vent or scrubber and the room it belongs to (area 0 means no room).</summary>
+    public readonly struct AtmosDeviceRecord
+    {
+        public readonly string Kind;
+        public readonly Vector3 Position;
+        public readonly ushort AreaId;
+        public readonly string AreaName;
+
+        public AtmosDeviceRecord(string kind, Vector3 position, ushort areaId, string areaName)
+        {
+            Kind = kind;
+            Position = position;
+            AreaId = areaId;
+            AreaName = areaName;
+        }
     }
 
     [Serializable]

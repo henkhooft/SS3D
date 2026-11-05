@@ -36,7 +36,7 @@ Sandbox lockdown ([2026-11_sandbox-server](../2026-11_sandbox-server.md)): `-san
 
 Save validation uses `Tile/Validation/MapValidationService` for the server's selected mode after saving.
 Incomplete maps remain saveable; errors and soft warnings open an author-only scrollable Map validation popover
-(with no timed dismissal). Unknown job markers and markers without plenum flooring are soft warnings.
+(with no timed dismissal). Unknown job markers, markers without plenum flooring, and vents or scrubbers no air alarm can control (a room with none, or a device outside every room) are soft warnings.
 The same policy blocks round Start; see [rounds-lobby](rounds-lobby.md). Validation does not implement job-to-spawn assignment.
 
 ## Extension points
@@ -62,7 +62,7 @@ Data contracts for Phase 2 vertical slice (per creative-mode §10):
 
 ## Tests
 
-- `MapValidationTests`: shared requirements, nonblocking warnings, repair and scrollable literal-text save report.
+- `MapValidationTests`: shared requirements, nonblocking warnings, air alarm coverage, repair and scrollable literal-text save report.
 - `MapEditorCommandRevertTests`: save points across undo/redo, branches, the history limit and new-map/load resets; undo ownership for sandbox players.
 - `SandboxServerTests`: sandbox profile, persistence gate, capabilities, denylist and catalog filter.
 - `MapFileSharingTests`, `MapLoadSkippedSummaryTests`, `MapEditorRateLimiterTests`, `AdminTokensTests`: export/import round trip, load-loss summary text, edit throttling, admin-name tokens.
