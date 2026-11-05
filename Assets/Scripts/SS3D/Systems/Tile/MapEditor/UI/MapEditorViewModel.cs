@@ -1,3 +1,4 @@
+using SS3D.Systems.Tile.GasMarkers;
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Tile.TileMapCreator;
 using SS3D.Systems.Tile.Validation;
@@ -63,6 +64,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         public string ToastMessage { get; set; }
         public string OpenPopover { get; set; }
+
+        /// <summary>What the next placed gas marker writes, or what the marker form is editing.</summary>
+        public GasMarkerRecord GasMarkerDraft { get; set; } = GasMarkerRecord.Default(GasMarkerKind.Source);
         public string SaveMapName { get; set; } = "Untitled Map";
         public Direction CurrentRotation { get; set; } = Direction.North;
         public MapEditorSaveTarget SaveTarget { get; set; } = MapEditorSaveTarget.LocalTemplate;

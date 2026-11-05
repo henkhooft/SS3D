@@ -45,7 +45,7 @@ LAYERS = {
     "TablePoker": 7, "TableSteel": 7, "TableWood": 7, "VendorHotDrinks": 7, "VendorRobustSoftdrinks": 7,
     "VendorSecTech": 7, "VendorYouTool": 7, "Vent": 7,
     "AtmosPipesMixed": 9, "AtmosPipesSupply": 10, "AtmosPipesWaste": 11, "AtmosPipesSurface": 4,
-    "GasPump": 4, "AtmosValveManual": 4, "AtmosManifold4": 12, "AtmosSourceAir": 7, "AtmosFillSupply": 7,
+    "GasPump": 4, "AtmosValveManual": 4, "AtmosManifold4": 12,
 }
 
 TILE_RENAMES = {
@@ -105,14 +105,18 @@ ADDED_MIXED_PIPES = [
 ADDED_SURFACE_PIPES = [(2, -8), (0, -8), (5, -6), (5, -8)]  # each sits on a manifold, at a device's port
 ADDED_ATMOS_TILES = [
     ("Scrubber", 2, -10, 0),  # the chamber's intake
-    ("AtmosSourceAir", 3, -10, 0),
     ("AtmosManifold4", 2, -8, 0), ("GasPump", 1, -8, 6), ("AtmosManifold4", 0, -8, 0),  # chamber to Supply
     ("AtmosManifold4", 5, -6, 0), ("AtmosValveManual", 5, -7, 4), ("AtmosManifold4", 5, -8, 0),  # Waste to space
-    ("AtmosFillSupply", 3, -6, 0),
     ("Vent", 4, -7, 0),
     ("Vent", *WASTE_OUTLET_VENT, 0),
     ("APC", 1, -9, 4), ("APC", 3, -9, 0),
     ("LightBulbFixture", -2, -7, 2), ("LightBulbFixture", 6, -7, 6), ("LightBulbFixture", -2, -10, 2),
+]
+AIR = [20.79, 83.17, 0.0, 0.0]  # gas fractions by id, the map's own air
+PIPE_LEFT = 10  # TileLayer.PipeLeft, the Supply line
+ADDED_GAS_MARKERS = [
+    (0, 3, -10, 0, 500.0),  # Source: the chamber
+    (1, 3, -6, PIPE_LEFT, 300.0),  # LineFill: Supply starts charged
 ]
 ADDED_ITEMS = [
     ("NuclearAuthenticationDisk", 5.0, 0.8, 7.0),
@@ -348,6 +352,13 @@ def build_items(report):
     return items
 
 
+def build_gas_markers():
+    return {"records": [
+        {"Kind": kind, "Position": {"x": float(x), "y": 0.0, "z": float(y)}, "Line": line, "PressureKpa": pressure, "GasFractions": AIR}
+        for kind, x, y, line, pressure in ADDED_GAS_MARKERS
+    ]}
+
+
 def build_spawns():
     records = []
     for job, x, y in ADDED_SPAWNS:
@@ -385,6 +396,7 @@ def main():
         "chunks": [
             {"contributorId": "tilemap", "payloadJson": json.dumps(build_tilemap(cells, build_items(report)), separators=(",", ":"))},
             {"contributorId": "spawn-points", "payloadJson": json.dumps(build_spawns(), separators=(",", ":"))},
+            {"contributorId": "gas-markers", "payloadJson": json.dumps(build_gas_markers(), separators=(",", ":"))},
         ],
     }
     text = json.dumps(template, separators=(",", ":"))

@@ -56,13 +56,13 @@ namespace SS3D.Systems.Atmospherics.Pipes
         /// <summary>
         /// Replaces the contents of the network holding <paramref name="segment"/> with a mix at this pressure.
         /// </summary>
-        public bool TryFillNetwork(GasPipeSegmentKey segment, AtmosSupplyMix mix, float pressureKpa)
+        public bool TryFillNetwork(GasPipeSegmentKey segment, float[] gasFractions, float pressureKpa)
         {
             if (!TryGetNetworkForSegment(segment, out _, out GasPipeNetworkRecord record))
                 return false;
 
             float moles = AtmosPipeThermo.GetMolesForPressure(pressureKpa, record.Temperature, record.Volume);
-            AtmosSupplyMixes.FillMoles(mix, moles, record.Moles);
+            AtmosGasMix.FillMoles(gasFractions, moles, record.Moles);
             return true;
         }
 

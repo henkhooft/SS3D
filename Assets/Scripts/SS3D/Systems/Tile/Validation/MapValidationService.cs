@@ -7,6 +7,7 @@ using SS3D.Systems.Electricity;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Items.Generic;
 using SS3D.Systems.Roles;
+using SS3D.Systems.Tile.GasMarkers;
 using UnityEngine;
 
 namespace SS3D.Systems.Tile.Validation
@@ -44,11 +45,25 @@ namespace SS3D.Systems.Tile.Validation
                         spawn.Position, true);
                 }
             }
-            CheckRoomDevices(report, map, tileObjects);
+            CheckRoomDevices(report, tiles, map, tileObjects);
+            CheckGasMarkerRooms(report, tiles, map);
             return report;
         }
 
-        private static void CheckRoomDevices(MapValidationReport report, TileMap map, IEnumerable<PlacedTileObject> tileObjects)
+        private static void CheckGasMarkerRooms(MapValidationReport report, TileSubSystem tiles, TileMap map)
+        {
+            List<TileCoord> cells = new();
+            foreach (GasMarkerRecord marker in tiles.GasMarkers.Records)
+            {
+                if (marker.Kind == GasMarkerKind.LineFill)
+                    continue;
+
+                if (!AtmosRoomFlood.Collect(tiles.QueryService, tiles.QueryService.WorldToTile(marker.Position, map.MapId), cells))
+                    MapValidator.AddUnsealedGasMarker(report, marker);
+            }
+        }
+
+        private static void CheckRoomDevices(MapValidationReport report, TileSubSystem tiles, TileMap map, IEnumerable<PlacedTileObject> tileObjects)
         {
             if (!SubSystems.TryGet(out AreaSubSystem areas))
                 return;
@@ -68,6 +83,15 @@ namespace SS3D.Systems.Tile.Validation
                     inRoom && areas.TryGetAreaApc(room.Id, out _),
                     hasPipe));
             }
+            foreach (GasMarkerRecord marker in tiles.GasMarkers.Records)
+            {
+                if (marker.Kind != GasMarkerKind.LineFill)
+                    continue;
+
+                bool hasPipe = AtmosDevicePipeResolver.HasPipeSegment(map,
+                    tiles.QueryService.WorldToTile(marker.Position, map.MapId), new[] { marker.Line });
+                devices.Add(new RoomDeviceRecord(RoomDeviceKind.LineFill, marker.Position, AreaId.None, null, false, hasPipe));
+            }
             MapValidator.AddRoomDeviceChecks(report, devices, areas.HasAuthoredAreas);
         }
 
@@ -78,8 +102,7 @@ namespace SS3D.Systems.Tile.Validation
             if (placed.TryGetComponent<AtmosInlineDeviceBase>(out _))
                 return AtmosDevicePipeResolver.HasInlinePipes(map, coord, placed.Direction);
 
-            TileLayer[] lines = placed.TryGetComponent(out AtmosPortControllerBase port) ? port.PipeLayers
-                : placed.TryGetComponent(out AtmosLineFill fill) ? fill.Lines : null;
+            TileLayer[] lines = placed.TryGetComponent(out AtmosPortControllerBase port) ? port.PipeLayers : null;
             return lines == null || AtmosDevicePipeResolver.HasPipeSegment(map, coord, lines);
         }
 
@@ -94,8 +117,6 @@ namespace SS3D.Systems.Tile.Validation
                 kind = RoomDeviceKind.GasPump;
             else if (placed.TryGetComponent(out AtmosValveController _))
                 kind = RoomDeviceKind.Valve;
-            else if (placed.TryGetComponent(out AtmosLineFill _))
-                kind = RoomDeviceKind.LineFill;
             else if (placed.TryGetComponent(out AirAlarmController _))
                 kind = RoomDeviceKind.AirAlarm;
             else if (placed.TryGetComponent(out LightPower _) || placed.TryGetComponent(out LightSwitchController _))

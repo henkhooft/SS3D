@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using SS3D.Systems.Tile.GasMarkers;
+using SS3D.Systems.Tile.MapEditor;
 using SS3D.Systems.Tile.SpawnPoints;
 
 namespace SS3D.Systems.Tile.Validation
@@ -148,6 +150,17 @@ namespace SS3D.Systems.Tile.Validation
                     AddWarning(report, $"no-apc:{room.Key}", first, $"No APC in {RoomLabel(first)}",
                         "so nothing here gets local power. Place an APC in the room.");
             }
+        }
+
+        /// <summary>A source or room air marker whose room is open to space, or too large to be a room.</summary>
+        public static void AddUnsealedGasMarker(MapValidationReport report, GasMarkerRecord marker)
+        {
+            Vector2Int cell = SpawnPointRegistry.TileKey(marker.Position);
+            string title = $"{MapEditorGasMarkerCatalog.DisplayName(marker.Kind)} at ({cell.x}, {cell.y}) isn't in a sealed room";
+            string consequence = marker.Kind == GasMarkerKind.Source
+                ? "so its gas pours out for the whole round. Close the room with walls and doors."
+                : "so it leaks away from round start. Close the room with walls and doors.";
+            report.AddIssue($"gas-marker:{cell.x}:{cell.y}", true, "Atmos", title, $"{title}, {consequence}", marker.Position, true);
         }
 
         private static void AddWarning(MapValidationReport report, string id, RoomDeviceRecord device, string title, string consequence) =>

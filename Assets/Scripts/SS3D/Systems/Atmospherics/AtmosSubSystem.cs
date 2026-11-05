@@ -40,6 +40,7 @@ namespace SS3D.Systems.Atmospherics
         private AtmosPipeObserver _pipeObserver;
         private AtmosPipeSimulation _pipeSimulation;
         private GasPipeNetworkRegistry _pipeRegistry;
+        private AtmosGasMarkers _gasMarkers;
         private readonly AtmosPortRegistry _portRegistry = new();
         private readonly AtmosAreaPortIndex _areaPortIndex = new();
         private AtmosVisualizationBridge _visualizationBridge;
@@ -194,7 +195,8 @@ namespace SS3D.Systems.Atmospherics
 
             _pipeRegistry = new GasPipeNetworkRegistry(gasTypeCount, specificHeats);
             _pipeRegistry.RebuildAll(tileSubSystem.CurrentMap);
-            AtmosLineFill.ApplyAll(tileSubSystem.CurrentMap, _pipeRegistry);
+            _gasMarkers = new AtmosGasMarkers(tileSubSystem.GasMarkers, tileSubSystem.CurrentMap, tileSubSystem.QueryService, gasTypeCount);
+            _gasMarkers.FillLines(_pipeRegistry);
             _pipeObserver = new AtmosPipeObserver(tileSubSystem.CurrentMap, _pipeRegistry);
             tileSubSystem.RegisterTileMutationObserver(_pipeObserver);
             _pipeSimulation = new AtmosPipeSimulation(
@@ -207,6 +209,8 @@ namespace SS3D.Systems.Atmospherics
             // Seed any chunks that were created before the observer registered.
             foreach (TileChunkRef chunkRef in tileSubSystem.CurrentMap.GetChunkRefs())
                 _simulation.CreateChunk(chunkRef);
+
+            _gasMarkers.FillRooms(_simulation);
 
             _visualizationBridge?.PublishSnapshot();
 
@@ -272,6 +276,8 @@ namespace SS3D.Systems.Atmospherics
             if (_pipeObserver != null)
                 tileSubSystem?.UnregisterTileMutationObserver(_pipeObserver);
 
+            _gasMarkers?.Dispose();
+            _gasMarkers = null;
             _simulation?.Dispose();
             _simulation = null;
             LooseBodies = null;
@@ -339,6 +345,7 @@ namespace SS3D.Systems.Atmospherics
                 LastSimulationMilliseconds = (Time.realtimeSinceStartup - started) * 1000f;
                 _pipeSimulation?.Tick(AtmosConstants.TickInterval);
                 _portRegistry.TickDevices(_pipeSimulation, _simulation, AtmosConstants.TickInterval);
+                _gasMarkers?.HoldSources(_simulation);
                 TickWind();
             }
 

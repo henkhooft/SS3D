@@ -5,8 +5,6 @@ namespace SS3D.Data.Generated
     {
         public const string AirAlarm = "11a2276338ebc64429dfc565b491e437";
         public const string APC = "4c966398d6624164c910cd29c1faa980";
-        public const string AtmosFillMixed = "8f020a802a52332cfaf8f0ca567ee5aa";
-        public const string AtmosFillSupply = "1a4300a1832dd26c083bb8702031cc01";
         public const string AtmosManifold3 = "0f9043fa6769666faaa893d26d564355";
         public const string AtmosManifold4 = "d4bb90462bc4749cdaa3796b227902b9";
         public const string AtmosPipesMixed = "251dc2a5fbda518429c8205c3b62165f";
@@ -14,9 +12,6 @@ namespace SS3D.Data.Generated
         public const string AtmosPipesSurface = "48efd00c91c310e4bb965d025c63b3ba";
         public const string AtmosPipesWaste = "adc07a7f0fee8304691f45a201509b13";
         public const string AtmosPumpVolume = "1927b699e71f9833a82ed74dffe4acfd";
-        public const string AtmosSourceAir = "8460657a2ccb5c877a55295b74742174";
-        public const string AtmosSourceNitrogen = "c6b22d7cad04fce9e9bc8f15340c4260";
-        public const string AtmosSourceOxygen = "2b5b0d2410c2f4c13a8a9cba048ca521";
         public const string AtmosValveDigital = "52003a6b5233e43fca012e400adbeea6";
         public const string AtmosValveManual = "8eb79a916f17f4339888eeb43288ad4e";
         public const string Backpack = "ddaa28fac1956b2428aff1dac1d89707";

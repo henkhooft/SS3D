@@ -1,12 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using SS3D.Core;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Tile;
-using SS3D.Systems.Tile.MapEditor;
+using SS3D.Systems.Tile.GasMarkers;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -60,7 +60,7 @@ namespace SS3D.Tests
             return record;
         }
 
-        // Guards: a loaded station starts with Supply filled, the chamber at its fixed mix, the intake parted from Supply by the air pump, and every room scrubber on one Waste line (AtmosLineFill.ApplyAll, AtmosGasSource, AtmosDevicePipeResolver, manifolds, inline ports) · Not cheaper because: needs the importer's real template loaded through the tilemap, with devices spawned and ticking
+        // Guards: a loaded station starts with Supply filled, the chamber at its fixed mix, the intake parted from Supply by the air pump, and every room scrubber on one Waste line (AtmosGasMarkers, AtmosDevicePipeResolver, manifolds, inline ports) · Not cheaper because: needs the importer's real template loaded through the tilemap, with devices spawned and ticking
         [UnityTest]
         public IEnumerator ClassicMiniStation_StartsWithChamberAndLinesWired()
         {
@@ -89,13 +89,18 @@ namespace SS3D.Tests
             Assert.AreEqual(1, waste.Length, "Every room scrubber shares one Waste line");
             Assert.AreNotEqual(supply, waste[0], "Room scrubbers stay off Supply");
 
+            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+            Assert.IsTrue(tiles.GasMarkers.TryGetAt(new Vector3(Source.x, 0f, Source.y), out GasMarkerRecord chamber), "The map saves its chamber as a marker");
+            Assert.AreEqual(GasMarkerKind.Source, chamber.Kind);
+            Assert.IsTrue(AtmosRoomFlood.Collect(tiles.QueryService, Tile(Source), new List<TileCoord>()), "Map Check takes the chamber for a sealed room");
+
             GasPipeNetworkRecord record = Record(supply);
             Assert.Greater(record.GetPressure(AtmosConstants.DefaultGasCount), AtmosConstants.StandardPressure,
                 "The line starts above room pressure, so vents have air from the first moment");
             Assert.Greater(record.Moles[AtmosConstants.Nitrogen.Value], record.Moles[AtmosConstants.Oxygen.Value], "The line holds air");
         }
 
-        // Guards: gas taken from the chamber by the intake crosses the manifolds and the air pump and reaches a depressurised room through its vent, with Supply's starting fill out of the way (AtmosGasSource, ScrubberController, GasPipeManifold, AtmosPumpController, VentController) · Not cheaper because: needs the turf sim, pipe network, powered devices and the shipped map's real run between them
+        // Guards: gas taken from the chamber by the intake crosses the manifolds and the air pump and reaches a depressurised room through its vent, with Supply's starting fill out of the way (AtmosGasMarkers, ScrubberController, GasPipeManifold, AtmosPumpController, VentController) · Not cheaper because: needs the turf sim, pipe network, powered devices and the shipped map's real run between them
         [UnityTest]
         public IEnumerator Chamber_RefillsADepressurisedRoomThroughItsVent()
         {
@@ -184,34 +189,6 @@ namespace SS3D.Tests
             Assert.IsTrue(co2 && !o2 && !n2 && !plasma, "Normal goes back to CO₂");
             Assert.AreEqual(AtmosPortConstants.ScrubberNormalFlowRate, scrubber.FlowRate);
         }
-
-        // Guards: map logic objects draw only while authoring (TileObjectSo.mapEditorOnly through PlacedTileObject visibility) · Not cheaper because: FishNet's host visibility pass re-enables renderers on a real spawn, which EditMode tiles never reach
-        [UnityTest]
-        public IEnumerator GasSource_IsHiddenInPlay_AndDrawnInTheMapEditor()
-        {
-            ChangesRoom = true;
-            Renderer marker = Object.FindAnyObjectByType<AtmosGasSource>().GetComponentInChildren<Renderer>(true);
-            MapEditorSubSystem editor = SubSystems.Get<MapEditorSubSystem>();
-            Assert.IsTrue(marker.forceRenderingOff, "Players never see the source");
-
-            SetEditorActive(editor, true);
-            try
-            {
-                yield return Hold(0.2f);
-                Assert.IsTrue(marker.enabled && !marker.forceRenderingOff, "A mapper can see the source");
-                SetEditorActive(editor, false);
-                yield return null;
-                Assert.IsTrue(marker.forceRenderingOff, "Closing the editor hides it again");
-            }
-            finally
-            {
-                if (editor.IsActive)
-                    SetEditorActive(editor, false);
-            }
-        }
-
-        private static void SetEditorActive(MapEditorSubSystem editor, bool active) =>
-            typeof(MapEditorSubSystem).GetMethod("SetActive", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(editor, new object[] { active });
 
         private static void DrainRoom()
         {

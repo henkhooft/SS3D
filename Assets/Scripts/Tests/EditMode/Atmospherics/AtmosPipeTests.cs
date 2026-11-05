@@ -65,7 +65,7 @@ namespace EditorTests.Atmospherics
 
             var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
             registry.RebuildAll(context.Map);
-            Assert.IsTrue(registry.TryFillNetwork(GasPipeSegmentKey.From(mixed), AtmosSupplyMix.Air, 300f));
+            Assert.IsTrue(registry.TryFillNetwork(GasPipeSegmentKey.From(mixed), AtmosGasMix.Air(), 300f));
 
             registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(mixed), out _, out GasPipeNetworkRecord filled);
             registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(waste), out _, out GasPipeNetworkRecord other);

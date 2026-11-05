@@ -709,7 +709,7 @@ namespace SS3D.Systems.Tile
             // Template restore skips missing spawn chunks — wipe markers with the map so stale
             // points cannot survive a load that has no spawn-points contributor payload.
             if (SubSystems.TryGet(out TileSubSystem tileSubSystem) && tileSubSystem.CurrentMap == this)
-                tileSubSystem.ClearSpawnPoints();
+                tileSubSystem.ClearMarkers();
         }
 
         /// <summary>

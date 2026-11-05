@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using FishNet.Object;
+using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Atmospherics.Pipes;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Electricity;
@@ -10,6 +11,7 @@ using SS3D.Systems.Tile.Connections;
 using SS3D.Systems.Tile.TileMapCreator;
 using SS3D.UI.MachineInterface;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
 using UnityEngine;
 using DB = UnityEditor.AssetDatabase;
 
@@ -33,6 +35,10 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string ScrubberTile = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmospherics/Scrubber.asset";
         private const string AirIntakeName = "ScrubberIntake";
         private const string AirIntakePrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/ScrubberIntake.prefab";
+        private const string TileFolder = "Assets/Content/Data/TileMap/Resources/Structures/Pipes/Atmospherics/";
+        private const string ReferenceFolder = "Assets/Content/Data/ObjectAssetReferences/";
+        private const string ItemsDatabase = "Assets/Content/Data/Databases/Items.asset";
+        private const string ItemsDatabaseGuid = "c2644d7b34e956743a0bc485e7ca5e37";
         private const string InletCap = "InletCap";
         private const string OutletCap = "OutletCap";
         private const string FlowArrow = "FlowArrow";
@@ -64,7 +70,7 @@ namespace SS3D.Systems.Atmospherics.Editor
                 PrefabUtility.UnloadPrefabContents(root);
             }
 
-            TileObjectSo tile = AtmosSupplySetup.RegisterTileObject(AirIntakeName, AirIntakePrefab, scrubberTile.layer);
+            TileObjectSo tile = RegisterTileObject(AirIntakeName, AirIntakePrefab, scrubberTile.layer);
             tile.placementYOffset = scrubberTile.placementYOffset;
             EditorUtility.SetDirty(tile);
             DB.SaveAssets();
@@ -252,7 +258,7 @@ namespace SS3D.Systems.Atmospherics.Editor
             FishNet.Managing.Object.ManagedObjects.InitializePrefab(root.GetComponent<NetworkObject>(), -1);
             string path = DeviceFolder + name + ".prefab";
             PrefabUtility.SaveAsPrefabAsset(root, path);
-            AtmosSupplySetup.RegisterTileObject(name, path, layer);
+            RegisterTileObject(name, path, layer);
         }
 
         // The copied prefab's reference names the source; placement sets the real one.
@@ -357,6 +363,39 @@ namespace SS3D.Systems.Atmospherics.Editor
 
         // Front and back are one axis, and the lines sit at different heights, so a half turn would
         // put each run on the wrong line.
+        /// <summary>
+        /// Gives a prefab its tile asset and a place in the Items database and addressables.
+        /// </summary>
+        private static TileObjectSo RegisterTileObject(string name, string path, TileLayer layer)
+        {
+            var reference = EnsureAsset<ObjectAssetReference>(ReferenceFolder + name + ".asset");
+            reference.Id = DB.AssetPathToGUID(path);
+            reference.Database = ItemsDatabaseGuid;
+            EditorUtility.SetDirty(reference);
+
+            var tile = EnsureAsset<TileObjectSo>(TileFolder + name + ".asset");
+            tile.PrefabAsset = reference;
+            tile.layer = layer;
+            EditorUtility.SetDirty(tile);
+
+            var database = DB.LoadAssetAtPath<SS3D.Data.AssetDatabases.AssetDatabase>(ItemsDatabase);
+            AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(reference.Id, database.AssetGroup).address = path;
+            database.Assets[reference.Id] = DB.LoadAssetAtPath<GameObject>(path);
+            EditorUtility.SetDirty(database);
+            return tile;
+        }
+
+        private static T EnsureAsset<T>(string path) where T : ScriptableObject
+        {
+            var asset = DB.LoadAssetAtPath<T>(path);
+            if (asset != null)
+                return asset;
+
+            asset = ScriptableObject.CreateInstance<T>();
+            DB.CreateAsset(asset, path);
+            return asset;
+        }
+
         private static void AllowOneFacingPerAxis(GameObject root)
         {
             var rotation = new SerializedObject(root.AddComponent<CustomGhostTileObjectRotation>());
