@@ -1,5 +1,6 @@
-using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using FishNet.Object;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Tile;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
     /// <summary>
     /// Pushes connected pipe network gas into the turf cell at the device coordinate.
     /// </summary>
-    public sealed class VentController : AtmosPortControllerBase
+    public sealed class VentController : AtmosPortControllerBase, IAmbientLoopState
     {
         private static readonly int VentActiveId = Animator.StringToHash("ventActive");
 

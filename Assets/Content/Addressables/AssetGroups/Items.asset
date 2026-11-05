@@ -55,6 +55,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0f9043fa6769666faaa893d26d564355
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosManifold3.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 11a2276338ebc64429dfc565b491e437
     m_Address: Assets/Content/WorldObjects/Structures/WallMounts/AirAlarm.prefab
     m_ReadOnly: 0
@@ -82,6 +87,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 177428b73bad0fb4a89d1a64b85629bf
     m_Address: Assets/Content/WorldObjects/Items/Consumable/Drinks/Soda/SodaCanDukePurpleTea.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1927b699e71f9833a82ed74dffe4acfd
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosPumpVolume.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -310,6 +320,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 52003a6b5233e43fca012e400adbeea6
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosValveDigital.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 535ed7c02b5cbdc43ae2b234a963c5cc
     m_Address: Assets/Content/WorldObjects/Items/Clothing/ShoeJackboots.prefab
     m_ReadOnly: 0
@@ -495,6 +510,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8612d44a1543bec729e78a0ec8d626c0
+    m_Address: Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/ScrubberIntake.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8686fbdb413e33b4395a775c4f2ba990
     m_Address: Assets/Content/WorldObjects/Structures/Floors/Tiles/TilePlating.prefab
     m_ReadOnly: 0
@@ -507,6 +527,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8dc5399c58290d54f9a6cc2f6c1c9d9f
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/JukeboxBlueGreen.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8eb79a916f17f4339888eeb43288ad4e
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosValveManual.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -742,6 +767,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d32855055305ce5489c69379e2219a7d
     m_Address: Assets/Content/WorldObjects/Furniture/Machines/Engineering/PowerCellCharger.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d4bb90462bc4749cdaa3796b227902b9
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosManifold4.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

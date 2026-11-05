@@ -13,8 +13,8 @@ using UnityEngine.TestTools;
 namespace SS3D.Tests
 {
     /// <summary>
-    /// Classic MiniStation's atmos room: the air chamber feeds the vents through the Mixed line, and
-    /// scrubbers send what they take to the Waste line.
+    /// Classic MiniStation's atmos room: the air pump lifts the chamber's air through manifolds into
+    /// the Supply line, and scrubbers send what they take to the Waste line, which ends at a valve.
     /// </summary>
     [Category(TestCategories.Scenarios)]
     [Category(TestCategories.Environment)]
@@ -24,6 +24,9 @@ namespace SS3D.Tests
 
         private static readonly Vector2Int Intake = new(2, -10);
         private static readonly Vector2Int Source = new(3, -10);
+        private static readonly Vector2Int AirPump = new(2, -7);
+        private static readonly Vector2Int WasteValve = new(5, -7);
+        private static readonly Vector2Int WasteOutlet = new(7, -8);
         private static readonly RectInt VentedRoom = new(16, 6, 6, 3);
         private static readonly Vector2Int RoomVent = new(17, 7);
         private static readonly Vector2Int RoomScrubber = new(20, 7);
@@ -48,42 +51,67 @@ namespace SS3D.Tests
             return network;
         }
 
-        // Guards: a loaded station starts with its distribution line filled, the chamber at its fixed mix, and every vent and intake on that one line while the room scrubbers stay off it (AtmosLineFill.ApplyAll, AtmosGasSource, AtmosDevicePipeResolver) · Not cheaper because: needs the importer's real template loaded through the tilemap, with devices spawned and ticking
+        private static VentController[] RoomVents() =>
+            Devices<VentController>().Where(vent => vent.OriginTile.Grid != WasteOutlet).ToArray();
+
+        private static GasPipeNetworkRecord Record(GasPipeNetworkId id)
+        {
+            Assert.IsTrue(Atmos.PipeRegistry.TryGetNetwork(id, out GasPipeNetworkRecord record));
+            return record;
+        }
+
+        // Guards: a loaded station starts with Supply filled, the chamber at its fixed mix, the intake parted from Supply by the air pump, and every room scrubber on one Waste line (AtmosLineFill.ApplyAll, AtmosGasSource, AtmosDevicePipeResolver, manifolds, inline ports) · Not cheaper because: needs the importer's real template loaded through the tilemap, with devices spawned and ticking
         [UnityTest]
         public IEnumerator ClassicMiniStation_StartsWithChamberAndLinesWired()
         {
             yield return WaitFor(() => Atmos.Simulation.GetCellPressure(Tile(Source)) > AtmosPipeConstants.ChamberPressureKpa - 1f,
                 "the source holds the chamber at pressure", 10f);
             yield return WaitFor(() => Devices<VentController>().Concat<AtmosPortControllerBase>(Devices<ScrubberController>())
-                .All(device => device.TryGetConnectedNetwork(out _)), "every vent and scrubber joins a network", 10f);
+                .Concat(Devices<AtmosInlineDeviceBase>())
+                .All(device => device.TryGetConnectedNetwork(out _)), "every device joins its networks", 10f);
 
-            GasPipeNetworkId supply = NetworkOf(DeviceAt<ScrubberController>(Intake));
-            Assert.That(Devices<VentController>().Select(NetworkOf), Is.All.EqualTo(supply), "All vents draw on the intake's line");
+            GasPipeNetworkId supply = NetworkOf(RoomVents()[0]);
+            Assert.That(RoomVents().Select(NetworkOf), Is.All.EqualTo(supply), "All room vents draw on Supply");
+            AtmosPumpController airPump = DeviceAt<AtmosPumpController>(AirPump);
+            Assert.AreEqual(supply, NetworkOf(airPump), "The air pump's outlet is Supply");
+            Assert.IsTrue(airPump.InletJoined && airPump.OutletJoined, "Both port caps show");
+            Assert.AreEqual(AtmosPortConstants.PumpDefaultTargetKpa, airPump.TargetOutletPressureKpa, "A pump starts modest, for atmos to raise");
+            Assert.AreNotEqual(supply, NetworkOf(DeviceAt<ScrubberController>(Intake)), "The pump parts the intake from Supply");
+
+            DeviceAt<ScrubberController>(Intake).GetFilterStates(out bool intakeO2, out bool intakeN2, out _, out _, out _);
+            Assert.IsTrue(intakeO2 && intakeN2, "The intake carries air");
+            DeviceAt<ScrubberController>(RoomScrubber).GetFilterStates(out bool roomO2, out bool roomN2, out bool roomCo2, out _, out _);
+            Assert.IsFalse(roomO2 || roomN2, "Room scrubbers leave air alone");
+            Assert.IsTrue(roomCo2, "Room scrubbers take CO₂");
+
             GasPipeNetworkId[] waste = Devices<ScrubberController>().Where(scrubber => scrubber.OriginTile.Grid != Intake)
                 .Select(NetworkOf).Distinct().ToArray();
-            Assert.That(waste, Has.None.EqualTo(supply), "Room scrubbers stay off the distribution line");
+            Assert.AreEqual(1, waste.Length, "Every room scrubber shares one Waste line");
+            Assert.AreNotEqual(supply, waste[0], "Room scrubbers stay off Supply");
 
-            Assert.IsTrue(Atmos.PipeRegistry.TryGetNetwork(supply, out GasPipeNetworkRecord record));
+            GasPipeNetworkRecord record = Record(supply);
             Assert.Greater(record.GetPressure(AtmosConstants.DefaultGasCount), AtmosConstants.StandardPressure,
                 "The line starts above room pressure, so vents have air from the first moment");
             Assert.Greater(record.Moles[AtmosConstants.Nitrogen.Value], record.Moles[AtmosConstants.Oxygen.Value], "The line holds air");
         }
 
-        // Guards: gas taken from the chamber by the intake reaches a depressurised room through its vent, with the line's starting fill out of the way (AtmosGasSource, ScrubberController, VentController, Mixed line attachment) · Not cheaper because: needs the turf sim, pipe network, powered devices and the shipped map's real run between them
+        // Guards: gas taken from the chamber by the intake crosses the manifolds and the air pump and reaches a depressurised room through its vent, with Supply's starting fill out of the way (AtmosGasSource, ScrubberController, GasPipeManifold, AtmosPumpController, VentController) · Not cheaper because: needs the turf sim, pipe network, powered devices and the shipped map's real run between them
         [UnityTest]
         public IEnumerator Chamber_RefillsADepressurisedRoomThroughItsVent()
         {
             ChangesRoom = true;
             ScrubberController intake = DeviceAt<ScrubberController>(Intake);
             VentController vent = DeviceAt<VentController>(RoomVent);
-            yield return WaitFor(() => intake.TryGetConnectedNetwork(out _) && vent.TryGetConnectedNetwork(out _), "the intake and vent join their line", 10f);
+            AtmosPumpController pump = DeviceAt<AtmosPumpController>(AirPump);
+            yield return WaitFor(() => intake.TryGetConnectedNetwork(out _) && vent.TryGetConnectedNetwork(out _)
+                && pump.TryGetConnectedNetwork(out _), "the intake, pump and vent join their lines", 10f);
 
             foreach (ScrubberController scrubber in Devices<ScrubberController>().Where(scrubber => scrubber != intake))
                 scrubber.ServerSetEnabled(false);
             foreach (VentController other in Devices<VentController>().Where(other => other != vent))
                 other.ServerSetEnabled(false);
 
-            Assert.IsTrue(Atmos.PipeRegistry.TryGetNetwork(NetworkOf(intake), out GasPipeNetworkRecord line));
+            GasPipeNetworkRecord line = Record(NetworkOf(vent));
             System.Array.Clear(line.Moles, 0, line.Moles.Length);
             DrainRoom();
             Assert.Less(RoomPressure(), 1f, "The room starts empty");
@@ -107,6 +135,54 @@ namespace SS3D.Tests
             Atmos.Simulation.DebugAddMoles(Tile(RoomScrubber), AtmosConstants.CarbonDioxide, 20f);
             yield return WaitFor(() => Atmos.GetPipeNetworkMoles(waste, AtmosConstants.CarbonDioxide) >= 1f, "CO₂ reaches the waste line", 15f);
             Assert.AreEqual(0f, Atmos.GetPipeNetworkMoles(supply, AtmosConstants.CarbonDioxide), "None of it reaches the distribution line");
+        }
+
+        // Guards: Waste stays shut behind its closed valve at round start, and opening the valve lets it out through the hull vent (AtmosValveController, inline ports, a vent powered off the grid outside any room) · Not cheaper because: needs the shipped map's run, a real space cell and the grid-fed vent
+        [UnityTest]
+        public IEnumerator WasteValve_HoldsTheLine_UntilOpened_ThenVentsItToSpace()
+        {
+            ChangesRoom = true;
+            AtmosValveController valve = DeviceAt<AtmosValveController>(WasteValve);
+            VentController outlet = DeviceAt<VentController>(WasteOutlet);
+            ScrubberController scrubber = DeviceAt<ScrubberController>(RoomScrubber);
+            yield return WaitFor(() => valve.TryGetConnectedNetwork(out _) && scrubber.TryGetConnectedNetwork(out _),
+                "the valve and scrubber join their lines", 10f);
+
+            Assert.IsFalse(valve.IsOpen, "The valve starts closed");
+            GasPipeNetworkRecord waste = Record(NetworkOf(scrubber));
+            foreach (ScrubberController other in Devices<ScrubberController>())
+                other.ServerSetEnabled(false);
+
+            waste.Moles[AtmosConstants.CarbonDioxide.Value] += 500f;
+            float heldMoles = waste.GetTotalMoles(AtmosConstants.DefaultGasCount);
+            yield return Hold(1f);
+            Assert.AreEqual(heldMoles, waste.GetTotalMoles(AtmosConstants.DefaultGasCount), 0.01f, "A closed valve holds the line");
+
+            valve.ServerSetEnabled(true);
+            yield return WaitFor(() => outlet.IsPortFlowing, "the hull vent runs once the valve opens", 10f);
+
+            // One vent drains the whole 60 m³ line, so it halves in over half a minute.
+            yield return WaitFor(() => waste.GetTotalMoles(AtmosConstants.DefaultGasCount) < heldMoles * 0.9f,
+                "Waste drains out through the hull", 30f);
+        }
+
+        // Guards: panic takes every gas at full speed with the vents off, and normal puts a scrubber's speed and filters back (AirAlarmPresetDispatcher, ScrubberController) · Not cheaper because: [Server] setters need a spawned scrubber in a real area
+        [UnityTest]
+        public IEnumerator AirAlarmPresets_SiphonThenRestoreTheScrubber()
+        {
+            ChangesRoom = true;
+            ScrubberController scrubber = DeviceAt<ScrubberController>(RoomScrubber);
+            yield return WaitFor(() => scrubber.TryGetConnectedNetwork(out _), "the scrubber joins its line", 10f);
+
+            scrubber.ServerApplyPanicSettings();
+            scrubber.GetFilterStates(out bool o2, out bool n2, out bool co2, out bool plasma, out _);
+            Assert.IsTrue(o2 && n2 && co2 && plasma, "Panic takes every gas");
+            Assert.AreEqual(AtmosPortConstants.ScrubberMaxFlowRate, scrubber.FlowRate);
+
+            scrubber.ServerApplyNormalSettings();
+            scrubber.GetFilterStates(out o2, out n2, out co2, out plasma, out _);
+            Assert.IsTrue(co2 && !o2 && !n2 && !plasma, "Normal goes back to CO₂");
+            Assert.AreEqual(AtmosPortConstants.ScrubberNormalFlowRate, scrubber.FlowRate);
         }
 
         // Guards: map logic objects draw only while authoring (TileObjectSo.mapEditorOnly through PlacedTileObject visibility) · Not cheaper because: FishNet's host visibility pass re-enables renderers on a real spawn, which EditMode tiles never reach

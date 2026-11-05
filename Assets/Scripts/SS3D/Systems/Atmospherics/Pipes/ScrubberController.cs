@@ -1,6 +1,7 @@
-using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using FishNet.Object;
 using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Audio;
 using SS3D.Systems.Tile;
 using UnityEngine;
 
@@ -9,24 +10,54 @@ namespace SS3D.Systems.Atmospherics.Pipes
     /// <summary>
     /// Pulls filtered gases from the turf cell into the connected pipe network.
     /// </summary>
-    public sealed class ScrubberController : AtmosPortControllerBase
+    public sealed class ScrubberController : AtmosPortControllerBase, IAmbientLoopState
     {
         private static readonly int ScrubActiveId = Animator.StringToHash("scrubActive");
 
         [SyncVar]
-        private int _flowRate = 5;
+        private int _flowRate = AtmosPortConstants.ScrubberNormalFlowRate;
 
-        private bool _filterO2 = true;
-        private bool _filterN2 = true;
+        // A chamber intake carries air, where a room scrubber must leave air alone.
+        [SerializeField]
+        private bool _isAirIntake;
+
+        private bool _filterO2;
+        private bool _filterN2;
         private bool _filterCo2 = true;
         private bool _filterPlasma;
-        private bool _filterToxins = true;
+        private bool _filterToxins;
 
         public int FlowRate => _flowRate;
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            ServerApplyNormalSettings();
+        }
+
+        /// <summary>
+        /// Back to this scrubber's everyday speed and filters.
+        /// </summary>
+        [Server]
+        public void ServerApplyNormalSettings()
+        {
+            _flowRate = AtmosPortConstants.ScrubberNormalFlowRate;
+            ServerSetFilters(o2: _isAirIntake, n2: _isAirIntake, co2: !_isAirIntake, plasma: false, toxins: false);
+        }
+
+        /// <summary>
+        /// Flat out on every gas, to siphon a room.
+        /// </summary>
+        [Server]
+        public void ServerApplyPanicSettings()
+        {
+            _flowRate = AtmosPortConstants.ScrubberMaxFlowRate;
+            ServerSetFilters(o2: true, n2: true, co2: true, plasma: true, toxins: true);
+        }
+
         public static float GetRatedFlowMolesPerSecond(int flowRate)
         {
-            float scale = Mathf.Clamp(flowRate, 1, 10) / 10f;
+            float scale = Mathf.Clamp(flowRate, 1, AtmosPortConstants.ScrubberMaxFlowRate) / (float)AtmosPortConstants.ScrubberMaxFlowRate;
             return AtmosPortConstants.ScrubberRatedFlowMolesPerSecond * scale;
         }
 
@@ -47,7 +78,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
         [Server]
         public void ServerSetFlowRate(int flowRate)
         {
-            _flowRate = Mathf.Clamp(flowRate, 1, 10);
+            _flowRate = Mathf.Clamp(flowRate, 1, AtmosPortConstants.ScrubberMaxFlowRate);
         }
 
         [Server]

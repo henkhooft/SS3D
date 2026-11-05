@@ -348,6 +348,8 @@ namespace EditorTests
         public void PumpInterfaceSnapshotSerializer_RoundTrips()
         {
             PumpInterfaceSnapshot original = CreatePumpSnapshot();
+            original.Regulation = (byte)PumpRegulation.Volume;
+            original.TargetLitresPerSecond = 750;
 
             using PooledWriter writer = WriterPool.Retrieve();
             writer.WritePumpInterfaceSnapshot(original);
@@ -355,6 +357,8 @@ namespace EditorTests
             ArraySegment<byte> segment = writer.GetArraySegment();
             using PooledReader reader = ReaderPool.Retrieve(segment, null);
             PumpInterfaceSnapshot roundTripped = reader.ReadPumpInterfaceSnapshot();
+            Assert.AreEqual(original.Regulation, roundTripped.Regulation);
+            Assert.AreEqual(original.TargetLitresPerSecond, roundTripped.TargetLitresPerSecond);
 
             Assert.AreEqual(original.MachineObjectId, roundTripped.MachineObjectId);
             Assert.AreEqual(original.InterfaceId, roundTripped.InterfaceId);
@@ -380,6 +384,37 @@ namespace EditorTests
             Assert.AreEqual(PumpScenario.Pumping, model.Scenario);
             Assert.AreEqual("PUMPING", model.StatusBadgeText);
             Assert.AreEqual("Flowing — 12.3 L/s", model.FlowStatusText);
+        }
+
+        [Test]
+        public void PumpSnapshotMapper_VolumePump_ShowsItsSetRate_AndNeverHoldsForATarget()
+        {
+            PumpInterfaceSnapshot snapshot = CreatePumpSnapshot();
+            snapshot.Regulation = (byte)PumpRegulation.Volume;
+            snapshot.TargetOutletPressureKpa = 0;
+            snapshot.TargetLitresPerSecond = 500;
+            snapshot.Powered = true;
+            snapshot.Connected = true;
+            snapshot.OutletPressureKpa = 900f;
+
+            PumpInterfaceViewModel model = PumpInterfaceSnapshotMapper.ToViewModel(snapshot);
+
+            Assert.AreEqual("500 L/s", model.TargetValueText);
+            Assert.AreEqual("Set flow rate", model.TargetTitle);
+            StringAssert.DoesNotContain("holding", model.StatusSubline);
+        }
+
+        [TestCase(false, "Closed — no throughput.")]
+        [TestCase(true, "Open — both sides at the same pressure.")]
+        public void PumpSnapshotMapper_Valve_DescribesItsPosition(bool open, string expected)
+        {
+            PumpInterfaceSnapshot snapshot = CreatePumpSnapshot();
+            snapshot.Regulation = (byte)PumpRegulation.None;
+            snapshot.TargetOutletPressureKpa = 0;
+            snapshot.Powered = open;
+            snapshot.Connected = true;
+
+            Assert.AreEqual(expected, PumpInterfaceSnapshotMapper.ToViewModel(snapshot).StatusSubline);
         }
 
         private static PumpInterfaceSnapshot CreatePumpSnapshot()

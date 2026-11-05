@@ -556,6 +556,7 @@ namespace SS3D.Systems.Tile
             if (placed != null)
             {
                 NotifyTileCleared(placed, placePosition, layer);
+                TileLayer[] portLines = placed.TryGetComponent(out IPipePortDevice device) ? device.PortLines : null;
 
                 if (placed.TryGetComponent(out IAdjacencyConnector connector))
                 {
@@ -566,6 +567,9 @@ namespace SS3D.Systems.Tile
                 {
                     tileLocation.TryClearPlacedObject(dir);
                 }
+
+                if (portLines != null)
+                    RedrawPipesBeside(portLines, placePosition);
             }
 
             // Remove any invalid tile combinations
@@ -932,10 +936,20 @@ namespace SS3D.Systems.Tile
 
         private void UpdateAdjacenciesFor(PlacedTileObject placedObject)
         {
-            if (placedObject.TryGetComponent<IEngineDrivenAdjacency>(out _))
+            if (placedObject.TryGetComponent(out IPipePortDevice device))
+                RedrawPipesBeside(device.PortLines, placedObject.transform.position);
+            else if (placedObject.TryGetComponent<IEngineDrivenAdjacency>(out _))
                 _adjacencyEngine.QueueCascadeFrom(placedObject);
             else
                 placedObject.UpdateAdjacencies();
+        }
+
+        private void RedrawPipesBeside(TileLayer[] lines, Vector3 position)
+        {
+            foreach (TileLayer line in lines)
+                _adjacencyEngine.QueueNeighbours(line, position);
+
+            _adjacencyEngine.ProcessQueue();
         }
 
         /// <summary>

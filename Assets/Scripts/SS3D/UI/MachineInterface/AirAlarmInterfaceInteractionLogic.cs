@@ -102,6 +102,11 @@ namespace SS3D.UI.MachineInterface
                     case AirAlarmPresetMode.Filtering:
                     {
                         device.Powered = true;
+                        if (device.Kind != AirAlarmConnectedDeviceKind.Vent)
+                        {
+                            SetScrubberFilters(device, o2: false, n2: false, co2: true, plasma: false, toxins: false);
+                        }
+
                         break;
                     }
 
@@ -114,7 +119,7 @@ namespace SS3D.UI.MachineInterface
                         else
                         {
                             device.Powered = true;
-                            SetScrubberFilters(device, o2: false, n2: false, co2: false, plasma: true, toxins: false);
+                            SetScrubberFilters(device, o2: true, n2: true, co2: true, plasma: true, toxins: true);
                         }
 
                         break;

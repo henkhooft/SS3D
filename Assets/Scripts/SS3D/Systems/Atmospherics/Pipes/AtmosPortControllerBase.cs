@@ -15,7 +15,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
     /// Shared toggle, pipe resolution, animator sync, and port registration for vents and scrubbers.
     /// </summary>
     [RequireComponent(typeof(PlacedTileObject))]
-    public abstract class AtmosPortControllerBase : InteractionTargetNetworkBehaviour, IAtmosPortDevice, IToggleable, IAmbientLoopState
+    public abstract class AtmosPortControllerBase : InteractionTargetNetworkBehaviour, IAtmosPortDevice, IToggleable
     {
         private static readonly int DeviceActiveId = Animator.StringToHash("deviceActive");
 
@@ -49,10 +49,25 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         public bool IsLoopRunning => _portFlowing;
 
-        public bool TryGetConnectedNetwork(out GasPipeNetworkId networkId)
+        public virtual bool TryGetConnectedNetwork(out GasPipeNetworkId networkId)
         {
             networkId = _networkId;
             return !networkId.IsNone;
+        }
+
+        /// <summary>
+        /// The placed object behind this device.
+        /// </summary>
+        protected PlacedTileObject TileObject
+        {
+            get
+            {
+                // Map load refreshes pipe adjacency before devices start.
+                if (_tileObject == null)
+                    TryGetComponent(out _tileObject);
+
+                return _tileObject;
+            }
         }
 
         public override IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
@@ -119,7 +134,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 return;
             }
 
-            if (_networkId.IsNone)
+            if (!TryGetConnectedNetwork(out _))
             {
                 SetAnimatorActive(ShouldAnimateWhileIdle());
                 SetPortFlowing(false);
@@ -143,18 +158,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         protected virtual bool ShouldAnimateWhileIdle() => true;
 
-        protected void ResolveConnectedNetwork()
+        protected virtual void ResolveConnectedNetwork()
         {
-            if (_tileObject == null
-                || !SubSystems.TryGet(out TileSubSystem tileSubSystem)
-                || !SubSystems.TryGet(out AtmosSubSystem atmosSubSystem)
-                || tileSubSystem.CurrentMap == null
-                || atmosSubSystem.PipeRegistry == null)
-            {
+            if (!TryGetPipeContext(out TileMap map, out GasPipeNetworkRegistry registry))
                 return;
-            }
 
-            GasPipeNetworkRegistry registry = atmosSubSystem.PipeRegistry;
             int topologyVersion = registry.TopologyVersion;
             if (!_networkId.IsNone
                 && _resolvedTopologyVersion == topologyVersion
@@ -165,13 +173,29 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
             _networkId = GasPipeNetworkId.None;
             AtmosDevicePipeResolver.TryResolveNetwork(
-                tileSubSystem.CurrentMap,
+                map,
                 registry,
                 new TileCoord(_tileObject.MapId, _tileObject.WorldOrigin),
                 PipeLayers,
                 out _networkId,
                 out _);
             _resolvedTopologyVersion = topologyVersion;
+        }
+
+        protected bool TryGetPipeContext(out TileMap map, out GasPipeNetworkRegistry registry)
+        {
+            map = null;
+            registry = null;
+            if (_tileObject == null
+                || !SubSystems.TryGet(out TileSubSystem tileSubSystem)
+                || !SubSystems.TryGet(out AtmosSubSystem atmosSubSystem))
+            {
+                return false;
+            }
+
+            map = tileSubSystem.CurrentMap;
+            registry = atmosSubSystem.PipeRegistry;
+            return map != null && registry != null;
         }
 
         private void Initialize()
@@ -222,8 +246,9 @@ namespace SS3D.Systems.Atmospherics.Pipes
             }
 
             ResolveConnectedNetwork();
-            SetAnimatorActive(!_networkId.IsNone || ShouldAnimateWhileIdle());
-            if (_networkId.IsNone)
+            bool connected = TryGetConnectedNetwork(out _);
+            SetAnimatorActive(connected || ShouldAnimateWhileIdle());
+            if (!connected)
                 SetPortFlowing(false, force: true);
         }
 
@@ -275,6 +300,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
             if (NetworkObject == null || !IsClient)
                 return;
 
+            ApplyEnabledVisual(_enabled);
             bool deviceActive = _enabled && IsPowered() && _animatorActive;
             bool flowing = _enabled && IsPowered() && _portFlowing;
             ApplyAnimatorState(deviceActive);
@@ -311,6 +337,10 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 return;
 
             ApplyDeviceSpecificAnimatorState(flowing);
+        }
+
+        protected virtual void ApplyEnabledVisual(bool enabled)
+        {
         }
 
         protected virtual void ApplyDeviceSpecificAnimatorState(bool flowing)

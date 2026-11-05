@@ -10,9 +10,12 @@ todos:
     status: completed
   - id: inline-devices
     content: "PR 3: two-network device base on PipeSurface, pumps, valves, manifolds on a new PipeManifold layer, GasPump replaced"
-    status: pending
+    status: completed
   - id: filters-mixers
     content: "PR 4: filters, mixers, meter, injector, scrubber Toxins category, Claude Design UI for filter and mixer"
+    status: pending
+  - id: gas-markers
+    content: "Atmospherics rail in the Map Editor: gas source, line fill and room air as saved markers like spawn points, replacing the AtmosSource and AtmosFill tile objects"
     status: pending
   - id: optional-extras
     content: "Optional, if effort allows: Ignitor, ConnectorPort with canisters and Connector pipes, pipe rupture, pipe gas temperature"
@@ -72,7 +75,7 @@ The `TileLayer` enum keeps its names.
 
 **Plate layer choice:** a plate replaces the pipe tile on its own line. It connects to the line with pipes at its ports and a gap under it, so other lines can pass beneath. If that's ambiguous, Map Check warns and the device stays disconnected.
 
-**Manifolds:** a new `PipeManifold` value appended to `TileLayer`. Pipes run through the tile, and the manifold merges the networks of each layer present: L1–L3 for `Manifold3`, L1–L4 for `Manifold4`.
+**Manifolds:** a new `PipeManifold` value appended to `TileLayer`. A manifold is a straight pipe on every line it spans, all one network, connecting at its front and back only: L1–L3 for `Manifold3`, L1–L4 for `Manifold4`. No pipes go on its tile.
 
 **Valves:** two-network devices. Closed moves nothing; open equalises fast. Toggling never rebuilds topology, so players can't trigger whole-network rebuilds by flipping one. The cost is a brief equalisation instead of an instant merge.
 
@@ -80,9 +83,11 @@ The `TileLayer` enum keeps its names.
 
 **Mixers:** two-inlet ratio and a target outlet pressure. They stop when either inlet is dry.
 
-**Scrubbers:** add a toxic flag to `GasDefinition`. Scrubbers keep a Toxins category over every flagged gas and lose the Plasma toggle. Defaults become CO₂ + Toxins. Filtering restores them after Panic.
+**Scrubbers:** add a toxic flag to `GasDefinition`. Scrubbers keep a Toxins category over every flagged gas and lose the Plasma toggle. Defaults are CO₂ only and Filtering restores them after Panic (both done in PR 3).
 
 **UI:** filter and mixer get new panels, designed in Claude Design. Volume pump reuses the pump template; digital valve gets a minimal on/off panel; manual valve uses a direct interaction; meter uses examine and its shape key.
+
+**Gas markers:** the Atmospherics rail, stubbed through `MapEditorCatalog.IsUnavailableScriptingSubcategory`, places saved records instead of tile objects, with the same shape as spawn points: a record type, a persistence contributor beside `spawn-points`, pins under the Scripts layer, and undoable place and clear commands. A record holds kind, position, a mix and a pressure. Mixes become gas fractions rather than `AtmosSupplyMix`, so plasma or a custom mix needs no prefab. Kinds are gas source (holds its tile), line fill (once, at round start) and room air (once: vacuum or a chosen gas, `creative-mode.md` §3 starting air). Map Check warns about a source in an unsealed room. `classic-ministation`'s source and fill convert to markers, and the tile objects and `AtmosSupplySetup` go.
 
 ## Art
 
@@ -107,6 +112,21 @@ PR 2 differs from the plan in four ways:
 - A catwalk run joins the east and west halves of the line, which were separate networks.
 - Scrubbers now share their budget across selected gases by mole fraction. They used to fill it from the first gas in filter order, so an intake sent pure O₂ and CO₂ never moved while oxygen was on the tile. Not in the plan, but the intake can't carry air without it.
 
+PR 3 differs from the plan in five ways:
+
+- `GasPump` keeps its name and prefab rather than being replaced: its tile asset moved to `PipeSurface`, with the 6 cm offset gone, and `AtmosPumpController` became inline. The asset still lives under `Furniture/`.
+- The digital valve reuses the pump template and `PumpInterfaceController` with the set point hidden, instead of its own panel. It needed no new catalog entry, and a device with a richer panel can still get one.
+- `classic-ministation` now runs distribution on Supply, as PR 2 left open. The intake's Mixed run reaches a manifold, the air pump and a second manifold into Supply. Waste crosses the catwalk so all scrubbers share one line, then ends at a manual valve, a Mixed stub and a vent on a catwalk outside the east wall.
+- That waste valve starts closed. Scrubbers now take CO₂ only, so Waste fills slowly, and opening the outlet is an engineer's job.
+- Scrubber defaults moved up from PR 4 and changed, at the owner's call: CO₂ only, not CO₂ + Toxins. Plasma and toxins stay off so that scrubbing them is atmos's work. `atmospherics.md` §4 still lists toxic gases under what scrubbers pull; the owner decides whether it changes. `ScrubberIntake` is a `Scrubber` that takes O₂ and N₂, placed at the chamber.
+- Inline pumps show a pipe cap at each port with a network, and carry a `FlowArrow` child that only holograms show. Valves carry a pipe run instead.
+- `classic-ministation.json` is the source of truth from this PR on, edited in the map editor. `classic_ministation.py` won't write without `--overwrite-map-edits`. The outlet vent runs off a cable, not an APC. By its rules Map Check should warn that it's outside every room; Map Check hasn't been run on this map.
+- Manifolds changed from the plan after the owner placed them: merging pipes on the tile needed an extra pipe to look connected and joined on every side. They now carry a run of each line's own mesh, and allow two facings, because lines sit at different heights and a half turn would misplace the runs.
+- Pumps start at 101 kPa rather than 4,500, so raising them is atmos's work. Supply settles near room pressure once its starting fill is used.
+- Air alarm presets: Panic takes every gas at top speed with vents off, and Filtering restores speed and filters, moved up from PR 4. Custom filters set by hand are lost when Filtering is pressed.
+- The manual valve shows `ValveManualHandle`, in line with the pipe while open and across it while closed. It snaps, with no animation.
+- `IAmbientLoopState` moved from `AtmosPortControllerBase` onto vents, scrubbers and pumps, so valves need no sound.
+
 ## Implementation notes
 
 - `classic-ministation.json` holds 240 pipe entries over 189 distinct saved placements. It loads as 240 segments in 4 networks: 120 Supply and 120 Waste, one per line on each tile. Read the map by tile and line, not by saved placement.
@@ -114,8 +134,8 @@ PR 2 differs from the plan in four ways:
 - Keep port ticks allocation-free and cache networks against `TopologyVersion`, as `AtmosPortControllerBase` does.
 - Dynamic device state doesn't survive template saves; `SavedPlacedTileObject` holds name, origin and direction only.
 - Reimport changes in the main checkout wait for the editor to be free.
-- PR 4: the intake must keep pulling O₂ and N₂ when scrubber defaults become CO₂ + Toxins, and templates can't store filter state, so it needs its own prefab or a saved default on the scrubber.
-- Open until PR 3 gives Waste an outlet: with default filters scrubbers fill Waste with room air until it backs up at 202 kPa, about 50 s into a round, and then stall. New CO₂ stays in the rooms from then on. Room pressure holds at 101 kPa throughout, with vents covering what Waste took from the line's starting fill.
+- `MapEditorCatalog.asset` names a script GUID (`3b7298e7…`) that matches no script, on develop too; `MapEditorCatalogSo.cs.meta` is `16071b6e…`. Rerunning the regenerator rewrites the asset with the right GUID and reshuffles unrelated entries. PR 3 left the GUID alone and added its rows by hand.
+- `AtmosFillMixed` is out of the map now; the prefab stays for other maps.
 - Open: `HullBreach_BlowsLooseItemIntoSpace_WhereItComesToRest` in `scenarios:Environment` failed 3 of 10 runs after PR 1 and 0 of 6 on a2bf3a24a, timing out at "the wind carries the item out through the hole". The test room has no pipes and no causal path was found, so this is neither a confirmed regression nor a confirmed flake. Passing runs take about 10.6 s against a 10 s wait; log the wrench's exit time on both commits to compare.
 
 ## Tests

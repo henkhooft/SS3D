@@ -1379,6 +1379,46 @@ MonoBehaviour:
     m_Key: examine.seal.breached
     m_Metadata:
       m_Items: []
+  - m_Id: 296172240830177280
+    m_Key: structures.pipes.atmos_pump_volume.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343104
+    m_Key: structures.pipes.atmos_pump_volume.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343105
+    m_Key: structures.pipes.atmos_valve_manual.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343106
+    m_Key: structures.pipes.atmos_valve_manual.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343107
+    m_Key: structures.pipes.atmos_valve_digital.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343108
+    m_Key: structures.pipes.atmos_valve_digital.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343109
+    m_Key: structures.pipes.atmos_manifold_3.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343110
+    m_Key: structures.pipes.atmos_manifold_3.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343111
+    m_Key: structures.pipes.atmos_manifold_4.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296172240855343112
+    m_Key: structures.pipes.atmos_manifold_4.desc
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

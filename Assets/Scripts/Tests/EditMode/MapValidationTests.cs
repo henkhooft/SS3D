@@ -216,10 +216,17 @@ namespace EditorTests
         }
 
         [Test]
-        public void GasPumpWithoutASurfacePipeWarnsWithoutCountingAsARoomPort()
+        public void GasPumpWithoutSurfacePipesWarnsWithoutCountingAsARoomPort()
         {
             MapValidationReport report = RoomChecks(Device(RoomDeviceKind.GasPump, 1, 3, pipe: false), Alarm(2, 3));
-            StringAssert.Contains("Gas pump at (1, 2) has no Surface pipe on its tile", report.Issues.Single().Title);
+            StringAssert.Contains("Gas pump at (1, 2) needs a Surface pipe at both ports", report.Issues.Single().Title);
+        }
+
+        [Test]
+        public void ValveWithoutSurfacePipesWarns()
+        {
+            MapValidationReport report = RoomChecks(Device(RoomDeviceKind.Valve, 1, 3, pipe: false), Alarm(2, 3));
+            StringAssert.Contains("Valve at (1, 2) needs a Surface pipe at both ports", report.Issues.Single().Title);
         }
 
         [Test]

@@ -10,8 +10,8 @@
 python3 Tools/map_import/dmm_gap_report.py /path/to/map.dmm
 ```
 
-- `classic_ministation.py` — rebuilds the 2021 MiniStation (RE-SS3D #857) from git history as
-  `Builds/Game/Data/StationTemplates/classic-ministation.json`. Stand-ins, dropped assets and added
-  power, atmos room and spawns live in tables at the top of the script. Run it with `--check` to verify the template.
+- `classic_ministation.py` — the one-time build of the 2021 MiniStation (RE-SS3D #857) from git history.
+  `Builds/Game/Data/StationTemplates/classic-ministation.json` is the source of truth now, edited in the
+  map editor. The script only writes with `--overwrite-map-edits`, which loses those edits.
 
 Do not commit full tgstation maps or converted Box/Meta station templates. Keep fixtures tiny under EditMode tests.

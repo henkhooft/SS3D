@@ -189,11 +189,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 targetKpa = vent.TargetPressureKpa;
             }
 
-            bool filterO2 = true;
-            bool filterN2 = true;
+            bool filterO2 = false;
+            bool filterN2 = false;
             bool filterCo2 = true;
             bool filterPlasma = false;
-            bool filterToxins = true;
+            bool filterToxins = false;
             if (!isVent && controller.TryGetComponent(out ScrubberController scrubber))
             {
                 scrubber.GetFilterStates(

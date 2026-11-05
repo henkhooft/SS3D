@@ -267,10 +267,18 @@ namespace SS3D.UI.MachineInterface
                 && controlId == MachineInterfaceControlIds.Atmos.TargetPressure
                 && pump.AccessGranted)
             {
-                pump.TargetOutletPressureKpa = Math.Clamp(
-                    pump.TargetOutletPressureKpa + (int)MathF.Round(delta * 100f),
-                    0,
-                    9000);
+                int step = (int)MathF.Round(delta * 100f);
+                if (pump.Regulation == PumpRegulation.Volume)
+                {
+                    pump.TargetLitresPerSecond = Math.Clamp(
+                        pump.TargetLitresPerSecond + step,
+                        0,
+                        AtmosPortConstants.VolumePumpMaxLitresPerSecond);
+                }
+                else
+                {
+                    pump.TargetOutletPressureKpa = Math.Clamp(pump.TargetOutletPressureKpa + step, 0, 9000);
+                }
             }
         }
 

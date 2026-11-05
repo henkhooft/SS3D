@@ -42,11 +42,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
         {
             return new Dictionary<string, bool>
             {
-                ["O2"] = true,
-                ["N2"] = true,
+                ["O2"] = false,
+                ["N2"] = false,
                 ["CO2"] = true,
                 ["Plasma"] = false,
-                ["Toxins"] = true,
+                ["Toxins"] = false,
             };
         }
 

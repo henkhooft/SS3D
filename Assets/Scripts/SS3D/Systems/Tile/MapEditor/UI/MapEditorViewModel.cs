@@ -204,7 +204,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (CurrentMode == MapEditorMode.Lower
                 || layer is TileLayer.Plenum or TileLayer.Turf or TileLayer.Wire or TileLayer.Disposal
-                    or TileLayer.PipeLeft or TileLayer.PipeMiddle or TileLayer.PipeRight or TileLayer.PipeSurface)
+                    or TileLayer.PipeLeft or TileLayer.PipeMiddle or TileLayer.PipeRight or TileLayer.PipeSurface
+                    or TileLayer.PipeManifold)
                 return "Hold Shift and drag to fill a rectangle — plain drag places a line";
 
             return "Drag to place a line, Shift+drag to fill a rectangle — R to rotate";

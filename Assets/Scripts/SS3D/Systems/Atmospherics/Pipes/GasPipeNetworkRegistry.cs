@@ -1,6 +1,7 @@
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.Connections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace SS3D.Systems.Atmospherics.Pipes
 {
@@ -63,6 +64,26 @@ namespace SS3D.Systems.Atmospherics.Pipes
             float moles = AtmosPipeThermo.GetMolesForPressure(pressureKpa, record.Temperature, record.Volume);
             AtmosSupplyMixes.FillMoles(mix, moles, record.Moles);
             return true;
+        }
+
+        /// <summary>
+        /// Moves up to <paramref name="moles"/> of a network's mixture into another, carrying its heat.
+        /// </summary>
+        /// <returns>The moles moved, which is less than asked when the source runs out.</returns>
+        public float MoveGas(GasPipeNetworkRecord source, GasPipeNetworkRecord target, float moles)
+        {
+            float available = source.GetTotalMoles(_gasTypeCount);
+            if (moles <= 0f || available <= 0f || source == target)
+                return 0f;
+
+            float moved = Mathf.Min(moles, available);
+            float fraction = moved / available;
+            AddGas(target, source, fraction);
+
+            for (int gasId = 0; gasId < _gasTypeCount; gasId++)
+                source.Moles[gasId] -= source.Moles[gasId] * fraction;
+
+            return moved;
         }
 
         public void RebuildAll(TileMap map)

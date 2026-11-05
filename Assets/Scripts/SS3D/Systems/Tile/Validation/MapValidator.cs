@@ -104,7 +104,11 @@ namespace SS3D.Systems.Tile.Validation
                 Vector2Int cell = SpawnPointRegistry.TileKey(device.Position);
                 string name = KindName(device.Kind);
                 string place = $"{cell.x}:{cell.y}";
-                if (!device.HasPipe)
+                if (!device.HasPipe && IsInline(device.Kind))
+                    AddWarning(report, $"pipe:{device.Kind}:{place}", device,
+                        $"{name} at ({cell.x}, {cell.y}) needs a Surface pipe at both ports",
+                        "so it can't move any gas. Run one up to its front and its back.");
+                else if (!device.HasPipe)
                     AddWarning(report, $"pipe:{device.Kind}:{place}", device,
                         $"{name} at ({cell.x}, {cell.y}) has no {PipeLineName(device.Kind)} pipe on its tile",
                         "so it can't move any gas. Run one under it.");
@@ -151,12 +155,13 @@ namespace SS3D.Systems.Tile.Validation
 
         private static bool IsPort(RoomDeviceKind kind) => kind is RoomDeviceKind.Vent or RoomDeviceKind.Scrubber;
 
+        private static bool IsInline(RoomDeviceKind kind) => kind is RoomDeviceKind.GasPump or RoomDeviceKind.Valve;
+
         private static string PipeLineName(RoomDeviceKind kind) => kind switch
         {
             RoomDeviceKind.Vent => "Supply or Mixed",
             RoomDeviceKind.Scrubber => "Waste or Mixed",
-            RoomDeviceKind.LineFill => "matching",
-            _ => "Surface",
+            _ => "matching",
         };
 
         private static string KindName(RoomDeviceKind kind) => kind switch
@@ -164,6 +169,7 @@ namespace SS3D.Systems.Tile.Validation
             RoomDeviceKind.Vent => "Vent",
             RoomDeviceKind.Scrubber => "Scrubber",
             RoomDeviceKind.GasPump => "Gas pump",
+            RoomDeviceKind.Valve => "Valve",
             RoomDeviceKind.LineFill => "Line fill",
             RoomDeviceKind.AirAlarm => "Air alarm",
             _ => "Light",
@@ -191,6 +197,7 @@ namespace SS3D.Systems.Tile.Validation
         Vent,
         Scrubber,
         GasPump,
+        Valve,
         AirAlarm,
         Light,
         LineFill,

@@ -502,6 +502,347 @@ namespace EditorTests.Atmospherics
             return registry;
         }
 
+        [Test]
+        public void Manifold_JoinsItsLinesAtFrontAndBack_AndLeavesOtherLinesAlone()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject below = PlacePipe(context, 5, 4, TileLayer.PipeMiddle);
+            PlacedTileObject above = PlacePipe(context, 5, 6, TileLayer.PipeLeft);
+            PlacedTileObject waste = PlacePipe(context, 5, 6, TileLayer.PipeRight);
+            PlaceManifold(context, 5, 5, Direction.North, TileLayer.PipeMiddle, TileLayer.PipeLeft);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(below), out GasPipeNetworkId belowNetwork, out _);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(above), out GasPipeNetworkId aboveNetwork, out _);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(waste), out GasPipeNetworkId wasteNetwork, out _);
+            Assert.AreEqual(belowNetwork, aboveNetwork);
+            Assert.AreNotEqual(belowNetwork, wasteNetwork);
+        }
+
+        [Test]
+        public void Manifold_IgnoresPipesAtItsSides()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject front = PlacePipe(context, 5, 6, TileLayer.PipeMiddle);
+            PlacedTileObject side = PlacePipe(context, 6, 5, TileLayer.PipeMiddle);
+            PlaceManifold(context, 5, 5, Direction.North, TileLayer.PipeMiddle);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(front), out GasPipeNetworkId frontNetwork, out _);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(side), out GasPipeNetworkId sideNetwork, out _);
+            Assert.AreNotEqual(frontNetwork, sideNetwork);
+        }
+
+        [Test]
+        public void Pipe_DrawsIntoAManifoldPort_OnlyOnALineItSpans()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject spanned = PlacePipe(context, 5, 6, TileLayer.PipeMiddle);
+            PlacedTileObject other = PlacePipe(context, 5, 6, TileLayer.PipeRight);
+            PlacedTileObject atSide = PlacePipe(context, 6, 5, TileLayer.PipeMiddle);
+            PlaceManifold(context, 5, 5, Direction.North, TileLayer.PipeMiddle);
+
+            Assert.IsTrue(AdjacencyEngine.ComputeAdjacencyMap(spanned, EngineRule(spanned), context.Map).HasConnection(Direction.South));
+            Assert.IsFalse(AdjacencyEngine.ComputeAdjacencyMap(other, EngineRule(other), context.Map).HasConnection(Direction.South));
+            Assert.IsFalse(AdjacencyEngine.ComputeAdjacencyMap(atSide, EngineRule(atSide), context.Map).HasConnection(Direction.West));
+        }
+
+        [Test]
+        public void RemovingManifold_SplitsItsNetwork_AndKeepsTheGas()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject below = PlacePipe(context, 5, 4, TileLayer.PipeMiddle);
+            PlacedTileObject above = PlacePipe(context, 5, 6, TileLayer.PipeMiddle);
+            PlaceManifold(context, 5, 5, Direction.North, TileLayer.PipeMiddle);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(below), out _, out GasPipeNetworkRecord joined);
+            joined.Moles[AtmosConstants.Oxygen.Value] = 90f;
+
+            context.Map.GetOrCreateTileLocation(TileLayer.PipeManifold, new Vector3(5, 0, 5)).ClearAllPlacedObject();
+            registry.RebuildAround(context.Map, new TileCoord(context.Map.MapId, 5, 5));
+
+            Assert.AreEqual(2, registry.NetworkCount);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(below), out _, out GasPipeNetworkRecord left);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(above), out _, out GasPipeNetworkRecord right);
+            Assert.AreEqual(30f, left.Moles[AtmosConstants.Oxygen.Value], 0.001f);
+            Assert.AreEqual(30f, right.Moles[AtmosConstants.Oxygen.Value], 0.001f);
+            Assert.AreEqual(1, registry.PendingReleases.Count, "The manifold's own share lets out on its tile");
+        }
+
+        [Test]
+        public void InlineDevice_ReachesAManifoldPort_ThatSpansSurface()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject underfloor = PlacePipe(context, 5, 3, TileLayer.PipeMiddle);
+            PlaceManifold(context, 5, 4, Direction.North, TileLayer.PipeMiddle, TileLayer.PipeSurface);
+            PlacedTileObject front = PlacePipe(context, 5, 6, TileLayer.PipeSurface);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            var coord = new TileCoord(context.Map.MapId, 5, 5);
+
+            Assert.IsTrue(AtmosDevicePipeResolver.TryResolveInlineNetworks(
+                context.Map, registry, coord, Direction.North, out GasPipeNetworkId inlet, out _));
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(underfloor), out GasPipeNetworkId underfloorNetwork, out _);
+            Assert.AreEqual(underfloorNetwork, inlet);
+            Assert.IsTrue(AtmosDevicePipeResolver.HasInlinePipes(context.Map, coord, Direction.North));
+        }
+
+        [Test]
+        public void InlineDevice_ResolvesInletBehindAndOutletInFront_AsSeparateNetworks()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject behind = PlacePipe(context, 4, 5, TileLayer.PipeSurface);
+            PlacedTileObject front = PlacePipe(context, 6, 5, TileLayer.PipeSurface);
+
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+
+            Assert.IsTrue(AtmosDevicePipeResolver.TryResolveInlineNetworks(
+                context.Map,
+                registry,
+                new TileCoord(context.Map.MapId, 5, 5),
+                Direction.East,
+                out GasPipeNetworkId inlet,
+                out GasPipeNetworkId outlet));
+            Assert.AreEqual(2, registry.NetworkCount);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(behind), out GasPipeNetworkId behindNetwork, out _);
+            registry.TryGetNetworkForSegment(GasPipeSegmentKey.From(front), out GasPipeNetworkId frontNetwork, out _);
+            Assert.AreEqual(behindNetwork, inlet);
+            Assert.AreEqual(frontNetwork, outlet);
+        }
+
+        [Test]
+        public void InlineDevice_WithAPipeOnOneSideOnly_IsNotConnected()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacePipe(context, 6, 5, TileLayer.PipeSurface);
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            registry.RebuildAll(context.Map);
+            var coord = new TileCoord(context.Map.MapId, 5, 5);
+
+            Assert.IsFalse(AtmosDevicePipeResolver.TryResolveInlineNetworks(
+                context.Map, registry, coord, Direction.East, out GasPipeNetworkId inlet, out _));
+            Assert.IsTrue(inlet.IsNone);
+            Assert.IsFalse(AtmosDevicePipeResolver.HasInlinePipes(context.Map, coord, Direction.East));
+        }
+
+        [Test]
+        public void InlineDevice_IgnoresUnderfloorLinesAtItsPorts()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacePipe(context, 4, 5, TileLayer.PipeLeft);
+            PlacePipe(context, 6, 5, TileLayer.PipeMiddle);
+
+            Assert.IsFalse(AtmosDevicePipeResolver.HasInlinePipes(
+                context.Map, new TileCoord(context.Map.MapId, 5, 5), Direction.East));
+        }
+
+        [TestCase(Direction.East, Direction.East, true)]
+        [TestCase(Direction.East, Direction.West, true)]
+        [TestCase(Direction.East, Direction.North, false)]
+        [TestCase(Direction.North, Direction.South, true)]
+        public void InlineDevice_HasPortsFrontAndBack(Direction facing, Direction direction, bool expected)
+        {
+            Assert.AreEqual(expected, AtmosDevicePipeResolver.HasInlinePortToward(facing, direction));
+        }
+
+        [Test]
+        public void Pipe_DrawsARunIntoAFacingDevicePort_WithoutJoiningANetwork()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject west = PlacePipe(context, 4, 5, TileLayer.PipeSurface);
+            PlacedTileObject north = PlacePipe(context, 5, 6, TileLayer.PipeSurface);
+            PlacedTileObject device = PlacePortDevice(context, 5, 5, Direction.East);
+            var rule = new PipeConnectionRule(TileObjectGenericType.Pipe, TileObjectSpecificType.None);
+
+            Assert.IsTrue(rule.IsConnected(west, device));
+            Assert.IsFalse(rule.IsConnected(north, device));
+            Assert.IsFalse(PipeConnectionRule.IsPipeSegmentConnected(west, device));
+        }
+
+        [Test]
+        public void ClearingADevice_RedrawsThePipesBesideIt()
+        {
+            TileMapTestUtilities.MapContext context = TileMapTestUtilities.CreateContext(_instantiated);
+            PlacedTileObject west = CreateSimpleGasPipeAt(new Vector2Int(4, 5), TileLayer.PipeSurface);
+            RegisterOnMap(context.Map, west, TileLayer.PipeSurface, new Vector3(4, 0, 5));
+            PlacePortDevice(context, 5, 5, Direction.East);
+            RecomputeAdjacency(context.Map, west);
+            byte connected = AdjacencyEngine.ComputeAdjacencyMap(west, EngineRule(west), context.Map).SerializeToByte();
+            Assert.AreNotEqual(0, connected);
+
+            context.Map.ClearTileObject(new Vector3(5, 0, 5), TileLayer.PipeSurface, Direction.North);
+
+            Assert.AreEqual(0, AdjacencyEngine.ComputeAdjacencyMap(west, EngineRule(west), context.Map).SerializeToByte());
+        }
+
+        [Test]
+        public void MoveGas_CarriesTheMixAndItsHeat_AndConservesMoles()
+        {
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            GasPipeNetworkRecord source = Network(1, oxygen: 75f, nitrogen: 25f, temperature: 400f);
+            GasPipeNetworkRecord target = Network(2, oxygen: 0f, nitrogen: 100f, temperature: 200f);
+
+            float moved = registry.MoveGas(source, target, 100f * 0.5f);
+
+            Assert.AreEqual(50f, moved, 0.001f);
+            Assert.AreEqual(37.5f, target.Moles[AtmosConstants.Oxygen.Value], 0.001f);
+            Assert.AreEqual(112.5f, target.Moles[AtmosConstants.Nitrogen.Value], 0.001f);
+            Assert.AreEqual(50f, source.GetTotalMoles(AtmosConstants.DefaultGasCount), 0.001f);
+            Assert.AreEqual((50f * 400f + 100f * 200f) / 150f, target.Temperature, 0.01f);
+        }
+
+        [Test]
+        public void MoveGas_StopsWhenTheSourceRunsOut()
+        {
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            GasPipeNetworkRecord source = Network(1, oxygen: 10f);
+            GasPipeNetworkRecord target = Network(2);
+
+            Assert.AreEqual(10f, registry.MoveGas(source, target, 1000f), 0.001f);
+            Assert.AreEqual(0f, source.GetTotalMoles(AtmosConstants.DefaultGasCount), 0.001f);
+        }
+
+        [Test]
+        public void OpenValve_LevelsTwoNetworks_WithoutOvershootOrLosingGas()
+        {
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            GasPipeNetworkRecord full = Network(1, oxygen: 300f, volume: 1f);
+            GasPipeNetworkRecord empty = Network(2, volume: 3f);
+
+            float previousGap = float.MaxValue;
+            for (int tick = 0; tick < 20; tick++)
+            {
+                AtmosValveController.Equalise(registry, full, empty);
+                float gap = full.GetPressure(AtmosConstants.DefaultGasCount) - empty.GetPressure(AtmosConstants.DefaultGasCount);
+                Assert.GreaterOrEqual(gap, -0.001f);
+                Assert.Less(gap, previousGap);
+                previousGap = gap;
+            }
+
+            Assert.Less(previousGap, 0.01f);
+            Assert.AreEqual(75f, full.GetTotalMoles(AtmosConstants.DefaultGasCount), 0.01f);
+            Assert.AreEqual(225f, empty.GetTotalMoles(AtmosConstants.DefaultGasCount), 0.01f);
+        }
+
+        [Test]
+        public void PressurePump_FillsItsOutletToTheTarget_AndStops()
+        {
+            var registry = new GasPipeNetworkRegistry(AtmosConstants.DefaultGasCount);
+            GasPipeNetworkRecord inlet = Network(1, oxygen: 100_000f, volume: 100f);
+            GasPipeNetworkRecord outlet = Network(2, volume: 1f);
+
+            for (int tick = 0; tick < 200; tick++)
+            {
+                float moles = AtmosPumpController.ComputePressureMoles(
+                    inlet.GetPressure(AtmosConstants.DefaultGasCount), outlet, 500, 100f, 450f, 0.5f, out _, out _);
+                registry.MoveGas(inlet, outlet, moles);
+            }
+
+            Assert.AreEqual(500f, outlet.GetPressure(AtmosConstants.DefaultGasCount), 0.5f);
+        }
+
+        [Test]
+        public void VolumePump_MovesItsSetVolume_WhateverTheOutletHolds()
+        {
+            GasPipeNetworkRecord inlet = Network(1, oxygen: 40f, volume: 1f);
+
+            float moles = AtmosPumpController.ComputeVolumeMoles(
+                inlet, 0f, 250, 100f, 450f, 1f, out _, out bool stalled);
+
+            Assert.IsFalse(stalled);
+            Assert.AreEqual(10f, moles, 0.001f);
+        }
+
+        [Test]
+        public void VolumePump_StallsAgainstBackpressure()
+        {
+            GasPipeNetworkRecord inlet = Network(1, oxygen: 40f, volume: 1f);
+            float outletPressure = inlet.GetPressure(AtmosConstants.DefaultGasCount) + 450f;
+
+            float moles = AtmosPumpController.ComputeVolumeMoles(
+                inlet, outletPressure, 250, 100f, 450f, 1f, out _, out bool stalled);
+
+            Assert.IsTrue(stalled);
+            Assert.AreEqual(0f, moles);
+        }
+
+        private static GasPipeNetworkRecord Network(
+            ushort id,
+            float oxygen = 0f,
+            float nitrogen = 0f,
+            float temperature = AtmosConstants.StandardTemperature,
+            float volume = 1f)
+        {
+            var record = new GasPipeNetworkRecord(new GasPipeNetworkId(id), AtmosConstants.DefaultGasCount)
+            {
+                Temperature = temperature,
+                Volume = volume,
+            };
+            record.Moles[AtmosConstants.Oxygen.Value] = oxygen;
+            record.Moles[AtmosConstants.Nitrogen.Value] = nitrogen;
+            return record;
+        }
+
+        private static IConnectionRule EngineRule(PlacedTileObject pipe) =>
+            ((IEngineDrivenAdjacency)pipe.Connector).ConnectionRule;
+
+        private PlacedTileObject PlacePipe(TileMapTestUtilities.MapContext context, int x, int y, TileLayer layer)
+        {
+            PlacedTileObject pipe = CreateGasPipeAt(new Vector2Int(x, y), layer);
+            RegisterOnMap(context.Map, pipe, layer, new Vector3(x, 0, y));
+            return pipe;
+        }
+
+        private PlacedTileObject CreateTileObjectAt(int x, int y, TileLayer layer, Direction direction)
+        {
+            var go = new GameObject($"TileObject_{x}_{y}_{layer}");
+            _instantiated.Add(go);
+
+            PlacedTileObject placed = go.AddComponent<PlacedTileObject>();
+            TileObjectSo so = ScriptableObject.CreateInstance<TileObjectSo>();
+            so.layer = layer;
+
+            SetPrivateField(placed, "_tileObjectSo", so);
+            SetPrivateField(placed, "_worldOrigin", new Vector2Int(x, y));
+            SetPrivateField(placed, "_mapId", 0);
+            SetPrivateField(placed, "_dir", direction);
+            placed.transform.position = new Vector3(x, 0, y);
+            return placed;
+        }
+
+        private void PlaceManifold(TileMapTestUtilities.MapContext context, int x, int y, Direction facing, params TileLayer[] lines)
+        {
+            PlacedTileObject placed = CreateTileObjectAt(x, y, TileLayer.PipeManifold, facing);
+            placed.gameObject.AddComponent<GasPipeManifold>().SetLines(lines);
+            RegisterOnMap(context.Map, placed, TileLayer.PipeManifold, new Vector3(x, 0, y));
+        }
+
+        private PlacedTileObject PlacePortDevice(TileMapTestUtilities.MapContext context, int x, int y, Direction facing)
+        {
+            PlacedTileObject placed = CreateTileObjectAt(x, y, TileLayer.PipeSurface, facing);
+            placed.gameObject.AddComponent<PortDeviceStub>().Facing = facing;
+            RegisterOnMap(context.Map, placed, TileLayer.PipeSurface, new Vector3(x, 0, y));
+            return placed;
+        }
+
+        private sealed class PortDeviceStub : MonoBehaviour, IPipePortDevice
+        {
+            public Direction Facing;
+
+            public TileLayer[] PortLines => AtmosDevicePipeResolver.InlineLayers;
+
+            public bool HasPortToward(Direction direction) =>
+                AtmosDevicePipeResolver.HasInlinePortToward(Facing, direction);
+        }
+
         private static TileLayer ResolvedLayer(TileMapTestUtilities.MapContext context, GasPipeNetworkRegistry registry, TileLayer[] layers)
         {
             Assert.IsTrue(AtmosDevicePipeResolver.TryResolveNetwork(

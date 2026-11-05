@@ -91,6 +91,16 @@ namespace SS3D.Systems.Atmospherics.Editor
                 Object.DestroyImmediate(root);
             }
 
+            TileObjectSo tile = RegisterTileObject(name, path, TileLayer.FurnitureBase);
+            tile.mapEditorOnly = true;
+            EditorUtility.SetDirty(tile);
+        }
+
+        /// <summary>
+        /// Gives a prefab its tile asset and a place in the Items database and addressables.
+        /// </summary>
+        public static TileObjectSo RegisterTileObject(string name, string path, TileLayer layer)
+        {
             var reference = EnsureAsset<ObjectAssetReference>(ReferenceFolder + name + ".asset");
             reference.Id = DB.AssetPathToGUID(path);
             reference.Database = ItemsDatabaseGuid;
@@ -98,18 +108,18 @@ namespace SS3D.Systems.Atmospherics.Editor
 
             var tile = EnsureAsset<TileObjectSo>(TileFolder + name + ".asset");
             tile.PrefabAsset = reference;
-            tile.layer = TileLayer.FurnitureBase;
-            tile.mapEditorOnly = true;
+            tile.layer = layer;
             EditorUtility.SetDirty(tile);
 
             var database = DB.LoadAssetAtPath<SS3D.Data.AssetDatabases.AssetDatabase>(ItemsDatabase);
             AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(reference.Id, database.AssetGroup).address = path;
             database.Assets[reference.Id] = DB.LoadAssetAtPath<GameObject>(path);
             EditorUtility.SetDirty(database);
+            return tile;
         }
 
         // Same observer TileGridObserverConfigurator gives every tile prefab.
-        private static void AddGridObserver(GameObject root)
+        public static void AddGridObserver(GameObject root)
         {
             var observer = new SerializedObject(root.AddComponent<NetworkObserver>());
             observer.FindProperty("_overrideType").intValue = (int)NetworkObserver.ConditionOverrideType.IgnoreManager;
