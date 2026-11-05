@@ -105,6 +105,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - Effort: [2026-07_atmos-ecs-foundation.md](../../archive/architecture/2026-07_atmos-ecs-foundation.md)
 - Effort: [2026-07_atmos-client-visualization-sync.md](../2026-07_atmos-client-visualization-sync.md) — Phase 1 shipped; Phase 2 late-join/AOI open; Phase 3 host AOI atlas partial via [metastation-scale-perf](../../archive/architecture/2026-07_metastation-scale-perf.md)
 - Effort: [2026-11_atmos-edge-flow.md](../2026-11_atmos-edge-flow.md) — in-progress; all phases built; 8 clients, tick peak and owner review open
+- Plan: [atmos-machinery.plan.md](../../plans/atmos-machinery.plan.md) — planned; pipe lines, gas supply, inline devices
 - Effort: [2026-07_session-world-lifecycle.md](../../archive/architecture/2026-07_session-world-lifecycle.md)
 - [tile](tile.md) — occupancy and mutation hooks
 - [rendering](rendering.md) — URP feature wiring
