@@ -20,3 +20,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ecd4614364cd91f378d30404373190f0, type: 2}
   _airBed: {fileID: 8300000, guid: d9621c4533c1d4842babaf04e7c8993c, type: 3}
   _airBedVolume: 0.15
+  _windLayers:
+  - {fileID: 8300000, guid: b743493757a54a2498fc3da972fa1333, type: 3}
+  - {fileID: 8300000, guid: 665aaf4a721a505488baafe1c55fd4b9, type: 3}
+  - {fileID: 8300000, guid: 98ec12a171cf0e84b98a5fcfe5706c4d, type: 3}
+  _windVolume: 0.7
+  _spaceBed: {fileID: 8300000, guid: 96e717bb433850647bff44e9378dda5a, type: 3}
+  _spaceBedVolume: 0.08

@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green. The owner tagged `classic-ministation` in the Map Editor and approved the clips in a playtest on 2026-11-05. C hasn't started. Phase order is D, A, B, C, all in one PR once the plan is done.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. Targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green. The owner tagged `classic-ministation` in the Map Editor and approved the clips in a playtest on 2026-11-05. C is built, with compile, EditMode and `mppm:breach` green, and the breach run also covers D1's line in the table below. C's sounds haven't been auditioned. It adds no messages, so the T3 8-client line stands. Phase order is D, A, B, C, all in one PR once the plan is done.
 
 # Ambience and impact audio (Nov 2026)
 
@@ -56,6 +56,11 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | 23 | A bed's Equipment fade needs the channel on and the grid covering the load. A battery carries only the lights, so the hum goes first. It rides the lighting snapshot as one more field, with no new message. Protocol 18, because develop is also on 17 with a different wire shape. |
 | 24 | Only `engineering` is power-gated, because `PowerHum` implies a machine. Command, Security, Science, Service, Cargo and Hallways play `station`, because there are no distinct clips for them yet. `morgue` is available as an override. |
 | 25 | One clock schedules occasional sounds across rooms, with 25 to 70 s gaps from the end of the last one, so walking through short rooms can't put them off forever. The air bed plays in any area until C ties it to real air. |
+| 26 | Air is the one tile under the listener, not a blend, because a blend would read walls as low pressure and leak vacuum through the hull. Hearing runs from full at 70 kPa to nothing at 5 kPa. A wall tile keeps the last reading. |
+| 27 | A tile with no data counts as air unless the server's `IsFloating` says the body is in open space. A pure client only holds chunks that changed since it joined, so missing data can't mean vacuum. A late joiner who missed a settled breach therefore hears air in that room until [atmos client sync](2026-07_atmos-client-visualization-sync.md) Phase 2 sends a late-join bootstrap. |
+| 28 | Everything positional takes the muffle through `AudioSourceOcclusion`, so footsteps and the cracked-wall hiss gain it, and with it wall occlusion. The Music pool takes air only (`IgnoresWalls`), which keeps the jukebox clear of the wall lowpass. The hiss stays on its own source rather than moving to the pool as Decision 10 planned. |
+| 29 | Wind is three looped layers, `WindLight`, `WindHeavy` and `WindViolent`, crossfaded by speed in `AudioAirState.WindGain`. The clips are SS3D-Art and sit about 18 dB apart, so moving up the layers is what makes wind louder. Space uses `SpaceAmbience2`, the attributed clip. |
+| 30 | The air bed now plays wherever there's air, in or out of an area. `Breathing.wav`, imported earlier and unused, is the calm breath below 20% air, on its own source, and heavy breathing takes over from it. "Well away from the hull" reads loaded tiles within 6, because the atlas may not hold them. A ghost hears the air on its tile, with no breathing. |
 | 18 | SS14's `vending_machine_hum`, `engine_hum` and `light_hum` have no attribution entry, so they're out. Vendors and APCs use `PowerHum` and the SMES uses SS3D-Art `Machinery2`. The air alarm uses SS3D-Art `Alarm 1` instead of SS14 `alarm.ogg`. The generator keeps the loop it gets in `develop` from #159, so A leaves it alone. |
 
 ## Clips
@@ -76,7 +81,8 @@ The station sounds empty. Explosions, wall breaks and melee hits on structures m
 | Morgue override | `ambimo*` | CC-BY-SA-3.0 |
 | Everything else | `StationAmbience*` | CC-BY-SA-3.0 |
 | Bed candidates | `PowerHum`, `AirStagnant`, SS14 `shipambience` | Check per file |
-| Wind | `WindLight`, `WindHeavy`, `WindViolent`, SS14 `Effects/Weather/wind_*` | Check per file |
+| Wind | `WindLight`, `WindHeavy`, `WindViolent` | Project assets |
+| Space bed | `SpaceAmbience2` | CC-BY-SA-3.0 |
 
 Confirm each license in SS14's `attributions.yml` at import. `metal_slam1–3` are CC-BY-SA-3.0 and `metal_slam5` is CC-BY-NC-4.0. `metal_slam4`, `glass_knock` and `airlock_creaking` have no entry, so leave them out. The owner auditions beds in-game, because seams and repetition need a human ear.
 

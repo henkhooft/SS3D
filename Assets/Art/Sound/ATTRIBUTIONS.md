@@ -9,7 +9,7 @@ not original SS3D / SS3D-Art work. Keep paths relative to the repo root.
 | `Assets/Art/Sound/UI/Comms/Welcome.ogg` | CC-BY-SA-3.0 | Taken from tgstation; via Space Station 14 Announcements pack | [tgstation welcome.ogg](https://github.com/tgstation/tgstation/blob/40d89d11ea4a5cb81d61dc1018b46f4e7d32c62a/sound/ai/default/welcome.ogg); SS14 `Resources/Audio/Announcements/welcome.ogg` |
 | `Assets/Art/Sound/Entities/Humanoid/Personal/Heartbeat.wav` | CC-BY | "Heartbeat, Regular, Single, 01-01, LOOP.wav" by InspectorJ (www.jshaw.co.uk) of Freesound.org | [Freesound 485076](https://freesound.org/people/InspectorJ/sounds/485076/) |
 | `Assets/Art/Sound/Entities/Humanoid/Personal/HeavyBreathing.wav` | CC0 | "Heavy Breathing" by Under7dude | [Freesound 163383](https://freesound.org/people/Under7dude/sounds/163383/) |
-| `Assets/Art/Sound/Entities/Humanoid/Personal/Breathing.wav` | CC Attribution (Freesound) | "Breathing" by ckvoiceover — imported, not wired this pass | [Freesound 401336](https://freesound.org/people/ckvoiceover/sounds/401336/) |
+| `Assets/Art/Sound/Entities/Humanoid/Personal/Breathing.wav` | CC Attribution (Freesound) | "Breathing" by ckvoiceover | [Freesound 401336](https://freesound.org/people/ckvoiceover/sounds/401336/) |
 | `Assets/Art/Sound/UI/Health/Beep1.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Effects pack | SS14 `Resources/Audio/Effects/beep1.ogg` |
 | `Assets/Art/Sound/World/Fluids/Blood1.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Effects/Fluids | SS14 `Resources/Audio/Effects/Fluids/blood1.ogg` |
 | `Assets/Art/Sound/World/Fluids/Splat.ogg` | CC-BY-SA-3.0 | Via Space Station 14 Effects/Fluids | SS14 `Resources/Audio/Effects/Fluids/splat.ogg` |

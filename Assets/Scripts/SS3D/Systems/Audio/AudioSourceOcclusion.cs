@@ -8,7 +8,8 @@ namespace SS3D.Systems.Audio
     /// the seventh consumer of the shared <see cref="LineOfSight"/> raycast (a wall blocks a
     /// sound exactly the same way it already blocks a shot, a subtitle bubble, or a wireless
     /// scan). Runs entirely client-side: occlusion depends on the local listener's position, so
-    /// it cannot be baked into the server's play RPC.
+    /// it cannot be baked into the server's play RPC. Sound needs air (audio.md §3), so the same
+    /// component also thins every source by the air where the listener stands.
     /// </summary>
     [RequireComponent(typeof(AudioSource))]
     public class AudioSourceOcclusion : MonoBehaviour
@@ -31,6 +32,15 @@ namespace SS3D.Systems.Audio
         private const float OcclusionSampleHeight = 1.2f;
 
         private static Transform s_listener;
+
+        /// <summary>How well the listener's air carries sound, 0..1. Driven by <see cref="AmbienceSubSystem"/>.</summary>
+        public static float ListenerAir { get; set; } = 1f;
+
+        /// <summary>
+        /// Takes the air's muffle but not a wall's. A jukebox reads as permanently muddled under the
+        /// occlusion lowpass, because furniture counts as a hit.
+        /// </summary>
+        public bool IgnoresWalls { get; set; }
 
         private AudioSource _source;
         private AudioLowPassFilter _lowPass;
@@ -75,6 +85,17 @@ namespace SS3D.Systems.Audio
 
         private void Awake()
         {
+            CacheComponents();
+        }
+
+        /// <summary>Also called from play, because a presenter can start a sound where Awake never ran.</summary>
+        private void CacheComponents()
+        {
+            if (_source != null)
+            {
+                return;
+            }
+
             _source = GetComponent<AudioSource>();
             _lowPass = GetComponent<AudioLowPassFilter>();
             if (_lowPass == null)
@@ -92,13 +113,14 @@ namespace SS3D.Systems.Audio
         /// </summary>
         public void PrepareForPlayback(float volume)
         {
+            CacheComponents();
             _baseVolume = volume;
             _isOccluded = false;
             _cutoffCurrent = AudioOcclusionState.ClearCutoffHz;
             _volumeScaleCurrent = 1f;
             _nextSampleTime = 0f;
             _lowPass.cutoffFrequency = AudioOcclusionState.ClearCutoffHz;
-            _source.volume = volume;
+            _source.volume = volume * HearingNow();
             _lowPass.enabled = false;
         }
 
@@ -106,6 +128,13 @@ namespace SS3D.Systems.Audio
         public void SetBaseVolume(float volume)
         {
             _baseVolume = volume;
+        }
+
+        private float HearingNow()
+        {
+            return TryGetListenerPosition(out Vector3 listenerPosition)
+                ? AudioAirState.Hearing(ListenerAir, Vector3.Distance(listenerPosition, transform.position))
+                : ListenerAir;
         }
 
         private void Update()
@@ -122,7 +151,8 @@ namespace SS3D.Systems.Audio
 
             // Unity's own rolloff already silences sources past maxDistance — skip the raycast
             // and filter update entirely rather than sampling occlusion for inaudible sources.
-            if (Vector3.Distance(listenerPosition, transform.position) > _source.maxDistance)
+            float distance = Vector3.Distance(listenerPosition, transform.position);
+            if (distance > _source.maxDistance)
             {
                 return;
             }
@@ -131,10 +161,9 @@ namespace SS3D.Systems.Audio
             {
                 _nextSampleTime = Time.time + SampleInterval;
 
-                float distance = Vector3.Distance(listenerPosition, transform.position);
                 // Own footsteps / point-blank sources: never occlude (ray length ~0 also false-hits
                 // nearby Default colliders on the body/tile).
-                if (distance < 1.5f)
+                if (IgnoresWalls || distance < 1.5f)
                 {
                     _isOccluded = false;
                 }
@@ -154,15 +183,18 @@ namespace SS3D.Systems.Audio
             _cutoffCurrent = AudioOcclusionState.LerpCutoffHz(_cutoffCurrent, _isOccluded, lerpFactor);
             _volumeScaleCurrent = AudioOcclusionState.LerpVolumeScale(_volumeScaleCurrent, _isOccluded, lerpFactor);
 
+            float hearing = AudioAirState.Hearing(ListenerAir, distance);
+            float cutoff = Mathf.Min(_cutoffCurrent, AudioAirState.CutoffHz(hearing));
+
             // Disable the filter when fully clear — a 22kHz lowpass still colors some clips.
-            bool filterNeeded = _isOccluded || _cutoffCurrent < AudioOcclusionState.ClearCutoffHz - 500f;
+            bool filterNeeded = _isOccluded || cutoff < AudioOcclusionState.ClearCutoffHz - 500f;
             _lowPass.enabled = filterNeeded;
             if (filterNeeded)
             {
-                _lowPass.cutoffFrequency = _cutoffCurrent;
+                _lowPass.cutoffFrequency = cutoff;
             }
 
-            _source.volume = _baseVolume * _volumeScaleCurrent;
+            _source.volume = _baseVolume * _volumeScaleCurrent * hearing;
         }
     }
 }

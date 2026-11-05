@@ -290,9 +290,10 @@ namespace SS3D.Systems.Audio
 
                 // Sfx only — Music (jukebox) must not get the 800Hz occlusion lowpass or it reads
                 // as permanently muddled even in the same room (furniture/wall false hits on Default).
-                if (AudioType is AudioType.Sfx)
+                if (AudioType is AudioType.Sfx or AudioType.Music)
                 {
-                    newAudioSource.gameObject.AddComponent<AudioSourceOcclusion>();
+                    AudioSourceOcclusion occlusion = newAudioSource.gameObject.AddComponent<AudioSourceOcclusion>();
+                    occlusion.IgnoresWalls = AudioType is AudioType.Music;
                 }
 
                 List.Add(newAudioSource);

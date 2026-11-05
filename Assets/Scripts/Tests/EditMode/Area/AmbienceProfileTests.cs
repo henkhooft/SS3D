@@ -84,6 +84,14 @@ namespace EditorTests
         }
 
         [Test]
+        public void CatalogHasEveryWindLayerAndASpaceBed()
+        {
+            Assert.AreEqual(AudioAirState.WindLayerCount, Catalog.WindLayers.Length);
+            Assert.IsTrue(Catalog.WindLayers.All(clip => clip != null));
+            Assert.IsNotNull(Catalog.SpaceBed);
+        }
+
+        [Test]
         public void ScheduledGapIsLongAndTheFirstSoundWaitsForIt()
         {
             AmbienceScheduler scheduler = new(new Random(1));

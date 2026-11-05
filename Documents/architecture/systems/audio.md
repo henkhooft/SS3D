@@ -21,6 +21,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
 - `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Plays the `AmbienceProfile` for the area's resolved id (`AmbienceProfileCatalog`, loaded from Resources), or the generic `station` profile: a bed, occasional clips timed by `AmbienceScheduler`, and the catalog's thin air bed underneath. A `PowerGated` bed fades with `AreaSubSystem.IsAreaEquipmentPowered`. Outside any area, silence. Replaces legacy `AmbienceHandler.cs`.
+- `Assets/Scripts/SS3D/Systems/Audio/ListenerAirTracker.cs` / `AudioAirState.cs` — air and wind at the listener from this client's atlas, no messages; pure muffle curve and wind crossfade in `AudioAirState`. `AmbienceSubSystem` publishes the level as `AudioSourceOcclusion.ListenerAir`
 - `Assets/Scripts/SS3D/Systems/Audio/AmbientLoopSubSystem.cs` — machine hums (§3): 12 client-local voices lent to the nearest running `AmbientLoopSource`s, each occluded through `AudioSourceOcclusion`; choice is pure in `AmbientLoopSelection.cs`, and each kind's clip, level and reach in `AmbientLoopTrackIds.cs`
 - `Assets/Scripts/SS3D/Systems/Audio/PersonalAudioSubSystem.cs` — Phase 3 owner-only heartbeat, breathing and alert ding (§4), non-positional. Driven by `HealthPersonalAudioMapper` / `StaminaPersonalAudioMapper` from each domain's existing local-owner hook.
 - `Assets/Scripts/SS3D/UI/MainHud/Components/AlertStackAudioMapper.cs` — Phase 4 (§6): `HasNewAlert` diff; `MainHudSubSystem.PushAlertState` is the single funnel that calls `PlayAlertCue()`
@@ -48,6 +49,8 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 ## Pitfalls
 
 - **A prefab recipe save bakes `[RequireComponent]` into the prefab.** `SaveAsPrefabAsset` added `PlacedTileObject` and `AuthLogDeviceBehaviour`, both `NetworkBehaviour`s, to GasPump, AirAlarm and APC when `SetupMachineLoops` first ran, and refreshed stale fields. The machine loops went in by text to keep those out. Read the prefab diff after any recipe run.
+- **Missing atmos data is not vacuum.** A pure client's atlas holds only chunks that changed since it joined, so `MaskEmpty` or a tile outside the atlas means unknown. Reading it as 0 kPa silences every late joiner with no error. `AudioAirState.ResolveAir` calls it air unless the server's `IsFloating` says open space. Designed around 2026-11-05.
+- **`AudioSourceOcclusion` can be asked to play where `Awake` never ran.** EditMode tests drive `StructuralIntegrityPresenter`, so `AddComponent` then `PrepareForPlayback` must work with no `Awake`; it caches its components itself. Hit 2026-11-05.
 - **Occlusion is client-local — do not gate it behind `[Server]`/RPC.** The listener position only
   exists on each client; baking a muffled/clear decision into the server RPC would require per-observer
   variants of every play call. `AudioSourceOcclusion.Update()` runs unconditionally on whichever machine
@@ -105,7 +108,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Tests
 
-- EditMode: `AudioOcclusionStateTests`, `HealthPersonalAudioMapperTests`, `StaminaPersonalAudioMapperTests`, `AlertStackAudioMapperTests`, `PlayerAudioMixTests`, `PlayerSettingsStoreTests`. Pool playback, occlusion and ambience have no automated coverage; check them in Play Mode.
+- EditMode: `AudioAirStateTests`, `AudioOcclusionStateTests`, `HealthPersonalAudioMapperTests`, `StaminaPersonalAudioMapperTests`, `AlertStackAudioMapperTests`, `PlayerAudioMixTests`, `PlayerSettingsStoreTests`. `Testing/ui/validate.sh --steps mppm:breach` proves a remote client hears wind and thinning air from its own patches. Pool playback, occlusion and the mix itself have no automated coverage; check them by ear.
 
 ## Depends on / Used by
 
