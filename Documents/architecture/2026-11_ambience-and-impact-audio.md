@@ -2,7 +2,7 @@
 > Touches systems: audio, audio-content, area, structural-destruction, combat, atmospherics, electricity, map-editor-creative-hooks, persistence
 > Status: in-progress
 
-**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green, and haven't been heard. The owner tagged `classic-ministation` in the Map Editor. C hasn't started. Phase order is D, A, B, C, all in one PR once the plan is done.
+**Progress:** D1 and D2 are built, with compile and EditMode green, and `scenarios:Environment` green for D2. `mppm:breach`, targeted smoke and the traffic measurement weren't run for D1. D2's sounds haven't been auditioned. A is built and hasn't been auditioned or smoke tested. B1 and B2 are built, with compile, EditMode and `scenarios:MapEditor` green. The owner tagged `classic-ministation` in the Map Editor and approved the clips in a playtest on 2026-11-05. C hasn't started. Phase order is D, A, B, C, all in one PR once the plan is done.
 
 # Ambience and impact audio (Nov 2026)
 
