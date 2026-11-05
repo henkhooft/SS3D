@@ -65,7 +65,8 @@ namespace SS3D.Systems.Audio.Editor
         private static readonly HashSet<string> SilentItems = new()
         {
             "Backpack", "BrutePatch", "BurnPatch", "DonkPocket", "Doodad", "GloveInsulated", "JumpsuitGrey",
-            "MedicalPatch", "Poster", "ShoeHiTops", "ShoeJackboots", "Toolbelt", "TruckerCap",
+            "MedicalPatch", "Poster", "ShoeHiTops", "ShoeJackboots", "SyndicateHardsuit", "SyndicateHardsuitHelmet",
+            "Toolbelt", "TruckerCap",
         };
 
         private static readonly Dictionary<string, AmbientLoopKind> MachineLoops = new()

@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using FishNet;
+using FishNet.Managing;
 using FishNet.Managing.Client;
 using SS3D.Core;
 using SS3D.Core.Behaviours;
@@ -38,7 +39,7 @@ namespace SS3D.Systems.BugReports
         private const int NetworkScreenshotWidth = 960;
 
         /// <summary>Maps that ship in <c>Builds/Game/Data/StationTemplates/</c>; any other map defaults the map option on.</summary>
-        private static readonly string[] ShippedMaps = { "ministation", "Metastation v2" };
+        private static readonly string[] ShippedMaps = { "ministation", "classic-ministation" };
 
         private BugReportAssetCatalog _catalog;
         private bool _catalogFailed;
@@ -183,6 +184,10 @@ namespace SS3D.Systems.BugReports
 
         private void BindClient()
         {
+            // InstanceFinder logs and rescans the scenes on every miss, and this runs each frame.
+            if (NetworkManager.Instances.Count == 0)
+                return;
+
             ClientManager client = InstanceFinder.ClientManager;
             if (client == null || client == _clientManager)
                 return;

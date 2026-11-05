@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Inventory/, Assets/Scripts/SS3D/UI/MainHud/, Assets/Scripts/SS3D/UI/StoragePanel/, Assets/Scripts/SS3D/Systems/Stamina/
 > Entry points: ItemSubSystem, MainHudSubSystem, StoragePanelHost, StaminaController
 > Status: partial
-> Verified: 5834bcdac — 2026-11-04 (loose-item zero-g gravity)
+> Verified: e2f86cf20 — 2026-11-05
 
 # Inventory
 
@@ -26,6 +26,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 **Hands wiring on `Human.prefab`** — `Hands.PlayerHands` (2-entry list, Left then Right; `Hands.OnStartServer` selects `FirstOrDefault()` as the initial active hand, so order matters) is recipe-managed via **SS3D → Entities → Run All Human Prefab Recipes** (`HandsPrefabSetup` + peers, [Entity prefab recipes](entities-prefab-recipes.md)) instead of hand-dragging `fileID`s in the Inspector. `HandsPrefabSetup` also ensures `HandSearchExtension` on `HumanHandLeft`/`HumanHandRight` (Search → character paperdoll). Currently correctly wired; the aggregator is the safety net. Head/torso must not expose world `ContainerInteractive` (combat targeting clarity; clothing/pocket HUD slots stay) — same **Run All Human Prefab Recipes** strip if it regresses (enforced by the recipe and integrity tests).
 
 **Alert icon stack (main-hud.md §9 + fork):** `AlertIconStack.cs` renders the §9 hazards plus fork additions **Bleeding** and **CardiacArrest** (14 total) with per-hazard `AlertSeverity` (None/Warning/Critical — Dying and CardiacArrest have no Warning tier). Icons are PNGs under `Assets/Art/Icons/Alerts/` wired through `AlertIconSet` → `MainHudAssetCatalog` → `MainHudAssetCatalogBuilder`. Critical severity pulses the rounded border via DOTween. **Health hazards are live:** `MainHudSubSystem` binds `HumanHealthController.SnapshotChanged` and maps via `HealthAlertStackMapper` (Bleeding / Dying / CardiacArrest / LowOxygen). `AtmosAlertStackMapper` also supplies Hot/Cold/pressure/Fire and turf LowOxygen; hunger / thirst / pulling / restrained / radiation remain unbound. **F1 → Alert Stack** (`AlertStackDebugMenuView`) and `alertstack` remain a full-stack debug override; `ClearDebugAlertOverride` re-applies live health. Old PlayerCanvas uGUI `HealthAlertsView` text chips are purged. **Audio cue ([audio-foundation](../2026-07_audio-foundation.md) Phase 4, [audio](audio.md) §6):** every `AlertStackState` push (health-driven, debug override, or clear) funnels through `MainHudSubSystem.PushAlertState`, which diffs against the previous state via `AlertStackAudioMapper.HasNewAlert` and fires `PersonalAudioSubSystem.PlayAlertCue()` only when a hazard newly appears (None → any severity) — an escalation already showing does not re-trigger it.
+
+**Syndicate hardsuit:** `SyndicateHardsuitSetup` imports the supplied Drive FBXs into suit/helmet Items, adapts bone indices and bind poses to Human, and registers item refs/Addressables and the operative loadout. Run via **Inventory → Run Content Prefab Recipes**. The suit uses the ExoSuit slot, exposed as **Suit** in the equipment doll; `ExoSuitPrefabSetup` wires the container and worn renderer through the Human recipe aggregator. Worn presentation sync identifies local renderers by `ClothType` (including initially inactive renderers), with existing state applied on client startup. `Cloth` optionally supplies worn materials and names of underlying renderers concealed while equipped; removal restores them. These assets have no body-shape blend shapes. Combat absorption is present; environmental sealing, internals and magboot mechanics are planned in [eva-gear.plan.md](../../plans/eva-gear.plan.md).
 
 ## Start here
 
@@ -69,6 +71,12 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Pitfalls
 
+- **ExoSuit invisible / cannot unequip with belt worn:** clothing sync must resolve local renderers by `ClothType`, rather than an empty nested NetworkObject reference. A slot copied from Jumpsuit must strip `JumpsuitStorageCondition`; that rule intentionally locks jumpsuit removal while wearing a belt, and does not belong on outer suits.
+- **Clothing HUD icon contains two shapes:** icon clones must discard the unused world/worn branch before baking; keep both shapes only on the live Item. `ClothingItemPresentation.PrepareIconPreview` is clone-only.
+
+- **Drive clothing rig indices differ from Human:** never assign the raw FBX mesh directly. `SyndicateHardsuitSetup` remaps weights/bind poses to Human's bone array; opaque suit occlusion prevents body/jumpsuit clipping. Keep the folded world mesh on the same Item and rebuild FishNet behaviour caches after adding armor.
+
+
 - **Ghost retains body HUD / Drop throws after death:** exclude `HumanoidGhostController` bodies from `MainHudSubSystem.ApplyVisibility`. `Hands` must unsubscribe input callbacks on destruction even after ownership is removed; callback lifetime cannot be gated by `IsOwner`. The focused health pilot checks ghost HUD hiding, Drop/Swap keys and HUD restoration on respawn.
 
 - **Incapacitated inventory actions:** use `Hand.CanUseHand` for server pickup, inventory transfer/placement/drop, combat and continued delayed interactions. It combines health arm control with ragdoll presentation; UI suppression alone does not guard incoming RPCs.
@@ -76,7 +84,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 - **Soda cans placed at the world origin:** an interpolated Rigidbody created and moved only via its Transform in the same frame snaps back to its creation pose. `PlacedItemObject.Create` instantiates at (0,0,0) then moves, so `SodaCanGeneric` (the only item with `Interpolate`) landed at 0,0 — host and dedicated alike. Move items with `ItemUtility.SetWorldPose` (Transform + Rigidbody). Hit 2026-10-31.
 - **Placed items sank into the floor:** `ItemUtility.Place` lifted the item, then `TryPlaceItem` was handed the raw surface point and `PlacedItemObject.Create` moved it back down (centre-pivot items such as medkits clipped). `Place` now rests collider bounds on the surface after rotation; callers pass `item.transform` pose to `TryPlaceItem`. Hit 2026-10-31.
 - **Client Main HUD item icons never update:** `HumanInventory.AddContainer` (server-only) used to be the only place that subscribed `AttachedContainer.OnContentsChanged` → `OnContainerContentChanged`. Pure clients get containers via the SyncList and never subscribed, so pickup/equip refreshed nothing on the gear strip. Wire contents in `SyncInventoryContainerChange` / `OnStartClient` via `SubscribeContainerContents` (idempotent `-=` then `+=`). Hit 2026-07-26.
-- **`Couldn't get player ckey` on pickup:** `PickupInteraction` used `Hands.Inventory.Body.Mind` — `Hands.Inventory` is only set on the owning client. Resolve ckey from `Entity.Mind.player` (and set `Hands.Inventory` on server in `HumanInventory.OnStartServer`). Do not wrap in a bare `catch`. Hit 2026-07-26.
+- **`Hands.Inventory` is only set on the owning client** (and on the server by `HumanInventory.OnStartServer`): resolve a picker's ckey from `Entity.Mind.player`, never `Hands.Inventory.Body.Mind`. Hit 2026-07-26.
 - **Green outline baked into HUD icons:** `RemoveInteractionOutlines` must `DestroyImmediate` on the preview clone — Coimbra `Dispose` → end-of-frame `Destroy`, but the icon camera renders same frame while hover shells are still enabled. Hit 2026-07-26.
 - **Worn jumpsuit icon wrong / `Can't generate icon`:** worn preview activates inactive shaped children; `SetChildRenderersEnabled` must use `GetComponentsInChildren<Renderer>(true)`. Null-check texture before `Sprite.Create`. Do **not** set `HideFlags.HideAndDontSave` on the preview before `IconPreviewGenerator.Generate` — that makes `scene.IsValid()` false, so `RuntimePreviewGenerator` re-clones and `ClothingItemPresentation.Awake` → `ApplyWorldForm` bakes the folded pile as the “worn” HUD sprite. Hit 2026-07-26.
 - **Client can't re-equip filtered clothing (gloves):** `TraitSerializer` CreateInstance copies break `Filter.acceptedTraits.Contains` (reference equality). Match traits by `Name`+`Category` in `Filter.CanStore` / `Item.HasTrait`. Hit 2026-07-26.
@@ -122,7 +130,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 ## Depends on / Used by
 
-- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md), [id-access](id-access.md), [stamina](stamina.md) (encumbrance consumer), [health](health.md) (alert stack signals), [machine-interface](machine-interface.md) (open/close suppress), [audio](audio.md) (`PersonalAudioSubSystem.PlayAlertCue`)
+- **Depends on:** [interactions-framework](interactions-framework.md), [inputs](inputs.md), [id-access](id-access.md), [stamina](stamina.md) (encumbrance consumer), [health](health.md) (alert stack signals), [machine-interface](machine-interface.md) (open/close suppress), [audio](audio.md) (`PersonalAudioSubSystem.PlayAlertCue`), [atmospherics](atmospherics.md) (server items register with `AtmosLooseBodies` for wind push; space support sets gravity)
 - **Used by:** [examine](examine.md), [player-control](player-control.md), [id-access](id-access.md), [stamina](stamina.md), [combat](combat.md) (zone reticle / intent chip)
 - **Catalog pattern:** [ui-shell](ui-shell.md), [machine-interface](machine-interface.md)
 
@@ -130,5 +138,6 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: inventory (stripping rule), main-hud (zone selection in every intent)
 - Design (read-only): [inventory-storage.md](../../design/inventory-storage.md), [main-hud.md](../../design/main-hud.md)
+- [eva-gear.plan.md](../../plans/eva-gear.plan.md) — seal, internals and magboots
 - [clothing_world_presentation.plan.md](../../archive/plans/clothing_world_presentation.plan.md)
 - [INDEX.md](../INDEX.md)

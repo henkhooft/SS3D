@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/ (plus integrity stage, occupancy and blast VFX Rpc hooks in Systems/Tile/, mapped by [tile](tile.md))
 > Entry points: StructuralDamageSubSystem, StructuralDamageService, BlastResolutionService, BlastVfxPresenter, StructuralIntegrityPresenter, HurtStructureCommand, BlastCommand
 > Status: partial
-> Verified: f5e66d0c8 — 2026-11-04
+> Verified: e2f86cf20 — 2026-11-05
 
 # Structural destruction
 
@@ -18,7 +18,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralDamageSubSystem.cs` — self-bootstrap; `TryApplyStructuralDamage` / `TryGetIntegrity` / `ResolveBlast` (+ VFX broadcast)
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralDamageService.cs` — server apply + Destroyed clear
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/SteelWreckageRecord.cs` / `SteelWreckageView.cs` — pre-clear bounds capture, procedural folded steel and collapse animation
-- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.Wreckage.cs` — session wreckage SyncList, unbuffered breakup RPC, placement cleanup (protocol 14)
+- `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.Wreckage.cs` — session wreckage SyncList, unbuffered breakup RPC, placement cleanup
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastResolutionService.cs` — BFS blast spread
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastVfxPresenter.cs` — client detonation FX (catalog-driven)
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastVfxCatalog.cs` — Resources catalog + falloff tuning
@@ -53,7 +53,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 
 ## Pitfalls
 
-- **Area reflood must not run inside `OnTileCleared` synchronously:** `TileMap` notifies before the occupant is removed; immediate flood still sees the wall/door. Area queues `_pendingLiveBoundaryRecompute` and flushes next `UpdateEvent` (same class of bug as `AtmosTileObserver` defer).
+- **Area reflood must not run inside `OnTileCleared` synchronously:** `TileMap` notifies before the occupant is removed; immediate flood still sees the wall/door. Area queues `_pendingLiveBoundaryRecompute` and flushes next `UpdateEvent`; authored maps then skip the reflood (same class of bug as `AtmosTileObserver` defer).
 - **Cracked still blocks Area expansion and blast hops:** only Destroyed (clear) opens boundaries; Cracked only flips `IsAirtight` for atmos.
 - **Cracked is not a slow room↔room leak yet:** design wants a slow vent; `IsAirtight=false` only changes the wall cell's atmos state. Neighbour `CanFlow` still uses binary `BlockedEdges` — real permeability deferred (document fork until ShareGasJob / edge rate exists).
 - **Do not bind TileQueryService at Awake:** `StructuralDamageSubSystem` self-bootstraps before `TileSubSystem` creates its map. Resolve query/construction lazily from the current `TileSubSystem` or `TryApplyStructuralDamage` / `ResolveBlast` always miss.
@@ -81,7 +81,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 ## Depends on / Used by
 
 - **Depends on:** [inventory](inventory.md) (release storage contents), [tile](tile.md), [area](area.md), [atmospherics](atmospherics.md) (observer refresh), [health](health.md) (blast crew brute), [examine](examine.md), [screen-effects](screen-effects.md) (blast flash), [core-subsystems](core-subsystems.md)
-- **Used by:** [combat](combat.md) melee connect; Phase 5+ explosive items
+- **Used by:** [combat](combat.md) melee connect; Phase 5+ explosive items; [furniture](furniture.md) (tables, lockers, machines, airlocks)
 
 ## Related docs
 

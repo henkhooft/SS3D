@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Atmospherics/, Assets/Scripts/SS3D/Rendering/URP/Atmos*
 > Entry points: AtmosSubSystem, AtmosSimulation, AtmosRendererFeature
 > Status: partial
-> Verified: 270f2b3dc — 2026-11-04
+> Verified: f481dc3b1 — 2026-11-05
 
 # Atmospherics
 
@@ -28,6 +28,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosClientVisualizationBridge.cs` / `AtmosClientAtlas.cs` — pure-client patch → atlas
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosChunkPatch.cs` — ObserversRpc payload
 - `Assets/Scripts/SS3D/Rendering/URP/AtmosRendererFeature.cs` — URP scatter, glow, distortion passes
+- `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosVisualActivity.cs` — decides whether the fullscreen passes have anything to draw
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Visualization/AtmosCamera.cs` — registers player camera with render context (all clients)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/AtmosDebugController.cs` — runtime overlay (F1 → Atmospherics; server/host)
 - `Assets/Scripts/SS3D/Systems/Atmospherics/Pipes/AtmosPortRegistry.cs` — registered vent/scrubber/pump port tick list
@@ -54,6 +55,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Pitfalls
 
+- **Atmos early-outs live in two places:** the fullscreen passes march every pixel, so `AtmosVisualActivity.IsCalm` skips them for plain room air (about 2 ms of GPU at 1440p). Its thresholds mirror the early-outs in `AtmosCommon.hlsl`. If a shader starts reacting to something new, widen `IsCalm` too, or the effect silently never draws. Unknown gas profiles count as not calm. Hit 2026-11-05.
 - **FishNet's server traffic total counts every connection:** `OnServerNetworkTraffic` sums what went to each client, the host's own included, so one remote client reads about double what it receives. Compare Decision 10 with `client_traffic`, which reads the client's own count. Hit 2026-11-04.
 - **Nothing stops an object in space by itself:** `Item` turns gravity off there, but a body keeps its velocity, so it sends transform traffic forever with no error. `AtmosLooseBodies` damps registered bodies to rest. A new kind of free rigidbody must call `Register`, or the wind ignores it and space never stops it. Hit 2026-11-04.
 - **Wind speed is continuity, not pressure:** air speed is flow per mole, so it falls with distance from a hole however strong the drain is. A 10×10 room peaks at 0.3 m/s of true air mid-room. Raising wave speed does not help, because the hole sets the flow. Change reach with `AtmosWind.AirSpeedGain`; drain time is `EdgeFlowVacuumMaxSpeed`. Hit 2026-11-04.
@@ -87,7 +89,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Tests
 
-- `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `AtmosEdgeFlowTests` covers edge flow's conservation, stability, sleep, doors and chunk borders. `AtmosEdgeFlowReferenceTests` asserts room-scale drain time, far-field onset and knockdown reach against the design targets, and logs the numbers as `[edge-flow-ref]`. `Testing/fixtures/stations/atmostest.json` is the sealed map for atmos budget runs; Metastation leaks at rest, so its numbers measure the leak. `AtmosLooseBodiesTests` covers mass scaling, the cap, held bodies and drift. `scenarios:Environment` covers owner gust knockdown, upright drift, a live hull breach through to streaks and pull, and an item blown through the hole to rest in space. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner and saves `breach-wind.png` from the client. `--steps mppm:breach-budget` measures tick cost and traffic on that map with 64 loose items and a real client, logged as `[atmos-budget]`, with what the client really received in Player 2's log. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
+- `AtmosWindTests` covers sealed edges, destruction/repair, vacuum fade, continuous sampling, drag and flow encoding. `AtmosNeighbourTests` covers chunk borders in both load orders. `AtmosEdgeFlowTests` covers edge flow's conservation, stability, sleep, doors and chunk borders. `AtmosEdgeFlowReferenceTests` asserts room-scale drain time, far-field onset and knockdown reach against the design targets, and logs the numbers as `[edge-flow-ref]`. `Testing/fixtures/stations/atmostest.json` is the sealed map for atmos budget runs. `AtmosLooseBodiesTests` covers mass scaling, the cap, held bodies and drift. `scenarios:Environment` covers owner gust knockdown, upright drift, a live hull breach through to streaks and pull, and an item blown through the hole to rest in space. `Testing/ui/validate.sh --steps mppm:breach` proves the same on a remote owner and saves `breach-wind.png` from the client. `--steps mppm:breach-budget` measures tick cost and traffic on that map with 64 loose items and a real client, logged as `[atmos-budget]`, with what the client really received in Player 2's log. Wind tuning is in `AtmosWind`; streak tuning is in `AtmosWindView`; visuals use `Assets/Resources/Atmospherics/Wind.shader`.
 
 - `Testing/ui/validate.sh --steps compile,round-reset` runs a focused host stop/restart, depletes a cell before Stop and checks oxygen returns in a fresh simulation. The sandbox pilot also carries this regression. Remote dedicated-server replay remains required for release acceptance.
 

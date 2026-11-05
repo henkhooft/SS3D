@@ -140,7 +140,7 @@ namespace SS3D.Systems.StructuralDamage
         {
             if (SubSystems.TryGet(out AudioSubSystem audio))
             {
-                audio.PlayLocalAudioSource(AudioType.Sfx, clipId, position, volume,
+                audio.PlayAudioSourceLocal(AudioType.Sfx, clipId, position, null, false, volume,
                     basePitch * Random.Range(0.92f, 1.08f), minRange, maxRange);
             }
         }
