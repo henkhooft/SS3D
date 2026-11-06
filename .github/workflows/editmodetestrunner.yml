@@ -138,6 +138,10 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+      - name: Recreate game-ci license dir for the test run
+        # The import pass does not leave this dir usable by the host user, so repeat the step above.
+        if: needs.pick_runner.outputs.self_hosted == 'true'
+        run: rm -rf "$GITHUB_WORKSPACE/_activate-license~" && mkdir -p "$GITHUB_WORKSPACE/_activate-license~"
       - name: Run tests
         id: run-tests
         uses: game-ci/unity-test-runner@v4
