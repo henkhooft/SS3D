@@ -20,4 +20,5 @@ MonoBehaviour:
   width: 1
   height: 1
   isLarge: 0
+  structuralMaxIntegrity: 100
   impactMaterial: 3

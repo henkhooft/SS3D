@@ -3,7 +3,8 @@ using SS3D.Systems.Tile;
 namespace SS3D.Systems.StructuralDamage
 {
     /// <summary>
-    /// Provisional integrity thresholds (balance deferred). Stage from remaining HP fraction.
+    /// Integrity fallbacks and stage thresholds. Stage from remaining HP fraction. Shipped walls, windows,
+    /// girders and airlocks set <see cref="TileObjectSo.structuralMaxIntegrity"/> from SS13 values instead.
     /// </summary>
     public static class StructuralIntegrityRules
     {

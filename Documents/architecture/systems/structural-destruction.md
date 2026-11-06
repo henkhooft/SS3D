@@ -28,7 +28,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 - `Assets/Scripts/SS3D/Systems/Tile/StructuralMaterial.cs` — material enum and the one resolve function
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityPresenter.cs` — stage overlays or fallback tint + optional WindLight hiss
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/SteelWallDamageVfx.cs` — mesh overlays and short contact particles using `Assets/Resources/StructuralDamage/SteelWallDamage.shader`
-- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityRules.cs` — supported targets, layer-aware lookup, provisional HP thresholds / stage fractions
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityRules.cs` — supported targets, layer-aware lookup, fallback HP / stage fractions
 - `Assets/Scripts/SS3D/Systems/Tile/StructuralIntegrityStage.cs` — Intact / Damaged / Cracked / Destroyed
 - `Assets/Scripts/SS3D/Systems/Tile/PlacedObjects/PlacedTileObject.cs` — SyncVar integrity + `ServerSetIntegrity` → presenter
 - `Assets/Scripts/SS3D/Systems/Tile/TileSubSystem.cs` — `ServerNotifyBlastDetonated` / `RpcBlastDetonated`
@@ -45,7 +45,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 
 - Call `StructuralDamageSubSystem.TryApplyStructuralDamage(coord, force, source)` from melee, ranged hitscan, blast hops, chemistry, etc. — one apply path. Lookup prefers structural Turf, then supported furniture on FurnitureBase; destruction clears only the chosen layer. Sources include `StructuralDamageSource.Melee` / `Ranged` / `Blast` / `Console`.
 - Call `StructuralDamageSubSystem.ResolveBlast(epicenter, yield, falloff)` from grenades/charges (Phase 5) — also broadcasts blast VFX.
-- Override max HP per SO via `TileObjectSo.structuralMaxIntegrity` (> 0).
+- Override max HP per SO via `TileObjectSo.structuralMaxIntegrity` (> 0). Shipped values follow SS13: steel wall 300, reinforced wall 1800 (Paradise's 100/600 at three times the scale, because tg walls have no HP and these must outlast the airlock and girder below), full-tile window 100, reinforced window 150, girder 200, civilian airlock 300, security airlock 450 (tgstation `max_integrity`). `StructuralDamageTests.ShippedStructures_UseSs13Integrity` pins them. `StructuralIntegrityRules` constants are only the fallback for unset assets.
 - Wall/window, supported table, locker, machine and airlock prefabs + blast assets: **SS3D → Structural Damage → Run Content Prefab Recipes**.
 - Give an object a different impact sound with `TileObjectSo.impactMaterial`. New clips go in `StructuralAudioTrackIds`.
 
@@ -53,6 +53,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 
 ## Pitfalls
 
+- **Forces predate the SS13 integrity values:** SS13 melee and bullets don't damage walls at all; here an M4 (12 per shot) still breaks a steel wall in 25 rounds and a crowbar in 9 swings. The console `blast` default of 120 and `hurtstructure` of 40 no longer break a plain wall in one go. Tune yields when explosive items land.
 - **Area reflood must not run inside `OnTileCleared` synchronously:** `TileMap` notifies before the occupant is removed; immediate flood still sees the wall/door. Area queues `_pendingLiveBoundaryRecompute` and flushes next `UpdateEvent`; authored maps then skip the reflood (same class of bug as `AtmosTileObserver` defer).
 - **Cracked still blocks Area expansion and blast hops:** only Destroyed (clear) opens boundaries; Cracked only flips `IsAirtight` for atmos.
 - **Cracked is not a slow room↔room leak yet:** design wants a slow vent; `IsAirtight=false` only changes the wall cell's atmos state. Neighbour `CanFlow` still uses binary `BlockedEdges` — real permeability deferred (document fork until ShareGasJob / edge rate exists).

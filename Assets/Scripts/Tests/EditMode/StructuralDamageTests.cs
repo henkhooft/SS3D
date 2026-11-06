@@ -155,6 +155,24 @@ namespace EditorTests
             Assert.IsFalse(service.TryApplyStructuralDamage(coord, 50f, StructuralDamageSource.Console));
         }
 
+        // tgstation max_integrity, except walls: Paradise's 100/600 at three times the scale, so a wall outlasts
+        // tg's 300 HP airlock and 200 HP girder. tg walls have no HP. Full-tile window values, since ours fill the tile.
+        [TestCase("Walls/SteelWall", 300f)]
+        [TestCase("Walls/SteelWallReinforced", 1800f)]
+        [TestCase("Walls/SteelWindow", 100f)]
+        [TestCase("Walls/SteelWindowReinforced", 150f)]
+        [TestCase("Walls/SteelGirder", 200f)]
+        [TestCase("Doors/AirlockCivilian", 300f)]
+        [TestCase("Doors/AirlockSecurity", 450f)]
+        public void ShippedStructures_UseSs13Integrity(string asset, float expected)
+        {
+            TileObjectSo so = UnityEditor.AssetDatabase.LoadAssetAtPath<TileObjectSo>(
+                $"Assets/Content/Data/TileMap/Resources/Structures/{asset}.asset");
+
+            Assert.IsNotNull(so, asset);
+            Assert.AreEqual(expected, StructuralIntegrityRules.ResolveMaxIntegrity(so), 0.01f);
+        }
+
         [Test]
         public void Window_UsesLowerDefaultMaxIntegrity()
         {
