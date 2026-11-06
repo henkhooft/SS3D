@@ -6,7 +6,7 @@ namespace SS3D.UI.MachineInterface
     {
         public string Title { get; set; } = "GALLEY VENDOMAT";
 
-        public string Subtitle { get; set; } = "Crew Mess — Sundries Dispenser";
+        public string Subtitle { get; set; } = "Sundries Dispenser";
 
         public string ModelLabel { get; set; } = "VND-7 · ration & sundries dispenser";
 

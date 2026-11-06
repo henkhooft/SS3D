@@ -26,6 +26,7 @@ namespace EditorTests
             Assert.AreEqual(original.MachineObjectId, roundTripped.MachineObjectId);
             Assert.AreEqual(original.InterfaceId, roundTripped.InterfaceId);
             Assert.AreEqual(original.Title, roundTripped.Title);
+            Assert.AreEqual(original.AreaName, roundTripped.AreaName);
             Assert.AreEqual(original.Channels, roundTripped.Channels);
             Assert.AreEqual(original.PowerState, roundTripped.PowerState);
             Assert.AreEqual(original.GridInputKw, roundTripped.GridInputKw);
@@ -186,6 +187,7 @@ namespace EditorTests
                 MachineObjectId = 12,
                 InterfaceId = MachineInterfaceIds.AirAlarm,
                 Title = "AIR ALARM",
+                AreaName = "Medbay",
                 ActiveMode = (byte)AirAlarmPresetMode.Panic,
                 HasSample = true,
                 PressureKpa = 101.3f,
@@ -223,6 +225,7 @@ namespace EditorTests
             AirAlarmInterfaceSnapshot roundTripped = reader.ReadAirAlarmInterfaceSnapshot();
 
             Assert.AreEqual(original.MachineObjectId, roundTripped.MachineObjectId);
+            Assert.AreEqual(original.AreaName, roundTripped.AreaName);
             Assert.AreEqual(original.ActiveMode, roundTripped.ActiveMode);
             Assert.AreEqual(original.HasSample, roundTripped.HasSample);
             Assert.AreEqual(original.PlasmaFraction, roundTripped.PlasmaFraction);
@@ -292,6 +295,7 @@ namespace EditorTests
                 MachineObjectId = 42,
                 InterfaceId = MachineInterfaceIds.Apc,
                 Title = "APC · TEST",
+                AreaName = "Test Room",
                 Channels = ApcControlFlags.Lighting | ApcControlFlags.Equipment,
                 PowerState = (byte)ApcPowerState.Nominal,
                 GridInputKw = 12.4f,
@@ -422,7 +426,7 @@ namespace EditorTests
                 Title = "PUMP · TEST",
                 ModelLabel = "PMP-22 · pipe pump unit",
                 DeviceTitle = "PMP-22",
-                Subtitle = "Engineering Bay 3 — Pipe Pump",
+                Subtitle = "Room 1 — Pipe Pump",
                 PowerOk = true,
                 Powered = true,
                 Connected = true,

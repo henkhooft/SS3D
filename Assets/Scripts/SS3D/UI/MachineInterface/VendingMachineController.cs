@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using SS3D.Systems.Electricity;
 using UnityEngine;
+using UnityEngine.Serialization;
 using AudioType = SS3D.Systems.Audio.AudioType;
 using Random = UnityEngine.Random;
 
@@ -65,7 +66,9 @@ namespace SS3D.UI.MachineInterface
         private string _title = "GALLEY VENDOMAT";
 
         [SerializeField]
-        private string _subtitle = "Crew Mess — Sundries Dispenser";
+        [Tooltip("Device kind shown after the room name, e.g. \"Medbay — Sundries Dispenser\".")]
+        [FormerlySerializedAs("_subtitle")]
+        private string _deviceKind = "Sundries Dispenser";
 
         [SerializeField]
         private string _modelLabel = "VND-7 · ration & sundries dispenser";
@@ -434,7 +437,7 @@ namespace SS3D.UI.MachineInterface
                 MachineObjectId = NetworkObject.ObjectId,
                 InterfaceId = InterfaceId,
                 Title = _title,
-                Subtitle = _subtitle,
+                Subtitle = MachineAreaLabel.ComposeForDevice(this, _deviceKind),
                 ModelLabel = _modelLabel,
                 ConnectionStatus = _connectionStatus,
                 StockedReadout = $"{inStockCount} of {_productsToDispense.Length} items stocked",
