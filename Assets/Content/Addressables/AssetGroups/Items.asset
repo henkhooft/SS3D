@@ -190,6 +190,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2dba6d04d674f53eca17cdf7eaaba294
+    m_Address: LaserRifle
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 30794a01d5f4c174a9d20b2c632f2dca
     m_Address: Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanEarRight.prefab
     m_ReadOnly: 0
@@ -217,6 +222,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 404443f7c306fc8469698745624fa3bf
     m_Address: Assets/Content/WorldObjects/Items/Functional/Generic/GreyFloorTile.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4099749ffee23ec59ab069d60911690f
+    m_Address: IonRifle
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -677,6 +687,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b25f51097d8c9b35ba76f8697fefa2ca
     m_Address: Assets/Content/WorldObjects/Items/Weapons/M4.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b35a2498ed516c0ad8a703bd70069a85
+    m_Address: Taser
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

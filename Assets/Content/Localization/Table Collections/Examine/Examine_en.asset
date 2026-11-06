@@ -1473,6 +1473,8 @@ MonoBehaviour:
   - m_Id: 296342594936610820
     m_Localized: A floor nozzle that releases a pipe line's gas into the room while
       it's open.
+    m_Metadata:
+      m_Items: []
   - m_Id: 296089487001546752
     m_Localized: 'Tank: {0}% full.'
     m_Metadata:
@@ -1502,6 +1504,33 @@ MonoBehaviour:
   - m_Id: 296137613323247618
     m_Localized: Armored sealed helmet. It completes the hardsuit's seal and doubles
       as a mask for internals.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296406898272608256
+    m_Localized: Ion Rifle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296406898314551296
+    m_Localized: A cyan ion rifle. Burns its target; no EMP effect. Use to replenish
+      its charge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296407231195488256
+    m_Localized: Laser Rifle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296407231203876864
+    m_Localized: A focused laser rifle. Delivers burn damage. Use to replenish its
+      charge.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296407234903252992
+    m_Localized: Taser
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296407234903252993
+    m_Localized: A short-range electrical weapon. Drains stamina without burn damage
+      or a forced knockdown. Use to replenish its charge.
     m_Metadata:
       m_Items: []
   references:
