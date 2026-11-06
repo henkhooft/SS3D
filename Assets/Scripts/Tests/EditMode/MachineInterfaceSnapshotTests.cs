@@ -61,6 +61,7 @@ namespace EditorTests
             Assert.AreEqual(original.MachineObjectId, roundTripped.MachineObjectId);
             Assert.AreEqual(original.InterfaceId, roundTripped.InterfaceId);
             Assert.AreEqual(original.Title, roundTripped.Title);
+            Assert.AreEqual(original.Subtitle, roundTripped.Subtitle);
             Assert.AreEqual(original.PowerState, roundTripped.PowerState);
             Assert.AreEqual(original.ChargePct, roundTripped.ChargePct);
             Assert.AreEqual(original.ChargeTrend, roundTripped.ChargeTrend);
@@ -326,6 +327,7 @@ namespace EditorTests
                 MachineObjectId = 84,
                 InterfaceId = MachineInterfaceIds.Smes,
                 Title = "SMES · TEST",
+                Subtitle = "Engineering — Substation Storage Bank",
                 PowerState = (byte)SmesPowerState.Nominal,
                 ChargePct = 0.72f,
                 ChargeTrend = (byte)SmesChargeTrend.Steady,
@@ -447,10 +449,10 @@ namespace EditorTests
             {
                 MachineObjectId = 126,
                 InterfaceId = MachineInterfaceIds.Vending,
-                Title = "GALLEY VENDOMAT",
-                Subtitle = "Crew Mess — Sundries Dispenser",
-                ModelLabel = "VND-7 · ration & sundries dispenser",
-                ConnectionStatus = "WIRED · VEND BUS · PORT J1",
+                Title = "YOUTOOL VENDOMAT",
+                Subtitle = "Room 2 — Tool Dispenser",
+                ModelLabel = "VND-7 · tool dispenser",
+                ConnectionStatus = MachineStatusLine.Powered,
                 StockedReadout = "2 of 2 items stocked",
                 PowerOk = true,
                 IdScanned = true,

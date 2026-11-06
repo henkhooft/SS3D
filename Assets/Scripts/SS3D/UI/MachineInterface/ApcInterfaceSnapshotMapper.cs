@@ -12,6 +12,7 @@ namespace SS3D.UI.MachineInterface
             ApcInterfaceViewModel model = new()
             {
                 Title = snapshot.Title,
+                ConnectionStatus = MachineStatusLine.GridFeed(snapshot.GridInputKw > 0f),
                 Subtitle = string.IsNullOrEmpty(snapshot.AreaName) ? UnassignedSubtitle : snapshot.AreaName,
                 State = (ApcPowerState)snapshot.PowerState,
                 GridInputKw = snapshot.GridInputKw,

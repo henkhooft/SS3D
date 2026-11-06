@@ -63,18 +63,15 @@ namespace SS3D.UI.MachineInterface
         private Transform _dispensingTransform;
 
         [SerializeField]
-        private string _title = "GALLEY VENDOMAT";
+        private string _title = "VENDOMAT";
 
         [SerializeField]
-        [Tooltip("Device kind shown after the room name, e.g. \"Medbay — Sundries Dispenser\".")]
+        [Tooltip("Device kind shown after the room name, e.g. \"Medbay — Tool Dispenser\".")]
         [FormerlySerializedAs("_subtitle")]
-        private string _deviceKind = "Sundries Dispenser";
+        private string _deviceKind = "Vending Machine";
 
         [SerializeField]
         private string _modelLabel = "VND-7 · ration & sundries dispenser";
-
-        [SerializeField]
-        private string _connectionStatus = "WIRED · VEND BUS · PORT J1";
 
         private int _logSequence;
 
@@ -439,7 +436,7 @@ namespace SS3D.UI.MachineInterface
                 Title = _title,
                 Subtitle = MachineAreaLabel.ComposeForDevice(this, _deviceKind),
                 ModelLabel = _modelLabel,
-                ConnectionStatus = _connectionStatus,
+                ConnectionStatus = MachineStatusLine.Power(IsPowered()),
                 StockedReadout = $"{inStockCount} of {_productsToDispense.Length} items stocked",
                 PowerOk = IsPowered(),
                 IdScanned = _idScanned,

@@ -42,6 +42,27 @@ namespace EditorTests
         }
 
         [Test]
+        public void ApcMapper_StatusLineFollowsTheGridFeed()
+        {
+            Assert.AreEqual(MachineStatusLine.GridFeedOk, ApcInterfaceSnapshotMapper.ToViewModel(new ApcInterfaceSnapshot { GridInputKw = 3f }).ConnectionStatus);
+            Assert.AreEqual(MachineStatusLine.NoGridFeed, ApcInterfaceSnapshotMapper.ToViewModel(new ApcInterfaceSnapshot()).ConnectionStatus);
+        }
+
+        [Test]
+        public void SmesMapper_ShowsTheRoomSubtitle_AndGridFeed()
+        {
+            SmesInterfaceViewModel model = SmesInterfaceSnapshotMapper.ToViewModel(new SmesInterfaceSnapshot
+            {
+                Subtitle = "Engine Room — Substation Storage Bank",
+                InputActive = true,
+            });
+
+            Assert.AreEqual("Engine Room — Substation Storage Bank", model.Subtitle);
+            Assert.AreEqual(MachineStatusLine.GridFeedOk, model.ConnectionStatus);
+            Assert.AreEqual(SmesInterfaceViewModel.DefaultDeviceKind, SmesInterfaceSnapshotMapper.ToViewModel(new SmesInterfaceSnapshot()).Subtitle);
+        }
+
+        [Test]
         public void AirAlarmMapper_NamesTheZoneFromTheRoom()
         {
             AirAlarmInterfaceViewModel withRoom = AirAlarmInterfaceSnapshotMapper.ToViewModel(new AirAlarmInterfaceSnapshot { AreaName = "Medbay" });

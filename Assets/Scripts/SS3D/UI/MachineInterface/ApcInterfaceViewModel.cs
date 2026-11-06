@@ -13,7 +13,7 @@ namespace SS3D.UI.MachineInterface
 
         public string Subtitle { get; set; } = ApcInterfaceSnapshotMapper.UnassignedSubtitle;
 
-        public string ConnectionStatus { get; set; } = "WIRED · POWER NET · NODE E-12";
+        public string ConnectionStatus { get; set; } = MachineStatusLine.NoGridFeed;
 
         public string HeaderReadout { get; set; } = "GRID FEED NOMINAL";
 
