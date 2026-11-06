@@ -1565,6 +1565,14 @@ MonoBehaviour:
       An armed minibomb cannot be defused.
     m_Metadata:
       m_Items: []
+  - m_Id: 296457849096347648
+    m_Localized: The flooring is badly cracked and scorched.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296457849121513472
+    m_Localized: The hull plating is badly damaged, but remains sealed.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -1,6 +1,6 @@
 ---
 name: Station Structural Damage
-overview: Implement design-aligned structural damage for walls, doors, and windows only — integrity stages first (melee-playable), then blast BFS, then explosive items; repair comes last because it depends on the construction/crafting freeform stack.
+overview: Implement design-aligned structural damage for walls, doors, windows, flooring and hull plenum — integrity stages first (melee-playable), then blast BFS, then explosive items; repair comes last because it depends on the construction/crafting freeform stack.
 todos:
   - id: phase1-integrity
     content: "Phase 1: StructuralDamageSubSystem + stages, Destroyed→TryClearTile, Cracked airtightness, Area live local recompute, console hurt + EditMode tests"
@@ -10,6 +10,9 @@ todos:
     status: completed
   - id: phase3-blast
     content: "Phase 3: Blast BFS Resolve(epicenter, yield, falloff); cascade on Destroyed; crew brute; geometry EditMode tests"
+    status: completed
+  - id: blast-floors
+    content: "Blast damage to floor/plenum, deferred traversal, hull breaches, infrastructure cleanup and pressure loss"
     status: completed
   - id: phase4-presentation
     content: "Phase 4: World visuals for stages + examine; optional atmos slow-leak for Cracked"
@@ -39,7 +42,7 @@ isProject: false
 
 **Scope for this effort:** Turf-layer structural objects (`TileObjectGenericType.Wall` / `Door`, including windows via existing `IsWindow`). Steel/wood/glass tables and recipe-opted-in lockers/machines additionally use this integrity/presentation path; other furniture remains out.
 
-**Explicitly deferred:** staged build ladder (Open→Framed→Plated→Sealed), deconstruction, deck plating, furniture integrity, floor/ceiling/z-level, balance numbers, explosive crafting recipes. Repair (Phase 6) is in-plan but **blocked** until construction/crafting freeform ships.
+**Explicitly deferred:** staged build ladder (Open→Framed→Plated→Sealed), deconstruction, hull rebuilding, remaining furniture, ceiling/z-level, balance numbers, explosive crafting recipes. Repair (Phase 6) is in-plan but **blocked** until construction/crafting freeform ships.
 
 ---
 
@@ -160,6 +163,8 @@ Optional this phase: Effect-tier flash hook if lighting API is ready; else stub 
 4. Examine strings for damage stage (via existing examine providers).
 
 ---
+
+Floor/hull blast damage now uses independent accumulated integrity (defaults 60/160) and runs after traversal; X4 combines both passes first. Hull removal releases world storage, notifies infrastructure clears and opens vacuum through the existing atmos observer. Floor presenters and sealed-plating examine strings are recipe-managed. Hull rebuilding remains deferred.
 
 ## Phase 5 — Explosive items
 

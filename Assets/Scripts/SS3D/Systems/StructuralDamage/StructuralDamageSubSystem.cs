@@ -120,8 +120,7 @@ namespace SS3D.Systems.StructuralDamage
         {
             EnsureServiceBound();
             if (_blast == null) return;
-            _blast.Resolve(target, 240f, 60f);
-            _blast.ResolveCone(target, 180f, 40f, direction);
+            _blast.ResolveShaped(target, 240f, 60f, 180f, 40f, direction);
             if (SubSystems.TryGet(out TileSubSystem tiles) && tiles.IsServer)
                 tiles.ServerNotifyBlastDetonated(_boundQuery.TileToWorld(target), 300f);
         }
@@ -150,7 +149,7 @@ namespace SS3D.Systems.StructuralDamage
             _boundQuery = tiles.QueryService;
             _boundConstruction = tiles.Construction;
             _service = new StructuralDamageService(_boundQuery, _boundConstruction);
-            _blast = new BlastResolutionService(_boundQuery, _service, ApplyCrewBlastBrute);
+            _blast = new BlastResolutionService(_boundQuery, _service, ApplyCrewBlastBrute, _service.ApplyBlastFloorDamage);
         }
 
         private void ApplyCrewBlastBrute(TileCoord coord, float force)

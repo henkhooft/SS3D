@@ -21,37 +21,59 @@ namespace SS3D.Systems.StructuralDamage
         private readonly ITileQueryService _query;
         private readonly IStructuralDamageService _structural;
         private readonly Action<TileCoord, float> _applyCrewBrute;
+        private readonly Action<TileCoord, float> _applyFloorDamage;
 
         /// <param name="applyCrewBrute">Optional; invoked as (tile, force) for each BFS visit.</param>
         public BlastResolutionService(
             ITileQueryService query,
             IStructuralDamageService structural,
-            Action<TileCoord, float> applyCrewBrute = null)
+            Action<TileCoord, float> applyCrewBrute = null,
+            Action<TileCoord, float> applyFloorDamage = null)
         {
             _query = query;
             _structural = structural;
             _applyCrewBrute = applyCrewBrute;
+            _applyFloorDamage = applyFloorDamage;
         }
 
         public void Resolve(TileCoord epicenter, float yield, float falloff)
-            => ResolveInternal(epicenter, yield, falloff, Vector2.zero);
+            => ApplyFloors(ResolveInternal(epicenter, yield, falloff, Vector2.zero));
 
         /// <summary>Additional shaped-charge force in a 90-degree cone. Still respects barriers and plenum.</summary>
         public void ResolveCone(TileCoord epicenter, float yield, float falloff, Vector2 forward)
         {
             if (forward.sqrMagnitude < 0.01f) return;
-            ResolveInternal(epicenter, yield, falloff, forward.normalized);
+            ApplyFloors(ResolveInternal(epicenter, yield, falloff, forward.normalized));
+        }
+
+        public void ResolveShaped(TileCoord epicenter, float radialYield, float radialFalloff,
+            float coneYield, float coneFalloff, Vector2 forward)
+        {
+            Dictionary<TileCoord, float> forces = ResolveInternal(epicenter, radialYield, radialFalloff, Vector2.zero);
+            if (forward.sqrMagnitude > 0.01f)
+                foreach (KeyValuePair<TileCoord, float> entry in ResolveInternal(epicenter, coneYield, coneFalloff, forward.normalized))
+                {
+                    forces.TryGetValue(entry.Key, out float existing);
+                    forces[entry.Key] = existing + entry.Value;
+                }
+            ApplyFloors(forces);
+        }
+
+        private void ApplyFloors(Dictionary<TileCoord, float> forces)
+        {
+            if (_applyFloorDamage == null) return;
+            foreach (KeyValuePair<TileCoord, float> entry in forces) _applyFloorDamage(entry.Key, entry.Value);
         }
 
         public static bool IsInCone(Vector2 offset, Vector2 forward) => offset.sqrMagnitude < 0.001f
             || Vector2.Dot(offset.normalized, forward.normalized) >= 0.707f;
 
-        private void ResolveInternal(TileCoord epicenter, float yield, float falloff, Vector2 forward)
+        private Dictionary<TileCoord, float> ResolveInternal(TileCoord epicenter, float yield, float falloff, Vector2 forward)
         {
             if (_query == null || _structural == null || !float.IsFinite(yield) || !float.IsFinite(falloff)
                 || yield < MinUsefulForce || falloff < 0f)
             {
-                return;
+                return new Dictionary<TileCoord, float>();
             }
 
             var bestForce = new Dictionary<TileCoord, float>();
@@ -128,6 +150,7 @@ namespace SS3D.Systems.StructuralDamage
                     }
                 }
             }
+            return bestForce;
         }
 
         /// <summary>Same edge rules as atmos <c>CanFlow</c> — kept local to avoid Atmospherics.internal coupling.</summary>

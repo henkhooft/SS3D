@@ -579,12 +579,16 @@ namespace SS3D.Systems.Tile
             {
                 var allPlaced = clearLocation.GetAllPlacedObject();
 
+                // Cascaded removal must reach gas, cable and pipe observers just like a direct clear.
+                foreach (PlacedTileObject removed in allPlaced)
+                    if (removed != null) NotifyTileCleared(removed, placePosition, removed.Layer);
+
                 foreach (PlacedTileObject placedToClear in allPlaced)
                 {
-                    if (placed != null && placedToClear.TryGetComponent(out IAdjacencyConnector connectorToClear))
+                    if (placedToClear != null && placedToClear.TryGetComponent(out IAdjacencyConnector connectorToClear))
                     {
                         List<PlacedTileObject> neighbours = connectorToClear.GetNeighbours();
-                        ResetAdjacencies(placed, clearLocation, neighbours);
+                        ResetAdjacencies(placedToClear, clearLocation, neighbours);
                     }
                 }
 

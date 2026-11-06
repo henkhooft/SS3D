@@ -1,0 +1,55 @@
+> Parent map: [structural-destruction.md](structural-destruction.md)
+> Code paths: Assets/Scripts/SS3D/Systems/StructuralDamage/, Assets/Scripts/SS3D/Systems/Tile/TileMap.cs
+> Status: partial
+> Verified: 7785df8dc — 2026-11-06
+
+# Floor and hull damage
+
+## Overview
+
+Implements [explosives-destruction.md §3 Floors](../../design/explosives-destruction.md#3-structural-failure--multi-stage-per-tile). Blast force damages the removable Turf floor and the Plenum hull independently, using each object's existing integrity SyncVars. Default integrity is 60 for flooring and 160 for plenum; `TileObjectSo.structuralMaxIntegrity` overrides either. Damage accumulates across explosions. Direct melee/ranged structural hits retain their existing wall/furniture selection.
+
+A destroyed floor reveals the existing underfloor plating, cables and pipes. Damaged or cracked plating remains a seal; only removing the plenum makes the tile vacuum. A hull hole clears unsupported structures and infrastructure through the existing tilemap rules, releases world-storage contents first, and notifies mutation observers for every cleared layer. Atmos queues the refresh, then the hole vents adjacent gas through the existing simulation; the tile keeps its area. Damage stages use the existing tint presenter and localized examine text, without a false leak/hiss warning for sealed plating.
+
+Floor removal happens after blast traversal. The traversal records the strongest visit at each tile, so its new holes cannot cut off its own remaining hops. X4 resolves both its radial and directional passes before applying their combined force to the floor/hull. C4 normally breaches the epicenter and strips a wider ring; the minibomb damages plating without breaching fresh hull in one blast. Values remain provisional balance tuning.
+
+Hull repair/rebuilding remains the construction milestone's separate work. Damage uses the existing replicated integrity fields and tile despawns; no new protocol or persistence fields were added.
+
+## Start here
+
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralDamageService.Floors.cs` — layer damage, hull clear and storage release
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralIntegrityRules.cs` — floor eligibility and integrity defaults
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/BlastResolutionService.cs` — deferred floor callback and combined `ResolveShaped` traversal
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/StructuralDamageSubSystem.cs` — binds the floor callback on the live server
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/Editor/StructuralIntegrityPrefabSetup.cs` — `SetupFloors`, registered on the structural damage recipe aggregator
+- `Assets/Scripts/SS3D/Systems/Tile/TileMap.cs` — cascade clear notifications
+- `Assets/Scripts/SS3D/Systems/Examine/StructuralIntegrityExaminable.cs` — flooring/plating damage text
+
+## Extension points
+
+- Run **SS3D → Structural Damage → Run Content Prefab Recipes** to add presenters/examinables to floor/plenum prefabs. `SetupFloors()` is available for a focused rebuild.
+- Custom blast resolvers should pass `StructuralDamageService.ApplyBlastFloorDamage` as the `BlastResolutionService` floor callback, after the crew callback. Call `ResolveShaped` when combining radial and cone forces.
+- Override an individual floor/hull definition with `structuralMaxIntegrity` rather than changing the common thresholds.
+
+## Pitfalls
+
+- **No eager hull clearing during traversal:** losing `HasPlenum` mid-pass stops later hops. Defer floor damage until all passes finish, including X4's extra cone.
+- **Cascade clears must notify each occupant:** clearing the hull previously deleted its pipes/cables without their observers seeing removal, leaving stale networks. `TileMap.ClearTileObject` now emits their clear notifications before destruction.
+- **Cracked hull plating is still airtight:** do not give it the wall's leak/hiss examine text or refresh gas as though it were a breached wall.
+- **Storage contents must survive loss of support:** release world-container contents before clearing the plenum; preserve contents of nested Item containers.
+
+## Tests
+
+- `BlastFloorDamageTests`: stage/accumulation, exposed plating stays sealed, full breaches clear and notify infrastructure, deferred propagation, X4 directional hull damage and actual atmosphere loss through a hull hole.
+- Related focused suites: `BlastResolutionTests`, `StructuralDamageTests`, `TileMapIntegrationTests`.
+- Host acceptance checks real floor removal, a wider exposed-plating ring, a vacuum epicenter and pressure loss. Separate-client acceptance remains pending.
+
+## Depends on / Used by
+
+- **Depends on:** [tile](tile.md), [atmospherics](atmospherics.md), [inventory](inventory.md), [examine](examine.md)
+- **Used by:** [explosive items](structural-destruction-explosives.md), [structural-destruction](structural-destruction.md)
+
+## Related docs
+
+- [Station structural damage plan](../../plans/station_structural_damage.plan.md)
+- [MVP1](../../milestones/mvp1-nuke-ops.md) M3/M8

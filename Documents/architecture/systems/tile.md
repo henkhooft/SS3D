@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Tile/
 > Entry points: TileSubSystem, AdjacencyEngine, ConstructionService, TileQueryService, MapEditorSubSystem, MapImportPlanner
 > Status: partial
-> Verified: 41fd036ed — 2026-11-05
+> Verified: 7785df8dc — 2026-11-06
 
 # Tile / construction
 
@@ -69,6 +69,8 @@ Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage
 - **SS13 DMM import:** Play Mode menu `SS3D/Map Import/Import DMM…` parses a `.dmm`, maps floors/walls/windows/doors **and** infrastructure (cables, gas pipes, disposals, vents/scrubbers, APCs, lights) plus lattices/catwalks, tables, and SMES via `Tools/map_import/ss13_type_map.yaml` (longest prefix). Per cell: Plenum-layer SO + optional structural turf + overlays (layer from each SO). Lattice/Catwalk **replace** `Plenum` (space+lattice cells import with no turf). Pipe SO resolved by `MapImportPipeResolver` (supply→`AtmosPipesSupply`, scrubbers→`AtmosPipesMixed`, waste/general/yellow→`AtmosPipesWaste`, else `piping_layer` 1–4). Wall mounts: parse `/directional/…` (or `dir`/pixel), offset onto the wall tile, face into the room. Doors without `dir`: infer from adjacent walls. FurnitureBase single-occupant priority: SMES > Vent > Scrubber > DisposalBin > DisposalOutlet > Table. Apply runs as a **coroutine** (`ApplyRoutine`, yield every 64 placements) so Host FishNet heartbeats keep ticking on MetaStation-scale maps. Places with `skipBuildCheck`/`skipAdjacency`, then `RefreshAllAdjacencies` + host `RebuildObservers` / `RefreshAllHostVisibility`. Defers area flood (`BeginDeferredAreaFlood` / `EndDeferredAreaFlood`) and disposal topology (`BeginDeferredNetworkRebuild` / `EndDeferredNetworkRebuild`) around bulk place. Suspends electricity circuit ticks + atmos sim during apply. Writes `*.unmapped.csv`. Optional bbox + Z filter. CLI: `Tools/map_import/dmm_gap_report.py`. Efforts: [2026-07_ss13-map-import](../../archive/architecture/2026-07_ss13-map-import.md), [2026-07_ss13-map-import-infrastructure](../../archive/architecture/2026-07_ss13-map-import-infrastructure.md).
 
 ## Pitfalls
+
+- **Cascaded clears need mutation notifications:** removing plenum also removes supported occupants. Notify each of those occupants before destruction, so cable/pipe/gas observers disconnect them; notify the cascaded object, not just the original support tile.
 
 - **Map Editor Piping delete takes pipes before wires:** the tab holds both, so `MapEditorDeleteTargeting` clears the tile's pipes first and its wire on the next delete. All pipe lines on a tile still go together. Hit 2026-11-05.
 - **A connector-less device beside pipes must tell them to redraw:** `IPipePortDevice` is how `TileMap` knows, on place through `UpdateAdjacenciesFor` and on clear through `AdjacencyEngine.QueueNeighbours`. Without it a pipe keeps the last shape it drew. Hit 2026-11-05.

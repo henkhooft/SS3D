@@ -1527,6 +1527,14 @@ MonoBehaviour:
     m_Key: items.weapons.syndicateminibomb.desc
     m_Metadata:
       m_Items: []
+  - m_Id: 296457849096347648
+    m_Key: examine.structural.fractured_floor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296457849121513472
+    m_Key: examine.structural.damaged_plating
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

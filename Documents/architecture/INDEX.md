@@ -103,7 +103,7 @@ Infrastructure and gameplay maps, including the ones with no design doc (interac
 | [screen-effects](systems/screen-effects.md) | partial | URP Volume overlays driven by health/atmos |
 | [selection](systems/selection.md) | shipped | Shader-ID mesh picking, pick-grid index |
 | [stamina](systems/stamina.md) | partial | Regen, encumbrance, sprint, exertion |
-| [structural-destruction](systems/structural-destruction.md) | partial | Turf/table/opt-in furniture integrity, wall/table/airlock damage visuals, steel wall/table breakup and wreckage, structural force, blasts, C4/X4 and syndicate minibomb ([explosive items](systems/structural-destruction-explosives.md)) |
+| [structural-destruction](systems/structural-destruction.md) | partial | Turf/table/opt-in furniture integrity, wall/table/airlock damage visuals, steel wall/table breakup and wreckage, structural force, blast floor/plenum damage, C4/X4 and syndicate minibomb ([explosive items](systems/structural-destruction-explosives.md)) |
 | [substances](systems/substances.md) | partial | Networked containers, reactions, heat |
 | [tile](systems/tile.md) | partial | Tilemap, adjacency, Map Editor with persistent Map Check, SS13 DMM import |
 | [ui-shell](systems/ui-shell.md) | partial | UITK composition root, shared catalog/binder, bug report dialog (F8) on the Modal layer; [main menu](systems/ui-shell-main-menu.md) (join/host/status/update); F1 debug host still separate |

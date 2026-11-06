@@ -13,7 +13,11 @@ Steel walls (including reinforced steel) and steel tables now leave deterministi
 
 Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md) now drives wind streaks, pressure-driven knockdown and pull from the resulting gradient, without a separate destruction impulse.
 
+Blast floors and the hull beneath them now take independent accumulated damage: weaker blasts expose plating; stronger blasts open holes to space, destroy supported infrastructure and vent the room. See [floor and hull damage](structural-destruction-floors.md).
+
 ## Start here
+
+- [Floor and hull damage](structural-destruction-floors.md) — deferred blast damage, floor/plenum integrity, vacuum consequences and floor prefab recipe
 
 - `Assets/Scripts/SS3D/Systems/StructuralDamage/TimedCharge.cs` / `ChargeCountdownDisplay.cs` — explosive profiles, fuse/attach/throw/defuse interactions, recorded countdown and physical LED readout
 - [Explosive items](structural-destruction-explosives.md) — C4/X4/minibomb behavior, countdown lifecycle, content recipe and tests
@@ -56,6 +60,8 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 
 ## Pitfalls
 
+- **Opening holes during BFS erases the blast's own path:** defer floor/plenum damage until traversal finishes. X4 must finish both radial and cone passes before applying their combined floor force.
+
 - **Orbiting camera position is not blast distance:** camera zoom can put it 15 m from a nearby explosion and suppress feedback. Use the audio listener, which follows the controlled body, before falling back to a camera.
 
 - **Defuse must redeclare `IInteraction` on the `DelayedInteraction` subclass:** otherwise its `Priority` property is ignored by interface dispatch (default 0) and pickup wins over the tool action. `TimedChargeTests` guards the dispatch.
@@ -86,7 +92,7 @@ Wall removal also opens the existing atmos edges: [atmospherics](atmospherics.md
 - `TimedChargeTests`: physical content scale, countdown/clip wiring, wirecutter-only defuse, expiry gating. Cone propagation and barrier tests are in `BlastResolutionTests`; separate-client acceptance remains.
 
 - `StructuralAudioTests`: material resolve, cue rules, clip registration, break hold, debris cap, frame hitch.
-- `StructuralDamageTests`: steel/wood-table stages and destruction preserve flooring/plenum; table material eligibility includes glass.
+- `StructuralDamageTests`: direct steel/wood-table hits preserve flooring/plenum; table material eligibility includes glass. `BlastFloorDamageTests` covers the separate blast-floor path and atmosphere consequences.
 - `StructuralIntegrityPresentationTests`: tabletop/leaf selection, moving surface inheritance, stage changes, repair clearing, and wall adjacency regression.
 - Run `Testing/ui/validate.sh --steps compile,editmode,visual`; inspect object renders separately from the lobby visual smoke.
 

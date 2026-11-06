@@ -15,6 +15,8 @@ Implements [explosives-destruction.md §6–§7](../../design/explosives-destruc
 | X4 | 15 seconds | Hold and use on a wall/door to attach and arm. Radial yield 240/falloff 60, plus yield 180/falloff 40 in a 90-degree cone through the far side of its target. |
 | Syndicate minibomb | 5 seconds | Arm in hand using Use, or choose Throw minibomb, then a landing point. Throwing pulls the pin if needed; an already running fuse is preserved. Small radial yield 90/falloff 45. |
 
+Floor and plenum damage is applied after all blast passes; see [floor and hull damage](structural-destruction-floors.md).
+
 The values above are provisional content tuning. X4's additional force uses the same BFS, structural apply path and crew damage as radial blasts; it still stops at surviving structure. Both passes produce one audiovisual detonation. The direction is captured from the attached surface, pointing into the target. Picking up an attached charge dislodges it: its blast then follows the item, without the attached X4 cone.
 
 C4/X4 have physical LED countdowns and a three-second wirecutter defuse. Movement, range loss or losing the tool cancels; expiry wins a same-frame defuse. Minibombs cannot be defused. Throws use server Rigidbody physics, cap the target distance at 10 m and start clear of nearby walls. No new throw key or permanent HUD surface is added.
