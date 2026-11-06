@@ -6,7 +6,7 @@ Use this index when implementing a feature that needs art. Most game-ready asset
 live in [RE-SS3D/SS3D-Art](https://github.com/RE-SS3D/SS3D-Art) but are not yet
 imported into Unity.
 
-**Generated:** 2026-11-06T15:14:20.928541+00:00
+**Generated:** 2026-11-06T19:08:35.446709+00:00
 
 ## When to use
 
