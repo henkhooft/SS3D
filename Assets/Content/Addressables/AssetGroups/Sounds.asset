@@ -70,6 +70,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5f478263e83487f00b850ad152ba8db5
+    m_Address: ExplosiveCountdown
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6fab86354b054a54b8b4828f689970e4
     m_Address: Assets/Art/Sound/Entities/Humanoid/Combat/Punch1.ogg
     m_ReadOnly: 0
@@ -107,6 +112,16 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9c25cbf72a814b7daecb30325916da0a
     m_Address: Assets/Art/Sound/UI/Health/Beep1.ogg
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9cdf48ea33f0c0cc4adc4608a51d0185
+    m_Address: C4Defused
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a583ecd799d040728b40947e8e4287d1
+    m_Address: MinibombExplosion
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

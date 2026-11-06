@@ -15,8 +15,8 @@ todos:
     content: "Phase 4: World visuals for stages + examine; optional atmos slow-leak for Cracked"
     status: completed
   - id: phase5-items
-    content: "Phase 5: Grenade, breaching charge, timed charge + defuse, remote detonator → Blast Resolve; proximity alert"
-    status: pending
+    content: "Phase 5: C4/X4 sticky timed charges + defuse and throwable five-second syndicate minibomb implemented; remote detonator, other grenades and proximity alert remain"
+    status: in_progress
   - id: phase6-repair
     content: "Phase 6: Welder/sheets repair Damaged/Cracked → Intact — gated on construction/crafting freeform stack shipping first"
     status: pending
@@ -167,9 +167,9 @@ Optional this phase: Effect-tier flash hook if lighting API is ready; else stub 
 
 | Item | Behavior |
 |------|----------|
-| Grenade | Fuse / impact → Resolve at tile |
-| Breaching charge | Place on wall/door (use-with), timer, yield tuned to Destroy target tile |
-| Timed charge | Free place, visible countdown, defuse interaction |
+| Grenade | Syndicate minibomb implemented: arm/throw, five-second fuse, small shared blast; other grenade variants remain |
+| Breaching charge | C4/X4 wall/door attachment implemented; X4 adds a stronger blast and extra cone force behind the target |
+| Timed charge | C4/X4 implemented: 15-second physical LED countdown, a recorded final-five-second countdown, 3-second wirecutter defuse, shared blast resolver; multiplayer acceptance pending |
 | Remote detonator | Paired trigger (comms frequency reuse flagged — stub pairing if comms not ready) |
 
 Proximity alert-stack entry when armed charge nears detonation (one HUD touchpoint from design §7).

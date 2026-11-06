@@ -34,8 +34,22 @@ namespace SS3D.Systems.StructuralDamage
         }
 
         public void Resolve(TileCoord epicenter, float yield, float falloff)
+            => ResolveInternal(epicenter, yield, falloff, Vector2.zero);
+
+        /// <summary>Additional shaped-charge force in a 90-degree cone. Still respects barriers and plenum.</summary>
+        public void ResolveCone(TileCoord epicenter, float yield, float falloff, Vector2 forward)
         {
-            if (_query == null || _structural == null || yield < MinUsefulForce || falloff < 0f)
+            if (forward.sqrMagnitude < 0.01f) return;
+            ResolveInternal(epicenter, yield, falloff, forward.normalized);
+        }
+
+        public static bool IsInCone(Vector2 offset, Vector2 forward) => offset.sqrMagnitude < 0.001f
+            || Vector2.Dot(offset.normalized, forward.normalized) >= 0.707f;
+
+        private void ResolveInternal(TileCoord epicenter, float yield, float falloff, Vector2 forward)
+        {
+            if (_query == null || _structural == null || !float.IsFinite(yield) || !float.IsFinite(falloff)
+                || yield < MinUsefulForce || falloff < 0f)
             {
                 return;
             }
@@ -77,6 +91,8 @@ namespace SS3D.Systems.StructuralDamage
                     }
 
                     TileCoord neighbor = GetNeighbourCoord(coord, direction);
+                    if (forward.sqrMagnitude > 0f && !IsInCone((Vector2)(neighbor.Grid - epicenter.Grid), forward))
+                        continue;
                     if (!_query.TryGetOccupancy(neighbor, out TileOccupancy toOccupancy))
                     {
                         continue;

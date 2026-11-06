@@ -1533,6 +1533,38 @@ MonoBehaviour:
       or a forced knockdown. Use to replenish its charge.
     m_Metadata:
       m_Items: []
+  - m_Id: 296422524005359616
+    m_Localized: C4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296422524022136832
+    m_Localized: A timed demolition charge. Place it and arm from the interaction
+      menu, or use it on a wall or door to attach and arm. Its red display counts
+      down fifteen seconds; an audible countdown plays for the last five. Wirecutters
+      take three seconds to defuse it; stay in reach.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446533984034816
+    m_Localized: X4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446534005006336
+    m_Localized: A powerful directional demolition charge. Hold it and use it on
+      a wall or door to attach and arm. Its fifteen-second fuse ends with a five-second
+      audible countdown. Extra blast force spreads in a cone through the far side
+      of the target. Wirecutters take three seconds to defuse it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446538652295168
+    m_Localized: Syndicate minibomb
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446538652295169
+    m_Localized: A compact syndicate grenade. Arm it in hand or use Throw minibomb
+      to pull the pin and throw. Its five-second fuse ends in a small explosion.
+      An armed minibomb cannot be defused.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

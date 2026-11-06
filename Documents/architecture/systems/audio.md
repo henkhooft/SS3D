@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: ae1a54ed1 — 2026-11-05
+> Verified: 7785df8dc — 2026-11-06
 
 # Audio
 
@@ -18,7 +18,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
+- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` (returns a voice handle, accepts `startTime` for a synchronized recording) / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
 - `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Plays the `AmbienceProfile` for the area's resolved id (`AmbienceProfileCatalog`, loaded from Resources), or the generic `station` profile: a bed, occasional clips timed by `AmbienceScheduler`, and the catalog's thin air bed underneath. A `PowerGated` bed fades with `AreaSubSystem.IsAreaEquipmentPowered`. Outside any area, silence. Replaces legacy `AmbienceHandler.cs`.
 - `Assets/Scripts/SS3D/Systems/Audio/ListenerAirTracker.cs` / `AudioAirState.cs` — air and wind at the listener from this client's atlas, no messages; pure muffle curve and wind crossfade in `AudioAirState`. `AmbienceSubSystem` publishes the level as `AudioSourceOcclusion.ListenerAir`

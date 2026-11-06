@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-06T12:10:37.578881+00:00",
+  "generated_at": "2026-11-06T14:51:03.688737+00:00",
   "purpose": "Game-ready SS3D-Art assets not yet imported into Assets/Art/.",
-  "count": 2011,
+  "count": 2008,
   "assets": [
     {
       "name": "HumanAnimRig.ma",
@@ -10660,15 +10660,6 @@
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Models/Items/Weapons/Explosive/BreachingCharge.blend"
     },
     {
-      "name": "C4.blend",
-      "stem": "c4",
-      "extension": "blend",
-      "category": "Models/Items/Weapons/Explosive",
-      "ss3d_art_path": "Assets/Models/Items/Weapons/Explosive/C4.blend",
-      "import_target_path": "Assets/Art/Models/Items/Weapons/Explosive/C4.fbx",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Models/Items/Weapons/Explosive/C4.blend"
-    },
-    {
       "name": "FlashBangV2.blend",
       "stem": "flashbangv2",
       "extension": "blend",
@@ -10721,24 +10712,6 @@
       "ss3d_art_path": "Assets/Models/Items/Weapons/Explosive/Rockets.blend",
       "import_target_path": "Assets/Art/Models/Items/Weapons/Explosive/Rockets.fbx",
       "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Models/Items/Weapons/Explosive/Rockets.blend"
-    },
-    {
-      "name": "SyndicateMiniBomb.blend",
-      "stem": "syndicateminibomb",
-      "extension": "blend",
-      "category": "Models/Items/Weapons/Explosive",
-      "ss3d_art_path": "Assets/Models/Items/Weapons/Explosive/SyndicateMiniBomb.blend",
-      "import_target_path": "Assets/Art/Models/Items/Weapons/Explosive/SyndicateMiniBomb.fbx",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Models/Items/Weapons/Explosive/SyndicateMiniBomb.blend"
-    },
-    {
-      "name": "X4.blend",
-      "stem": "x4",
-      "extension": "blend",
-      "category": "Models/Items/Weapons/Explosive",
-      "ss3d_art_path": "Assets/Models/Items/Weapons/Explosive/X4.blend",
-      "import_target_path": "Assets/Art/Models/Items/Weapons/Explosive/X4.fbx",
-      "github_url": "https://github.com/RE-SS3D/SS3D-Art/blob/main/Assets/Models/Items/Weapons/Explosive/X4.blend"
     },
     {
       "name": "FLRRocketLauncher.blend",

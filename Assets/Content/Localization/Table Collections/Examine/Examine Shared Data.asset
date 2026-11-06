@@ -1503,6 +1503,30 @@ MonoBehaviour:
     m_Key: items.weapons.taser.desc
     m_Metadata:
       m_Items: []
+  - m_Id: 296422524005359616
+    m_Key: items.weapons.c4.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296422524022136832
+    m_Key: items.weapons.c4.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446533984034816
+    m_Key: items.weapons.x4.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446534005006336
+    m_Key: items.weapons.x4.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446538652295168
+    m_Key: items.weapons.syndicateminibomb.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296446538652295169
+    m_Key: items.weapons.syndicateminibomb.desc
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

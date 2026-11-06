@@ -650,6 +650,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a80afacc2627cce2eb94db4ffc35559b
+    m_Address: X4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a8b265034e3f79344a6067b406e1bff6
     m_Address: Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanOrgans/HumanLungRight.prefab
     m_ReadOnly: 0
@@ -787,6 +792,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d4bb90462bc4749cdaa3796b227902b9
     m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosManifold4.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d5222e435d7aa2d45b959a73ebc874c9
+    m_Address: C4
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -942,6 +952,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f71edbe17e151c82aad1ec265ffa9d23
     m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosInjector.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f811d1b8a792159e396e4b258540cd7e
+    m_Address: SyndicateMiniBomb
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

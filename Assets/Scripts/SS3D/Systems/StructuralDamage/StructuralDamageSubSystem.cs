@@ -96,7 +96,7 @@ namespace SS3D.Systems.StructuralDamage
         /// Server blast BFS from <paramref name="epicenter"/>. No-op if tile services are unbound.
         /// Broadcasts client VFX via <see cref="TileSubSystem"/> after resolution.
         /// </summary>
-        public void ResolveBlast(TileCoord epicenter, float yield, float falloff)
+        public void ResolveBlast(TileCoord epicenter, float yield, float falloff, bool smallSound = false)
         {
             IBlastResolutionService blast = Blast;
             if (blast == null)
@@ -112,7 +112,18 @@ namespace SS3D.Systems.StructuralDamage
             }
 
             Vector3 world = _boundQuery.TileToWorld(epicenter);
-            tiles.ServerNotifyBlastDetonated(world, yield);
+            tiles.ServerNotifyBlastDetonated(world, yield, smallSound);
+        }
+
+        /// <summary>X4's stronger radial blast plus extra force beyond its attached target; one audiovisual event.</summary>
+        public void ResolveShapedCharge(TileCoord target, Vector2 direction)
+        {
+            EnsureServiceBound();
+            if (_blast == null) return;
+            _blast.Resolve(target, 240f, 60f);
+            _blast.ResolveCone(target, 180f, 40f, direction);
+            if (SubSystems.TryGet(out TileSubSystem tiles) && tiles.IsServer)
+                tiles.ServerNotifyBlastDetonated(_boundQuery.TileToWorld(target), 300f);
         }
 
         private void EnsureServiceBound()

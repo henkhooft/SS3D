@@ -65,7 +65,7 @@ What already works, system by system, is listed in
 | 🟡 | M0 | A test station where every job spawns with the right gear and ID, and ops and crew are easy to tell apart (job picking works) |
 | ✅ | M1 | Guns shoot and hit; armor absorbs damage |
 | 🟡 | M1m | Walking and running respond instantly, like a quick RPG |
-| 🟡 | M1c | Ops and Security each have their own guns, magazines, C4 and a stun baton (the rifle works) |
+| 🟡 | M1c | Ops and Security each have their own guns, magazines, C4 and a stun baton (the rifle works; C4/X4 attach to walls with a visible timer and wirecutter defuse; the minibomb can be thrown) |
 | ✅ | M2 | Walls take damage and explosions tear through the station |
 | 🟡 | M3 | The nuke itself: breach the vault, arm or defuse, a station-wide warning, and blasts that tear up the floor (tables, lockers and supported machines take damage; steel walls and tables leave wreckage) |
 | ✅ | M4 | An operative squad is drawn and briefed, and every round has a winner |
