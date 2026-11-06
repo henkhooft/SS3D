@@ -61,6 +61,7 @@ namespace SS3D.Editor
                 Bleeding = LoadRequiredAlertSprite("bleeding-droplet", missing),
                 CardiacArrest = LoadRequiredAlertSprite("cardiac-arrest", missing),
                 SealBreach = LoadRequiredAlertSprite("seal-breach", missing),
+                Invincible = LoadRequiredAlertSprite("invincible", missing),
             };
 
             if (missing.Count > 0)

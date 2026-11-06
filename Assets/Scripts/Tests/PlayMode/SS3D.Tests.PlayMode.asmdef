@@ -11,6 +11,7 @@
         "FishNet.Runtime",
         "SS3D.UI",
         "SS3D.UI.MachineInterface",
+        "SS3D.UI.MainHud",
         "Coimbra",
         "Coimbra.Editor",
         "Coimbra.Services",

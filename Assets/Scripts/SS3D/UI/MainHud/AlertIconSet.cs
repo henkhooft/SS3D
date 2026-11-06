@@ -25,6 +25,7 @@ namespace SS3D.UI.MainHud
         public Sprite Bleeding;
         public Sprite CardiacArrest;
         public Sprite SealBreach;
+        public Sprite Invincible;
 
         public Sprite this[Components.AlertHazard hazard] => hazard switch
         {
@@ -43,6 +44,7 @@ namespace SS3D.UI.MainHud
             Components.AlertHazard.Bleeding => Bleeding,
             Components.AlertHazard.CardiacArrest => CardiacArrest,
             Components.AlertHazard.SealBreach => SealBreach,
+            Components.AlertHazard.Invincible => Invincible,
             _ => null,
         };
     }

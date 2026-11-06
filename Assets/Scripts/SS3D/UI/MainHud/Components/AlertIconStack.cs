@@ -30,6 +30,7 @@ namespace SS3D.UI.MainHud.Components
         Bleeding,
         CardiacArrest,
         SealBreach,
+        Invincible,
     }
 
     /// <summary>
@@ -67,6 +68,7 @@ namespace SS3D.UI.MainHud.Components
         public AlertSeverity Bleeding;
         public AlertSeverity CardiacArrest;
         public AlertSeverity SealBreach;
+        public AlertSeverity Invincible;
 
         public AlertSeverity this[AlertHazard hazard] => hazard switch
         {
@@ -85,6 +87,7 @@ namespace SS3D.UI.MainHud.Components
             AlertHazard.Bleeding => Bleeding,
             AlertHazard.CardiacArrest => CardiacArrest,
             AlertHazard.SealBreach => SealBreach,
+            AlertHazard.Invincible => Invincible,
             _ => AlertSeverity.None,
         };
     }
@@ -114,6 +117,7 @@ namespace SS3D.UI.MainHud.Components
             (AlertHazard.Bleeding, "Bleeding"),
             (AlertHazard.CardiacArrest, "Cardiac Arrest"),
             (AlertHazard.SealBreach, "Seal Breach"),
+            (AlertHazard.Invincible, "Invincible (Map Editor)"),
         };
 
         private readonly AlertChip[] _chips;
@@ -185,6 +189,9 @@ namespace SS3D.UI.MainHud.Components
                 chipLabel.AddToClassList("alert-chip__label");
                 chipLabel.AddToClassList("font-arcade");
                 chipLabel.pickingMode = PickingMode.Ignore;
+
+                // A chosen state, not a passing hazard: say where it came from without a hover.
+                EnableInClassList("alert-chip--labelled", hazard == AlertHazard.Invincible);
 
                 Add(_box);
                 Add(chipLabel);

@@ -6,7 +6,7 @@ Use this index when implementing a feature that needs art. Most game-ready asset
 live in [RE-SS3D/SS3D-Art](https://github.com/RE-SS3D/SS3D-Art) but are not yet
 imported into Unity.
 
-**Generated:** 2026-11-05T17:24:58.334946+00:00
+**Generated:** 2026-11-06T10:18:42.922608+00:00
 
 ## When to use
 
@@ -59,7 +59,7 @@ Full list: [`art-available-for-import.json`](art-available-for-import.json)
 | Metric | Count |
 |--------|------:|
 | Already imported (in-game + SS3D-Art) | 241 |
-| In-game only | 5140 |
+| In-game only | 5141 |
 | Available for import | 2014 |
 | Promotional artwork (not game-ready) | 215 |
 
