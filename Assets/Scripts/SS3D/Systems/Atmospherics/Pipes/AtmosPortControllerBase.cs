@@ -182,6 +182,45 @@ namespace SS3D.Systems.Atmospherics.Pipes
             _resolvedTopologyVersion = topologyVersion;
         }
 
+        /// <summary>
+        /// Releases up to <paramref name="budgetMoles"/> of a network's mix onto this device's tile,
+        /// each gas by its share.
+        /// </summary>
+        protected bool ReleaseToTurf(
+            AtmosPipeSimulation pipeSimulation,
+            GasPipeNetworkId networkId,
+            GasPipeNetworkRecord network,
+            float budgetMoles)
+        {
+            float totalMoles = network.GetTotalMoles(AtmosConstants.DefaultGasCount);
+            if (budgetMoles <= 0f || totalMoles <= 0f)
+                return false;
+
+            budgetMoles = Mathf.Min(budgetMoles, totalMoles);
+            bool movedAny = false;
+
+            for (int gasId = 0; gasId < AtmosConstants.DefaultGasCount; gasId++)
+            {
+                float gasMoles = network.Moles[gasId];
+                if (gasMoles <= 0f)
+                    continue;
+
+                if (pipeSimulation.TryTransferMoles(
+                        networkId,
+                        new GasId((ushort)gasId),
+                        budgetMoles * (gasMoles / totalMoles),
+                        OriginTile,
+                        PipeTransferDirection.ToTurf,
+                        out float moved)
+                    && moved > 0f)
+                {
+                    movedAny = true;
+                }
+            }
+
+            return movedAny;
+        }
+
         protected bool TryGetPipeContext(out TileMap map, out GasPipeNetworkRegistry registry)
         {
             map = null;

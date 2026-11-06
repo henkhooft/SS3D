@@ -17,18 +17,26 @@ namespace SS3D.Systems.Atmospherics.Pipes
 
         public GasPipeNetworkRegistry Registry => _registry;
 
+        /// <summary>Bit n is set when gas id n is toxic, for a scrubber's Toxins setting.</summary>
+        public ulong ToxicGases { get; }
+
+        /// <summary>How many gas slots a network holds.</summary>
+        public int GasTypeCount => _gasTypeCount;
+
         public AtmosPipeSimulation(
             GasPipeNetworkRegistry registry,
             AtmosSimulation turf,
             float[] specificHeats,
             int gasTypeCount,
-            AtmosPipeObserver observer)
+            AtmosPipeObserver observer,
+            ulong? toxicGases = null)
         {
             _registry = registry;
             _turf = turf;
             _specificHeats = specificHeats;
             _gasTypeCount = gasTypeCount;
             _observer = observer;
+            ToxicGases = toxicGases ?? 1UL << AtmosConstants.Plasma.Value;
         }
 
         public void Tick(float deltaTime)

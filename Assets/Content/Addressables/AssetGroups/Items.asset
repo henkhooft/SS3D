@@ -100,6 +100,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1c71957ab86ed6acaacd79fb484b1fa2
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosMixerL.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1d2cf546d53e3fe4c9103007427aaec7
     m_Address: Assets/Content/WorldObjects/Items/Functional/Generic/Boombox.prefab
     m_ReadOnly: 0
@@ -142,6 +147,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 242a937784a622f4f8a6e6d097e0737c
     m_Address: Assets/Content/WorldObjects/Entities/Humanoids/Human/HumanBodyParts/HumanLegRight.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 24f10fc508009b222a4dd482d4f5fb28
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosMixerR.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -325,6 +335,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 56a01152a193a795c8bd85889e556118
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosMeter.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 56b1aff2041026242bed0f064dee56bb
     m_Address: Assets/Content/WorldObjects/Items/Consumable/Food/General/Snacks/DonkPocket.prefab
     m_ReadOnly: 0
@@ -342,6 +357,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5dba4171f2124fb48b0e32c0e10841e0
     m_Address: Assets/Content/WorldObjects/Structures/Walls/SteelGirderUnbolted.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5e0b09c25d237e2ac9d24483a28a58d7
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosFilterR.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -775,6 +795,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dcc88642be56594528a53c74eb601601
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosFilterR2.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dceb056e41b5c634f9933423de8e075c
     m_Address: Assets/Content/WorldObjects/Items/Consumable/Drinks/Soda/SodaCanCannedLaughter.prefab
     m_ReadOnly: 0
@@ -835,6 +860,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e833d4cec8da5e6abaddd92b3829ad9c
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosFilterL2.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e9009aff81f29eb429148fd71961539f
     m_Address: Assets/Content/WorldObjects/Furniture/Generic/Surfaces/Tables/TableFrameSteel.prefab
     m_ReadOnly: 0
@@ -877,6 +907,16 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f6528d8afa18fa14998a0158260ef26c
     m_Address: Assets/Content/WorldObjects/Items/DoodadTestItem.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f662bf52ef0cc6e64866de255913b88d
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosFilterL.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f71edbe17e151c82aad1ec265ffa9d23
+    m_Address: Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/Devices/AtmosInjector.prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

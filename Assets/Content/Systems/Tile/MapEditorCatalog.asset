@@ -85,6 +85,62 @@ MonoBehaviour:
     - pipe
     - device
     IsEraser: 0
+  - AssetName: AtmosFilterL
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosFilterL2
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosFilterR
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosFilterR2
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosInjector
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosMeter
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosMixerL
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
+  - AssetName: AtmosMixerR
+    Mode: 1
+    Subcategory: 6
+    SearchTags:
+    - pipe
+    - device
+    IsEraser: 0
   - AssetName: AtmosValveManual
     Mode: 1
     Subcategory: 6

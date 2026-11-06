@@ -86,6 +86,45 @@ namespace SS3D.Systems.Atmospherics.Pipes
             return moved;
         }
 
+        /// <summary>
+        /// Moves a share of each gas in <paramref name="gasMask"/> into another network, carrying its
+        /// heat. Bit n is gas id n.
+        /// </summary>
+        /// <returns>The moles moved.</returns>
+        public float MoveGases(GasPipeNetworkRecord source, GasPipeNetworkRecord target, ulong gasMask, float fraction)
+        {
+            if (fraction <= 0f || source == target)
+                return 0f;
+
+            fraction = Mathf.Min(fraction, 1f);
+            float targetCapacity = target.GetHeatCapacity(_specificHeats, _gasTypeCount);
+            float addedCapacity = 0f;
+            float moved = 0f;
+
+            for (int gasId = 0; gasId < _gasTypeCount; gasId++)
+            {
+                if ((gasMask & (1UL << gasId)) == 0UL)
+                    continue;
+
+                float share = source.Moles[gasId] * fraction;
+                addedCapacity += share * _specificHeats[gasId];
+                target.Moles[gasId] += share;
+                source.Moles[gasId] -= share;
+                moved += share;
+            }
+
+            if (moved > 0f)
+            {
+                target.Temperature = AtmosPipeThermo.BlendTemperature(
+                    target.Temperature,
+                    targetCapacity,
+                    source.Temperature,
+                    addedCapacity);
+            }
+
+            return moved;
+        }
+
         public void RebuildAll(TileMap map)
         {
             Clear();

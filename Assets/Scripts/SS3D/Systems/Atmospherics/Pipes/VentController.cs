@@ -55,38 +55,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 AtmosPortConstants.PortMaxDifferentialKpa,
                 deltaTime);
 
-            if (budgetMoles <= 0f)
-                return false;
-
-            float totalMoles = network.GetTotalMoles(AtmosConstants.DefaultGasCount);
-            if (totalMoles <= 0f)
-                return false;
-
-            budgetMoles = Mathf.Min(budgetMoles, totalMoles);
-            bool movedAny = false;
-
-            for (int gasId = 0; gasId < AtmosConstants.DefaultGasCount; gasId++)
-            {
-                float gasMoles = network.Moles[gasId];
-                if (gasMoles <= 0f)
-                    continue;
-
-                float share = gasMoles / totalMoles;
-                float request = budgetMoles * share;
-                if (pipeSimulation.TryTransferMoles(
-                        networkId,
-                        new GasId((ushort)gasId),
-                        request,
-                        turfCell,
-                        PipeTransferDirection.ToTurf,
-                        out float moved)
-                    && moved > 0f)
-                {
-                    movedAny = true;
-                }
-            }
-
-            return movedAny;
+            return ReleaseToTurf(pipeSimulation, networkId, network, budgetMoles);
         }
 
         protected override void ApplyDeviceSpecificAnimatorState(bool flowing)

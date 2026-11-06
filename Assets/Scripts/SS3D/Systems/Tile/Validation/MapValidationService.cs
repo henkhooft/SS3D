@@ -102,6 +102,9 @@ namespace SS3D.Systems.Tile.Validation
             if (placed.TryGetComponent<AtmosInlineDeviceBase>(out _))
                 return AtmosDevicePipeResolver.HasInlinePipes(map, coord, placed.Direction);
 
+            if (placed.TryGetComponent(out AtmosThreeWayDeviceBase threeWay))
+                return AtmosDevicePipeResolver.HasThreeWayPipes(map, coord, placed.Direction, threeWay.SideOnLeft, threeWay.PipeLayers);
+
             TileLayer[] lines = placed.TryGetComponent(out AtmosPortControllerBase port) ? port.PipeLayers : null;
             return lines == null || AtmosDevicePipeResolver.HasPipeSegment(map, coord, lines);
         }
@@ -117,6 +120,10 @@ namespace SS3D.Systems.Tile.Validation
                 kind = RoomDeviceKind.GasPump;
             else if (placed.TryGetComponent(out AtmosValveController _))
                 kind = RoomDeviceKind.Valve;
+            else if (placed.TryGetComponent(out AtmosThreeWayDeviceBase _))
+                kind = RoomDeviceKind.ThreeWay;
+            else if (placed.TryGetComponent(out AtmosMeterController _) || placed.TryGetComponent(out AtmosInjectorController _))
+                kind = RoomDeviceKind.LineReader;
             else if (placed.TryGetComponent(out AirAlarmController _))
                 kind = RoomDeviceKind.AirAlarm;
             else if (placed.TryGetComponent(out LightPower _) || placed.TryGetComponent(out LightSwitchController _))

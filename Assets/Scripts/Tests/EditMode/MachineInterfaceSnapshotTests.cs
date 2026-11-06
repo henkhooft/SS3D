@@ -211,7 +211,6 @@ namespace EditorTests
                         Kind = (byte)AirAlarmConnectedDeviceKind.Scrubber,
                         Powered = false,
                         FilterCo2 = true,
-                        FilterPlasma = true,
                     },
                 },
             };
@@ -231,7 +230,6 @@ namespace EditorTests
             Assert.AreEqual(2, roundTripped.ConnectedDevices.Count);
             Assert.AreEqual("101", roundTripped.ConnectedDevices[0].Id);
             Assert.AreEqual("Scrubber — South", roundTripped.ConnectedDevices[1].Name);
-            Assert.IsTrue(roundTripped.ConnectedDevices[1].FilterPlasma);
         }
 
         [Test]
@@ -272,7 +270,6 @@ namespace EditorTests
                 FilterO2 = false,
                 FilterN2 = true,
                 FilterCo2 = true,
-                FilterPlasma = true,
                 FilterToxins = false,
             };
 
@@ -284,7 +281,6 @@ namespace EditorTests
             ScrubberInterfaceSnapshot roundTripped = reader.ReadScrubberInterfaceSnapshot();
 
             Assert.AreEqual(original.FilterO2, roundTripped.FilterO2);
-            Assert.AreEqual(original.FilterPlasma, roundTripped.FilterPlasma);
             Assert.AreEqual(original.FilterToxins, roundTripped.FilterToxins);
             Assert.AreEqual(7, roundTripped.FlowRate);
         }

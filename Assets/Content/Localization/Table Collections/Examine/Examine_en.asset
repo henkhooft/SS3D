@@ -1439,6 +1439,42 @@ MonoBehaviour:
       into one line.
     m_Metadata:
       m_Items: []
+  - m_Id: 296342594903056384
+    m_Localized: Gas Filter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594932416512
+    m_Localized: Sends the gases it's set to out of its side port. Everything else
+      carries straight on.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594932416513
+    m_Localized: Gas Mixer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610816
+    m_Localized: Combines two lines at a set ratio, up to a target pressure. Stops
+      if a line it needs runs dry.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610817
+    m_Localized: Gas Meter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610818
+    m_Localized: 'Reads the pipe line it sits on: pressure, temperature and what
+      the gas is made of.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610819
+    m_Localized: Gas Injector
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610820
+    m_Localized: A floor nozzle that releases a pipe line's gas into the room while
+      it's open.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

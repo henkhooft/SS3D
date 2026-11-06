@@ -82,9 +82,9 @@ namespace SS3D.Tests
             Assert.AreEqual(AtmosPortConstants.PumpDefaultTargetKpa, airPump.TargetOutletPressureKpa, "A pump starts modest, for atmos to raise");
             Assert.AreNotEqual(supply, NetworkOf(DeviceAt<ScrubberController>(Intake)), "The pump parts the intake from Supply");
 
-            DeviceAt<ScrubberController>(Intake).GetFilterStates(out bool intakeO2, out bool intakeN2, out _, out _, out _);
+            DeviceAt<ScrubberController>(Intake).GetFilterStates(out bool intakeO2, out bool intakeN2, out _, out _);
             Assert.IsTrue(intakeO2 && intakeN2, "The intake carries air");
-            DeviceAt<ScrubberController>(RoomScrubber).GetFilterStates(out bool roomO2, out bool roomN2, out bool roomCo2, out _, out _);
+            DeviceAt<ScrubberController>(RoomScrubber).GetFilterStates(out bool roomO2, out bool roomN2, out bool roomCo2, out _);
             Assert.IsFalse(roomO2 || roomN2, "Room scrubbers leave air alone");
             Assert.IsTrue(roomCo2, "Room scrubbers take CO₂");
 
@@ -184,13 +184,13 @@ namespace SS3D.Tests
             yield return WaitFor(() => scrubber.TryGetConnectedNetwork(out _), "the scrubber joins its line", 10f);
 
             scrubber.ServerApplyPanicSettings();
-            scrubber.GetFilterStates(out bool o2, out bool n2, out bool co2, out bool plasma, out _);
-            Assert.IsTrue(o2 && n2 && co2 && plasma, "Panic takes every gas");
+            scrubber.GetFilterStates(out bool o2, out bool n2, out bool co2, out bool toxins);
+            Assert.IsTrue(o2 && n2 && co2 && toxins, "Panic takes every gas");
             Assert.AreEqual(AtmosPortConstants.ScrubberMaxFlowRate, scrubber.FlowRate);
 
             scrubber.ServerApplyNormalSettings();
-            scrubber.GetFilterStates(out o2, out n2, out co2, out plasma, out _);
-            Assert.IsTrue(co2 && !o2 && !n2 && !plasma, "Normal goes back to CO₂");
+            scrubber.GetFilterStates(out o2, out n2, out co2, out toxins);
+            Assert.IsTrue(co2 && !o2 && !n2 && !toxins, "Normal goes back to CO₂");
             Assert.AreEqual(AtmosPortConstants.ScrubberNormalFlowRate, scrubber.FlowRate);
         }
 

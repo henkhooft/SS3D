@@ -1419,6 +1419,38 @@ MonoBehaviour:
     m_Key: structures.pipes.atmos_manifold_4.desc
     m_Metadata:
       m_Items: []
+  - m_Id: 296342594903056384
+    m_Key: structures.pipes.atmos_filter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594932416512
+    m_Key: structures.pipes.atmos_filter.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594932416513
+    m_Key: structures.pipes.atmos_mixer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610816
+    m_Key: structures.pipes.atmos_mixer.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610817
+    m_Key: structures.pipes.atmos_meter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610818
+    m_Key: structures.pipes.atmos_meter.desc
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610819
+    m_Key: structures.pipes.atmos_injector.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 296342594936610820
+    m_Key: structures.pipes.atmos_injector.desc
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -230,6 +230,32 @@ namespace EditorTests
         }
 
         [Test]
+        public void ThreeWayDevice_WithNoSingleLine_SaysWhatItNeeds()
+        {
+            var report = new MapValidationReport();
+
+            MapValidator.AddRoomDeviceChecks(
+                report,
+                new[] { new RoomDeviceRecord(RoomDeviceKind.ThreeWay, new Vector3(1, 0, 2), 1, "Atmos", hasPipe: false) },
+                paintedRooms: true);
+
+            Assert.That(report.Issues.Select(issue => issue.Title), Has.Some.Contains("Filter or mixer at (1, 2) can't tell which pipe line"));
+        }
+
+        [Test]
+        public void Meter_WithNoPipe_HasNoLineToWorkOn()
+        {
+            var report = new MapValidationReport();
+
+            MapValidator.AddRoomDeviceChecks(
+                report,
+                new[] { new RoomDeviceRecord(RoomDeviceKind.LineReader, new Vector3(1, 0, 2), 1, "Atmos", hasPipe: false) },
+                paintedRooms: true);
+
+            Assert.That(report.Issues.Select(issue => issue.Title), Has.Some.Contains("Meter or injector at (1, 2) has no gas pipe"));
+        }
+
+        [Test]
         public void RoomMissingOneHalfOfItsAirLoopNamesWhatIsMissing()
         {
             StringAssert.StartsWith("No scrubber in Bar", RoomChecks(Vent(1, 3), Alarm(2, 3)).Issues.Single().Title);

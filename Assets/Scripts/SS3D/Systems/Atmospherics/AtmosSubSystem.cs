@@ -204,7 +204,8 @@ namespace SS3D.Systems.Atmospherics
                 _simulation,
                 specificHeats,
                 gasTypeCount,
-                _pipeObserver);
+                _pipeObserver,
+                _gasRegistry != null ? BuildToxicGases(_gasRegistry) : 1UL << AtmosConstants.Plasma.Value);
 
             // Seed any chunks that were created before the observer registered.
             foreach (TileChunkRef chunkRef in tileSubSystem.CurrentMap.GetChunkRefs())
@@ -231,6 +232,18 @@ namespace SS3D.Systems.Atmospherics
             }
 
             return heats;
+        }
+
+        private static ulong BuildToxicGases(GasRegistry registry)
+        {
+            ulong toxic = 0UL;
+            foreach (GasDefinition definition in registry.Definitions)
+            {
+                if (definition.IsToxic)
+                    toxic |= 1UL << definition.Id;
+            }
+
+            return toxic;
         }
 
         private static float[] BuildMolarMasses(GasRegistry registry)

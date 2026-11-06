@@ -12,8 +12,8 @@ todos:
     content: "PR 3: two-network device base on PipeSurface, pumps, valves, manifolds on a new PipeManifold layer, GasPump replaced"
     status: completed
   - id: filters-mixers
-    content: "PR 4: filters, mixers, meter, injector, scrubber Toxins category, Claude Design UI for filter and mixer"
-    status: pending
+    content: "PR 4: filters, mixers, meter, injector, scrubber Toxins category, Claude Design UI for filter, mixer and meter"
+    status: completed
   - id: gas-markers
     content: "Atmospherics rail in the Map Editor: gas source, line fill and room air as saved markers like spawn points, replacing the AtmosSource and AtmosFill tile objects"
     status: completed
@@ -137,6 +137,19 @@ The gas markers PR came before PR 4, at the owner's call, and differs from the p
 - `TileObjectSo.mapEditorOnly` went too, since only these objects used it. Seven tile assets still carry `mapEditorOnly: 0`, which Unity drops on their next save.
 
 A scenario sends a marker through the real command RPC and checks its pin and its removal. Mouse placement, the hologram, and Select and Dropper on a marker have not been run, by test or by hand, and neither have the form's looks, since no `visual` step covers them.
+
+PR 4 differs from the plan in eight ways:
+
+- The meter has a read-only panel from Claude Design rather than examine and a shape key, at the owner's call. It needs no power and no ID. `atmospherics.md` §6 still says a meter reads on the device itself.
+- Meters and injectors sit on `FurnitureBase` over a line, not in a gap in it. Both take the first of Surface, Supply, Mixed, Waste on their tile, so on a shared tile they can't pick another line.
+- The injector has no panel: it starts closed and is opened by hand, needs no power, and pours at up to 50 mol/s, tapering as pressures level. No design came with it.
+- The bundle's `atmos-gases.json` lists eight gases; the panels list `GasRegistry`, which has four. `GasDefinition` gained a symbol, panel colour and toxic flag, colours from that file.
+- A filter's outlet mix on its panel is worked out from the inlet and selection, as the design does, not read from the outlet pipe. Flow is 0–200 L/s in 5 L/s steps; a mixer's ratio moves in 5% steps and its target in 100 kPa steps.
+- Filters and mixers start with 101 kPa targets and nothing selected, not the design's demo values: a filter sends everything straight on until set.
+- Mixers run as pumps: inlets below the outlet still feed it, with no backpressure stall. The plan named only the ratio, target and dry stop.
+- Filters and mixers are silent, with no `MachineLoops` entry.
+
+`FilterL/R` and `MixerL/R` are read as side port left or right looking toward +Z, from `FilterL2`'s geometry and the plates' raised shape. Which plate port the art means as outlet is not checked.
 
 ## Implementation notes
 

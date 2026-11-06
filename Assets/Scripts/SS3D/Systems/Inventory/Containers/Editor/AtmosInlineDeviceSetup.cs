@@ -48,6 +48,9 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string OpenIcon = "Assets/Art/Graphics/UI/Interactions/InteractionIcons/ValveOpen.png";
         private const string ClosedIcon = "Assets/Art/Graphics/UI/Interactions/InteractionIcons/ValveClose.png";
 
+        // The name in PipeMachinery.fbx really does end in a space.
+        private const string InjectorMesh = "Injector ";
+
         /// <summary>
         /// A <c>Scrubber</c> that takes O₂ and N₂ instead of CO₂, for feeding a line from a chamber.
         /// </summary>
@@ -132,7 +135,120 @@ namespace SS3D.Systems.Atmospherics.Editor
                 TileLayer.PipeSurface);
 
             BuildAirIntake();
+            BuildFiltersAndMixers();
             Debug.Log("[AtmosInlineDeviceSetup] Built inline devices, manifolds and the air intake.");
+        }
+
+        /// <summary>
+        /// Filters in both forms, mixer plates, the meter and the injector. Needs
+        /// <see cref="Run"/>'s pump visuals, so it can run alone once those exist.
+        /// </summary>
+        public static void BuildFiltersAndMixers()
+        {
+            BuildFilter("AtmosFilterL2", "FilterL2", sideOnLeft: true, AtmosDevicePipeResolver.InlineLayers);
+            BuildFilter("AtmosFilterR2", "FilterR2", sideOnLeft: false, AtmosDevicePipeResolver.InlineLayers);
+            BuildFilter("AtmosFilterL", "FilterL", sideOnLeft: true, AtmosDevicePipeResolver.PlateLayers);
+            BuildFilter("AtmosFilterR", "FilterR", sideOnLeft: false, AtmosDevicePipeResolver.PlateLayers);
+            BuildMixer("AtmosMixerL", "MixerL", sideOnLeft: true);
+            BuildMixer("AtmosMixerR", "MixerR", sideOnLeft: false);
+
+            GameObject meter = PrefabUtility.LoadPrefabContents(GasPumpPrefab);
+            try
+            {
+                meter.name = "AtmosMeter";
+                ShowMesh(meter, "Meter");
+                RemovePumpVisuals(meter);
+                RemovePumpParts(meter);
+                Object.DestroyImmediate(meter.GetComponent<AtmosPumpController>());
+                meter.AddComponent<AtmosMeterController>();
+                meter.AddComponent<MeterInterfaceController>();
+                SaveTilePrefab(meter, "AtmosMeter", TileLayer.FurnitureBase);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(meter);
+            }
+
+            GameObject injector = PrefabUtility.LoadPrefabContents(GasPumpPrefab);
+            try
+            {
+                injector.name = "AtmosInjector";
+                ShowMesh(injector, InjectorMesh);
+                RemovePumpVisuals(injector);
+                RemovePumpParts(injector);
+                Object.DestroyImmediate(injector.GetComponent<AtmosPumpController>());
+                var settings = new SerializedObject(injector.AddComponent<AtmosInjectorController>());
+                settings.FindProperty("_onIcon").objectReferenceValue = DB.LoadAssetAtPath<Sprite>(OpenIcon);
+                settings.FindProperty("_offIcon").objectReferenceValue = DB.LoadAssetAtPath<Sprite>(ClosedIcon);
+                settings.ApplyModifiedPropertiesWithoutUndo();
+                SaveTilePrefab(injector, "AtmosInjector", TileLayer.FurnitureBase);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(injector);
+            }
+
+            DB.SaveAssets();
+        }
+
+        private static void BuildFilter(string name, string mesh, bool sideOnLeft, TileLayer[] lines)
+        {
+            BuildThreeWay(name, mesh, sideOnLeft, lines, root =>
+            {
+                root.AddComponent<AtmosFilterController>();
+                return root.AddComponent<FilterInterfaceController>();
+            });
+        }
+
+        private static void BuildMixer(string name, string mesh, bool sideOnLeft)
+        {
+            // No machine-form art, so the plate also serves on Surface.
+            BuildThreeWay(name, mesh, sideOnLeft, AtmosDevicePipeResolver.PlateOrSurfaceLayers, root =>
+            {
+                root.AddComponent<AtmosMixerController>();
+                return root.AddComponent<MixerInterfaceController>();
+            });
+        }
+
+        private static void BuildThreeWay(
+            string name,
+            string mesh,
+            bool sideOnLeft,
+            TileLayer[] lines,
+            System.Func<GameObject, Component> addDevice)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(GasPumpPrefab);
+            try
+            {
+                root.name = name;
+                ShowMesh(root, mesh);
+                RemovePumpVisuals(root);
+                AddFlowArrow(root);
+                Object.DestroyImmediate(root.GetComponent<AmbientLoopSource>());
+                Object.DestroyImmediate(root.GetComponent<PumpInterfaceController>());
+                Object.DestroyImmediate(root.GetComponent<AtmosPumpController>());
+
+                Component panel = addDevice(root);
+                var power = root.GetComponent<BasicPowerConsumer>();
+                var device = new SerializedObject(root.GetComponent<AtmosThreeWayDeviceBase>());
+                device.FindProperty("_powerConsumer").objectReferenceValue = power;
+                device.FindProperty("_sideOnLeft").boolValue = sideOnLeft;
+                SerializedProperty deviceLines = device.FindProperty("_lines");
+                deviceLines.arraySize = lines.Length;
+                for (int i = 0; i < lines.Length; i++)
+                    deviceLines.GetArrayElementAtIndex(i).enumValueIndex = (int)lines[i];
+
+                device.ApplyModifiedPropertiesWithoutUndo();
+
+                var panelSettings = new SerializedObject(panel);
+                panelSettings.FindProperty("_powerConsumer").objectReferenceValue = power;
+                panelSettings.ApplyModifiedPropertiesWithoutUndo();
+                SaveTilePrefab(root, name);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         // Valves and manifolds start from the pump too, and drop these in RemovePumpVisuals.

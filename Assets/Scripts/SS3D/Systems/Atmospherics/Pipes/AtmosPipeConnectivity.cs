@@ -106,6 +106,23 @@ namespace SS3D.Systems.Atmospherics.Pipes
             out GasPipeManifold manifold) =>
             TryGetManifold(map, coord, out manifold) && manifold.Spans(line) && manifold.HasPortToward(toward);
 
+        /// <summary>
+        /// A device on this tile with a port facing <paramref name="toward"/> on <paramref name="line"/>,
+        /// with a gap in that line for it. Devices sit on Surface, so an underfloor pipe never sees
+        /// one as a same-layer neighbour.
+        /// </summary>
+        public static bool HasDevicePort(TileMap map, TileCoord coord, TileLayer line, Direction toward)
+        {
+            Vector3 world = new Vector3(coord.Grid.x, 0, coord.Grid.y);
+            return map.TryGetTileLocation(TileLayer.PipeSurface, world, out ITileLocation location)
+                && location.TryGetPlacedObject(out PlacedTileObject placedObject)
+                && placedObject != null
+                && placedObject.TryGetComponent(out IPipePortDevice device)
+                && device.HasPortToward(toward)
+                && System.Array.IndexOf(device.PortLines, line) >= 0
+                && !TryGetSegment(map, coord, line, out _);
+        }
+
         public static TileCoord Offset(TileCoord coord, Direction direction)
         {
             System.Tuple<int, int> offset = TileHelper.ToCardinalVector(direction);

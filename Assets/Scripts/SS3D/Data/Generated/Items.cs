@@ -5,8 +5,16 @@ namespace SS3D.Data.Generated
     {
         public const string AirAlarm = "11a2276338ebc64429dfc565b491e437";
         public const string APC = "4c966398d6624164c910cd29c1faa980";
+        public const string AtmosFilterL = "f662bf52ef0cc6e64866de255913b88d";
+        public const string AtmosFilterL2 = "e833d4cec8da5e6abaddd92b3829ad9c";
+        public const string AtmosFilterR = "5e0b09c25d237e2ac9d24483a28a58d7";
+        public const string AtmosFilterR2 = "dcc88642be56594528a53c74eb601601";
+        public const string AtmosInjector = "f71edbe17e151c82aad1ec265ffa9d23";
         public const string AtmosManifold3 = "0f9043fa6769666faaa893d26d564355";
         public const string AtmosManifold4 = "d4bb90462bc4749cdaa3796b227902b9";
+        public const string AtmosMeter = "56a01152a193a795c8bd85889e556118";
+        public const string AtmosMixerL = "1c71957ab86ed6acaacd79fb484b1fa2";
+        public const string AtmosMixerR = "24f10fc508009b222a4dd482d4f5fb28";
         public const string AtmosPipesMixed = "251dc2a5fbda518429c8205c3b62165f";
         public const string AtmosPipesSupply = "de6f06ad18d50134295959f438ba9c5d";
         public const string AtmosPipesSurface = "48efd00c91c310e4bb965d025c63b3ba";

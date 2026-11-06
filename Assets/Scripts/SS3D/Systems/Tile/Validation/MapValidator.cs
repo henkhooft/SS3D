@@ -110,10 +110,16 @@ namespace SS3D.Systems.Tile.Validation
                     AddWarning(report, $"pipe:{device.Kind}:{place}", device,
                         $"{name} at ({cell.x}, {cell.y}) needs a Surface pipe at both ports",
                         "so it can't move any gas. Run one up to its front and its back.");
+                else if (!device.HasPipe && device.Kind == RoomDeviceKind.ThreeWay)
+                    AddWarning(report, $"pipe:{device.Kind}:{place}", device,
+                        $"{name} at ({cell.x}, {cell.y}) can't tell which pipe line it's on",
+                        "so it can't move any gas. Its line needs a pipe at all three ports and none under it, and only one line may fit.");
                 else if (!device.HasPipe)
                     AddWarning(report, $"pipe:{device.Kind}:{place}", device,
                         $"{name} at ({cell.x}, {cell.y}) has no {PipeLineName(device.Kind)} pipe on its tile",
-                        "so it can't move any gas. Run one under it.");
+                        device.Kind == RoomDeviceKind.LineReader
+                            ? "so it has no line to work on. Run one under it."
+                            : "so it can't move any gas. Run one under it.");
                 if (device.AreaId == 0 && device.Kind == RoomDeviceKind.AirAlarm)
                     AddWarning(report, $"alarm-room:{place}", device,
                         $"{name} at ({cell.x}, {cell.y}) faces no room",
@@ -174,6 +180,7 @@ namespace SS3D.Systems.Tile.Validation
         {
             RoomDeviceKind.Vent => "Supply or Mixed",
             RoomDeviceKind.Scrubber => "Waste or Mixed",
+            RoomDeviceKind.LineReader => "gas",
             _ => "matching",
         };
 
@@ -184,6 +191,8 @@ namespace SS3D.Systems.Tile.Validation
             RoomDeviceKind.GasPump => "Gas pump",
             RoomDeviceKind.Valve => "Valve",
             RoomDeviceKind.LineFill => "Line fill",
+            RoomDeviceKind.ThreeWay => "Filter or mixer",
+            RoomDeviceKind.LineReader => "Meter or injector",
             RoomDeviceKind.AirAlarm => "Air alarm",
             _ => "Light",
         };
@@ -214,6 +223,12 @@ namespace SS3D.Systems.Tile.Validation
         AirAlarm,
         Light,
         LineFill,
+
+        /// <summary>A filter or mixer: three ports on one line.</summary>
+        ThreeWay,
+
+        /// <summary>A meter or injector: any line on its tile.</summary>
+        LineReader,
     }
 
     /// <summary>A placed device and the room it belongs to (area 0 means no room).</summary>

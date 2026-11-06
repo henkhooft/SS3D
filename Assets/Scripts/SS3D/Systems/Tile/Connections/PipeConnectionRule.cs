@@ -19,16 +19,19 @@ namespace SS3D.Systems.Tile.Connections
             _inner.IsConnected(self, neighbour) || IsDevicePortFacing(self, neighbour);
 
         /// <summary>
-        /// A manifold sits on its own layer, so a pipe's same-layer neighbours never show it.
+        /// A manifold sits on its own layer and a floor plate on Surface, so a pipe's same-layer
+        /// neighbours never show them.
         /// </summary>
-        public bool IsConnectedAcrossLayers(PlacedTileObject self, Direction direction, TileMap map) =>
-            TileHelper.IsCardinal(direction)
-            && AtmosPipeConnectivity.TryGetManifoldPort(
-                map,
-                AtmosPipeConnectivity.Offset(new TileCoord(self.MapId, self.WorldOrigin), direction),
-                self.Layer,
-                TileHelper.GetOpposite(direction),
-                out _);
+        public bool IsConnectedAcrossLayers(PlacedTileObject self, Direction direction, TileMap map)
+        {
+            if (!TileHelper.IsCardinal(direction))
+                return false;
+
+            TileCoord neighbour = AtmosPipeConnectivity.Offset(new TileCoord(self.MapId, self.WorldOrigin), direction);
+            Direction backToPipe = TileHelper.GetOpposite(direction);
+            return AtmosPipeConnectivity.TryGetManifoldPort(map, neighbour, self.Layer, backToPipe, out _)
+                || AtmosPipeConnectivity.HasDevicePort(map, neighbour, self.Layer, backToPipe);
+        }
 
         public static bool ParticipatesInGasNetwork(PlacedTileObject segment) =>
             segment != null

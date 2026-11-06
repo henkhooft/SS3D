@@ -32,6 +32,33 @@ namespace SS3D.Systems.Atmospherics.Pipes
         /// <summary>Highest set rate of a volume pump (L/s).</summary>
         public const int VolumePumpMaxLitresPerSecond = 2000;
 
+        /// <summary>Starting flow rate of a filter (L/s).</summary>
+        public const int FilterDefaultLitresPerSecond = 50;
+
+        /// <summary>Highest flow rate of a filter (L/s).</summary>
+        public const int FilterMaxLitresPerSecond = 200;
+
+        /// <summary>Most moles a filter passes a second, whatever its flow rate.</summary>
+        public const float FilterRatedFlowMolesPerSecond = 100f;
+
+        /// <summary>Pressure at which a filter calls an outlet full and stops (kPa).</summary>
+        public const float FilterOutletLimitKpa = 4500f;
+
+        /// <summary>Most moles a mixer passes a second.</summary>
+        public const float MixerRatedFlowMolesPerSecond = 100f;
+
+        /// <summary>Highest target outlet pressure of a pump or mixer (kPa).</summary>
+        public const int MaxTargetPressureKpa = 9000;
+
+        /// <summary>A mixer's starting share from inlet 1 (percent).</summary>
+        public const int MixerDefaultInlet1Percent = 50;
+
+        /// <summary>Moles at or below which a mixer counts an inlet as dry.</summary>
+        public const float MixerDryMoles = 0.001f;
+
+        /// <summary>Rated injector throughput under ideal differential (moles/s total mixture).</summary>
+        public const float InjectorRatedFlowMolesPerSecond = 50f;
+
         /// <summary>Share of the pressure gap an open valve closes each tick.</summary>
         public const float ValveEqualiseFraction = 0.5f;
 

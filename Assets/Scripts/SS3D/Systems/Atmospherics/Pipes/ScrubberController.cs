@@ -24,7 +24,6 @@ namespace SS3D.Systems.Atmospherics.Pipes
         private bool _filterO2;
         private bool _filterN2;
         private bool _filterCo2 = true;
-        private bool _filterPlasma;
         private bool _filterToxins;
 
         public int FlowRate => _flowRate;
@@ -42,7 +41,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
         public void ServerApplyNormalSettings()
         {
             _flowRate = AtmosPortConstants.ScrubberNormalFlowRate;
-            ServerSetFilters(o2: _isAirIntake, n2: _isAirIntake, co2: !_isAirIntake, plasma: false, toxins: false);
+            ServerSetFilters(o2: _isAirIntake, n2: _isAirIntake, co2: !_isAirIntake, toxins: false);
         }
 
         /// <summary>
@@ -52,7 +51,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
         public void ServerApplyPanicSettings()
         {
             _flowRate = AtmosPortConstants.ScrubberMaxFlowRate;
-            ServerSetFilters(o2: true, n2: true, co2: true, plasma: true, toxins: true);
+            ServerSetFilters(o2: true, n2: true, co2: true, toxins: true);
         }
 
         public static float GetRatedFlowMolesPerSecond(int flowRate)
@@ -65,13 +64,11 @@ namespace SS3D.Systems.Atmospherics.Pipes
             out bool filterO2,
             out bool filterN2,
             out bool filterCo2,
-            out bool filterPlasma,
             out bool filterToxins)
         {
             filterO2 = _filterO2;
             filterN2 = _filterN2;
             filterCo2 = _filterCo2;
-            filterPlasma = _filterPlasma;
             filterToxins = _filterToxins;
         }
 
@@ -103,21 +100,17 @@ namespace SS3D.Systems.Atmospherics.Pipes
                     _filterCo2 = enabled;
                     break;
                 case 3:
-                    _filterPlasma = enabled;
-                    break;
-                case 4:
                     _filterToxins = enabled;
                     break;
             }
         }
 
         [Server]
-        public void ServerSetFilters(bool o2, bool n2, bool co2, bool plasma, bool toxins)
+        public void ServerSetFilters(bool o2, bool n2, bool co2, bool toxins)
         {
             _filterO2 = o2;
             _filterN2 = n2;
             _filterCo2 = co2;
-            _filterPlasma = plasma;
             _filterToxins = toxins;
         }
 
@@ -153,12 +146,18 @@ namespace SS3D.Systems.Atmospherics.Pipes
             if (budgetMoles <= 0f)
                 return false;
 
-            // "Toxins" is currently treated as an alias of plasma in the core gas set.
-            bool filterPlasma = _filterPlasma || _filterToxins;
-            float selected = SelectedMoles(turfSimulation, turfCell, AtmosConstants.Oxygen, _filterO2)
-                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.Nitrogen, _filterN2)
-                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.CarbonDioxide, _filterCo2)
-                + SelectedMoles(turfSimulation, turfCell, AtmosConstants.Plasma, filterPlasma);
+            ulong gases = SelectedGases(pipeSimulation.ToxicGases);
+            int gasCount = pipeSimulation.GasTypeCount;
+            float selected = 0f;
+            for (int gasId = 0; gasId < gasCount; gasId++)
+            {
+                if ((gases & (1UL << gasId)) != 0UL
+                    && turfSimulation.TryGetGasMoles(turfCell, new GasId((ushort)gasId), out float moles))
+                {
+                    selected += moles;
+                }
+            }
+
             if (selected <= 0f)
                 return false;
 
@@ -166,25 +165,31 @@ namespace SS3D.Systems.Atmospherics.Pipes
             // sits in and a trace of CO₂ isn't starved by the air around it.
             float fraction = Mathf.Min(budgetMoles / selected, 1f);
 
-            // Unrolled filters — do not use yield/IEnumerable (allocates a state machine per scrubber per tick).
+            // A mask, not yield/IEnumerable: an iterator allocates per scrubber per tick.
             bool movedAny = false;
-            if (_filterO2)
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Oxygen, fraction);
-
-            if (_filterN2)
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Nitrogen, fraction);
-
-            if (_filterCo2)
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.CarbonDioxide, fraction);
-
-            if (filterPlasma)
-                movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, AtmosConstants.Plasma, fraction);
+            for (int gasId = 0; gasId < gasCount; gasId++)
+            {
+                if ((gases & (1UL << gasId)) != 0UL)
+                    movedAny |= TryScrubGas(pipeSimulation, turfSimulation, networkId, turfCell, new GasId((ushort)gasId), fraction);
+            }
 
             return movedAny;
         }
 
-        private static float SelectedMoles(AtmosSimulation turfSimulation, TileCoord turfCell, GasId gasId, bool selected) =>
-            selected && turfSimulation.TryGetGasMoles(turfCell, gasId, out float moles) ? moles : 0f;
+        private ulong SelectedGases(ulong toxicGases)
+        {
+            ulong gases = _filterToxins ? toxicGases : 0UL;
+            if (_filterO2)
+                gases |= 1UL << AtmosConstants.Oxygen.Value;
+
+            if (_filterN2)
+                gases |= 1UL << AtmosConstants.Nitrogen.Value;
+
+            if (_filterCo2)
+                gases |= 1UL << AtmosConstants.CarbonDioxide.Value;
+
+            return gases;
+        }
 
         private static bool TryScrubGas(
             AtmosPipeSimulation pipeSimulation,
@@ -221,8 +226,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 0 => _filterO2,
                 1 => _filterN2,
                 2 => _filterCo2,
-                3 => _filterPlasma,
-                4 => _filterToxins,
+                3 => _filterToxins,
                 _ => false,
             };
         }
