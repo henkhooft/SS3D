@@ -95,6 +95,27 @@ namespace EditorTests
         }
 
         [Test]
+        public void TrySetTargetAccessAsAuthor_NeedsNoOperator()
+        {
+            IdAccessSubSystem subsystem = IdAccessTestFixtures.CreateRegisteredIdAccess(out GameObject subsystemObject);
+
+            try
+            {
+                CrewRecord record = IdAccessTestFixtures.CreateCivilianRecord(subsystem);
+                IDCard card = IdAccessTestFixtures.CreateBoundCard(record);
+
+                Assert.IsTrue(subsystem.TrySetTargetAccessAsAuthor(card, AccessPresets.Engineer, out string failure), failure);
+
+                Assert.IsTrue(record.Access.HasAll(AccessMask.FromLevels(AccessLevel.Engineering)));
+                IdAccessTestFixtures.DestroyObjects(card.gameObject);
+            }
+            finally
+            {
+                IdAccessTestFixtures.DestroyRegistered(subsystem, subsystemObject);
+            }
+        }
+
+        [Test]
         public void CheckAccess_PassesAfterRecordAccessIsUpdated()
         {
             IdAccessSubSystem subsystem = IdAccessTestFixtures.CreateRegisteredIdAccess(out GameObject subsystemObject);

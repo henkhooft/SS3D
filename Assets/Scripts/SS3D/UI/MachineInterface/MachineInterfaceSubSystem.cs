@@ -134,7 +134,7 @@ namespace SS3D.UI.MachineInterface
             Close();
         }
 
-        /// <summary>The editor's Use tool may have opened this far from the body the editor hands back.</summary>
+        /// <summary>The editor's Select tool may have opened this far from the body the editor hands back.</summary>
         private void HandleMapEditorClosed()
         {
             if (IsOpen)

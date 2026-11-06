@@ -577,9 +577,6 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
                     HandleMoveInput();
-
-                if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Use && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
-                    HandleUseClick();
             }
             else
             {
@@ -632,6 +629,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private void HandleSelectClick()
         {
+            if (MapEditorCursorPick.TryPickMachine(PickCamera, _tileSystem.CurrentMap, _viewModel, out IMapEditorUsable machine))
+                RpcOpenMachine(machine.NetworkObject, LocalConnection);
+
             if (!MapEditorCursorPick.TryPick(PickCamera, _tileSystem.CurrentMap, _viewModel,
                     out PlacedTileObject placed, out PlacedItemObject item))
                 return;
@@ -734,17 +734,6 @@ namespace SS3D.Systems.Tile.MapEditor
 
             _viewModel.HideUI = machineOpen || _hideUiBeforeMachine;
             _viewModel.NotifyChanged();
-        }
-
-        private void HandleUseClick()
-        {
-            if (!MapEditorCursorPick.TryPickMachine(PickCamera, _tileSystem.CurrentMap, _viewModel, out IMapEditorUsable machine))
-            {
-                _viewModel.ShowToast("No machine here");
-                return;
-            }
-
-            RpcUseMachine(machine.NetworkObject, LocalConnection);
         }
 
         private void UpdateMouseOverUI()
@@ -882,8 +871,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 OnToolSelected(MapEditorTool.Dropper);
             else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame)
                 OnToolSelected(MapEditorTool.Delete);
-            else if (keyboard.digit5Key.wasPressedThisFrame || keyboard.numpad5Key.wasPressedThisFrame)
-                OnToolSelected(MapEditorTool.Use);
         }
 
         private static bool IsChordModifierPressed(Keyboard keyboard) =>
@@ -1204,11 +1191,11 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// The Use tool. This open path skips range and ID on purpose, so it stays limited to machine
+        /// Select on a machine, for setting it up. This open path skips range and ID on purpose, so it stays limited to machine
         /// panels for anyone the editor already authorizes; it is not a general reach bypass.
         /// </summary>
         [ServerRpc(RequireOwnership = false)]
-        private void RpcUseMachine(NetworkObject machine, NetworkConnection conn = null)
+        private void RpcOpenMachine(NetworkObject machine, NetworkConnection conn = null)
         {
             if (machine == null || !MapEditorPermissions.TryAuthorize(conn))
                 return;

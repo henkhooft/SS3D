@@ -123,7 +123,9 @@ namespace SS3D.UI.MachineInterface
                 return false;
             }
 
-            if (!TryResolveOperatorInventory(conn, out HumanInventory operatorInventory))
+            bool author = IsMapEditorViewer(conn);
+            HumanInventory operatorInventory = null;
+            if (!author && !TryResolveOperatorInventory(conn, out operatorInventory))
             {
                 PushLog("Operator credential not found.");
                 RefreshAllViewers();
@@ -149,12 +151,11 @@ namespace SS3D.UI.MachineInterface
                 ? current.With(entry.Level)
                 : current.Without(entry.Level);
 
-            if (!idAccess.TrySetTargetAccess(
-                    operatorInventory,
-                    targetCard,
-                    updated,
-                    _authLogDevice,
-                    out string failureReason))
+            string failureReason;
+            bool applied = author
+                ? idAccess.TrySetTargetAccessAsAuthor(targetCard, updated, out failureReason)
+                : idAccess.TrySetTargetAccess(operatorInventory, targetCard, updated, _authLogDevice, out failureReason);
+            if (!applied)
             {
                 PushLog(failureReason);
                 RefreshAllViewers();
@@ -169,14 +170,15 @@ namespace SS3D.UI.MachineInterface
         private IdConsoleInterfaceSnapshot BuildSnapshot(NetworkConnection conn)
         {
             bool devBypass = IdAccessDevSettings.AllowConsoleAccessEditing;
-            bool editorUnlocked = devBypass;
+            bool author = IsMapEditorViewer(conn);
+            bool editorUnlocked = devBypass || author;
             IDCard targetCard = GetTargetCard();
             AccessMask targetAccess = AccessMask.None;
             string targetName = string.Empty;
             string targetJob = string.Empty;
             bool hasIdAccess = SubSystems.TryGet(out IdAccessSubSystem idAccess);
 
-            if (!devBypass
+            if (!editorUnlocked
                 && hasIdAccess
                 && TryResolveOperatorInventory(conn, out HumanInventory operatorInventory))
             {

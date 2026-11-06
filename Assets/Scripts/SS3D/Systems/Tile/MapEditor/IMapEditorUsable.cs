@@ -4,7 +4,7 @@ using FishNet.Object;
 namespace SS3D.Systems.Tile.MapEditor
 {
     /// <summary>
-    /// A placed object the map editor's Use tool can open. Implemented by machine panels, which live in
+    /// A placed object the map editor's Select tool can open to set it up. Implemented by machine panels, which live in
     /// an assembly above this one.
     /// </summary>
     public interface IMapEditorUsable

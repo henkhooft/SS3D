@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace SS3D.Systems.Tile.MapEditor
 {
     /// <summary>
-    /// Resolves which placed object is under the map-editor cursor for Select / Dropper / Move / Use.
+    /// Resolves which placed object is under the map-editor cursor for Select / Dropper / Move.
     /// </summary>
     public static class MapEditorCursorPick
     {

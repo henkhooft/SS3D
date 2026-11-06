@@ -8,6 +8,8 @@ using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 
 namespace SS3D.Tests
@@ -54,9 +56,9 @@ namespace SS3D.Tests
             }
         }
 
-        // Guards: the Use tool opens a machine for an author far from the body and outside its AOI, with no ID, and closing the editor closes the panel (MapEditorSubSystem.RpcUseMachine) · Not cheaper because: the panel is a TargetRpc on a real spawned machine, which only reaches the client in a running host
+        // Guards: Select opens a machine for an author far from the body and outside its AOI, with no ID, and closing the editor closes the panel (MapEditorSubSystem.RpcOpenMachine) · Not cheaper because: the panel is a TargetRpc on a real spawned machine, which only reaches the client in a running host
         [UnityTest]
-        public IEnumerator UseTool_OpensAMachineOutOfRange_WithoutAnId()
+        public IEnumerator Select_OpensAMachineOutOfRange_WithoutAnId()
         {
             ChangesRoom = true;
             MapEditorSubSystem editor = SubSystems.Get<MapEditorSubSystem>();
@@ -72,12 +74,16 @@ namespace SS3D.Tests
                 yield return Hold(0.2f);
 
                 IMapEditorUsable apc = instance.GetComponentInChildren<IMapEditorUsable>();
-                Assert.IsNotNull(apc, "An APC is a machine the tool can open");
+                Assert.IsNotNull(apc, "An APC is a machine Select can open");
                 Assert.IsFalse(apc.NetworkObject.Observers.Contains(InstanceFinder.ClientManager.Connection),
                     "The APC is outside the host's AOI");
 
-                typeof(MapEditorSubSystem).GetMethod("RpcUseMachine", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(editor, new object[] { apc.NetworkObject, null });
+                // Through the real pick: the session centres the camera on the tile, so the screen centre points at it.
+                var session = (MapEditorSession)typeof(MapEditorSubSystem).GetField("_session", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(editor);
+                session.CenterOn(OutsideHostAoi);
+                yield return null;
+                InputState.Change(Mouse.current.position, new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+                typeof(MapEditorSubSystem).GetMethod("HandleSelectClick", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(editor, null);
                 yield return WaitFor(() => input.IsContextPushed(InputContext.MachineUI), "the APC panel to open");
 
                 SetEditorActive(editor, false);

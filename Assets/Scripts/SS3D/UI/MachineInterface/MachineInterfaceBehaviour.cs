@@ -17,6 +17,7 @@ namespace SS3D.UI.MachineInterface
     public abstract class MachineInterfaceBehaviour : InteractionTargetNetworkBehaviour, IMachineInterfaceProvider, IMachineInterfaceClientBridge, IMapEditorUsable
     {
         private readonly HashSet<NetworkConnection> _viewers = new();
+        private readonly HashSet<NetworkConnection> _mapEditorViewers = new();
 
         public abstract string InterfaceId { get; }
 
@@ -68,6 +69,7 @@ namespace SS3D.UI.MachineInterface
             }
 
             _viewers.Clear();
+            _mapEditorViewers.Clear();
             ReleaseTickSubscription();
             base.OnStopServer();
         }
@@ -90,7 +92,7 @@ namespace SS3D.UI.MachineInterface
         }
 
         /// <summary>
-        /// The map editor's Use tool: opens without the range check, because the editor camera leaves the
+        /// The map editor's Select tool: opens without the range check, because the editor camera leaves the
         /// body behind. <c>MapEditorSubSystem</c> has already authorized <paramref name="conn"/>.
         /// </summary>
         [Server]
@@ -98,9 +100,13 @@ namespace SS3D.UI.MachineInterface
         {
             if (conn != null && conn.IsValid)
             {
+                _mapEditorViewers.Add(conn);
                 OpenInterfaceForViewer(conn);
             }
         }
+
+        /// <summary>This viewer came in through <see cref="ServerOpenForMapEditor"/>, so ID checks don't apply to them.</summary>
+        protected bool IsMapEditorViewer(NetworkConnection conn) => _mapEditorViewers.Contains(conn);
 
         [ServerRpc(RequireOwnership = false)]
         public void CmdSetControl(byte controlId, bool value, NetworkConnection conn = null)
@@ -150,6 +156,7 @@ namespace SS3D.UI.MachineInterface
             }
 
             _viewers.Remove(conn);
+            _mapEditorViewers.Remove(conn);
             TargetCloseInterface(conn);
 
             if (_viewers.Count == 0)
@@ -314,6 +321,7 @@ namespace SS3D.UI.MachineInterface
                 return;
             }
 
+            _mapEditorViewers.Remove(conn);
             if (_viewers.Remove(conn) && _viewers.Count == 0)
             {
                 ReleaseTickSubscription();

@@ -133,6 +133,28 @@ namespace SS3D.Systems.IdAccess
         }
 
         [Server]
+        /// <summary>
+        /// A map author setting a card up from the editor, who may have no ID or even a body. There is no
+        /// operator to record, so this leaves no console edit log entry.
+        /// </summary>
+        public bool TrySetTargetAccessAsAuthor(IDCard targetCard, AccessMask newAccess, out string failureReason)
+        {
+            failureReason = string.Empty;
+            if (targetCard == null || targetCard.BoundRecordId.IsNone)
+            {
+                failureReason = "No target ID card inserted.";
+                return false;
+            }
+
+            if (!TrySetAccess(targetCard.BoundRecordId, newAccess))
+            {
+                failureReason = "Failed to update target access.";
+                return false;
+            }
+
+            return true;
+        }
+
         public bool TrySetTargetAccess(
             HumanInventory operatorInventory,
             IDCard targetCard,

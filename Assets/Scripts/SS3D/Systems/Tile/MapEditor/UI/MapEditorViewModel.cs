@@ -241,7 +241,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (CurrentTool == MapEditorTool.Select)
             {
-                SelectedObjectHint = "Select tool active — click a tile to inspect";
+                SelectedObjectHint = "Select tool active — click a tile to inspect, or a machine to set it up";
                 return;
             }
 
@@ -254,12 +254,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (CurrentTool == MapEditorTool.Dropper)
             {
                 SelectedObjectHint = "Dropper tool active — click a placed object to copy it";
-                return;
-            }
-
-            if (CurrentTool == MapEditorTool.Use)
-            {
-                SelectedObjectHint = "Use tool active — click a machine to open it, at any range and without an ID";
                 return;
             }
 
