@@ -42,6 +42,8 @@ namespace SS3D.Systems.Entities.Humanoid
         [SerializeField] protected float _facingTurnRate = 15f;
         /// <summary>Yaw turn rate while aiming in combat (lower than peaceful for less twitchy facing).</summary>
         [SerializeField] protected float _combatRotationLerpMultiplier = 3.5f;
+        /// <summary>Top combat yaw speed. The slerp above alone turns a 180 at 630°/s; this keeps it about a second.</summary>
+        [SerializeField] protected float _combatMaxTurnDegreesPerSecond = 180f;
         [SerializeField] protected float _turnVelocityScale = 4f;
         /// <summary>Combat gaits are slower than peaceful — scale world speed to match Mixamo cadence.</summary>
         [SerializeField] protected float _combatWalkSpeedFactor = 0.7f;
@@ -406,7 +408,8 @@ namespace SS3D.Systems.Entities.Humanoid
             GetComponent<HumanoidIkController>()?.SetCombatAimPoint(aimPoint);
 
             Quaternion lookRotation = Quaternion.Euler(0f, yaw, 0f);
-            transform.rotation = Quaternion.Slerp(Rotation, lookRotation, Time.deltaTime * _combatRotationLerpMultiplier);
+            transform.rotation = StepCombatYaw(Rotation, lookRotation, _combatRotationLerpMultiplier,
+                _combatMaxTurnDegreesPerSecond, Time.deltaTime);
         }
 
         /// <summary>
@@ -415,7 +418,19 @@ namespace SS3D.Systems.Entities.Humanoid
         public void ApplyCombatAimYaw(float aimYaw, float deltaTime)
         {
             Quaternion lookRotation = Quaternion.Euler(0f, aimYaw, 0f);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, deltaTime * _combatRotationLerpMultiplier);
+            transform.rotation = StepCombatYaw(transform.rotation, lookRotation, _combatRotationLerpMultiplier,
+                _combatMaxTurnDegreesPerSecond, deltaTime);
+        }
+
+        /// <summary>
+        /// One step of combat facing: eases in like a slerp at <paramref name="rate"/>, but never faster
+        /// than <paramref name="maxDegreesPerSecond"/>, so big turns take their time and small aim stays crisp.
+        /// </summary>
+        public static Quaternion StepCombatYaw(Quaternion current, Quaternion target, float rate,
+            float maxDegreesPerSecond, float deltaTime)
+        {
+            float eased = Quaternion.Angle(current, target) * Mathf.Clamp01(rate * deltaTime);
+            return Quaternion.RotateTowards(current, target, Mathf.Min(eased, maxDegreesPerSecond * deltaTime));
         }
 
         /// <summary>
