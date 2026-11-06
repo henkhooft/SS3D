@@ -156,11 +156,12 @@ namespace EditorTests
         }
 
         // tgstation max_integrity, except walls: Paradise's 100/600 at three times the scale, so a wall outlasts
-        // tg's 300 HP airlock and 200 HP girder. tg walls have no HP. Full-tile window values, since ours fill the tile.
+        // tg's 300 HP airlock and 200 HP girder. tg walls have no HP. A window is a wall with glass in it, and hull
+        // sections mix the two, so each matches its steel variant.
         [TestCase("Walls/SteelWall", 300f)]
         [TestCase("Walls/SteelWallReinforced", 1800f)]
-        [TestCase("Walls/SteelWindow", 100f)]
-        [TestCase("Walls/SteelWindowReinforced", 150f)]
+        [TestCase("Walls/SteelWindow", 300f)]
+        [TestCase("Walls/SteelWindowReinforced", 1800f)]
         [TestCase("Walls/SteelGirder", 200f)]
         [TestCase("Doors/AirlockCivilian", 300f)]
         [TestCase("Doors/AirlockSecurity", 450f)]
