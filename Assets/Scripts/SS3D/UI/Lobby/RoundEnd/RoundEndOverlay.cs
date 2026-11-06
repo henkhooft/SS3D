@@ -30,6 +30,9 @@ namespace SS3D.UI.Lobby
         /// <summary>The chevron was clicked.</summary>
         public event Action CollapseToggleRequested;
 
+        /// <summary>Back to lobby was clicked.</summary>
+        public event Action ReturnToLobbyRequested;
+
         public bool IsAttached => _root != null;
 
         public bool IsVisible => _root != null && _root.style.display == DisplayStyle.Flex;
@@ -121,6 +124,19 @@ namespace SS3D.UI.Lobby
                 paused.style.display = held ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
+        /// <summary>Shows the vote on Back to lobby; the button locks once this player has pressed it.</summary>
+        public void SetLobbyVote(bool pressed, int votes, int needed)
+        {
+            Button button = _root?.Q<Button>("round-end-lobby");
+            if (button == null)
+                return;
+
+            string text = RoundSummaryModel.LobbyButtonText(pressed, votes, needed);
+            if (button.text != text)
+                button.text = text;
+            button.SetEnabled(!pressed);
+        }
+
         private void ApplyCollapsed()
         {
             if (_panel == null)
@@ -165,6 +181,8 @@ namespace SS3D.UI.Lobby
             footer.AddToClassList("round-end__footer");
             footer.Add(RoundSummaryView.Arcade("TAB", "round-end__key"));
             footer.Add(RoundSummaryView.Titling("Collapse · movement and combat stay active", "round-end__hint"));
+            footer.Add(Spacer());
+            footer.Add(LobbyButton());
             panel.Add(footer);
             return panel;
         }
@@ -226,6 +244,14 @@ namespace SS3D.UI.Lobby
             fill.AddToClassList("round-end__progress-fill");
             track.Add(fill);
             return track;
+        }
+
+        private Button LobbyButton()
+        {
+            Button button = new(() => ReturnToLobbyRequested?.Invoke()) { name = "round-end-lobby", focusable = false };
+            button.AddToClassList("round-end__lobby");
+            button.AddToClassList("round-end__arcade");
+            return button;
         }
 
         /// <summary>A drawn chevron (two borders of a rotated square); the game fonts have no arrow glyphs.</summary>

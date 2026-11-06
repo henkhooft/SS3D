@@ -15,7 +15,7 @@ namespace SS3D.UI.Lobby
     /// <summary>
     /// Client host of the round-end overlay (effort <c>2026-11_round-end-loop</c> Decisions 3–5). While the
     /// round is Ending it paints the outcome over whatever the player sees, living or ghost, with the beat's
-    /// countdown; Tab or the chevron collapse it to a banner. Players in the lobby read the same outcome in
+    /// countdown; Tab or the chevron collapse it to a banner, and Back to lobby asks to cut it short. Players in the lobby read the same outcome in
     /// the shell's Last Round tab instead (the lobby window sits above this layer).
     /// </summary>
     public sealed class RoundEndUiSubSystem : SubSystem
@@ -25,6 +25,7 @@ namespace SS3D.UI.Lobby
         private RoundEndOverlay _overlay;
         private InputSubSystem _input;
         private RoundSummaryModel _model;
+        private bool _lobbyPressed;
 
         /// <summary>The overlay, once built; for automation.</summary>
         public RoundEndOverlay Overlay => _overlay;
@@ -74,11 +75,13 @@ namespace SS3D.UI.Lobby
             if (_model == null || _model.Outcome != outcome)
                 _model = new RoundSummaryModel(outcome, SS3D.Core.Settings.LocalPlayer.Ckey);
             _overlay.Show(_model, rounds.EndSecondsLeft, rounds.EndHeld);
+            _overlay.SetLobbyVote(_lobbyPressed, rounds.LobbyVotes, rounds.LobbyVotesNeeded);
         }
 
         private void Hide()
         {
             _model = null;
+            _lobbyPressed = false;
             _overlay?.Hide();
         }
 
@@ -98,6 +101,16 @@ namespace SS3D.UI.Lobby
         {
             if (_overlay != null && _overlay.IsVisible)
                 _overlay.SetCollapsed(!_overlay.IsCollapsed);
+        }
+
+        /// <summary>The Back to lobby button; also for automation.</summary>
+        public void ReturnToLobby()
+        {
+            if (_lobbyPressed || !SubSystems.TryGet(out RoundSubSystem rounds))
+                return;
+
+            _lobbyPressed = true;
+            rounds.CmdReturnToLobby();
         }
 
         private bool EnsureOverlay()
@@ -121,6 +134,7 @@ namespace SS3D.UI.Lobby
             InputInterface.RegisterDocument(shell.Document);
             _overlay = new RoundEndOverlay(_catalog);
             _overlay.CollapseToggleRequested += ToggleCollapsed;
+            _overlay.ReturnToLobbyRequested += ReturnToLobby;
             _overlay.Attach(layer);
             return true;
         }

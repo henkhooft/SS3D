@@ -85,5 +85,14 @@ namespace SS3D.Systems.Rounds
         /// <summary>Progress bar fill, 0–1; full while held.</summary>
         public static float Progress(int secondsLeft, bool held) =>
             held ? 1f : Math.Clamp(secondsLeft / (float)RoundEndBeat.Seconds, 0f, 1f);
+
+        /// <summary>Back to lobby's label: the vote once it has started, then who it waits for after pressing.</summary>
+        public static string LobbyButtonText(bool pressed, int votes, int needed)
+        {
+            if (!pressed)
+                return votes > 0 ? $"BACK TO LOBBY {votes}/{needed}" : "BACK TO LOBBY";
+
+            return votes > 0 ? $"WAITING {votes}/{needed}" : "RETURNING";
+        }
     }
 }

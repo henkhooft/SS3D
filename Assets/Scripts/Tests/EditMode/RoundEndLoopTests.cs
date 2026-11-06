@@ -138,6 +138,69 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
+        public void Beat_Skip_EndsOnTheNextTick_EvenWhenHeld()
+        {
+            RoundEndBeat beat = new();
+            beat.Begin();
+            beat.SetHeld(true);
+
+            beat.Skip();
+
+            Assert.IsTrue(beat.Tick());
+            Assert.AreEqual(0, beat.SecondsLeft);
+            Assert.IsFalse(beat.Running);
+        }
+
+        [Test]
+        public void Beat_Skip_DoesNotCarryIntoTheNextBeat()
+        {
+            RoundEndBeat beat = new();
+            beat.Skip();
+            beat.Begin();
+            beat.Skip();
+            beat.Reset();
+
+            beat.Begin();
+
+            Assert.IsFalse(beat.Tick());
+            Assert.AreEqual(RoundEndBeat.Seconds - 1, beat.SecondsLeft);
+        }
+
+        [Test]
+        public void LobbyVote_NeedsEveryoneStillInTheRound()
+        {
+            RoundEndLobbyVote vote = new();
+            string[] voters = { "ann", "bo", "cy" };
+            vote.Add("ann");
+            vote.Add("ann");
+            vote.Add("lurker");
+
+            Assert.AreEqual(1, vote.CountFrom(voters));
+            Assert.IsFalse(RoundEndLobbyVote.Passed(vote.CountFrom(voters), voters.Length));
+
+            // Cy leaves and Bo votes: the last holdout going can finish it.
+            voters = new[] { "ann", "bo" };
+            vote.Add("bo");
+
+            Assert.IsTrue(RoundEndLobbyVote.Passed(vote.CountFrom(voters), voters.Length));
+        }
+
+        [Test]
+        public void LobbyVote_NobodyInTheRound_DoesNotPass()
+        {
+            Assert.IsFalse(RoundEndLobbyVote.Passed(0, 0));
+        }
+
+        [TestCase(false, 0, 3, "BACK TO LOBBY")]
+        [TestCase(false, 1, 3, "BACK TO LOBBY 1/3")]
+        [TestCase(true, 1, 3, "WAITING 1/3")]
+        [TestCase(true, 0, 2, "RETURNING")]
+        public void LobbyButton_ShowsTheVote(bool pressed, int votes, int needed, string expected)
+        {
+            Assert.AreEqual(expected, RoundSummaryModel.LobbyButtonText(pressed, votes, needed));
+        }
+
+        [Test]
         public void Beat_Held_DoesNotAdvance_UntilResumed()
         {
             RoundEndBeat beat = new();

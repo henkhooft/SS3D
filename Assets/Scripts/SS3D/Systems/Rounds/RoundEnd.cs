@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using SS3D.Core;
@@ -10,6 +12,7 @@ using SS3D.Systems.Comms;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Gamemodes;
+using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Roles;
 using SS3D.Systems.ScreenEffects;
 using SS3D.Systems.Rounds.Messages;
@@ -19,12 +22,13 @@ namespace SS3D.Systems.Rounds
     /// <summary>
     /// The round-end loop (<c>round-end.md</c> §2, §5, §6; effort <c>2026-11_round-end-loop</c> P1): every
     /// trigger goes through <see cref="RequestRoundEnd"/>, which fixes a <see cref="RoundOutcome"/> on the
-    /// spot. Ending shows it to everyone for <see cref="RoundEndBeat.Seconds"/> (an admin can hold the beat),
-    /// then the round stops as before. Clients keep the outcome as the lobby's Last round until the next one.
+    /// spot. Ending shows it to everyone for <see cref="RoundEndBeat.Seconds"/> (an admin can hold the beat, and
+    /// Back to lobby cuts it short), then the round stops as before. Clients keep the outcome as the lobby's Last round until the next one.
     /// </summary>
     public sealed partial class RoundSubSystem
     {
         private readonly RoundEndBeat _endBeat = new();
+        private readonly RoundEndLobbyVote _lobbyVote = new();
         /// <summary>Beat length for the next round end; only automation changes it (<c>SetEndBeatSecondsForTesting</c>).</summary>
         private int _endBeatSeconds = RoundEndBeat.Seconds;
         private RoundOutcome _pendingOutcome;
@@ -33,6 +37,8 @@ namespace SS3D.Systems.Rounds
 
         [SyncVar] private int _endSecondsLeft;
         [SyncVar] private bool _endHeld;
+        [SyncVar] private int _lobbyVotes;
+        [SyncVar] private int _lobbyVotesNeeded;
 
         /// <summary>Client: the last round's outcome, kept until the next round ends. Null before any round ended.</summary>
         public RoundOutcome LastOutcome { get; private set; }
@@ -45,6 +51,12 @@ namespace SS3D.Systems.Rounds
 
         /// <summary>An admin is holding the summary beat.</summary>
         public bool EndHeld => _endHeld;
+
+        /// <summary>Players who pressed Back to lobby during this beat.</summary>
+        public int LobbyVotes => _lobbyVotes;
+
+        /// <summary>Players whose votes the beat waits for: everyone online with a body or ghost in the round.</summary>
+        public int LobbyVotesNeeded => _lobbyVotesNeeded;
 
         /// <summary>Server: this round runs without antagonists, configured as Extended or fallen back to it.</summary>
         public bool IsExtendedRound => _serverSettings.Mode == "Extended" || _roundFellBackToExtended;
@@ -162,6 +174,7 @@ namespace SS3D.Systems.Rounds
         [Server]
         private async UniTask RunEndBeat(CancellationToken cancellationToken)
         {
+            _lobbyVote.Clear();
             _endBeat.Begin(_endBeatSeconds);
             SyncEndBeat();
             try
@@ -170,6 +183,8 @@ namespace SS3D.Systems.Rounds
                 while (true)
                 {
                     await UniTask.Delay(second, ignoreTimeScale: true, cancellationToken: cancellationToken);
+                    // Per tick as well as per press: a holdout leaving can complete the vote.
+                    SyncLobbyVote();
                     if (_endBeat.Tick())
                         break;
 
@@ -179,8 +194,60 @@ namespace SS3D.Systems.Rounds
             finally
             {
                 _endBeat.Reset();
+                _lobbyVote.Clear();
+                _lobbyVotes = 0;
+                _lobbyVotesNeeded = 0;
                 SyncEndBeat();
             }
+        }
+
+        /// <summary>
+        /// Back to lobby on the summary. An admin ends the beat at once, held or not. A player's press is a
+        /// vote; a unanimous vote ends the beat, but waits for the resume if an admin is holding it.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void CmdReturnToLobby(NetworkConnection sender = null)
+        {
+            if (CurrentRoundState != RoundState.Ending || !_endBeat.Running || sender == null)
+                return;
+
+            if (IsAdministrator(sender))
+            {
+                _endBeat.Skip();
+                return;
+            }
+
+            _lobbyVote.Add(SubSystems.Get<PlayerSubSystem>().GetCkey(sender));
+            SyncLobbyVote();
+        }
+
+        [Server]
+        private void SyncLobbyVote()
+        {
+            List<string> voters = CollectLobbyVoters();
+            _lobbyVotes = _lobbyVote.CountFrom(voters);
+            _lobbyVotesNeeded = voters.Count;
+            if (RoundEndLobbyVote.Passed(_lobbyVotes, _lobbyVotesNeeded) && !_endBeat.Held)
+                _endBeat.Skip();
+        }
+
+        /// <summary>Online players with a body or ghost; anyone else is in the lobby already and sees no summary to skip.</summary>
+        [Server]
+        private List<string> CollectLobbyVoters()
+        {
+            List<string> voters = new();
+            if (!SubSystems.TryGet(out EntitySubSystem entities) || !SubSystems.TryGet(out PlayerSubSystem players))
+                return voters;
+
+            HashSet<string> online = new(players.OnlinePlayers.Select(player => player.Ckey), StringComparer.Ordinal);
+            foreach (Entity entity in entities.SpawnedPlayers)
+            {
+                Player player = entity != null && entity.Mind != null ? entity.Mind.player : null;
+                if (player != null && online.Contains(player.Ckey) && !voters.Contains(player.Ckey))
+                    voters.Add(player.Ckey);
+            }
+
+            return voters;
         }
 
         [Server]

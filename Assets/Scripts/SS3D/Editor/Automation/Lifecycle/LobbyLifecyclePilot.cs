@@ -606,7 +606,7 @@ namespace SS3D.Editor.Automation
                     Rounds().CmdSaveServerSettings(settings);
                 },
                 Until = () => Rounds().SettingsForServer.PlayerCap == 32 && Rounds().AllowLateJoin
-                    && Shell().Q<Toggle>("server-late-join").value && Shell().Q<IntegerField>("server-round-length").value == 90,
+                    && Shell().Q<Toggle>("server-late-join").value && Shell().Q<IntegerField>("server-round-length").value == ServerSettings.Default.RoundLengthMinutes,
             },
             new Step { Name = "Leave admin before lifecycle", Enter = () => Click(AdminButton()), Until = () => Shell().Q("server-settings-form") == null },
             new Step { Name = "Ready", Enter = () => Click(ReadyButton()), Until = () => IsReady() && ReadyButton().text.Contains("READY") && CountLabel() == "1/1 ready",
@@ -922,7 +922,7 @@ namespace SS3D.Editor.Automation
                 Enter = () =>
                 {
                     // The real beat, so the countdown and bar look as players see them; the captures below happen
-                    // while held, and the resumed beat is the one ~30 s this pilot pays for the summary.
+                    // while held, and Back to lobby then ends the beat, which is checked by not waiting out the 30 s.
                     Rounds().SetEndBeatSecondsForTesting(RoundEndBeat.Seconds);
                     Rounds().CmdResolveMapStop(Rounds().MapStopToken, MapStopChoice.DiscardAndStop, "");
                 },
@@ -953,12 +953,14 @@ namespace SS3D.Editor.Automation
             },
             new Step
             {
-                Name = "Resumed summary returns to lobby shell",
-                Timeout = 60,
+                Name = "Back to lobby on the summary returns to the lobby shell",
+                Timeout = 15,
                 Enter = () =>
                 {
                     Rounds().SetEndBeatSecondsForTesting(PilotEndBeatSeconds);
-                    Rounds().CmdRoundAdminAction(RoundAdminAction.ResumeEnd);
+                    RoundEndUi().ToggleCollapsed();
+                    Require(Shown(RoundEndPart("round-end-lobby")), "The summary offers Back to lobby");
+                    RoundEndUi().ReturnToLobby();
                 },
                 Until = () => Rounds().CurrentRoundState == RoundState.Stopped && !Spawned() && Visible(Shell()),
                 Verify = () =>

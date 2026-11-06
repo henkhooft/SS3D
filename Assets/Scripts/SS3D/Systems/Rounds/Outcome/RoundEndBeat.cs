@@ -6,7 +6,7 @@ namespace SS3D.Systems.Rounds
 {
     /// <summary>
     /// The summary beat between Ending and Stopped (<c>round-end.md</c> §6): a fixed count everyone can
-    /// read, which an admin can hold and resume. One <see cref="Tick"/> per second.
+    /// read, which an admin can hold and resume. <see cref="Skip"/> ends it early. One <see cref="Tick"/> per second.
     /// </summary>
     public sealed class RoundEndBeat
     {
@@ -18,21 +18,24 @@ namespace SS3D.Systems.Rounds
 
         public bool Running { get; private set; }
 
+        private bool _skipped;
+
         /// <param name="seconds">Beat length; <see cref="Seconds"/> in play. Automation shortens it (min 1).</param>
         public void Begin(int seconds = Seconds)
         {
             SecondsLeft = Math.Max(1, seconds);
             Held = false;
             Running = true;
+            _skipped = false;
         }
 
         /// <summary>Advances one second unless held; true exactly when the beat is over.</summary>
         public bool Tick()
         {
-            if (!Running || Held)
+            if (!Running || (Held && !_skipped))
                 return false;
 
-            SecondsLeft = Math.Max(0, SecondsLeft - 1);
+            SecondsLeft = _skipped ? 0 : Math.Max(0, SecondsLeft - 1);
             if (SecondsLeft > 0)
                 return false;
 
@@ -50,12 +53,42 @@ namespace SS3D.Systems.Rounds
             return true;
         }
 
+        /// <summary>The next <see cref="Tick"/> ends the beat, even a held one.</summary>
+        public void Skip()
+        {
+            if (Running)
+                _skipped = true;
+        }
+
         public void Reset()
         {
             SecondsLeft = 0;
             Held = false;
             Running = false;
+            _skipped = false;
         }
+    }
+
+    /// <summary>
+    /// Who pressed Back to lobby during the summary beat. Everyone still in the round has to agree, so
+    /// one impatient player can't cut the summary short for the rest; an admin skips without a vote.
+    /// </summary>
+    public sealed class RoundEndLobbyVote
+    {
+        private readonly HashSet<string> _ckeys = new(StringComparer.Ordinal);
+
+        public void Add(string ckey)
+        {
+            if (!string.IsNullOrEmpty(ckey))
+                _ckeys.Add(ckey);
+        }
+
+        public void Clear() => _ckeys.Clear();
+
+        /// <summary>How many of <paramref name="voters"/> have pressed; someone who left no longer counts.</summary>
+        public int CountFrom(IEnumerable<string> voters) => voters.Count(_ckeys.Contains);
+
+        public static bool Passed(int votes, int needed) => needed > 0 && votes >= needed;
     }
 
     /// <summary>Builds the fixed <see cref="RoundOutcome"/> from what the server knows at the trigger instant.</summary>

@@ -444,6 +444,26 @@
     color: #aaaaaa;
 }
 
+.round-end__lobby {
+    height: 24px;
+    margin: 0;
+    padding: 0 10px;
+    border-width: 0;
+    border-radius: 0;
+    color: #161616;
+    background-color: #aaaaaa;
+}
+
+.round-end__lobby:hover {
+    background-color: #dddddd;
+}
+
+.round-end__lobby:disabled {
+    color: #aaaaaa;
+    background-color: #2a2a2e;
+    opacity: 1;
+}
+
 /* ---- Collapsed banner ---- */
 .round-end__banner {
     position: absolute;
@@ -571,6 +591,7 @@
 .round-end__row-status,
 .round-end__you,
 .round-end__key,
+.round-end__lobby,
 .round-end__objective-label,
 .round-end__paused,
 .round-end__banner-body .round-end__destroyed {
