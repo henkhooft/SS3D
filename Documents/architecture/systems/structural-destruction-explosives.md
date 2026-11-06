@@ -19,7 +19,7 @@ The values above are provisional content tuning. X4's additional force uses the 
 
 C4/X4 have physical LED countdowns and a three-second wirecutter defuse. Movement, range loss or losing the tool cancels; expiry wins a same-frame defuse. Minibombs cannot be defused. Throws use server Rigidbody physics, cap the target distance at 10 m and start clear of nearby walls. No new throw key or permanent HUD surface is added.
 
-`Effects/minibombcountdown.ogg` is imported as `ExplosiveCountdown.ogg`: one non-looping five-second recording plays for the final five seconds of every fuse. A client seeks from the replicated deadline when it first observes an armed charge during that interval. Playback follows the item through the SFX pool with normal occlusion. Defuse/despawn stops and detaches that voice. C4/X4 reuse registered SS14 `explosion1.ogg`; minibombs use `explosion_small1.ogg`. Distant listeners retain the existing blast rumble.
+`Effects/minibombcountdown.ogg` is imported as `ExplosiveCountdown.ogg` for the five-second minibomb. C4/X4 use `ChargeCountdown.ogg`, a fifteen-second version with ten steady opening cues followed by the original accelerating five-second finale. One non-looping recording starts at arming; a client seeks from the replicated deadline when it first observes an armed charge. Playback follows the item through the SFX pool with normal occlusion. Defuse/despawn stops and detaches that voice. C4/X4 reuse registered SS14 `explosion1.ogg`; minibombs use `explosion_small1.ogg`. Distant listeners retain the existing blast rumble.
 
 Remote triggers, a proximity alert, other grenades and separate-client acceptance remain outstanding. Moving airlock leaves do not carry the attached model; attachment is fixed at the selected world contact.
 

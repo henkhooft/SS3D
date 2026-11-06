@@ -47,11 +47,11 @@ namespace SS3D.Systems.StructuralDamage.Editor
             mesh.vertices = vertices; mesh.RecalculateBounds(); mesh.name = name;
             Mesh saved = DB.LoadAssetAtPath<Mesh>(Art + name + "Mesh.asset");
             if (saved == null) DB.CreateAsset(mesh, Art + name + "Mesh.asset");
-            else { EditorUtility.CopySerialized(mesh, saved); UnityEngine.Object.DestroyImmediate(mesh); mesh = saved; }
+            else { mesh.name = saved.name; EditorUtility.CopySerialized(mesh, saved); UnityEngine.Object.DestroyImmediate(mesh); mesh = saved; }
             if (DB.LoadAssetAtPath<GameObject>(prefabPath) == null)
                 DB.CopyAsset("Assets/Content/WorldObjects/Items/Functional/Tools/Engineering/Wirecutters.prefab", prefabPath);
             ObjectAssetReference reference = Reference(name, prefabPath, "Items", "c2644d7b34e956743a0bc485e7ca5e37");
-            string countdown = RegisterSound("ExplosiveCountdown");
+            string countdown = RegisterSound(kind == ExplosiveKind.Minibomb ? "ExplosiveCountdown" : "ChargeCountdown");
             string defused = RegisterSound("C4Defused");
             Material palette = DB.LoadAssetAtPath<Material>("Assets/Content/WorldObjects/World/Materials/Palette.mat");
             Material lit = Material("C4Led", new Color(3f, 0.12f, 0.025f));
@@ -63,7 +63,7 @@ namespace SS3D.Systems.StructuralDamage.Editor
                 root.name = name;
                 root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
                 foreach (Transform child in root.transform.Cast<Transform>().ToArray())
-                    if (child.name != "Attachment") UnityEngine.Object.DestroyImmediate(child.gameObject);
+                    if (child.name != "Attachment" && child.name != "Countdown") UnityEngine.Object.DestroyImmediate(child.gameObject);
                 root.GetComponent<MeshFilter>().sharedMesh = mesh;
                 root.GetComponent<MeshRenderer>().sharedMaterials = Enumerable.Repeat(palette, mesh.subMeshCount).ToArray();
                 BoxCollider collider = root.GetComponent<BoxCollider>();
@@ -75,7 +75,9 @@ namespace SS3D.Systems.StructuralDamage.Editor
                 item.FindProperty("_name").stringValue = name == "SyndicateMiniBomb" ? "Syndicate minibomb" : name;
                 item.FindProperty("_weight").floatValue = weight;
                 item.ApplyModifiedPropertiesWithoutUndo();
-                GameObject screen = new("Countdown"); screen.transform.SetParent(root.transform, false);
+                Transform existingScreen = root.transform.Find("Countdown");
+                GameObject screen = existingScreen != null ? existingScreen.gameObject : new GameObject("Countdown");
+                screen.transform.SetParent(root.transform, false);
                 screen.transform.localPosition = new Vector3(0f, mesh.bounds.max.y + 0.002f, 0f);
                 Cube(screen.transform, "Backing", Vector3.zero, new Vector3(0.085f, 0.003f, 0.052f), black);
                 System.Collections.Generic.List<Renderer> segments = new();
@@ -88,7 +90,7 @@ namespace SS3D.Systems.StructuralDamage.Editor
                         segments.Add(Cube(screen.transform, "Digit" + digit + "Segment" + s, p,
                             horizontal ? new Vector3(0.02f, 0.001f, 0.003f) : new Vector3(0.003f, 0.001f, 0.014f), dim));
                     }
-                ChargeCountdownDisplay display = screen.AddComponent<ChargeCountdownDisplay>();
+                if (!screen.TryGetComponent(out ChargeCountdownDisplay display)) display = screen.AddComponent<ChargeCountdownDisplay>();
                 SerializedObject d = new(display);
                 d.FindProperty("_segments").arraySize = 14;
                 for (int i = 0; i < 14; i++) d.FindProperty("_segments").GetArrayElementAtIndex(i).objectReferenceValue = segments[i];
@@ -118,8 +120,9 @@ namespace SS3D.Systems.StructuralDamage.Editor
         }
         private static Renderer Cube(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
         {
-            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); cube.name = name;
-            UnityEngine.Object.DestroyImmediate(cube.GetComponent<Collider>());
+            Transform existing = parent.Find(name);
+            GameObject cube = existing != null ? existing.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cube); cube.name = name;
+            if (cube.TryGetComponent(out Collider collider)) UnityEngine.Object.DestroyImmediate(collider);
             cube.transform.SetParent(parent, false); cube.transform.localPosition = position; cube.transform.localScale = scale;
             Renderer renderer = cube.GetComponent<Renderer>(); renderer.sharedMaterial = material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; return renderer;
@@ -159,9 +162,9 @@ namespace SS3D.Systems.StructuralDamage.Editor
             string title = kind == ExplosiveKind.Minibomb ? "Syndicate minibomb" : name;
             string description = kind switch
             {
-                ExplosiveKind.X4 => "A powerful directional demolition charge. Hold it and use it on a wall or door to attach and arm. Its fifteen-second fuse ends with a five-second audible countdown. Extra blast force spreads in a cone through the far side of the target. Wirecutters take three seconds to defuse it.",
+                ExplosiveKind.X4 => "A powerful directional demolition charge. Hold it and use it on a wall or door to attach and arm. Its fifteen-second audible countdown speeds up toward detonation. Extra blast force spreads in a cone through the far side of the target. Wirecutters take three seconds to defuse it.",
                 ExplosiveKind.Minibomb => "A compact syndicate grenade. Arm it in hand or use Throw minibomb to pull the pin and throw. Its five-second fuse ends in a small explosion. An armed minibomb cannot be defused.",
-                _ => "A timed demolition charge. Place it and arm from the interaction menu, or use it on a wall or door to attach and arm. Its red display counts down fifteen seconds; an audible countdown plays for the last five. Wirecutters take three seconds to defuse it; stay in reach.",
+                _ => "A timed demolition charge. Place it and arm from the interaction menu, or use it on a wall or door to attach and arm. Its red display counts down fifteen seconds; an audible countdown runs throughout and speeds up at the end. Wirecutters take three seconds to defuse it; stay in reach.",
             };
             table.AddEntry(key + ".name", title);
             table.AddEntry(key + ".desc", description);

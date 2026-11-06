@@ -28,7 +28,7 @@ How sound clips are found, registered and named in code, plus which registered c
 - `Assets/Resources/AmbienceProfileCatalog.asset` lists the `AmbienceProfile` assets in `Assets/Content/Data/Ambience/`. Profiles reference their `AudioClip`s directly, so room tone needs no `Sounds.asset` entry. The catalog also holds the three wind layers and the space bed. Clips live under `Assets/Art/Sound/World/Ambience/`, and long ones import as Compressed In Memory, because the catalog holds them all.
 - Third-party credits: [Sound ATTRIBUTIONS](../../../Assets/Art/Sound/ATTRIBUTIONS.md). Sound effects may be CC0, CC-BY, CC-BY-SA or CC-BY-NC; a commercial release would have to replace the NC clips (metal breaks), and custom-licensed music stays out. An SS14 clip with no `attributions.yml` entry stays out.
 
-- `Systems/StructuralDamage/Editor/ExplosivePrefabSetup.cs` registers the five-second explosive countdown, defused cue and small explosion under `Assets/Art/Sound/Items/Weapons/Explosive/SS14/`; `TimedCharge` seeks a single non-looping countdown recording from the synchronized fuse; C4/X4 reuse the registered `Explosion1` clip.
+- `Systems/StructuralDamage/Editor/ExplosivePrefabSetup.cs` registers the five-second minibomb and fifteen-second charge countdowns, defused cue and small explosion under `Assets/Art/Sound/Items/Weapons/Explosive/SS14/`; `TimedCharge` seeks a single non-looping countdown recording from the synchronized fuse; C4/X4 reuse the registered `Explosion1` clip.
 
 ## Extension points
 

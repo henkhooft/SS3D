@@ -169,7 +169,7 @@ Optional this phase: Effect-tier flash hook if lighting API is ready; else stub 
 |------|----------|
 | Grenade | Syndicate minibomb implemented: arm/throw, five-second fuse, small shared blast; other grenade variants remain |
 | Breaching charge | C4/X4 wall/door attachment implemented; X4 adds a stronger blast and extra cone force behind the target |
-| Timed charge | C4/X4 implemented: 15-second physical LED countdown, a recorded final-five-second countdown, 3-second wirecutter defuse, shared blast resolver; multiplayer acceptance pending |
+| Timed charge | C4/X4 implemented: 15-second physical LED countdown, a recorded full-fuse countdown, 3-second wirecutter defuse, shared blast resolver; multiplayer acceptance pending |
 | Remote detonator | Paired trigger (comms frequency reuse flagged — stub pairing if comms not ready) |
 
 Proximity alert-stack entry when armed charge nears detonation (one HUD touchpoint from design §7).

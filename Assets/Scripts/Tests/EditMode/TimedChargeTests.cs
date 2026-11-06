@@ -37,7 +37,7 @@ namespace EditorTests
                 string id = charge.FindProperty(field).stringValue;
                 Assert.That(id, Is.Not.Empty);
                 Assert.That(sounds.Assets[id], Is.TypeOf<AudioClip>());
-                if (field == "_countdownId") Assert.That(((AudioClip)sounds.Assets[id]).length, Is.EqualTo(5f).Within(0.01f));
+                if (field == "_countdownId") Assert.That(((AudioClip)sounds.Assets[id]).length, Is.EqualTo(fuse).Within(0.01f));
             }
             Assert.NotNull(charge.FindProperty("_wirecuttersAsset").objectReferenceValue);
         }

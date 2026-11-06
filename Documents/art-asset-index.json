@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-06T14:51:03.688737+00:00",
+  "generated_at": "2026-11-06T15:14:20.928541+00:00",
   "purpose": "Agent reference for locating SS3D art assets and determining import status.",
   "sources": {
     "in_game": {
       "root": "Assets/Art",
-      "file_count": 5392
+      "file_count": 5393
     },
     "ss3d_art": {
       "repo": "https://github.com/RE-SS3D/SS3D-Art",
@@ -13,11 +13,11 @@
     }
   },
   "summary": {
-    "in_game_files": 5392,
+    "in_game_files": 5393,
     "ss3d_art_files": 2480,
-    "unique_assets": 7625,
+    "unique_assets": 7626,
     "imported": 247,
-    "in_game_only": 5155,
+    "in_game_only": 5156,
     "ss3d_art_only": 2223,
     "available_for_import": 2008,
     "artwork_only": 215
@@ -81,10 +81,10 @@
     },
     {
       "path": "Sound",
-      "in_game": 182,
+      "in_game": 183,
       "ss3d_art": 218,
       "imported": 89,
-      "in_game_only": 93,
+      "in_game_only": 94,
       "ss3d_art_only": 129
     },
     {
@@ -2219,10 +2219,10 @@
     },
     {
       "path": "Sound/Items/Weapons/Explosive/SS14",
-      "in_game": 3,
+      "in_game": 4,
       "ss3d_art": 0,
       "imported": 0,
-      "in_game_only": 3,
+      "in_game_only": 4,
       "ss3d_art_only": 0
     },
     {
@@ -2992,7 +2992,7 @@
     "blend": 671,
     "fbx": 253,
     "wav": 159,
-    "ogg": 134,
+    "ogg": 135,
     "mp3": 18,
     "ma": 13,
     "mp4": 12,
@@ -77788,6 +77788,17 @@
       "extension": "ogg",
       "category": "Sound/Items/Weapons/Explosive/SS14",
       "in_game_path": "Assets/Art/Sound/Items/Weapons/Explosive/SS14/C4Defused.ogg",
+      "ss3d_art_path": null,
+      "github_url": null,
+      "import_target_path": null,
+      "status": "in_game_only"
+    },
+    {
+      "name": "ChargeCountdown.ogg",
+      "stem": "chargecountdown",
+      "extension": "ogg",
+      "category": "Sound/Items/Weapons/Explosive/SS14",
+      "in_game_path": "Assets/Art/Sound/Items/Weapons/Explosive/SS14/ChargeCountdown.ogg",
       "ss3d_art_path": null,
       "github_url": null,
       "import_target_path": null,

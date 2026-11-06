@@ -21,7 +21,6 @@ namespace SS3D.Systems.StructuralDamage
     {
         public const float FuseSeconds = 15f;
         public const float DefuseSeconds = 3f;
-        public const float CountdownSeconds = 5f;
         [SyncVar] private bool _armed;
         [SyncVar] private double _deadline;
         [SyncVar] private bool _attached;
@@ -87,12 +86,12 @@ namespace SS3D.Systems.StructuralDamage
             if (!IsClient) return;
             _display?.Show(Remaining, _armed, Now);
             if (!_armed) { StopCountdown(); return; }
-            if (Remaining <= 0f || Remaining > CountdownSeconds || _playingDeadline == _deadline) return;
+            if (Remaining <= 0f || _playingDeadline == _deadline) return;
             if (SubSystems.TryGet(out AudioSubSystem audio))
             {
                 _countdown = audio.PlayAudioSourceLocal(AudioType.Sfx, _countdownId, transform.position,
                     GetComponent<NetworkObject>(), volume: 0.7f, minRange: 1f, maxRange: 12f,
-                    startTime: CountdownSeconds - Remaining);
+                    startTime: Mathf.Max(0f, FuseDuration - Remaining));
                 if (_countdown != null) _playingDeadline = _deadline;
             }
         }
