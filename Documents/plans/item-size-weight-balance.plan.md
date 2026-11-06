@@ -4,25 +4,25 @@ overview: Replace the default Normal/1 on every handheld, wearable and material 
 todos:
   - id: table-recipe
     content: "Add ItemSizeWeightRecipe (static path -> size, weight table) and register it on Run Content Prefab Recipes"
-    status: pending
+    status: completed
   - id: fold-recipes
     content: "Make GasTankSetup and SyndicateHardsuitSetup read the table instead of their own constants"
-    status: pending
+    status: completed
   - id: containers
     content: "Extend StorageContainerPrefabSetup: backpack/toolbelt/toolbox/medkit grids, ceilings, MaxWeight; lockers to Huge-max"
-    status: pending
+    status: completed
   - id: seeded-contents
     content: "Audit prefab-seeded contents, role loadouts and map placements against the smaller grids and new ceilings"
-    status: pending
+    status: completed
   - id: tests
     content: "EditMode ItemSizeWeightTableTests: coverage, prefab == table, tier ordering, fit rules, loadout bands"
-    status: pending
+    status: completed
   - id: run-and-verify
     content: "Run the recipe in the Editor, commit the prefab diffs, run Testing/ui/validate.sh --steps compile,editmode"
     status: pending
   - id: docs-sync
     content: "Add the tier rubric to inventory.md; update-system-docs for map, Verified stamp and pitfalls"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -159,4 +159,12 @@ Everyday kit (jumpsuit 1.0, boots 0.8, backpack 0.6, belt 0.5, ID 0.1, PDA 0.4, 
 
 ## Implementation notes
 
-*(Fill in if the shipped result diverges.)*
+Written without a Unity Editor, so the recipe and the tests have **not been run**; `run-and-verify` stays pending until someone runs them. The checked-in prefab values were applied to the YAML by script from the same table and cross-checked against `ItemSizeWeightTable.cs` row by row (57 rows, 0 mismatches), so a first recipe run should produce no diff apart from Unity re-serialising.
+
+Differences from the plan above:
+
+- **Location:** the table and recipe are in `Containers/Editor/` beside `GasTankSetup` (same assembly), not `Items/Editor/`. The EditMode test assembly now references `ContainerEditorAssembly`.
+- **Medkit and toolbox are not in `StorageContainerPrefabSetup.Targets`.** That recipe forces `_isOpenable` and `_onlyStoreWhenOpen` off, which would break both. Their grid, ceiling and readout are `ItemSizeWeightTable.Containers`, applied by `ItemSizeWeightRecipe`.
+- **Prefab variants** (12: three jumpsuits, seven soda cans, `HeadsetSecurity`, `PowerCellAdmin`) have no row of their own. None overrides weight or size, so they inherit their base; the coverage test accepts a variant only when its base has a row and it does not override.
+- **Seeded-contents audit found nothing to fix.** No prefab or station template stores container contents. Loadouts fill only equipment slots and pockets; the pocket items (emergency tank, gas mask) are Small, which pockets still take.
+- **System map** `inventory.md` was edited by hand for the touched sections (rubric, container line, pitfalls, tests). Its `Verified` stamp was not bumped because the rest of the map was not re-checked; run `update-system-docs` for that.
