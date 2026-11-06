@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: ae1a54ed1 — 2026-11-05
+> Verified: 407953d97 — 2026-11-06
 
 # Audio
 
