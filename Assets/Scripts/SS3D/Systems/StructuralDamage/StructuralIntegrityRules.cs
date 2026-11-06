@@ -12,7 +12,7 @@ namespace SS3D.Systems.StructuralDamage
         public const float DefaultWindowMaxIntegrity = 50f;
         public const float DefaultTableMaxIntegrity = 100f;
         public const float DefaultFloorMaxIntegrity = 60f;
-        public const float DefaultPlenumMaxIntegrity = 160f;
+        public const float DefaultPlenumMaxIntegrity = 200f;
 
         /// <summary>Remaining fraction at or below which the tile becomes Damaged.</summary>
         public const float DamagedFraction = 0.7f;

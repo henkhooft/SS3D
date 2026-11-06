@@ -7,11 +7,13 @@
 
 ## Overview
 
-Implements [explosives-destruction.md §3 Floors](../../design/explosives-destruction.md#3-structural-failure--multi-stage-per-tile). Blast force damages the removable Turf floor and the Plenum hull independently, using each object's existing integrity SyncVars. Default integrity is 60 for flooring and 160 for plenum; `TileObjectSo.structuralMaxIntegrity` overrides either. Damage accumulates across explosions. Direct melee/ranged structural hits retain their existing wall/furniture selection.
+Implements [explosives-destruction.md §3 Floors](../../design/explosives-destruction.md#3-structural-failure--multi-stage-per-tile). Blast force damages the removable Turf floor and the Plenum hull independently, using each object's existing integrity SyncVars. Default integrity is 60 for flooring and 200 for plenum; `TileObjectSo.structuralMaxIntegrity` overrides either. Damage accumulates across explosions. Direct melee/ranged structural hits retain their existing wall/furniture selection.
 
 A destroyed floor reveals the existing underfloor plating, cables and pipes. Damaged or cracked plating remains a seal; only removing the plenum makes the tile vacuum. A hull hole clears unsupported structures and infrastructure through the existing tilemap rules, releases world-storage contents first, and notifies mutation observers for every cleared layer. Atmos queues the refresh, then the hole vents adjacent gas through the existing simulation; the tile keeps its area. Damage stages use the existing tint presenter and localized examine text, without a false leak/hiss warning for sealed plating.
 
-Floor removal happens after blast traversal. The traversal records the strongest visit at each tile, so its new holes cannot cut off its own remaining hops. X4 resolves both its radial and directional passes before applying their combined force to the floor/hull. C4 normally breaches the epicenter and strips a wider ring; the minibomb damages plating without breaching fresh hull in one blast. Values remain provisional balance tuning.
+Floor removal happens after blast traversal. The traversal records the strongest visit at each tile, so its new holes cannot cut off its own remaining hops. X4 resolves both its radial and directional passes before applying their combined force to the floor/hull. One C4 strips a wider ring and cracks the plating at its epicenter, but a second blast on that tile is needed to space it. X4 breaches fresh hull at its target and two tiles further through it, while the room side keeps its plating. The minibomb only dents plating. Values remain provisional balance tuning.
+
+**Divergence from design:** [explosives-destruction.md §8 example E](../../design/explosives-destruction.md#8-worked-examples) has a charge set on a corridor floor breaching the plating. X4 can only be armed on a wall or door, so the only charge that can sit on a floor is C4, and that no longer breaches undamaged hull. This was the owner's balance call on 2026-11-06, in line with C4 in SS13 and SS14.
 
 Hull repair/rebuilding remains the construction milestone's separate work. Damage uses the existing replicated integrity fields and tile despawns; no new protocol or persistence fields were added.
 
@@ -42,7 +44,7 @@ Hull repair/rebuilding remains the construction milestone's separate work. Damag
 
 - `BlastFloorDamageTests`: stage/accumulation, exposed plating stays sealed, full breaches clear and notify infrastructure, deferred propagation, X4 directional hull damage and actual atmosphere loss through a hull hole.
 - Related focused suites: `BlastResolutionTests`, `StructuralDamageTests`, `TileMapIntegrationTests`.
-- Host acceptance checks real floor removal, a wider exposed-plating ring, a vacuum epicenter and pressure loss. Separate-client acceptance remains pending.
+- Host acceptance checked real floor removal, a wider exposed-plating ring, a vacuum epicenter and pressure loss, before plenum integrity rose from 160 to 200. It has not been repeated since. Separate-client acceptance remains pending.
 
 ## Depends on / Used by
 

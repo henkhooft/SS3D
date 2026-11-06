@@ -164,7 +164,7 @@ Optional this phase: Effect-tier flash hook if lighting API is ready; else stub 
 
 ---
 
-Floor/hull blast damage now uses independent accumulated integrity (defaults 60/160) and runs after traversal; X4 combines both passes first. Hull removal releases world storage, notifies infrastructure clears and opens vacuum through the existing atmos observer. Floor presenters and sealed-plating examine strings are recipe-managed. Hull rebuilding remains deferred.
+Floor/hull blast damage now uses independent accumulated integrity (defaults 60/200) and runs after traversal; X4 combines both passes first. Hull removal releases world storage, notifies infrastructure clears and opens vacuum through the existing atmos observer. Floor presenters and sealed-plating examine strings are recipe-managed. Hull rebuilding remains deferred.
 
 ## Phase 5 — Explosive items
 
