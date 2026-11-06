@@ -75,6 +75,7 @@ namespace SS3D.UI.MainHud.Commands
                 case AlertHazard.CardiacArrest: state.CardiacArrest = severity; break;
                 case AlertHazard.SealBreach: state.SealBreach = severity; break;
                 case AlertHazard.Invincible: state.Invincible = severity; break;
+                case AlertHazard.TankLow: state.TankLow = severity; break;
             }
         }
     }

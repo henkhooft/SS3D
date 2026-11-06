@@ -26,6 +26,13 @@ namespace SS3D.UI.MainHud
         public Sprite CardiacArrest;
         public Sprite SealBreach;
         public Sprite Invincible;
+        public Sprite TankLow;
+
+        /// <summary>The internals chip beside the hands; it is not a hazard.</summary>
+        public Sprite Internals;
+
+        /// <summary>The magboots chip beside the hands; it is not a hazard.</summary>
+        public Sprite Magboots;
 
         public Sprite this[Components.AlertHazard hazard] => hazard switch
         {
@@ -45,6 +52,7 @@ namespace SS3D.UI.MainHud
             Components.AlertHazard.CardiacArrest => CardiacArrest,
             Components.AlertHazard.SealBreach => SealBreach,
             Components.AlertHazard.Invincible => Invincible,
+            Components.AlertHazard.TankLow => TankLow,
             _ => null,
         };
     }
