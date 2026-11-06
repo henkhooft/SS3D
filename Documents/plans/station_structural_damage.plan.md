@@ -164,6 +164,8 @@ Optional this phase: Effect-tier flash hook if lighting API is ready; else stub 
 
 ---
 
+Bodies in a blast are pushed away from the epicenter and knocked down close to it; see [explosive items](../architecture/systems/structural-destruction-explosives.md).
+
 Floor/hull blast damage now uses independent accumulated integrity (defaults 60/200) and runs after traversal; X4 combines both passes first. Hull removal releases world storage, notifies infrastructure clears and opens vacuum through the existing atmos observer. Floor presenters and sealed-plating examine strings are recipe-managed. Hull rebuilding remains deferred.
 
 ## Phase 5 — Explosive items

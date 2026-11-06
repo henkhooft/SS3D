@@ -22,28 +22,32 @@ namespace SS3D.Systems.StructuralDamage
         private readonly IStructuralDamageService _structural;
         private readonly Action<TileCoord, float> _applyCrewBrute;
         private readonly Action<TileCoord, float> _applyFloorDamage;
+        private readonly Action<TileCoord, IReadOnlyDictionary<TileCoord, float>> _applyCrewPush;
 
         /// <param name="applyCrewBrute">Optional; invoked as (tile, force) for each BFS visit.</param>
+        /// <param name="applyCrewPush">Optional; invoked once per detonation as (epicenter, force per tile, summed over passes).</param>
         public BlastResolutionService(
             ITileQueryService query,
             IStructuralDamageService structural,
             Action<TileCoord, float> applyCrewBrute = null,
-            Action<TileCoord, float> applyFloorDamage = null)
+            Action<TileCoord, float> applyFloorDamage = null,
+            Action<TileCoord, IReadOnlyDictionary<TileCoord, float>> applyCrewPush = null)
         {
             _query = query;
             _structural = structural;
             _applyCrewBrute = applyCrewBrute;
             _applyFloorDamage = applyFloorDamage;
+            _applyCrewPush = applyCrewPush;
         }
 
         public void Resolve(TileCoord epicenter, float yield, float falloff)
-            => ApplyFloors(ResolveInternal(epicenter, yield, falloff, Vector2.zero));
+            => FinishBlast(epicenter, ResolveInternal(epicenter, yield, falloff, Vector2.zero));
 
         /// <summary>Additional shaped-charge force in a 90-degree cone. Still respects barriers and plenum.</summary>
         public void ResolveCone(TileCoord epicenter, float yield, float falloff, Vector2 forward)
         {
             if (forward.sqrMagnitude < 0.01f) return;
-            ApplyFloors(ResolveInternal(epicenter, yield, falloff, forward.normalized));
+            FinishBlast(epicenter, ResolveInternal(epicenter, yield, falloff, forward.normalized));
         }
 
         public void ResolveShaped(TileCoord epicenter, float radialYield, float radialFalloff,
@@ -56,13 +60,14 @@ namespace SS3D.Systems.StructuralDamage
                     forces.TryGetValue(entry.Key, out float existing);
                     forces[entry.Key] = existing + entry.Value;
                 }
-            ApplyFloors(forces);
+            FinishBlast(epicenter, forces);
         }
 
-        private void ApplyFloors(Dictionary<TileCoord, float> forces)
+        private void FinishBlast(TileCoord epicenter, Dictionary<TileCoord, float> forces)
         {
-            if (_applyFloorDamage == null) return;
-            foreach (KeyValuePair<TileCoord, float> entry in forces) _applyFloorDamage(entry.Key, entry.Value);
+            if (_applyFloorDamage != null)
+                foreach (KeyValuePair<TileCoord, float> entry in forces) _applyFloorDamage(entry.Key, entry.Value);
+            if (forces.Count > 0) _applyCrewPush?.Invoke(epicenter, forces);
         }
 
         public static bool IsInCone(Vector2 offset, Vector2 forward) => offset.sqrMagnitude < 0.001f

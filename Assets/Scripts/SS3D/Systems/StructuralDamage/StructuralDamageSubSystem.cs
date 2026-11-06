@@ -1,6 +1,7 @@
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Health;
 using SS3D.Systems.Tile;
 using System.Collections.Generic;
@@ -149,7 +150,7 @@ namespace SS3D.Systems.StructuralDamage
             _boundQuery = tiles.QueryService;
             _boundConstruction = tiles.Construction;
             _service = new StructuralDamageService(_boundQuery, _boundConstruction);
-            _blast = new BlastResolutionService(_boundQuery, _service, ApplyCrewBlastBrute, _service.ApplyBlastFloorDamage);
+            _blast = new BlastResolutionService(_boundQuery, _service, ApplyCrewBlastBrute, _service.ApplyBlastFloorDamage, ApplyCrewBlastPush);
         }
 
         private void ApplyCrewBlastBrute(TileCoord coord, float force)
@@ -191,6 +192,32 @@ namespace SS3D.Systems.StructuralDamage
                 }
 
                 TryDamageIfOnTile(health, coord, force);
+            }
+        }
+
+        /// <summary>Runs once all passes are done, so a body gets one push from one detonation.</summary>
+        private void ApplyCrewBlastPush(TileCoord epicenter, IReadOnlyDictionary<TileCoord, float> forces)
+        {
+            if (_boundQuery == null)
+            {
+                return;
+            }
+
+            Vector3 origin = _boundQuery.TileToWorld(epicenter);
+            foreach (Ragdoll body in Ragdoll.WindBodies)
+            {
+                if (body == null || !body.IsServer)
+                {
+                    continue;
+                }
+
+                Vector3 position = body.WindSamplePosition;
+                if (!forces.TryGetValue(_boundQuery.WorldToTile(position, epicenter.MapId), out float force))
+                {
+                    continue;
+                }
+
+                body.ServerApplyBlast(BlastPush.Velocity(origin, position, -body.transform.forward, force), BlastPush.KnocksDown(force));
             }
         }
 
