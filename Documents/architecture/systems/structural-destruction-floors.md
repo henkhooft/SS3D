@@ -43,6 +43,7 @@ Hull repair/rebuilding remains the construction milestone's separate work. Damag
 ## Tests
 
 - `BlastFloorDamageTests`: stage/accumulation, exposed plating stays sealed, full breaches clear and notify infrastructure, deferred propagation, X4 directional hull damage and actual atmosphere loss through a hull hole.
+- `ExplosivesScenarios` (`scenarios:Explosives`): a real C4 in the test room cracks the plating and holds the air, surrounding plenums draw in the same frame, and a second blast breaches and vents.
 - Related focused suites: `BlastResolutionTests`, `StructuralDamageTests`, `TileMapIntegrationTests`.
 - Host acceptance checked real floor removal, a wider exposed-plating ring, a vacuum epicenter and pressure loss, before plenum integrity rose from 160 to 200. It has not been repeated since. Separate-client acceptance remains pending.
 

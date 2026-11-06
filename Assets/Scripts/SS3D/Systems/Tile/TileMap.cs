@@ -543,9 +543,10 @@ namespace SS3D.Systems.Tile
             ITileLocation tileLocation = tileLocations[(int)layer];
             tileLocation.TryGetPlacedObject(out PlacedTileObject placed, dir);
 
-            // Capture turf footprint before DestroySelf so underfloor can reappear after clear.
+            // Capture the footprint before DestroySelf so underfloor can reappear after clear. A plenum
+            // counts too: clearing it cascades to the turf above without going through this branch.
             List<Vector3> underfloorRefreshCells = null;
-            if (layer == TileLayer.Turf && placed != null)
+            if (layer is TileLayer.Turf or TileLayer.Plenum && placed != null)
             {
                 underfloorRefreshCells = new List<Vector3>();
                 Vector3 turfOrigin = new Vector3(placed.WorldOrigin.x, 0f, placed.WorldOrigin.y);
