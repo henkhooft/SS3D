@@ -187,6 +187,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             AddToolButton(_leftToolbar, MapEditorTool.Select, "Select [2]");
             AddToolButton(_leftToolbar, MapEditorTool.Dropper, "Dropper [3]");
             AddToolButton(_leftToolbar, MapEditorTool.Delete, "Delete [4]");
+            AddToolButton(_leftToolbar, MapEditorTool.Use, "Use machine [5]");
             AddSeparator(_leftToolbar, vertical: true);
 
             Button undo = CreateIconButton(_icons?.Undo, null, () => UndoRequested?.Invoke());

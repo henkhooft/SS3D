@@ -1,6 +1,7 @@
 using SS3D.Core;
 using SS3D.Core.Behaviours;
 using SS3D.Systems.Inputs;
+using SS3D.Systems.Tile.MapEditor;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -49,6 +50,12 @@ namespace SS3D.UI.MachineInterface
             _openInterfaceId = interfaceId;
             _openModel = viewModel;
             SetGameplayInputBlocked(true);
+            if (SubSystems.TryGet(out MapEditorSubSystem mapEditor))
+            {
+                mapEditor.EditorClosed -= HandleMapEditorClosed;
+                mapEditor.EditorClosed += HandleMapEditorClosed;
+            }
+
             InterfaceOpened?.Invoke();
         }
 
@@ -125,6 +132,15 @@ namespace SS3D.UI.MachineInterface
 
             _clientBridge?.RequestClose();
             Close();
+        }
+
+        /// <summary>The editor's Use tool may have opened this far from the body the editor hands back.</summary>
+        private void HandleMapEditorClosed()
+        {
+            if (IsOpen)
+            {
+                RequestCloseFromUi(_openInterfaceId);
+            }
         }
 
         public void NotifyClosed(string interfaceId)
@@ -255,6 +271,11 @@ namespace SS3D.UI.MachineInterface
 
         protected override void OnDestroyed()
         {
+            if (SubSystems.TryGet(out MapEditorSubSystem mapEditor))
+            {
+                mapEditor.EditorClosed -= HandleMapEditorClosed;
+            }
+
             MachineInterfaceHost host = GetHost();
             host?.CloseImmediate();
             FinishClose();

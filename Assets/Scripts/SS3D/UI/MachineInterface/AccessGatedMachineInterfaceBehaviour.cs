@@ -47,6 +47,21 @@ namespace SS3D.UI.MachineInterface
             _authLogDevice = GetComponent<AuthLogDeviceBehaviour>();
         }
 
+        /// <summary>A map author needs no ID, and may be a ghost with no inventory to scan.</summary>
+        public override void ServerOpenForMapEditor(NetworkConnection conn)
+        {
+            if (_scanCoroutine != null)
+            {
+                StopCoroutine(_scanCoroutine);
+                _scanCoroutine = null;
+            }
+
+            _accessScanning = false;
+            _accessDenied = false;
+            _accessGranted = true;
+            base.ServerOpenForMapEditor(conn);
+        }
+
         protected override bool ApplyActionControl(byte controlId, int value)
         {
             if (controlId != ReadIdControlId)

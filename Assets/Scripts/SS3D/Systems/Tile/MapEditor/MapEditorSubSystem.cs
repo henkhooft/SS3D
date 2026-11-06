@@ -48,6 +48,8 @@ namespace SS3D.Systems.Tile.MapEditor
         [SerializeField] private ConstructionHologramManager _hologramManager;
 
         private readonly MapEditorViewModel _viewModel = new();
+        private bool _chromeHiddenForMachine;
+        private bool _hideUiBeforeMachine;
         private MapEditorGameplayHud _gameplayHud;
         private readonly MapEditorCatalog _catalog = new();
         private readonly MapEditorSession _session = new();
@@ -366,6 +368,8 @@ namespace SS3D.Systems.Tile.MapEditor
             if (active)
             {
                 _viewModel.HideUI = false;
+                _chromeHiddenForMachine = false;
+                _hideUiBeforeMachine = false;
                 EnableDocument();
                 RebuildCatalog();
                 EnsureCommandServiceBound();
@@ -551,7 +555,10 @@ namespace SS3D.Systems.Tile.MapEditor
 
             UpdatePendingValidation();
 
-            if (_session.IsActive)
+            // The panel captures the keyboard like it does for a body; the session polls devices directly.
+            bool machineOpen = _inputSystem.IsContextPushed(InputContext.MachineUI);
+            UpdateChromeForMachinePanel(machineOpen);
+            if (_session.IsActive && !machineOpen)
                 _session.Update(updateEvent.DeltaTime);
 
             // While orbiting, skip UI hover / tool clicks — placement picks are frozen too.
@@ -570,6 +577,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
                 if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Move && !MouseOverUI)
                     HandleMoveInput();
+
+                if (!IsRoomCategory && _viewModel.CurrentTool == MapEditorTool.Use && _controls.Place.WasPerformedThisFrame() && !MouseOverUI)
+                    HandleUseClick();
             }
             else
             {
@@ -578,13 +588,13 @@ namespace SS3D.Systems.Tile.MapEditor
             }
             if (Keyboard.current != null)
             {
-                if (Keyboard.current.f7Key.wasPressedThisFrame)
+                if (Keyboard.current.f7Key.wasPressedThisFrame && !machineOpen)
                 {
                     _viewModel.HideUI = !_viewModel.HideUI;
                     _viewModel.NotifyChanged();
                 }
 
-                if (!InputInterface.IsCapturingText)
+                if (!InputInterface.IsCapturingText && !machineOpen)
                 {
                     HandleToolHotkeys();
 
@@ -710,6 +720,31 @@ namespace SS3D.Systems.Tile.MapEditor
             RpcMoveObject(_moveAssetName, _moveSource.Value, destination, _moveDirection, _moveIsItem, LocalConnection);
             _moveSource = null;
             _moveAssetName = null;
+        }
+
+        /// <summary>The editor's chrome draws over the machine panel, so it steps aside while one is open.</summary>
+        private void UpdateChromeForMachinePanel(bool machineOpen)
+        {
+            if (machineOpen == _chromeHiddenForMachine)
+                return;
+
+            _chromeHiddenForMachine = machineOpen;
+            if (machineOpen)
+                _hideUiBeforeMachine = _viewModel.HideUI;
+
+            _viewModel.HideUI = machineOpen || _hideUiBeforeMachine;
+            _viewModel.NotifyChanged();
+        }
+
+        private void HandleUseClick()
+        {
+            if (!MapEditorCursorPick.TryPickMachine(PickCamera, _tileSystem.CurrentMap, _viewModel, out IMapEditorUsable machine))
+            {
+                _viewModel.ShowToast("No machine here");
+                return;
+            }
+
+            RpcUseMachine(machine.NetworkObject, LocalConnection);
         }
 
         private void UpdateMouseOverUI()
@@ -847,6 +882,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 OnToolSelected(MapEditorTool.Dropper);
             else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame)
                 OnToolSelected(MapEditorTool.Delete);
+            else if (keyboard.digit5Key.wasPressedThisFrame || keyboard.numpad5Key.wasPressedThisFrame)
+                OnToolSelected(MapEditorTool.Use);
         }
 
         private static bool IsChordModifierPressed(Keyboard keyboard) =>
@@ -1164,6 +1201,19 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             _viewModel.SearchText = text;
             _viewModel.NotifyChanged();
+        }
+
+        /// <summary>
+        /// The Use tool. This open path skips range and ID on purpose, so it stays limited to machine
+        /// panels for anyone the editor already authorizes; it is not a general reach bypass.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        private void RpcUseMachine(NetworkObject machine, NetworkConnection conn = null)
+        {
+            if (machine == null || !MapEditorPermissions.TryAuthorize(conn))
+                return;
+
+            machine.GetComponentInChildren<IMapEditorUsable>()?.ServerOpenForMapEditor(conn);
         }
 
         [ServerRpc(RequireOwnership = false)]

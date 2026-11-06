@@ -4,6 +4,7 @@ using System.Reflection;
 using FishNet;
 using NUnit.Framework;
 using SS3D.Core;
+using SS3D.Systems.Inputs;
 using SS3D.Systems.Tile;
 using SS3D.Systems.Tile.MapEditor;
 using UnityEngine;
@@ -45,6 +46,42 @@ namespace SS3D.Tests
                 SetEditorActive(editor, false);
                 yield return null;
                 Assert.IsFalse(AnyRendererEnabled(placed), "Outside the editor, AOI hides the tile again");
+            }
+            finally
+            {
+                if (editor.IsActive)
+                    SetEditorActive(editor, false);
+            }
+        }
+
+        // Guards: the Use tool opens a machine for an author far from the body and outside its AOI, with no ID, and closing the editor closes the panel (MapEditorSubSystem.RpcUseMachine) · Not cheaper because: the panel is a TargetRpc on a real spawned machine, which only reaches the client in a running host
+        [UnityTest]
+        public IEnumerator UseTool_OpensAMachineOutOfRange_WithoutAnId()
+        {
+            ChangesRoom = true;
+            MapEditorSubSystem editor = SubSystems.Get<MapEditorSubSystem>();
+            TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+            InputSubSystem input = SubSystems.Get<InputSubSystem>();
+
+            SetEditorActive(editor, true);
+            try
+            {
+                yield return Hold(0.2f);
+                Assert.IsTrue(tiles.CurrentMap.PlaceTileObject((TileObjectSo)tiles.GetAsset("APC"), OutsideHostAoi, Direction.North,
+                    true, false, false, out GameObject instance), "The APC is placed");
+                yield return Hold(0.2f);
+
+                IMapEditorUsable apc = instance.GetComponentInChildren<IMapEditorUsable>();
+                Assert.IsNotNull(apc, "An APC is a machine the tool can open");
+                Assert.IsFalse(apc.NetworkObject.Observers.Contains(InstanceFinder.ClientManager.Connection),
+                    "The APC is outside the host's AOI");
+
+                typeof(MapEditorSubSystem).GetMethod("RpcUseMachine", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(editor, new object[] { apc.NetworkObject, null });
+                yield return WaitFor(() => input.IsContextPushed(InputContext.MachineUI), "the APC panel to open");
+
+                SetEditorActive(editor, false);
+                yield return WaitFor(() => !input.IsContextPushed(InputContext.MachineUI), "closing the editor to close the panel");
             }
             finally
             {

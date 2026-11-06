@@ -257,6 +257,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
+            if (CurrentTool == MapEditorTool.Use)
+            {
+                SelectedObjectHint = "Use tool active — click a machine to open it, at any range and without an ID";
+                return;
+            }
+
             SelectedObjectHint = SelectedAsset != null
                 ? "Select the Edit tool to place this object"
                 : "Choose an object from the library";

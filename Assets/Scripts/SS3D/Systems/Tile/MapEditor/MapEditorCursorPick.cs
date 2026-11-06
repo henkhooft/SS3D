@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace SS3D.Systems.Tile.MapEditor
 {
     /// <summary>
-    /// Resolves which placed object is under the map-editor cursor for Select / Dropper / Move.
+    /// Resolves which placed object is under the map-editor cursor for Select / Dropper / Move / Use.
     /// </summary>
     public static class MapEditorCursorPick
     {
@@ -59,6 +59,40 @@ namespace SS3D.Systems.Tile.MapEditor
                 return true;
 
             return TryPickFromLayers(locations, viewModel, requireVisible: false, out placedTile);
+        }
+
+        /// <summary>
+        /// The machine under the cursor. A ray stops at the floor over a vent and at the wall under a
+        /// mount, so after the plain pick this looks through every layer of the pointed tile.
+        /// </summary>
+        public static bool TryPickMachine(Camera camera, TileMap map, MapEditorViewModel viewModel, out IMapEditorUsable machine)
+        {
+            machine = null;
+            if (TryPick(camera, map, viewModel, out PlacedTileObject placed, out _) && placed != null)
+            {
+                machine = placed.GetComponentInChildren<IMapEditorUsable>();
+                if (machine != null)
+                    return true;
+            }
+
+            if (map == null || !map.TryGetTileLocations(TileHelper.GetPointedPosition(true, camera), out ITileLocation[] locations))
+                return false;
+
+            foreach (TileLayer layer in LayerPickOrder)
+            {
+                int index = (int)layer;
+                if (index < 0 || index >= locations.Length || locations[index] == null || locations[index].IsFullyEmpty())
+                    continue;
+
+                foreach (PlacedTileObject candidate in locations[index].GetAllPlacedObject())
+                {
+                    machine = candidate != null ? candidate.GetComponentInChildren<IMapEditorUsable>() : null;
+                    if (machine != null)
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryRaycastItem(Camera camera, out PlacedItemObject item)

@@ -14,5 +14,6 @@ namespace SS3D.Systems.Tile.MapEditor
         Area,
         Dropper,
         Delete,
+        Use,
     }
 }

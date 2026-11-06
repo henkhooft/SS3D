@@ -8,12 +8,13 @@ using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Tile.MapEditor;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace SS3D.UI.MachineInterface
 {
-    public abstract class MachineInterfaceBehaviour : InteractionTargetNetworkBehaviour, IMachineInterfaceProvider, IMachineInterfaceClientBridge
+    public abstract class MachineInterfaceBehaviour : InteractionTargetNetworkBehaviour, IMachineInterfaceProvider, IMachineInterfaceClientBridge, IMapEditorUsable
     {
         private readonly HashSet<NetworkConnection> _viewers = new();
 
@@ -86,6 +87,19 @@ namespace SS3D.UI.MachineInterface
             }
 
             OpenInterfaceForViewer(conn);
+        }
+
+        /// <summary>
+        /// The map editor's Use tool: opens without the range check, because the editor camera leaves the
+        /// body behind. <c>MapEditorSubSystem</c> has already authorized <paramref name="conn"/>.
+        /// </summary>
+        [Server]
+        public virtual void ServerOpenForMapEditor(NetworkConnection conn)
+        {
+            if (conn != null && conn.IsValid)
+            {
+                OpenInterfaceForViewer(conn);
+            }
         }
 
         [ServerRpc(RequireOwnership = false)]

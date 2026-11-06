@@ -7,7 +7,8 @@ namespace SS3D.UI.MachineInterface
 {
     /// <summary>
     /// Opens a machine panel via the validated server interaction path only.
-    /// Do not add a client open ServerRpc — that bypasses range checks.
+    /// Do not add a client open ServerRpc — that bypasses range checks. The map editor's Use tool is the
+    /// one exception, behind its own authorization (<c>MapEditorSubSystem.RpcUseMachine</c>).
     /// </summary>
     public sealed class OpenMachineInterfaceInteraction : IInteraction
     {
