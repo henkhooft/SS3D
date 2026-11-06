@@ -90,16 +90,16 @@ namespace EditorTests.Atmospherics
             Assert.AreEqual(250f, AtmosPipeThermo.GetPressure(moles, 293f, 5f, 1), 0.01f);
         }
 
-        [TestCase(1, 4f)]
-        [TestCase(5, 20f)]
-        [TestCase(10, 40f)]
+        [TestCase(1, 6f)]
+        [TestCase(5, 30f)]
+        [TestCase(10, 60f)]
         public void Scrubber_GetRatedFlowMolesPerSecond_ScalesWithFlowRate(int flowRate, float expected)
         {
             Assert.AreEqual(expected, ScrubberController.GetRatedFlowMolesPerSecond(flowRate), 0.001f);
         }
 
-        [TestCase(0, 4f)]
-        [TestCase(11, 40f)]
+        [TestCase(0, 6f)]
+        [TestCase(11, 60f)]
         public void Scrubber_GetRatedFlowMolesPerSecond_ClampsFlowRate(int flowRate, float expected)
         {
             Assert.AreEqual(expected, ScrubberController.GetRatedFlowMolesPerSecond(flowRate), 0.001f);

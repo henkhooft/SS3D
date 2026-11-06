@@ -170,7 +170,7 @@ namespace SS3D.Tests
             valve.ServerSetEnabled(true);
             yield return WaitFor(() => outlet.IsPortFlowing, "the hull vent runs once the valve opens", 10f);
 
-            // One vent drains the whole 60 m³ line, so it halves in over half a minute.
+            // One vent drains the whole 60 m³ line.
             yield return WaitFor(() => waste.GetTotalMoles(AtmosConstants.DefaultGasCount) < heldMoles * 0.9f,
                 "Waste drains out through the hull", 30f);
         }

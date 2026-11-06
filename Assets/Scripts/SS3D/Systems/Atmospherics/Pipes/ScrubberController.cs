@@ -141,7 +141,8 @@ namespace SS3D.Systems.Atmospherics.Pipes
             }
 
             float pressureFactor = Mathf.Clamp01((differential + maxDiff) / maxDiff);
-            float budgetMoles = GetRatedFlowMolesPerSecond(_flowRate) * pressureFactor * deltaTime;
+            float ratedFlow = _isAirIntake ? AtmosPortConstants.AirIntakeRatedFlowMolesPerSecond : GetRatedFlowMolesPerSecond(_flowRate);
+            float budgetMoles = ratedFlow * pressureFactor * deltaTime;
 
             if (budgetMoles <= 0f)
                 return false;

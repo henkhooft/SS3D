@@ -1,5 +1,6 @@
 using FishNet.Object.Synchronizing;
 using FishNet.Object;
+using SS3D.Core;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Tile;
 using UnityEngine;
@@ -27,6 +28,22 @@ namespace SS3D.Systems.Atmospherics.Pipes
             _targetPressureKpa = Mathf.Clamp(targetKpa, 0, 200);
         }
 
+        /// <summary>Pressure in the room and in the line this vent draws on; the line reads 0 with no pipe.</summary>
+        public void GetPressures(out float roomKpa, out float lineKpa)
+        {
+            roomKpa = 0f;
+            lineKpa = 0f;
+            if (!SubSystems.TryGet(out AtmosSubSystem atmos) || atmos.Simulation == null)
+                return;
+
+            roomKpa = atmos.Simulation.GetCellPressure(OriginTile);
+            if (TryGetConnectedNetwork(out GasPipeNetworkId networkId)
+                && atmos.PipeRegistry.TryGetNetwork(networkId, out GasPipeNetworkRecord network))
+            {
+                lineKpa = network.GetPressure(AtmosConstants.DefaultGasCount);
+            }
+        }
+
         public override TileLayer[] PipeLayers => AtmosDevicePipeResolver.VentLayers;
 
         protected override bool RunPortTick(
@@ -52,7 +69,7 @@ namespace SS3D.Systems.Atmospherics.Pipes
                 networkPressure,
                 turfPressure,
                 AtmosPortConstants.VentRatedFlowMolesPerSecond,
-                AtmosPortConstants.PortMaxDifferentialKpa,
+                AtmosPortConstants.VentFullFlowDifferentialKpa,
                 deltaTime);
 
             return ReleaseToTurf(pipeSimulation, networkId, network, budgetMoles);

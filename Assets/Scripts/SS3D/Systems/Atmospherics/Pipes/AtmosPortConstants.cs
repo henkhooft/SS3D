@@ -3,10 +3,16 @@ namespace SS3D.Systems.Atmospherics.Pipes
     public static class AtmosPortConstants
     {
         /// <summary>Rated vent throughput under ideal differential (moles/s total mixture).</summary>
-        public const float VentRatedFlowMolesPerSecond = 50f;
+        public const float VentRatedFlowMolesPerSecond = 100f;
+
+        /// <summary>Gap between line and tile above which a vent runs at its rated flow (kPa).</summary>
+        public const float VentFullFlowDifferentialKpa = 20f;
 
         /// <summary>Rated scrubber throughput for filtered gases (moles/s).</summary>
-        public const float ScrubberRatedFlowMolesPerSecond = 40f;
+        public const float ScrubberRatedFlowMolesPerSecond = 60f;
+
+        /// <summary>Rated throughput of a chamber intake (moles/s), matching the pump that follows it.</summary>
+        public const float AirIntakeRatedFlowMolesPerSecond = 100f;
 
         /// <summary>Backpressure differential at which port flow tapers to zero (kPa).</summary>
         public const float PortMaxDifferentialKpa = 101.325f;

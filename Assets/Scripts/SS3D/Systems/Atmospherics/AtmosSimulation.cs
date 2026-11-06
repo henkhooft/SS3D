@@ -333,9 +333,17 @@ namespace SS3D.Systems.Atmospherics
             if (!_coordToIndex.TryGetValue(coord, out int cellIndex))
                 return;
 
-            InitCell(cellIndex, coord);
+            AtmosCellMeta previous = _cellMeta[cellIndex];
+            bool wasOpen = previous.Volume > 0f && previous.State is not (AtmosCellState.Blocked or AtmosCellState.Vacuum);
+            if (!wasOpen || !IsOpenTile(coord))
+                InitCell(cellIndex, coord);
+
             ClearEdgeFlows(cellIndex, coord);
             RebuildNeighboursAround(coord);
+
+            if (previous.State == AtmosCellState.Blocked && _cellMeta[cellIndex].State is not (AtmosCellState.Blocked or AtmosCellState.Vacuum))
+                LevelWithNeighbours(cellIndex);
+
             ActivateRegion(coord, 1);
         }
 
@@ -568,6 +576,51 @@ namespace SS3D.Systems.Atmospherics
             _cellMeta[cellIndex] = meta;
             _cellMetaWrite[cellIndex] = meta;
             QueueActivate(cellIndex);
+        }
+
+        private bool IsOpenTile(TileCoord coord) =>
+            _query.TryGetOccupancy(coord, out TileOccupancy occupancy)
+            && occupancy.HasPlenum
+            && !(occupancy.HasWall && occupancy.IsAirtight);
+
+        // A wall or door that goes starts level with the air around it, so opening one is never a
+        // source of gas: an emptied room stays empty, and a full room feels no draught.
+        private void LevelWithNeighbours(int cellIndex)
+        {
+            int baseIndex = cellIndex * AtmosConstants.MaxGasTypes;
+            ClearMoles(cellIndex);
+
+            int count = 0;
+            float weightedTemperature = 0f;
+            float totalMoles = 0f;
+            for (int direction = 0; direction < 4; direction++)
+            {
+                int neighbour = _neighbours[cellIndex].Get(direction);
+                if (neighbour < 0 || _cellMeta[neighbour].State is AtmosCellState.Blocked or AtmosCellState.Vacuum)
+                    continue;
+
+                count++;
+                float moles = GetCellMoles(neighbour);
+                totalMoles += moles;
+                weightedTemperature += moles * _cellMeta[neighbour].Temperature;
+
+                int neighbourBase = neighbour * AtmosConstants.MaxGasTypes;
+                for (int id = 0; id < _gasTypeCount; id++)
+                    _molesRead[baseIndex + id] += _molesRead[neighbourBase + id];
+            }
+
+            for (int id = 0; id < _gasTypeCount && count > 0; id++)
+            {
+                _molesRead[baseIndex + id] /= count;
+                _molesWrite[baseIndex + id] = _molesRead[baseIndex + id];
+            }
+
+            AtmosCellMeta meta = _cellMeta[cellIndex];
+            if (totalMoles > 0f)
+                meta.Temperature = weightedTemperature / totalMoles;
+
+            _cellMeta[cellIndex] = meta;
+            _cellMetaWrite[cellIndex] = meta;
         }
 
         // A changed cell starts from rest: a door that opens later must not resume the old flow.
