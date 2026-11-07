@@ -569,8 +569,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             IReadOnlyList<MapEditorHeadingGroup> groups =
                 MapEditorCatalog.GroupByHeading(MapEditorSubTabs.Get(_vm.CurrentSubcategory), entryList);
+            // Headings count entries, not slots (S6 decision 9); families fold within each heading.
             foreach (MapEditorHeadingGroup group in groups)
-                AddHeadedGroup(group.Heading, "grid-heading-" + group.Heading, group.Entries);
+                AddHeadedGroup(group.Heading, "grid-heading-" + group.Heading, MapEditorCatalog.GroupFamilies(group.Entries));
         }
 
         /// <summary>Palette-wide search: every tab's matches, each group headed with where it lives.</summary>
@@ -584,31 +585,31 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
 
             foreach (MapEditorSearchGroup group in groups)
-                AddHeadedGroup(group.Heading, "search-group-" + group.SubTab.Id, group.Entries);
+                AddHeadedGroup(group.Heading, "search-group-" + group.SubTab.Id, _catalog.SlotsFor(group.Entries));
         }
 
         /// <summary>
         /// A group's slots under its heading. The compact view shows one slot row, so a heading above it would
         /// overflow; there the heading runs up the left of the group's first row instead.
         /// </summary>
-        private void AddHeadedGroup(string heading, string name, IReadOnlyList<MapEditorCatalogEntry> entries)
+        private void AddHeadedGroup(string heading, string name, IReadOnlyList<MapEditorPaletteSlot> slots)
         {
             if (heading == null)
             {
-                AddSlotRows(entries);
+                AddSlotRows(slots);
                 return;
             }
 
             if (_paletteMode == PaletteMode.Normal)
             {
-                AddSlotRows(entries, heading, name);
+                AddSlotRows(slots, heading, name);
                 return;
             }
 
             Label label = new(heading.ToUpperInvariant()) { name = name };
             label.AddToClassList("map-editor-grid-heading");
             _grid.Add(label);
-            AddSlotRows(entries);
+            AddSlotRows(slots);
         }
 
         private static VisualElement SideHeading(string heading, string name)
@@ -634,14 +635,14 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         }
 
         /// <param name="sideHeading">Compact view: the heading beside the first row; later rows get an empty column so slots line up.</param>
-        private void AddSlotRows(IReadOnlyList<MapEditorCatalogEntry> entries, string sideHeading = null, string headingName = null)
+        private void AddSlotRows(IReadOnlyList<MapEditorPaletteSlot> slots, string sideHeading = null, string headingName = null)
         {
             int columnCount = GetMaxGridColumns(sideHeading != null ? GridSideHeadingOuterWidthPx : 0f);
             if (columnCount <= 0)
-                columnCount = Math.Max(1, entries.Count);
+                columnCount = Math.Max(1, slots.Count);
 
             VisualElement row = null;
-            for (int index = 0; index < entries.Count; index++)
+            for (int index = 0; index < slots.Count; index++)
             {
                 if (index % columnCount == 0)
                 {
@@ -652,7 +653,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                     _grid.Add(row);
                 }
 
-                row.Add(BuildSlot(entries[index]));
+                row.Add(BuildSlot(slots[index]));
             }
         }
 
@@ -684,8 +685,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             return Math.Max(1, Mathf.FloorToInt((width - reservedWidth) / GridSlotOuterWidthPx));
         }
 
-        private Button BuildSlot(MapEditorCatalogEntry entry)
+        private Button BuildSlot(MapEditorPaletteSlot paletteSlot)
         {
+            MapEditorCatalogEntry entry = _vm.ShownVariant(paletteSlot);
             ushort decalId = 0;
             bool isFloorDecal = MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out decalId);
             bool isSpawn = MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName);
@@ -747,15 +749,67 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                         : isGasMarker
                             ? MapEditorGasMarkerCatalog.DisplayName(gasKind)
                             : MapEditorCatalog.PaletteLabel(entry.AssetName);
+            slot.Add(iconFrame);
+            if (paletteSlot.IsFamily)
+            {
+                AddFamilyChrome(slot, iconFrame, paletteSlot, entry);
+                return slot;
+            }
+
             Label label = new(labelText)
             {
                 pickingMode = PickingMode.Ignore,
             };
             label.AddToClassList("map-editor-slot__label");
-
-            slot.Add(iconFrame);
             slot.Add(label);
             return slot;
+        }
+
+        /// <summary>
+        /// A family slot (S6 decision 8): family on line 1, variant on line 2, an "n/N" badge, and ‹ › arrows
+        /// (shown on hover or while held) that pick the neighbouring variant.
+        /// </summary>
+        private void AddFamilyChrome(Button slot, VisualElement iconFrame, MapEditorPaletteSlot paletteSlot, MapEditorCatalogEntry shown)
+        {
+            slot.AddToClassList("map-editor-slot--family");
+            slot.tooltip = $"{paletteSlot.Family}: {shown.VariantLabel} ({shown.AssetName}) — V / Shift+V for the next variant";
+
+            VisualElement label = new() { pickingMode = PickingMode.Ignore };
+            label.AddToClassList("map-editor-slot__label");
+            label.AddToClassList("map-editor-slot__label--family");
+            Label family = new(paletteSlot.Family) { pickingMode = PickingMode.Ignore };
+            family.AddToClassList("map-editor-slot__family");
+            Label variant = new(shown.VariantLabel) { pickingMode = PickingMode.Ignore };
+            variant.AddToClassList("map-editor-slot__variant");
+            label.Add(family);
+            label.Add(variant);
+            slot.Add(label);
+
+            Label badge = new($"{paletteSlot.IndexOf(shown) + 1}/{paletteSlot.Variants.Count}") { pickingMode = PickingMode.Ignore };
+            badge.AddToClassList("map-editor-slot__badge");
+            slot.Add(badge);
+
+            iconFrame.Add(VariantArrow(paletteSlot, shown, -1, "\u2039", "map-editor-slot__cycle--previous"));
+            iconFrame.Add(VariantArrow(paletteSlot, shown, 1, "\u203A", "map-editor-slot__cycle--next"));
+        }
+
+        private Button VariantArrow(MapEditorPaletteSlot paletteSlot, MapEditorCatalogEntry shown, int step, string glyph, string className)
+        {
+            Button arrow = new(() =>
+            {
+                MapEditorCatalogEntry next = paletteSlot.Step(shown, step);
+                AssetSelected?.Invoke(next, _loader.GetAsset(next.AssetName));
+            })
+            {
+                text = glyph,
+                tooltip = step < 0 ? "Previous variant (Shift+V)" : "Next variant (V)",
+            };
+            arrow.AddToClassList("map-editor-slot__cycle");
+            arrow.AddToClassList(className);
+            // The slot is a Button too: keep this press from also picking the shown variant.
+            arrow.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            arrow.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            return arrow;
         }
 
         private void TogglePopover(string key)

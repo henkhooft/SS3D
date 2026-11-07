@@ -203,9 +203,47 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             SelectedEntry = entry;
             SelectedAsset = asset;
+            RememberVariant(entry);
             UpdateHint();
             NotifyChanged();
         }
+
+        /// <summary>
+        /// The variant a family slot shows (S6 decision 6): the held one, else the family's last pick this session,
+        /// else its base variant. A plain slot shows its entry.
+        /// </summary>
+        public MapEditorCatalogEntry ShownVariant(MapEditorPaletteSlot slot)
+        {
+            if (slot.IndexOf(SelectedEntry) >= 0)
+                return SelectedEntry;
+
+            if (slot.IsFamily && _lastVariant.TryGetValue(FamilyKey(slot.Variants[0]), out string assetName))
+            {
+                foreach (MapEditorCatalogEntry variant in slot.Variants)
+                {
+                    if (string.Equals(variant.AssetName, assetName, StringComparison.OrdinalIgnoreCase))
+                        return variant;
+                }
+            }
+
+            return slot.Variants[0];
+        }
+
+        /// <summary>Whether the held entry belongs to a family with more than one variant (V cycles it).</summary>
+        public bool HoldsFamily => SelectedEntry != null && !string.IsNullOrEmpty(SelectedEntry.Family)
+            && (Catalog?.SlotOf(SelectedEntry).IsFamily ?? true);
+
+        // Last variant picked per family, for this session only (not PlayerPrefs; S6 decision 6).
+        private readonly Dictionary<string, string> _lastVariant = new(StringComparer.OrdinalIgnoreCase);
+
+        private void RememberVariant(MapEditorCatalogEntry entry)
+        {
+            if (entry != null && !string.IsNullOrEmpty(entry.Family))
+                _lastVariant[FamilyKey(entry)] = entry.AssetName;
+        }
+
+        // Family labels are unique within a sub-tab (MapEditorCatalogGeneration.FamilyProblems), not across them.
+        private static string FamilyKey(MapEditorCatalogEntry entry) => $"{(int)entry.Subcategory}/{entry.Family}";
 
         public void ClearSelection()
         {
@@ -286,7 +324,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             if (CurrentTool == MapEditorTool.Edit && SelectedAsset != null)
             {
-                SelectedObjectHint = PlacementHint();
+                SelectedObjectHint = HoldsFamily ? PlacementHint() + " — V: variant" : PlacementHint();
                 return;
             }
 

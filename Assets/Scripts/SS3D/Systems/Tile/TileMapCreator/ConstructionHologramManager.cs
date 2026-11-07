@@ -133,6 +133,23 @@ namespace SS3D.Systems.Tile.TileMapCreator
         }
 
         /// <summary>
+        /// V / Shift+V (palette S6 decision 11): swap the held object for another variant the way R rotates,
+        /// keeping a drag in progress. The ghosts rebuild with the new prefab on the next update.
+        /// </summary>
+        public void SwapSelectedObject(GenericObjectSo genericObjectSo)
+        {
+            if (!_isDragging || genericObjectSo is not TileObjectSo || _selectedObject is not TileObjectSo)
+            {
+                SetSelectedObject(genericObjectSo);
+                return;
+            }
+
+            _selectedObject = genericObjectSo;
+            DestroyHolograms();
+            _hasDragEndTile = false;
+        }
+
+        /// <summary>
         /// World point under the cursor for placement. Tile objects snap to the tile centre; items do not.
         /// </summary>
         public Vector3 GetPlacementPoint(bool forceTileSnap = false)

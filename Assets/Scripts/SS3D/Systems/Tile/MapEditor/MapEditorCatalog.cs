@@ -57,6 +57,48 @@ namespace SS3D.Systems.Tile.MapEditor
     }
 
     /// <summary>
+    /// One palette slot (palette S6): a plain entry, or a variant family drawn as one slot that cycles its variants.
+    /// <see cref="Variants"/> holds the base variant first (<see cref="MapEditorCatalogHeuristics.StandardVariant"/>),
+    /// then the rest by asset name.
+    /// </summary>
+    public sealed class MapEditorPaletteSlot
+    {
+        public MapEditorPaletteSlot(string family, IReadOnlyList<MapEditorCatalogEntry> variants)
+        {
+            Family = family;
+            Variants = variants;
+        }
+
+        /// <summary>The family label; null for a plain entry.</summary>
+        public string Family { get; }
+        public IReadOnlyList<MapEditorCatalogEntry> Variants { get; }
+        /// <summary>Whether the slot cycles: a family folder with one member draws as a plain entry.</summary>
+        public bool IsFamily => Family != null && Variants.Count > 1;
+
+        public int IndexOf(MapEditorCatalogEntry entry)
+        {
+            if (entry == null)
+                return -1;
+
+            for (int i = 0; i < Variants.Count; i++)
+            {
+                if (string.Equals(Variants[i].AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>The variant <paramref name="step"/> places from <paramref name="from"/>, wrapping both ways.</summary>
+        public MapEditorCatalogEntry Step(MapEditorCatalogEntry from, int step)
+        {
+            int index = Math.Max(0, IndexOf(from));
+            int count = Variants.Count;
+            return Variants[((index + step) % count + count) % count];
+        }
+    }
+
+    /// <summary>
     /// Runtime catalog built from <see cref="MapEditorCatalogSo"/> and live tile assets.
     /// </summary>
     public sealed class MapEditorCatalog
@@ -241,6 +283,85 @@ namespace SS3D.Systems.Tile.MapEditor
                 .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(group => new MapEditorHeadingGroup(group.Key, group.ToArray()))
                 .ToArray();
+        }
+
+        /// <summary>
+        /// <paramref name="entries"/> as palette slots (S6 decision 1): each family's members fold into one slot where
+        /// its first member stood; other entries keep their order as single slots.
+        /// </summary>
+        public static IReadOnlyList<MapEditorPaletteSlot> GroupFamilies(IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            List<MapEditorPaletteSlot> slots = new();
+            Dictionary<string, List<MapEditorCatalogEntry>> families = new(StringComparer.OrdinalIgnoreCase);
+            foreach (MapEditorCatalogEntry entry in entries)
+            {
+                if (string.IsNullOrEmpty(entry.Family))
+                {
+                    slots.Add(new MapEditorPaletteSlot(null, new[] { entry }));
+                    continue;
+                }
+
+                if (families.TryGetValue(entry.Family, out List<MapEditorCatalogEntry> members))
+                {
+                    members.Add(entry);
+                    continue;
+                }
+
+                members = new List<MapEditorCatalogEntry> { entry };
+                families[entry.Family] = members;
+                slots.Add(new MapEditorPaletteSlot(entry.Family, members));
+            }
+
+            foreach (List<MapEditorCatalogEntry> members in families.Values)
+            {
+                // Stable: the base variant leads, the rest keep the incoming (asset name) order.
+                List<MapEditorCatalogEntry> ordered = members
+                    .OrderBy(e => e.VariantLabel == MapEditorCatalogHeuristics.StandardVariant ? 0 : 1)
+                    .ToList();
+                members.Clear();
+                members.AddRange(ordered);
+            }
+
+            return slots;
+        }
+
+        /// <summary>
+        /// The slot <paramref name="entry"/> draws in: its whole family in its sub-tab (sandbox-hidden members left out),
+        /// or a single slot when it has none. Search, V and the slot arrows all cycle this set.
+        /// </summary>
+        public MapEditorPaletteSlot SlotOf(MapEditorCatalogEntry entry)
+        {
+            if (entry == null)
+                return null;
+
+            if (string.IsNullOrEmpty(entry.Family))
+                return new MapEditorPaletteSlot(null, new[] { entry });
+
+            MapEditorCatalogEntry[] members = Query(entry.Mode, entry.Subcategory, null)
+                .Where(e => string.Equals(e.Family, entry.Family, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            return members.Length == 0
+                ? new MapEditorPaletteSlot(null, new[] { entry })
+                : GroupFamilies(members)[0];
+        }
+
+        /// <summary>
+        /// The slots a search group draws: one per family, holding the whole family even when only some
+        /// variants matched (S6 decision 10), in the order the first match appears.
+        /// </summary>
+        public IReadOnlyList<MapEditorPaletteSlot> SlotsFor(IReadOnlyList<MapEditorCatalogEntry> matches)
+        {
+            List<MapEditorPaletteSlot> slots = new();
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+            foreach (MapEditorCatalogEntry entry in matches)
+            {
+                if (!string.IsNullOrEmpty(entry.Family) && !seen.Add(entry.Family))
+                    continue;
+
+                slots.Add(SlotOf(entry));
+            }
+
+            return slots;
         }
 
         /// <summary>

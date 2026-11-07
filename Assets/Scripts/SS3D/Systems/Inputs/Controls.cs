@@ -1042,6 +1042,15 @@ namespace SS3D.Systems.Inputs
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Cycle Variant"",
+                    ""type"": ""Button"",
+                    ""id"": ""0fdbbf3c-4c42-4aa9-850e-bf3ee3c79e55"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Delete"",
                     ""type"": ""Button"",
                     ""id"": ""f4257e8f-54a4-4181-839c-930d11200e42"",
@@ -1091,6 +1100,17 @@ namespace SS3D.Systems.Inputs
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Rotate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f513d011-7d00-4c68-980d-24e3eb7abde7"",
+                    ""path"": ""<Keyboard>/v"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cycle Variant"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1259,6 +1279,7 @@ namespace SS3D.Systems.Inputs
             m_TileCreator_Place = m_TileCreator.FindAction("Place", throwIfNotFound: true);
             m_TileCreator_Replace = m_TileCreator.FindAction("Replace", throwIfNotFound: true);
             m_TileCreator_Rotate = m_TileCreator.FindAction("Rotate", throwIfNotFound: true);
+            m_TileCreator_CycleVariant = m_TileCreator.FindAction("Cycle Variant", throwIfNotFound: true);
             m_TileCreator_Delete = m_TileCreator.FindAction("Delete", throwIfNotFound: true);
             m_TileCreator_SquareDrag = m_TileCreator.FindAction("Square Drag", throwIfNotFound: true);
             // Interactions
@@ -2133,6 +2154,7 @@ namespace SS3D.Systems.Inputs
         private readonly InputAction m_TileCreator_Place;
         private readonly InputAction m_TileCreator_Replace;
         private readonly InputAction m_TileCreator_Rotate;
+        private readonly InputAction m_TileCreator_CycleVariant;
         private readonly InputAction m_TileCreator_Delete;
         private readonly InputAction m_TileCreator_SquareDrag;
         /// <summary>
@@ -2162,6 +2184,10 @@ namespace SS3D.Systems.Inputs
             /// Provides access to the underlying input action "TileCreator/Rotate".
             /// </summary>
             public InputAction @Rotate => m_Wrapper.m_TileCreator_Rotate;
+            /// <summary>
+            /// Provides access to the underlying input action "TileCreator/CycleVariant".
+            /// </summary>
+            public InputAction @CycleVariant => m_Wrapper.m_TileCreator_CycleVariant;
             /// <summary>
             /// Provides access to the underlying input action "TileCreator/Delete".
             /// </summary>
@@ -2208,6 +2234,9 @@ namespace SS3D.Systems.Inputs
                 @Rotate.started += instance.OnRotate;
                 @Rotate.performed += instance.OnRotate;
                 @Rotate.canceled += instance.OnRotate;
+                @CycleVariant.started += instance.OnCycleVariant;
+                @CycleVariant.performed += instance.OnCycleVariant;
+                @CycleVariant.canceled += instance.OnCycleVariant;
                 @Delete.started += instance.OnDelete;
                 @Delete.performed += instance.OnDelete;
                 @Delete.canceled += instance.OnDelete;
@@ -2237,6 +2266,9 @@ namespace SS3D.Systems.Inputs
                 @Rotate.started -= instance.OnRotate;
                 @Rotate.performed -= instance.OnRotate;
                 @Rotate.canceled -= instance.OnRotate;
+                @CycleVariant.started -= instance.OnCycleVariant;
+                @CycleVariant.performed -= instance.OnCycleVariant;
+                @CycleVariant.canceled -= instance.OnCycleVariant;
                 @Delete.started -= instance.OnDelete;
                 @Delete.performed -= instance.OnDelete;
                 @Delete.canceled -= instance.OnDelete;
@@ -2693,6 +2725,13 @@ namespace SS3D.Systems.Inputs
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnRotate(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Cycle Variant" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnCycleVariant(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "Delete" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

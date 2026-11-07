@@ -600,6 +600,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 if (!InputInterface.IsCapturingText)
                 {
                     HandleToolHotkeys();
+                    HandleVariantHotkey();
 
                     if (IsChordModifierPressed(Keyboard.current) && Keyboard.current.zKey.wasPressedThisFrame)
                         RpcUndo(LocalConnection);
@@ -852,6 +853,35 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             HandleAssetSelected(entry, _viewModel.SelectedAsset);
+        }
+
+        /// <summary>
+        /// V next variant, Shift+V previous (palette S6 decision 5). With no family held it does nothing;
+        /// mid-drag it swaps the ghosts' prefab and keeps the drag, as R keeps it when rotating (decision 11).
+        /// </summary>
+        private void HandleVariantHotkey()
+        {
+            if (!_controls.CycleVariant.WasPressedThisFrame() || !_viewModel.HoldsFamily)
+                return;
+
+            Keyboard keyboard = Keyboard.current;
+            bool previous = keyboard != null && keyboard.shiftKey.isPressed;
+            StepVariant(_catalog.SlotOf(_viewModel.SelectedEntry), previous ? -1 : 1);
+        }
+
+        private void StepVariant(MapEditorPaletteSlot slot, int step)
+        {
+            if (slot == null || !slot.IsFamily)
+                return;
+
+            MapEditorCatalogEntry next = slot.Step(_viewModel.SelectedEntry, step);
+            _catalog.TryGetAsset(next.AssetName, _tileSystem.Loader, out GenericObjectSo asset);
+            if (asset == null)
+                return;
+
+            _viewModel.SelectEntry(next, asset);
+            if (_viewModel.CurrentTool == MapEditorTool.Edit)
+                _hologramManager.SwapSelectedObject(asset);
         }
 
         private void HandleToolHotkeys()

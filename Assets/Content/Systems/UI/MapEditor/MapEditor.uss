@@ -834,6 +834,59 @@
     padding-bottom: 0;
 }
 
+/* Variant families (palette S6): family on line 1, variant on line 2, "n/N" badge, ‹ › on hover or while held. */
+.map-editor-slot__label--family {
+    flex-direction: column;
+    align-items: stretch;
+}
+.map-editor-slot__family,
+.map-editor-slot__variant {
+    font-size: 10.5px;
+    -unity-text-align: upper-center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 12.5px;
+    margin: 0;
+    padding: 0;
+}
+.map-editor-slot__family { color: var(--ss3d-text-secondary); }
+.map-editor-slot__variant { color: var(--ss3d-text-primary); }
+.map-editor-slot__badge {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    font-size: 9px;
+    padding: 0 3px;
+    margin: 0;
+    border-radius: 4px;
+    color: var(--ss3d-text-secondary);
+    background-color: var(--ss3d-surface-inset);
+}
+.map-editor-slot__cycle {
+    display: none;
+    position: absolute;
+    top: 18px;
+    width: 18px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-width: 0;
+    border-radius: 4px;
+    color: var(--ss3d-text-primary);
+    background-color: var(--ss3d-surface-inset);
+}
+.map-editor-slot__cycle--previous { left: -14px; }
+.map-editor-slot__cycle--next { right: -14px; }
+.map-editor-slot__cycle:hover { color: var(--map-editor-accent); }
+.map-editor-slot--family:hover .map-editor-slot__cycle,
+.map-editor-slot--family.map-editor-slot--active .map-editor-slot__cycle {
+    display: flex;
+}
+
 /* Lives in the view's popover layer; MapEditorView.PlacePopover sets top/left/right beside its anchor. */
 .map-editor-popover {
     position: absolute;
