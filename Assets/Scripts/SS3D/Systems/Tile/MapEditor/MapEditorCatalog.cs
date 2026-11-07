@@ -154,7 +154,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 mapped.Add(assetName);
             }
 
-            foreach (AntagonistSpawnCategory category in Enum.GetValues(typeof(AntagonistSpawnCategory)))
+            foreach (AntagonistSpawnCategory category in MapEditorSpawnCatalog.MarkerAntagonists)
             {
                 string assetName = MapEditorSpawnCatalog.EncodeAntagonist(category);
                 if (mapped.Contains(assetName))

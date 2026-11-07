@@ -20,7 +20,7 @@ starts unsaved. Round stop uses this to prompt or autosave before unloading; see
 
 Spawn Points authoring (**Scripts → Spawn Points**):
 
-- Catalog: `spawn:job:{RoleName}` / `spawn:antag:{Category}` (`MapEditorSubcategory.SpawnPoints`, flagged `SandboxRestricted`)
+- Catalog: `spawn:job:{RoleName}` / `spawn:antag:{Category}` (`MapEditorSubcategory.SpawnPoints`, flagged `SandboxRestricted`). The palette lists only `MapEditorSpawnCatalog.MarkerAntagonists` (Nuclear Operatives); the enum keeps Traitor and Malf AI so old records still load
 - Registry: `TileSubSystem.SpawnPoints` (`SpawnPointRegistry`); one marker per tile
 - Persist: `SpawnPointPersistenceContributor` (`spawn-points` station-template chunk)
 - Effort: [2026-07_spawn-point-authoring](../../archive/architecture/2026-07_spawn-point-authoring.md)

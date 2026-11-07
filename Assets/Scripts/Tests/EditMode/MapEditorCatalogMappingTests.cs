@@ -177,6 +177,21 @@ namespace SS3D.Tests.EditMode
             Assert.IsNull(groups[0].Heading);
         }
 
+        /// <summary>Traitor and Malfunctioning AI are assigned in-round, not spawned at a marker: no palette entry.</summary>
+        [Test]
+        public void SpawnPoints_ListOnlyAntagonistsThatSpawnAtAMarker()
+        {
+            MapEditorCatalog catalog = BuildCommittedCatalog();
+            string[] antagonists = catalog.Query(MapEditorMode.Scripting, MapEditorSubcategory.SpawnPoints, null)
+                .Where(entry => MapEditorSpawnCatalog.TryDecode(entry.AssetName, out SpawnPointKind kind, out _, out _)
+                    && kind == SpawnPointKind.Antagonist)
+                .Select(entry => entry.AssetName)
+                .ToArray();
+
+            CollectionAssert.AreEqual(
+                new[] { MapEditorSpawnCatalog.EncodeAntagonist(AntagonistSpawnCategory.NuclearOperatives) }, antagonists);
+        }
+
         [Test]
         public void EveryTileAsset_HasASubTab()
         {

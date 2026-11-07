@@ -131,6 +131,8 @@ Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palett
 - **Furniture gets headings too** (21 entries). Owner chose "by use" (2026-11-07): Seats, Tables, Plants, Lockers, General. Moves: `Furniture/Generic/Surfaces/Tables` → `Furniture/Generic/Tables`, `Furniture/Flora/PottedPlants` → `Furniture/Flora/Plants` (tile assets only; prefabs and examine strings stay put).
 - **AtmosMeter and AtmosInjector tiles moved** to `Furniture/Machines/Atmos`, so they head under Atmos. `AtmosInlineDeviceSetup` now writes furniture-layer device tiles to `MachineTileFolder`.
 - `MapEditorCatalog.GroupByHeading` sorts headings by name with General last; Machines reads Atmos, Disposal, Kitchen, Medical, Power, Vendors, General. Search results stay grouped by sub-tab only, without folder headings.
+- **Compact view puts headings beside the row** (owner, after the hand check, 2026-11-07): it shows one 115 px slot row, and a heading above would overflow it. There the heading (folder or search group) runs bottom-to-top in a 24 px column left of the group's first row; later rows get an empty column so slots line up. The expanded view keeps headings above.
+- **Spawn Points lists Nuclear Operatives only** (owner, 2026-11-07): Traitor and Malfunctioning AI are assigned to someone already aboard, so their markers did nothing. `MapEditorSpawnCatalog.MarkerAntagonists` picks the palette's antagonists; the enum values stay so saved records still read.
 - Tests: `HeadingOf` cases, the Machines General set is pinned (`EveryMachine_SitsInAHeadingFolder`), heading order, below-threshold and no-heading sub-tabs; the drift test now compares `Heading`.
 
 ### S4 — Layers groups — **planned**

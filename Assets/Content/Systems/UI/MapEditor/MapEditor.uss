@@ -740,6 +740,36 @@
     padding: 6px 4px 2px 4px;
 }
 
+/* Compact view: the heading runs bottom-to-top beside its group's first row, so the row keeps the slot height. */
+.map-editor-grid-side-heading {
+    width: 24px;
+    height: 104px;
+    margin: 4px 4px 4px 0;
+    flex-shrink: 0;
+    border-right-width: 1px;
+    border-color: var(--ss3d-border-default);
+}
+
+/* Laid out 104 × 24, then turned a quarter about its centre to fill the 24 × 104 column. */
+.map-editor-grid-side-heading__label {
+    position: absolute;
+    width: 104px;
+    height: 24px;
+    left: -40px;
+    top: 40px;
+    rotate: -90deg;
+    transform-origin: center;
+    color: var(--ss3d-text-secondary);
+    font-size: 9px;
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
 .map-editor-slot {
     width: 108px;
     height: 104px;

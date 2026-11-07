@@ -34,6 +34,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private const float GridSlotOuterWidthPx = 120f;
         /// <summary>Slot height (104) + vertical margins (8) + border (3).</summary>
         private const float GridSlotOuterHeightPx = 115f;
+        /// <summary>Width of a compact-view side heading (<c>.map-editor-grid-side-heading</c>: 24 + right margin 4).</summary>
+        private const float GridSideHeadingOuterWidthPx = 28f;
 
         private readonly StyleSheet _styleSheet;
         private readonly MapEditorIconsSo _icons;
@@ -565,17 +567,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
-            foreach (MapEditorHeadingGroup group in MapEditorCatalog.GroupByHeading(MapEditorSubTabs.Get(_vm.CurrentSubcategory), entryList))
-            {
-                if (group.Heading != null)
-                {
-                    Label heading = new(group.Heading.ToUpperInvariant()) { name = "grid-heading-" + group.Heading };
-                    heading.AddToClassList("map-editor-grid-heading");
-                    _grid.Add(heading);
-                }
-
-                AddSlotRows(group.Entries);
-            }
+            IReadOnlyList<MapEditorHeadingGroup> groups =
+                MapEditorCatalog.GroupByHeading(MapEditorSubTabs.Get(_vm.CurrentSubcategory), entryList);
+            foreach (MapEditorHeadingGroup group in groups)
+                AddHeadedGroup(group.Heading, "grid-heading-" + group.Heading, group.Entries);
         }
 
         /// <summary>Palette-wide search: every tab's matches, each group headed with where it lives.</summary>
@@ -589,12 +584,46 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             }
 
             foreach (MapEditorSearchGroup group in groups)
+                AddHeadedGroup(group.Heading, "search-group-" + group.SubTab.Id, group.Entries);
+        }
+
+        /// <summary>
+        /// A group's slots under its heading. The compact view shows one slot row, so a heading above it would
+        /// overflow; there the heading runs up the left of the group's first row instead.
+        /// </summary>
+        private void AddHeadedGroup(string heading, string name, IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            if (heading == null)
             {
-                Label heading = new(group.Heading.ToUpperInvariant()) { name = "search-group-" + group.SubTab.Id };
-                heading.AddToClassList("map-editor-grid-heading");
-                _grid.Add(heading);
-                AddSlotRows(group.Entries);
+                AddSlotRows(entries);
+                return;
             }
+
+            if (_paletteMode == PaletteMode.Normal)
+            {
+                AddSlotRows(entries, heading, name);
+                return;
+            }
+
+            Label label = new(heading.ToUpperInvariant()) { name = name };
+            label.AddToClassList("map-editor-grid-heading");
+            _grid.Add(label);
+            AddSlotRows(entries);
+        }
+
+        private static VisualElement SideHeading(string heading, string name)
+        {
+            VisualElement column = new() { pickingMode = PickingMode.Ignore };
+            column.AddToClassList("map-editor-grid-side-heading");
+            if (heading == null)
+                return column;
+
+            column.name = name;
+            column.tooltip = heading;
+            Label label = new(heading.ToUpperInvariant()) { pickingMode = PickingMode.Ignore };
+            label.AddToClassList("map-editor-grid-side-heading__label");
+            column.Add(label);
+            return column;
         }
 
         private void AddGridMessage(string text)
@@ -604,9 +633,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _grid.Add(message);
         }
 
-        private void AddSlotRows(IReadOnlyList<MapEditorCatalogEntry> entries)
+        /// <param name="sideHeading">Compact view: the heading beside the first row; later rows get an empty column so slots line up.</param>
+        private void AddSlotRows(IReadOnlyList<MapEditorCatalogEntry> entries, string sideHeading = null, string headingName = null)
         {
-            int columnCount = GetMaxGridColumns();
+            int columnCount = GetMaxGridColumns(sideHeading != null ? GridSideHeadingOuterWidthPx : 0f);
             if (columnCount <= 0)
                 columnCount = Math.Max(1, entries.Count);
 
@@ -617,6 +647,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 {
                     row = new VisualElement { pickingMode = PickingMode.Position };
                     row.AddToClassList("map-editor-grid-row");
+                    if (sideHeading != null)
+                        row.Add(SideHeading(index == 0 ? sideHeading : null, headingName));
                     _grid.Add(row);
                 }
 
@@ -641,7 +673,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             ApplyGridScrollHeight();
         }
 
-        private int GetMaxGridColumns()
+        private int GetMaxGridColumns(float reservedWidth = 0f)
         {
             float width = _gridScroll?.contentViewport?.layout.width ?? 0f;
             if (width <= 1f)
@@ -649,7 +681,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (width <= 1f)
                 return 0;
 
-            return Math.Max(1, Mathf.FloorToInt(width / GridSlotOuterWidthPx));
+            return Math.Max(1, Mathf.FloorToInt((width - reservedWidth) / GridSlotOuterWidthPx));
         }
 
         private Button BuildSlot(MapEditorCatalogEntry entry)
