@@ -65,7 +65,7 @@ minutes.
 Still required once was: docker group + linger + image pull (done Jul 2026). Pre-pull:
 
 ```bash
-ssh tomnas 'docker pull unityci/editor:ubuntu-6000.3.16f1-linux-il2cpp-3'
+ssh tomnas 'docker pull unityci/editor:ubuntu-6000.3.28f1-linux-il2cpp-3'
 ```
 
 Without the docker group, `game-ci/unity-builder` fails on the daemon socket. Without linger,
