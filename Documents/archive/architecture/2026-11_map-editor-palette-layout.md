@@ -1,8 +1,8 @@
 > Implements: Documents/design/creative-mode.md §2 (The palette's layout)
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
-> Status: in-progress
+> Status: shipped
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6a done (variant families baked into the catalog); S6b done (one slot per family, V/Shift+V); S6c done (one selection route, family-label search). Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6a done (variant families baked into the catalog); S6b done (one slot per family, V/Shift+V); S6c done (one selection route, family-label search). Advances [map-authoring.md](../../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -28,7 +28,7 @@ Settled with the owner in an implementation grill (2026-11-07). Design premises 
 1. **Layer-first classification.** Tile objects classify by `TileLayer` + `genericType`; items classify by `Items/` folder, and the folder *is* the sub-tab. Name keywords are deleted.
 2. **Furniture-layer split.** A `FurnitureBase`/`FurnitureTop` object is **Machines** unless it sits under `Furniture/Generic`, `Furniture/Flora` or `Furniture/Storage` (→ Furniture). New devices land in Machines without listing.
 3. **One static C# sub-tab table** (not a ScriptableObject) replaces the switches. One row per sub-tab: mode, build order, label, icon, delete scope, heading threshold, flags (`IsMarker`, `IsItem`, `SandboxRestricted`). Every former switch reads it.
-4. **Fresh enum with explicit values**, old values deleted, never reused. The asset is regenerated in the same commit. An EditMode **drift test** asserts the committed asset equals regeneration output (tier-B pattern, [editor-tooling-tiers](2026-07_editor-tooling-tiers.md)).
+4. **Fresh enum with explicit values**, old values deleted, never reused. The asset is regenerated in the same commit. An EditMode **drift test** asserts the committed asset equals regeneration output (tier-B pattern, [editor-tooling-tiers](../../architecture/2026-07_editor-tooling-tiers.md)).
 5. **Eraser removed completely**: the catalog entry, `MapEditorCatalogEntry.IsEraser`, `CreateEraserEntry`, `IsEraserSelected` and every Edit+eraser path. The Delete tool is the eraser.
 6. **Delete scope declared per row, by layer** (table below). Furniture and Machines both clear the furniture layers. Cables getting their own sub-tab retires the `tile.md` pitfall "Piping delete takes pipes before wires".
 7. **Couplings by ID or flag, never label:** sandbox hides rows with `SandboxRestricted`; Rooms and Starting Air compare sub-tab IDs; `MapValidator` and the delete toast build text from `PathOf(subTab)` ("Scripts → Spawn Points").

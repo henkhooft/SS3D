@@ -240,7 +240,7 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// Palette-wide search (creative-mode §2, decision 9): matches in every tab, grouped by sub-tab in
+        /// Palette-wide search (creative-mode §2): matches in every tab, grouped by sub-tab in
         /// tab and build order. Sub-tabs the player can't see are left out; an empty term finds nothing.
         /// </summary>
         public IReadOnlyList<MapEditorSearchGroup> Search(string search, bool restrictedPalette)
@@ -266,7 +266,7 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// A sub-tab's grid split under its folder headings (creative-mode §2, decision 12): only once the sub-tab
+        /// A sub-tab's grid split under its folder headings (creative-mode §2): only once the sub-tab
         /// holds <see cref="MapEditorSubTab.HeadingThreshold"/> entries and they carry headings. Headings sort by name
         /// with <see cref="MapEditorCatalogHeuristics.GeneralHeading"/> last; entries keep their order. Otherwise one
         /// group with no heading.
@@ -286,7 +286,7 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// <paramref name="entries"/> as palette slots (S6 decision 1): each family's members fold into one slot where
+        /// <paramref name="entries"/> as palette slots: each family's members fold into one slot where
         /// its first member stood; other entries keep their order as single slots.
         /// </summary>
         public static IReadOnlyList<MapEditorPaletteSlot> GroupFamilies(IReadOnlyList<MapEditorCatalogEntry> entries)
@@ -347,7 +347,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         /// <summary>
         /// The slots a search group draws: one per family, holding the whole family even when only some
-        /// variants matched (S6 decision 10), in the order the first match appears.
+        /// variants matched, in the order the first match appears.
         /// </summary>
         public IReadOnlyList<MapEditorPaletteSlot> SlotsFor(IReadOnlyList<MapEditorCatalogEntry> matches)
         {
@@ -461,7 +461,7 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private static bool MatchesSearch(MapEditorCatalogEntry entry, string term)
         {
-            // A family's label finds every variant ("office chair"), as each variant's own name does (S6 decision 10).
+            // A family's label finds every variant ("office chair"), as each variant's own name does.
             if (entry.AssetName.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || (!string.IsNullOrEmpty(entry.Family) && entry.Family.Contains(term, StringComparison.OrdinalIgnoreCase)))
                 return true;

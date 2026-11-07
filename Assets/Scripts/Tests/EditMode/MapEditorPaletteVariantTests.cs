@@ -11,7 +11,7 @@ namespace SS3D.Tests.EditMode
 {
     /// <summary>
     /// Palette layout S6b (variant slots): one slot per family, cycling, per-family session memory and the
-    /// V hint (<c>2026-11_map-editor-palette-layout.md</c> S6 decisions 1, 5, 6, 8–10).
+    /// V hint (<c>Documents/architecture/systems/tile.md</c>, Map Editor palette).
     /// </summary>
     public sealed class MapEditorPaletteVariantTests
     {
@@ -213,7 +213,7 @@ namespace SS3D.Tests.EditMode
             IReadOnlyList<MapEditorHeadingGroup> groups = MapEditorCatalog.GroupByHeading(furniture, entries);
             int slots = groups.Sum(group => MapEditorCatalog.GroupFamilies(group.Entries).Count);
 
-            Assert.That(groups.Count, Is.GreaterThan(1), "Headings count entries, not slots (S6 decision 9)");
+            Assert.That(groups.Count, Is.GreaterThan(1), "Headings count entries, not slots");
             Assert.That(slots, Is.LessThan(entries.Length));
         }
 

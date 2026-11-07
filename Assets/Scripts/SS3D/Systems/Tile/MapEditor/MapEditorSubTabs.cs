@@ -168,7 +168,7 @@ namespace SS3D.Systems.Tile.MapEditor
     }
 
     /// <summary>
-    /// The tab the editor reopens on (creative-mode §2, decision 11), kept per machine in
+    /// The tab the editor reopens on (creative-mode §2), kept per machine in
     /// <see cref="PlayerPrefs"/> as "Mode/SubTab" enum names, so renumbering never misreads it.
     /// </summary>
     public static class MapEditorLastTab

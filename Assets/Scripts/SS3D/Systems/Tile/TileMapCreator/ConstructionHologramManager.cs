@@ -133,7 +133,7 @@ namespace SS3D.Systems.Tile.TileMapCreator
         }
 
         /// <summary>
-        /// V / Shift+V (palette S6 decision 11): swap the held object for another variant the way R rotates,
+        /// V / Shift+V: swap the held object for another variant the way R rotates,
         /// keeping a drag in progress. The ghosts rebuild with the new prefab on the next update.
         /// </summary>
         public void SwapSelectedObject(GenericObjectSo genericObjectSo)

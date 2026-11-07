@@ -36,7 +36,7 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string AirIntakeName = "ScrubberIntake";
         private const string AirIntakePrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/ScrubberIntake.prefab";
         private const string TileFolder = "Assets/Content/Data/TileMap/Resources/Structures/Pipes/Atmospherics/";
-        // Floor-standing machines file under Machines in the palette by their folder (map-editor-palette-layout).
+        // Floor-standing machines file under Machines in the palette by their folder (tile.md, Map Editor palette).
         // Map Editor variant families (palette S6): one folder per family, split by pipe layers.
         private const string InlineFilterTileFolder = TileFolder + "InlineFilterVariants/";
         private const string FilterTileFolder = TileFolder + "FilterVariants/";

@@ -902,8 +902,8 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// V next variant, Shift+V previous (palette S6 decision 5). With no family held it does nothing;
-        /// mid-drag it swaps the ghosts' prefab and keeps the drag, as R keeps it when rotating (decision 11).
+        /// V next variant, Shift+V previous. With no family held it does nothing;
+        /// mid-drag it swaps the ghosts' prefab and keeps the drag, as R keeps it when rotating.
         /// </summary>
         private void HandleVariantHotkey()
         {
@@ -1188,12 +1188,12 @@ namespace SS3D.Systems.Tile.MapEditor
 
         /// <summary>
         /// A palette click. Search results come from every tab, so the entry's sub-tab opens first:
-        /// delete scope, forms and hints all key off the open sub-tab (decision 9).
+        /// delete scope, forms and hints all key off the open sub-tab.
         /// </summary>
         private void OnPaletteEntryPicked(MapEditorCatalogEntry entry, GenericObjectSo asset) => SelectAsset(entry, asset);
 
         /// <summary>
-        /// Dropper, search and Show in palette all select through here (palette S6 decision 10): the asset's family
+        /// Dropper, search and Show in palette all select through here: the asset's family
         /// slot shows it as the current variant, its sub-tab opens, and the ghost follows in Edit.
         /// </summary>
         private void SelectAsset(MapEditorCatalogEntry entry, GenericObjectSo asset)

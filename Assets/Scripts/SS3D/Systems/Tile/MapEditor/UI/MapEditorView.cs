@@ -569,7 +569,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             IReadOnlyList<MapEditorHeadingGroup> groups =
                 MapEditorCatalog.GroupByHeading(MapEditorSubTabs.Get(_vm.CurrentSubcategory), entryList);
-            // Headings count entries, not slots (S6 decision 9); families fold within each heading.
+            // Headings count entries, not slots; families fold within each heading.
             foreach (MapEditorHeadingGroup group in groups)
                 AddHeadedGroup(group.Heading, "grid-heading-" + group.Heading, MapEditorCatalog.GroupFamilies(group.Entries));
         }
@@ -760,7 +760,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         }
 
         /// <summary>
-        /// A family slot (S6 decision 8): family on line 1, variant on line 2, an "n/N" badge, and ‹ › arrows
+        /// A family slot: family on line 1, variant on line 2, an "n/N" badge, and ‹ › arrows
         /// (shown on hover or while held) that pick the neighbouring variant.
         /// </summary>
         private void AddFamilyChrome(Button slot, VisualElement iconFrame, MapEditorPaletteSlot paletteSlot, MapEditorCatalogEntry shown)

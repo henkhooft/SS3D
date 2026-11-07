@@ -15,7 +15,7 @@ namespace SS3D.Tests.EditMode
 {
     /// <summary>
     /// Palette layout S2 (finding things): palette-wide search, Map Check's Show in palette and the
-    /// remembered last tab (<c>2026-11_map-editor-palette-layout.md</c> decisions 9–11).
+    /// remembered last tab (<c>Documents/architecture/systems/tile.md</c>, Map Editor palette).
     /// </summary>
     public sealed class MapEditorPaletteSearchTests
     {

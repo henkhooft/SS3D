@@ -125,7 +125,7 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(expected, MapEditorCatalogHeuristics.HeadingOf(subTab, path == null ? null : Res + path));
         }
 
-        // Variant families (S6 decision 1): the asset's own folder ends in "Variants".
+        // Variant families: the asset's own folder ends in "Variants".
         [TestCase("Furniture/Generic/Seats/Chairs/OfficeChairVariants/OfficeChairBlue.asset", "Furniture/Generic/Seats/Chairs/OfficeChairVariants")]
         [TestCase("Furniture/Generic/Seats/Chairs/OfficeChairVariants/Deeper/OfficeChairBlue.asset", null)]
         [TestCase("Furniture/Generic/Sink.asset", null)]
@@ -215,7 +215,7 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(string.Empty, members[0].Entry.VariantLabel);
         }
 
-        /// <summary>The families S6 ships (decision 4): a move into or out of a <c>…Variants/</c> folder shows up here.</summary>
+        /// <summary>The families S6 ships: a move into or out of a <c>…Variants/</c> folder shows up here.</summary>
         [Test]
         public void CommittedFamilies_AreTheS6Set()
         {

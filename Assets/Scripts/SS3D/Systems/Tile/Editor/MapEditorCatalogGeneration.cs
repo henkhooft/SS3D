@@ -68,7 +68,7 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// Cycling a variant must never change what a placement occupies (S6 decision 12): a family's members share
+        /// Cycling a variant must never change what a placement occupies: a family's members share
         /// sub-tab, heading and layer, and two family folders in one sub-tab can't share a label.
         /// </summary>
         public static List<string> FamilyProblems(IReadOnlyList<FamilyMember> members)

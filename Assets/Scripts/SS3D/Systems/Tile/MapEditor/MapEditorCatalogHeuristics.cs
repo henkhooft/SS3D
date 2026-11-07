@@ -36,7 +36,7 @@ namespace SS3D.Systems.Tile.MapEditor
         };
 
         /// <summary>
-        /// Sub-tab → the folders its headings come from (creative-mode §2, decision 12): the folder just below
+        /// Sub-tab → the folders its headings come from (creative-mode §2): the folder just below
         /// a root is the heading, and a file directly in a root, or outside every root, is under <see cref="GeneralHeading"/>.
         /// A sub-tab with no roots has no headings. Rename a folder to change a heading; never add a rule here.
         /// </summary>
@@ -141,7 +141,7 @@ namespace SS3D.Systems.Tile.MapEditor
             return GeneralHeading;
         }
 
-        /// <summary>Folder-name suffix that makes a folder a variant family (S6 decision 1).</summary>
+        /// <summary>Folder-name suffix that makes a folder a variant family.</summary>
         public const string FamilySuffix = "Variants";
 
         /// <summary>Variant label of a family's base asset, the one named only by the shared prefix.</summary>
