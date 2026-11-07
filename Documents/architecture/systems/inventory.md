@@ -72,8 +72,8 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
   |---|---|---|---|
   | Tiny | fits a closed fist | 0.1-0.2 | ID card, patch, disk, glass shard |
   | Small | pocket or belt tool | 0.1-0.8 | screwdriver, mask, soda can, power cell, emergency tank |
-  | Normal | one-handed, fits a backpack | 0.5-2.0 | crowbar, medkit, jumpsuit, boots, sheets |
-  | Bulky | needs a hand or a locker | at least 0.5 | toolbox, M4, boombox, hardsuit, backpack |
+  | Normal | one-handed, fits a backpack | 0.5-2.0 (weapons up to 3.5) | crowbar, medkit, jumpsuit, boots, sheets, every weapon |
+  | Bulky | needs a hand or a locker | at least 0.5 | toolbox, boombox, hardsuit, backpack |
   | Huge | rides in suit storage or a hand | 5 and up | full gas tanks |
 
   Loads are sized against the stamina cap of 40: everyday kit about 10%, EVA kit 40-50%, only deliberate hauling near 100%. Stack caps are not set here (weight is per unit).
@@ -93,7 +93,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - **Hand-edited sizes and weights revert:** `ItemSizeWeightRecipe` (and `GasTankSetup` / `SyndicateHardsuitSetup`, which now read the same table) reapply `ItemSizeWeightTable` on every **Run Content Prefab Recipes**, and `ItemSizeWeightTableTests.PrefabsMatchTable` fails on drift. Change the table, not the Inspector.
 - **Do not put the medkit or toolbox in `StorageContainerPrefabSetup.Targets`:** it forces `_isOpenable` off and `_onlyStoreWhenOpen` off, which breaks them. Their grids live in `ItemSizeWeightTable.Containers`.
-- **A Bulky item cannot go in a backpack:** that is intended (toolbox, M4, backpack, toolbelt). A new bag must be Bulky or it nests in itself.
+- **A Bulky item cannot go in a backpack:** that is intended (toolbox, backpack, toolbelt). Weapons are never Bulky: `TileMapTests.EveryWeaponFitsTheBackpack`. A new bag must be Bulky or it nests in itself.
 
 - **Held items attached at spawn keep a wrong angle (#158):** `ContainerItemDisplay` parents the item to a pivot under the hand bone and sets the pivot's world rotation from the character root. The offset from the hand is fixed at that moment, so an item attached before the Animator has posed the hand (loadout at spawn) keeps the bind-pose angle until it is picked up again. The display re-sets the grip in `LateUpdate` once the Animator is initialized (at most 60 frames later). Keep grips relative to the character root, and don't remove that re-set.
 

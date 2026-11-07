@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: run-and-verify
     content: "Run the recipe in the Editor, commit the prefab diffs, run Testing/ui/validate.sh --steps compile,editmode"
-    status: pending
+    status: completed
   - id: docs-sync
     content: "Add the tier rubric to inventory.md; update-system-docs for map, Verified stamp and pitfalls"
     status: completed
@@ -116,9 +116,11 @@ Tier, then weight in kg-ish units. Paths are relative to `Assets/Content/WorldOb
 | Functional/Materials/SteelSheet | Normal | 1.5 |
 | Functional/Materials/SteelReinforcedSheet | Normal | 2.0 |
 | Functional/Materials/WoodPlank | Normal | 1.0 |
+| Weapons/SyndicateMiniBomb, Taser, C4, X4 | Normal | 0.5, 0.6, 0.8, 1.2 |
+| Weapons/IonRifle, LaserRifle | Normal | 2.5 |
+| Weapons/M4 | Normal | 3.5 |
 | Functional/Storage/Objects/ToolBoxes/ToolboxBlue | Bulky | 2.0 |
 | Functional/Generic/Boombox | Bulky | 3.0 |
-| Weapons/M4 | Bulky | 3.5 |
 | Functional/Materials/WoodLog | Bulky | 4.0 |
 | Clothing/SyndicateHardsuit | Bulky | 6.0 |
 | Functional/Generic/Tanks/OxygenTank, PlasmaTank | Huge | 5.0 |
@@ -159,7 +161,7 @@ Everyday kit (jumpsuit 1.0, boots 0.8, backpack 0.6, belt 0.5, ID 0.1, PDA 0.4, 
 
 ## Implementation notes
 
-Written without a Unity Editor, so the recipe and the tests have **not been run**; `run-and-verify` stays pending until someone runs them. The checked-in prefab values were applied to the YAML by script from the same table and cross-checked against `ItemSizeWeightTable.cs` row by row (57 rows, 0 mismatches), so a first recipe run should produce no diff apart from Unity re-serialising.
+Written without a Unity Editor. **Verified 2026-11-07** (Unity 6000.3.16f1): Run Content Prefab Recipes changed no values (only Unity re-serialising, discarded), and `validate.sh --steps compile,editmode` passed 3451/3451. The checked-in prefab values were applied to the YAML by script from the same table and cross-checked against `ItemSizeWeightTable.cs` row by row (57 rows, 0 mismatches), so a first recipe run should produce no diff apart from Unity re-serialising.
 
 Differences from the plan above:
 
@@ -168,3 +170,4 @@ Differences from the plan above:
 - **Prefab variants** (12: three jumpsuits, seven soda cans, `HeadsetSecurity`, `PowerCellAdmin`) have no row of their own. None overrides weight or size, so they inherit their base; the coverage test accepts a variant only when its base has a row and it does not override.
 - **Seeded-contents audit found nothing to fix.** No prefab or station template stores container contents. Loadouts fill only equipment slots and pockets; the pocket items (emergency tank, gas mask) are Small, which pockets still take.
 - **System map** `inventory.md` was edited by hand for the touched sections (rubric, container line, pitfalls, tests). Its `Verified` stamp was not bumped because the rest of the map was not re-checked; run `update-system-docs` for that.
+- **Weapons stay Normal (2026-11-07, owner).** Develop's #174 added the energy weapons and explosives plus `TileMapTests.EveryWeaponFitsTheBackpack`. The owner chose that rule over Bulky rifles, so the M4 moved from Bulky to Normal and weapons may exceed the 2 kg Normal band (up to 3.5).

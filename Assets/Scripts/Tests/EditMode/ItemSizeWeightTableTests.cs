@@ -105,7 +105,11 @@ namespace EditorTests
                 {
                     case SizeClass.Tiny: Assert.LessOrEqual(entry.Weight, 0.2f, entry.Path); break;
                     case SizeClass.Small: Assert.LessOrEqual(entry.Weight, 0.8f, entry.Path); break;
-                    case SizeClass.Normal: Assert.That(entry.Weight, Is.InRange(0.5f, 2f), entry.Path); break;
+                    case SizeClass.Normal:
+                        // Weapons stay Normal so they fit a backpack, so rifles may reach 3.5.
+                        float ceiling = entry.Path.StartsWith("Weapons/") ? 3.5f : 2f;
+                        Assert.That(entry.Weight, Is.InRange(0.5f, ceiling), entry.Path);
+                        break;
                     case SizeClass.Bulky: Assert.GreaterOrEqual(entry.Weight, 0.5f, entry.Path); break;
                     case SizeClass.Huge: Assert.GreaterOrEqual(entry.Weight, 5f, entry.Path); break;
                 }

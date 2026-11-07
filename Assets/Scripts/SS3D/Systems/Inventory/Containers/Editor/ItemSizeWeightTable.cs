@@ -112,9 +112,17 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             new("Functional/Materials/SteelSheet", SizeClass.Normal, 1.5f),
             new("Functional/Materials/SteelReinforcedSheet", SizeClass.Normal, 2.0f),
             new("Functional/Materials/WoodPlank", SizeClass.Normal, 1.0f),
+            // Every weapon is at most Normal so it fits a backpack (TileMapTests.EveryWeaponFitsTheBackpack, #174);
+            // rifles are the one Normal exception to the 2 kg band.
+            new("Weapons/SyndicateMiniBomb", SizeClass.Normal, 0.5f),
+            new("Weapons/Taser", SizeClass.Normal, 0.6f),
+            new("Weapons/C4", SizeClass.Normal, 0.8f),
+            new("Weapons/X4", SizeClass.Normal, 1.2f),
+            new("Weapons/IonRifle", SizeClass.Normal, 2.5f),
+            new("Weapons/LaserRifle", SizeClass.Normal, 2.5f),
+            new("Weapons/M4", SizeClass.Normal, 3.5f),
             new("Functional/Storage/Objects/ToolBoxes/ToolboxBlue", SizeClass.Bulky, 2.0f),
             new("Functional/Generic/Boombox", SizeClass.Bulky, 3.0f),
-            new("Weapons/M4", SizeClass.Bulky, 3.5f),
             new("Functional/Materials/WoodLog", SizeClass.Bulky, 4.0f),
             new("Clothing/SyndicateHardsuit", SizeClass.Bulky, 6.0f),
             new("Functional/Generic/Tanks/OxygenTank", SizeClass.Huge, 5.0f),
