@@ -1084,7 +1084,8 @@ namespace SS3D.Systems.Inputs
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
-                    ""initialStateCheck"": false
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 },
                 {
                     ""name"": ""Delete"",
