@@ -742,13 +742,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             iconFrame.Add(icon);
 
-            string labelText = floorDecal != null
-                    ? floorDecal.DisplayName
-                    : isSpawn
-                        ? MapEditorSpawnCatalog.DisplayName(entry.AssetName)
-                        : isGasMarker
-                            ? MapEditorGasMarkerCatalog.DisplayName(gasKind)
-                            : MapEditorCatalog.PaletteLabel(entry.AssetName);
+            string labelText = MapEditorCatalog.DisplayLabel(entry);
             slot.Add(iconFrame);
             if (paletteSlot.IsFamily)
             {

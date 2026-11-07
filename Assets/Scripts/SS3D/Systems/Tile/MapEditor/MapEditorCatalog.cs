@@ -365,6 +365,42 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
+        /// A slot's one-entry label: a decal's, spawn marker's or gas marker's display name, otherwise the asset name
+        /// as palette words (<see cref="PaletteLabel"/>).
+        /// </summary>
+        public static string DisplayLabel(MapEditorCatalogEntry entry)
+        {
+            string assetName = entry.AssetName;
+            if (MapEditorFloorDecalCatalog.TryDecode(assetName, out ushort decalId))
+                return FloorDecalCatalog.Get()?.TryGet(decalId, out FloorDecalDefinition decal) == true ? decal.DisplayName : assetName;
+
+            if (MapEditorSpawnCatalog.IsSpawnKey(assetName))
+                return MapEditorSpawnCatalog.DisplayName(assetName);
+
+            if (MapEditorGasMarkerCatalog.TryDecode(assetName, out GasMarkerKind gasKind))
+                return MapEditorGasMarkerCatalog.DisplayName(gasKind);
+
+            return PaletteLabel(assetName);
+        }
+
+        /// <summary>
+        /// What the cursor badge says while Edit holds <paramref name="entry"/>: "Office Chair (Blue)" for a variant,
+        /// the bare family for its base ("Office Chair"), otherwise <see cref="DisplayLabel"/>.
+        /// </summary>
+        public static string PlacingLabel(MapEditorCatalogEntry entry)
+        {
+            if (entry == null)
+                return string.Empty;
+
+            if (string.IsNullOrEmpty(entry.Family) || string.IsNullOrEmpty(entry.VariantLabel))
+                return DisplayLabel(entry);
+
+            return entry.VariantLabel == MapEditorCatalogHeuristics.StandardVariant
+                ? entry.Family
+                : $"{entry.Family} ({entry.VariantLabel})";
+        }
+
+        /// <summary>
         /// The words that find <paramref name="assetName"/> in search: a marker's job, antagonist or kind,
         /// a decal's name, otherwise the asset name. Map Check's Show in palette searches for this.
         /// </summary>

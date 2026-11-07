@@ -13,6 +13,7 @@ using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Electricity;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Examine;
 using SS3D.Systems.Furniture.Disposal;
 using SS3D.Systems.Inputs;
 using SS3D.Systems.Rounds;
@@ -60,6 +61,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private IMapEditorPersistence _persistence;
         private InputSubSystem _inputSystem;
         private Controls.TileCreatorActions _controls;
+        private ExamineSubSystem _examine;
         private TileSubSystem _tileSystem;
         private CameraFollow _cameraFollow;
         private Camera _playerCamera;
@@ -433,6 +435,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 ApplyEditorVisualSuppression(false);
                 // IsActive is already false — re-apply HashGrid AOI host visibility.
                 RefreshTileHostVisibility();
+                ReleaseCursorLabel();
                 EditorClosed?.Invoke();
             }
         }
@@ -589,6 +592,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 CancelAreaStroke();
                 SetMouseOverUI(false);
             }
+
+            SyncCursorLabel();
             if (Keyboard.current != null)
             {
                 if (Keyboard.current.f7Key.wasPressedThisFrame)
@@ -730,6 +735,49 @@ namespace SS3D.Systems.Tile.MapEditor
             RpcMoveObject(_moveAssetName, _moveSource.Value, destination, _moveDirection, _moveIsItem, LocalConnection);
             _moveSource = null;
             _moveAssetName = null;
+        }
+
+        /// <summary>
+        /// The examine badge by the cursor names what Edit is about to place ("Office Chair (Blue)", the room being
+        /// painted) instead of examining the object under the pointer, which is rarely what you're building with.
+        /// Other tools, the pointer over the editor's UI, and F7's hidden UI show no badge.
+        /// </summary>
+        private void SyncCursorLabel()
+        {
+            if (_examine == null && !SubSystems.TryGet(out _examine))
+                return;
+
+            string label = string.Empty;
+            if (!_viewModel.HideUI && !_mouseOverUI && _viewModel.CurrentTool == MapEditorTool.Edit)
+            {
+                if (IsRoomCategory)
+                    label = _viewModel.AreaRoomName ?? string.Empty;
+                else if (_viewModel.SelectedEntry != null)
+                    label = PlacingLabel(_viewModel.SelectedEntry);
+            }
+
+            _examine.SetCursorLabelOverride(label);
+        }
+
+        // One string per held entry, not one per frame.
+        private MapEditorCatalogEntry _placingLabelEntry;
+        private string _placingLabel;
+
+        private string PlacingLabel(MapEditorCatalogEntry entry)
+        {
+            if (!ReferenceEquals(entry, _placingLabelEntry))
+            {
+                _placingLabelEntry = entry;
+                _placingLabel = MapEditorCatalog.PlacingLabel(entry);
+            }
+
+            return _placingLabel;
+        }
+
+        private void ReleaseCursorLabel()
+        {
+            if (_examine != null || SubSystems.TryGet(out _examine))
+                _examine.SetCursorLabelOverride(null);
         }
 
         private void UpdateMouseOverUI()

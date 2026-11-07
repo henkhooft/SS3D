@@ -127,6 +127,32 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(3, FurnitureSlots(catalog, "blue")[0].Variants.Count);
         }
 
+        [TestCase("OfficeChairBlue", "Office Chair", "Blue", "Office Chair (Blue)")]
+        [TestCase("OfficeChair", "Office Chair", "Standard", "Office Chair")]
+        [TestCase("AtmosPipesSupply", "", "", "Atmos Pipes Supply")]
+        public void PlacingLabel_NamesTheHeldVariant(string assetName, string family, string variant, string expected)
+        {
+            Assert.AreEqual(expected,
+                MapEditorCatalog.PlacingLabel(Entry(assetName, MapEditorSubcategory.Furniture, family, variant)));
+        }
+
+        [Test]
+        public void CursorLabelOverride_FiresOnlyOnChange()
+        {
+            GameObject host = new("examine");
+            _created.Add(host);
+            SS3D.Systems.Examine.ExamineSubSystem examine = host.AddComponent<SS3D.Systems.Examine.ExamineSubSystem>();
+            int changes = 0;
+            examine.OnCursorLabelOverrideChanged += () => changes++;
+
+            examine.SetCursorLabelOverride("Sink");
+            examine.SetCursorLabelOverride("Sink");
+            examine.SetCursorLabelOverride(null);
+
+            Assert.AreEqual(2, changes);
+            Assert.IsNull(examine.CursorLabelOverride);
+        }
+
         [Test]
         public void CommittedFurniture_KeepsItsHeadings_WithFewerSlots()
         {
