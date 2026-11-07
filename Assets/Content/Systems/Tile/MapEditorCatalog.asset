@@ -774,20 +774,20 @@ MonoBehaviour:
     VariantLabel: 
     SearchTags:
     - machines
-  - AssetName: Plant0
+  - AssetName: PlantEarth
     Mode: 0
     Subcategory: 104
     Heading: Plants
     Family: Plant
-    VariantLabel: 0
+    VariantLabel: Earth
     SearchTags:
     - furniture
-  - AssetName: Plant7
+  - AssetName: PlantExotic
     Mode: 0
     Subcategory: 104
     Heading: Plants
     Family: Plant
-    VariantLabel: 7
+    VariantLabel: Exotic
     SearchTags:
     - furniture
   - AssetName: PlasmaTank

@@ -26,7 +26,7 @@ namespace SS3D.Tests.EditMode
         [TestCase(TileLayer.WallMountLow, TileObjectGenericType.None, "Structures/WallMounts/APC.asset", MapEditorSubcategory.WallMounts)]
         [TestCase(TileLayer.WallMountHigh, TileObjectGenericType.None, "Structures/WallMounts/Lights/LightTubeFixture.asset", MapEditorSubcategory.WallMounts)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Generic/Sink.asset", MapEditorSubcategory.Furniture)]
-        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Flora/Plants/Plant0.asset", MapEditorSubcategory.Furniture)]
+        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Flora/Plants/PlantVariants/PlantEarth.asset", MapEditorSubcategory.Furniture)]
         [TestCase(TileLayer.FurnitureTop, TileObjectGenericType.None, "Furniture/Storage/Lockers/Locker.asset", MapEditorSubcategory.Furniture)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Machines/Power/SMES.asset", MapEditorSubcategory.Machines)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Machines/General/NukeCart.asset", MapEditorSubcategory.Machines)]
@@ -117,7 +117,7 @@ namespace SS3D.Tests.EditMode
         [TestCase(MapEditorSubcategory.Machines, null, "General")]
         [TestCase(MapEditorSubcategory.Furniture, "Furniture/Generic/Seats/Chairs/Office/OfficeChair.asset", "Seats")]
         [TestCase(MapEditorSubcategory.Furniture, "Furniture/Generic/Sink.asset", "General")]
-        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Flora/Plants/Plant0.asset", "Plants")]
+        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Flora/Plants/PlantVariants/PlantEarth.asset", "Plants")]
         [TestCase(MapEditorSubcategory.Furniture, "Furniture/Storage/Lockers/Locker.asset", "Lockers")]
         [TestCase(MapEditorSubcategory.GasPipes, "Structures/Pipes/Atmospherics/AtmosPipe.asset", "")]
         public void HeadingOf_IsTheFolderBelowTheRoot(MapEditorSubcategory subTab, string path, string expected)
@@ -233,7 +233,7 @@ namespace SS3D.Tests.EditMode
                     "Inline Filter: Left, Right",
                     "Mixer: Left, Right",
                     "Office Chair: Standard, Blue, Grey",
-                    "Plant: 0, 7",
+                    "Plant: Earth, Exotic",
                     "Plastic Chair: Standard, Blue, Grey",
                     "Soda Can: Beeps Soda, Beepy Lime, Canned Air, Canned Laughter, Cola, Duke Purple Tea, Tonic",
                 },

@@ -15,6 +15,8 @@ namespace SS3D.Systems.Tile
             { "AtmosPipesL2", "AtmosPipesMixed" },
             { "AtmosPipesL3", "AtmosPipesWaste" },
             { "AtmosPipesL4", "AtmosPipesSurface" },
+            { "Plant0", "PlantEarth" },
+            { "Plant7", "PlantExotic" },
         };
 
         public static IReadOnlyDictionary<string, string> All => NewNames;
