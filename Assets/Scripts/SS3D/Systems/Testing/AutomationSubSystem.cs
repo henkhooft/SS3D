@@ -24,6 +24,7 @@ using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.PlayerControl;
 using SS3D.Systems.Rounds;
 using SS3D.Systems.Rounds.Messages;
+using SS3D.Systems.StructuralDamage;
 using SS3D.Systems.Tile;
 using System;
 using System.Collections;
@@ -517,6 +518,13 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "BreachOpened", BreachBesideClient());
                     break;
 
+                // Server: detonates this yield and falloff on the tile of the first body this process does not own.
+                case "blast_on_client":
+                    TestSignal.Emit(this, "BlastDetonated", BlastOnClient(
+                        float.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(instruction.Args[1], System.Globalization.CultureInfo.InvariantCulture)));
+                    break;
+
                 // Host: the next round loads this map and mode. Map names may not contain spaces here.
                 case "use_station":
                     UseStation(instruction.Args[0], instruction.Args[1]);
@@ -551,6 +559,12 @@ namespace SS3D.Systems.Testing
                     TestSignal.Emit(this, "WindFelt");
                     break;
 
+                // Client: a weak blast shoved the owned body while it stood, then a strong one floored and threw it, and it got up.
+                case "assert_blast_felt":
+                    yield return AssertBlastFelt();
+                    TestSignal.Emit(this, "BlastFelt");
+                    break;
+
                 // Client: the owned body's gear offers internals, and a toggle from this process reaches the server.
                 case "assert_internals_toggle":
                     yield return AssertInternalsToggle();
@@ -568,6 +582,48 @@ namespace SS3D.Systems.Testing
                 case "assert_magboots_wind":
                     yield return AssertMagbootsWind();
                     TestSignal.Emit(this, "MagbootsHeld");
+                    break;
+
+                // Client: the server ended this connection with this reason code (DisconnectCode).
+                case "wait_disconnect_reason":
+                    DisconnectCode expectedCode = Enum.Parse<DisconnectCode>(instruction.Args[0]);
+                    yield return WaitUntil(() => ConnectionNotices.LastCode == expectedCode && IsClientFullyStopped(),
+                        _waitTimeoutSeconds, "wait_disconnect_reason");
+                    break;
+
+                case "assert_login_accepted":
+                    if (!ConnectionNotices.LoginWasAccepted)
+                    {
+                        throw new InvalidOperationException("The server never accepted this client's login.");
+                    }
+
+                    break;
+
+                // Client: the admin token the next reconnect presents; {ckey} is this client's name.
+                case "set_token":
+                    LocalPlayer.UpdateAccessToken(instruction.Args[0].Replace("{ckey}", LocalPlayer.Ckey));
+                    break;
+
+                // Server: at least N players have logged in.
+                case "wait_online_players":
+                    int online = int.Parse(instruction.Args[0], System.Globalization.CultureInfo.InvariantCulture);
+                    yield return WaitUntil(() => System.Linq.Enumerable.Count(SubSystems.Get<PlayerSubSystem>().OnlinePlayers) >= online,
+                        _waitTimeoutSeconds, "wait_online_players");
+                    break;
+
+                // Server: a refused login leaves no placeholder behind (PlayerSubSystem.ProcessPlayerDisconnect).
+                case "assert_no_unauthorized":
+                    int leftOver = FindObjectsByType<UnauthorizedPlayer>(FindObjectsSortMode.None).Length;
+                    if (leftOver != 0)
+                    {
+                        throw new InvalidOperationException($"{leftOver} UnauthorizedPlayer objects left over.");
+                    }
+
+                    break;
+
+                // Server: kicks every client, with the rest of the line as the message.
+                case "kick_all":
+                    ConnectionNotices.DisconnectAll(InstanceFinder.NetworkManager, DisconnectCode.Kicked, instruction.ArgsJoined);
                     break;
 
                 case "wait_seconds":
@@ -705,6 +761,22 @@ namespace SS3D.Systems.Testing
             }
 
             throw new InvalidOperationException("breach_beside_client: no remote body");
+        }
+
+        private static string BlastOnClient(float yield, float falloff)
+        {
+            foreach (Entity body in SubSystems.Get<EntitySubSystem>().SpawnedPlayers)
+            {
+                if (body == null || body.IsOwner)
+                    continue;
+
+                TileSubSystem tiles = SubSystems.Get<TileSubSystem>();
+                TileCoord tile = tiles.QueryService.WorldToTile(body.transform.position, tiles.CurrentMap.MapId);
+                SubSystems.Get<StructuralDamageSubSystem>().ResolveBlast(tile, yield, falloff);
+                return tile.ToString();
+            }
+
+            throw new InvalidOperationException("blast_on_client: no remote body");
         }
 
         private static void UseStation(string map, string mode)
@@ -857,6 +929,40 @@ namespace SS3D.Systems.Testing
 
             yield return WaitUntil(() => AudioSourceOcclusion.ListenerAir < MaxHeardAir, _waitTimeoutSeconds,
                 "assert_wind_felt thin air");
+        }
+
+        private IEnumerator AssertBlastFelt()
+        {
+            const float shovedMetres = 0.3f;
+            // Half the launch from a force of 120. A body that only collapses stays well under it, though
+            // it can end half a metre to the side, so distance proves nothing here.
+            const float thrownSpeed = 3f;
+            const float sampleSeconds = 0.1f;
+            const int samples = 15;
+            yield return WaitUntil(IsEmbarked, _waitTimeoutSeconds, "assert_blast_felt embarked");
+            SubSystems.Get<EntitySubSystem>().TryGetOwnedEntity(InstanceFinder.ClientManager.Connection, out Entity entity);
+            Ragdoll body = entity.GetComponent<Ragdoll>();
+
+            Vector3 start = body.WindSamplePosition;
+            yield return WaitUntil(() => Planar(body.WindSamplePosition - start) > shovedMetres, _waitTimeoutSeconds, "assert_blast_felt shove");
+            if (body.IsKnockedDown) throw new InvalidOperationException("assert_blast_felt: a weak blast floored the body");
+
+            yield return WaitUntil(() => body.IsKnockedDown, _waitTimeoutSeconds, "assert_blast_felt knockdown");
+            float peak = 0f;
+            Vector3 last = body.WindSamplePosition;
+            for (int i = 0; i < samples; i++)
+            {
+                yield return new WaitForSeconds(sampleSeconds);
+                Vector3 now = body.WindSamplePosition;
+                peak = Mathf.Max(peak, Planar(now - last) / sampleSeconds);
+                last = now;
+            }
+
+            if (peak < thrownSpeed) throw new InvalidOperationException($"assert_blast_felt: peak speed {peak:F1} m/s, not thrown");
+
+            yield return WaitUntil(() => !body.IsKnockedDown, _waitTimeoutSeconds, "assert_blast_felt recovery");
+
+            static float Planar(Vector3 offset) => new Vector2(offset.x, offset.z).magnitude;
         }
 
         private IEnumerator AssertInternalsToggle()
