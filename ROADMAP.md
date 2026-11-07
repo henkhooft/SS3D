@@ -55,7 +55,7 @@ What already works, system by system, is listed in
 | ✅ | A5 | Easy to find, share and hand in your map files, with a testers' guide in the download |
 | ⬜ | A6 | A tester builds a Nuke Ops station from the download using only the guide, and it ships with the game |
 | ✅ | A7 | Close the game and run Update_SS3D.bat (Windows) or ./update_ss3d.sh (Linux) to get the latest stable release without losing maps; the previous build stays available |
-| 🟡 | A8 | Every object in the editor's palette sits in a tab named for where it goes, and search finds anything from any tab (objects are filed under their new tabs and search finds them from any tab; big sub-tabs have no headings yet) |
+| 🟡 | A8 | Every object in the editor's palette sits in a tab named for where it goes, and search finds anything from any tab (objects are filed under their new tabs, search finds them from any tab, and Furniture and Machines are split under headings) |
 
 ## Nuclear Operatives round
 

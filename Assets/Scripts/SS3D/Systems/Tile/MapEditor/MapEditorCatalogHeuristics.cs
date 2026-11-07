@@ -33,6 +33,19 @@ namespace SS3D.Systems.Tile.MapEditor
             ("Items/Weapons/", MapEditorSubcategory.Weapons),
         };
 
+        /// <summary>
+        /// Sub-tab → the folders its headings come from (creative-mode §2, decision 12): the folder just below
+        /// a root is the heading, and a file directly in a root, or outside every root, is under <see cref="GeneralHeading"/>.
+        /// A sub-tab with no roots has no headings. Rename a folder to change a heading; never add a rule here.
+        /// </summary>
+        private static readonly (MapEditorSubcategory SubTab, string[] Roots)[] HeadingRoots =
+        {
+            (MapEditorSubcategory.Furniture, FurnitureFolders),
+            (MapEditorSubcategory.Machines, new[] { "Furniture/Machines/" }),
+        };
+
+        public const string GeneralHeading = "General";
+
         private const string ResourcesRoot = "/Resources/";
 
         public static MapEditorCatalogEntry Infer(GenericObjectSo asset) =>
@@ -51,13 +64,13 @@ namespace SS3D.Systems.Tile.MapEditor
             string assetName = ResolveAssetName(asset);
 
             if (asset is ItemObjectSo)
-                return Entry(assetName, ClassifyItem(assetPath), "item");
+                return Entry(assetName, ClassifyItem(assetPath), assetPath, "item");
 
             if (asset is not TileObjectSo tile)
                 return null;
 
             MapEditorSubcategory? subTab = ClassifyTile(tile.layer, tile.genericType, assetPath);
-            return subTab.HasValue ? Entry(assetName, subTab.Value) : null;
+            return subTab.HasValue ? Entry(assetName, subTab.Value, assetPath) : null;
         }
 
         public static MapEditorSubcategory? ClassifyTile(TileLayer layer, TileObjectGenericType genericType, string assetPath = null) =>
@@ -95,6 +108,37 @@ namespace SS3D.Systems.Tile.MapEditor
             return MapEditorSubcategory.Misc;
         }
 
+        /// <summary>
+        /// The grid heading an asset sits under in its sub-tab: "Furniture/Machines/Power/SMES.asset" → "Power".
+        /// Empty for a sub-tab without heading roots.
+        /// </summary>
+        public static string HeadingOf(MapEditorSubcategory subTab, string assetPath)
+        {
+            string[] roots = null;
+            foreach ((MapEditorSubcategory headed, string[] headedRoots) in HeadingRoots)
+            {
+                if (headed == subTab)
+                    roots = headedRoots;
+            }
+
+            if (roots == null)
+                return string.Empty;
+
+            string relative = RelativeToResources(assetPath);
+            foreach (string root in roots)
+            {
+                if (!relative.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                int folderEnd = relative.IndexOf('/', root.Length);
+                return folderEnd > root.Length
+                    ? MapEditorCatalog.PaletteLabel(relative.Substring(root.Length, folderEnd - root.Length))
+                    : GeneralHeading;
+            }
+
+            return GeneralHeading;
+        }
+
         private static bool IsUnderAny(string assetPath, string[] folders)
         {
             string relative = RelativeToResources(assetPath);
@@ -126,7 +170,7 @@ namespace SS3D.Systems.Tile.MapEditor
             return string.IsNullOrEmpty(asset.name) ? string.Empty : asset.name;
         }
 
-        private static MapEditorCatalogEntry Entry(string name, MapEditorSubcategory subTab, string extraTag = null)
+        private static MapEditorCatalogEntry Entry(string name, MapEditorSubcategory subTab, string assetPath, string extraTag = null)
         {
             MapEditorSubTab row = MapEditorSubTabs.Get(subTab);
             string label = row.Label.ToLowerInvariant();
@@ -135,6 +179,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 AssetName = name,
                 Mode = row.Mode,
                 Subcategory = subTab,
+                Heading = HeadingOf(subTab, assetPath),
                 SearchTags = extraTag == null ? new[] { label } : new[] { extraTag, label },
             };
         }

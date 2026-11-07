@@ -26,11 +26,11 @@ namespace SS3D.Tests.EditMode
         [TestCase(TileLayer.WallMountLow, TileObjectGenericType.None, "Structures/WallMounts/APC.asset", MapEditorSubcategory.WallMounts)]
         [TestCase(TileLayer.WallMountHigh, TileObjectGenericType.None, "Structures/WallMounts/Lights/LightTubeFixture.asset", MapEditorSubcategory.WallMounts)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Generic/Sink.asset", MapEditorSubcategory.Furniture)]
-        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Flora/PottedPlants/Plant0.asset", MapEditorSubcategory.Furniture)]
+        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Flora/Plants/Plant0.asset", MapEditorSubcategory.Furniture)]
         [TestCase(TileLayer.FurnitureTop, TileObjectGenericType.None, "Furniture/Storage/Lockers/Locker.asset", MapEditorSubcategory.Furniture)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Machines/Power/SMES.asset", MapEditorSubcategory.Machines)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Machines/General/NukeCart.asset", MapEditorSubcategory.Machines)]
-        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Structures/Pipes/Atmospherics/AtmosMeter.asset", MapEditorSubcategory.Machines)]
+        [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, "Furniture/Machines/Atmos/AtmosMeter.asset", MapEditorSubcategory.Machines)]
         [TestCase(TileLayer.FurnitureBase, TileObjectGenericType.None, null, MapEditorSubcategory.Machines)]
         [TestCase(TileLayer.Plenum, TileObjectGenericType.Plenum, "Structures/Floors/Plenum.asset", MapEditorSubcategory.Subfloor)]
         [TestCase(TileLayer.Plenum, TileObjectGenericType.None, "Structures/Floors/Catwalk.asset", MapEditorSubcategory.Subfloor)]
@@ -108,6 +108,73 @@ namespace SS3D.Tests.EditMode
                 MapEditorCatalogGeneration.BuildEntries().Select(Describe).ToArray(),
                 committed.Entries.Select(Describe).ToArray(),
                 "MapEditorCatalog.asset is stale: run SS3D/Map Editor/Regenerate Catalog and commit it.");
+        }
+
+        // Headings (Decision 12): the folder just below the sub-tab's root, "General" for loose files.
+        [TestCase(MapEditorSubcategory.Machines, "Furniture/Machines/Power/SMES.asset", "Power")]
+        [TestCase(MapEditorSubcategory.Machines, "Furniture/Machines/General/Tanks/FuelTank.asset", "General")]
+        [TestCase(MapEditorSubcategory.Machines, "Furniture/Machines/Atmos/AtmosMeter.asset", "Atmos")]
+        [TestCase(MapEditorSubcategory.Machines, null, "General")]
+        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Generic/Seats/Chairs/Office/OfficeChair.asset", "Seats")]
+        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Generic/Sink.asset", "General")]
+        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Flora/Plants/Plant0.asset", "Plants")]
+        [TestCase(MapEditorSubcategory.Furniture, "Furniture/Storage/Lockers/Locker.asset", "Lockers")]
+        [TestCase(MapEditorSubcategory.GasPipes, "Structures/Pipes/Atmospherics/AtmosPipe.asset", "")]
+        public void HeadingOf_IsTheFolderBelowTheRoot(MapEditorSubcategory subTab, string path, string expected)
+        {
+            Assert.AreEqual(expected, MapEditorCatalogHeuristics.HeadingOf(subTab, path == null ? null : Res + path));
+        }
+
+        /// <summary>A Machines asset outside <c>Furniture/Machines/</c> would fall under General: move it into a heading folder.</summary>
+        [Test]
+        public void EveryMachine_SitsInAHeadingFolder()
+        {
+            string[] loose = MapEditorCatalogGeneration.BuildEntries()
+                .Where(entry => entry.Subcategory == MapEditorSubcategory.Machines && entry.Heading == MapEditorCatalogHeuristics.GeneralHeading)
+                .Select(entry => entry.AssetName)
+                .ToArray();
+
+            CollectionAssert.AreEquivalent(new[] { "FuelTank", "MachineFrame", "NukeCart", "SlotMachine", "WaterTank" }, loose);
+        }
+
+        [Test]
+        public void GroupByHeading_SortsHeadings_GeneralLast()
+        {
+            MapEditorCatalog catalog = BuildCommittedCatalog();
+            MapEditorSubTab machines = MapEditorSubTabs.Get(MapEditorSubcategory.Machines);
+            MapEditorCatalogEntry[] entries = catalog.Query(MapEditorMode.Upper, machines.Id, null).ToArray();
+
+            string[] headings = MapEditorCatalog.GroupByHeading(machines, entries).Select(group => group.Heading).ToArray();
+
+            CollectionAssert.AreEqual(new[] { "Atmos", "Disposal", "Kitchen", "Medical", "Power", "Vendors", "General" }, headings);
+        }
+
+        [Test]
+        public void GroupByHeading_BelowThreshold_DrawsNoHeadings()
+        {
+            MapEditorSubTab machines = MapEditorSubTabs.Get(MapEditorSubcategory.Machines);
+            MapEditorCatalogEntry[] few = Enumerable.Range(0, machines.HeadingThreshold - 1)
+                .Select(i => new MapEditorCatalogEntry { AssetName = "M" + i, Heading = i % 2 == 0 ? "Power" : "Atmos" })
+                .ToArray();
+
+            IReadOnlyList<MapEditorHeadingGroup> groups = MapEditorCatalog.GroupByHeading(machines, few);
+
+            Assert.AreEqual(1, groups.Count);
+            Assert.IsNull(groups[0].Heading);
+            Assert.AreEqual(few.Length, groups[0].Entries.Count);
+        }
+
+        [Test]
+        public void GroupByHeading_SubTabWithoutHeadings_IsOneGroup()
+        {
+            MapEditorCatalog catalog = BuildCommittedCatalog();
+            MapEditorSubTab pipes = MapEditorSubTabs.Get(MapEditorSubcategory.GasPipes);
+            MapEditorCatalogEntry[] entries = catalog.Query(MapEditorMode.Lower, pipes.Id, null).ToArray();
+
+            IReadOnlyList<MapEditorHeadingGroup> groups = MapEditorCatalog.GroupByHeading(pipes, entries);
+
+            Assert.AreEqual(1, groups.Count);
+            Assert.IsNull(groups[0].Heading);
         }
 
         [Test]
@@ -238,6 +305,6 @@ namespace SS3D.Tests.EditMode
         private static string[] Labels(MapEditorMode mode) => MapEditorSubTabs.InMode(mode).Select(row => row.Label).ToArray();
 
         private static string Describe(MapEditorCatalogEntry entry) =>
-            $"{entry.AssetName} | {entry.Mode} | {entry.Subcategory} | {string.Join(",", entry.SearchTags ?? new string[0])}";
+            $"{entry.AssetName} | {entry.Mode} | {entry.Subcategory} | {entry.Heading} | {string.Join(",", entry.SearchTags ?? new string[0])}";
     }
 }

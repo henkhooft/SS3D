@@ -43,6 +43,19 @@ namespace SS3D.Systems.Tile.MapEditor
         public string Heading => $"{MapEditorSubTabs.ModeLabel(SubTab.Mode)} › {SubTab.Label}";
     }
 
+    /// <summary>One heading's entries in a sub-tab's grid; <see cref="Heading"/> is null when the grid draws no headings.</summary>
+    public sealed class MapEditorHeadingGroup
+    {
+        public MapEditorHeadingGroup(string heading, IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            Heading = heading;
+            Entries = entries;
+        }
+
+        public string Heading { get; }
+        public IReadOnlyList<MapEditorCatalogEntry> Entries { get; }
+    }
+
     /// <summary>
     /// Runtime catalog built from <see cref="MapEditorCatalogSo"/> and live tile assets.
     /// </summary>
@@ -208,6 +221,26 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             return groups;
+        }
+
+        /// <summary>
+        /// A sub-tab's grid split under its folder headings (creative-mode §2, decision 12): only once the sub-tab
+        /// holds <see cref="MapEditorSubTab.HeadingThreshold"/> entries and they carry headings. Headings sort by name
+        /// with <see cref="MapEditorCatalogHeuristics.GeneralHeading"/> last; entries keep their order. Otherwise one
+        /// group with no heading.
+        /// </summary>
+        public static IReadOnlyList<MapEditorHeadingGroup> GroupByHeading(MapEditorSubTab row, IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            if (row == null || entries.Count < row.HeadingThreshold || entries.All(e => string.IsNullOrEmpty(e.Heading)))
+                return new[] { new MapEditorHeadingGroup(null, entries) };
+
+            return entries
+                .GroupBy(e => string.IsNullOrEmpty(e.Heading) ? MapEditorCatalogHeuristics.GeneralHeading : e.Heading,
+                    StringComparer.OrdinalIgnoreCase)
+                .OrderBy(group => string.Equals(group.Key, MapEditorCatalogHeuristics.GeneralHeading, StringComparison.OrdinalIgnoreCase))
+                .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new MapEditorHeadingGroup(group.Key, group.ToArray()))
+                .ToArray();
         }
 
         /// <summary>

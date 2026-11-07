@@ -565,7 +565,17 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return;
             }
 
-            AddSlotRows(entryList);
+            foreach (MapEditorHeadingGroup group in MapEditorCatalog.GroupByHeading(MapEditorSubTabs.Get(_vm.CurrentSubcategory), entryList))
+            {
+                if (group.Heading != null)
+                {
+                    Label heading = new(group.Heading.ToUpperInvariant()) { name = "grid-heading-" + group.Heading };
+                    heading.AddToClassList("map-editor-grid-heading");
+                    _grid.Add(heading);
+                }
+
+                AddSlotRows(group.Entries);
+            }
         }
 
         /// <summary>Palette-wide search: every tab's matches, each group headed with where it lives.</summary>

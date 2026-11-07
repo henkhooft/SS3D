@@ -376,7 +376,8 @@ namespace SS3D.Systems.Atmospherics.Editor
             FishNet.Managing.Object.ManagedObjects.InitializePrefab(root.GetComponent<NetworkObject>(), -1);
             string path = DeviceFolder + name + ".prefab";
             PrefabUtility.SaveAsPrefabAsset(root, path);
-            RegisterTileObject(name, path, layer);
+            // Floor-standing devices (meter, injector) file under Machines › Atmos like the scrubber intake.
+            RegisterTileObject(name, path, layer, layer == TileLayer.FurnitureBase ? MachineTileFolder : TileFolder);
         }
 
         // The copied prefab's reference names the source; placement sets the real one.

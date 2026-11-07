@@ -730,7 +730,7 @@
     flex-shrink: 0;
 }
 
-/* Search groups ("UPPER › MACHINES"); S3's folder headings reuse it. */
+/* Search groups ("UPPER › MACHINES") and folder headings ("POWER") in a sub-tab grid. */
 .map-editor-grid-heading {
     flex-shrink: 0;
     color: var(--ss3d-text-secondary);

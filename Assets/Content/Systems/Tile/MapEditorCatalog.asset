@@ -16,941 +16,1114 @@ MonoBehaviour:
   - AssetName: APC
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: AirAlarm
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: AtmosFilterL
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosFilterL2
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosFilterR
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosFilterR2
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosInjector
     Mode: 0
     Subcategory: 105
+    Heading: Atmos
     SearchTags:
     - machines
   - AssetName: AtmosManifold3
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosManifold4
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosMeter
     Mode: 0
     Subcategory: 105
+    Heading: Atmos
     SearchTags:
     - machines
   - AssetName: AtmosMixerL
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosMixerR
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosPipesMixed
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosPipesSupply
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosPipesSurface
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosPipesWaste
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosPumpVolume
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosValveDigital
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: AtmosValveManual
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: Backpack
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: BikeHorn
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: Blender
     Mode: 0
     Subcategory: 105
+    Heading: Kitchen
     SearchTags:
     - machines
   - AssetName: Boombox
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: BrutePatch
     Mode: 2
     Subcategory: 303
+    Heading: 
     SearchTags:
     - item
     - medical
   - AssetName: BurnPatch
     Mode: 2
     Subcategory: 303
+    Heading: 
     SearchTags:
     - item
     - medical
   - AssetName: C4
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: Cables
     Mode: 1
     Subcategory: 201
+    Heading: 
     SearchTags:
     - cables
   - AssetName: Catwalk
     Mode: 1
     Subcategory: 200
+    Heading: 
     SearchTags:
     - subfloor
   - AssetName: ChemicalDispenser
     Mode: 0
     Subcategory: 105
+    Heading: Medical
     SearchTags:
     - machines
   - AssetName: CivillianAirlock
     Mode: 0
     Subcategory: 102
+    Heading: 
     SearchTags:
     - doors
   - AssetName: Crowbar
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: Cryotube
     Mode: 0
     Subcategory: 105
+    Heading: Medical
     SearchTags:
     - machines
   - AssetName: DinnerBooth
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: DisposalBin
     Mode: 0
     Subcategory: 105
+    Heading: Disposal
     SearchTags:
     - machines
   - AssetName: DisposalOutlet
     Mode: 0
     Subcategory: 105
+    Heading: Disposal
     SearchTags:
     - machines
   - AssetName: DisposalPipes
     Mode: 1
     Subcategory: 203
+    Heading: 
     SearchTags:
     - disposal pipes
   - AssetName: DonkPocket
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: Doodad
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: ElectricalCable
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: ElectricalWire
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: EmergencyOxygenTank
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: FacewearGasMask
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: FancyCarpetRed
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: FireAlarm
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: FlashlightBlue
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: FloorTile
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: FuelTank
     Mode: 0
     Subcategory: 105
+    Heading: General
     SearchTags:
     - machines
   - AssetName: GasPump
     Mode: 1
     Subcategory: 202
+    Heading: 
     SearchTags:
     - gas pipes
   - AssetName: Gibber
     Mode: 0
     Subcategory: 105
+    Heading: Kitchen
     SearchTags:
     - machines
   - AssetName: GlassReinforcedSheet
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: GlassShard
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: GlassSheet
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: GloveInsulated
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: Hatchet
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: Headset
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: HeadsetSecurity
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: HealthScanner
     Mode: 2
     Subcategory: 303
+    Heading: 
     SearchTags:
     - item
     - medical
   - AssetName: IDCard
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: IonRifle
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: JukeboxBlueGreen
     Mode: 0
     Subcategory: 104
+    Heading: General
     SearchTags:
     - furniture
   - AssetName: JumpsuitBotany
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: JumpsuitEngineer
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: JumpsuitGrey
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: JumpsuitSecurity
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: KitchenKnife
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: LaserRifle
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: Lattice
     Mode: 1
     Subcategory: 200
+    Heading: 
     SearchTags:
     - subfloor
   - AssetName: LightBulbFixture
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: LightSwitch
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: LightTubeFixture
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: Locker
     Mode: 0
     Subcategory: 104
+    Heading: Lockers
     SearchTags:
     - furniture
   - AssetName: LockerSecure
     Mode: 0
     Subcategory: 104
+    Heading: Lockers
     SearchTags:
     - furniture
   - AssetName: M4
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: MachineFrame
     Mode: 0
     Subcategory: 105
+    Heading: General
     SearchTags:
     - machines
   - AssetName: MatterBin
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: MedicalPatch
     Mode: 2
     Subcategory: 303
+    Heading: 
     SearchTags:
     - item
     - medical
   - AssetName: Medkit
     Mode: 2
     Subcategory: 303
+    Heading: 
     SearchTags:
     - item
     - medical
   - AssetName: MicroLaser
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: Microwave
     Mode: 0
     Subcategory: 105
+    Heading: Kitchen
     SearchTags:
     - machines
   - AssetName: Mirror
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: Mug
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: Multitool
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: NuclearAuthenticationDisk
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: NukeCart
     Mode: 0
     Subcategory: 105
+    Heading: General
     SearchTags:
     - machines
   - AssetName: OfficeChair
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: OfficeChairBlue
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: OfficeChairGrey
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: OxygenTank
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: PDA
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: PacManGenerator
     Mode: 0
     Subcategory: 105
+    Heading: Power
     SearchTags:
     - machines
   - AssetName: Plant0
     Mode: 0
     Subcategory: 104
+    Heading: Plants
     SearchTags:
     - furniture
   - AssetName: Plant7
     Mode: 0
     Subcategory: 104
+    Heading: Plants
     SearchTags:
     - furniture
   - AssetName: PlasmaTank
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: PlasticChair
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: PlasticChairBlue
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: PlasticChairGrey
     Mode: 0
     Subcategory: 104
+    Heading: Seats
     SearchTags:
     - furniture
   - AssetName: Plenum
     Mode: 1
     Subcategory: 200
+    Heading: 
     SearchTags:
     - subfloor
   - AssetName: Poster
     Mode: 2
     Subcategory: 307
+    Heading: 
     SearchTags:
     - item
     - misc
   - AssetName: PosterHorizontal
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: PosterVertical
     Mode: 0
     Subcategory: 103
+    Heading: 
     SearchTags:
     - wall mounts
   - AssetName: PowerCell
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: PowerCellAdmin
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: PowerCellCharger
     Mode: 0
     Subcategory: 105
+    Heading: Power
     SearchTags:
     - machines
   - AssetName: SMES
     Mode: 0
     Subcategory: 105
+    Heading: Power
     SearchTags:
     - machines
   - AssetName: ScrewdriverBlue
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: Scrubber
     Mode: 0
     Subcategory: 105
+    Heading: Atmos
     SearchTags:
     - machines
   - AssetName: ScrubberIntake
     Mode: 0
     Subcategory: 105
+    Heading: Atmos
     SearchTags:
     - machines
   - AssetName: SecurityAirlock
     Mode: 0
     Subcategory: 102
+    Heading: 
     SearchTags:
     - doors
   - AssetName: SecurityIDCard
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: SecurityLocker
     Mode: 0
     Subcategory: 104
+    Heading: Lockers
     SearchTags:
     - furniture
   - AssetName: SecurityPDA
     Mode: 2
     Subcategory: 305
+    Heading: 
     SearchTags:
     - item
     - devices
   - AssetName: ShoeHiTops
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: ShoeJackboots
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: Sink
     Mode: 0
     Subcategory: 104
+    Heading: General
     SearchTags:
     - furniture
   - AssetName: SleeperBed
     Mode: 0
     Subcategory: 105
+    Heading: Medical
     SearchTags:
     - machines
   - AssetName: SlotMachine
     Mode: 0
     Subcategory: 105
+    Heading: General
     SearchTags:
     - machines
   - AssetName: SodaCanBeepsSoda
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanBeepyLime
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanCannedAir
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanCannedLaughter
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanCola
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanDukePurpleTea
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SodaCanTonic
     Mode: 2
     Subcategory: 304
+    Heading: 
     SearchTags:
     - item
     - food & drink
   - AssetName: SolarPanel
     Mode: 0
     Subcategory: 105
+    Heading: Power
     SearchTags:
     - machines
   - AssetName: SolarTrackingBeacon
     Mode: 0
     Subcategory: 105
+    Heading: Power
     SearchTags:
     - machines
   - AssetName: SteelGirder
     Mode: 0
     Subcategory: 101
+    Heading: 
     SearchTags:
     - walls & windows
   - AssetName: SteelGirderUnbolted
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: SteelReinforcedSheet
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: SteelRod
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: SteelSheet
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: SteelWall
     Mode: 0
     Subcategory: 101
+    Heading: 
     SearchTags:
     - walls & windows
   - AssetName: SteelWallReinforced
     Mode: 0
     Subcategory: 101
+    Heading: 
     SearchTags:
     - walls & windows
   - AssetName: SteelWindow
     Mode: 0
     Subcategory: 101
+    Heading: 
     SearchTags:
     - walls & windows
   - AssetName: SteelWindowReinforced
     Mode: 0
     Subcategory: 101
+    Heading: 
     SearchTags:
     - walls & windows
   - AssetName: Sunglasses
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: SyndicateHardsuit
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: SyndicateHardsuitHelmet
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: SyndicateMagboots
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: SyndicateMiniBomb
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: TableBoozeDispenser
     Mode: 0
     Subcategory: 105
+    Heading: Kitchen
     SearchTags:
     - machines
   - AssetName: TableFrameSteel
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: TableFrameWood
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: TableGlass
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: TablePoker
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: TableSteel
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: TableWood
     Mode: 0
     Subcategory: 104
+    Heading: Tables
     SearchTags:
     - furniture
   - AssetName: Taser
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons
   - AssetName: TileBar
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileDirt1
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileGrass
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileGrey
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileGreyDark
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileKitchen
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TilePlating
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileReinforced
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileWhite
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: TileWood
     Mode: 0
     Subcategory: 100
+    Heading: 
     SearchTags:
     - floors
   - AssetName: Toolbelt
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: ToolboxBlue
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: TruckerCap
     Mode: 2
     Subcategory: 302
+    Heading: 
     SearchTags:
     - item
     - clothing
   - AssetName: VendorHotDrinks
     Mode: 0
     Subcategory: 105
+    Heading: Vendors
     SearchTags:
     - machines
   - AssetName: VendorRobustSoftdrinks
     Mode: 0
     Subcategory: 105
+    Heading: Vendors
     SearchTags:
     - machines
   - AssetName: VendorSecTech
     Mode: 0
     Subcategory: 105
+    Heading: Vendors
     SearchTags:
     - machines
   - AssetName: VendorYouTool
     Mode: 0
     Subcategory: 105
+    Heading: Vendors
     SearchTags:
     - machines
   - AssetName: Vent
     Mode: 0
     Subcategory: 105
+    Heading: Atmos
     SearchTags:
     - machines
   - AssetName: WaterCooler
     Mode: 0
     Subcategory: 104
+    Heading: General
     SearchTags:
     - furniture
   - AssetName: WaterTank
     Mode: 0
     Subcategory: 105
+    Heading: General
     SearchTags:
     - machines
   - AssetName: Welder
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: Wirecutters
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: WoodLog
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: WoodPlank
     Mode: 2
     Subcategory: 301
+    Heading: 
     SearchTags:
     - item
     - materials & parts
   - AssetName: Wrench
     Mode: 2
     Subcategory: 300
+    Heading: 
     SearchTags:
     - item
     - tools
   - AssetName: X4
     Mode: 2
     Subcategory: 306
+    Heading: 
     SearchTags:
     - item
     - weapons

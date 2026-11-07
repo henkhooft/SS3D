@@ -13,6 +13,8 @@ namespace SS3D.Systems.Tile.MapEditor
         public string AssetName;
         public MapEditorMode Mode;
         public MapEditorSubcategory Subcategory;
+        /// <summary>The grid heading within the sub-tab, from the asset's folder (empty: the sub-tab has none).</summary>
+        public string Heading = string.Empty;
         public string[] SearchTags = Array.Empty<string>();
     }
 

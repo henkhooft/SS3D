@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -121,9 +121,17 @@ Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palett
 - `MapEditorLastTab` stores `"Mode/SubTab"` enum names under `SS3D.MapEditor.LastTab`. It restores on the session's first open; a stored tab under another mode, an unknown name, a number or a hidden sub-tab falls back to Upper › Floors. `SetCapabilities` also moves a sandbox player off a hidden open sub-tab.
 - Tests: `MapEditorPaletteSearchTests`. The pick path itself (a `NetworkBehaviour` handler) is covered through `OpenSubTab`, not end to end.
 
-### S3 — Headings — **planned**
+### S3 — Headings — **done**
 
-`Heading` string on `MapEditorCatalogEntry`, baked by the regenerator from the folder segment below the sub-tab's root; grid renders headings when the sub-tab has ≥ 20 entries. Today only Machines qualifies (Atmos, Power, Disposal, Kitchen, Medical, Vendors, General).
+`Heading` string on `MapEditorCatalogEntry`, baked by the regenerator from the folder segment below the sub-tab's root; grid renders headings when the sub-tab has ≥ 20 entries.
+
+**As built:**
+
+- **Roots:** `MapEditorCatalogHeuristics.HeadingRoots` names them per sub-tab: Machines → `Furniture/Machines/`; Furniture → its three classifying folders. The folder below a root is the heading (split into words like slot labels); a file directly in a root, or outside every root, is **General**. Other sub-tabs bake an empty heading.
+- **Furniture gets headings too** (21 entries). Owner chose "by use" (2026-11-07): Seats, Tables, Plants, Lockers, General. Moves: `Furniture/Generic/Surfaces/Tables` → `Furniture/Generic/Tables`, `Furniture/Flora/PottedPlants` → `Furniture/Flora/Plants` (tile assets only; prefabs and examine strings stay put).
+- **AtmosMeter and AtmosInjector tiles moved** to `Furniture/Machines/Atmos`, so they head under Atmos. `AtmosInlineDeviceSetup` now writes furniture-layer device tiles to `MachineTileFolder`.
+- `MapEditorCatalog.GroupByHeading` sorts headings by name with General last; Machines reads Atmos, Disposal, Kitchen, Medical, Power, Vendors, General. Search results stay grouped by sub-tab only, without folder headings.
+- Tests: `HeadingOf` cases, the Machines General set is pinned (`EveryMachine_SitsInAHeadingFolder`), heading order, below-threshold and no-heading sub-tabs; the drift test now compares `Heading`.
 
 ### S4 — Layers groups — **planned**
 
