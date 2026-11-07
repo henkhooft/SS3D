@@ -14,7 +14,7 @@ namespace SS3D.Tests
     [Category("Vision")]
     public class VisionScenarios : ScenarioFixture
     {
-        // Guards: #145 FOV slack showing the next room past a wall, without blacking out the wall beside a door jamb (VisionSubSystem.TrimSlackPastOccluders) · Not cheaper because: the failure came from how the real wall box and the airlock's jamb cap sit together, which the pure OccluderSlack seam can't see
+        // Guards: #145 FOV slack showing the far faces of a wall or door, without blacking out the wall beside a door jamb (VisionSubSystem.OccluderSlack, OcclusionNormal) · Not cheaper because: the failure came from how the real wall box and the airlock's jamb cap sit together, which the pure seams can't see
         [UnityTest]
         public IEnumerator HuggingAWall_HidesTheNextRoom_KeepsTheWallBesideADoor()
         {
@@ -34,9 +34,29 @@ namespace SS3D.Tests
             yield return null;
 
             Vector3 eye = vision.DetectionCenter;
-            float farTileEdge = wallLineToBody + 0.5f;
-            Assert.Less(DistanceAlong(vision, eye, throughWall) + VisionSubSystem.ShaderDepthSlack, farTileEdge,
-                "A ray through the wall stops short of the room behind it");
+            const float wallFaceFromCentre = 0.22f;
+            float farWallFace = wallLineToBody + wallFaceFromCentre;
+            Assert.Less(DistanceAlong(vision, eye, throughWall) + VisionSubSystem.ShaderDepthSlack, farWallFace,
+                "A ray through the wall stops short of the far face it draws");
+
+            const float radiansOblique = 45f * Mathf.Deg2Rad;
+            Vector3 oblique = (throughWall * Mathf.Cos(radiansOblique)) + (Vector3.forward * Mathf.Sin(radiansOblique));
+            float obliqueDepth = (DistanceAlong(vision, eye, oblique) + VisionSubSystem.ShaderDepthSlack) * Mathf.Cos(radiansOblique);
+            Assert.Less(obliqueDepth, farWallFace,
+                "So does an oblique ray, though its end is still inside the wall's collider");
+
+            // In front of the door, a little off its centre: rays hit the side of the jamb cap,
+            // whose normal runs along the wall, and go on through the wall beside the door.
+            const float offDoorCentre = 0.3f;
+            Teleport(Body, new Vector3(door.x + (towardMainRoom * wallLineToBody), Body.transform.position.y, door.z + offDoorCentre));
+            yield return Hold(0.4f);
+            Physics.SyncTransforms();
+            yield return null;
+
+            const float pastTheJamb = 0.74f;
+            const float justPastTheFarFace = wallFaceFromCentre + 0.02f;
+            Vector3 behindTheJamb = new(door.x - (towardMainRoom * justPastTheFarFace), 0f, door.z + pastTheJamb);
+            Assert.IsFalse(vision.IsVisible(behindTheJamb), "Rays past the jamb cap stop before the wall's far face");
 
             const float radiansTowardJamb = 78f * Mathf.Deg2Rad;
             Vector3 towardJamb = (throughWall * Mathf.Cos(radiansTowardJamb)) + (Vector3.back * Mathf.Sin(radiansTowardJamb));

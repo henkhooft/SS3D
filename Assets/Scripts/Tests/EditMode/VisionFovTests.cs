@@ -6,17 +6,18 @@ namespace EditorTests
 {
     /// <summary>
     /// The FOV lights a little past each wall hit so the wall's own mesh stays visible. That slack
-    /// has to stop inside the wall layer, or the floor behind it shows (issue #145). Gameplay reads
-    /// the same depths through IsWithinDepths, so examine agrees with the black mask.
+    /// has to stop before the far face the wall draws, or what is behind it shows (issue #145).
+    /// Gameplay reads the same depths through IsWithinDepths, so examine agrees with the black mask.
     /// </summary>
     public class VisionFovTests
     {
-        // Measured from the first collider face to the far edge of the tile.
-        private const float WallDepth = 1.0f; // SteelWall box: 1 m deep.
-        private const float AirlockDepth = 0.9f; // Airlock box: 0.8 m deep, centered on a 1 m tile.
+        // Measured from the near collider face to the far face the mesh draws, not the far collider
+        // face: colliders fill the tile, while the meshes above the wall's flared base do not.
+        private const float WallFarFace = 0.72f; // SteelWallI faces sit 0.22 m from the tile centre.
+        private const float AirlockFarFace = 0.57f; // Door faces sit 0.17 m from the tile centre.
 
-        // SteelWallI faces sit up to 0.11 m behind the collider.
-        private const float WallFaceRecess = 0.11f;
+        // SteelWallI's main face sits 0.28 m behind the collider.
+        private const float WallFaceRecess = 0.28f;
 
         // Total slack before this fix, which stayed clear of glancing-angle wall blackout.
         private const float PreviousTotalSlack = 1.15f;
@@ -35,11 +36,11 @@ namespace EditorTests
         }
 
         [Test]
-        public void Slack_NeverReachesPastTheFarEdgeOfAWallOrAirlockTile(
+        public void Slack_NeverReachesTheFarFaceOfAWallOrAirlock(
             [NUnit.Framework.Range(0f, 89f, 1f)] float degrees)
         {
-            Assert.Less(DepthReachedIntoWall(degrees), WallDepth);
-            Assert.Less(DepthReachedIntoWall(degrees), AirlockDepth);
+            Assert.Less(DepthReachedIntoWall(degrees), WallFarFace);
+            Assert.Less(DepthReachedIntoWall(degrees), AirlockFarFace);
         }
 
         [Test]
@@ -50,17 +51,60 @@ namespace EditorTests
 
         [Test]
         public void Slack_MatchesThePreviousConstant_WhereRecessedFacesNeedIt(
-            [Values(45f, 60f, 75f, 85f)] float degrees)
+            [Values(70f, 75f, 85f)] float degrees)
         {
             Assert.AreEqual(PreviousTotalSlack, TotalSlack(degrees), 1e-4f);
         }
 
         [Test]
         public void Slack_KeepsRecessedWallFacesLit_WhereItWasReduced(
-            [NUnit.Framework.Range(0f, 40f, 1f)] float degrees)
+            [NUnit.Framework.Range(0f, 70f, 1f)] float degrees)
         {
             float rayLengthToFace = WallFaceRecess / Mathf.Cos(degrees * Mathf.Deg2Rad);
             Assert.Greater(TotalSlack(degrees), rayLengthToFace);
+        }
+
+        // An airlock's jamb cap: 0.05 m along a wall that runs along x, the full tile through it.
+        private static readonly Vector3 JambCapSize = new(0.05f, 2.6f, 1f);
+
+        [Test]
+        public void OcclusionNormal_KeepsTheHitNormal_OnAWall()
+        {
+            Vector3 normal = VisionSubSystem.OcclusionNormal(Vector3.left, new Vector3(1f, 2.6f, 1f));
+
+            Assert.AreEqual(Vector3.left, normal);
+        }
+
+        [Test]
+        public void OcclusionNormal_OnAJambCapsSide_MeasuresThroughTheWall()
+        {
+            Vector3 normal = VisionSubSystem.OcclusionNormal(Vector3.left, JambCapSize);
+
+            Assert.AreEqual(0f, Vector3.Dot(normal, Vector3.left), 1e-4f);
+            Assert.AreEqual(1f, Mathf.Abs(normal.z), 1e-4f);
+        }
+
+        // From the door's recess a ray hits the cap's side, whose normal runs along the wall, and
+        // goes on through the wall's thickness. Measured along that normal it crossed the wall.
+        [Test]
+        public void Slack_PastAJambCapsSide_StopsBeforeTheFarFace([NUnit.Framework.Range(10f, 40f, 2f)] float degrees)
+        {
+            Vector3 ray = Quaternion.AngleAxis(degrees, Vector3.up) * Vector3.forward;
+            Vector3 normal = VisionSubSystem.OcclusionNormal(Vector3.left, JambCapSize);
+            float slack = VisionSubSystem.OccluderSlack(ray, normal) + VisionSubSystem.ShaderDepthSlack;
+
+            Assert.Less(slack * ray.z, WallFarFace);
+        }
+
+        // Standing beside a door, a ray glancing along the wall stops on the cap's side, with the
+        // wall beside the door behind it. It keeps the full slack, or that wall paints black.
+        [Test]
+        public void Slack_AlongTheWallIntoAJambCap_KeepsTheWallBesideTheDoorLit()
+        {
+            Vector3 ray = Quaternion.AngleAxis(-78f, Vector3.up) * Vector3.forward;
+            Vector3 normal = VisionSubSystem.OcclusionNormal(Vector3.right, JambCapSize);
+
+            Assert.AreEqual(PreviousTotalSlack, VisionSubSystem.OccluderSlack(ray, normal) + VisionSubSystem.ShaderDepthSlack, 1e-4f);
         }
 
         private const float Range = 35f;

@@ -64,16 +64,17 @@ namespace SS3D.Systems.Vision
         /// <summary>Radial slack added in <c>VisionSampleWallDepth</c> (Vision.hlsl). Keep the two equal.</summary>
         public const float ShaderDepthSlack = 0.05f;
 
-        // With ShaderDepthSlack, 0.85 m into the occluder: wall boxes are 1 m deep and an airlock's
-        // sits 0.9 m from the far tile edge, so a perpendicular ray stops short of the next room.
-        private const float OccluderSlackPerpendicular = 0.8f;
+        // With ShaderDepthSlack, 0.45 m into the occluder, about its centre line. Colliders are far
+        // thicker than what they draw: a wall's face is 0.28 m behind its near collider face and
+        // an airlock's far face 0.57 m past it, so this lights near faces and hides far ones.
+        private const float OccluderSlackPerpendicular = 0.4f;
 
-        // Slack for a ray that is still inside solid wall at this distance. Also the most any ray
-        // gets, which bounds it at corners where a ray leaves through a side face.
+        // Slack for a ray that glances along the wall, where a fixed depth would need a long ray.
+        // Also the most any ray gets.
         private const float OccluderSlackMax = 1.1f;
 
-        /// <summary>Colliders read per ray when checking whether its slack ends in solid wall.</summary>
-        private const int MaxSlackEndOverlaps = 4;
+        // A collider thinner than this along the hit normal is a jamb cap, not the wall's thickness.
+        private const float ThinOccluder = 0.25f;
 
         [SerializeField]
         [Tooltip("Fallback cast origin offset when the target has no Entity.ViewPoint")]
@@ -100,12 +101,6 @@ namespace SS3D.Systems.Vision
         private NativeArray<Vector3> _rayDirections;
         private float[] _rayTraveled;
         private int[] _activeRayIndices;
-
-        // Rays whose slack may be trimmed, with the distance to trim to (see TrimSlackPastOccluders).
-        private NativeArray<OverlapSphereCommand> _slackEndCommands;
-        private NativeArray<ColliderHit> _slackEndHits;
-        private int[] _trimRayIndices;
-        private float[] _trimmedDistances;
 
         /// <summary>
         /// Collider instance-id → occluder. Walls/doors are stable; cleared when oversized so
@@ -406,7 +401,6 @@ namespace SS3D.Systems.Vision
             }
 
             int activeCount = count;
-            int trimCount = 0;
 
             // Wave schedule: all active rays cast together, then only non-occluder hits stay
             // active and advance. Same semantics as iterative single-hit Physics.Raycast, but
@@ -439,22 +433,15 @@ namespace SS3D.Systems.Vision
                     Collider collider = hit.collider;
                     if (collider != null && IsVisionOccluder(collider))
                     {
-                        float visibleDistance = Mathf.Min(distanceFromOrigin + OccluderSlackMax, viewRange);
+                        Vector3 normal = OcclusionNormal(hit.normal, collider.bounds.size);
+                        float slack = OccluderSlack(_rayDirections[ray], normal);
+                        float visibleDistance = Mathf.Min(distanceFromOrigin + slack, viewRange);
                         resultArray[ray] = new ViewCastInfo(
                             true,
                             origin + (_rayDirections[ray] * visibleDistance),
                             visibleDistance,
                             angles[ray],
                             hit.normal);
-
-                        float trimmedDistance = distanceFromOrigin + OccluderSlack(_rayDirections[ray], hit.normal);
-                        if (trimmedDistance < visibleDistance)
-                        {
-                            _trimRayIndices[trimCount] = ray;
-                            _trimmedDistances[trimCount] = trimmedDistance;
-                            trimCount++;
-                        }
-
                         continue;
                     }
 
@@ -466,71 +453,38 @@ namespace SS3D.Systems.Vision
 
                 activeCount = nextActive;
             }
-
-            TrimSlackPastOccluders(origin, trimCount, resultArray);
         }
 
         /// <summary>
-        /// Pulls a ray's lit end back to its trimmed distance only if the end has left the occluder.
-        /// A ray stopped by a thin face along the wall line, like a door jamb's cap, ends inside the
-        /// next wall tile: that ray keeps its slack, or the wall face beside it paints black.
+        /// How far past a collider hit a ray stays lit, so the occluder's own mesh (well behind the
+        /// collider) does not paint black. A fixed depth into the wall along
+        /// <paramref name="occluderNormal"/>, so a glancing ray gets more length, which keeps the
+        /// recessed faces of a wall you hug lit while what is behind it stays hidden.
         /// </summary>
-        private void TrimSlackPastOccluders(Vector3 origin, int trimCount, ViewCastInfo[] resultArray)
+        public static float OccluderSlack(Vector3 rayDirection, Vector3 occluderNormal)
         {
-            if (trimCount == 0)
-                return;
-
-            const float probeRadius = 0.01f;
-            QueryParameters query = new(obstacleMask, false, QueryTriggerInteraction.Ignore, false);
-
-            for (int t = 0; t < trimCount; t++)
-                _slackEndCommands[t] = new OverlapSphereCommand(resultArray[_trimRayIndices[t]].Point, probeRadius, query);
-
-            NativeArray<OverlapSphereCommand> commands = _slackEndCommands.GetSubArray(0, trimCount);
-            NativeArray<ColliderHit> hits = _slackEndHits.GetSubArray(0, trimCount * MaxSlackEndOverlaps);
-            OverlapSphereCommand.ScheduleBatch(commands, hits, 32, MaxSlackEndOverlaps, default(JobHandle)).Complete();
-
-            for (int t = 0; t < trimCount; t++)
-            {
-                if (EndsInsideOccluder(hits, t))
-                    continue;
-
-                int ray = _trimRayIndices[t];
-                float distance = _trimmedDistances[t];
-                resultArray[ray].Distance = distance;
-                resultArray[ray].Point = origin + (_rayDirections[ray] * distance);
-            }
-        }
-
-        private bool EndsInsideOccluder(NativeArray<ColliderHit> hits, int command)
-        {
-            int first = command * MaxSlackEndOverlaps;
-            for (int i = first; i < first + MaxSlackEndOverlaps; i++)
-            {
-                Collider collider = hits[i].collider;
-                if (collider == null)
-                    return false;
-
-                if (IsVisionOccluder(collider))
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// How far past a collider hit a ray that has left the occluder stays lit, so the occluder's
-        /// own mesh (often slightly behind the collider) does not paint black. Measured along the
-        /// ray: a fixed depth into the wall needs more ray length at a glancing angle, which keeps
-        /// the recessed faces of a wall you hug lit while the floor beyond it stays hidden.
-        /// </summary>
-        public static float OccluderSlack(Vector3 rayDirection, Vector3 hitNormal)
-        {
-            float cosine = Mathf.Abs(Vector3.Dot(rayDirection, hitNormal));
+            float cosine = Mathf.Abs(Vector3.Dot(rayDirection, occluderNormal));
             if (cosine * OccluderSlackMax <= OccluderSlackPerpendicular)
                 return OccluderSlackMax;
 
             return OccluderSlackPerpendicular / cosine;
+        }
+
+        /// <summary>
+        /// The axis to measure a hit's depth along. A door jamb's cap is thin along the wall, so a
+        /// ray hitting its side gets a normal that runs along the wall: measured that way, slack
+        /// would either cross the wall behind it or black out the wall beside the door. Such a hit
+        /// uses the other horizontal axis, the wall's thickness. Tile occluders are axis-aligned,
+        /// so <paramref name="occluderSize"/> is the collider's world bounds.
+        /// </summary>
+        public static Vector3 OcclusionNormal(Vector3 hitNormal, Vector3 occluderSize)
+        {
+            bool alongX = Mathf.Abs(hitNormal.x) >= Mathf.Abs(hitNormal.z);
+            float thickness = alongX ? occluderSize.x : occluderSize.z;
+            if (thickness >= ThinOccluder)
+                return hitNormal;
+
+            return alongX ? Vector3.forward : Vector3.right;
         }
 
         /// <summary>
@@ -610,10 +564,6 @@ namespace SS3D.Systems.Vision
             _rayCommands = new NativeArray<RaycastCommand>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             _rayHits = new NativeArray<RaycastHit>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             _rayDirections = new NativeArray<Vector3>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            _slackEndCommands = new NativeArray<OverlapSphereCommand>(count, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            _slackEndHits = new NativeArray<ColliderHit>(count * MaxSlackEndOverlaps, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            _trimRayIndices = new int[count];
-            _trimmedDistances = new float[count];
             _rayTraveled = new float[count];
             _activeRayIndices = new int[count];
             _viewCastResults = new ViewCastInfo[count];
@@ -631,10 +581,6 @@ namespace SS3D.Systems.Vision
                 _rayHits.Dispose();
             if (_rayDirections.IsCreated)
                 _rayDirections.Dispose();
-            if (_slackEndCommands.IsCreated)
-                _slackEndCommands.Dispose();
-            if (_slackEndHits.IsCreated)
-                _slackEndHits.Dispose();
         }
 
         public struct ViewCastInfo
