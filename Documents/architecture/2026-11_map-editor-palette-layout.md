@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id; examine keys open); S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6 planned, starts with a grill. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -167,7 +167,7 @@ Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a 
 - Schema 1 → 2. Nothing reads `schemaVersion` on load: a version 1 file has no `id` and loads by name, and an older build reading a version 2 file ignores `id`. The bump marks the format and triggers a MINOR release.
 - **Shipped maps stamped** by the new `Tools/map_import/asset_ids.py` (name → id from the `ObjectAssetReferences` and tile asset files, no Unity): both `StationTemplates`, the legacy `Tilemaps`, and the `testroom` and `atmostest` fixtures. With the ids removed, every file compares equal to the original. `classic_ministation.py` writes ids through the same table. The DMM importer places through the game, so its saves get ids for free.
 - **Wire path unchanged.** Placement, clear and move RPCs send names, and `TileAssetCatalog` indices follow sorted names. Both sides run the same build, so a rename only needs the `ProtocolVersion` bump that `atmospherics.md` already calls for. Moving RPCs to ids would buy nothing until mismatched builds can connect.
-- **Examine localization keys: open, owner's call.** `ExamineCanonicalKeyGenerator.GetNameKey` still builds keys from the asset's folder path, so a move or rename still changes the key. Not touched here.
+- **Examine localization keys stay path-based** (owner, 2026-11-07: left for a later localization effort). `ExamineCanonicalKeyGenerator.GetNameKey` builds keys from the asset's folder path, so a move or rename still changes the key.
 - Tests: `SavedAssetLookupTests`: id finds a renamed asset; a version 1 save without id loads by name; old pipe names go through `RenamedTileObjects`; an unknown id falls back to the name; every tile asset has a unique prefab id; every shipped map stores an id matching each name. `scenarios:NukeOps` loads the stamped test room (disk, nuke cart) through the real loader.
 
 ### S6 — Variants — **planned; starts with a grill**
