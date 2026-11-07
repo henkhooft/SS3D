@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -135,9 +135,16 @@ Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palett
 - **Spawn Points lists Nuclear Operatives only** (owner, 2026-11-07): Traitor and Malfunctioning AI are assigned to someone already aboard, so their markers did nothing. `MapEditorSpawnCatalog.MarkerAntagonists` picks the palette's antagonists; the enum values stay so saved records still read.
 - Tests: `HeadingOf` cases, the Machines General set is pinned (`EveryMachine_SitsInAHeadingFolder`), heading order, below-threshold and no-heading sub-tabs; the drift test now compares `Heading`.
 
-### S4 — Layers groups — **planned**
+### S4 — Layers groups — **done**
 
 `TileLayerCategory`: rename Plenums → Subfloor; split Wires and pipes into Cables, Gas pipes, Disposals. Update `MapEditorLayerVisibility` and its tests.
+
+**As built:**
+
+- The popover reads Subfloor, Turfs, Furniture, Wall mounts, Cables, Gas pipes, Disposals, Floor decals, Items, Scripts, Areas. The three new groups sit where Wires and pipes was; the order is otherwise unchanged.
+- Gas pipes holds every pipe layer (`PipeLeft`, `PipeRight`, `PipeSurface`, `PipeMiddle`, `PipeManifold`), matching the Gas Pipes sub-tab's delete scope.
+- No save or wire change: layer visibility lives only in `MapEditorViewModel` and `TileLayerVisibilityService`, never persisted, so renaming enum values breaks nothing. `MapEditorLayerVisibility` and the cursor pick iterate `AllCategories` and needed no edit.
+- Tests: `TileLayerCategoryMappingTests` checks each Lower layer's group, that every `TileLayer` sits in exactly one group, and the plain-word labels.
 
 ### S5 — Saved maps reference objects by ID — **planned**
 

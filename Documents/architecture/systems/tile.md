@@ -57,7 +57,7 @@ Steel wall/table debris is separate from tile occupancy: `TileSubSystem.Wreckage
 - `Assets/Scripts/SS3D/Systems/Tile/MapImport/` — SS13 `.dmm` import (parser, type map, pipe resolver, planner, Play Mode applier)
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/ConstructionHologramManager.cs` — placement preview and drag batches
 - `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerVisibilityService.cs` — client-only layer-group dim/restore (~5% opacity); **Scripts** toggles spawn-marker pins
-- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
+- `Assets/Scripts/SS3D/Systems/Tile/TileMapCreator/TileLayerCategory.cs` — shared layer → category mapping for the Layers popover; the Lower groups (Subfloor, Cables, Gas pipes, Disposals) match the Lower sub-tabs (`FloorDecals` / `Scripts` are catalog-backed, not a `TileLayer`)
 
 ## Extension points
 
