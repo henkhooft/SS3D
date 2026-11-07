@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2–S4 planned. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -107,9 +107,19 @@ Atomic: the enum, the asset and the delete switch must change together.
 - **For S3:** Furniture has 21 entries after S1, so it also passes the 20-entry heading threshold, not only Machines.
 - Not machine-checked: Items delete (a raycast under the real cursor). The manual pass covered every other sub-tab's delete in a live session.
 
-### S2 — Finding things — **planned**
+### S2 — Finding things — **done**
 
 Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palette** (decision 10); last tab in `PlayerPrefs` (decision 11). Tests: search across tabs, pick switches mode/sub-tab, Scripts searchable, preference round-trip and fallback for an unknown name.
+
+**As built:**
+
+- **Added after the owner's hand check (2026-11-07):** slot labels split asset names into words (`MapEditorCatalog.PaletteLabel`) on two lines, because about 47 names were cut off at one line. Map Check issues no longer open on their own, and a closed issue is one line (title, with the category on the right).
+- `MapEditorCatalog.Search` returns `MapEditorSearchGroup`s in tab and build order; the grid heads each with "Upper › Machines" (`map-editor-grid-heading`, which S3 reuses). Marker rails now honour a search term; without one they keep kind order. Rooms lists areas, not entries, so search doesn't reach room names.
+- A pick goes through `MapEditorSubSystem.OnPaletteEntryPicked`: select, then `MapEditorViewModel.OpenSubTab` (mode and sub-tab in one step), then the ghost. Only palette clicks switch tabs; the Dropper doesn't.
+- **Clicking a mode or sub-tab clears the search** (not in the plan): with search showing every tab, a tab click would otherwise look dead.
+- `MapValidationIssue.EntryKey` carries the entry. Set on missing job spawns and the nuclear checklist (first unmet requirement), and on the room warnings for a missing air alarm, scrubber, vent or APC. The button searches `MapEditorCatalog.SearchTermFor(key)` (a job, antagonist or marker name, else the asset name), opens the entry's sub-tab and un-minimises the palette. A job with no palette entry (only Assistant and Security have one) gets a toast. The new field changes the `TargetMapValidation` payload: protocol 31 → 32.
+- `MapEditorLastTab` stores `"Mode/SubTab"` enum names under `SS3D.MapEditor.LastTab`. It restores on the session's first open; a stored tab under another mode, an unknown name, a number or a hidden sub-tab falls back to Upper › Floors. `SetCapabilities` also moves a sandbox player off a hidden open sub-tab.
+- Tests: `MapEditorPaletteSearchTests`. The pick path itself (a `NetworkBehaviour` handler) is covered through `OpenSubTab`, not end to end.
 
 ### S3 — Headings — **planned**
 
@@ -118,6 +128,35 @@ Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palett
 ### S4 — Layers groups — **planned**
 
 `TileLayerCategory`: rename Plenums → Subfloor; split Wires and pipes into Cables, Gas pipes, Disposals. Update `MapEditorLayerVisibility` and its tests.
+
+### S5 — Saved maps reference objects by ID — **planned**
+
+Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a save-format change costs nothing now and more with every outside map.
+
+**Why:** saved maps store objects by name: `SavedPlacedTileObject.tileObjectSOName` and `SavedPlacedItemObject.itemName`, resolved through `RenamedTileObjects`. A rename therefore needs an alias entry and breaks the map-import tools. Stable IDs already exist: each prefab's `ObjectAssetReference.Id` is its Unity asset GUID (the generated `Data/Generated/Items.cs` lists them), and a rename keeps the GUID.
+
+- Save the ID as the key and keep the name beside it, for readable JSON and for loading old saves. Load by ID, then by name through `RenamedTileObjects`.
+- Bump `PersistenceEnvelope.CurrentSchemaVersion` (it is 1), and write the shipped maps under `Builds/Game/Data/` in the new format.
+- Update `Tools/map_import/` (it writes names) and `MapImportPipeResolver` / `Ss13TypeMapper` if they emit names into saves.
+- Check the wire path: whether placement commands and RPCs send names. Moving them to IDs is a protocol bump.
+- Test: the old format loads; a saved and renamed asset still loads. An audit test checks that IDs are unique and that no two assets share a GUID (a deleted and recreated asset gets a new one).
+- Not in scope, but to record: examine localization keys are built from the asset's folder path (`ExamineCanonicalKeyGenerator.GetNameKey`), so moving or renaming an asset changes its translation key. Decide whether S5 moves those keys to IDs too, or leaves that to a localization effort.
+- After S5, renames are cheap. The owner may then shorten names such as `AtmosPipesSupply` (see S2's labels).
+
+### S6 — Variants — **planned; starts with a grill**
+
+Added by the owner on 2026-11-07. Several entries are variants of one object: `AtmosFilterL`/`R`/`L2`/`R2`, `AtmosMixerL`/`R`, `AtmosManifold3`/`4`, the Blue/Grey office and plastic chairs, `Plant0`–`7`, the `TileDirt` tiles and the soda cans. The palette should show one entry per family and cycle its variants. This is not in `creative-mode.md` §2, so it is recorded here as a decision, not as a change to the design doc.
+
+**Step 1 is a `grilling` session with the owner**, before any code. Questions to settle:
+
+- What makes a family: a folder per family (baked by the regenerator, like S3's headings; matches S1's "move the asset, never a rule"), or an explicit list?
+- Does a variant stay its own asset in saved maps (no save change, only the palette), or is a variant a property of one object (a save change, which belongs with S5)?
+- The cycle input: the scroll wheel zooms the camera (`MapEditorSession`), so Shift+scroll, `[`/`]`, a key, or arrows on the slot. How does it sit beside R rotate? What does the slot show (a "2/4" badge, the variant's name)?
+- Which variant is selected by default, and is it remembered per family?
+- How Dropper, search (any variant's name finds the family) and Map Check's Show in palette land on a variant.
+- Is mirroring (L/R) a variant, or should mirroring be its own transform beside rotation?
+
+Then write the decisions into this section and split it into implementation steps.
 
 ## Parked
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace SS3D.Systems.Tile.MapEditor
 {
@@ -164,5 +165,49 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private static MapEditorSubTab Item(MapEditorSubcategory id, int order, string label, string icon) =>
             Row(id, MapEditorMode.Items, order, label, icon, MapEditorDeleteScope.ItemUnderCursor, MapEditorSubTabFlags.IsItem);
+    }
+
+    /// <summary>
+    /// The tab the editor reopens on (creative-mode §2, decision 11), kept per machine in
+    /// <see cref="PlayerPrefs"/> as "Mode/SubTab" enum names, so renumbering never misreads it.
+    /// </summary>
+    public static class MapEditorLastTab
+    {
+        public const string PrefsKey = "SS3D.MapEditor.LastTab";
+
+        public static string Encode(MapEditorSubcategory id) =>
+            MapEditorSubTabs.TryGet(id, out MapEditorSubTab row) ? $"{row.Mode}/{row.Id}" : null;
+
+        /// <summary>
+        /// The stored sub-tab, or <see cref="MapEditorSubTabs.Default"/> when the text names no sub-tab, names one
+        /// under another mode, or names one <paramref name="isShown"/> rejects (sandbox, emptied).
+        /// </summary>
+        public static MapEditorSubcategory Decode(string stored, Func<MapEditorSubTab, bool> isShown)
+        {
+            string[] parts = stored?.Split('/');
+            if (parts is { Length: 2 }
+                && Enum.TryParse(parts[0], out MapEditorMode mode)
+                && Enum.TryParse(parts[1], out MapEditorSubcategory id)
+                && !int.TryParse(parts[1], out _)
+                && MapEditorSubTabs.TryGet(id, out MapEditorSubTab row)
+                && row.Mode == mode
+                && (isShown == null || isShown(row)))
+                return id;
+
+            return MapEditorSubTabs.Default;
+        }
+
+        public static MapEditorSubcategory Load(Func<MapEditorSubTab, bool> isShown) =>
+            Decode(PlayerPrefs.GetString(PrefsKey, null), isShown);
+
+        public static void Save(MapEditorSubcategory id)
+        {
+            string encoded = Encode(id);
+            if (encoded == null || PlayerPrefs.GetString(PrefsKey, null) == encoded)
+                return;
+
+            PlayerPrefs.SetString(PrefsKey, encoded);
+            PlayerPrefs.Save();
+        }
     }
 }

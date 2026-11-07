@@ -21,6 +21,8 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         /// <summary>Decides which sub-tabs are drawn (empty ones are not); null draws every row the sandbox allows.</summary>
         public MapEditorCatalog Catalog { get; set; }
         public string SearchText { get; set; } = string.Empty;
+        /// <summary>A non-empty search shows matches from every tab instead of the open sub-tab.</summary>
+        public bool IsSearching => !string.IsNullOrWhiteSpace(SearchText);
         public GenericObjectSo SelectedAsset { get; set; }
         public MapEditorCatalogEntry SelectedEntry { get; set; }
         public bool HideUI { get; set; }
@@ -60,6 +62,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             Capabilities = capabilities;
             if (!capabilities.Persistence && OpenPopover is "saveMenu" or "maps")
                 OpenPopover = null;
+            // A tab remembered from an admin session can be one this player may not see.
+            if (MapEditorSubTabs.TryGet(CurrentSubcategory, out MapEditorSubTab open) && !IsSubTabShown(open))
+            {
+                SetMode(CurrentMode);
+                return;
+            }
             NotifyChanged();
         }
 
@@ -124,6 +132,20 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetSubcategory(MapEditorSubcategory subcategory)
         {
             CurrentSubcategory = subcategory;
+            UpdateCategoryTool();
+            UpdateHint();
+            NotifyChanged();
+        }
+
+        /// <summary>Opens <paramref name="subcategory"/> together with its mode (search picks, Show in palette, last tab).</summary>
+        public void OpenSubTab(MapEditorSubcategory subcategory)
+        {
+            if (!MapEditorSubTabs.TryGet(subcategory, out MapEditorSubTab row))
+                return;
+
+            CurrentMode = row.Mode;
+            CurrentSubcategory = subcategory;
+            _layerCategoryVisibility[TileLayerCategory.Scripts] = row.Mode == MapEditorMode.Scripting;
             UpdateCategoryTool();
             UpdateHint();
             NotifyChanged();

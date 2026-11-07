@@ -27,6 +27,22 @@ namespace SS3D.Systems.Tile.MapEditor
         }
     }
 
+    /// <summary>One sub-tab's matches in a palette-wide search.</summary>
+    public sealed class MapEditorSearchGroup
+    {
+        public MapEditorSearchGroup(MapEditorSubTab subTab, IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            SubTab = subTab;
+            Entries = entries;
+        }
+
+        public MapEditorSubTab SubTab { get; }
+        public IReadOnlyList<MapEditorCatalogEntry> Entries { get; }
+
+        /// <summary>Where the matches live, as the grid heads them: "Upper › Machines".</summary>
+        public string Heading => $"{MapEditorSubTabs.ModeLabel(SubTab.Mode)} › {SubTab.Label}";
+    }
+
     /// <summary>
     /// Runtime catalog built from <see cref="MapEditorCatalogSo"/> and live tile assets.
     /// </summary>
@@ -153,18 +169,65 @@ namespace SS3D.Systems.Tile.MapEditor
             IEnumerable<MapEditorCatalogEntry> query = _entries.Where(e => e.Mode == mode && e.Subcategory == subcategory
                 && !(HideSandboxDenied && MapEditorSandboxRules.IsDeniedAsset(e.AssetName)));
 
-            // Marker rails other than Spawn Points list in kind order and ignore search (palette-wide search is S2).
-            if (MapEditorSubTabs.TryGet(subcategory, out MapEditorSubTab row) && row.IsMarker
-                && subcategory != MapEditorSubcategory.SpawnPoints)
-                return query;
-
             if (string.IsNullOrWhiteSpace(search))
-                return query.OrderBy(e => e.AssetName);
+            {
+                // Marker rails other than Spawn Points list in kind order.
+                return MapEditorSubTabs.TryGet(subcategory, out MapEditorSubTab row) && row.IsMarker
+                    && subcategory != MapEditorSubcategory.SpawnPoints
+                    ? query
+                    : query.OrderBy(e => e.AssetName);
+            }
 
             string term = search.Trim();
             return query
                 .Where(e => MatchesSearch(e, term))
                 .OrderBy(e => e.AssetName);
+        }
+
+        /// <summary>
+        /// Palette-wide search (creative-mode §2, decision 9): matches in every tab, grouped by sub-tab in
+        /// tab and build order. Sub-tabs the player can't see are left out; an empty term finds nothing.
+        /// </summary>
+        public IReadOnlyList<MapEditorSearchGroup> Search(string search, bool restrictedPalette)
+        {
+            List<MapEditorSearchGroup> groups = new();
+            if (string.IsNullOrWhiteSpace(search))
+                return groups;
+
+            foreach (MapEditorMode mode in MapEditorSubTabs.Modes)
+            {
+                foreach (MapEditorSubTab row in MapEditorSubTabs.InMode(mode))
+                {
+                    if (restrictedPalette && row.SandboxRestricted)
+                        continue;
+
+                    MapEditorCatalogEntry[] matches = Query(mode, row.Id, search).ToArray();
+                    if (matches.Length > 0)
+                        groups.Add(new MapEditorSearchGroup(row, matches));
+                }
+            }
+
+            return groups;
+        }
+
+        /// <summary>
+        /// The words that find <paramref name="assetName"/> in search: a marker's job, antagonist or kind,
+        /// a decal's name, otherwise the asset name. Map Check's Show in palette searches for this.
+        /// </summary>
+        public static string SearchTermFor(string assetName)
+        {
+            if (MapEditorSpawnCatalog.TryDecode(assetName, out SpawnPointKind kind, out string jobName,
+                    out AntagonistSpawnCategory category))
+                return kind == SpawnPointKind.Job ? jobName : MapEditorSpawnCatalog.FormatAntagonist(category);
+
+            if (MapEditorGasMarkerCatalog.TryDecode(assetName, out GasMarkerKind gasKind))
+                return MapEditorGasMarkerCatalog.DisplayName(gasKind);
+
+            if (MapEditorFloorDecalCatalog.TryDecode(assetName, out ushort decalId)
+                && FloorDecalCatalog.Get()?.TryGet(decalId, out FloorDecalDefinition decal) == true)
+                return decal.DisplayName;
+
+            return assetName;
         }
 
         /// <summary>
@@ -181,6 +244,15 @@ namespace SS3D.Systems.Tile.MapEditor
 
             return Query(row.Mode, row.Id, null).Any();
         }
+
+        /// <summary>
+        /// An asset name as palette words, so the two-line slot label can wrap it: "AtmosPipesSupply" →
+        /// "Atmos Pipes Supply", "IDCard" → "ID Card". Acronyms and trailing digits stay whole ("APC", "AtmosFilterL2").
+        /// </summary>
+        public static string PaletteLabel(string assetName) =>
+            string.IsNullOrEmpty(assetName)
+                ? assetName
+                : System.Text.RegularExpressions.Regex.Replace(assetName, "(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ");
 
         private static MapEditorCatalogEntry Virtual(string assetName, MapEditorSubcategory subTab, params string[] tags) =>
             new()

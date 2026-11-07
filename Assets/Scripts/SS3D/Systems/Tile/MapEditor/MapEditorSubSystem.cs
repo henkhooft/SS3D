@@ -66,6 +66,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private IInputHandle _mapEditorHandle;
         private VisualElement _overlayRoot;
         private bool _active;
+        private bool _lastTabRestored;
         /// <summary>OnStart finished; OnDestroyed may run first when a scene unloads mid-load.</summary>
         private bool _started;
         /// <summary>Unscaled time at which the pending Map Check runs after an edit; negative when none is pending.</summary>
@@ -296,6 +297,7 @@ namespace SS3D.Systems.Tile.MapEditor
         private void WireViewEvents()
         {
             _view.ValidationLocateRequested += OnValidationLocateRequested;
+            _view.ValidationShowInPaletteRequested += OnValidationShowInPaletteRequested;
             _view.ToolSelected += OnToolSelected;
             _view.AreaApplyRequested += OnAreaApplyRequested;
             _view.GasMarkerApplyRequested += OnGasMarkerApplyRequested;
@@ -321,7 +323,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.ModeSelected += OnModeSelected;
             _view.SubcategorySelected += OnSubcategorySelected;
             _view.SearchChanged += OnSearchChanged;
-            _view.AssetSelected += HandleAssetSelected;
+            _view.AssetSelected += OnPaletteEntryPicked;
         }
 
         private void RebuildCatalog()
@@ -358,6 +360,16 @@ namespace SS3D.Systems.Tile.MapEditor
                 && entities.IsPlayerSpawned(local);
         }
 
+        /// <summary>The first open of a session reopens the tab used last on this machine (creative-mode §2).</summary>
+        private void RestoreLastTab()
+        {
+            if (_lastTabRestored)
+                return;
+
+            _lastTabRestored = true;
+            _viewModel.OpenSubTab(MapEditorLastTab.Load(_viewModel.IsSubTabShown));
+        }
+
         private void SetActive(bool active)
         {
             _active = active;
@@ -367,6 +379,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 _viewModel.HideUI = false;
                 EnableDocument();
                 RebuildCatalog();
+                RestoreLastTab();
                 EnsureCommandServiceBound();
                 _viewModel.EnsureLayerDefaults();
                 MapEditorLayerVisibility.Activate();
@@ -774,6 +787,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _view.ValidationLocateRequested -= OnValidationLocateRequested;
+            _view.ValidationShowInPaletteRequested -= OnValidationShowInPaletteRequested;
             _view.ToolSelected -= OnToolSelected;
             _view.AreaApplyRequested -= OnAreaApplyRequested;
             _view.GasMarkerApplyRequested -= OnGasMarkerApplyRequested;
@@ -799,7 +813,7 @@ namespace SS3D.Systems.Tile.MapEditor
             _view.ModeSelected -= OnModeSelected;
             _view.SubcategorySelected -= OnSubcategorySelected;
             _view.SearchChanged -= OnSearchChanged;
-            _view.AssetSelected -= HandleAssetSelected;
+            _view.AssetSelected -= OnPaletteEntryPicked;
         }
 
         private void OnToolSelected(MapEditorTool tool)
@@ -1061,22 +1075,69 @@ namespace SS3D.Systems.Tile.MapEditor
             MapEditorLayerVisibility.Apply(_viewModel);
         }
 
+        // Clicking a tab means browsing it, so it ends a palette-wide search.
         private void OnModeSelected(MapEditorMode mode)
         {
+            _viewModel.SearchText = string.Empty;
             _viewModel.SetMode(mode);
+            AfterSubTabChanged();
+        }
+
+        private void OnSubcategorySelected(MapEditorSubcategory sub)
+        {
+            _viewModel.SearchText = string.Empty;
+            _viewModel.SetSubcategory(sub);
+            AfterSubTabChanged();
+        }
+
+        /// <summary>Opens a sub-tab in any mode, as a search pick or Show in palette does.</summary>
+        private void OpenSubTab(MapEditorSubcategory sub)
+        {
+            if (_viewModel.CurrentSubcategory == sub)
+                return;
+
+            _viewModel.OpenSubTab(sub);
+            AfterSubTabChanged();
+        }
+
+        private void AfterSubTabChanged()
+        {
             TileLayerVisibilityService.SetGroupVisible(TileLayerCategory.Scripts,
                 _viewModel.IsLayerCategoryVisible(TileLayerCategory.Scripts));
             SyncTurfsLayerVisibility();
             OnToolSelected(_viewModel.CurrentTool);
             SyncHologramToLibrarySelection();
+            MapEditorLastTab.Save(_viewModel.CurrentSubcategory);
         }
 
-        private void OnSubcategorySelected(MapEditorSubcategory sub)
+        /// <summary>
+        /// A palette click. Search results come from every tab, so the entry's sub-tab opens first:
+        /// delete scope, forms and hints all key off the open sub-tab (decision 9).
+        /// </summary>
+        private void OnPaletteEntryPicked(MapEditorCatalogEntry entry, GenericObjectSo asset)
         {
-            _viewModel.SetSubcategory(sub);
-            SyncTurfsLayerVisibility();
-            OnToolSelected(_viewModel.CurrentTool);
-            SyncHologramToLibrarySelection();
+            if (entry == null)
+                return;
+
+            // Selected first, so opening the sub-tab keeps this entry instead of picking its first one.
+            _viewModel.SelectEntry(entry, asset);
+            OpenSubTab(entry.Subcategory);
+            HandleAssetSelected(entry, asset);
+        }
+
+        /// <summary>Map Check's Show in palette: search for the entry and open the sub-tab it lives in.</summary>
+        private void OnValidationShowInPaletteRequested(string entryKey)
+        {
+            if (string.IsNullOrEmpty(entryKey) || !_catalog.TryGetEntry(entryKey, out MapEditorCatalogEntry entry))
+            {
+                _viewModel.ShowToast("That isn't in this build's palette.");
+                return;
+            }
+
+            _viewModel.SearchText = MapEditorCatalog.SearchTermFor(entry.AssetName);
+            if (MapEditorSubTabs.TryGet(entry.Subcategory, out MapEditorSubTab row) && _viewModel.IsSubTabShown(row))
+                OpenSubTab(entry.Subcategory);
+            _viewModel.NotifyChanged();
         }
 
         /// <summary>Lower run tabs (Cables, Gas Pipes, Disposal Pipes) toggle Turfs in the view model; only re-dim when it changed (walks the map).</summary>

@@ -7,6 +7,7 @@ using SS3D.Systems.Tile.SpawnPoints;
 using SS3D.Systems.Tile.TileMapCreator;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -353,7 +354,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             search.AddToClassList("map-editor-search");
             _searchField = new TextField { value = string.Empty };
             _searchField.AddToClassList("map-editor-search-field");
-            _searchField.textEdition.placeholder = "Search tags, names, keyword";
+            _searchField.textEdition.placeholder = "Search every tab";
             _searchField.textEdition.hidePlaceholderOnFocus = true;
             _searchField.RegisterValueChangedCallback(evt => SearchChanged?.Invoke(evt.newValue));
             WireTextEntryField(_searchField);
@@ -464,6 +465,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 pair.Value.EnableInClassList("map-editor-mode-tab--active", pair.Key == _vm.CurrentMode);
             }
 
+            if (_searchField != null && _searchField.value != _vm.SearchText)
+                _searchField.SetValueWithoutNotify(_vm.SearchText ?? string.Empty);
+
             RebuildSubcategories();
             ApplyPaletteMode();
 
@@ -540,45 +544,73 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             if (_vm.OpenPopover == GasMarkerPopover && _vm.CurrentSubcategory != MapEditorSubcategory.StartingAir)
                 ClosePopover();
 
+            if (_vm.IsSearching)
+            {
+                BuildSearchResults();
+                return;
+            }
+
             if (_vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
             {
                 BuildAreaPalette(_grid);
                 return;
             }
 
-            List<MapEditorCatalogEntry> entryList = new();
-            foreach (MapEditorCatalogEntry entry in _catalog.Query(
-                         _vm.CurrentMode, _vm.CurrentSubcategory, _vm.SearchText))
-            {
-                entryList.Add(entry);
-            }
-
+            List<MapEditorCatalogEntry> entryList = _catalog
+                .Query(_vm.CurrentMode, _vm.CurrentSubcategory, null)
+                .ToList();
             if (entryList.Count == 0)
             {
-                Label empty = new($"No matches for \"{_vm.SearchText}\".");
-                empty.AddToClassList("map-editor-stub-message");
-                _grid.Add(empty);
+                AddGridMessage("Nothing here yet.");
                 return;
             }
 
-            int maxColumns = GetMaxGridColumns();
-            if (maxColumns <= 0)
-                maxColumns = Math.Max(1, entryList.Count);
+            AddSlotRows(entryList);
+        }
 
-            int columnCount = maxColumns;
-            int usedRows = (entryList.Count + columnCount - 1) / columnCount;
-            VisualElement[] rows = new VisualElement[usedRows];
-            for (int rowIndex = 0; rowIndex < usedRows; rowIndex++)
+        /// <summary>Palette-wide search: every tab's matches, each group headed with where it lives.</summary>
+        private void BuildSearchResults()
+        {
+            IReadOnlyList<MapEditorSearchGroup> groups = _catalog.Search(_vm.SearchText, _vm.Capabilities.RestrictedPalette);
+            if (groups.Count == 0)
             {
-                VisualElement row = new() { pickingMode = PickingMode.Position };
-                row.AddToClassList("map-editor-grid-row");
-                rows[rowIndex] = row;
-                _grid.Add(row);
+                AddGridMessage($"No matches for \"{_vm.SearchText.Trim()}\" in any tab.");
+                return;
             }
 
-            for (int index = 0; index < entryList.Count; index++)
+            foreach (MapEditorSearchGroup group in groups)
             {
-                rows[index / columnCount].Add(BuildSlot(entryList[index]));
+                Label heading = new(group.Heading.ToUpperInvariant()) { name = "search-group-" + group.SubTab.Id };
+                heading.AddToClassList("map-editor-grid-heading");
+                _grid.Add(heading);
+                AddSlotRows(group.Entries);
+            }
+        }
+
+        private void AddGridMessage(string text)
+        {
+            Label message = new(text);
+            message.AddToClassList("map-editor-stub-message");
+            _grid.Add(message);
+        }
+
+        private void AddSlotRows(IReadOnlyList<MapEditorCatalogEntry> entries)
+        {
+            int columnCount = GetMaxGridColumns();
+            if (columnCount <= 0)
+                columnCount = Math.Max(1, entries.Count);
+
+            VisualElement row = null;
+            for (int index = 0; index < entries.Count; index++)
+            {
+                if (index % columnCount == 0)
+                {
+                    row = new VisualElement { pickingMode = PickingMode.Position };
+                    row.AddToClassList("map-editor-grid-row");
+                    _grid.Add(row);
+                }
+
+                row.Add(BuildSlot(entries[index]));
             }
         }
 
@@ -672,7 +704,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                         ? MapEditorSpawnCatalog.DisplayName(entry.AssetName)
                         : isGasMarker
                             ? MapEditorGasMarkerCatalog.DisplayName(gasKind)
-                            : entry.AssetName;
+                            : MapEditorCatalog.PaletteLabel(entry.AssetName);
             Label label = new(labelText)
             {
                 pickingMode = PickingMode.Ignore,
