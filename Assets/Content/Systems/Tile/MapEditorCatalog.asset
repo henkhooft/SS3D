@@ -143,6 +143,12 @@ MonoBehaviour:
     SearchTags:
     - item
     - medical
+  - AssetName: C4
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons
   - AssetName: Cables
     Mode: 1
     Subcategory: 201
@@ -218,6 +224,12 @@ MonoBehaviour:
     SearchTags:
     - item
     - materials & parts
+  - AssetName: EmergencyOxygenTank
+    Mode: 2
+    Subcategory: 307
+    SearchTags:
+    - item
+    - misc
   - AssetName: FacewearGasMask
     Mode: 2
     Subcategory: 302
@@ -315,6 +327,12 @@ MonoBehaviour:
     SearchTags:
     - item
     - devices
+  - AssetName: IonRifle
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons
   - AssetName: JukeboxBlueGreen
     Mode: 0
     Subcategory: 104
@@ -350,6 +368,12 @@ MonoBehaviour:
     SearchTags:
     - item
     - tools
+  - AssetName: LaserRifle
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons
   - AssetName: Lattice
     Mode: 1
     Subcategory: 200
@@ -726,6 +750,30 @@ MonoBehaviour:
     SearchTags:
     - item
     - clothing
+  - AssetName: SyndicateHardsuit
+    Mode: 2
+    Subcategory: 302
+    SearchTags:
+    - item
+    - clothing
+  - AssetName: SyndicateHardsuitHelmet
+    Mode: 2
+    Subcategory: 302
+    SearchTags:
+    - item
+    - clothing
+  - AssetName: SyndicateMagboots
+    Mode: 2
+    Subcategory: 302
+    SearchTags:
+    - item
+    - clothing
+  - AssetName: SyndicateMiniBomb
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons
   - AssetName: TableBoozeDispenser
     Mode: 0
     Subcategory: 105
@@ -761,6 +809,12 @@ MonoBehaviour:
     Subcategory: 104
     SearchTags:
     - furniture
+  - AssetName: Taser
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons
   - AssetName: TileBar
     Mode: 0
     Subcategory: 100
@@ -894,3 +948,9 @@ MonoBehaviour:
     SearchTags:
     - item
     - tools
+  - AssetName: X4
+    Mode: 2
+    Subcategory: 306
+    SearchTags:
+    - item
+    - weapons

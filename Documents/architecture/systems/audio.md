@@ -1,7 +1,7 @@
 > Code paths: Assets/Scripts/SS3D/Systems/Audio/
 > Entry points: AudioSubSystem, AmbienceSubSystem, PersonalAudioSubSystem
 > Status: partial
-> Verified: ae1a54ed1 — 2026-11-05
+> Verified: 7785df8dc — 2026-11-06
 
 # Audio
 
@@ -18,7 +18,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 ## Start here
 
-- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
+- `Assets/Scripts/SS3D/Systems/Audio/AudioSubSystem.cs` — pool: `PlayAudioSource` / `StopAudioSource` / `SetTimeAudioSource` (server) → `RpcPlayAudioSource` (observers); `PlayAudioSourceLocal` (returns a voice handle, accepts `startTime` for a synchronized recording) / `StopAudioSourceLocal` play on this machine's pool only (no-op on the server), for a domain's own buffered state RPC; pool sizing and periodic purge
 - `Assets/Scripts/SS3D/Systems/Audio/AudioSourceOcclusion.cs` — client-local occlusion (§3, a `SS3D.Utils.LineOfSight` consumer), added to every pooled source and primed by `PrepareForPlayback` before each `Play()`; pure math in `AudioOcclusionState.cs` (`AudioOcclusionStateTests`)
 - `Assets/Scripts/SS3D/Systems/Audio/AmbienceSubSystem.cs` — Phase 2 per-Area ambience crossfade (§2); self-bootstrapped, polls the local player's area every 0.5 s, two non-positional sources, no occlusion. Plays the `AmbienceProfile` for the area's resolved id (`AmbienceProfileCatalog`, loaded from Resources), or the generic `station` profile: a bed, occasional clips timed by `AmbienceScheduler`, and the catalog's thin air bed underneath. A `PowerGated` bed fades with `AreaSubSystem.IsAreaEquipmentPowered`. Outside any area, silence. Replaces legacy `AmbienceHandler.cs`.
 - `Assets/Scripts/SS3D/Systems/Audio/ListenerAirTracker.cs` / `AudioAirState.cs` — air and wind at the listener from this client's atlas, no messages; pure muffle curve and wind crossfade in `AudioAirState`. `AmbienceSubSystem` publishes the level as `AudioSourceOcclusion.ListenerAir`
@@ -36,6 +36,7 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
 
 - Positional sound: `SubSystems.Get<AudioSubSystem>().PlayAudioSource(AudioType, clipId, position, parent, ...)` (server-only). Route anything that should occlude through the pool.
 - Positional sound a client derives from a message it already has: `PlayAudioSourceLocal` plays on the same pool with no message, as `StructuralAudioPresenter` does. Listener position: `AudioSourceOcclusion.TryGetListenerPosition`.
+- Energy weapon reports/impacts: `CombatAudioTrackIds.FireFor(VisualStyle)` selects the registered SS14 energy set; `EnergyWeaponPrefabSetup` registers clips alongside the combat content. Ion rifle, laser rifle and taser are metal collision entries in `AudioContentPrefabRecipes`.
 - A new item's collision sound: add it to `Materials` or `SilentItems` in `Audio/Editor/AudioContentPrefabRecipes.cs`, then call `SetupItemCollisions` (or **SS3D → Audio → Run Content Prefab Recipes**). `ItemPrefabs_MatchTheRecipeLists` fails until you do. A prefab variant inherits its base's entry.
 - Area ambience: tag the room's department, or set an override in the Map Editor room form or with `AreaSubSystem.SetAreaAmbienceProfileId(areaId, profileId)` (server). In game, the `areaambience (profileId|clear)` console command (`AreaAmbienceCommand`) targets the caller's own area. Syncs via `RpcSyncAreaAmbience` (BufferLast).
 - Machine hum: implement `IAmbientLoopState` from synced state, add an `AmbientLoopKind`, and list the prefab in `AudioContentPrefabRecipes.MachineLoops`. `MachinePrefabs_MatchTheRecipeList` fails if a prefab with that state isn't listed.
@@ -99,9 +100,12 @@ sound *for a given listener*, which the server's "play clip X at position P" RPC
   does, so it clears its own `_lastResolvedAreaId`/`_currentTrackId` when `LocalPlayerObjectChanged`
   reports no body — otherwise ambience loops the last live area's track forever with nothing left to
   poll, and a fresh map's `AreaId`s can numerically collide with the old ones. `PersonalAudioSubSystem`
-  sidesteps this the way `ScreenEffectsSubSystem` does: it never watches for disconnect itself — the
-  driving consumer (`HumanHealthController.ClearScreenEffectsIfDriving`, same call site as the
-  screen-effect clear) zeroes the intensity on ownership loss instead.
+  used to trust its driving consumers alone (`HumanHealthController.ClearScreenEffectsIfDriving`), but
+  stamina never pushes a final zero and the health clear skipped internals, so breathing kept looping
+  under the launcher after Leave. It now zeroes every target when `LocalPlayerObjectChanged` names a
+  different (or no) body, and stops every source outright on `SceneManager.sceneUnloaded` for Game.
+  Do not rely on `LocalPlayerObjectChanged(false)` alone at session end: `Entity.OnDestroyed` checks
+  `IsOwner`, which is already false by then.
 - **`PlayAudioSource` reaches only the observers present at that moment.** A loop started that way
   (machine hum, generator) is silent for late joiners and clients re-entering AOI. Persist the state in
   a `BufferLast` ObserversRpc that calls `PlayAudioSourceLocal`; and call `PlayAudioSource` /
