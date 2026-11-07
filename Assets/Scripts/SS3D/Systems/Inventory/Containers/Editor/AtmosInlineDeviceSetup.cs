@@ -37,6 +37,10 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string AirIntakePrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/ScrubberIntake.prefab";
         private const string TileFolder = "Assets/Content/Data/TileMap/Resources/Structures/Pipes/Atmospherics/";
         // Floor-standing machines file under Machines in the palette by their folder (map-editor-palette-layout).
+        // Map Editor variant families (palette S6): one folder per family, split by pipe layers.
+        private const string InlineFilterTileFolder = TileFolder + "InlineFilterVariants/";
+        private const string FilterTileFolder = TileFolder + "FilterVariants/";
+        private const string MixerTileFolder = TileFolder + "MixerVariants/";
         private const string MachineTileFolder = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmos/";
         private const string ReferenceFolder = "Assets/Content/Data/ObjectAssetReferences/";
         private const string ItemsDatabase = "Assets/Content/Data/Databases/Items.asset";
@@ -147,10 +151,10 @@ namespace SS3D.Systems.Atmospherics.Editor
         /// </summary>
         public static void BuildFiltersAndMixers()
         {
-            BuildFilter("AtmosFilterL2", "FilterL2", sideOnLeft: true, AtmosDevicePipeResolver.InlineLayers);
-            BuildFilter("AtmosFilterR2", "FilterR2", sideOnLeft: false, AtmosDevicePipeResolver.InlineLayers);
-            BuildFilter("AtmosFilterL", "FilterL", sideOnLeft: true, AtmosDevicePipeResolver.PlateLayers);
-            BuildFilter("AtmosFilterR", "FilterR", sideOnLeft: false, AtmosDevicePipeResolver.PlateLayers);
+            BuildFilter("AtmosFilterL2", "FilterL2", sideOnLeft: true, AtmosDevicePipeResolver.InlineLayers, InlineFilterTileFolder);
+            BuildFilter("AtmosFilterR2", "FilterR2", sideOnLeft: false, AtmosDevicePipeResolver.InlineLayers, InlineFilterTileFolder);
+            BuildFilter("AtmosFilterL", "FilterL", sideOnLeft: true, AtmosDevicePipeResolver.PlateLayers, FilterTileFolder);
+            BuildFilter("AtmosFilterR", "FilterR", sideOnLeft: false, AtmosDevicePipeResolver.PlateLayers, FilterTileFolder);
             BuildMixer("AtmosMixerL", "MixerL", sideOnLeft: true);
             BuildMixer("AtmosMixerR", "MixerR", sideOnLeft: false);
 
@@ -193,9 +197,9 @@ namespace SS3D.Systems.Atmospherics.Editor
             DB.SaveAssets();
         }
 
-        private static void BuildFilter(string name, string mesh, bool sideOnLeft, TileLayer[] lines)
+        private static void BuildFilter(string name, string mesh, bool sideOnLeft, TileLayer[] lines, string tileFolder)
         {
-            BuildThreeWay(name, mesh, sideOnLeft, lines, root =>
+            BuildThreeWay(name, mesh, sideOnLeft, lines, tileFolder, root =>
             {
                 root.AddComponent<AtmosFilterController>();
                 return root.AddComponent<FilterInterfaceController>();
@@ -205,7 +209,7 @@ namespace SS3D.Systems.Atmospherics.Editor
         private static void BuildMixer(string name, string mesh, bool sideOnLeft)
         {
             // No machine-form art, so the plate also serves on Surface.
-            BuildThreeWay(name, mesh, sideOnLeft, AtmosDevicePipeResolver.PlateOrSurfaceLayers, root =>
+            BuildThreeWay(name, mesh, sideOnLeft, AtmosDevicePipeResolver.PlateOrSurfaceLayers, MixerTileFolder, root =>
             {
                 root.AddComponent<AtmosMixerController>();
                 return root.AddComponent<MixerInterfaceController>();
@@ -217,6 +221,7 @@ namespace SS3D.Systems.Atmospherics.Editor
             string mesh,
             bool sideOnLeft,
             TileLayer[] lines,
+            string tileFolder,
             System.Func<GameObject, Component> addDevice)
         {
             GameObject root = PrefabUtility.LoadPrefabContents(GasPumpPrefab);
@@ -245,7 +250,7 @@ namespace SS3D.Systems.Atmospherics.Editor
                 var panelSettings = new SerializedObject(panel);
                 panelSettings.FindProperty("_powerConsumer").objectReferenceValue = power;
                 panelSettings.ApplyModifiedPropertiesWithoutUndo();
-                SaveTilePrefab(root, name);
+                SaveTilePrefab(root, name, tileFolder: tileFolder);
             }
             finally
             {
@@ -362,7 +367,7 @@ namespace SS3D.Systems.Atmospherics.Editor
             Object.DestroyImmediate(root.GetComponent<BasicPowerConsumer>());
         }
 
-        private static void SaveTilePrefab(GameObject root, string name, TileLayer layer = TileLayer.PipeSurface)
+        private static void SaveTilePrefab(GameObject root, string name, TileLayer layer = TileLayer.PipeSurface, string tileFolder = null)
         {
             string examinePath = ExamineFolder + name + ".asset";
             if (DB.LoadMainAssetAtPath(examinePath) == null)
@@ -377,7 +382,7 @@ namespace SS3D.Systems.Atmospherics.Editor
             string path = DeviceFolder + name + ".prefab";
             PrefabUtility.SaveAsPrefabAsset(root, path);
             // Floor-standing devices (meter, injector) file under Machines › Atmos like the scrubber intake.
-            RegisterTileObject(name, path, layer, layer == TileLayer.FurnitureBase ? MachineTileFolder : TileFolder);
+            RegisterTileObject(name, path, layer, tileFolder ?? (layer == TileLayer.FurnitureBase ? MachineTileFolder : TileFolder));
         }
 
         // The copied prefab's reference names the source; placement sets the real one.
@@ -509,6 +514,10 @@ namespace SS3D.Systems.Atmospherics.Editor
             var asset = DB.LoadAssetAtPath<T>(path);
             if (asset != null)
                 return asset;
+
+            string folder = path.Substring(0, path.LastIndexOf('/'));
+            if (!DB.IsValidFolder(folder))
+                DB.CreateFolder(folder.Substring(0, folder.LastIndexOf('/')), folder.Substring(folder.LastIndexOf('/') + 1));
 
             asset = ScriptableObject.CreateInstance<T>();
             DB.CreateAsset(asset, path);

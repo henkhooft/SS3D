@@ -1,7 +1,7 @@
 > Goal: A tester downloads a release, authors a map in a locally hosted build, playtests it in the same session, and hands it over; adopted maps ship in every release
 > Status: in-progress
 > Depends on: [test-server.md](test-server.md) T1 only (loadable build); can feed [mvp1-nuke-ops.md](mvp1-nuke-ops.md) M0 (a tester-built station may replace or join the in-house test station)
-> Current focus: A8 palette layout (S1–S3 done; S4 layer groups next); triage tester reports. A6 is off MVP1's critical path
+> Current focus: A8 palette layout (S1–S5 done; S6 variants in progress); triage tester reports. A6 is off MVP1's critical path
 > Roadmap: Map authoring — Build your own station in a release build and hand it in
 > Pillars: enabler for [mvp1-nuke-ops.md](mvp1-nuke-ops.md) (station maps); pillar 5 for the testers who build
 

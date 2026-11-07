@@ -1,5 +1,7 @@
 using SS3D.Systems.Tile.Connections;
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace SS3D.Systems.Tile.MapEditor
 {
@@ -137,6 +139,88 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             return GeneralHeading;
+        }
+
+        /// <summary>Folder-name suffix that makes a folder a variant family (S6 decision 1).</summary>
+        public const string FamilySuffix = "Variants";
+
+        /// <summary>Variant label of a family's base asset, the one named only by the shared prefix.</summary>
+        public const string StandardVariant = "Standard";
+
+        /// <summary>
+        /// The family folder an asset sits directly in, relative to <c>Resources</c>
+        /// ("Furniture/Generic/Seats/Chairs/OfficeChairVariants"), or null when its folder is not a family.
+        /// </summary>
+        public static string FamilyFolderOf(string assetPath)
+        {
+            string relative = RelativeToResources(assetPath);
+            int slash = relative.LastIndexOf('/');
+            if (slash <= 0)
+                return null;
+
+            string folder = relative.Substring(0, slash);
+            string name = folder.Substring(folder.LastIndexOf('/') + 1);
+            return name.Length > FamilySuffix.Length && name.EndsWith(FamilySuffix, StringComparison.Ordinal) ? folder : null;
+        }
+
+        /// <summary>"…/OfficeChairVariants" → "Office Chair".</summary>
+        public static string FamilyLabelOf(string familyFolder)
+        {
+            string name = familyFolder.Substring(familyFolder.LastIndexOf('/') + 1);
+            return MapEditorCatalog.PaletteLabel(name.Substring(0, name.Length - FamilySuffix.Length));
+        }
+
+        /// <summary>
+        /// Each member's label: its name minus the prefix all members share (cut back to a word start).
+        /// "L"/"R" (with any digits) read Left/Right; an empty remainder is <see cref="StandardVariant"/>.
+        /// </summary>
+        public static string[] VariantLabels(IReadOnlyList<string> assetNames)
+        {
+            int prefix = SharedWordPrefix(assetNames);
+            string[] labels = new string[assetNames.Count];
+            for (int i = 0; i < assetNames.Count; i++)
+            {
+                string rest = assetNames[i].Substring(prefix);
+                Match side = Regex.Match(rest, "^([LR])[0-9]*$");
+                labels[i] = rest.Length == 0 ? StandardVariant
+                    : side.Success ? (side.Groups[1].Value == "L" ? "Left" : "Right")
+                    : MapEditorCatalog.PaletteLabel(rest);
+            }
+
+            return labels;
+        }
+
+        private static int SharedWordPrefix(IReadOnlyList<string> names)
+        {
+            if (names.Count == 0)
+                return 0;
+
+            int length = names[0].Length;
+            foreach (string name in names)
+            {
+                int common = 0;
+                while (common < length && common < name.Length && name[common] == names[0][common])
+                    common++;
+
+                length = common;
+            }
+
+            // Back up while the cut falls inside a word ("PlantE|arth" → "Plant|Earth").
+            while (length > 0 && SplitsAWord(names, length))
+                length--;
+
+            return length;
+        }
+
+        private static bool SplitsAWord(IReadOnlyList<string> names, int at)
+        {
+            foreach (string name in names)
+            {
+                if (at < name.Length && char.IsLower(name[at]))
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool IsUnderAny(string assetPath, string[] folders)

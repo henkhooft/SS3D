@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6 planned, starts with a grill. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6a done (variant families baked into the catalog); S6b (palette slot) next. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -170,23 +170,44 @@ Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a 
 - **Examine localization keys stay path-based** (owner, 2026-11-07: left for a later localization effort). `ExamineCanonicalKeyGenerator.GetNameKey` builds keys from the asset's folder path, so a move or rename still changes the key.
 - Tests: `SavedAssetLookupTests`: id finds a renamed asset; a version 1 save without id loads by name; old pipe names go through `RenamedTileObjects`; an unknown id falls back to the name; every tile asset has a unique prefab id; every shipped map stores an id matching each name. `scenarios:NukeOps` loads the stamped test room (disk, nuke cart) through the real loader.
 
-### S6 — Variants — **planned; starts with a grill**
+### S6 — Variants — **S6a done; S6b next**
 
-Added by the owner on 2026-11-07. Several entries are variants of one object: `AtmosFilterL`/`R`/`L2`/`R2`, `AtmosMixerL`/`R`, `AtmosManifold3`/`4`, the Blue/Grey office and plastic chairs, `Plant0`–`7`, the `TileDirt` tiles and the soda cans. The palette should show one entry per family and cycle its variants. This is not in `creative-mode.md` §2, so it is recorded here as a decision, not as a change to the design doc.
+Added by the owner on 2026-11-07. Several entries are variants of one object; the palette shows one slot per family and cycles its variants. This is not in `creative-mode.md` §2, so it is recorded here as a decision, not as a change to the design doc. Settled with the owner in an implementation grill (2026-11-07).
 
-**Step 1 is a `grilling` session with the owner**, before any code. Questions to settle:
+**Starting facts:** `Plant0` and `Plant7` are the only plants and `TileDirt1` is a single asset. Filters vary on two axes: `L`/`R` is the side port's side (`sideOnLeft`), `L2`/`R2` sit on the inline pipe layers instead of the plate layers (`AtmosInlineDeviceSetup.BuildFiltersAndMixers`). Manifold 3/4 differ in port count.
 
-- What makes a family: a folder per family (baked by the regenerator, like S3's headings; matches S1's "move the asset, never a rule"), or an explicit list?
-- Does a variant stay its own asset in saved maps (no save change, only the palette), or is a variant a property of one object (a save change, which belongs with S5)?
-- The cycle input: the scroll wheel zooms the camera (`MapEditorSession`), so Shift+scroll, `[`/`]`, a key, or arrows on the slot. How does it sit beside R rotate? What does the slot show (a "2/4" badge, the variant's name)?
-- Which variant is selected by default, and is it remembered per family?
-- How Dropper, search (any variant's name finds the family) and Map Check's Show in palette land on a variant.
-- Is mirroring (L/R) a variant, or should mirroring be its own transform beside rotation?
+**Decisions:**
 
-Then write the decisions into this section and split it into implementation steps.
+1. **A family is a folder named `<Family>Variants/`.** The regenerator bakes `Family` and `VariantLabel` onto each entry, beside S3's `Heading`. A family folder with one member draws as a plain entry.
+2. **Each variant stays its own asset and prefab id.** Saves (S5), undo and Map Check don't change; only the palette groups them.
+3. **Mirroring (L/R) is a variant,** not a transform. Mirror-as-transform is parked.
+4. **Families:** Office chair (3), Plastic chair (3), Plant (2), Soda can (7), Mixer (L/R), Filter (L/R), Inline filter (L2/R2). Filters split by layer, so cycling never changes the layers a placement occupies. Manifold 3/4 stay separate entries (different objects). `TileDirt` is not a family.
+5. **Input:** V next variant, Shift+V previous, beside R rotate; ‹ › arrows on the slot for the mouse.
+6. **Default and memory:** the base asset first (no suffix, else first by name); the last variant is remembered per family for the session, not in `PlayerPrefs`.
+7. **Labels baked from names:** family = folder name without `Variants`, split into words; variant = asset name minus the family's shared prefix, `L`/`R` → Left/Right, empty → Standard. The two plant assets are renamed to descriptive names.
+8. **Slot:** current variant's thumbnail, family on line 1, variant on line 2 (S2's two lines), an "n/N" badge, ‹ › on hover or selection. The hint bar shows "V: variant" while a family is held.
+9. **Heading threshold counts entries, not slots,** so Furniture (21 entries, 16 slots after S6) keeps its S3 headings.
+10. **One `SelectAsset` route** for Dropper, search and Show in palette: select the asset's family slot, set it as the family's current variant, update the memory. Search matches the family label and every variant name; results show one slot per family.
+11. **V mid-gesture does what R does;** confirm R's behaviour in code and record it. With no family held, V does nothing.
+12. **Mixed families fail regeneration:** members must share sub-tab, heading and layer set. An EditMode test asserts every family is uniform.
+
+**Steps:**
+
+- **S6a — data:** move assets into `…Variants/` folders (with `.meta`), rename the plants, update tier-B path constants (`AtmosInlineDeviceSetup`, `StructuralIntegrityPrefabSetup`); add `Family`/`VariantLabel` to `MapEditorCatalogEntry` and the regenerator, the uniformity check, regenerate the catalog; tests: label baking, uniformity, drift. Check examine keys (path-based, S5) for the renames.
+- **S6b — palette:** one slot per family, labels, badge, arrows; V/Shift+V in `Controls.inputactions`; per-family session memory; hint bar.
+- **S6c — routing:** `SelectAsset` for Dropper, search and Show in palette; `scenarios:MapEditor`; sync `tile.md` and milestone A8.
+
+**As built (S6a):**
+
+- **Folders:** chair folders `Office`/`Plastic` → `OfficeChairVariants`/`PlasticChairVariants`; `Drinks/Soda` → `Drinks/SodaCanVariants`; plants into `Plants/PlantVariants/`; atmos tiles into `Atmospherics/FilterVariants/` (L, R), `InlineFilterVariants/` (L2, R2) and `MixerVariants/`. Tile assets only, moved through `AssetDatabase.MoveAsset` (GUIDs kept); prefabs, examine strings and their keys stay put. Headings are unchanged: the family folder sits below the heading folder.
+- `MapEditorCatalogHeuristics.FamilyFolderOf` / `FamilyLabelOf` / `VariantLabels`; `MapEditorCatalogGeneration.FamilyProblems` / `AssignFamilies`. A mixed family makes `BuildEntries` throw, so regeneration and the drift test both fail and name the folder. Two family folders with one label in one sub-tab are also an error, since the palette groups by label.
+- `AtmosInlineDeviceSetup` writes filter and mixer tiles into the family folders (and creates a missing folder); not re-run, as the assets were moved, not rebuilt.
+- **Plants read "0" / "7"** until the rename (decision 7). `NameString` is the prefab reference's name, so a rename touches the prefab, `ObjectAssetReference`, tile asset, `Items.cs`, the shipped maps' names and the examine key; it waits on the owner.
+- Tests in `MapEditorCatalogMappingTests`: folder detection, labels, problems per kind, one-member folder stays plain, and the committed family set is pinned (`CommittedFamilies_AreTheS6Set`).
 
 ## Parked
 
 - Gas Pipes split into runs and inline parts: only under §2's growth rule (≈ 12 entries and a clear boundary).
 - Storage and Atmos Machines as their own sub-tabs: same rule.
+- Mirroring as its own transform beside rotation (S6 decision 3): only once handed forms exist beyond the atmos parts; it needs a per-placement save field.
 - Clothing headings: Clothing has 12 entries after headsets leave, below the threshold; add subfolders when it grows.

@@ -125,6 +125,121 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(expected, MapEditorCatalogHeuristics.HeadingOf(subTab, path == null ? null : Res + path));
         }
 
+        // Variant families (S6 decision 1): the asset's own folder ends in "Variants".
+        [TestCase("Furniture/Generic/Seats/Chairs/OfficeChairVariants/OfficeChairBlue.asset", "Furniture/Generic/Seats/Chairs/OfficeChairVariants")]
+        [TestCase("Furniture/Generic/Seats/Chairs/OfficeChairVariants/Deeper/OfficeChairBlue.asset", null)]
+        [TestCase("Furniture/Generic/Sink.asset", null)]
+        [TestCase("Variants/Thing.asset", null)]
+        [TestCase(null, null)]
+        public void FamilyFolderOf_IsTheAssetsOwnVariantsFolder(string path, string expected)
+        {
+            Assert.AreEqual(expected, MapEditorCatalogHeuristics.FamilyFolderOf(path == null ? null : Res + path));
+        }
+
+        [TestCase("Furniture/Generic/Seats/Chairs/OfficeChairVariants", "Office Chair")]
+        [TestCase("Structures/Pipes/Atmospherics/InlineFilterVariants", "Inline Filter")]
+        public void FamilyLabelOf_DropsTheSuffixAndSplitsWords(string folder, string expected)
+        {
+            Assert.AreEqual(expected, MapEditorCatalogHeuristics.FamilyLabelOf(folder));
+        }
+
+        [TestCase(new[] { "OfficeChair", "OfficeChairBlue", "OfficeChairGrey" }, new[] { "Standard", "Blue", "Grey" })]
+        [TestCase(new[] { "AtmosFilterL2", "AtmosFilterR2" }, new[] { "Left", "Right" })]
+        [TestCase(new[] { "SodaCanCannedAir", "SodaCanCola" }, new[] { "Canned Air", "Cola" })]
+        [TestCase(new[] { "PlantEarth", "PlantExotic" }, new[] { "Earth", "Exotic" })]
+        [TestCase(new[] { "Plant0", "Plant7" }, new[] { "0", "7" })]
+        public void VariantLabels_StripTheSharedWordPrefix(string[] names, string[] expected)
+        {
+            CollectionAssert.AreEqual(expected, MapEditorCatalogHeuristics.VariantLabels(names));
+        }
+
+        [Test]
+        public void FamilyProblems_UniformFamily_HasNone()
+        {
+            var members = new List<MapEditorCatalogGeneration.FamilyMember>
+            {
+                Member("A/FilterVariants", "FilterL", MapEditorSubcategory.GasPipes, "", TileLayer.PipeSurface),
+                Member("A/FilterVariants", "FilterR", MapEditorSubcategory.GasPipes, "", TileLayer.PipeSurface),
+            };
+
+            CollectionAssert.IsEmpty(MapEditorCatalogGeneration.FamilyProblems(members));
+        }
+
+        [Test]
+        public void FamilyProblems_NameTheFolder_WhenMembersDiffer()
+        {
+            var members = new List<MapEditorCatalogGeneration.FamilyMember>
+            {
+                Member("A/FilterVariants", "FilterL", MapEditorSubcategory.GasPipes, "", TileLayer.PipeSurface),
+                Member("A/FilterVariants", "FilterL2", MapEditorSubcategory.GasPipes, "", TileLayer.PipeMiddle),
+                Member("B/ChairVariants", "Chair", MapEditorSubcategory.Furniture, "Seats", TileLayer.FurnitureBase),
+                Member("B/ChairVariants", "ChairBlue", MapEditorSubcategory.Furniture, "General", TileLayer.FurnitureBase),
+                Member("C/CanVariants", "CanCola", MapEditorSubcategory.FoodAndDrink, "", null),
+                Member("C/CanVariants", "CanBench", MapEditorSubcategory.Furniture, "", TileLayer.FurnitureBase),
+            };
+
+            List<string> problems = MapEditorCatalogGeneration.FamilyProblems(members);
+
+            Assert.AreEqual(3, problems.Count, string.Join("\n", problems));
+            StringAssert.Contains("PipeMiddle", problems.Single(problem => problem.StartsWith("A/FilterVariants")));
+            StringAssert.Contains("General", problems.Single(problem => problem.StartsWith("B/ChairVariants")));
+            StringAssert.Contains("Furniture", problems.Single(problem => problem.StartsWith("C/CanVariants")));
+        }
+
+        [Test]
+        public void FamilyProblems_TwoFoldersWithOneLabelInASubTab()
+        {
+            var members = new List<MapEditorCatalogGeneration.FamilyMember>
+            {
+                Member("A/ChairVariants", "Chair", MapEditorSubcategory.Furniture, "Seats", TileLayer.FurnitureBase),
+                Member("B/ChairVariants", "ChairRed", MapEditorSubcategory.Furniture, "Seats", TileLayer.FurnitureBase),
+            };
+
+            List<string> problems = MapEditorCatalogGeneration.FamilyProblems(members);
+
+            Assert.AreEqual(1, problems.Count);
+            StringAssert.Contains("\"Chair\"", problems[0]);
+        }
+
+        [Test]
+        public void AssignFamilies_OneMemberFolder_StaysAPlainEntry()
+        {
+            var members = new List<MapEditorCatalogGeneration.FamilyMember>
+            {
+                Member("A/ChairVariants", "Chair", MapEditorSubcategory.Furniture, "Seats", TileLayer.FurnitureBase),
+            };
+
+            MapEditorCatalogGeneration.AssignFamilies(members);
+
+            Assert.AreEqual(string.Empty, members[0].Entry.Family);
+            Assert.AreEqual(string.Empty, members[0].Entry.VariantLabel);
+        }
+
+        /// <summary>The families S6 ships (decision 4): a move into or out of a <c>…Variants/</c> folder shows up here.</summary>
+        [Test]
+        public void CommittedFamilies_AreTheS6Set()
+        {
+            string[] families = MapEditorCatalogGeneration.BuildEntries()
+                .Where(entry => entry.Family.Length > 0)
+                .GroupBy(entry => entry.Family)
+                .OrderBy(family => family.Key, System.StringComparer.Ordinal)
+                .Select(family => family.Key + ": " + string.Join(", ", family.Select(entry => entry.VariantLabel)))
+                .ToArray();
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "Filter: Left, Right",
+                    "Inline Filter: Left, Right",
+                    "Mixer: Left, Right",
+                    "Office Chair: Standard, Blue, Grey",
+                    "Plant: 0, 7",
+                    "Plastic Chair: Standard, Blue, Grey",
+                    "Soda Can: Beeps Soda, Beepy Lime, Canned Air, Canned Laughter, Cola, Duke Purple Tea, Tonic",
+                },
+                families);
+        }
+
         /// <summary>A Machines asset outside <c>Furniture/Machines/</c> would fall under General: move it into a heading folder.</summary>
         [Test]
         public void EveryMachine_SitsInAHeadingFolder()
@@ -319,7 +434,11 @@ namespace SS3D.Tests.EditMode
 
         private static string[] Labels(MapEditorMode mode) => MapEditorSubTabs.InMode(mode).Select(row => row.Label).ToArray();
 
+        private static MapEditorCatalogGeneration.FamilyMember Member(
+            string folder, string name, MapEditorSubcategory subTab, string heading, TileLayer? layer) =>
+            new(folder, new MapEditorCatalogEntry { AssetName = name, Subcategory = subTab, Heading = heading }, layer);
+
         private static string Describe(MapEditorCatalogEntry entry) =>
-            $"{entry.AssetName} | {entry.Mode} | {entry.Subcategory} | {entry.Heading} | {string.Join(",", entry.SearchTags ?? new string[0])}";
+            $"{entry.AssetName} | {entry.Mode} | {entry.Subcategory} | {entry.Heading} | {entry.Family} | {entry.VariantLabel} | {string.Join(",", entry.SearchTags ?? new string[0])}";
     }
 }
