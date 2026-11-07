@@ -27,7 +27,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | comms | [comms](../design/comms.md) | [comms-non-diegetic-feed](../archive/architecture/2026-07_comms-non-diegetic-feed.md) — shipped | [chat-audio-screens](systems/chat-audio-screens.md) — partial |
 | construction | [construction](../design/construction.md) | none yet | [tile](systems/tile.md) — partial |
 | crafting | [crafting](../design/crafting.md) | none yet | [crafting](systems/crafting.md) — stub |
-| creative-mode | [creative-mode](../design/creative-mode.md) | [map-editor-replacement](../archive/architecture/2026-07_map-editor-replacement.md), [spawn-point-authoring](../archive/architecture/2026-07_spawn-point-authoring.md), [ss13-map-import](../archive/architecture/2026-07_ss13-map-import.md), [ss13-map-import-infrastructure](../archive/architecture/2026-07_ss13-map-import-infrastructure.md) — shipped ; [map-editor-palette-layout](2026-11_map-editor-palette-layout.md) — planned | [tile](systems/tile.md) — partial; [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) |
+| creative-mode | [creative-mode](../design/creative-mode.md) | [map-editor-replacement](../archive/architecture/2026-07_map-editor-replacement.md), [spawn-point-authoring](../archive/architecture/2026-07_spawn-point-authoring.md), [ss13-map-import](../archive/architecture/2026-07_ss13-map-import.md), [ss13-map-import-infrastructure](../archive/architecture/2026-07_ss13-map-import-infrastructure.md) — shipped ; [map-editor-palette-layout](2026-11_map-editor-palette-layout.md) — in-progress | [tile](systems/tile.md) — partial; [map-editor-creative-hooks](systems/map-editor-creative-hooks.md) |
 | cryogenics | [cryogenics](../design/cryogenics.md) | none yet | none yet |
 | death-cloning-respawn | [death-cloning-respawn](../design/death-cloning-respawn.md) | none yet | none yet |
 | disposal | [disposal](../design/disposal.md) | [disposal-item-network](../archive/architecture/2026-07_disposal-item-network.md) — shipped | [disposal](systems/disposal.md) — partial |
@@ -133,6 +133,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
 | [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
 | [2026-11_atmos-edge-flow](2026-11_atmos-edge-flow.md) | in-progress |
+| [2026-11_map-editor-palette-layout](2026-11_map-editor-palette-layout.md) | in-progress |
 | [2026-11_testing-philosophy](2026-11_testing-philosophy.md) | shipped (standing policy) |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [eva-gear.plan](../plans/eva-gear.plan.md) | in-progress |

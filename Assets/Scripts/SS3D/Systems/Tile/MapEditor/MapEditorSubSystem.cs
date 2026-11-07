@@ -117,12 +117,8 @@ namespace SS3D.Systems.Tile.MapEditor
 
         public bool IsOrbiting => _session.IsOrbiting;
 
-        /// <summary>
-        /// True for the dedicated Delete tool (always erases, no selected asset), or for the
-        /// legacy Edit-tool-plus-Eraser-catalog-entry combination.
-        /// </summary>
-        public bool IsDeleting => _viewModel.CurrentTool == MapEditorTool.Delete ||
-            (_viewModel.IsEraserSelected && _viewModel.CurrentTool == MapEditorTool.Edit);
+        /// <summary>True for the Delete tool, which erases whatever the open sub-tab's delete scope covers.</summary>
+        public bool IsDeleting => _viewModel.CurrentTool == MapEditorTool.Delete;
         public MapEditorTool CurrentTool => _viewModel.CurrentTool;
         public bool IsRoomCategory => _viewModel.IsRoomCategory;
         public MapEditorMode CurrentMode => _viewModel.CurrentMode;
@@ -334,6 +330,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _catalog.Build(_tileSystem.Loader.Assets, _catalogAsset);
+            _viewModel.Catalog = _catalog;
             _viewModel.NotifyChanged();
         }
 
@@ -507,12 +504,6 @@ namespace SS3D.Systems.Tile.MapEditor
                 return;
 
             _viewModel.SelectEntry(entry, asset);
-
-            if (entry.IsEraser)
-            {
-                _hologramManager.EnterDeleteMode();
-                return;
-            }
 
             if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out ushort decalId) &&
                 FloorDecalCatalog.Get()?.TryGet(decalId, out FloorDecalDefinition definition) == true &&
@@ -1088,7 +1079,7 @@ namespace SS3D.Systems.Tile.MapEditor
             SyncHologramToLibrarySelection();
         }
 
-        /// <summary>Piping/Disposals tabs toggle Turfs in the view model; only re-dim when it changed (walks the map).</summary>
+        /// <summary>Lower run tabs (Cables, Gas Pipes, Disposal Pipes) toggle Turfs in the view model; only re-dim when it changed (walks the map).</summary>
         private void SyncTurfsLayerVisibility()
         {
             bool visible = _viewModel.IsLayerCategoryVisible(TileLayerCategory.Turfs);
@@ -1116,7 +1107,7 @@ namespace SS3D.Systems.Tile.MapEditor
         }
 
         /// <summary>
-        /// First placeable catalog entry for the active subcategory (skips Eraser / floor-decal slots).
+        /// First placeable catalog entry for the active subcategory (skips floor-decal slots).
         /// Used as the Delete-tool ghost prototype when the cursor is not over a matching target.
         /// </summary>
         public bool TryGetSubcategoryPrototypeAssetName(MapEditorSubcategory subcategory, out string assetName)
@@ -1125,15 +1116,14 @@ namespace SS3D.Systems.Tile.MapEditor
             if (_catalog == null)
                 return false;
 
-            if (subcategory == MapEditorSubcategory.Overlays ||
-                MapEditorCatalog.IsScriptingSubcategory(subcategory) ||
-                MapEditorDeleteTargeting.RequiresSubcategorySelection(subcategory) ||
-                MapEditorDeleteTargeting.IsItemSubcategory(subcategory))
+            // Only tile-layer scopes have a prefab to ghost; decals, markers, items and rooms don't.
+            if (!MapEditorSubTabs.TryGet(subcategory, out MapEditorSubTab row) ||
+                !MapEditorDeleteTargeting.IsTileScope(row.DeleteScope))
                 return false;
 
-            foreach (MapEditorCatalogEntry entry in _catalog.Query(_viewModel.CurrentMode, subcategory, null))
+            foreach (MapEditorCatalogEntry entry in _catalog.Query(row.Mode, subcategory, null))
             {
-                if (entry.IsEraser || MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _))
+                if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _))
                     continue;
 
                 assetName = entry.AssetName;
@@ -1147,7 +1137,6 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             MapEditorSubcategory sub = _viewModel.CurrentSubcategory;
             if (_viewModel.SelectedEntry != null &&
-                !_viewModel.SelectedEntry.IsEraser &&
                 _viewModel.SelectedEntry.Subcategory == sub)
             {
                 // Already holding something from this tab — keep it, but refresh the ghost.
@@ -1157,9 +1146,6 @@ namespace SS3D.Systems.Tile.MapEditor
 
             foreach (MapEditorCatalogEntry entry in _catalog.Query(_viewModel.CurrentMode, sub, _viewModel.SearchText))
             {
-                if (entry.IsEraser)
-                    continue;
-
                 GenericObjectSo asset = null;
                 if (MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out _) ||
                     MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName) ||

@@ -1,8 +1,8 @@
 > Implements: Documents/design/creative-mode.md §2 (The palette's layout)
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
-> Status: planned
+> Status: in-progress
 
-**Progress:** decisions settled in an implementation grill; no phase started. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2–S4 planned. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -81,7 +81,7 @@ Confirm each source path in the Editor before moving; any other folder whose con
 
 ## Phases
 
-### S1 — Reorganisation — **planned**
+### S1 — Reorganisation — **done**
 
 Atomic: the enum, the asset and the delete switch must change together.
 
@@ -93,6 +93,19 @@ Atomic: the enum, the asset and the delete switch must change together.
 - Tests: update `MapEditorCatalogMappingTests`, `MapEditorDeleteTargetingTests`, `GasMarkerAuthoringTests`, `MapEditorAreaViewTests`; add the drift test, a per-folder/per-layer classification test, a per-row delete-scope test, and a test that no row's label appears hard-coded in `MapValidator`.
 - Docs: `Builds/TESTERS.md`; `tile.md` (remove Piping pitfall, update catalog lines); `map-editor-creative-hooks.md` (Scripts → Rooms, Spawn Points, Starting Air, gas-form pitfall); `area.md`, `area-authoring.md`; `FORK_STATUS.md` where it names tabs.
 - Validate: `Testing/ui/validate.sh --steps compile,editmode,scenarios:MapEditor`, plus a manual pass in the editor (every sub-tab non-empty and correct, Delete per sub-tab, sandbox hides Spawn Points).
+
+**As built, and where it differs from the plan above** (owner-approved where noted):
+
+- **AtmosMeter and AtmosInjector are Machines, not Gas Pipes** (owner, 2026-11-07). Both sit on `FurnitureBase`, so layer-first filing makes them Machines and the furniture-layer delete clears them. The Shape table's "meter, injector" under Gas Pipes was wrong about their layer. They stay in `Structures/Pipes/Atmospherics/`, where `AtmosInlineDeviceSetup` creates them; S3 needs a heading for them (folder below the Machines root doesn't exist).
+- **SteelGirderUnbolted moved** to `Items/Functional/Materials` (owner, 2026-11-07): an `ItemObjectSo` stored under `Structures/Walls`, which the folder map otherwise files as Misc.
+- **Map Check grouped bodies name the path.** `MapValidator` folds per-job and operative issues into the `job-spawns` and `nuclear` checklists, so the per-issue "Add it under …" text never reached Map Check. Both grouped bodies now end with `PathOf(SpawnPoints)`.
+- **The committed catalog had never loaded:** its `m_Script` GUID matched no script, so the runtime filed every asset by name-keyword fallback. Regeneration fixed the GUID and also dropped six deleted TileOverlay rows and added the missing M4. The baked asset now drives the palette.
+- **Enum values start at 100** per tab (Upper 100s … Scripts 400s), so no old 0–20 value can be read as a new sub-tab.
+- **Rooms is always drawn**: it lists areas, not catalog entries, so the "empty sub-tab is not drawn" rule (`MapEditorCatalog.IsShown`) skips it. Sandbox players opening Scripts land on Rooms.
+- **Icons** are one baked list keyed by each row's icon path (`MapEditorIconsSo._subTabIcons`), not a field per sub-tab.
+- **Tier-B recipes repointed**: `AtmosInlineDeviceSetup` writes ScrubberIntake's tile under `Furniture/Machines/Atmos`; `StructuralIntegrityPrefabSetup` maps renamed tile folders back to the unrenamed `WorldObjects` prefab folders.
+- **For S3:** Furniture has 21 entries after S1, so it also passes the 20-entry heading threshold, not only Machines.
+- Not machine-checked: Items delete (a raycast under the real cursor). The manual pass covered every other sub-tab's delete in a live session.
 
 ### S2 — Finding things — **planned**
 

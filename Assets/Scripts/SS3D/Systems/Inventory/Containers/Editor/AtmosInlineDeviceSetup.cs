@@ -24,7 +24,7 @@ namespace SS3D.Systems.Atmospherics.Editor
     public static class AtmosInlineDeviceSetup
     {
         private const string GasPumpPrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/GasPump/GasPump.prefab";
-        private const string GasPumpTile = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmospherics/GasPump.asset";
+        private const string GasPumpTile = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmos/GasPump.asset";
         private const string PipeFolder = "Assets/Content/WorldObjects/Structures/Pipes/Atmospherics/";
         private const string SurfacePipePrefab = PipeFolder + "AtmosPipesSurface.prefab";
         private const string MachineryModel = "Assets/Art/Models/Structures/Pipes/PipeMachinery.fbx";
@@ -32,10 +32,12 @@ namespace SS3D.Systems.Atmospherics.Editor
         private const string ExamineFolder = "Assets/Content/Data/Examine/String/Structures/Pipes/";
         private const string GasPumpExamine = "Assets/Content/Data/Examine/String/Furniture/Machines/Atmospherics/GasPump.asset";
         private const string ScrubberPrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/Scrubber.prefab";
-        private const string ScrubberTile = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmospherics/Scrubber.asset";
+        private const string ScrubberTile = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmos/Scrubber.asset";
         private const string AirIntakeName = "ScrubberIntake";
         private const string AirIntakePrefab = "Assets/Content/WorldObjects/Furniture/Machines/Atmospherics/Scrubber/ScrubberIntake.prefab";
         private const string TileFolder = "Assets/Content/Data/TileMap/Resources/Structures/Pipes/Atmospherics/";
+        // Floor-standing machines file under Machines in the palette by their folder (map-editor-palette-layout).
+        private const string MachineTileFolder = "Assets/Content/Data/TileMap/Resources/Furniture/Machines/Atmos/";
         private const string ReferenceFolder = "Assets/Content/Data/ObjectAssetReferences/";
         private const string ItemsDatabase = "Assets/Content/Data/Databases/Items.asset";
         private const string ItemsDatabaseGuid = "c2644d7b34e956743a0bc485e7ca5e37";
@@ -73,7 +75,7 @@ namespace SS3D.Systems.Atmospherics.Editor
                 PrefabUtility.UnloadPrefabContents(root);
             }
 
-            TileObjectSo tile = RegisterTileObject(AirIntakeName, AirIntakePrefab, scrubberTile.layer);
+            TileObjectSo tile = RegisterTileObject(AirIntakeName, AirIntakePrefab, scrubberTile.layer, MachineTileFolder);
             tile.placementYOffset = scrubberTile.placementYOffset;
             EditorUtility.SetDirty(tile);
             DB.SaveAssets();
@@ -482,14 +484,14 @@ namespace SS3D.Systems.Atmospherics.Editor
         /// <summary>
         /// Gives a prefab its tile asset and a place in the Items database and addressables.
         /// </summary>
-        private static TileObjectSo RegisterTileObject(string name, string path, TileLayer layer)
+        private static TileObjectSo RegisterTileObject(string name, string path, TileLayer layer, string tileFolder = TileFolder)
         {
             var reference = EnsureAsset<ObjectAssetReference>(ReferenceFolder + name + ".asset");
             reference.Id = DB.AssetPathToGUID(path);
             reference.Database = ItemsDatabaseGuid;
             EditorUtility.SetDirty(reference);
 
-            var tile = EnsureAsset<TileObjectSo>(TileFolder + name + ".asset");
+            var tile = EnsureAsset<TileObjectSo>(tileFolder + name + ".asset");
             tile.PrefabAsset = reference;
             tile.layer = layer;
             EditorUtility.SetDirty(tile);

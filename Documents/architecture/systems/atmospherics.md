@@ -56,7 +56,7 @@ Destroyed walls automatically produce wind, because wind is the air speed the ed
 
 ## Extension points
 
-- New inline devices: subclass `AtmosInlineDeviceBase` and report through `RecordFlow`, then add to `AtmosInlineDeviceSetup.Run` (tier B static — no MenuItem), which builds from `GasPump.prefab`. Rerunning it needs no examine step; new names need examine strings and `AssetDatabasesCodeGenerator`. Add catalog rows by hand: `MapEditorCatalogRegenerator` also rewrites unrelated entries.
+- New inline devices: subclass `AtmosInlineDeviceBase` and report through `RecordFlow`, then add to `AtmosInlineDeviceSetup.Run` (tier B static — no MenuItem), which builds from `GasPump.prefab`. Rerunning it needs no examine step; new names need examine strings and `AssetDatabasesCodeGenerator`. Then run `SS3D → Map Editor → Regenerate Catalog` and commit `MapEditorCatalog.asset` (a drift test fails otherwise); floor-standing machines go under `Resources/Furniture/Machines/Atmos/`, inline devices on a pipe layer file under Gas Pipes by layer.
 - New three-way devices: subclass `AtmosThreeWayDeviceBase`, then add to `AtmosInlineDeviceSetup.BuildFiltersAndMixers`, which sets its lines and side.
 - Air alarm power/alarm visuals use `Electricity/EmissiveMaterialSlots` to preserve each material slot's authored emission/luminance; avoid one renderer-wide baseline for mixed-material meshes.
 

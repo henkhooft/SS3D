@@ -14,11 +14,11 @@ namespace SS3D.Systems.Tile.MapEditor
         public MapEditorMode Mode;
         public MapEditorSubcategory Subcategory;
         public string[] SearchTags = Array.Empty<string>();
-        public bool IsEraser;
     }
 
     /// <summary>
-    /// Version-controlled taxonomy for the map editor object library.
+    /// Version-controlled taxonomy for the map editor object library. Generated: run
+    /// <c>SS3D/Map Editor/Regenerate Catalog</c> rather than editing it (an EditMode test checks it matches).
     /// </summary>
     [CreateAssetMenu(fileName = "MapEditorCatalog", menuName = "SS3D/Map Editor Catalog", order = 0)]
     public sealed class MapEditorCatalogSo : ScriptableObject

@@ -14,14 +14,15 @@ namespace SS3D.Systems.Tile.MapEditor.UI
     {
         public string AreaRoomName { get; set; } = "New room";
         public ushort AreaRoomId { get; set; }
-        public bool IsRoomCategory => CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
+        public bool IsRoomCategory => CurrentSubcategory == MapEditorSubcategory.Rooms;
         public MapEditorTool CurrentTool { get; set; } = MapEditorTool.Edit;
         public MapEditorMode CurrentMode { get; set; } = MapEditorMode.Upper;
-        public MapEditorSubcategory CurrentSubcategory { get; set; } = MapEditorSubcategory.Flooring;
+        public MapEditorSubcategory CurrentSubcategory { get; set; } = MapEditorSubTabs.Default;
+        /// <summary>Decides which sub-tabs are drawn (empty ones are not); null draws every row the sandbox allows.</summary>
+        public MapEditorCatalog Catalog { get; set; }
         public string SearchText { get; set; } = string.Empty;
         public GenericObjectSo SelectedAsset { get; set; }
         public MapEditorCatalogEntry SelectedEntry { get; set; }
-        public bool IsEraserSelected { get; set; }
         public bool HideUI { get; set; }
         public bool DebugOverlay { get; set; }
         /// <summary>Light fixtures glow without grid power (server-wide; persists after closing the editor).</summary>
@@ -74,7 +75,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
         private readonly Dictionary<TileLayerCategory, bool> _layerCategoryVisibility = new();
 
-        // True while Piping/Disposals hid Turfs; leaving those tabs restores it. A manual Turfs toggle clears it.
+        // True while a Lower run tab (Cables, Gas Pipes, Disposal Pipes) hid Turfs; leaving those tabs restores it. A manual Turfs toggle clears it.
         private bool _turfsAutoHidden;
 
         public event Action StateChanged;
@@ -111,8 +112,9 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         public void SetMode(MapEditorMode mode)
         {
             CurrentMode = mode;
-            MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(mode);
-            CurrentSubcategory = subs.Length > 0 ? subs[0] : MapEditorSubcategory.Uncategorized;
+            MapEditorSubTab first = FirstShownSubTab(mode);
+            if (first != null)
+                CurrentSubcategory = first.Id;
             _layerCategoryVisibility[TileLayerCategory.Scripts] = mode == MapEditorMode.Scripting;
             UpdateCategoryTool();
             UpdateHint();
@@ -127,18 +129,42 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             NotifyChanged();
         }
 
+        /// <summary>Whether the palette draws <paramref name="row"/> for this player.</summary>
+        public bool IsSubTabShown(MapEditorSubTab row) =>
+            Catalog?.IsShown(row, Capabilities.RestrictedPalette)
+            ?? (row != null && !(Capabilities.RestrictedPalette && row.SandboxRestricted));
+
+        /// <summary>The mode's sub-tabs this player sees, in build order.</summary>
+        public IEnumerable<MapEditorSubTab> ShownSubTabs(MapEditorMode mode)
+        {
+            foreach (MapEditorSubTab row in MapEditorSubTabs.InMode(mode))
+            {
+                if (IsSubTabShown(row))
+                    yield return row;
+            }
+        }
+
+        private MapEditorSubTab FirstShownSubTab(MapEditorMode mode)
+        {
+            foreach (MapEditorSubTab row in ShownSubTabs(mode))
+                return row;
+
+            return null;
+        }
+
         private void UpdateCategoryTool()
         {
-            bool rooms = CurrentMode == MapEditorMode.Scripting && CurrentSubcategory == MapEditorSubcategory.Rooms;
+            bool rooms = IsRoomCategory;
             if (CurrentTool == MapEditorTool.Area) CurrentTool = MapEditorTool.Edit;
             _layerCategoryVisibility[TileLayerCategory.Areas] = rooms;
             UpdateTurfsForLowerRuns();
         }
 
-        /// <summary>Pipes and disposals run under the turf, so their tabs hide Turfs until you leave them.</summary>
+        /// <summary>Cables, gas pipes and disposals run under the turf, so their tabs hide Turfs until you leave them.</summary>
         private void UpdateTurfsForLowerRuns()
         {
-            bool underTurf = CurrentSubcategory is MapEditorSubcategory.Piping or MapEditorSubcategory.Disposals;
+            bool underTurf = CurrentSubcategory is MapEditorSubcategory.Cables
+                or MapEditorSubcategory.GasPipes or MapEditorSubcategory.DisposalPipes;
             if (underTurf && !_turfsAutoHidden && IsLayerCategoryVisible(TileLayerCategory.Turfs))
             {
                 _layerCategoryVisibility[TileLayerCategory.Turfs] = false;
@@ -155,7 +181,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             SelectedEntry = entry;
             SelectedAsset = asset;
-            IsEraserSelected = entry?.IsEraser == true;
             UpdateHint();
             NotifyChanged();
         }
@@ -164,7 +189,6 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         {
             SelectedEntry = null;
             SelectedAsset = null;
-            IsEraserSelected = false;
             UpdateHint();
             NotifyChanged();
         }
@@ -203,7 +227,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 return "Click to place the item";
 
             if (layer is TileLayer.WallMountHigh or TileLayer.WallMountLow
-                || (layer == null && CurrentSubcategory == MapEditorSubcategory.WallAttachments))
+                || (layer == null && CurrentSubcategory == MapEditorSubcategory.WallMounts))
                 return "Press R to rotate — click a wall to place, drag for a line";
 
             if (CurrentMode == MapEditorMode.Lower
@@ -229,10 +253,10 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                 };
                 return;
             }
-            if ((IsEraserSelected && CurrentTool == MapEditorTool.Edit) || CurrentTool == MapEditorTool.Delete)
+            if (CurrentTool == MapEditorTool.Delete)
             {
-                string label = MapEditorCatalog.GetSubcategoryLabel(CurrentSubcategory);
-                SelectedObjectHint = CurrentSubcategory == MapEditorSubcategory.WallAttachments
+                string label = MapEditorSubTabs.LabelOf(CurrentSubcategory);
+                SelectedObjectHint = MapEditorDeleteTargeting.ScopeOf(CurrentSubcategory) == MapEditorDeleteScope.WallMountFace
                     ? $"Delete {label} — R to change face"
                     : $"Delete {label} — drag a line, Shift+drag a rectangle";
                 return;

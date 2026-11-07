@@ -11,6 +11,10 @@ namespace SS3D.Systems.Tile.Validation
     /// <summary>Shared save-warning and round-start policy. No scene-wide object searches.</summary>
     public static class MapValidator
     {
+        // Palette paths come from the sub-tab table, so renaming a tab never leaves stale advice here.
+        private static string SpawnPointsPath => MapEditorSubTabs.PathOf(MapEditorSubcategory.SpawnPoints);
+        private static string RoomsPath => MapEditorSubTabs.PathOf(MapEditorSubcategory.Rooms);
+
         public static MapValidationReport Validate(string mode, IEnumerable<string> jobs,
             IReadOnlyList<SpawnPointRecord> spawns, bool hasNuke, bool hasDisk)
         {
@@ -23,7 +27,7 @@ namespace SS3D.Systems.Tile.Validation
             {
                 if (!spawns.Any(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job))
                     report.AddIssue("job:" + job, false, "Jobs", $"Missing job spawn: {job}",
-                        $"Missing job spawn: {job}. Add it under Scripts → Spawn Placements.");
+                        $"Missing job spawn: {job}. Add it under {SpawnPointsPath}.");
             }
 
             // Secret resolves to the sole existing antagonist mode, just as GamemodeSubSystem does.
@@ -32,7 +36,7 @@ namespace SS3D.Systems.Tile.Validation
                 if (!spawns.Any(spawn => spawn.Kind == SpawnPointKind.Antagonist
                     && spawn.AntagonistCategory == AntagonistSpawnCategory.NuclearOperatives))
                     report.AddIssue("operative", false, "Game Modes", "Missing Nuclear Operatives spawn",
-                        "Missing Nuclear Operatives spawn. Add it under Scripts → Spawn Placements.");
+                        $"Missing Nuclear Operatives spawn. Add it under {SpawnPointsPath}.");
                 if (!hasNuke)
                     report.AddIssue("nuke", false, "Game Modes", "Missing nuclear device",
                         "Missing nuclear device. Place a NukeCart on the map.");
@@ -61,7 +65,7 @@ namespace SS3D.Systems.Tile.Validation
                 report.Issues.Insert(0, new MapValidationIssue
                 {
                     Id = "job-spawns", Category = "Jobs", Title = "Offered jobs missing spawn markers",
-                    Body = "Every offered job needs an authored spawn marker.",
+                    Body = $"Every offered job needs an authored spawn marker. Add them under {SpawnPointsPath}.",
                     Checks = requiredJobs.Select(job => new MapValidationCheck
                     {
                         Label = job, IsMet = spawns.Any(spawn => spawn.Kind == SpawnPointKind.Job && spawn.JobName == job),
@@ -74,7 +78,8 @@ namespace SS3D.Systems.Tile.Validation
                 report.Issues.Add(new MapValidationIssue
                 {
                     Id = "nuclear", Category = "Game Modes", Title = "Nuclear requirements incomplete",
-                    Body = "Nuclear Emergency and Secret require an operative marker, nuclear device and authentication disk.",
+                    Body = "Nuclear Emergency and Secret require an operative marker, nuclear device and authentication disk. "
+                        + $"The operative marker is under {SpawnPointsPath}.",
                     Checks = new[]
                     {
                         new MapValidationCheck { Label = "Operative marker", IsMet = spawns.Any(spawn => spawn.Kind == SpawnPointKind.Antagonist
@@ -89,7 +94,7 @@ namespace SS3D.Systems.Tile.Validation
 
         /// <summary>
         /// Warns about devices that are placed but cannot do their job. "Room" here is an area
-        /// (the editor's Scripts → Rooms): an APC's flood fill bounded by walls and doors, or a
+        /// (the editor's Rooms sub-tab): an APC's flood fill bounded by walls and doors, or a
         /// painted room once the map is authored. Device names can repeat across rooms, so
         /// titles carry a position.
         /// </summary>
@@ -98,8 +103,8 @@ namespace SS3D.Systems.Tile.Validation
         {
             RoomDeviceRecord[] ordered = devices
                 .OrderBy(device => device.Position.x).ThenBy(device => device.Position.z).ToArray();
-            string assignRoom = paintedRooms ? "Paint the tile into a room under Scripts → Rooms."
-                : "Add an APC to that space, or paint it into a room under Scripts → Rooms.";
+            string assignRoom = paintedRooms ? $"Paint the tile into a room under {RoomsPath}."
+                : $"Add an APC to that space, or paint it into a room under {RoomsPath}.";
 
             foreach (RoomDeviceRecord device in ordered)
             {

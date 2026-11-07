@@ -514,21 +514,18 @@ namespace SS3D.Systems.Tile.MapEditor.UI
             _subcatRow.Clear();
             _subcatButtons.Clear();
 
-            MapEditorSubcategory[] subs = MapEditorCatalog.GetSubcategories(_vm.CurrentMode);
-            foreach (MapEditorSubcategory sub in subs)
+            // Sandbox-restricted and empty sub-tabs are not drawn (MapEditorCatalog.IsShown).
+            foreach (MapEditorSubTab row in _vm.ShownSubTabs(_vm.CurrentMode))
             {
-                if (sub == MapEditorSubcategory.SpawnPlacements && _vm.Capabilities.RestrictedPalette)
-                    continue;
-
-                Button tab = CreateSubcategoryTab(sub);
-                _subcatButtons[sub] = tab;
+                Button tab = CreateSubcategoryTab(row.Id);
+                _subcatButtons[row.Id] = tab;
                 _subcatRow.Add(tab);
             }
 
             if (_windowTitle != null)
             {
-                string mode = MapEditorCatalog.GetModeLabel(_vm.CurrentMode).ToUpperInvariant();
-                string sub = MapEditorCatalog.GetSubcategoryLabel(_vm.CurrentSubcategory).ToUpperInvariant();
+                string mode = MapEditorSubTabs.ModeLabel(_vm.CurrentMode).ToUpperInvariant();
+                string sub = MapEditorSubTabs.LabelOf(_vm.CurrentSubcategory).ToUpperInvariant();
                 _windowTitle.text = $"Object Library — {mode} / {sub}";
             }
         }
@@ -540,25 +537,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             _grid.Clear();
 
-            if (_vm.OpenPopover == GasMarkerPopover && _vm.CurrentSubcategory != MapEditorSubcategory.Atmospherics)
+            if (_vm.OpenPopover == GasMarkerPopover && _vm.CurrentSubcategory != MapEditorSubcategory.StartingAir)
                 ClosePopover();
 
-            if (_vm.CurrentMode == MapEditorMode.Scripting && _vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
+            if (_vm.CurrentSubcategory == MapEditorSubcategory.Rooms)
             {
                 BuildAreaPalette(_grid);
-                return;
-            }
-
-            if (_vm.CurrentMode == MapEditorMode.Scripting &&
-                MapEditorCatalog.IsUnavailableScriptingSubcategory(_vm.CurrentSubcategory))
-            {
-                Label stub = new(
-                    "Not available yet — random spawners and triggers are a later pass.")
-                {
-                    style = { whiteSpace = WhiteSpace.Normal },
-                };
-                stub.AddToClassList("map-editor-stub-message");
-                _grid.Add(stub);
                 return;
             }
 
@@ -629,13 +613,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         private Button BuildSlot(MapEditorCatalogEntry entry)
         {
             ushort decalId = 0;
-            bool isFloorDecal = !entry.IsEraser &&
-                               MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out decalId);
-            bool isSpawn = !entry.IsEraser && MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName);
-            bool isGasMarker = MapEditorGasMarkerCatalog.TryDecode(entry.AssetName, out GasMarkerKind gasKind) && !entry.IsEraser;
+            bool isFloorDecal = MapEditorFloorDecalCatalog.TryDecode(entry.AssetName, out decalId);
+            bool isSpawn = MapEditorSpawnCatalog.IsSpawnKey(entry.AssetName);
+            bool isGasMarker = MapEditorGasMarkerCatalog.TryDecode(entry.AssetName, out GasMarkerKind gasKind);
 
             // Virtual catalog keys (floor decals / spawn markers) are not TileResourceLoader assets.
-            GenericObjectSo asset = entry.IsEraser || isFloorDecal || isSpawn || isGasMarker
+            GenericObjectSo asset = isFloorDecal || isSpawn || isGasMarker
                 ? null
                 : _loader.GetAsset(entry.AssetName);
 
@@ -645,15 +628,12 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             Button slot = new(() => AssetSelected?.Invoke(entry, asset));
             slot.AddToClassList("map-editor-slot");
-            if (!entry.IsEraser)
-            {
-                if (floorDecal != null)
-                    slot.tooltip = floorDecal.DisplayName;
-                else if (isSpawn)
-                    slot.tooltip = MapEditorSpawnCatalog.DisplayName(entry.AssetName);
-                else
-                    slot.tooltip = entry.AssetName;
-            }
+            if (floorDecal != null)
+                slot.tooltip = floorDecal.DisplayName;
+            else if (isSpawn)
+                slot.tooltip = MapEditorSpawnCatalog.DisplayName(entry.AssetName);
+            else
+                slot.tooltip = entry.AssetName;
             bool active = _vm.SelectedEntry != null &&
                           string.Equals(_vm.SelectedEntry.AssetName, entry.AssetName, StringComparison.OrdinalIgnoreCase);
             slot.EnableInClassList("map-editor-slot--active", active);
@@ -663,11 +643,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement icon = new();
             icon.AddToClassList("map-editor-slot__icon");
-            if (entry.IsEraser)
-            {
-                icon.AddToClassList("map-editor-slot__icon--eraser");
-            }
-            else if (floorDecal?.Texture != null)
+            if (floorDecal?.Texture != null)
             {
                 icon.style.backgroundImage = new StyleBackground(floorDecal.Texture);
             }
@@ -678,7 +654,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
                                   && kind == SpawnPointKind.Antagonist;
                 icon.AddToClassList(antagonist ? "map-editor-slot__icon--spawn-antag" : "map-editor-slot__icon--spawn-job");
             }
-            else if (isGasMarker && _icons?.GetSubcategoryIcon(MapEditorSubcategory.Atmospherics) is VectorImage gasIcon)
+            else if (isGasMarker && _icons?.GetSubcategoryIcon(MapEditorSubcategory.StartingAir) is VectorImage gasIcon)
             {
                 icon.style.backgroundImage = new StyleBackground(gasIcon);
                 icon.style.unityBackgroundImageTintColor = MapEditorGasMarkerCatalog.PinColor(gasKind);
@@ -690,9 +666,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             iconFrame.Add(icon);
 
-            string labelText = entry.IsEraser
-                ? "Eraser"
-                : floorDecal != null
+            string labelText = floorDecal != null
                     ? floorDecal.DisplayName
                     : isSpawn
                         ? MapEditorSpawnCatalog.DisplayName(entry.AssetName)
@@ -1107,7 +1081,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement icon = CreateIconElement(_icons?.GetModeIcon(mode));
             icon.AddToClassList("map-editor-mode-tab__icon");
-            Label label = new(MapEditorCatalog.GetModeLabel(mode).ToUpperInvariant());
+            Label label = new(MapEditorSubTabs.ModeLabel(mode).ToUpperInvariant());
             label.AddToClassList("map-editor-mode-tab__label");
             label.pickingMode = PickingMode.Ignore;
             surface.Add(icon);
@@ -1128,7 +1102,7 @@ namespace SS3D.Systems.Tile.MapEditor.UI
 
             VisualElement icon = CreateIconElement(_icons?.GetSubcategoryIcon(subcategory));
             icon.AddToClassList("map-editor-subcat-tab__icon");
-            Label label = new(MapEditorCatalog.GetSubcategoryLabel(subcategory).ToUpperInvariant());
+            Label label = new(MapEditorSubTabs.LabelOf(subcategory).ToUpperInvariant());
             label.AddToClassList("map-editor-subcat-tab__label");
             label.pickingMode = PickingMode.Ignore;
             surface.Add(icon);

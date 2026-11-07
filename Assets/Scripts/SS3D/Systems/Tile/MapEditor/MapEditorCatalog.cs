@@ -66,12 +66,15 @@ namespace SS3D.Systems.Tile.MapEditor
                     continue;
 
                 MapEditorCatalogEntry generated = MapEditorCatalogHeuristics.Infer(asset);
+                if (generated == null)
+                    continue;
+
                 _entries.Add(generated);
                 _byAssetName[asset.NameString] = generated;
             }
 
             AppendFloorDecals(mapped);
-            AppendSpawnPlacements(mapped);
+            AppendSpawnPoints(mapped);
             AppendGasMarkers();
         }
 
@@ -90,13 +93,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 if (mapped.Contains(assetName))
                     continue;
 
-                var entry = new MapEditorCatalogEntry
-                {
-                    AssetName = assetName,
-                    Mode = MapEditorMode.Upper,
-                    Subcategory = MapEditorSubcategory.Overlays,
-                    SearchTags = new[] { "overlay", "decal", definition.DisplayName },
-                };
+                MapEditorCatalogEntry entry = Virtual(assetName, MapEditorSubcategory.Decals,
+                    "decal", "overlay", definition.DisplayName);
                 _entries.Add(entry);
                 _byAssetName[assetName] = entry;
             }
@@ -106,19 +104,14 @@ namespace SS3D.Systems.Tile.MapEditor
         {
             foreach (GasMarkerKind kind in Enum.GetValues(typeof(GasMarkerKind)))
             {
-                var entry = new MapEditorCatalogEntry
-                {
-                    AssetName = MapEditorGasMarkerCatalog.Encode(kind),
-                    Mode = MapEditorMode.Scripting,
-                    Subcategory = MapEditorSubcategory.Atmospherics,
-                    SearchTags = new[] { "gas", "atmos", MapEditorGasMarkerCatalog.DisplayName(kind) },
-                };
+                MapEditorCatalogEntry entry = Virtual(MapEditorGasMarkerCatalog.Encode(kind), MapEditorSubcategory.StartingAir,
+                    "air", "gas", "atmos", MapEditorGasMarkerCatalog.DisplayName(kind));
                 _entries.Add(entry);
                 _byAssetName[entry.AssetName] = entry;
             }
         }
 
-        private void AppendSpawnPlacements(HashSet<string> mapped)
+        private void AppendSpawnPoints(HashSet<string> mapped)
         {
             foreach (string jobName in MapEditorSpawnCatalog.DefaultJobNames)
             {
@@ -126,13 +119,7 @@ namespace SS3D.Systems.Tile.MapEditor
                 if (mapped.Contains(assetName))
                     continue;
 
-                var entry = new MapEditorCatalogEntry
-                {
-                    AssetName = assetName,
-                    Mode = MapEditorMode.Scripting,
-                    Subcategory = MapEditorSubcategory.SpawnPlacements,
-                    SearchTags = new[] { "spawn", "job", jobName },
-                };
+                MapEditorCatalogEntry entry = Virtual(assetName, MapEditorSubcategory.SpawnPoints, "spawn", "job", jobName);
                 _entries.Add(entry);
                 _byAssetName[assetName] = entry;
                 mapped.Add(assetName);
@@ -144,16 +131,8 @@ namespace SS3D.Systems.Tile.MapEditor
                 if (mapped.Contains(assetName))
                     continue;
 
-                var entry = new MapEditorCatalogEntry
-                {
-                    AssetName = assetName,
-                    Mode = MapEditorMode.Scripting,
-                    Subcategory = MapEditorSubcategory.SpawnPlacements,
-                    SearchTags = new[]
-                    {
-                        "spawn", "antag", "antagonist", MapEditorSpawnCatalog.FormatAntagonist(category),
-                    },
-                };
+                MapEditorCatalogEntry entry = Virtual(assetName, MapEditorSubcategory.SpawnPoints,
+                    "spawn", "antag", "antagonist", MapEditorSpawnCatalog.FormatAntagonist(category));
                 _entries.Add(entry);
                 _byAssetName[assetName] = entry;
                 mapped.Add(assetName);
@@ -174,7 +153,9 @@ namespace SS3D.Systems.Tile.MapEditor
             IEnumerable<MapEditorCatalogEntry> query = _entries.Where(e => e.Mode == mode && e.Subcategory == subcategory
                 && !(HideSandboxDenied && MapEditorSandboxRules.IsDeniedAsset(e.AssetName)));
 
-            if (mode == MapEditorMode.Scripting && subcategory != MapEditorSubcategory.SpawnPlacements)
+            // Marker rails other than Spawn Points list in kind order and ignore search (palette-wide search is S2).
+            if (MapEditorSubTabs.TryGet(subcategory, out MapEditorSubTab row) && row.IsMarker
+                && subcategory != MapEditorSubcategory.SpawnPoints)
                 return query;
 
             if (string.IsNullOrWhiteSpace(search))
@@ -186,83 +167,28 @@ namespace SS3D.Systems.Tile.MapEditor
                 .OrderBy(e => e.AssetName);
         }
 
-        public static bool IsScriptingSubcategory(MapEditorSubcategory subcategory) =>
-            subcategory is MapEditorSubcategory.Atmospherics
-                or MapEditorSubcategory.SpawnPlacements
-                or MapEditorSubcategory.RandomSpawners
-                or MapEditorSubcategory.Triggers
-                or MapEditorSubcategory.Rooms;
-
         /// <summary>
-        /// Scripting rails that still show the stub message.
+        /// Whether the palette draws this sub-tab: sandbox players never see <see cref="MapEditorSubTab.SandboxRestricted"/>
+        /// rows, and a sub-tab with nothing in it is not shown. Rooms lists areas, not catalog entries, so it always shows.
         /// </summary>
-        public static bool IsUnavailableScriptingSubcategory(MapEditorSubcategory subcategory) =>
-            subcategory is MapEditorSubcategory.RandomSpawners or MapEditorSubcategory.Triggers;
+        public bool IsShown(MapEditorSubTab row, bool restrictedPalette)
+        {
+            if (row == null || (restrictedPalette && row.SandboxRestricted))
+                return false;
 
-        public static MapEditorSubcategory[] GetSubcategories(MapEditorMode mode) =>
-            mode switch
-            {
-                // Primary order matches the current design; Turfs/Overlays trail so assets
-                // heuristically tagged into them stay reachable even though the redesigned
-                // tab row no longer gives them top billing.
-                MapEditorMode.Upper => new[]
-                {
-                    MapEditorSubcategory.Flooring, MapEditorSubcategory.Walls, MapEditorSubcategory.Doors,
-                    MapEditorSubcategory.TileObjects, MapEditorSubcategory.WallAttachments,
-                    MapEditorSubcategory.Turfs, MapEditorSubcategory.Overlays,
-                },
-                MapEditorMode.Lower => new[]
-                {
-                    MapEditorSubcategory.BaseTiles, MapEditorSubcategory.Piping, MapEditorSubcategory.Disposals,
-                },
-                MapEditorMode.Items => new[]
-                {
-                    MapEditorSubcategory.FoodDrink, MapEditorSubcategory.Tools, MapEditorSubcategory.Medical,
-                    MapEditorSubcategory.Security, MapEditorSubcategory.Misc,
-                },
-                MapEditorMode.Scripting => new[]
-                {
-                    MapEditorSubcategory.Atmospherics, MapEditorSubcategory.SpawnPlacements,
-                    MapEditorSubcategory.RandomSpawners, MapEditorSubcategory.Triggers, MapEditorSubcategory.Rooms,
-                },
-                _ => Array.Empty<MapEditorSubcategory>(),
-            };
+            if (row.Id == MapEditorSubcategory.Rooms)
+                return true;
 
-        public static string GetModeLabel(MapEditorMode mode) =>
-            mode switch
-            {
-                MapEditorMode.Upper => "Upper",
-                MapEditorMode.Lower => "Lower",
-                MapEditorMode.Items => "Items",
-                MapEditorMode.Scripting => "Scripts",
-                _ => mode.ToString(),
-            };
+            return Query(row.Mode, row.Id, null).Any();
+        }
 
-        public static string GetSubcategoryLabel(MapEditorSubcategory subcategory) =>
-            subcategory switch
+        private static MapEditorCatalogEntry Virtual(string assetName, MapEditorSubcategory subTab, params string[] tags) =>
+            new()
             {
-                MapEditorSubcategory.Flooring => "Flooring",
-                MapEditorSubcategory.Turfs => "Turfs",
-                MapEditorSubcategory.Overlays => "Overlays",
-                MapEditorSubcategory.Walls => "Walls",
-                MapEditorSubcategory.Doors => "Doors",
-                MapEditorSubcategory.TileObjects => "Furniture",
-                MapEditorSubcategory.WallAttachments => "Wall Attachments",
-                MapEditorSubcategory.Piping => "Piping",
-                MapEditorSubcategory.Disposals => "Disposals",
-                MapEditorSubcategory.BaseTiles => "Plenum",
-                MapEditorSubcategory.FoodDrink => "Food & Drink",
-                MapEditorSubcategory.Tools => "Tools",
-                MapEditorSubcategory.Medical => "Medical",
-                MapEditorSubcategory.Security => "Security",
-                MapEditorSubcategory.Misc => "Misc",
-                MapEditorSubcategory.Atmospherics => "Atmospherics",
-                MapEditorSubcategory.SpawnPlacements => "Spawn Placements",
-                MapEditorSubcategory.RandomSpawners => "Random Item Spawners",
-                MapEditorSubcategory.Triggers => "Triggers",
-                MapEditorSubcategory.Rooms => "Rooms",
-                MapEditorSubcategory.Uncategorized => "Uncategorized",
-                _ => subcategory.ToString(),
+                AssetName = assetName,
+                Mode = MapEditorSubTabs.Get(subTab).Mode,
+                Subcategory = subTab,
+                SearchTags = tags,
             };
 
         private static bool MatchesSearch(MapEditorCatalogEntry entry, string term)

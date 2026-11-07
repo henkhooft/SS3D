@@ -23,8 +23,10 @@ beside it). It follows the same stable channel and preserves the same local data
 Press **B** to open the map editor. Press **B** again to close it.
 
 - Search the palette by name or tag: "wall", "floor", "door", "pipe", "apc".
-- **Scripts → Spawn Placements** sets where players appear. **Scripts → Rooms** paints rooms and
-  sets their name, department and door access.
+- **Scripts → Spawn Points** sets where players appear. **Scripts → Rooms** paints rooms and
+  sets their name, department and door access. **Scripts → Starting Air** marks what air a room starts with.
+- To erase, pick the **Delete** tool: it removes whatever the open sub-tab places (Cables removes
+  cables, Gas Pipes removes pipes, and so on).
 - Ctrl+Z / Ctrl+Y undo and redo.
 
 ## 3. Save
