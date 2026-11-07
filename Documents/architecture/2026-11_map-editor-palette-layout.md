@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5–S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id; examine keys open); S6 planned. S6 starts with a grill. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -146,7 +146,7 @@ Palette-wide search with switch-on-pick (decision 9); Map Check **Show in palett
 - No save or wire change: layer visibility lives only in `MapEditorViewModel` and `TileLayerVisibilityService`, never persisted, so renaming enum values breaks nothing. `MapEditorLayerVisibility` and the cursor pick iterate `AllCategories` and needed no edit.
 - Tests: `TileLayerCategoryMappingTests` checks each Lower layer's group, that every `TileLayer` sits in exactly one group, and the plain-word labels.
 
-### S5 — Saved maps reference objects by ID — **planned**
+### S5 — Saved maps reference objects by ID — **done**
 
 Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a save-format change costs nothing now and more with every outside map.
 
@@ -159,6 +159,16 @@ Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a 
 - Test: the old format loads; a saved and renamed asset still loads. An audit test checks that IDs are unique and that no two assets share a GUID (a deleted and recreated asset gets a new one).
 - Not in scope, but to record: examine localization keys are built from the asset's folder path (`ExamineCanonicalKeyGenerator.GetNameKey`), so moving or renaming an asset changes its translation key. Decide whether S5 moves those keys to IDs too, or leaves that to a localization effort.
 - After S5, renames are cheap. The owner may then shorten names such as `AtmosPipesSupply` (see S2's labels).
+
+**As built:**
+
+- `SavedPlacedTileObject.id` and `SavedPlacedItemObject.id` hold `GenericObjectSo.PrefabAsset.Id`, written first, with the name kept beside it. All 173 tile assets have their own prefab, so the id is unique; `TileResourceLoader` logs an error if two ever share one.
+- `SavedAssetLookup.Resolve` tries the id, then the name through `RenamedTileObjects`. The name fallback also covers a deleted and recreated asset (new GUID, same name). Items now go through `RenamedTileObjects` too; before, only tiles did.
+- Schema 1 → 2. Nothing reads `schemaVersion` on load: a version 1 file has no `id` and loads by name, and an older build reading a version 2 file ignores `id`. The bump marks the format and triggers a MINOR release.
+- **Shipped maps stamped** by the new `Tools/map_import/asset_ids.py` (name → id from the `ObjectAssetReferences` and tile asset files, no Unity): both `StationTemplates`, the legacy `Tilemaps`, and the `testroom` and `atmostest` fixtures. With the ids removed, every file compares equal to the original. `classic_ministation.py` writes ids through the same table. The DMM importer places through the game, so its saves get ids for free.
+- **Wire path unchanged.** Placement, clear and move RPCs send names, and `TileAssetCatalog` indices follow sorted names. Both sides run the same build, so a rename only needs the `ProtocolVersion` bump that `atmospherics.md` already calls for. Moving RPCs to ids would buy nothing until mismatched builds can connect.
+- **Examine localization keys: open, owner's call.** `ExamineCanonicalKeyGenerator.GetNameKey` still builds keys from the asset's folder path, so a move or rename still changes the key. Not touched here.
+- Tests: `SavedAssetLookupTests`: id finds a renamed asset; a version 1 save without id loads by name; old pipe names go through `RenamedTileObjects`; an unknown id falls back to the name; every tile asset has a unique prefab id; every shipped map stores an id matching each name. `scenarios:NukeOps` loads the stamped test room (disk, nuke cart) through the real loader.
 
 ### S6 — Variants — **planned; starts with a grill**
 
