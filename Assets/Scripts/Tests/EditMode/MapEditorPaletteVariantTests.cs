@@ -127,6 +127,54 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(3, FurnitureSlots(catalog, "blue")[0].Variants.Count);
         }
 
+        [Test]
+        public void Search_MatchesTheFamilyLabel()
+        {
+            MapEditorCatalog catalog = Synthetic(
+                Entry("OfficeChair", MapEditorSubcategory.Furniture, "Office Chair", "Standard"),
+                Entry("OfficeChairBlue", MapEditorSubcategory.Furniture, "Office Chair", "Blue"),
+                Entry("Sink", MapEditorSubcategory.Furniture));
+
+            IReadOnlyList<MapEditorPaletteSlot> slots = FurnitureSlots(catalog, "office chair");
+
+            Assert.AreEqual(1, slots.Count);
+            Assert.AreEqual(2, slots[0].Variants.Count);
+        }
+
+        [Test]
+        public void SelectAsset_HoldsTheCatalogEntry_RemembersTheVariant_AndOpensItsSubTab()
+        {
+            MapEditorCatalog catalog = Synthetic(
+                Entry("PlantEarth", MapEditorSubcategory.Furniture, "Plant", "Earth"),
+                Entry("PlantExotic", MapEditorSubcategory.Furniture, "Plant", "Exotic"));
+            MapEditorViewModel vm = new() { Catalog = catalog };
+            vm.OpenSubTab(MapEditorSubcategory.SpawnPoints);
+
+            // The Dropper only knows the placed object's name.
+            bool opened = vm.SelectAsset(new MapEditorCatalogEntry { AssetName = "PlantExotic" }, null);
+
+            Assert.IsTrue(opened);
+            Assert.AreEqual(MapEditorSubcategory.Furniture, vm.CurrentSubcategory);
+            Assert.AreEqual("Plant", vm.SelectedEntry.Family);
+            Assert.IsTrue(vm.HoldsFamily);
+            vm.ClearSelection();
+            Assert.AreEqual("PlantExotic", vm.ShownVariant(catalog.SlotOf(catalog.Entries[0])).AssetName);
+
+            Assert.IsFalse(vm.SelectAsset(new MapEditorCatalogEntry { AssetName = "PlantEarth" }, null),
+                "Already on its sub-tab");
+        }
+
+        [Test]
+        public void SelectAsset_KeepsTheSubTab_ForAnAssetNotInThePalette()
+        {
+            MapEditorViewModel vm = new() { Catalog = Synthetic(Entry("Sink", MapEditorSubcategory.Furniture)) };
+            vm.OpenSubTab(MapEditorSubcategory.Furniture);
+
+            Assert.IsFalse(vm.SelectAsset(new MapEditorCatalogEntry { AssetName = "NotInPalette" }, null));
+            Assert.AreEqual(MapEditorSubcategory.Furniture, vm.CurrentSubcategory);
+            Assert.AreEqual("NotInPalette", vm.SelectedEntry.AssetName);
+        }
+
         [TestCase("OfficeChairBlue", "Office Chair", "Blue", "Office Chair (Blue)")]
         [TestCase("OfficeChair", "Office Chair", "Standard", "Office Chair")]
         [TestCase("AtmosPipesSupply", "", "", "Atmos Pipes Supply")]

@@ -2,7 +2,7 @@
 > Touches systems: tile (Map Editor catalog, delete targeting, hologram manager), map-editor-creative-hooks (view, view model, sandbox capabilities, area and gas-marker forms), map validator, tile content folders under `Resources`
 > Status: in-progress
 
-**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6a done (variant families baked into the catalog); S6b done (one slot per family, V/Shift+V); S6c (routing) next. Advances [map-authoring.md](../milestones/map-authoring.md) A8.
+**Progress:** S1 done (reorganisation, eraser and stubs removed, per-row delete, drift test); S2 done (palette-wide search, Show in palette, last tab, two-line slot labels, compact Map Check rows); S3 done (folder headings in Furniture and Machines); S4 done (Layers popover groups match Lower); S5 done (saved maps by prefab id); S6a done (variant families baked into the catalog); S6b done (one slot per family, V/Shift+V); S6c done (one selection route, family-label search). Advances [map-authoring.md](../milestones/map-authoring.md) A8.
 
 # Map Editor palette layout (Nov 2026)
 
@@ -170,7 +170,7 @@ Added by the owner on 2026-11-07. Nobody but the owner has saved maps yet, so a 
 - **Examine localization keys stay path-based** (owner, 2026-11-07: left for a later localization effort). `ExamineCanonicalKeyGenerator.GetNameKey` builds keys from the asset's folder path, so a move or rename still changes the key.
 - Tests: `SavedAssetLookupTests`: id finds a renamed asset; a version 1 save without id loads by name; old pipe names go through `RenamedTileObjects`; an unknown id falls back to the name; every tile asset has a unique prefab id; every shipped map stores an id matching each name. `scenarios:NukeOps` loads the stamped test room (disk, nuke cart) through the real loader.
 
-### S6 — Variants — **S6a, S6b done; S6c next**
+### S6 — Variants — **done**
 
 Added by the owner on 2026-11-07. Several entries are variants of one object; the palette shows one slot per family and cycles its variants. This is not in `creative-mode.md` §2, so it is recorded here as a decision, not as a change to the design doc. Settled with the owner in an implementation grill (2026-11-07).
 
@@ -208,7 +208,7 @@ Added by the owner on 2026-11-07. Several entries are variants of one object; th
 
 **As built (S6b):**
 
-- `MapEditorPaletteSlot` (in `MapEditorCatalog.cs`): a family's variants, base first, with `IndexOf` / `Step` (wraps). `MapEditorCatalog.GroupFamilies` folds a family where its first member stood; `SlotOf(entry)` is the entry's whole family in its sub-tab (sandbox-hidden members left out); `SlotsFor(matches)` gives search one slot per family holding every variant, even when only some matched. Search still matches variant names only; matching the family label is S6c.
+- `MapEditorPaletteSlot` (in `MapEditorCatalog.cs`): a family's variants, base first, with `IndexOf` / `Step` (wraps). `MapEditorCatalog.GroupFamilies` folds a family where its first member stood; `SlotOf(entry)` is the entry's whole family in its sub-tab (sandbox-hidden members left out); `SlotsFor(matches)` gives search one slot per family holding every variant, even when only some matched. Search matching the family label came in S6c.
 - The grid groups by heading first (entries counted, decision 9), then folds families within each heading.
 - `MapEditorViewModel.ShownVariant(slot)`: the held variant, else the family's last pick this session, else the base. `SelectEntry` records the pick, keyed by sub-tab + family. `HoldsFamily` drives the hint suffix " — V: variant" (Edit tool, family of 2+).
 - Slot: `map-editor-slot--family`, two one-line labels (`__family`, `__variant`), an `n/N` badge (`__badge`), and ‹ › `__cycle` buttons shown on hover or while held. An arrow press stops propagation so the slot doesn't also pick, then goes through `AssetSelected` like a slot click.
@@ -216,6 +216,14 @@ Added by the owner on 2026-11-07. Several entries are variants of one object; th
 - **R mid-gesture (decision 11):** `HandleRotate` → `SetNextRotation` turns every ghost of the drag in place and updates `_lastRegisteredDirection`; the drag goes on. V matches it: `ConstructionHologramManager.SwapSelectedObject` swaps `_selectedObject`, drops the ghosts and pool, and the next update rebuilds the drag's ghosts from the new prefab with the same direction. Outside a drag (and for items) it is `SetSelectedObject`.
 - Tests: `MapEditorPaletteVariantTests` (folding and order, wrap, session memory, hint, search slots, committed Furniture keeps headings with fewer slots).
 - **Cursor badge names what you place** (owner, after the first S6b look: the ghost alone is hard to read, and the examine badge named the object under the pointer instead). `MapEditorSubSystem.SyncCursorLabel` sets `ExamineSubSystem.SetCursorLabelOverride` each frame: Edit holding an entry shows `MapEditorCatalog.PlacingLabel` ("Office Chair (Blue)", the bare family for its base), Rooms shows the room being painted; other tools, the pointer over editor UI, and F7 show no badge. Examine is off inside the editor, which also stops Shift (rectangle drag) from opening detailed examine. Closing the editor clears the override. `MapEditorCatalog.DisplayLabel` is now the slot label for single entries too.
+
+**As built (S6c):**
+
+- `MapEditorViewModel.SelectAsset(entry, asset)` is the one route (decision 10): it swaps in the catalog's own entry by asset name (the Dropper only knows the placed object's name, so before this it held a bare entry with no family), selects it so the family remembers the variant, and opens its sub-tab when the player sees it; it returns whether the sub-tab changed. An asset the catalog lacks keeps the open sub-tab. `MapEditorSubSystem.SelectAsset` adds the tab side effects and the ghost.
+- Callers: palette and search clicks, the Dropper (switches to Edit first, as before), and Map Check's Show in palette, which now also selects the entry instead of only searching for it. The Select tool still holds a bare entry: it inspects, it doesn't pick from the palette.
+- `MapEditorCatalog.IsVirtualKey` (decal, spawn or gas marker key) keeps Show in palette from asking the loader for a marker and logging a missing asset.
+- Search matches the family label as well as each variant's asset name ("office chair" finds the family).
+- Tests in `MapEditorPaletteVariantTests`: family-label search; `SelectAsset` from a bare name opens the family's sub-tab and remembers the variant; an asset outside the palette keeps the sub-tab.
 
 ## Parked
 

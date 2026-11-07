@@ -682,10 +682,8 @@ namespace SS3D.Systems.Tile.MapEditor
         private void CopyIntoActiveSelection(string assetName)
         {
             GenericObjectSo asset = _tileSystem.GetAsset(assetName);
-            _viewModel.SelectEntry(new MapEditorCatalogEntry { AssetName = assetName }, asset);
             _viewModel.SetTool(MapEditorTool.Edit);
-            if (asset != null)
-                _hologramManager.SetSelectedObject(asset);
+            SelectAsset(new MapEditorCatalogEntry { AssetName = assetName }, asset);
             _viewModel.ShowToast($"Copied {assetName}");
             _toastTimer = 1.6f;
         }
@@ -1192,18 +1190,23 @@ namespace SS3D.Systems.Tile.MapEditor
         /// A palette click. Search results come from every tab, so the entry's sub-tab opens first:
         /// delete scope, forms and hints all key off the open sub-tab (decision 9).
         /// </summary>
-        private void OnPaletteEntryPicked(MapEditorCatalogEntry entry, GenericObjectSo asset)
+        private void OnPaletteEntryPicked(MapEditorCatalogEntry entry, GenericObjectSo asset) => SelectAsset(entry, asset);
+
+        /// <summary>
+        /// Dropper, search and Show in palette all select through here (palette S6 decision 10): the asset's family
+        /// slot shows it as the current variant, its sub-tab opens, and the ghost follows in Edit.
+        /// </summary>
+        private void SelectAsset(MapEditorCatalogEntry entry, GenericObjectSo asset)
         {
             if (entry == null)
                 return;
 
-            // Selected first, so opening the sub-tab keeps this entry instead of picking its first one.
-            _viewModel.SelectEntry(entry, asset);
-            OpenSubTab(entry.Subcategory);
-            HandleAssetSelected(entry, asset);
+            if (_viewModel.SelectAsset(entry, asset))
+                AfterSubTabChanged();
+            HandleAssetSelected(_viewModel.SelectedEntry, asset);
         }
 
-        /// <summary>Map Check's Show in palette: search for the entry and open the sub-tab it lives in.</summary>
+        /// <summary>Map Check's Show in palette: search for the entry and select it in the sub-tab it lives in.</summary>
         private void OnValidationShowInPaletteRequested(string entryKey)
         {
             if (string.IsNullOrEmpty(entryKey) || !_catalog.TryGetEntry(entryKey, out MapEditorCatalogEntry entry))
@@ -1213,8 +1216,10 @@ namespace SS3D.Systems.Tile.MapEditor
             }
 
             _viewModel.SearchText = MapEditorCatalog.SearchTermFor(entry.AssetName);
-            if (MapEditorSubTabs.TryGet(entry.Subcategory, out MapEditorSubTab row) && _viewModel.IsSubTabShown(row))
-                OpenSubTab(entry.Subcategory);
+            GenericObjectSo asset = null;
+            if (!MapEditorCatalog.IsVirtualKey(entry.AssetName))
+                _catalog.TryGetAsset(entry.AssetName, _tileSystem.Loader, out asset);
+            SelectAsset(entry, asset);
             _viewModel.NotifyChanged();
         }
 

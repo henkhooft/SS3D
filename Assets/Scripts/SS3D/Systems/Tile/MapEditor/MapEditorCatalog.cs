@@ -400,6 +400,12 @@ namespace SS3D.Systems.Tile.MapEditor
                 : $"{entry.Family} ({entry.VariantLabel})";
         }
 
+        /// <summary>Whether <paramref name="assetName"/> is a floor decal, spawn marker or gas marker key, not a tile asset.</summary>
+        public static bool IsVirtualKey(string assetName) =>
+            MapEditorFloorDecalCatalog.TryDecode(assetName, out _)
+            || MapEditorSpawnCatalog.IsSpawnKey(assetName)
+            || MapEditorGasMarkerCatalog.TryDecode(assetName, out _);
+
         /// <summary>
         /// The words that find <paramref name="assetName"/> in search: a marker's job, antagonist or kind,
         /// a decal's name, otherwise the asset name. Map Check's Show in palette searches for this.
@@ -455,7 +461,9 @@ namespace SS3D.Systems.Tile.MapEditor
 
         private static bool MatchesSearch(MapEditorCatalogEntry entry, string term)
         {
-            if (entry.AssetName.Contains(term, StringComparison.OrdinalIgnoreCase))
+            // A family's label finds every variant ("office chair"), as each variant's own name does (S6 decision 10).
+            if (entry.AssetName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrEmpty(entry.Family) && entry.Family.Contains(term, StringComparison.OrdinalIgnoreCase)))
                 return true;
 
             if (entry.SearchTags == null)

@@ -209,6 +209,32 @@ namespace SS3D.Systems.Tile.MapEditor.UI
         }
 
         /// <summary>
+        /// The one route for Dropper, search and Show in palette (S6 decision 10): holds the catalog's own entry for
+        /// <paramref name="entry"/>'s asset, so a variant becomes its family's current one and is remembered, and opens
+        /// the sub-tab it lives in when this player sees it. An asset the catalog lacks is held as given.
+        /// Returns whether the open sub-tab changed.
+        /// </summary>
+        public bool SelectAsset(MapEditorCatalogEntry entry, GenericObjectSo asset)
+        {
+            if (entry == null)
+                return false;
+
+            bool inCatalog = Catalog != null && Catalog.TryGetEntry(entry.AssetName, out MapEditorCatalogEntry known)
+                && (entry = known) != null;
+
+            // Selected first, so opening the sub-tab keeps this entry instead of picking its first one.
+            SelectEntry(entry, asset);
+            if (!inCatalog
+                || entry.Subcategory == CurrentSubcategory
+                || !MapEditorSubTabs.TryGet(entry.Subcategory, out MapEditorSubTab row)
+                || !IsSubTabShown(row))
+                return false;
+
+            OpenSubTab(entry.Subcategory);
+            return true;
+        }
+
+        /// <summary>
         /// The variant a family slot shows (S6 decision 6): the held one, else the family's last pick this session,
         /// else its base variant. A plain slot shows its entry.
         /// </summary>
