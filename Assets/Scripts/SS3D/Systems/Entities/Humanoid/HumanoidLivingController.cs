@@ -192,6 +192,15 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 _characterController.Move(Physics.gravity);
             }
+            else
+            {
+                // Stranded above the deck (e.g. recovered from a ragdoll over the station): fall back down.
+                float drop = HumanoidSpaceSupport.GetDropToDeck(transform.position, -Physics.gravity.y * Time.deltaTime);
+                if (drop > 0f)
+                {
+                    _characterController.Move(Vector3.down * drop);
+                }
+            }
 
             if (Input.magnitude != 0)
             {
