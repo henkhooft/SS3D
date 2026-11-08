@@ -482,7 +482,7 @@ namespace SS3D.Systems.Entities.Humanoid
 
             float probe = (_characterController.height * 0.5f) + _characterController.skinWidth + 0.2f;
             Vector3 origin = transform.position + Vector3.up * 0.05f;
-            return Physics.Raycast(origin, Vector3.down, probe, Physics.DefaultRaycastLayers,
+            return Physics.Raycast(origin, Vector3.down, probe, StationBounds.WithoutCeiling(Physics.DefaultRaycastLayers),
                 QueryTriggerInteraction.Ignore);
         }
 
