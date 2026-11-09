@@ -35,7 +35,8 @@ become a second copy of the maps.
 
 ## Suggested paydown order
 
-Cheap, high-value first; the large splits after the contracts they depend on exist.
+Planned in phases in [2026-11_tech-debt-paydown.md](2026-11_tech-debt-paydown.md). In short: cheap,
+high-value first; the large splits after the contracts they depend on exist.
 
 1. **Authority holes** ([§1.19](#119-server-trusts-client-input-in-several-serverrpcs)) — small deletions and server-side checks.
 2. **Small correctness traps:** world-sim suspension ([§1.23](#123-world-simulation-suspension-copied-four-times-and-cannot-nest)),
@@ -360,6 +361,11 @@ chunks batched per command group; keep one full snapshot for late joiners (M).
   admin paths use the `Server*` variants. Delete the RPCs.
 - **`ItemSubSystem.CmdSpawnItem` / `CmdSpawnItemInContainer`** (`ItemSubSystem.cs:23`, `:63`): no
   permission check. Gate on admin (the console command calls the server method anyway).
+- **Console commands at `AccessLevel User` run on the server for any player**, in release builds
+  (`CommandsController.CmdProcessOnlineCommand`). These include `accessgrant` / `accessrevoke` /
+  `accesspreset` (any access level, on yourself or on another ckey) and `spawnitem`. Sandbox-server §5
+  says players get no console. An unknown command name throws, because `FindCommand`'s result is
+  ignored (`:144`).
 - **`Draggable.SetDragServer(bool, NetworkObject)`**: trusts a client-supplied dragger.
 - **Throw target height** is unbounded and NaN isn't rejected (`ThrowRules.cs:71-84` clamps
   horizontal distance only).
