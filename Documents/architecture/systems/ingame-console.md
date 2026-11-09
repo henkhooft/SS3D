@@ -62,6 +62,7 @@ Dev/admin in-game console commands routed through `CommandsController`. Commands
 
 ## Related docs
 
+- Effort: [2026-11_console-commands](../2026-11_console-commands.md) — planned rework: declared parameters, generated help, shared target resolver, roster cuts and permission fixes
 - Known design deltas: [REVIEW_2026-10 — Known delta](../../design/REVIEW_2026-10.md#known-delta-revised-design-vs-code) — rows: admin-tools (action logging, two-way Admin help)
 - Design (read-only): [admin-tools.md](../../design/admin-tools.md) — permission tiers, ahelp, stealth observation, world intervention, moderation this system will eventually need to expose
 - [id-access](id-access.md)
