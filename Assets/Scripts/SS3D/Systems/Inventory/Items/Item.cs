@@ -478,7 +478,36 @@ namespace SS3D.Systems.Inventory.Items
                     continue;
                 }
 
+                // Hiding takes everything stored inside along. Showing must not: stored items sit at their
+                // container's position, so re-enabling them piled every nested toolbox's contents on top
+                // of the dropped one. They come back below only if their container shows its items.
+                if (visible && childRenderer.GetComponentInParent<Item>() != this)
+                {
+                    continue;
+                }
+
                 childRenderer.enabled = visible;
+            }
+
+            if (!visible)
+            {
+                return;
+            }
+
+            foreach (AttachedContainer container in GetComponentsInChildren<AttachedContainer>())
+            {
+                if (container.HideItems || container.GetComponentInParent<Item>() != this)
+                {
+                    continue;
+                }
+
+                foreach (Item storedItem in container.Items)
+                {
+                    if (storedItem != null)
+                    {
+                        storedItem.SetVisibility(true);
+                    }
+                }
             }
         }
 

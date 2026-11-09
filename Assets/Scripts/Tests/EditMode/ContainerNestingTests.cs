@@ -76,6 +76,48 @@ namespace EditorTests
             Assert.IsTrue(locker.CanContainItem(toolbox));
         }
 
+        // Playtest follow-up "toolbox singularity": dropping a toolbox re-enabled every renderer under
+        // it, so the hidden contents of every nested toolbox appeared piled on top of it.
+        [Test]
+        public void ShowingAStorageItem_KeepsItsHiddenContentsHidden()
+        {
+            AttachedContainer toolbox = CreateStorageItem(SizeClass.Bulky, SizeClass.Bulky);
+            MeshRenderer toolboxRenderer = toolbox.gameObject.AddComponent<MeshRenderer>();
+            Item medkit = StoreWithRenderer(toolbox, out MeshRenderer medkitRenderer);
+            Assert.IsTrue(toolbox.HideItems, "Storage hides what it holds");
+
+            toolbox.GetComponent<Item>().SetVisibility(false);
+            toolbox.GetComponent<Item>().SetVisibility(true);
+
+            Assert.IsTrue(toolboxRenderer.enabled, "The toolbox itself shows again");
+            Assert.IsFalse(medkitRenderer.enabled, $"{medkit.name} stays hidden inside the toolbox");
+        }
+
+        [Test]
+        public void ShowingAnItem_ShowsWhatAnOpenDisplayHolds()
+        {
+            AttachedContainer rack = CreateStorageItem(SizeClass.Bulky, SizeClass.Bulky);
+            SetField(rack, "_hideItems", false);
+            StoreWithRenderer(rack, out MeshRenderer storedRenderer);
+
+            rack.GetComponent<Item>().SetVisibility(false);
+            Assert.IsFalse(storedRenderer.enabled, "Hiding the rack hides what it holds");
+
+            rack.GetComponent<Item>().SetVisibility(true);
+            Assert.IsTrue(storedRenderer.enabled, "A container that shows its items shows them again");
+        }
+
+        /// <summary>A Normal item with a hidden renderer, stored in and parented under <paramref name="container"/>.</summary>
+        private Item StoreWithRenderer(AttachedContainer container, out MeshRenderer storedRenderer)
+        {
+            Item stored = CreateItem(SizeClass.Normal);
+            storedRenderer = stored.gameObject.AddComponent<MeshRenderer>();
+            Assert.IsTrue(container.AddItem(stored), "The item fits");
+            stored.transform.SetParent(container.transform, false);
+            storedRenderer.enabled = !container.HideItems;
+            return stored;
+        }
+
         private AttachedContainer CreateStorageItem(SizeClass itemSize, SizeClass accepts)
         {
             return CreateContainerOnItem(itemSize, accepts, hasUi: true);
