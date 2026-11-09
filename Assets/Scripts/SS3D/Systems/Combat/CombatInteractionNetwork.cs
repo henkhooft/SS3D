@@ -306,9 +306,13 @@ namespace SS3D.Systems.Combat
                 hasImpact ? impactPoint : aimRay.origin + shotDirection * maxRange, impactNormal);
         }
 
-        /// <summary>Server only: what a shot that lands on a living body does to it (damage, stamina, knockdown).</summary>
+        /// <summary>
+        /// Server only: what a shot that lands on a living body does to it (damage, stamina, knockdown).
+        /// A stun on a zone shielded by <see cref="ArmorProfile.BlocksStun"/> armor only drains part of the stamina.
+        /// </summary>
         public static void ServerApplyLivingHit(RangedWeaponProfile profile, HumanHealthController health, BodyZone zone)
         {
+            bool stunBlocked = profile.KnockdownSeconds > 0f && health.ServerZoneBlocksStun(zone);
             if (profile.BruteDamage > 0f || profile.BurnDamage > 0f)
             {
                 health.ApplyDamage(zone, profile.ToDamagePacket());
@@ -318,11 +322,11 @@ namespace SS3D.Systems.Combat
                 StaminaController targetStamina = health.GetComponentInParent<StaminaController>();
                 if (targetStamina != null)
                 {
-                    targetStamina.ServerDepleteStamina(Mathf.Min(profile.StaminaDamage,
-                        Mathf.Max(0f, targetStamina.CurrentStamina)));
+                    float drain = profile.StaminaDamage * (stunBlocked ? RangedWeaponProfile.StunBlockedStaminaFactor : 1f);
+                    targetStamina.ServerDepleteStamina(Mathf.Min(drain, targetStamina.ServerCurrentStaminaAbsolute));
                 }
             }
-            if (profile.KnockdownSeconds > 0f)
+            if (profile.KnockdownSeconds > 0f && !stunBlocked)
             {
                 Ragdoll targetRagdoll = health.GetComponentInParent<Ragdoll>();
                 if (targetRagdoll != null)

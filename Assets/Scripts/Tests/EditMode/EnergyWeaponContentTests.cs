@@ -68,6 +68,27 @@ namespace SS3D.Tests.EditMode
         }
 
         [Test]
+        public void TaserPrefab_CarriesTheStunBalance()
+        {
+            RangedWeaponProfile code = RangedWeaponProfile.Taser;
+            RangedWeaponProfile prefab = DB.LoadAssetAtPath<GameObject>("Assets/Content/WorldObjects/Items/Weapons/Taser.prefab")
+                .GetComponent<RangedWeaponItemExtension>().Profile;
+            Assert.AreEqual(code.KnockdownSeconds, prefab.KnockdownSeconds);
+            Assert.AreEqual(code.MagazineSize, prefab.MagazineSize);
+            Assert.AreEqual(code.ReloadSeconds, prefab.ReloadSeconds);
+            Assert.That(code.ReloadSeconds, Is.GreaterThan(RangedWeaponProfile.LaserRifle.ReloadSeconds), "The taser recharges slowly");
+        }
+
+        [TestCase("SyndicateHardsuit", true)]
+        [TestCase("SyndicateHardsuitHelmet", true)]
+        [TestCase("JumpsuitSecurity", false)]
+        public void OnlyRigidSuits_BlockStuns(string name, bool blocks)
+        {
+            GameObject prefab = DB.LoadAssetAtPath<GameObject>("Assets/Content/WorldObjects/Items/Clothing/" + name + ".prefab");
+            Assert.AreEqual(blocks, prefab.GetComponent<ArmorItemExtension>().Profile.BlocksStun);
+        }
+
+        [Test]
         public void EnergyAudio_ResolvesToClipsInTheSoundDatabase()
         {
             var sounds = DB.LoadAssetAtPath<SS3D.Data.AssetDatabases.AssetDatabase>("Assets/Content/Data/Databases/Sounds.asset");
