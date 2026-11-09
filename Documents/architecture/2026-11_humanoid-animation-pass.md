@@ -2,7 +2,7 @@
 > Touches systems: entities, combat, inventory, interactions-framework, structural-destruction, player-control
 > Status: in-progress
 
-**Progress:** Planned and grilled with the owner on 2026-11-08. The owner put it ahead of MVP1 M0: the pistol stance and throwing serve [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c (Stechkin, security pistol, minibomb), and get-up shows on every knockdown in a round. Drag was cut to the post-playtest feel pass, so M1m closed without it. Tests follow the [testing philosophy](2026-11_testing-philosophy.md). Phase 1 (get-up) was implemented on `claude/humanoid-getup` on 2026-11-08 and passes its EditMode and Environment scenario tests; the owner hand check is still to do. The owner raised the get-up cap from ~1.2 s to ~2.2 s (Decision 2). The owner hand-checked the get-up on 2026-11-09 and found it good, but asked for less time lying down after a wind knockdown: it went from 3 s to 1.5 s, with a 1 s hold while the gust keeps blowing (`Ragdoll.Wind.cs`). Phase 2 (pistol stance) was implemented on `claude/humanoid-pistol` (stacked on the get-up branch) on 2026-11-09 and passes EditMode and the new `scenarios:Combat`. The owner hand-checked it on 2026-11-09 and approved it. Phase 3 (throwing) was implemented on `claude/humanoid-throw` on 2026-11-09 and passes EditMode, `scenarios:Combat` (new `ThrowScenarios`) and `scenarios:Explosives`. The owner hand-checked it and asked for two changes, both made: the feet froze when throwing mid-walk, and the indicator was to be lighter. It is in PR #199. Phase 4 (interaction animations) was added on 2026-11-09 as a draft; it has not been grilled.
+**Progress:** Planned and grilled with the owner on 2026-11-08. The owner put it ahead of MVP1 M0: the pistol stance and throwing serve [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c (Stechkin, security pistol, minibomb), and get-up shows on every knockdown in a round. Drag was cut to the post-playtest feel pass, so M1m closed without it. Tests follow the [testing philosophy](2026-11_testing-philosophy.md). Phase 1 (get-up) was implemented on `claude/humanoid-getup` on 2026-11-08 and passes its EditMode and Environment scenario tests; the owner hand check is still to do. The owner raised the get-up cap from ~1.2 s to ~2.2 s (Decision 2). The owner hand-checked the get-up on 2026-11-09 and found it good, but asked for less time lying down after a wind knockdown: it went from 3 s to 1.5 s, with a 1 s hold while the gust keeps blowing (`Ragdoll.Wind.cs`). Phase 2 (pistol stance) was implemented on `claude/humanoid-pistol` (stacked on the get-up branch) on 2026-11-09 and passes EditMode and the new `scenarios:Combat`. The owner hand-checked it on 2026-11-09 and approved it. Phase 3 (throwing) was implemented on `claude/humanoid-throw` on 2026-11-09 and passes EditMode, `scenarios:Combat` (new `ThrowScenarios`) and `scenarios:Explosives`. The owner hand-checked it and asked for two changes, both made: the feet froze when throwing mid-walk, and the indicator was to be lighter. It is in PR #199. Phase 4 (interaction animations) was added on 2026-11-09 and grilled with the owner the same day (Decisions 15–26).
 
 # Humanoid animation pass: get-up, pistol stance, throwing (Nov 2026)
 
@@ -24,6 +24,7 @@ From the owner's `~/Downloads`, 2026-11-06. Import recipe from M1m: Humanoid rig
 | 1 Get-up | `X Bot@Stand Up From Back.fbx` (face up), `X Bot@Standing Up From Stomach.fbx` (face down) | `Assets/Art/Animations/GetUp/` |
 | 2 Pistol | `Pistol_Handgun Locomotion Pack.zip`: idle, walk, run, walk/run backward, strafe ×2, walk/run arcs. The kneel set is imported and not wired | `Assets/Art/Animations/Pistol/` |
 | 3 Throw | `X Bot@Throw.fbx` (overhand, ordinary items), `X Bot@Run And Throw Grenade.fbx` (explosives). `X Bot@Grenade Throw.fbx` was not kept (Phase 3 findings) | `Assets/Art/Animations/Throw/` |
+| 4 Interactions | `X Bot@Opening.fbx`, `X Bot@Picking Up.fbx`, `X Bot@Pulling Lever.fbx` (owner); Mixamo *Picking Up An Object*, *Putting Down An Object*, *Attempting To Open A Door*, *Man Working On Device* | `Assets/Art/Animations/Interact/` |
 
 **Pistol pack, measured in Blender:** the hands stay 4 cm apart at chest-to-eye height in idle, walk, run and strafe, so the clips grip the gun with both hands. There are no diagonals and no aim, fire or reload clips.
 
@@ -45,6 +46,21 @@ Settled with the owner on 2026-11-08.
 12. **The throw is an upper-body oneshot over locomotion.** The body yaw-snaps toward the target first; while moving, the spine/chest correction from the rifle keeps the arm on target. The item leaves the hand at the clip's release frame, timed the way `MeleeSwingAnimation` times a strike.
 13. **An interrupted throw keeps the item.** A knockdown, stun or hand swap before the release frame cancels the throw; the item stays in hand, and a minibomb stays unarmed (combat §2: an interrupted windup does nothing).
 14. **Drag is cut** to the post-playtest feel pass, next to body dragging ([mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) Explicitly deferred). See **Notes for the drag pass**.
+
+Phase 4, settled with the owner on 2026-11-09:
+
+15. **Interaction effects stay instant; the motion is decoration.** Unlike the throw, nothing waits for a contact frame, so no interaction gets slower and no cancel rule is needed. Clips are trimmed to start partway into the reach so the hand arrives soon after the effect.
+16. **Playtest 1 tier:** pickup, drop, opening and closing lockers, the door reach (opening airlocks, ID swipes, access denied, and attaching C4 to a wall), and one kneel loop shared by C4 defuse and CPR. Arming C4 in hand plays nothing. Medical treatment on others (all instant, so it would need a short kneel oneshot), search and take-from-character, drinking, light switches and levers, and the shove reaction come later.
+17. **The kneel is full-body and rooted.** It plays for as long as a `DelayedInteraction` runs; movement input cancels the interaction (the existing `CancelOnMove`), and the body blends back to standing.
+18. **The active hand reaches,** mirrored for the left hand as the swings are. Two-handed clips (floor pickup, put-down, kneel) ignore the hand.
+19. **Pickup height:** an item less than 0.5 m above the feet plays the floor clip, anything higher the table clip. A drop onto the floor plays the put-down bend; a drop onto a table plays the table clip reversed.
+20. **Network:** oneshots go out as an observers RPC (`PlayInteraction`, table index and hand); a late joiner does not need a reach that is already over. The kneel is state, one snapshot bit (`InteractingKneel`), so anyone joining mid-defuse sees it. This keeps `ActiveTrigger` as it is.
+21. **Facing follows the throw:** standing, the body yaw-snaps toward the target over about 0.1 s; moving, only the torso twists, so the legs never stall.
+22. **A floor pickup while moving** falls back to the table reach. The full bend plays only when standing still.
+23. **Priority:** a melee swing, a throw, the kneel and an aimed two-handed weapon all win over an interaction clip, which is then skipped (the effect still lands, Decision 15). A new interaction clip during another one restarts it with a short crossfade.
+24. **Lockers:** open plays the `Opening` take's first reach (frames 15–132), close its second (153–300). Lock and unlock play only the reach (15–45 and back).
+25. **One PR** for Phase 4, carrying the draft commit and the main-hud §7 throw-mode entry. If the kneel stalls, the oneshots ship and the kneel is recorded here as open.
+26. **Tests:** EditMode covers the table and its imports, plus the contract that a skipped clip still applies its effect on the same tick. One scenario covers a locker (instant), one a defuse (the kneel bit is set, then cleared on cancel and on completion). The owner checks the look by hand.
 
 ## Phases
 
@@ -100,7 +116,7 @@ Settled with the owner on 2026-11-08.
 
 - **Done when** an ordinary item and a minibomb can each be thrown at a point within range, standing and running; out-of-range targets show a clamped marker and land at max range; the arm motion matches the release on an observer client; a knockdown before release keeps the item in hand. Tests cover launch velocity reaching the target point, the weight-to-range bands, and the cancel rule.
 
-### Phase 4 — interaction animations (draft, not grilled)
+### Phase 4 — interaction animations
 
 Every interaction today happens with no body motion: a locker opens, an item jumps into the hand, a light changes while the player stands still. Phase 4 gives the common ones a short upper-body or full-body motion, driven from a table as the swings and the throw are.
 
@@ -119,29 +135,23 @@ Every interaction today happens with no body motion: a locker opens, an item jum
 | `Pickup` from the floor | Picking Up An Object, `c9c6d7aa` (4.2 s) | Two-handed bend to the floor. The owner's clip covers table height; choose by the item's height above the feet |
 | `Drop` | Putting Down An Object, `c9c6d86d` | The same bend, in reverse |
 | `OpenAirlock`, ID swipes, access denied | Attempting To Open A Door, `c9c84f3e` | One arm reaches forward at chest height and holds |
-| `ArmC4`, `AttachCharge`, `DefuseC4`; `Search` and `TakeFromCharacter` on a downed body; splint, bandage, burn dressing, inject and transfusion on someone else | Man Working On Device, `c9c6cf65` | Down on one knee, both hands working low. One clip for every "hands busy at floor level" interaction; it loops while a delayed interaction runs |
+| `DefuseC4` and `Perform CPR` (Playtest 1); later `Search`, `TakeFromCharacter` and medical treatment on others | Man Working On Device, `c9c6cf65` | Down on one knee, both hands working low. One clip for every "hands busy at floor level" interaction; it loops while a delayed interaction runs. Arming and attaching C4 are instant, so they do not kneel (Decision 16) |
 | `Perform CPR` | Administering Cpr To A Victim On The Ground, `c9c959ad` | Kneeling compressions; loops for the CPR delay |
 | `PourSubstance` into yourself (drinking) | Male Drinking, `c9c63255` | Hand to mouth and back |
 | Disarm (deferred, combat §11) | Standing Reaction To Shove, `c9c687a7` | Plays on the victim; disarm itself is not built yet |
 
 Rejected: *Kneeling And Inspecting Element With Hands* holds one hand up beside the head. *Rocking Back And Forth As If Dizzy* is too subtle to read at game distance. *Opening Cabinet Door* is covered by the owner's `Opening`. No catalogue clip presses a wall button (*Attempting To Open A Door* is the closest), and typing exists only seated.
 
-**Shape (proposal, to settle in the grilling):**
+**Deferred past Playtest 1:** *Administering Cpr*, *Male Drinking* and *Standing Reaction To Shove* stay on the shortlist; until then CPR uses the kneel (Decision 16).
 
-- An `InteractionAnimation` table, like `ThrowAnimation`: generic interaction name → clip, trim, rate, contact frame, Upper Body or full body, oneshot or loop.
-- One new trigger, `Interact`, carrying the table index. The snapshot's 3-bit `ActiveTrigger` field is full (ids 1–7), and the 2-bit `AttackVariant` cannot index a table this size, so the snapshot needs wider fields. Bits 29–31 are free, or the index can ride its own SyncVar.
-- **Instant interactions** (open, pick up, toggle): the motion plays and the effect lands at the clip's contact frame, as the throw's release does. The alternative is an instant effect with the motion as decoration.
-- **Delayed interactions** (CPR, defuse, medical, search): a looping state for as long as the `DelayedInteraction` runs; a cancel or interrupt ends it.
-- The body faces the target first (`HoldFacing`, Phase 3). Kneeling clips need the full body, so they stop movement while they play. Standing reaches stay on the Upper Body over locomotion.
+**Build:**
 
-**Open questions for the grilling:**
+- Import the owner's three clips and the four Mixamo clips (Clips table). Measure trims and rates and record them in the findings.
+- An `InteractionAnimation` table, like `ThrowAnimation`: generic interaction name → clip, trim, rate, mirrored or two-handed, Upper Body or full body, oneshot or loop. The rebuild reads it.
+- Oneshots on the Upper Body over locomotion, raised the way the throw raises the layer in Peaceful; facing, height choice, fallback and priority per Decisions 18–23. The server sends `PlayInteraction` when the interaction runs; the owner plays it locally too.
+- The kneel as a full-body loop on `InteractingKneel`, set by the `DelayedInteraction` tracker for defuse and CPR and cleared on completion, cancel or interrupt.
 
-1. Does the effect wait for the contact frame (the locker opens when the hand pulls, the item lands in the hand when the hand gets there), or stay instant with the motion as decoration? Waiting reads better and matches the throw, but every pickup and door gets a few tenths of a second slower.
-2. Which tier ships before Playtest 1? A proposal: pickup, drop, lockers, the airlock reach, and the kneeling clip for C4 and CPR, since those show in every Nuke Ops round. Medical on others, search, drinking and light switches would follow.
-3. Do kneeling interactions root the player, with movement cancelling them as it already cancels a delayed interaction?
-4. Which hand reaches: always the active hand (mirrored as the swings are), or the hand nearer the target?
-
-- **Done when** (draft) the Playtest 1 tier plays on the owner and on observers, faces its target, and lands its effect as question 1 decides; delayed interactions loop and end on cancel. EditMode covers the table and its imports; a scenario covers one instant and one delayed interaction.
+- **Done when** the Playtest 1 tier (Decision 16) plays on the owner and on observers, faces its target, and never delays its effect; defuse and CPR kneel for their full delay and stand up on cancel and on completion. Tests per Decision 26.
 
 ## Out of scope
 
