@@ -362,6 +362,14 @@ namespace SS3D.Systems.Testing
 
         private void CollectEditorError(string condition, string stackTrace, LogType type)
         {
+            // Since Unity 6000.3.28f1, an asset refresh in the main editor during Play Mode makes MPPM
+            // re-import in each clone, and the clone logs Unity's analyzer .ruleset layout notices as
+            // errors from CloneInternalRuntime. They are editor noise, not game errors.
+            if (stackTrace != null && stackTrace.Contains("Unity.Multiplayer.PlayMode.Editor.CloneInternalRuntime"))
+            {
+                return;
+            }
+
             if (type is LogType.Error or LogType.Exception or LogType.Assert)
             {
                 _editorErrors.Add($"{type}: {condition}");
