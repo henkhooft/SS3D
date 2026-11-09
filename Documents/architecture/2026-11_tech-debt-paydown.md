@@ -2,7 +2,7 @@
 > Touches systems: core-subsystems, combat, entities, interactions-runtime, inventory, health, tile, map-editor-creative-hooks, area, structural-destruction, atmospherics, electricity, persistence, rounds-lobby, ui-shell, machine-interface, examine, ingame-console, networking-session, application
 > Status: planned
 
-**Progress:** Planned on 2026-11-09 from the code audit that refreshed [TECH_DEBT.md](TECH_DEBT.md) §1.19–§1.30. Nothing is built yet. The owner has not yet answered the [open questions](#open-questions-for-the-owner).
+**Progress:** Planned on 2026-11-09 from the code audit that refreshed [TECH_DEBT.md](TECH_DEBT.md) §1.19–§1.30. Nothing is built yet. The owner answered timing, Map Editor gating and pausing, `HumanoidPredictedMovement` and console access on 2026-11-09 (Decisions 9–12); four [open questions](#open-questions-for-the-owner) remain.
 
 # Tech-debt paydown (Nov 2026)
 
@@ -34,12 +34,19 @@ Proposed by the agent; the owner confirms or overrides them in the [open questio
 7. **Bump `ProtocolVersion.Current` in any PR that changes an RPC signature or a SyncVar layout.** Bump `PersistenceEnvelope.CurrentSchemaVersion` only if a saved payload changes; none in this plan should ([game versioning](2026-10_game-versioning.md)). No item here ends with `Version-Bump: minor`; this work is not a player-visible feature.
 8. **Guardrails ratchet.** The Phase 0 checks keep allowlists that may only shrink, the way `AssetAuditUtilities` grandfather lists do. A new violation fails the build. It does not get an allowlist entry (testing rule 7).
 
+Settled with the owner on 2026-11-09:
+
+9. **Timing:** Phases 0–2 before Playtest 1; Phases 3–9 after it, behind the gameplay focus.
+10. **The Map Editor is admin-only, except on the sandbox.** `-sandbox` stays the one open mode (sandbox-server §5). The standalone `-openbuild` switch goes away (P1.11). **Editing pauses nothing**: only map load, clear and import suspend simulations (P2.2). The owner may revisit pausing for sessions whose main goal is map building. That would be an explicit, admin-only "freeze world" control, not a side effect of opening the editor.
+11. **Delete `HumanoidPredictedMovement`** (P3.2). It is unused and keeps being maintained by mistake.
+12. **Console access is owned by the open console-rework branch,** which separates player and admin commands. This effort doesn't change command access levels. G2 and the console half of P1.3 hand over to that branch; check it covers `accessgrant`, `accessrevoke`, `accesspreset`, `spawnitem` and the unknown-command crash before closing §1.19.
+
 ## Phase overview
 
 | Phase | Goal | TECH_DEBT | Size | Depends on | When |
 |---|---|---|---|---|---|
 | [0](#phase-0--guardrails-and-doc-truth) | Ratchet checks; fix docs that are wrong | §1.9, §1.11, §1.19, §1.24 | S–M | — | Before Playtest 1 |
-| [1](#phase-1--authority-hardening) | Close trust holes on the public servers | §1.19 | M | 0 (G1) | Before Playtest 1 |
+| [1](#phase-1--authority-hardening) | Close trust holes on the public servers; Map Editor admin-only off the sandbox | §1.19, §1.22 | M | 0 (G1) | Before Playtest 1 |
 | [2](#phase-2--correctness-traps) | Small bugs that are one step from biting | §1.4, §1.9, §1.12, §1.20–§1.25, §1.29 | M | — | Before Playtest 1 |
 | [3](#phase-3--dead-code-and-bootstrap-hygiene) | Delete what nothing uses; one bootstrap | §1.7, §1.26, §1.29, §1.30 | S–M | — | Any time |
 | [4](#phase-4--gameplay-ownership-contracts) | One owner for hand actions, pose, item holder | §1.1, §1.9, §1.20, §1.21 | L | 1, animation pass shipped | After Playtest 1 |
@@ -58,7 +65,7 @@ Phases 0–2 are small, independent PRs and protect the 24/7 Nuke Ops server ([t
 Cheap checks that stop the debt regrowing while it is paid down, plus fixes for docs that now mislead agents.
 
 - **G1 — ServerRpc authority audit (EditMode, AssetAudit assembly).** Reflect over SS3D assemblies for `[ServerRpc(RequireOwnership = false)]` and for every `ServerRpc` taking a `Vector3`, `Quaternion` or `NetworkObject` argument. Each one must appear in an allowlist naming its check: `Admin`, `MapEditorPermission`, `OwnerOfArgument`, `ServerDerived` or `ReadOnly`. An `Unchecked` entry is allowed only for the RPCs Phase 1 fixes, and Phase 1 removes them. Verify first that FishNet's weaver leaves the attribute readable by reflection; if it doesn't, scan source instead.
-- **G2 — Console command access audit (EditMode).** Every `Command` with `AccessLevel < Administrator` must be on a list marked `SelfOnly` (it can only read or change the caller's own client-side state) or `ReadOnly`. Server-type commands that change world state or another player's state fail. This guards P1.3.
+- **G2 — Console command access audit:** handed to the console-rework branch (Decision 12). If that branch lands without a guard, add this check: every `Command` with `AccessLevel < Administrator` is marked `SelfOnly` or `ReadOnly`, and a Server-type command that changes world state or another player's state fails.
 - **G3 — Class-size ratchet (EditMode).** Sum lines per type across its partial files under `Assets/Scripts/SS3D`. A grandfather list holds today's sizes for the classes in [TECH_DEBT §1.9](TECH_DEBT.md#19-god-classes-forming-in-hot-uiinteraction-code). A listed class may not grow by more than 10 % without updating its entry in the same PR. An unlisted class may not pass 900 lines. The point is a visible diff at review time, not a hard cap.
 - **G4 — Systems folder dependency ratchet (EditMode).** Count pairs of `Systems/*` folders that depend on each other, taken from `using SS3D.Systems.X` lines outside `Editor/`. Fail if the count rises above the stored value (53 at `06316a98`). Phases 5, 6 and 8 lower it.
 - **G5 — UI catalog umbrella check (EditMode).** Every `*AssetCatalog` ScriptableObject type has a builder registered in `UiCatalogRebuildAll`. It fails today on Examine until P2.6 lands, so ship G5 together with P2.6.
@@ -66,7 +73,7 @@ Cheap checks that stop the debt regrowing while it is paid down, plus fixes for 
   - `entities.md:16`: the orchestrator does not read `Presentation`; it relies on `BodyState.Ragdoll` and `SetPosingSuppressed`.
   - `entities.md`: add `InteractionAnimation.cs` and `InteractionController.Animation.cs` to Start here.
   - `interactions-runtime.md:177`: "thin router" → name the hand-action scheduling it now owns.
-  - `tile.md:48`, `:71`: "admin-gated" → admin, or any non-Restricted player under `-openbuild` / `-sandbox` (sandbox-server §5).
+  - `tile.md:48`, `:71`: "admin-gated" is true only off the sandbox. Say: admin, or any non-Restricted player on `-sandbox` (sandbox-server §5). `-openbuild` goes in P1.11.
   - `ui-shell.md`: add the Map Editor and `FpsCounterView` to the not-migrated table.
   - `FORK_STATUS.md:544`: "ECS world" → Burst jobs on native buffers.
 - **Tests:** G1–G5 are tier 1. `validate.sh --steps compile,editmode`.
@@ -82,11 +89,9 @@ Public servers are the Playtest 1 enabler, so trust holes are gameplay bugs ther
   - Melee uses the same origin.
   - Test: EditMode on a pure resolver seam taking `(serverOrigin, clientAim)`; `scenarios:Combat`.
 - **P1.2 — Remove client-callable knockdown.** Delete `Ragdoll.Knockdown`, `KnockdownTimeless` and `Recover` as ServerRpcs (`Ragdoll.cs:347`, `:382`, `:817`); callers use the existing `Server*` methods. Delete `Hacks/RagdollWhenPressingButton` (no prefab or scene uses it). Networking §2: nobody else drives your body.
-- **P1.3 — Console and spawn permissions.**
-  - Raise `accessgrant`, `accessrevoke`, `accesspreset` and `spawnitem` to `Administrator`. Sandbox §5 says players have no console and get items from the palette.
-  - Audit the rest of the 17 `User` commands against G2. Read-only self commands such as `echo`, `playerlist` and `accesscheck` on yourself can stay.
+- **P1.3 — Spawn permissions.**
   - Gate `ItemSubSystem.CmdSpawnItem` / `CmdSpawnItemInContainer` (`:23`, `:63`) on admin. The console calls the server method directly, so nothing legitimate needs the RPC open.
-  - Null-check `FindCommand` in `CmdProcessOnlineCommand`, which throws on an unknown command name.
+  - Console command access levels and the `FindCommand` null crash belong to the console-rework branch (Decision 12). Before closing [TECH_DEBT §1.19](TECH_DEBT.md#119-server-trusts-client-input-in-several-serverrpcs), confirm it makes `accessgrant`, `accessrevoke`, `accesspreset` and `spawnitem` admin-only. Sandbox §5 says players have no console.
 - **P1.4 — Dragging.** `Draggable.SetDragServer(bool, NetworkObject)` → the server resolves the dragger from the caller's owned entity (`EntitySubSystem.TryGetOwnedEntity`) and checks range. It ignores any object argument.
 - **P1.5 — Input sanitizing.** One helper (`RpcInput.TryFinite(Vector3)`, plus a clamp to the station bounds) used by every RPC that takes a vector. `ThrowRules.ClampToRange` (`:71-84`) clamps height as well as distance and rejects NaN.
 - **P1.6 — Client-started animation and stance.**
@@ -102,8 +107,14 @@ Public servers are the Playtest 1 enabler, so trust holes are gameplay bugs ther
   - Step 3: `TargetRejectInteraction` shows a short "can't reach that" hint (Q5, owner wording).
   - Test: EditMode on the margin rule; a `scenarios:Reach` case with the FishNet latency simulator at 100 ms dropping onto a table while strafing.
 - **P1.10 — Owner-only RPCs.** `RpcExecuteClientInteraction`, `RpcExecuteClientInventoryInteraction` and `RpcExecuteMeleeSwing` broadcast to everyone, and non-owners ignore them → `TargetRpc` to the owner.
-- **Tests:** `compile,editmode`, `scenarios:Combat`, `scenarios:Reach`, `scenarios:Access`, `mppm:late-join` once at the end of the phase (it touches spawning and ownership).
-- **Done when:** G1's allowlist has no `Unchecked` entries and G2 passes.
+- **P1.11 — Map Editor admin-only outside the sandbox (Decision 10).**
+  - `MapEditorPermissions` (`:25-31`) picks `OpenBuildMapEditorAuthorizer` only when `SandboxProfile.RequestedOnCommandLine`. Every other server uses `AdminMapEditorAuthorizer`.
+  - Delete `OpenBuildMapEditorAuthorizer.RequestedOnCommandLine` and the `-openbuild` switch. No script or workflow passes it.
+  - `IsSandboxPlayer`, `MayReplaceMapFile`, the rate limiter and the sandbox denylist keep keying off the open authorizer, so the sandbox behaves as before.
+  - Update the docs that describe `-openbuild` as its own mode: `map-editor-creative-hooks.md:41`, `:54`; `tile.md` (with D1); `area.md`; [sandbox-server effort](2026-11_sandbox-server.md) Starting state and Implementation notes (mark the switch removed); [test-server.md](../milestones/test-server.md) T3 notes.
+  - Test: EditMode on authorizer selection (no flag → admin; `-sandbox` → open); `sandbox` pilot once.
+- **Tests:** `compile,editmode`, `scenarios:Combat`, `scenarios:Reach`, `scenarios:MapEditor`, `mppm:late-join` once at the end of the phase (it touches spawning and ownership).
+- **Done when:** G1's allowlist has no `Unchecked` entries; outside `-sandbox`, a non-admin can't open the Map Editor or call its RPCs.
 
 ### Phase 2 — Correctness traps
 
@@ -120,7 +131,7 @@ Independent small PRs. Each fixes a bug that exists today or is one feature away
   - `PersistenceSubSystem.cs:370-436`
   - `MapImportApplier.cs:94-202`
 
-  `ElectricitySubSystem.SuspendCircuitUpdates(bool)` becomes counted. Q2 decides whether an open editor pauses anything at all; the recommendation is that only load, clear and import do.
+  `ElectricitySubSystem.SuspendCircuitUpdates(bool)` becomes counted. Opening the editor no longer suspends anything; only load, clear and import take a scope (Decision 10). Remove the editor-open suspension in `MapEditorSubSystem.cs:461-497`. The scope API is shaped so an admin "freeze world" toggle can take one later, if the owner wants it.
   - Test: EditMode on nesting (load inside an editor session leaves circuits suspended until both scopes close).
 - **P2.3 — `SubSystems` registry.** `Core/Subsystems.cs`:
   - Reset `_isQuitting`, `_suppressMissingErrors` and the dictionary on `RuntimeInitializeLoadType.SubsystemRegistration`.
@@ -154,7 +165,10 @@ Independent small PRs. Each fixes a bug that exists today or is one feature away
   - **Before removing the package,** add `com.unity.burst`, `com.unity.collections` and `com.unity.mathematics` as direct dependencies in `Packages/manifest.json` if they are only transitive today. Atmos jobs need all three.
   - Rename the folder `ECS` → `Jobs` and the asmdef to `SS3D.Atmospherics.Jobs`. References are by GUID, so the rename is safe; check for `Type.GetType` strings and `[SerializeReference]` data naming the old assembly first.
   - Test: `compile,editmode`, `scenarios:Atmos`, `mppm:breach-budget` (the atmos cost baseline).
-- **P3.2 — `HumanoidPredictedMovement`.** It is disabled on `Human.prefab` (`m_Enabled: 0`) and has drifted from `HumanoidLivingController`. Q3: delete it (recommended; git keeps it), or schedule it as the replacement for client-authoritative movement in its own effort. If deleted, remove its component from Human through a recipe.
+- **P3.2 — Delete `HumanoidPredictedMovement`** (Decision 11). It is disabled on `Human.prefab` (`m_Enabled: 0`) and has drifted from `HumanoidLivingController`.
+  - Remove its component from Human (and TestHuman, if present) through a recipe, then delete the script.
+  - Grep for references in tests, the movement docs and `entities.md`, and drop them.
+  - Test: `HumanPrefabIntegrityTests`, `scenarios:Environment` (movement and float), `mppm:late-join`.
 - **P3.3 — Base `SS3D.UI` assembly.**
   - Delete `LabelButton`, `ToggleLabelButton`, `GenericTabView`, `GenericTabControllerView`, `MouseButtonType` and `TestHelpers.PressButton*`; check for scene and prefab references first.
   - Keep `LocalizeFont` until the condemned `PlayerCanvas.prefab` is purged with its uGUI, then delete the assembly.
@@ -332,16 +346,15 @@ Mechanical once Phases 5–7 have cut the reverse references. Each new assembly 
 
 - **TECH_DEBT items owned by other efforts:** §1.1 Human.prefab beyond the recipes Phase 4 adds ([entity prefab recipes](systems/entities-prefab-recipes.md)); §1.5 the catalog codegen pipeline; §1.8 condemned UI replacement; §1.10 CI multiplayer health ([multiplayer testing](2026-07_multiplayer-testing-self-hosted-ci.md)); §1.14 asset taxonomy ([asset file structure](2026-07_asset-file-structure-taxonomy.md)); §1.15 Addressables ([Addressables migration](2026-07_addressables-expansion-migration.md)).
 - **A domain split of the core simulation assembly** (Decision 4).
-- **Client-side prediction, rollback or lag compensation** beyond the validation margin in P1.9 (networking §10 leaves netcode to implementation; a real prediction effort would be its own doc, see Q3).
+- **Client-side prediction, rollback or lag compensation** beyond the validation margin in P1.9 (networking §10 leaves netcode to implementation; a real prediction effort would be its own doc).
+- **Console permissions** (Decision 12).
 - **Gameplay changes.** No rule, number or player-facing behaviour changes. The exceptions are the hint in P1.9 step 3 and the bugs fixed in Phases 1–2, each of which brings code back in line with a design doc.
 
 ## Open questions for the owner
 
-1. **Timing.** Do Phases 0–2 before Playtest 1, as proposed, with Phases 3–9 after it and behind the gameplay focus? Or should the whole effort wait?
-2. **Does an open Map Editor pause the world?** Today, a host opening the editor pauses atmos and power for every player, and a remote editor pauses nothing. Recommended: editing pauses nothing; only load, clear and import suspend simulations (P2.2). Creative-mode and sandbox-server don't say.
-3. **`HumanoidPredictedMovement`:** delete it (recommended), or keep it as the start of a client-prediction effort?
-4. **Console access:** confirm that `accessgrant`, `accessrevoke`, `accesspreset` and `spawnitem` become admin-only everywhere (sandbox §5 already rules out a player console on the sandbox). Should any other `User` command stay open on a public server?
-5. **Validation margins (P1.1, P1.9):** start with a 0.3 m LOS tolerance (or same collider), +0.25 m on interaction range, and a 15° aim cone around server facing? And what should the rejection hint say?
+Questions 1–4 were settled as Decisions 9–12.
+
+5. **How much lag slack the server's re-checks allow (P1.1, P1.9).** The server re-checks clicks and shots against its own copy of the player, which trails the client by the network delay. Today the checks are exact: a drop needs the server's line-of-sight ray to land within 10 cm of the clicked point, so a moving player's drop can be refused (#192). Recommended: ship P1.9's diagnostics first, which log how far off the server's copy really is. Then set the slack (LOS distance, range margin, aim cone for guns) from what playtests measure, instead of guessing now. Also, what should the "can't reach that" hint say?
 6. **Analyzer gate (P9.1):** which rules, and does it fail CI or only warn at first?
 7. **Automation in release builds (P8.1):** strip test automation from release builds (recommended), or keep `-testscript=` working on shipped builds for remote debugging?
 8. **`UiBinderBase`:** adopt it for the Machine UI binders during P7.8, or delete it?
