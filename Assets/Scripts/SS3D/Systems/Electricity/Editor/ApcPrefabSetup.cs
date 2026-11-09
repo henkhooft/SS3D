@@ -29,10 +29,7 @@ namespace SS3D.Systems.Electricity.Editor
                 so.ApplyModifiedPropertiesWithoutUndo();
                 // The collider was authored at floor level inside the wall, under the panel drawn at chest height,
                 // so rounds and swings never reached it. Fit it to the panel.
-                BoxCollider box = root.GetComponent<BoxCollider>();
-                Bounds panel = root.GetComponent<MeshFilter>().sharedMesh.bounds;
-                box.center = panel.center;
-                box.size = panel.size;
+                WallMountColliderSetup.FitToMesh(root);
 
                 StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, ApcPath);
