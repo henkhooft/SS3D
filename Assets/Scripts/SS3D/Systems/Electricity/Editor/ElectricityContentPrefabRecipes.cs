@@ -15,10 +15,11 @@ namespace SS3D.Systems.Electricity.Editor
         {
             int solar = SolarPrefabSetup.SetupAll();
             int lights = LightFixturePrefabSetup.SetupAll();
+            int apc = ApcPrefabSetup.SetupAll();
 
             EditorUtility.DisplayDialog(
                 "Electricity Content Prefab Recipes",
-                $"Solar: updated {solar} prefab(s). Lights: {lights} prefab(s).",
+                $"Solar: updated {solar} prefab(s). Lights: {lights} prefab(s). APC: {apc}.",
                 "OK");
         }
 
@@ -27,7 +28,8 @@ namespace SS3D.Systems.Electricity.Editor
         {
             int solar = SolarPrefabSetup.SetupAll();
             int lights = LightFixturePrefabSetup.SetupAll();
-            Debug.Log($"[ElectricityContentPrefabRecipes] Solar {solar}, lights {lights}.");
+            int apc = ApcPrefabSetup.SetupAll();
+            Debug.Log($"[ElectricityContentPrefabRecipes] Solar {solar}, lights {lights}, APC {apc}.");
 
             if (UnityEngine.Application.isBatchMode)
             {

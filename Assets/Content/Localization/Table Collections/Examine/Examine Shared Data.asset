@@ -1567,6 +1567,14 @@ MonoBehaviour:
     m_Key: items.parts.light_tube_broken.desc
     m_Metadata:
       m_Items: []
+  - m_Id: 297530947802525696
+    m_Key: examine.device.dented
+    m_Metadata:
+      m_Items: []
+  - m_Id: 297530947844468736
+    m_Key: examine.device.broken
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

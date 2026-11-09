@@ -1606,6 +1606,14 @@ MonoBehaviour:
     m_Localized: What's left of a fluorescent tube.
     m_Metadata:
       m_Items: []
+  - m_Id: 297530947802525696
+    m_Localized: Its casing is dented and scorched.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 297530947844468736
+    m_Localized: It's smashed and dead. Sparks spit from the broken casing.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -28,6 +28,10 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 
 **Consumer visuals:** `ConsumerPowerVisual` dims emissive materials (and optional panel indicators) from `BasicPowerConsumer` / `MachinePowerConsumer` power status and APC channel gating via `PowerGate`. Wired on vendor/jukebox prefabs, air alarms, and airlock panel lights.
 
+**Power loss, two batteries:** an area's APC cell carries it first: when the grid can't cover the load the area goes Emergency (dim red) and sheds Equipment, then Environment, then Lighting as the cell drains. Under that, every emergency-capable fixture has its own small cell (`FixtureEmergencyCell`, 120 s run, 60 s recharge on mains). Whenever its APC can't light it — APC cell flat, lighting shed or switched off at the APC, APC broken or gone with its wall — the fixture runs on its own cell in Emergency until that runs down, then goes dark. The wall light switch is a choice, not a power cut: it turns lights off without the cell. A cell only arms once the fixture has been lit from mains, so round start and Map Editor placement stay dark.
+
+**Breakable APC:** the APC carries a `BreakableDevice` (60 integrity: five M4 rounds, two crowbar swings). Rounds and swings that reach its casing hit it instead of the wall behind; a blast hitting its wall tile damages it too. A broken APC stays on the wall with its panel dark, reports every channel off, neither charges nor discharges its cell and offers nothing to open. Its room drops straight to the fixture cells. Repair is a later pass (explosives-destruction.md §9).
+
 **Breakable bulbs:** each bulb and tube fixture carries a `LightFixtureBulb` with a synced socket state (Intact / Broken / Empty). A ballistic or energy round with brute or burn damage that crosses an intact bulb's glass before it lands breaks it: the fixture swaps in its `*Broken` mesh, plays a small glass break (`LightFixtureAudioTrackIds`) and `LightPower` stays Off whatever the power. The round carries on through the glass. An empty hand removes whatever is in the socket (a whole bulb, or a broken one as rubbish). A held `LightBulb` / `LightTube` item of the fixture's kind inserts into an empty socket, or replaces a broken one, which drops to the floor. Spares are in the YouTool vendor (10 each). Socket state is round-scoped and not saved with the station template.
 
 **Balancing defaults (prefabs):** APC cell 5 kWh / 10 kW charge & discharge; SMES 100 kWh / 50 kW, starts charged with output enabled; solar panel peak 2 kW.
@@ -45,6 +49,8 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - `Assets/Scripts/SS3D/Systems/Electricity/Circuit.cs` — cable-grid power distribution; per-consumer channel resolver
 - `Assets/Scripts/SS3D/Systems/Electricity/GameplayLightGuard.cs` — station startup disables orphan lights; preserves `LightPower` fixtures and isolated `CharacterPreviewBooth` lights
 - `Assets/Scripts/SS3D/Systems/Electricity/LightPower.cs` — fixture visuals from power + area lighting state; client path uses floor-cache area id + lighting snapshot
+- `Assets/Scripts/SS3D/Systems/Electricity/FixtureEmergencyCell.cs` — a fixture's own battery (arm on mains, drain while it carries the light); `LightPower` ticks it on the electricity tick
+- `Assets/Scripts/SS3D/Systems/StructuralDamage/BreakableDevice.cs` — machine integrity → broken (APC); `BreakableDeviceResolver` finds one along a shot or swing
 - `Assets/Scripts/SS3D/Systems/Electricity/LightFixtureBulb.cs` — bulb socket SyncVar, glass hit box (`TryFindStruck`), break / remove / insert; `LightBulbRules.cs` holds the pure rules
 - `Assets/Scripts/SS3D/Systems/Electricity/LightBulbItem.cs` — loose bulb/tube item; offers `InsertLightBulbInteraction`. Empty hands get `RemoveLightBulbInteraction` from the fixture
 - `Assets/Scripts/SS3D/Systems/Electricity/Editor/LightFixturePrefabSetup.cs` — builds the four bulb items from `Lights.fbx`, wires both fixtures, stocks YouTool
@@ -66,6 +72,7 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - Prefab examples: vendors/jukebox (`MachinePowerConsumer` + `ConsumerPowerVisual`); air alarm/airlocks (`BasicPowerConsumer`, Environment channel); light switch uses [area](area.md) `LightSwitchController` instead.
 - HV cable graph: only `IPowerProducer` and `IPowerStorage` participate via `ElectricCableConnectivity.ParticipatesInCableGrid`; consumers draw from area APCs. Solar panels follow the Pacman producer path (FurnitureBase + `ElectricDeviceAdjacencyConnector` + Wire cable to SMES/APC).
 - Solar content prefabs: re-run `SS3D/Electricity/Run Content Prefab Recipes` (`SolarPrefabSetup`) after merge conflicts — do not hand-edit mega-prefab YAML. Recipe nests the full `SolarPanel.fbx` (base/arm/armature/panel) under a `Model` child; do not extract a single mesh.
+- Breakable machines: add `BreakableDevice` and gate the machine on `IsBroken` (see `ApcController.Channels`); `ApcPrefabSetup` is the example recipe.
 - Light fixtures and bulb items: re-run `SS3D/Electricity/Run Content Prefab Recipes` (`LightFixturePrefabSetup`). A new fixture kind needs `*` and `*Broken` socket meshes, a `LightBulbKind`, and a matching item pair.
 - Machine panels: register via [machine-interface](machine-interface.md). Solar tracker/panels intentionally have **no** MI (diegetic Toggle / Rotate only).
 - Area membership changes: Area APC register/unregister/rebuild calls `ElectricitySubSystem.InvalidateAreaConsumerIndex()`.
@@ -100,9 +107,11 @@ Power circuit simulation, APC channel gating, SMES storage, and tile-linked elec
 - **Fixture collider on its own layer:** fixtures need a collider for reach checks and the interaction point, but `LineOfSight` raycasts hit triggers, so a trigger on the fixture's layer stopped rounds before the glass and could block cover checks. The trigger lives on a `ReachVolume` child on Ignore Raycast; range checks and `SelectionTargetUtility` still find it. Hit 2026-11-09.
 - **Wall mounts sit inside their wall's collider:** walls collide as full tiles, so the structural hit lands about 0.16 m in front of a mounted bulb's glass and the round never reached it. A wall hit tests bulbs up to `LightFixtureBulb.WallInset` (0.35 m) past the landing point; a fixture on the wall's far side is about 0.8 m in, so it stays safe. Hit 2026-11-09.
 
+- **APC collider was under the panel, inside the wall:** the prefab's box sat at floor height in the wall's middle while the panel is drawn at chest height on its face, so rounds and swings never reached it. `ApcPrefabSetup` fits it to the mesh. `LightSwitch.prefab` has the same mis-authored box (unfixed; it isn't breakable). Hit 2026-11-09.
+
 ## Tests
 
-`Assets/Scripts/Tests/EditMode/ElectricityTests/`: circuit distribution, cable connectivity, consumer allocation, `PowerGate`, APC status/consumer index, area APC distribution and lighting state/fixture policy, solar generation, bulb rules and fixture wiring (`LightFixtureBulbTests`). Run `Testing/ui/validate.sh --steps compile,editmode`. PlayMode `LightBulbScenarios` (Combat category) fires the server path at a test-room fixture, then removes and replaces the bulb by hand.
+`Assets/Scripts/Tests/EditMode/ElectricityTests/`: circuit distribution, cable connectivity, consumer allocation, `PowerGate`, APC status/consumer index, area APC distribution and lighting state/fixture policy, solar generation, bulb rules and fixture wiring (`LightFixtureBulbTests`), fixture cells and the broken APC (`PowerLossLightingTests`). Run `Testing/ui/validate.sh --steps compile,editmode`. PlayMode `LightBulbScenarios` (Combat category) fires the server path at a test-room fixture, then removes and replaces the bulb by hand. `PowerLossScenarios` shoots the test room's APC until it breaks and blows its wall away, and checks the room runs on fixture cells, then goes dark.
 
 ## Depends on / Used by
 
