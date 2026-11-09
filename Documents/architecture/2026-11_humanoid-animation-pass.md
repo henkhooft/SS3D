@@ -2,11 +2,11 @@
 > Touches systems: entities, combat, inventory, interactions-framework, structural-destruction, player-control
 > Status: in-progress
 
-**Progress:** Planned and grilled with the owner on 2026-11-08. The owner put it ahead of MVP1 M0: the pistol stance and throwing serve [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c (Stechkin, security pistol, minibomb), and get-up shows on every knockdown in a round. Drag was cut to the post-playtest feel pass, so M1m closed without it. Tests follow the [testing philosophy](2026-11_testing-philosophy.md). Phase 1 (get-up) was implemented on `claude/humanoid-getup` on 2026-11-08 and passes its EditMode and Environment scenario tests; the owner hand check is still to do. The owner raised the get-up cap from ~1.2 s to ~2.2 s (Decision 2). The owner hand-checked the get-up on 2026-11-09 and found it good, but asked for less time lying down after a wind knockdown: it went from 3 s to 1.5 s, with a 1 s hold while the gust keeps blowing (`Ragdoll.Wind.cs`). Phase 2 (pistol stance) was implemented on `claude/humanoid-pistol` (stacked on the get-up branch) on 2026-11-09 and passes EditMode and the new `scenarios:Combat`. The owner hand-checked it on 2026-11-09 and approved it. Phase 3 (throwing) was implemented on `claude/humanoid-throw` on 2026-11-09 and passes EditMode, `scenarios:Combat` (new `ThrowScenarios`) and `scenarios:Explosives`; the owner hand check is still to do.
+**Progress:** Planned and grilled with the owner on 2026-11-08. The owner put it ahead of MVP1 M0: the pistol stance and throwing serve [mvp1-nuke-ops.md](../milestones/mvp1-nuke-ops.md) M1c (Stechkin, security pistol, minibomb), and get-up shows on every knockdown in a round. Drag was cut to the post-playtest feel pass, so M1m closed without it. Tests follow the [testing philosophy](2026-11_testing-philosophy.md). Phase 1 (get-up) was implemented on `claude/humanoid-getup` on 2026-11-08 and passes its EditMode and Environment scenario tests; the owner hand check is still to do. The owner raised the get-up cap from ~1.2 s to ~2.2 s (Decision 2). The owner hand-checked the get-up on 2026-11-09 and found it good, but asked for less time lying down after a wind knockdown: it went from 3 s to 1.5 s, with a 1 s hold while the gust keeps blowing (`Ragdoll.Wind.cs`). Phase 2 (pistol stance) was implemented on `claude/humanoid-pistol` (stacked on the get-up branch) on 2026-11-09 and passes EditMode and the new `scenarios:Combat`. The owner hand-checked it on 2026-11-09 and approved it. Phase 3 (throwing) was implemented on `claude/humanoid-throw` on 2026-11-09 and passes EditMode, `scenarios:Combat` (new `ThrowScenarios`) and `scenarios:Explosives`. The owner hand-checked it and asked for two changes, both made: the feet froze when throwing mid-walk, and the indicator was to be lighter. It is in PR #199. Phase 4 (interaction animations) was added on 2026-11-09 as a draft; it has not been grilled.
 
 # Humanoid animation pass: get-up, pistol stance, throwing (Nov 2026)
 
-Three things a playtester sees every round look wrong today. Standing up from a ragdoll passes through a T-pose. Every one-handed gun borrows the rifle's pose. Throwing is an item teleporting out of the hand with no body motion, and only the minibomb can do it. The owner supplied Mixamo clips for all three. This effort imports them and wires each into the existing body state machine and animator.
+Three things a playtester sees every round look wrong today (Phases 1–3); Phase 4, added later, covers everyday interactions. Standing up from a ragdoll passes through a T-pose. Every one-handed gun borrows the rifle's pose. Throwing is an item teleporting out of the hand with no body motion, and only the minibomb can do it. The owner supplied Mixamo clips for all three. This effort imports them and wires each into the existing body state machine and animator.
 
 ## Starting state (2026-11-08, `1cca8351f`)
 
@@ -40,7 +40,7 @@ Settled with the owner on 2026-11-08.
 7. **Pistol aim:** the pack's idle as the upper-body pose, plus the existing `HumanoidIkController` spine/chest muzzle correction, plus a procedural forearm kick per shot. Arm IK only if that cannot land the muzzle on the aim point. Reload keeps the timed refill with no hand animation.
 8. **Anything held can be thrown.** Range falls with item weight (the #184 recipe table): light items about 10 m, heavy about 3 m, and above a weight limit an item cannot be thrown. Two-handed items need both hands free. No damage on hit.
 9. **Throw mode on `R`** (owner decision; no design doc defines a throw control, see Open questions). A toggle, as in SS13: the next click throws the active hand's item at the point under the cursor, replacing that click's normal interaction. It turns off after a throw, on a click with an empty hand, and on `Esc`.
-10. **Throw feedback:** in throw mode the reticle changes to a throw icon and a landing marker sits on the target point, clamped to max range, so a throw that will fall short is visible before release (combat §1).
+10. **Throw feedback:** in throw mode a marker shows where the item will land, clamped to max range, so a throw that will fall short is visible before release (combat §1). *Revised at the Phase 3 hand check:* no reticle icon or text; a dashed flight arc and a landing ring (main-hud §7).
 11. **The minibomb loses its radial "Throw minibomb" entry.** It becomes an ordinary throwable that arms at release. Arming it in hand stays a separate action.
 12. **The throw is an upper-body oneshot over locomotion.** The body yaw-snaps toward the target first; while moving, the spine/chest correction from the rifle keeps the arm on target. The item leaves the hand at the clip's release frame, timed the way `MeleeSwingAnimation` times a strike.
 13. **An interrupted throw keeps the item.** A knockdown, stun or hand swap before the release frame cancels the throw; the item stays in hand, and a minibomb stays unarmed (combat §2: an interrupted windup does nothing).
@@ -100,6 +100,49 @@ Settled with the owner on 2026-11-08.
 
 - **Done when** an ordinary item and a minibomb can each be thrown at a point within range, standing and running; out-of-range targets show a clamped marker and land at max range; the arm motion matches the release on an observer client; a knockdown before release keeps the item in hand. Tests cover launch velocity reaching the target point, the weight-to-range bands, and the cancel rule.
 
+### Phase 4 — interaction animations (draft, not grilled)
+
+Every interaction today happens with no body motion: a locker opens, an item jumps into the hand, a light changes while the player stands still. Phase 4 gives the common ones a short upper-body or full-body motion, driven from a table as the swings and the throw are.
+
+**Owner-supplied clips** (`~/Downloads`, 2026-11-09), measured with `AnimationMode` sampling (Phase 1 findings). All three are slow single takes with long holds, so each needs a trim and a playback rate, as the get-up clips did:
+
+| Clip | Length | Motion (source frames, 30 fps) | Use |
+|---|---|---|---|
+| `X Bot@Opening.fbx` | 11.0 s | Two takes. The open: reach to a handle at shoulder height (frames 15–45), sweep it aside (60–96), arm back at the side by 132. Frames 153–300 are a second reach (a close) | Opening, closing, locking and unlocking lockers; probably crates and other hinged storage |
+| `X Bot@Picking Up.fbx` | 9.6 s | A waist-height pick: the right hand bottoms out at 0.60 m around frame 66 and comes back to the chest by 190; the hips stay up | Picking up from tables and counters |
+| `X Bot@Pulling Lever.fbx` | 6.3 s | Reach up to 1.3 m (24–42), slow pull down (42–105), hand back at the side by 126 | Light switches (`LightSwitchController`), the boombox and atmos port toggles (`GenericToggleInteractionTarget`) |
+
+**Mixamo shortlist** (`Tools/mixamo/mixamo.py`, previewed 2026-11-09). The game's existing interactions, each matched to a catalogue clip:
+
+| Interaction (generic name) | Clip, Mixamo id | Notes |
+|---|---|---|
+| `Pickup` from the floor | Picking Up An Object, `c9c6d7aa` (4.2 s) | Two-handed bend to the floor. The owner's clip covers table height; choose by the item's height above the feet |
+| `Drop` | Putting Down An Object, `c9c6d86d` | The same bend, in reverse |
+| `OpenAirlock`, ID swipes, access denied | Attempting To Open A Door, `c9c84f3e` | One arm reaches forward at chest height and holds |
+| `ArmC4`, `AttachCharge`, `DefuseC4`; `Search` and `TakeFromCharacter` on a downed body; splint, bandage, burn dressing, inject and transfusion on someone else | Man Working On Device, `c9c6cf65` | Down on one knee, both hands working low. One clip for every "hands busy at floor level" interaction; it loops while a delayed interaction runs |
+| `Perform CPR` | Administering Cpr To A Victim On The Ground, `c9c959ad` | Kneeling compressions; loops for the CPR delay |
+| `PourSubstance` into yourself (drinking) | Male Drinking, `c9c63255` | Hand to mouth and back |
+| Disarm (deferred, combat §11) | Standing Reaction To Shove, `c9c687a7` | Plays on the victim; disarm itself is not built yet |
+
+Rejected: *Kneeling And Inspecting Element With Hands* holds one hand up beside the head. *Rocking Back And Forth As If Dizzy* is too subtle to read at game distance. *Opening Cabinet Door* is covered by the owner's `Opening`. No catalogue clip presses a wall button (*Attempting To Open A Door* is the closest), and typing exists only seated.
+
+**Shape (proposal, to settle in the grilling):**
+
+- An `InteractionAnimation` table, like `ThrowAnimation`: generic interaction name → clip, trim, rate, contact frame, Upper Body or full body, oneshot or loop.
+- One new trigger, `Interact`, carrying the table index. The snapshot's 3-bit `ActiveTrigger` field is full (ids 1–7), and the 2-bit `AttackVariant` cannot index a table this size, so the snapshot needs wider fields. Bits 29–31 are free, or the index can ride its own SyncVar.
+- **Instant interactions** (open, pick up, toggle): the motion plays and the effect lands at the clip's contact frame, as the throw's release does. The alternative is an instant effect with the motion as decoration.
+- **Delayed interactions** (CPR, defuse, medical, search): a looping state for as long as the `DelayedInteraction` runs; a cancel or interrupt ends it.
+- The body faces the target first (`HoldFacing`, Phase 3). Kneeling clips need the full body, so they stop movement while they play. Standing reaches stay on the Upper Body over locomotion.
+
+**Open questions for the grilling:**
+
+1. Does the effect wait for the contact frame (the locker opens when the hand pulls, the item lands in the hand when the hand gets there), or stay instant with the motion as decoration? Waiting reads better and matches the throw, but every pickup and door gets a few tenths of a second slower.
+2. Which tier ships before Playtest 1? A proposal: pickup, drop, lockers, the airlock reach, and the kneeling clip for C4 and CPR, since those show in every Nuke Ops round. Medical on others, search, drinking and light switches would follow.
+3. Do kneeling interactions root the player, with movement cancelling them as it already cancels a delayed interaction?
+4. Which hand reaches: always the active hand (mirrored as the swings are), or the hand nearer the target?
+
+- **Done when** (draft) the Playtest 1 tier plays on the owner and on observers, faces its target, and lands its effect as question 1 decides; delayed interactions loop and end on cancel. EditMode covers the table and its imports; a scenario covers one instant and one delayed interaction.
+
 ## Out of scope
 
 - Drag and pull (Decision 14).
@@ -117,4 +160,5 @@ For whoever picks up dragging in the feel pass:
 
 ## Open questions for the owner
 
-- **Throw mode in the design docs.** Decision 9 fills a gap: `main-hud.md` §7 defines help/harm, disarm and grab but no throw control. Adding throw mode there is the owner's edit.
+- **Throw mode in the design docs.** Resolved 2026-11-09: at the owner's request, `main-hud.md` §7 now has throw mode.
+- **Phase 4** needs a grilling before it is built (its open questions above).
