@@ -145,6 +145,13 @@ namespace SS3D.Systems.Inventory.Items
         /// </summary>
         public AttachedContainer Container => _container;
 
+        /// <summary>
+        /// On this peer, the container whose add callback last took the item in (hid, froze and parented it).
+        /// <see cref="Container"/> is server-only, and on a client the two containers' callbacks for one move
+        /// arrive in either order, so a late remove from the old container checks this before undoing anything.
+        /// </summary>
+        public AttachedContainer LocalHolder { get; internal set; }
+
         private bool _initialised = false;
         
         /// <summary>
