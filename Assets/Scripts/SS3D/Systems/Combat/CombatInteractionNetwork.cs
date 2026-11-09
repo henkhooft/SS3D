@@ -14,6 +14,7 @@ using SS3D.Systems.Combat.Interactions;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Electricity;
 using SS3D.Systems.Health;
 using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
@@ -296,6 +297,25 @@ namespace SS3D.Systems.Combat
                         impactPoint, impactNormal))
                 {
                     landed = true;
+                }
+            }
+
+            if (weapon.Profile.BruteDamage > 0f || weapon.Profile.BurnDamage > 0f)
+            {
+                // The round goes through the glass, so it still lands where it was resolved to. The aim ray starts
+                // at the camera; start the bulb test level with the muzzle so a bulb behind the shooter is safe.
+                // Wall mounts sit inside their wall's full-tile collider, so a wall hit still reaches the glass.
+                float stop = hasImpact ? Vector3.Distance(aimRay.origin, impactPoint) : maxRange;
+                if (hitStructural)
+                {
+                    stop += LightFixtureBulb.WallInset;
+                }
+
+                float start = Mathf.Clamp(Vector3.Dot(firePosition - aimRay.origin, shotDirection), 0f, stop);
+                Ray shot = new(aimRay.origin + shotDirection * start, shotDirection);
+                if (LightFixtureBulb.TryFindStruck(shot, stop - start, out LightFixtureBulb bulb))
+                {
+                    bulb.ServerBreak();
                 }
             }
 

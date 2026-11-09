@@ -45,6 +45,8 @@ namespace SS3D.Systems.Electricity
         private float _emergencyRangeMultiplier = 0.45f;
         [SerializeField]
         private Color _emergencyTint = new Color(1f, 0.25f, 0.2f);
+        [SerializeField]
+        private LightFixtureBulb _bulb;
 
         [SyncVar(OnChange = nameof(SyncFixtureVisual))]
         private FixtureVisual _fixtureVisual;
@@ -334,6 +336,16 @@ namespace SS3D.Systems.Electricity
 
         private FixtureVisual ComputeFixtureVisual()
         {
+            if (_bulb == null)
+            {
+                TryGetComponent(out _bulb);
+            }
+
+            if (_bulb != null && !LightBulbRules.CanEmit(_bulb.State))
+            {
+                return FixtureVisual.Off;
+            }
+
             if (!ShouldBeLit(out bool useEmergencyVisuals))
             {
                 return FixtureVisual.Off;
