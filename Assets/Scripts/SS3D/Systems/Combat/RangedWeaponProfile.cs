@@ -26,6 +26,10 @@ namespace SS3D.Systems.Combat
 
         /// <summary>Hostile exhaustion, clamped to available stamina so it cannot create oxy debt.</summary>
         public float StaminaDamage;
+
+        /// <summary>Seconds a living hit knocks the target down (combat.md §5); 0 never floors anyone.</summary>
+        public float KnockdownSeconds;
+
         public bool CanSever;
 
         /// <summary>Base half-angle of the accuracy cone in degrees.</summary>
@@ -122,7 +126,18 @@ namespace SS3D.Systems.Combat
         };
         public static RangedWeaponProfile LaserRifle => Energy(RangedVisualStyle.Laser, 24f, 0f, 20, 0.3f, 40f);
         public static RangedWeaponProfile IonRifle => Energy(RangedVisualStyle.Ion, 16f, 0f, 12, 0.6f, 30f);
-        public static RangedWeaponProfile Taser => Energy(RangedVisualStyle.Taser, 0f, 65f, 6, 0.75f, 12f);
+        public static RangedWeaponProfile Taser
+        {
+            get
+            {
+                RangedWeaponProfile profile = Energy(RangedVisualStyle.Taser, 0f, 65f, 6, 0.75f, 12f);
+                profile.KnockdownSeconds = TaserKnockdownSeconds;
+                return profile;
+            }
+        }
+
+        /// <summary>A stun baton's knockdown (combat.md §5: roughly 2–3 s), delivered at range.</summary>
+        public const float TaserKnockdownSeconds = 2.5f;
 
         private static RangedWeaponProfile Energy(RangedVisualStyle style, float burn, float stamina,
             int capacity, float cooldown, float range)

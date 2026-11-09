@@ -60,6 +60,10 @@ namespace SS3D.Tests.EditMode
             Assert.Zero(profile.BurnDamage);
             Assert.Zero(profile.ResolveStructuralForce());
             Assert.Greater(profile.StaminaDamage, 0f);
+            Assert.That(profile.KnockdownSeconds, Is.InRange(2f, 3f), "A taser hit is a knockdown (combat.md §5)");
+            Assert.Zero(RangedWeaponProfile.LaserRifle.KnockdownSeconds);
+            Assert.Zero(RangedWeaponProfile.IonRifle.KnockdownSeconds);
+            Assert.Zero(RangedWeaponProfile.M4.KnockdownSeconds);
             Assert.IsFalse(profile.RequiresBothHands);
         }
 

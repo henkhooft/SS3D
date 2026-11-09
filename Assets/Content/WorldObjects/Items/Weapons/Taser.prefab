@@ -316,6 +316,7 @@ MonoBehaviour:
     BruteDamage: 0
     BurnDamage: 0
     StaminaDamage: 65
+    KnockdownSeconds: 2.5
     CanSever: 0
     BaseSpreadDegrees: 0.32
     RecoilClimbDegrees: 0.2

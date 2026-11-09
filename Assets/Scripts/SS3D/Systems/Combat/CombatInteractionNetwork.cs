@@ -268,19 +268,7 @@ namespace SS3D.Systems.Combat
             bool landed = false;
             if (resolved && hitLiving && health != null)
             {
-                if (weapon.Profile.BruteDamage > 0f || weapon.Profile.BurnDamage > 0f)
-                {
-                    health.ApplyDamage(zone, weapon.Profile.ToDamagePacket());
-                }
-                if (weapon.Profile.StaminaDamage > 0f)
-                {
-                    StaminaController targetStamina = health.GetComponentInParent<StaminaController>();
-                    if (targetStamina != null)
-                    {
-                        targetStamina.ServerDepleteStamina(Mathf.Min(weapon.Profile.StaminaDamage,
-                            Mathf.Max(0f, targetStamina.CurrentStamina)));
-                    }
-                }
+                ServerApplyLivingHit(weapon.Profile, health, zone);
                 if (weapon.Profile.VisualStyle != RangedVisualStyle.Ballistic)
                 {
                     PlaySurfaceHitSound(impactPoint, weapon.Profile.VisualStyle, true);
@@ -316,6 +304,32 @@ namespace SS3D.Systems.Combat
             ClearMeleeAimPoint();
             ServerNotifyRangedFireState(weapon, landed, hasImpact, impactPoint, shotDirection,
                 hasImpact ? impactPoint : aimRay.origin + shotDirection * maxRange, impactNormal);
+        }
+
+        /// <summary>Server only: what a shot that lands on a living body does to it (damage, stamina, knockdown).</summary>
+        public static void ServerApplyLivingHit(RangedWeaponProfile profile, HumanHealthController health, BodyZone zone)
+        {
+            if (profile.BruteDamage > 0f || profile.BurnDamage > 0f)
+            {
+                health.ApplyDamage(zone, profile.ToDamagePacket());
+            }
+            if (profile.StaminaDamage > 0f)
+            {
+                StaminaController targetStamina = health.GetComponentInParent<StaminaController>();
+                if (targetStamina != null)
+                {
+                    targetStamina.ServerDepleteStamina(Mathf.Min(profile.StaminaDamage,
+                        Mathf.Max(0f, targetStamina.CurrentStamina)));
+                }
+            }
+            if (profile.KnockdownSeconds > 0f)
+            {
+                Ragdoll targetRagdoll = health.GetComponentInParent<Ragdoll>();
+                if (targetRagdoll != null)
+                {
+                    targetRagdoll.ServerKnockdownAtLeast(profile.KnockdownSeconds);
+                }
+            }
         }
 
         [ServerRpc]
