@@ -73,6 +73,8 @@ Full recursive nesting: a box can sit inside a backpack, and another box can sit
 
 **Fit still gates by size and slots**, same as anywhere else (§4): a box goes into a bag only if the box's own size class fits. Its contents' weight adds to what the carrier hauls (§10), not to whether it fits.
 
+**A storage item only nests into a strictly larger storage item.** A toolbox (bulky) can hold a medkit (normal) but never another toolbox, and a medkit can't hold a medkit. Every step down the chain drops a size tier, so nesting stays a packing strategy and never becomes an endless toolbox-in-a-toolbox hoard. Hands, worn slots, and freestanding containers like lockers aren't storage items, so they take any storage item that fits (§4).
+
 ## 8. Locked storage
 
 Personal worn containers (a backpack, pockets, a belt) aren't lockable this pass — there's no crew workflow that needs your own backpack to have a combination, and adding one would just be friction. **Freestanding world containers** — station lockers, safes, evidence boxes — reuse the identical ID-locked pattern cargo's crates and disposal's secure chutes already established (`cargo.md` §5, `disposal.md` §2): present an ID with the right access (`id-access.md` §3) and it opens. Crew see "locked" on examine. Picking or bypassing a lock is a hacking-interface job and a later pass (`hacking-interface.md`, deferred).
