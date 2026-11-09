@@ -14,7 +14,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 
 | Domain | Design | Architecture | System map |
 |---|---|---|---|
-| admin-tools | [admin-tools](../design/admin-tools.md) | [console-commands](2026-11_console-commands.md) — planned | [ingame-console](systems/ingame-console.md) — partial |
+| admin-tools | [admin-tools](../design/admin-tools.md) | [console-commands](2026-11_console-commands.md) — in-progress | [ingame-console](systems/ingame-console.md) — partial |
 | ai-cyborgs | [ai-cyborgs](../design/ai-cyborgs.md) | none yet | none yet |
 | antagonist-content | [antagonist-content](../design/antagonist-content.md) | [round-end-loop](../archive/architecture/2026-11_round-end-loop.md) — shipped | [gamemodes-roles-traits](systems/gamemodes-roles-traits.md) — partial |
 | area | [area](../design/area.md) | [area-foundation](../archive/architecture/2026-07_area-foundation.md) — shipped | [area](systems/area.md) — partial |
@@ -132,7 +132,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-10_game-versioning](2026-10_game-versioning.md) | shipped (reference) |
 | [2026-10_player-settings](2026-10_player-settings.md) | in-progress |
 | [2026-11_sandbox-server](2026-11_sandbox-server.md) | in-progress |
-| [2026-11_console-commands](2026-11_console-commands.md) | planned |
+| [2026-11_console-commands](2026-11_console-commands.md) | in-progress |
 | [2026-11_atmos-edge-flow](2026-11_atmos-edge-flow.md) | in-progress |
 | [2026-11_humanoid-animation-pass](2026-11_humanoid-animation-pass.md) | in-progress |
 | [2026-11_testing-philosophy](2026-11_testing-philosophy.md) | shipped (standing policy) |

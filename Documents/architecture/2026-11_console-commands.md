@@ -1,8 +1,8 @@
 > Implements: Documents/design/admin-tools.md#1-design-philosophy (action logging), Documents/design/admin-tools.md#2-permission-tiers, Documents/design/admin-tools.md#5-world-intervention, Documents/design/admin-tools.md#6-round--objective-override (round controls)
 > Touches systems: ingame-console, permissions, rounds-lobby, networking-session (multiplayer harness), id-access, health
-> Status: planned
+> Status: in-progress
 
-**Progress:** not started. Advances [test-server.md](../milestones/test-server.md) T3 (console path for admin force-end).
+**Progress:** phases 1–6 written without Unity, so nothing is compiled or run in the Editor yet; the plain-C# registry and its EditMode tests pass under a stubbed .NET build. See **Handoff**. Advances [test-server.md](../milestones/test-server.md) T3 (console path for admin force-end).
 
 # Console commands rework (Nov 2026)
 
@@ -109,6 +109,24 @@ Exact parameter names and defaults are settled while converting each command. Th
    - Update the harness `.txt` scripts and `AutomationSubSystem`.
    - Update the docs that quote the old names: the system maps for health, structural-destruction, audio and screen-effects, and the T3 slice text.
 6. **`round` command.** Wraps `RoundSubSystem.CmdRoundAdminAction`'s server-side handler, with a PlayMode scenario that runs `round end` on a running round.
+
+## Handoff: verify in Unity
+
+Written in a session without the Editor. The framework (`CommandRegistry`, `CommandParameter`, `CommandArgs`, `CommandResult`) and `CommandRegistryTests`' fake-command tests compiled and passed against stubs under .NET 8 / C# 9. Every changed `.cs` file parses. Nothing else is verified. In order:
+
+1. `Testing/ui/validate.sh --steps compile,editmode`. Expect compile fixes in the converted commands and the `.meta` files written by hand for the new scripts. `RealCommands_DeclareValidly` and `RealCommands_ExamplesParse` check the whole roster.
+2. PlayMode console scenarios: `ConsoleToolScenarios` (including the new `nearest`, bad-argument, role-refusal and `round` cases), `AccessScenarios`, `ReachScenarios`, `EvaGearScenarios`, `RespawnScenarios`, `SpeechScenarios`, `NukeOpsScenarios`, `EnvironmentScenarios`, `ScenarioFixtureScenarios`. `AdminCommands_AreRefusedForAUser` demotes the host with `ChangeUserPermission` and restores it in `finally`. Check it doesn't leave a saved permissions file behind.
+3. Multiplayer smoke `late-join` and `observer-sync` (renamed `door`, `lights`, `atmos`, `observesync atmos assert`; `wait_console` now retries on `!Ok`).
+4. By hand: `help`, `help all`, `help hurt`, a typo, and `round end` on a running round (no scenario ends the fixture's round).
+
+**Behaviour changes found while converting:**
+
+- `screeneffect` is now `screeneffect set <effect> <0-1>` / `screeneffect release`.
+- Not-found answers from `door`, `lights`, `hurtstructure` and `areaambience`, and `ghostjump`'s "already there", are now `error:` results.
+- An unknown ckey reads `no player with ckey '…'` (the disk and ghostjump scenarios were updated).
+- A harness `console` line for an unknown command now fails the script, because unknown commands return a failed result.
+- `kill` and `hurt` append the target's name to their answers.
+- `spawn … feet` calls `ItemSubSystem.SpawnItem` on the server; the old command called the `CmdSpawnItem` ServerRpc from the server.
 
 ## Deviations and gaps
 
