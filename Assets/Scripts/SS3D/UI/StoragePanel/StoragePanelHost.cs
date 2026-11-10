@@ -61,8 +61,12 @@ namespace SS3D.UI.StoragePanel
         private readonly Dictionary<AttachedContainer, string> _pendingBreadcrumbs = new();
         private readonly List<HudDropTarget> _hudDropTargets = new();
 
+        /// <summary>How long a click on a container item waits for a second click (open) before taking it.</summary>
+        private const long DoubleClickWindowMs = 300;
+
         private VisualElement _root;
         private HumanInventory _localInventory;
+        private IVisualElementScheduledItem _pendingContainerTake;
         private int _cascadeIndex;
 
         // Active drag state (panel slot and/or HUD-origin drag).
@@ -430,7 +434,7 @@ namespace SS3D.UI.StoragePanel
             view.SlotDragStarted += HandleSlotDragStarted;
             view.SlotDragMoved += HandleSlotDragMoved;
             view.SlotDragEnded += HandleSlotDragEnded;
-            view.SlotNestedOpenRequested += HandleSlotNestedOpenRequested;
+            view.SlotClicked += HandleSlotClicked;
             view.Bind(container);
 
             _root.Add(view);
@@ -574,6 +578,10 @@ namespace SS3D.UI.StoragePanel
                 return;
             }
 
+            // A drag whose release never arrived (released while the window was unfocused) would
+            // otherwise leave its ghost drawn with nothing referencing it, across scenes too.
+            CleanupDrag();
+
             _dragItem = item;
             _dragSourceContainer = sourceContainer;
             _dragSourcePanel = sourcePanel;
@@ -709,6 +717,53 @@ namespace SS3D.UI.StoragePanel
             return false;
         }
 
+        /// <summary>
+        /// A click on a panel slot does what a click on a HUD slot does: with the active hand empty it takes the
+        /// item, with something held it stores that item in an empty slot it fits, else nothing
+        /// (<see cref="HumanInventory.ClientInteractWithContainerSlot"/>). A double-click opens a container item as a
+        /// nested panel, so its single click waits out the double-click window before taking it
+        /// (Documents/design/inventory-storage.md §6, §7).
+        /// </summary>
+        private void HandleSlotClicked(StoragePanelView panel, StorageSlot slot, int clickCount)
+        {
+            _pendingContainerTake?.Pause();
+            _pendingContainerTake = null;
+
+            if (_localInventory == null || panel.Container == null)
+            {
+                return;
+            }
+
+            bool opensNested = slot.BoundItem != null && slot.BoundItem.GetComponent<AttachedContainer>() != null;
+            if (clickCount >= 2)
+            {
+                // Anything that isn't a container went to the hand on the first click; don't put it straight back.
+                if (opensNested)
+                {
+                    HandleSlotNestedOpenRequested(panel, slot);
+                }
+
+                return;
+            }
+
+            AttachedContainer container = panel.Container;
+            Vector2Int position = slot.Position;
+            if (!opensNested)
+            {
+                _localInventory.ClientInteractWithContainerSlot(container, position);
+                return;
+            }
+
+            _pendingContainerTake = _root.schedule.Execute(() =>
+            {
+                _pendingContainerTake = null;
+                if (_localInventory != null && container != null)
+                {
+                    _localInventory.ClientInteractWithContainerSlot(container, position);
+                }
+            }).StartingIn(DoubleClickWindowMs);
+        }
+
         private void HandleSlotNestedOpenRequested(StoragePanelView panel, StorageSlot slot)
         {
             if (_boundViewer == null || panel.Container == null || slot.BoundItem == null)
@@ -840,6 +895,31 @@ namespace SS3D.UI.StoragePanel
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Tabbing out mid-drag means the mouse release happens outside the game and never reaches
+        /// UI Toolkit, so drop the drag and the capture its source slot still holds.
+        /// </summary>
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (hasFocus || _dragGhost == null)
+            {
+                return;
+            }
+
+            ReleaseMouseCapture(_root?.panel);
+            foreach (HudDropTarget target in _hudDropTargets)
+            {
+                ReleaseMouseCapture(target.Element?.panel);
+            }
+
+            CleanupDrag();
+        }
+
+        private static void ReleaseMouseCapture(IPanel panel)
+        {
+            panel?.GetCapturingElement(PointerId.mousePointerId)?.ReleasePointer(PointerId.mousePointerId);
         }
 
         private void CleanupDrag()
