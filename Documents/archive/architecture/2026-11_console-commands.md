@@ -1,12 +1,12 @@
 > Implements: Documents/design/admin-tools.md#1-design-philosophy (action logging), Documents/design/admin-tools.md#2-permission-tiers, Documents/design/admin-tools.md#5-world-intervention, Documents/design/admin-tools.md#6-round--objective-override (round controls)
 > Touches systems: ingame-console, permissions, rounds-lobby, networking-session (multiplayer harness), id-access, health
-> Status: in-progress
+> Status: shipped
 
-**Progress:** phases 1–6 written without Unity, so nothing is compiled or run in the Editor yet; the plain-C# registry and its EditMode tests pass under a stubbed .NET build. See **Handoff**. Advances [test-server.md](../milestones/test-server.md) T3 (console path for admin force-end).
+**Progress:** phases 1–6 shipped and validated in Unity on 2026-11-10 (EditMode, the PlayMode console scenarios, `late-join` and `observer-sync` smoke, owner hand check). Advances [test-server.md](../../milestones/test-server.md) T3 (console path for admin force-end).
 
 # Console commands rework (Nov 2026)
 
-The F12 console ([ingame-console](systems/ingame-console.md)) grew one command at a time: 41 `Command` subclasses with four ways to pick a target, hand-written usage strings in three syntaxes, and help that lists no parameters. This effort cuts the roster to what tests, dev debugging and playtest admins use. Commands declare typed parameters, and parsing, validation, help and error messages are all generated from those declarations. It also fixes the permission levels that contradict [admin-tools.md](../design/admin-tools.md) §2/§5. Scope was settled in an implementation grill on 2026-11-09.
+The F12 console ([ingame-console](../../architecture/systems/ingame-console.md)) grew one command at a time: 41 `Command` subclasses with four ways to pick a target, hand-written usage strings in three syntaxes, and help that lists no parameters. This effort cuts the roster to what tests, dev debugging and playtest admins use. Commands declare typed parameters, and parsing, validation, help and error messages are all generated from those declarations. It also fixes the permission levels that contradict [admin-tools.md](../../design/admin-tools.md) §2/§5. Scope was settled in an implementation grill on 2026-11-09.
 
 ## Starting state (2026-11-09, `e2f86cf20`)
 
@@ -37,7 +37,7 @@ The F12 console ([ingame-console](systems/ingame-console.md)) grew one command a
 | # | Decision |
 |---|---|
 | 1 | Each command declares a **category**: `Admin`, `Debug`, `Test` or `Session`. A category only changes how `help` groups and hides commands; who may run a command stays in `AccessLevel`. No server setting hides a category. |
-| 2 | **Delete:** `hitbodypart`, `destroybodypart`, `examinebodypart`, `dumpcontainer`, `addhand`, `addtrait`, `gettraits`, `describeitem`, `echo`, `screeneffecthitflash`. **Merge** `spawnitem` and `spawninhand` into `spawn`. Omniscient examine ([admin-tools.md](../design/admin-tools.md) §4) is where inspection goes later. |
+| 2 | **Delete:** `hitbodypart`, `destroybodypart`, `examinebodypart`, `dumpcontainer`, `addhand`, `addtrait`, `gettraits`, `describeitem`, `echo`, `screeneffecthitflash`. **Merge** `spawnitem` and `spawninhand` into `spawn`. Omniscient examine ([admin-tools.md](../../design/admin-tools.md) §4) is where inspection goes later. |
 | 3 | **Rename:** `doordebug`→`door`, `lightdebug`→`lights`, `atmosdebug`→`atmos`, `rangeddebug`→`rangedmarkers`; `atmosclientstatus` becomes the subcommand `observesync atmos`. |
 | 4 | **Add** `round start\|force\|extend\|cancel\|end\|hold\|resume`, mapping 1:1 to `RoundAdminAction` with no new round logic. It gives T3's force-end a console and automation path. |
 | 5 | A **target** is a parameter type, resolved by one shared resolver that accepts `me`, a ckey (case-sensitive, matching `PlayerSubSystem.GetPlayer`), or `nearest`: the closest entity with a `HumanHealthController` within **5 m**, not the caller, failing beyond that. `GameObject.Find` targeting is removed. Commands that act on a place take no target and use the caller's position. |
@@ -51,7 +51,7 @@ The F12 console ([ingame-console](systems/ingame-console.md)) grew one command a
 | 13 | **Results:** `CommandResult` has `Ok` and `Message`. The controller catches exceptions on every path and reports `error: <message>` with `Ok = false`, logging the stack trace. A parse error reads `error: <what>` followed by `usage: <signature>`. Success messages keep their current wording, which tests match on. |
 | 14 | **Harness contract:** `ClientProcessCommand` returns the `CommandResult` for `Local` commands. `AutomationSubSystem`'s `wait_console` retries on `!Ok` instead of on an exception, and `observesync` returns failures instead of throwing. |
 | 15 | **Unknown command:** the reply is `Unknown command '<x>'. Did you mean: …?`, matching by prefix or edit distance ≤2 across commands the caller may run. |
-| 16 | **Permissions:** `spawn` and `access*` require `Administrator` ([admin-tools.md](../design/admin-tools.md) §5). `changeperms` requires `ServerOwner` (§2), and its role argument is an `Enum<ServerRoleTypes>`, which fixes the case bug. `ghostjump` stays `User`. There is no sandbox exception: testers who need admin commands are promoted with `changeperms`. |
+| 16 | **Permissions:** `spawn` and `access*` require `Administrator` ([admin-tools.md](../../design/admin-tools.md) §5). `changeperms` requires `ServerOwner` (§2), and its role argument is an `Enum<ServerRoleTypes>`, which fixes the case bug. `ghostjump` stays `User`. There is no sandbox exception: testers who need admin commands are promoted with `changeperms`. |
 | 17 | **Admin action log:** `CommandsController` writes one `Log.Information` line tagged `AdminAction` for every successful command at `Administrator` or above, recording the ckey, the command line and the resolved target. It replaces `disk`'s own line. Permission checks are not logged (§1). |
 | 18 | **Signatures that change:** `heal <target> [zone=all] [brute=full] [burn=full]`, so `heal me` is a full heal. `disk [target]` lists where the disk is when given no target and moves it otherwise; the `here` token is gone because `me` covers it. `spawn <item> [at=feet\|hand]`. `ghostjump [target]`. |
 
@@ -110,14 +110,14 @@ Exact parameter names and defaults are settled while converting each command. Th
    - Update the docs that quote the old names: the system maps for health, structural-destruction, audio and screen-effects, and the T3 slice text.
 6. **`round` command.** Wraps `RoundSubSystem.CmdRoundAdminAction`'s server-side handler, with a PlayMode scenario that runs `round end` on a running round.
 
-## Handoff: verify in Unity
+## Validation (2026-11-10)
 
-Written in a session without the Editor. The framework (`CommandRegistry`, `CommandParameter`, `CommandArgs`, `CommandResult`) and `CommandRegistryTests`' fake-command tests compiled and passed against stubs under .NET 8 / C# 9. Every changed `.cs` file parses. Nothing else is verified. In order:
+Written without the Editor, then validated in Unity: compile, EditMode (`CommandRegistryTests` including the `RealCommands_*` roster checks), the PlayMode console scenarios, `late-join` and `observer-sync` smoke, and an owner hand check of `help`, `help all`, `help hurt`, a typo and `round end`. Fixes the run needed:
 
-1. `Testing/ui/validate.sh --steps compile,editmode`. Expect compile fixes in the converted commands and the `.meta` files written by hand for the new scripts. `RealCommands_DeclareValidly` and `RealCommands_ExamplesParse` check the whole roster.
-2. PlayMode console scenarios: `ConsoleToolScenarios` (including the new `nearest`, bad-argument, role-refusal and `round` cases), `AccessScenarios`, `ReachScenarios`, `EvaGearScenarios`, `RespawnScenarios`, `SpeechScenarios`, `NukeOpsScenarios`, `EnvironmentScenarios`, `ScenarioFixtureScenarios`. `AdminCommands_AreRefusedForAUser` demotes the host with `ChangeUserPermission` and restores it in `finally`. Check it doesn't leave a saved permissions file behind.
-3. Multiplayer smoke `late-join` and `observer-sync` (renamed `door`, `lights`, `atmos`, `observesync atmos assert`; `wait_console` now retries on `!Ok`).
-4. By hand: `help`, `help all`, `help hurt`, a typo, and `round end` on a running round (no scenario ends the fixture's round).
+- Discovery took the EditMode tests' private fake commands into the real roster. It now takes public top-level `Command` classes only.
+- `disk one two` resolved `one` as a ckey before it noticed the extra argument. Arity is now checked before any argument is parsed.
+- Hand-check follow-ups: console text 20/14 → 11 pt (the 800×600 canvas reference scaled it to ~48 px at 1440p), and `CameraFollow` ignores the scroll wheel while the pointer is over UI, so scrolling the console no longer zooms.
+- Merging develop brought #217's two-handed routing for `spawninhand` into `spawn … hand`, and moved #210's new access scenario to `spawn IDCard hand` / `accessgrant me …`.
 
 **Behaviour changes found while converting:**
 
@@ -130,7 +130,7 @@ Written in a session without the Editor. The framework (`CommandRegistry`, `Comm
 
 ## Deviations and gaps
 
-- **`round hold` holds the end screen, not the countdown.** [admin-tools.md](../design/admin-tools.md) §6 defines Hold as pausing the countdown. `RoundAdminAction.HoldEnd` instead holds the `Ending` state, and the lobby UI has no countdown pause. This effort exposes only what exists; pausing the countdown remains a gap for the admin-tools effort.
+- **`round hold` holds the end screen, not the countdown.** [admin-tools.md](../../design/admin-tools.md) §6 defines Hold as pausing the countdown. `RoundAdminAction.HoldEnd` instead holds the `Ending` state, and the lobby UI has no countdown pause. This effort exposes only what exists; pausing the countdown remains a gap for the admin-tools effort.
 - **The action log goes to the existing Serilog sinks only.** §1 asks for a real, inspectable log. A persistent admin log, alongside ahelp ticket records (§3), belongs to the later admin-tools effort.
 
 ## Tests
@@ -153,6 +153,6 @@ Written in a session without the Editor. The framework (`CommandRegistry`, `Comm
 
 ## Parked
 
-- Command history and Tab-completion use the declared parameters, but belong in the UITK debug layer, not the condemned uGUI panel ([agent-first composition](2026-07_agent-first-composition.md)).
-- Teleport (`tp`), mute, kick, ban, notes and godmode ([admin-tools.md](../design/admin-tools.md) §4, §5, §7) belong to a later admin-tools effort and are cheap to add on this framework.
+- Command history and Tab-completion use the declared parameters, but belong in the UITK debug layer, not the condemned uGUI panel ([agent-first composition](../../architecture/2026-07_agent-first-composition.md)).
+- Teleport (`tp`), mute, kick, ban, notes and godmode ([admin-tools.md](../../design/admin-tools.md) §4, §5, §7) belong to a later admin-tools effort and are cheap to add on this framework.
 - A coordinate target type, waiting on `tp`.
