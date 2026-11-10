@@ -183,6 +183,8 @@ namespace EditorTests
             StringAssert.Contains("missing <zone>", Run(registry, "hurtlike me").Message);
             StringAssert.Contains("too many arguments: 'extra'", Run(registry, "hurtlike me Chest 1 2 extra").Message);
             StringAssert.Contains("no player with ckey 'ghostless'", Run(registry, "hurtlike ghostless Chest 1").Message);
+            StringAssert.Contains("too many arguments", Run(registry, "hurtlike ghostless Chest 1 2 extra").Message,
+                "arity is checked before a target is resolved");
         }
 
         [Test]

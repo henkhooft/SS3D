@@ -54,7 +54,8 @@ namespace SS3D.Systems.IngameConsoleSystem
         /// <summary>Instantiates every concrete <see cref="Command"/> in every loaded assembly.</summary>
         /// <remarks>
         /// Every assembly, not just SS3D.Systems: UI assemblies (e.g. SS3D.UI.MainHud) host commands
-        /// that cannot live in Systems without an asmdef cycle.
+        /// that cannot live in Systems without an asmdef cycle. Public top-level types only, so the
+        /// private fake commands in the EditMode tests stay out of the real roster.
         /// </remarks>
         public static List<Command> DiscoverCommands()
         {
@@ -74,7 +75,7 @@ namespace SS3D.Systems.IngameConsoleSystem
 
                 foreach (Type type in types)
                 {
-                    if (type.IsClass && !type.IsAbstract && type.IsSubclassOf(commandBase)
+                    if (type.IsClass && type.IsPublic && !type.IsAbstract && type.IsSubclassOf(commandBase)
                         && type.GetConstructor(Type.EmptyTypes) != null)
                     {
                         commands.Add((Command)Activator.CreateInstance(type));
@@ -198,7 +199,16 @@ namespace SS3D.Systems.IngameConsoleSystem
         {
             bound = new CommandArgs();
             error = null;
-            bool consumedAll = false;
+
+            // Arity first: with an optional target last, 'disk one two' should say "too many
+            // arguments", not fail resolving 'one' as a ckey.
+            if (parameters.All(p => p.Kind != ParameterKind.Rest) && tokens.Count > parameters.Count)
+            {
+                error = parameters.Count == 0
+                    ? $"takes no arguments, got '{string.Join(" ", tokens)}'"
+                    : $"too many arguments: '{string.Join(" ", tokens.Skip(parameters.Count))}'";
+                return false;
+            }
 
             for (int i = 0; i < parameters.Count; i++)
             {
@@ -206,7 +216,6 @@ namespace SS3D.Systems.IngameConsoleSystem
 
                 if (parameter.Kind == ParameterKind.Rest)
                 {
-                    consumedAll = true;
                     if (i < tokens.Count)
                     {
                         bound.Set(parameter.Name, string.Join(" ", tokens.Skip(i)), true);
@@ -232,14 +241,6 @@ namespace SS3D.Systems.IngameConsoleSystem
                 }
 
                 bound.Set(parameter.Name, value, true);
-            }
-
-            if (!consumedAll && tokens.Count > parameters.Count)
-            {
-                error = parameters.Count == 0
-                    ? $"takes no arguments, got '{string.Join(" ", tokens)}'"
-                    : $"too many arguments: '{string.Join(" ", tokens.Skip(parameters.Count))}'";
-                return false;
             }
 
             return true;
