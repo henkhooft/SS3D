@@ -52,7 +52,8 @@ Each organ's function state drives one part of the systemic model:
 - **Lungs** — intake. Failing lung function raises oxy debt accumulation even in breathable air; destroyed lungs can't process air regardless of atmosphere.
 - **Liver + kidneys** — toxin clearance rate, as above.
 - **Brain** — consciousness, and the sole death trigger. Reduced function degrades vision/control before it's fatal (a natural extension of the existing screen-space feedback pattern — blurred vision, sluggish response); zero function is death.
-- Any additional organs (eyes, stomach, etc.) plug into their own existing effects (vision, the existing hunger alert) the same way — this doc doesn't need to invent those if they're already handled elsewhere.
+- **Stomach** — holds what's been eaten or drunk until it absorbs into the bloodstream (`chemistry.md` §9, `food-drink.md` §3).
+- Any additional organs (eyes, etc.) plug into their own existing effects (vision) the same way — this doc doesn't need to invent those if they're already handled elsewhere.
 
 ## 4. Shock, going down, critical and death
 
@@ -198,6 +199,6 @@ A gunfight, where shock does the work:
 - Organ transplants, cybernetics, prosthetics and limb reattachment
 - A per-limb and organ readout on self-examine (sentences only in this pass)
 - Genetic/DNA or radiation damage, if that exists as a separate type — not assumed here
-- Nutrition/hunger specifics — already an existing alert, untouched here
+- Nutrition and hunger — designed in `food-drink.md`
 - Sedatives that put a patient to sleep, and drug interactions beyond the painkiller and stimulant in §6
 

@@ -35,6 +35,7 @@ One row per gameplay domain that has, or should eventually have, a design doc. A
 | electricity | [electricity](../design/electricity.md) | [solar-generation](../archive/architecture/2026-07_solar-generation.md), [mi-area-electricity-debt](../archive/architecture/2026-07_mi-area-electricity-debt.md) — shipped | [electricity](systems/electricity.md) — partial |
 | examine | [examine](../design/examine.md) | [examine-and-action-feedback](2026-11_examine-and-action-feedback.md) — in-progress | [examine](systems/examine.md) — partial |
 | explosives-destruction | [explosives-destruction](../design/explosives-destruction.md) | [structural-destruction](2026-07_structural-destruction.md) — in-progress | [structural-destruction](systems/structural-destruction.md) — partial |
+| food-drink | [food-drink](../design/food-drink.md) | none yet | none yet |
 | hacking-interface | [hacking-interface](../design/hacking-interface.md) | none yet | none yet |
 | health | [health](../design/health.md) | [health plan](../plans/health_implementation_plan.md) — in-progress; [body-presentation-authority](../archive/architecture/2026-07_body-presentation-authority.md), [health-env-feel](../archive/architecture/2026-07_health-env-feel.md) — shipped | [health](systems/health.md) — partial |
 | id-access | [id-access](../design/id-access.md) | none yet | [id-access](systems/id-access.md) — partial |

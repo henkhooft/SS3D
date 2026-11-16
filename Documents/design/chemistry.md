@@ -89,7 +89,7 @@ This is the integration point the rest of the doc exists to set up. Once a reage
 
 ## 9. Delivery methods
 
-- **Ingestion** (drinks, pills) — slowest onset; enters the bloodstream at a metabolism-gated rate rather than instantly, giving food/drink a real, if minor, timing cost.
+- **Ingestion** (food, drinks, pills) — slowest onset. What's swallowed sits in the stomach first and absorbs into the bloodstream over time rather than instantly, giving food/drink a real, if minor, timing cost. Until it absorbs, it can be purged: vomiting (an emetic reagent, or a poison that causes it) or having the stomach pumped. That window is poisoning's counterplay (`food-drink.md` §3).
 - **Injection** (syringe) — a Tier 2 targeted action against an exposed zone; fastest onset, direct to bloodstream.
 - **Patches** (transdermal) — applied to a zone, delivers passively over time. Sits in the same family as bandages and burn dressings in the health doc's field-treatment tier (§6 there) — a zone-applied item with a gradual effect, not a new interaction pattern.
 - **IV** — a container attached and left running, continuous delivery over time. Reuses the existing "Blood transfusion / IV" field-treatment entry health §6 already names without defining the mechanism; the furniture/attachment specifics are out of scope (§13).
@@ -170,7 +170,7 @@ No new permanent chrome — same discipline as every other doc in this project.
 - Cryogenics as a player-facing system — designed in `cryogenics.md`, which uses the real container-temperature primitive §5 established here
 - Blast physics itself — `explosives-destruction.md`
 - Gas diffusion/propagation specifics — assumed to already be atmospherics' domain (`area.md` §4), not redesigned here
-- Botany/plant growth and food preparation as reagent sources — the grinder assumes harvestable/cookable items already exist as objects, doesn't design where they come from
+- Botany/plant growth as a reagent source — the grinder assumes harvestable items already exist as objects. Food and cooking are designed in `food-drink.md`
 - Gas and solid reagent states — this pass designs liquid only; a plausible future extension, not a hard limitation of the model
 - IV furniture specifics (bed/rack attachment, drip rate UI) — the delivery method itself is defined in §9, the hardware isn't
 - Disease/infection interactions — designed in `virology.md`; cure reagents are ordinary recipes per this doc's §4, nothing further needed here

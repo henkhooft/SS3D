@@ -49,7 +49,7 @@ Not focus: Area-id merge on breach, shuttles, PDA/uplink/Traitor, handcuffs, ran
 
 A sketch, so every gate above sits on a path to a recognizable SS13 shift. No docs or slices until MVP2 is in progress.
 
-- **MVP3 — Departments with depth**: chemistry, a cargo economy, robotics, construction
+- **MVP3 — Departments with depth**: chemistry, a cargo economy, the kitchen and bar with hunger, robotics, construction
 - **MVP4 — The full ensemble**: AI and cyborgs, the antagonist roster and evacuation drama on a MetaStation-scale map with 30+ players
 
 ## How to use

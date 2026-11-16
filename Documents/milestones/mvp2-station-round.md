@@ -79,6 +79,10 @@ Hidden blockers this sketch makes explicit (each its own future pass):
   ([gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md)), but the uplink tab +
   telecrystals ([antagonist-content.md](../design/antagonist-content.md) §3–§4) are net-new. Traitor is
   the target (pillar 3); Extended is only the low-population fallback.
+- **Poisoning needs a bloodstream.** A spiked drink is the Traitor's most SS13 tool, and the body
+  has nowhere for reagents to go yet: ingestion, the stomach stage, metabolism and reagent effects on
+  health ([chemistry.md](../design/chemistry.md) §8–§9, [food-drink.md](../design/food-drink.md) §2–§3,
+  §5 taste) belong with S5. Hunger itself waits for the Chef (see Explicitly deferred).
 - **Evac is thin: the shuttle appears docked and departs, with no flight.** Existing shuttle code is outdated
   and needs updating. [shuttles.md](../design/shuttles.md)
   has no architecture/system map yet; keeping evac thin makes it a docked, boardable structure that
@@ -100,7 +104,8 @@ Hidden blockers this sketch makes explicit (each its own future pass):
 
 ## Explicitly deferred
 
-- AI / cyborgs, virology, chemistry depth (player-facing analyzer/metabolism/machines), full crafting rewrite (S3 cloning stays thin/deferred until crafting is redesigned). Substances **foundation** (networked containers + reactions) may ship earlier as infrastructure — [2026-07_substances-foundation.md](../archive/architecture/2026-07_substances-foundation.md) — without counting as chemistry depth.
+- AI / cyborgs, virology, chemistry depth (player-facing analyzer and machines; the bloodstream itself ships with S5, see Hidden blockers), full crafting rewrite (S3 cloning stays thin/deferred until crafting is redesigned). Substances **foundation** (networked containers + reactions) may ship earlier as infrastructure — [2026-07_substances-foundation.md](../archive/architecture/2026-07_substances-foundation.md) — without counting as chemistry depth.
+- Hunger, the Chef and Bartender jobs, the kitchen and the bar ([food-drink.md](../design/food-drink.md) §4, §6–§7) — MVP3. Hunger without a Chef is only a chore; the bloodstream and poisoning ship in MVP2 (S5)
 - Shuttles beyond ops polish + evac (evac itself is blocked on the unbuilt shuttle framework — S6)
 - Full observer/ghost experience beyond the thin MVP1 death→spectator spine ([observer.md](../design/observer.md))
 - Persistence of station damage across rounds

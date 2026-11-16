@@ -17,7 +17,7 @@ Visual language matches the diagnostic interface and radial menu work already do
 ## 2. What carries over unchanged
 
 - **Intent as a persistent mode, not a menu** — carries over from the interaction-menu pass in spirit, but the shape of it changed since: a two-state help/harm toggle plus modifier-chorded verbs rather than a four-way selector. See §7.
-- **Alert icon stack** — pressure, temperature, fire, radiation, hunger/thirst, restrained, pulling, etc. This is one of SS13's cleanest systems: glanceable, only shows what's active, doesn't need a redesign — just a restyle.
+- **Alert icon stack** — pressure, temperature, fire, radiation, hunger, restrained, pulling, etc. This is one of SS13's cleanest systems: glanceable, only shows what's active, doesn't need a redesign — just a restyle.
 - **Two-hand item juggling** — both hand slots stay. It's core tool-use gameplay, not a legacy artifact.
 - **Per-limb damage as a data model** — the backend concept of tracking brute/burn/toxin/oxy damage per body part doesn't change. Only how the player perceives it changes (see §6).
 - **Radial menu as the interaction surface** — this HUD is the canvas the radial and the diagnostic device screens render on top of.
@@ -106,7 +106,7 @@ Previously left out of scope on the interaction-menu pass; covered here.
 
 ## 9. Alerts
 
-Top-right icon stack. Restyled only — same underlying set as SS13 (pressure, temperature, fire, radiation, hunger/thirst, pulling, restrained), plus the acute health alerts **Bleeding** and **Cardiac arrest** (`health.md` §7) and **Knocked down** (`combat.md` §5). Icons are hidden, not grayed out, when inactive, so the stack is empty on a healthy, unencumbered character and only fills in with what's actually true.
+Top-right icon stack. Restyled only — same underlying set as SS13 (pressure, temperature, fire, radiation, hunger, pulling, restrained; there is no thirst, `food-drink.md` §8), plus the acute health alerts **Bleeding** and **Cardiac arrest** (`health.md` §7) and **Knocked down** (`combat.md` §5). Icons are hidden, not grayed out, when inactive, so the stack is empty on a healthy, unencumbered character and only fills in with what's actually true.
 
 **Two severities.** An alert can be a **warning** (act soon — light bleeding, pressure dropping) or **critical** (act now — heavy bleeding, a stopped heart, vacuum). The colour says which, so the stack reads at a glance without opening anything.
 
@@ -122,7 +122,7 @@ Comms grew into its own system — local speech bubbles, distance/occlusion, cro
 | Zone targeting | Combat/medical damage application, character skeleton/rig |
 | Hands, gear strip | `inventory-storage.md` §3, §6 |
 | Intent module | Click-resolution logic (what a plain click and each modifier+click does) |
-| Alerts | Atmospherics, hunger/thirst, restraint state — existing trackers |
+| Alerts | Atmospherics, hunger (`food-drink.md` §4), restraint state — existing trackers |
 | Comms | See `comms.md` for full integration notes |
 
 ## 12. Worked example — taking a hit and calling for help
