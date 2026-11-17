@@ -5,6 +5,10 @@
 
 <!-- What does this change do for players or contributors, and why? Link the milestone slice, design doc section, effort or plan it implements. -->
 
+#### Decisions
+<!-- Choices this PR makes that no design doc, effort or system map already settles: numbers and rules players will notice, who can do what, a new code pattern or dependency. For each, say where it is now recorded. Write "None" if there are none. -->
+- 
+
 #### Checklist
 - [ ] One feature or fix: no unrelated changes, stray Unity reserialization or trash files.
 - [ ] `Testing/ui/validate.sh --steps compile,editmode` passes, plus the focused steps for what I touched (`visual` for visual changes).

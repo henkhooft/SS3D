@@ -29,29 +29,29 @@ Arguments: a PR number on `RE-SS3D/SS3D` (required); `--out <dir>` (default `rev
    - otherwise → **agent route**.
 5. Write two diff files to `--out`, serialized files left out of both (list their paths instead):
    - `pr-<n>.diff`: everything else;
-   - `pr-<n>.gameplay.diff`: player-facing changes only: runtime code under `Assets/Scripts/SS3D/` outside `Editor/` and `Systems/Testing/`, UXML/USS, and `Builds/Game/Data/`. Empty means dimension 1 is `n/a` and its agent doesn't run.
+   - `pr-<n>.gameplay.diff`: player-facing changes only: runtime code under `Assets/Scripts/SS3D/` outside `Editor/` and `Systems/Testing/`, UXML/USS, and `Builds/Game/Data/`. Then append the changed serialized **values** of prefabs and assets (`git diff -U0` on `*.prefab` and `*.asset`, keeping only `+`/`-` lines of the form `  <field>: <value>` and dropping `fileID`, `guid`, transform and `m_` engine fields). Content PRs keep their behaviour there (a door's `_autoCloseDelay`, an access fallback), and without it the Gameplay reader sees a thin diff. Empty means dimension 1 is `n/a` and its agent doesn't run.
 
 ## 2. Collect the blind sources
 
 Collect **paths and short facts**; pass 1 does the reading.
 
-- **System maps:** each `Documents/architecture/systems/*.md` whose `> Code paths:` header covers a changed file (one grep over the headers). For each, count code commits since its `> Verified:` stamp (`git log --oneline <sha>..<develop> -- <code paths>`). Any → **unverified**: check its claims against code before relying on them.
+- **System maps:** each `Documents/architecture/systems/*.md` whose `> Code paths:` header covers a changed file (one grep over the headers; split file lists on newlines, since asset paths contain spaces). For each, count develop commits since its `> Verified:` stamp that touch **the files this PR changes** under its code paths (`git log --oneline <sha>..<develop> -- <those files>`). Counting the map's whole code paths marks almost every map unverified and makes the label meaningless. If the stamp isn't on develop (`git merge-base --is-ancestor` fails), use `--since=<stamp date − 1 day>` ([Documents/SKILL.md](../../../Documents/SKILL.md) § Verified stamp). Any commit → **unverified**: check its claims against code before relying on them.
 - **Spec:** a plan or effort matching the head branch, title or domain; `Documents/…` paths the PR body links, extracted without reading the prose (`… --jq .body | grep -oE 'Documents/[A-Za-z0-9_./-]+\.md(#[A-Za-z0-9_-]+)?' | sort -u`); the design sections their `Implements:` lines cite; the domain's `Documents/design/<domain>.md`.
-- **Milestone:** `Documents/milestones/INDEX.md` § Current focus and the gate doc it names.
+- **Milestone:** `Documents/milestones/INDEX.md` § Current focus, the milestone's **Done when**, and the gate docs it names (for Playtest 1: `mvp1-nuke-ops.md` and `test-server.md`, whose slice **Done when** lines such as T3 count too).
 - **CI:** conclusions, the last ~30 lines of any failed log, and open `nightly-failure` / `weekly-failure` / `editmode-nightly-failure` issues (a failure develop already has isn't the PR's).
 
 Write these to `pr-<n>.sources.md`. Done when every changed code file is under a map or listed as unmapped.
 
 ## 3. Pass 1 (blind)
 
-Every reader works from the sources file and the diff files. Read the docs listed there and the code the diff touches; go further only to trace a specific finding. The PR description and commit messages are withheld until pass 2, so form the view from code and docs (`git diff`, `git show`, not `git log`).
+Every reader works from the sources file and the diff files, and every brief carries the blocker bar from step 5 word for word, with the `AGENTS.md` hard rules named as the inlined list in that file. A reader that knows the bar marks a server-authority break or a hard-rule break as `blocker-candidate`; one that doesn't tends to file it as a note. Read the docs listed there and the code the diff touches; go further only to trace a specific finding. The PR description and commit messages are withheld until pass 2, so form the view from code and docs (`git diff`, `git show`, not `git log`).
 
-**Inline route:** apply all four dimensions yourself, then go to step 4.
+**Inline route:** apply all four dimensions yourself, including both decision lists, then go to step 4.
 
 **Agent route:** spawn in parallel, each brief carrying the sources file path, its diff file, its dimensions' text from **The four dimensions** above, the finding format and the line on withheld context:
 
-- **Gameplay** (dimension 1): `pr-<n>.gameplay.diff`, `vision.md` §2–§5, the domain design doc, the milestone gate. Skipped when the gameplay diff is empty.
-- **Engineering** (dimensions 2–4): `pr-<n>.diff`, the maps and their Pitfalls, the spec, `2026-07_agent-first-composition.md` when the diff adds a SubSystem, entity behaviour, UI surface or prefab wiring. Also returns a 2–4 line summary of what the change does, written from the code, and the tests mapping.
+- **Gameplay** (dimension 1): `pr-<n>.gameplay.diff`, `vision.md` §2–§5, the domain design doc, the milestone gate. Skipped when the gameplay diff is empty. Also returns the **decisions** the change makes, read from the code: each choice players will notice (a number, a rule, who can do what) that no design doc settles.
+- **Engineering** (dimensions 2–4): `pr-<n>.diff`, the maps and their Pitfalls, the spec, `2026-07_agent-first-composition.md` when the diff adds a SubSystem, entity behaviour, UI surface or prefab wiring. Also returns a 2–4 line summary of what the change does, written from the code, the tests mapping, and the architectural **decisions** it makes (a new pattern, a new dependency direction) that no effort or map settles.
 
 **Finding format** (400 words per dimension at most):
 
@@ -69,11 +69,13 @@ Every reader works from the sources file and the diff files. Read the docs liste
 
 Now read the PR body and the commit messages (`git log --format=%B <merge-base>..<head>`). List each checkable claim (behaviour, "handles X", tests run, ticked networking-checklist boxes, "follows design §N", docs synced) and mark it **confirmed**, **not shown** or **contradicted** (cite the evidence). A contradicted claim becomes a finding in its dimension. Open only the files a claim needs; this pass checks claims, it doesn't re-review.
 
+Then reconcile **decisions**: match the pass-1 decision lists against the PR's **Decisions** section and the docs. A decision recorded in a design doc, effort or map is settled, so leave it out. One the PR lists but nothing records, and one the PR doesn't mention at all, both go to **Decisions for you**, the second marked "not mentioned in the PR". Keep the three that most change how the game plays or how the code grows; the rest become noted items or drop. A silent decision that contradicts a design doc is a deviation and goes to step 5 as a blocker candidate.
+
 ## 5. Rate (dimension 4's call)
 
 Merge duplicates, then sort each finding:
 
-- **Likely blocker:** has evidence **and** breaks an `AGENTS.md` hard rule (a silent deviation from a design doc is one), breaks server authority or ownership, or breaks something the current milestone's **Done when** scenario depends on. A suspected one stays a blocker only with its **Confirm by** step.
+- **Likely blocker:** has evidence **and** breaks an `AGENTS.md` hard rule (a silent deviation from a design doc is one), breaks server authority or ownership, or breaks something the current milestone's **Done when** depends on, including a **Done when** line of a gate doc the focus names. A suspected one stays a blocker only with its **Confirm by** step.
 - **Noted:** the single most consequential remaining finding per dimension, so at most four. Each ends "not a merge blocker".
 - **Dropped:** the rest: analyzer-enforced style, improvements with no concrete failure, findings that rest only on an unverified map's claim.
 
@@ -81,7 +83,7 @@ Each dimension's rating follows from what it kept. Done when every finding sits 
 
 ## 6. Write the briefing
 
-Write `pr-<n>.md` in `--out` and tell the user its path. Leave out empty sections.
+Write `pr-<n>.md` in `--out` and tell the user its path. Leave out empty sections. The verdict, **Decisions for you** and **Likely blockers** are the part a busy reviewer reads, so keep them on the first screen; the rest is reference.
 
 ```markdown
 ## Independent AI review — advisory, not an approval
@@ -89,6 +91,9 @@ Write `pr-<n>.md` in `--out` and tell the user its path. Leave out empty section
 PR #<n> · head `<sha>` · against develop `<sha>` · focus: <milestone focus, one line> · route: <inline | agents><· self-review override>
 
 **Verdict:** <No likely blockers | N likely blocker(s)> — <one sentence>
+
+### Decisions for you
+1. **<the choice, as a question>** — <what the code does now> · <not recorded | listed in the PR, not recorded | not mentioned in the PR> · record in: <doc §>
 
 | Dimension | Rating | Why |
 |---|---|---|
