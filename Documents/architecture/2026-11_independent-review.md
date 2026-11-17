@@ -24,7 +24,18 @@ Settled with the owner in a grilling session, 2026-11-17.
 
 1. **The reader is the PR's human reviewer.** The output is a briefing that helps them decide, not a
    to-do list for the author. Authors may run the same skill before opening a PR, but the bot is not
-   a gate they iterate against: that turns into an automated nitpick loop.
+   a gate they iterate against: that turns into an automated nitpick loop. The briefing **rates the PR
+   on four dimensions** (owner, 2026-11-17, after the first draft folded gameplay into one bullet):
+   1. **Gameplay and design consistency**: the domain design doc, behaviour no design covers, the
+      [vision](../design/vision.md) pillars (§2) and information density (§3), the milestone focus.
+      SS13 precedent from model knowledge is labelled unverified and never blocks on its own.
+   2. **Architectural integrity**: lifecycle, boundaries, authority, ownership, events, duplication, coupling.
+   3. **Correctness and regression risk**: multiplayer, late join, scene load, destruction, and whether
+      the tests prove the important behaviour.
+   4. **Proportionality and maintainability**: needless complexity, debt, a simpler way, and the
+      final call on whether anything found is serious enough to block.
+
+   Each gets `Sound`, `Concerns`, `Blocking` or `n/a`, with a one-line reason.
 2. **A local skill first, CI after Playtest 1.** The skill costs about a day and shows whether the
    idea works. CI wiring waits until Playtest 1 ([milestones](../milestones/INDEX.md)) has shipped
    and the pilot passed.
@@ -36,18 +47,22 @@ Settled with the owner in a grilling session, 2026-11-17.
    [upstream-merge](2026-11_upstream-merge.md) decision 8 (fork PR code never reaches the self-hosted
    runner) and with [testing philosophy](2026-11_testing-philosophy.md) D7 (runner budgets) and D12
    (one CI run per change). A later maintainer-dispatched run (`-f pr=<n>`) is possible, not planned.
-5. **The blocker bar.** A likely blocker carries evidence and breaks an `AGENTS.md` hard rule, breaks
-   server authority or ownership, or is a regression that threatens the current milestone focus.
-   At most 3 other items are noted, each marked "not a merge blocker". A clean PR gets one line.
+5. **The blocker bar.** A likely blocker carries evidence and breaks an `AGENTS.md` hard rule (a silent
+   deviation from a design doc is one), breaks server authority or ownership, or breaks something the
+   current milestone's **Done when** scenario depends on. Each dimension keeps at most one noted item,
+   so at most four in all, each marked "not a merge blocker". That way gameplay notes can't be
+   crowded out by code notes. A clean PR gets a table of `Sound`s and one line.
    Every finding says whether it is **confirmed** (traced end to end) or **suspected**.
 6. **Blind first, then reconcile.** Pass 1 reads the diff, the touched maps (Pitfalls, `Verified`
    staleness), the cited spec and design sections, the milestone focus and CI, and never the PR body
    or commit messages. Agent-written commits often carry the full rationale. Pass 2 reads them and
    marks each claim confirmed, not shown or contradicted. Pass 2 adds roughly 5–10% to the cost:
    it checks claims against pass-1 findings and doesn't re-read the diff.
-7. **Two pass-1 agents.** **Conformance** (Standards + Spec) and **Risk** (correctness, tests,
-   gameplay and milestone), each given only the touched maps and cited sections. Cost scales with
-   the agent count, not the pass count. If the pilot shows Conformance missing Spec findings, split it.
+7. **Agents split by what they read, not by dimension.** The skill runs on every PR, and cost scales
+   with the number of agents, not passes. **Gameplay** (dimension 1) reads the design docs, vision and
+   milestone gate plus only the player-facing part of the diff. **Engineering** (dimensions 2–4) reads
+   the full diff, the touched maps and the spec. Those two reading sets barely overlap, and the other
+   three dimensions share one. If the pilot shows Engineering short-changing a dimension, split it.
 8. **Clean context comes from the briefs.** Sub-agent briefs carry no author rationale. The skill
    refuses to run in a session that wrote the PR, or from its head branch, without `--allow-self`.
 9. **Pilot output is a local file.** After the pilot, the briefing becomes one PR comment headed
@@ -77,13 +92,19 @@ Settled with the owner in a grilling session, 2026-11-17.
     fixed set. Any change to the skill re-runs on them by hand, and the result is recorded below.
 17. **Docs-only PRs** skip in CI, as `Run Tests` does under D12. The skill still runs on them when
     someone asks.
+18. **Lean routes.** Diffs of up to 300 counted lines are reviewed inline by the orchestrator, with no
+    sub-agents. The order (blind pass, then claims) stays the same; only the extra contexts go.
+    The Gameplay agent is skipped when the PR changes nothing player-facing: dimension 1 is then `n/a`.
+    The diff is written to a file once, with serialized Unity files left out. Sub-agents read only the
+    docs in the sources file and the code the diff touches, and go further only to trace a finding.
 
 ## Phases
 
 ### Phase 1: the skill — done
 
-- [x] [`independent-review`](../../.claude/skills/independent-review/SKILL.md): pin and guard, blind
-  sources, two pass-1 agents, reconcile, blocker bar, briefing template
+- [x] [`independent-review`](../../.claude/skills/independent-review/SKILL.md): pin and guard, size
+  routes, blind sources, Gameplay + Engineering agents (or inline), reconcile, four-dimension rating,
+  briefing template
 - [x] Listed in [.claude/skills/README.md](../../.claude/skills/README.md); `review-out/` git-ignored;
   `CONTRIBUTING.md` step 5 mentions the advisory review
 

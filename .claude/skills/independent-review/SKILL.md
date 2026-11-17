@@ -1,111 +1,126 @@
 ---
 name: independent-review
-description: "Advisory independent review of a pull request, written for its human reviewer: a blind pass over the diff and docs before the author's explanation, then a check of the author's claims, filtered to milestone-level blockers. Use when asked for an independent, advisory or second-opinion review of a PR."
+description: "Advisory independent review of a pull request, written for its human reviewer: rates gameplay and design consistency, architectural integrity, correctness and regression risk, and proportionality, from a blind read of the code and docs before the author's explanation. Use when asked for an independent, advisory or second-opinion review of a PR."
 ---
 
-Produces a **briefing for the PR's human reviewer**: what the change actually does, the few risks worth their attention, and how the author's claims hold up. It is advisory. The output is a file the user reads; it approves nothing, requests nothing and never runs the PR's code. Decisions and pilot status: [2026-11_independent-review](../../../Documents/architecture/2026-11_independent-review.md).
+Produces a **briefing for the PR's human reviewer** that rates the PR on four dimensions, names the few risks worth their attention and checks the author's claims. It is advisory: the output is a file the user reads, it approves nothing and it never runs the PR's code. Decisions and pilot status: [2026-11_independent-review](../../../Documents/architecture/2026-11_independent-review.md).
 
-The leading word is **blind**: the analysis forms its own view from the code and the docs before it sees the author's reasoning, so it can't simply adopt it.
+The leading word is **blind**: pass 1 forms its own view from the code and the docs before anything sees the author's reasoning. The second is **lean**: this runs on every PR, so each step reads only what its dimension needs, and small PRs use no sub-agents at all.
 
-Arguments: a PR number on `RE-SS3D/SS3D` (required); `--out <path>` (default `review-out/pr-<n>.md`, git-ignored); `--allow-self` to override the self-review guard.
+Arguments: a PR number on `RE-SS3D/SS3D` (required); `--out <dir>` (default `review-out/`, git-ignored); `--allow-self` to override the self-review guard.
+
+## The four dimensions
+
+1. **Gameplay and design consistency.** Does the player-visible behaviour match the domain's design doc? Does it add behaviour players will notice that no design doc covers ("needs an owner decision", not "wrong")? Which [vision](../../../Documents/design/vision.md) pillar (§2) does it serve, and does it make something harder to read than the 2D original would (§3)? Does it fit the current milestone focus or the related systems it touches? SS13 precedent from model knowledge is allowed, labelled "SS13 precedent, unverified", and never a blocker on its own.
+2. **Architectural integrity.** Lifecycle, dependency boundaries, server authority and ownership, event patterns; duplicated functionality or needless coupling. Standards and smells: `.claude/skills/spec-review/SKILL.md` § 3. Conformance to the plan or effort it implements: that skill's Spec brief in § 4.
+3. **Correctness and regression risk.** Multiplayer (client-reachable `ServerRpc`s and input handlers that change server state without validation; state that late joiners and observers miss, such as RPC-only state or SyncVar initial values), scene load, despawn and destroy order, old saves and clients (`ProtocolVersion.Current`, `PersistenceEnvelope.CurrentSchemaVersion`), each touched map's **Pitfalls**, hot paths. **Tests:** do the tests and CI actually prove the riskiest changed behaviour? Each gap becomes a test sketch in the cheapest tier that proves it ([testing philosophy](../../../Documents/architecture/2026-11_testing-philosophy.md) § Tiers).
+4. **Proportionality and maintainability.** Needless complexity, new debt, a simpler approach that would do. Then the final call this dimension owns: are the imperfections found in 1–4 serious enough to block?
+
+**Ratings:** `Sound` (nothing worth a reviewer's time) · `Concerns` (noted items only) · `Blocking` (at least one likely blocker) · `n/a` (the PR doesn't touch this dimension; say why in three words).
 
 ## 1. Pin the PR
 
-1. Find the remote that points at `RE-SS3D/SS3D` (`git remote -v`); call it `<remote>`. Fetch `<remote> develop` and the PR head: `git fetch <remote> pull/<n>/head:review/pr-<n>`. Work from refs with `git diff` and `git show <ref>:<path>`; leave the working tree and the current branch alone.
-2. Read the PR's metadata **without its body**: number, title, head and base branch, changed files, CI check names and conclusions. Use `gh pr view <n> --repo RE-SS3D/SS3D --json number,title,headRefName,baseRefName,files,statusCheckRollup`, or the GitHub MCP `pull_request_read` tool, whichever this session has.
-3. **Self-review guard.** Stop and ask for a fresh session when this conversation wrote or edited any of the PR's commits, or when the current branch is the PR's head branch. `--allow-self` overrides both; say so in the output's header.
-4. Diff: `git diff <merge-base>...review/pr-<n>` with the merge-base of `<remote>/develop`. **Size gate:** count changed lines excluding Unity serialized files (`*.unity`, `*.prefab`, `*.asset`, `*.mat`, `*.meta`, `*.controller`, `*.anim`). Over 3,000 → write a one-line output ("too large for an automated review; split the PR or review by hand") and stop. Serialized files stay in the file list for the agents; they don't count toward the cap.
-
-Done when: the PR ref exists locally, the diff is non-empty and under the gate, and you hold the metadata without having read the body.
+1. Find the remote that points at `RE-SS3D/SS3D` (`git remote -v`), or use the URL directly. Fetch `develop` and `pull/<n>/head` into local refs (`refs/review/…`). Work with `git diff` and `git show <ref>:<path>`; leave the working tree and the current branch alone.
+2. Read the PR's metadata **without its body**: title, head and base branch, files, CI check conclusions (`gh pr view <n> --repo RE-SS3D/SS3D --json title,headRefName,baseRefName,files,statusCheckRollup`, or the GitHub MCP `pull_request_read` tool). Without API access, carry on and mark the claims and CI sections "not available".
+3. **Self-review guard:** stop and ask for a fresh session when this conversation wrote or edited any of the PR's commits, or the current branch is the PR's head branch. `--allow-self` overrides; say so in the header.
+4. **Size and route.** Count changed lines in the merge-base diff, excluding Unity serialized files (`*.unity`, `*.prefab`, `*.asset`, `*.mat`, `*.meta`, `*.controller`, `*.anim`):
+   - over **3,000** → write the one-line "too large for an automated review; split the PR or review by hand" briefing and stop;
+   - up to **300** → **inline route**: you run pass 1 yourself, no sub-agents;
+   - otherwise → **agent route**.
+5. Write two diff files to `--out`, serialized files left out of both (list their paths instead):
+   - `pr-<n>.diff`: everything else;
+   - `pr-<n>.gameplay.diff`: player-facing changes only: runtime code under `Assets/Scripts/SS3D/` outside `Editor/` and `Systems/Testing/`, UXML/USS, and `Builds/Game/Data/`. Empty means dimension 1 is `n/a` and its agent doesn't run.
 
 ## 2. Collect the blind sources
 
-Collect **paths and short facts**; the sub-agents do the reading.
+Collect **paths and short facts**; pass 1 does the reading.
 
-- **System maps:** every `Documents/architecture/systems/*.md` whose `> Code paths:` header covers a changed file. For each, read its `> Verified:` stamp and count commits since it that touch its code paths (`git log --oneline <sha>..<remote>/develop -- <code paths>`, fallback per [Documents/SKILL.md](../../../Documents/SKILL.md) § Verified stamp). A map with code commits since its stamp is **unverified**: agents treat it as possibly stale and check its claims against code before citing it.
-- **Spec:** a plan or effort matching the head branch name, the title or the touched domain; plus any `Documents/…` path the PR body links, extracted mechanically so the prose stays unread: `gh pr view <n> --repo RE-SS3D/SS3D --json body --jq .body | grep -oE 'Documents/[A-Za-z0-9_./-]+\.md(#[A-Za-z0-9_-]+)?' | sort -u`. Then the design sections those docs' `Implements:` lines cite. None found → the Spec part reports "no spec" as a noted item.
-- **Milestone focus:** the **Current focus** section of `Documents/milestones/INDEX.md`, plus the gate doc it names.
-- **CI:** each check's conclusion. For a failing check, the last ~30 lines of its failed log. Also list open issues labelled `nightly-failure`, `weekly-failure` or `editmode-nightly-failure`: a failure develop already has isn't the PR's.
+- **System maps:** each `Documents/architecture/systems/*.md` whose `> Code paths:` header covers a changed file (one grep over the headers). For each, count code commits since its `> Verified:` stamp (`git log --oneline <sha>..<develop> -- <code paths>`). Any → **unverified**: check its claims against code before relying on them.
+- **Spec:** a plan or effort matching the head branch, title or domain; `Documents/…` paths the PR body links, extracted without reading the prose (`… --jq .body | grep -oE 'Documents/[A-Za-z0-9_./-]+\.md(#[A-Za-z0-9_-]+)?' | sort -u`); the design sections their `Implements:` lines cite; the domain's `Documents/design/<domain>.md`.
+- **Milestone:** `Documents/milestones/INDEX.md` § Current focus and the gate doc it names.
+- **CI:** conclusions, the last ~30 lines of any failed log, and open `nightly-failure` / `weekly-failure` / `editmode-nightly-failure` issues (a failure develop already has isn't the PR's).
 
-Write the CI facts to a scratch file the agents can read. Done when: every changed code file maps to at least one map or is listed as unmapped, and every source has a path.
+Write these to `pr-<n>.sources.md`. Done when every changed code file is under a map or listed as unmapped.
 
-## 3. Pass 1: two blind sub-agents, in parallel
+## 3. Pass 1 (blind)
 
-Both briefs carry: the diff command, the PR ref, the changed-file list, the source paths from step 2 with each map's verified/unverified status, the CI scratch file, and the finding format below. Both say: *"Form your view from the code and the docs. The PR description and commit messages are withheld on purpose; read the change with `git diff` and `git show`, not `git log`."*
+Every reader works from the sources file and the diff files. Read the docs listed there and the code the diff touches; go further only to trace a specific finding. The PR description and commit messages are withheld until pass 2, so form the view from code and docs (`git diff`, `git show`, not `git log`).
 
-**Conformance** (does it follow the rules and the plan?): read `.claude/skills/spec-review/SKILL.md` § 3 (standards sources and the smell baseline) and the Spec sub-agent brief in § 4, and apply both to this diff.
+**Inline route:** apply all four dimensions yourself, then go to step 4.
 
-**Risk** (what breaks, and does it matter now?):
+**Agent route:** spawn in parallel, each brief carrying the sources file path, its diff file, its dimensions' text from **The four dimensions** above, the finding format and the line on withheld context:
 
-- **Authority and networking:** client-reachable paths (`ServerRpc`, input handlers) that change server state without validation; ownership checks; state late joiners and observers miss (SyncVar/SyncList initial state, RPC-only state); despawn and destroy ordering; scene load. Old clients or saves that break without a bump of `ProtocolVersion.Current` or `PersistenceEnvelope.CurrentSchemaVersion`.
-- **Regressions:** each touched map's **Pitfalls**; hot paths the change makes slower; callers of changed signatures.
-- **Tests:** for the riskiest changed behaviour, the tests that cover it (the map's **Tests** section, `Assets/Scripts/Tests/`), and whether CI ran them. For each gap, the missing test as a sketch, in the cheapest tier that proves it ([testing philosophy](../../../Documents/architecture/2026-11_testing-philosophy.md) § Tiers).
-- **Gameplay and milestone:** behaviour that contradicts the cited design sections; whether the change touches or threatens the current milestone slices.
+- **Gameplay** (dimension 1): `pr-<n>.gameplay.diff`, `vision.md` §2–§5, the domain design doc, the milestone gate. Skipped when the gameplay diff is empty.
+- **Engineering** (dimensions 2–4): `pr-<n>.diff`, the maps and their Pitfalls, the spec, `2026-07_agent-first-composition.md` when the diff adds a SubSystem, entity behaviour, UI surface or prefab wiring. Also returns a 2–4 line summary of what the change does, written from the code, and the tests mapping.
 
-**Finding format** (each agent, 500 words max):
+**Finding format** (400 words per dimension at most):
 
 ```
-- <title> · <blocker-candidate | note> · <confirmed | suspected>
-  Evidence: <path:line on the PR head> — <quoted line or traced call path>
+- [D<1-4>] <title> · <blocker-candidate | note> · <confirmed | suspected>
+  Evidence: <path:line on the PR head> — <quote or traced call path>
   Impact: <the concrete failure: who sees what, when>
   Confirm by: <test, reproduction or file to check> (suspected only)
   Action: <smallest fix or next step>
 ```
 
-**Confirmed** means the failure is traced through the code end to end; anything less is **suspected**. Plus, from Risk: a 2–4 line summary of what the change does, written from the code, and the tests mapping.
-
-Done when: both reports are back.
+**Confirmed** means traced through the code end to end; anything less is **suspected**.
 
 ## 4. Pass 2: reconcile the author's claims
 
-Now read the PR body and the commit messages (`git log --format=%B <merge-base>..review/pr-<n>`). List each checkable claim: behaviour, "handles X", tests run, ticked networking-checklist boxes, "follows design §N", docs synced. Mark each **confirmed** (pass 1 or a targeted file read supports it), **not shown** (nothing in the diff or CI demonstrates it) or **contradicted** (cite the evidence). A contradicted claim becomes a finding. Open only the files a claim needs; this pass checks claims, it doesn't re-review the diff.
+Now read the PR body and the commit messages (`git log --format=%B <merge-base>..<head>`). List each checkable claim (behaviour, "handles X", tests run, ticked networking-checklist boxes, "follows design §N", docs synced) and mark it **confirmed**, **not shown** or **contradicted** (cite the evidence). A contradicted claim becomes a finding in its dimension. Open only the files a claim needs; this pass checks claims, it doesn't re-review.
 
-## 5. Apply the blocker bar
+## 5. Rate (dimension 4's call)
 
-Merge duplicates across the two reports, then sort every finding:
+Merge duplicates, then sort each finding:
 
-- **Likely blocker:** has evidence **and** does at least one of: breaks a hard rule in `AGENTS.md`; breaks server authority or ownership; is a regression that threatens the current milestone focus. A suspected one stays a blocker only with its **Confirm by** step.
-- **Noted:** at most **3** of the rest, the most consequential first, each ending "not a merge blocker". This is where duplication, debt, smells and "no spec" land.
-- **Dropped:** everything else. Analyzer-enforced style, improvements with no concrete failure, and findings that rest only on an unverified map's claim, unless the code confirms them.
+- **Likely blocker:** has evidence **and** breaks an `AGENTS.md` hard rule (a silent deviation from a design doc is one), breaks server authority or ownership, or breaks something the current milestone's **Done when** scenario depends on. A suspected one stays a blocker only with its **Confirm by** step.
+- **Noted:** the single most consequential remaining finding per dimension, so at most four. Each ends "not a merge blocker".
+- **Dropped:** the rest: analyzer-enforced style, improvements with no concrete failure, findings that rest only on an unverified map's claim.
 
-Done when: every finding is in exactly one bucket and Noted holds 3 or fewer.
+Each dimension's rating follows from what it kept. Done when every finding sits in one bucket and each dimension has a rating with a one-line reason.
 
 ## 6. Write the briefing
 
-Write `--out` in this shape and tell the user its path. A PR with nothing to flag gets the header, the verdict line, the summary and the sources, nothing else.
+Write `pr-<n>.md` in `--out` and tell the user its path. Leave out empty sections.
 
 ```markdown
 ## Independent AI review — advisory, not an approval
 
-PR #<n> · head `<sha>` · against develop `<sha>` · focus: <milestone focus, one line><· self-review override>
+PR #<n> · head `<sha>` · against develop `<sha>` · focus: <milestone focus, one line> · route: <inline | agents><· self-review override>
 
 **Verdict:** <No likely blockers | N likely blocker(s)> — <one sentence>
+
+| Dimension | Rating | Why |
+|---|---|---|
+| 1. Gameplay and design | <rating> | <one line> |
+| 2. Architecture | <rating> | <one line> |
+| 3. Correctness and regressions | <rating> | <one line> |
+| 4. Proportionality | <rating> | <one line> |
 
 ### What this PR does (read from the code)
 <2–4 lines>
 
 ### Likely blockers
-1. **<title>** — <confirmed | suspected> · <authority | hard rule | milestone regression>
+1. **[D<n>] <title>** — <confirmed | suspected>
    Evidence: `<path:line>` <quote or call path>
    Why it blocks: <rule broken or gate threatened>
    Next step: <confirm-by and/or fix>
    - [ ] valid · [ ] false positive · [ ] accepted debt
 
 ### Noted (not merge blockers)
-- **<title>** — <one line, evidence> · [ ] valid · [ ] false positive · [ ] accepted debt
+- **[D<n>] <title>** — <one line, evidence> · [ ] valid · [ ] false positive · [ ] accepted debt
 
 ### Author's claims
 | Claim | Check |
 |---|---|
-| <claim> | confirmed / not shown / contradicted: <why> |
 
 ### Tests and CI
-- CI: <green | failing: check — cause (already red on develop? say so)>
+- CI: <green | failing: check — cause (already red on develop?) | not available>
 - Covered: <behaviour → test>
 - Missing: <behaviour → tier, test sketch>
 
 ### Sources
-<maps with verified/unverified status · spec docs · design §§ · what had no map>
+<maps with verified/unverified status · spec · design §§ · unmapped files>
 ```
 
-Posting the briefing as a PR comment arrives with the CI phase in the effort doc. Until then the output stays a local file.
+Posting the briefing as a PR comment arrives with the CI phase in the effort doc. Until then it stays a local file.
