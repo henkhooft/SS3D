@@ -49,7 +49,7 @@ Every change takes the same loop. The skill column is what to ask your agent for
 | 2. **Plan** | Decide HOW and IN WHAT ORDER: an architecture effort (`Documents/architecture/YYYY-MM_*.md`) for multi-system work, a plan (`Documents/plans/`) for a smaller piece. [Documents/SKILL.md](Documents/SKILL.md) defines both. | `grilling` |
 | 3. **Build** | Start from [architecture/INDEX.md](Documents/architecture/INDEX.md) and the system map for your domain, and read its **Pitfalls** first. Write the test before the fix where you can. | `tdd`, `diagnosing-bugs` |
 | 4. **Validate** | Run targeted checks: `Testing/ui/validate.sh --steps compile,editmode` plus the steps for what you touched; add `visual` for visual changes. Which tier a test belongs in: [testing philosophy](Documents/architecture/2026-11_testing-philosophy.md). | |
-| 5. **Review** | Check the branch against its plan and the project's conventions. | `spec-review` |
+| 5. **Review** | Check the branch against its plan and the project's conventions. Maintainers may add an advisory AI review of your PR: a briefing for the human reviewer, never an approval. | `spec-review`, `independent-review` |
 | 6. **Sync docs** | Update the system maps (with their `Verified` stamp and any new Pitfalls), the INDEX, the plan or effort, and any milestone slice the work advanced. | `update-system-docs` |
 | 7. **PR** | Open a PR into `develop` and fill in the template. | |
 

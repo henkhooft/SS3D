@@ -145,6 +145,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-11_tech-debt-paydown](2026-11_tech-debt-paydown.md) | in-progress (Phases 0–3 shipped; Phase 6 under way: P6.1–P6.4 done) |
 | [2026-11_project-infrastructure](2026-11_project-infrastructure.md) | shipped (reference) |
 | [2026-11_upstream-merge](2026-11_upstream-merge.md) | in-progress |
+| [2026-11_independent-review](2026-11_independent-review.md) | in-progress (skill built; pilot next) |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [eva-gear.plan](../plans/eva-gear.plan.md) | in-progress |
 | [ooc-column.plan](../plans/ooc-column.plan.md) | planned |
