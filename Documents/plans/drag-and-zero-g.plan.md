@@ -4,7 +4,7 @@ overview: MVP1 M13. Drag Downed, Critical and dead bodies (and furniture) on a r
 todos:
   - id: tether-rules
     content: "blind: pure static rules + EditMode tests: rope target point (dragger→target line, rest 1.0 m bodies, start distance clamped to 1.5 m furniture), break rule (server dragger-to-target > 2.5 m for 1 s), who may be dragged (Downed/Critical/dead only), throw Δv curve, reach classification (static tile geometry yes; lockers, items, bodies no)"
-    status: pending
+    status: completed
   - id: space-recovery
     content: "blind: Ragdoll — a wind/blast knockdown that expires over open space recovers into upright Floating (drop the floor gate at Ragdoll.cs ~l.209 for that case); while Floating, ServerApplyWind never knocks down"
     status: pending
@@ -120,6 +120,15 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 27 | Console `drag <dragger> <target>`; Down a body with `hurt` | SS3D | `HurtCommand` |
 | 28 | Test tiers below | SS3D | testing philosophy D11 |
 | 29 | Drag escape by an unresponsive client accepted for Playtest 1 | owner | owner question 1, 2026-11-18 |
+| 30 | Build-time decisions below (30+) were made during the M13 build session, 2026-11-18, without the owner; each is open to review | SS3D | owner brief: record every decision |
+| 31 | TDD seams: the pure static classes `DragRules` (Furniture) and `ZeroGravityRules` (Entities/Humanoid), EditMode only | SS3D | owner brief ("EditMode tests for every pure rule") |
+| 32 | The 60° cone is a half-angle (±60° of facing), measured on the deck plane; a target right underfoot counts | taste | hips on the floor sit below the pivot; a 3D angle would miss bodies at your feet |
+| 33 | Knockdown vs Critical: a ragdolled body is draggable only when health also wants it down (`BodyPresentationIntent`); a timed knockdown has health intent Locomotion | SS3D | `Ragdoll._isKnockdownTimed` is server-only; the health snapshot replicates |
+| 34 | "Walking acceleration" = `_movementSpeed / _accelerationTime` (the locomotion ramp, ~50 m/s²), so traction is ~12.5 m/s² | SS3D | `HumanoidController.MoveMovementTarget` |
+| 35 | Braking is linear at walk speed / 0.5 s; a faster coast takes longer than 0.5 s to stop | taste | stateless per-frame rule |
+| 36 | Traction never slows a coast faster than walk speed, but can steer it | taste | a thrown-off spacewalker keeps their throw speed |
+| 37 | Throw recoil is planar and opposite the throw's planar heading; a throw straight up or down gives none | adaptation | coast is planar (`TryProcessSpaceFloat`) |
+| 38 | End rules are checked in a fixed order: release, despawn, dragger down, snag, target stood, floating | SS3D | one reason logged per end |
 
 ## Phases
 
