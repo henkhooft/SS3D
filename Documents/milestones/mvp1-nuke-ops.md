@@ -1,7 +1,7 @@
 > Goal: Playtest 1 — eight players play Nuclear Operatives rounds on the 24/7 server: ops spawn geared and breach for the disk, a five-job crew fights back, keeps the hull and power up and patches the wounded, and every round ends with a summary and restarts
 > Status: in-progress
 > Depends on: —
-> Current focus: close M0 (engineering closet), M1c (stun baton hand test, physical magazines, M4 in an armory) and M12 (OOC column, prying unpowered airlocks), then M6 Playtest 1 — M1s, M3, M8, M9, M10 and M11 shipped 2026-11-16; session stability and smoke live on [test-server.md](test-server.md) T3
+> Current focus: close M0 (engineering closet), M1c (stun baton hand test, physical magazines, M4 in an armory) M12 (OOC column, prying unpowered airlocks) and M13 (dragging bodies, moving in zero-g), then M6 Playtest 1 — M1s, M3, M8, M9, M10 and M11 shipped 2026-11-16; session stability and smoke live on [test-server.md](test-server.md) T3
 > Roadmap: Nuclear Operatives round — Play a full Nuke Ops round from spawn to end screen
 > Pillars: 2, 4, 6 (1 thin) — [vision.md](../design/vision.md) §2
 
@@ -28,6 +28,7 @@ What a round needs:
 - **Combat core**: a small ballistic arsenal, physical magazines ([combat.md](../design/combat.md) §3), C4 breaching, the stun baton ([combat.md](../design/combat.md) §5), weapon sounds, no debug chrome in normal play. Shots visibly leave the muzzle and land where the reticle is.
 - **Nuke loop**: breach to the vault, load the disk, arm or defuse, a station-wide arm announcement, state on examine ([antagonist-content.md](../design/antagonist-content.md) §6).
 - **Breaches that matter**: blasts break floors through to space and wreck furniture ([explosives-destruction.md](../design/explosives-destruction.md) §3); vacuum kills; suits and internals protect; an engineer lays plating to seal the hull and the room refills; walls and windows can be repaired, rebuilt, barricaded and taken down ([construction.md](../design/construction.md)); APC-driven lights make power loss felt.
+- **Bodies and space you can move through**: anyone can drag a body or a loose object, and a player who loses the floor in zero-g can push off and get back instead of ragdolling forever.
 - **Objectives and win/lose** resolve, and the round ends with an **end screen** ghosts can see, then **restarts**.
 
 Crew wins by killing every operative in Playtest 1; restraints come with the station round ([combat.md](../design/combat.md) §11).
@@ -62,6 +63,7 @@ flowchart TB
   server[Always_on_server_T8]
   lobby[Lobby_character_window]
   ready[OOC_column_pry_airlocks]
+  dragmove[Drag_bodies_zero_g_movement]
 
   mvp1 --> map
   mvp1 --> roles
@@ -72,6 +74,7 @@ flowchart TB
   mvp1 --> roundend
   mvp1 --> lobby
   mvp1 --> ready
+  mvp1 --> dragmove
   ready --> power
   mvp1 --> vacuum
   mvp1 --> power
@@ -138,7 +141,8 @@ flowchart TB
 | M10 | Construction (thin): re-lay floors, weld walls, windows and plating back to Intact, rebuild a destroyed wall (girder → plate → weld) or window (girder → glass), barricade on any floor, deconstruct plain walls, salvage wreckage. Done when a crew member can rebuild a blown wall and a patched room refills | shipped — [construction-mvp1](../architecture/2026-11_construction-mvp1.md) in [#254](https://github.com/henkhooft/SS3D/pull/254), owner-checked 2026-11-16: floors and hull patch, weld repair, girder → plate → weld and girder → glass, deconstruction, wreckage salvage, one tile item per laid floor; a patched room refills from the test station's supply network | [construction.md](../design/construction.md) §2–§11; [construction](../architecture/systems/construction.md); [structural-destruction](../architecture/systems/structural-destruction.md); [tile](../architecture/systems/tile.md) | Engineers repair and rebuild what the ops blow up, and the crew can barricade |
 | M11 | Lobby and character window to the revised lobby design. Done when a new player connects to a random character, sets job priorities and antag opt-ins on it, readies up on the connected-count countdown and spawns in their job; Observe and joining late (direct pick beside the crew manifest) work; the screens match the recoloured canvas | shipped in [#282](https://github.com/henkhooft/SS3D/pull/282), owner hand-tested 2026-11-16 — all seven phases: characters with preferences, connected-count countdown, menu music into the lobby, UXML shell, character window, Join picker | [lobby.md](../design/lobby.md) §2–§8; [lobby-character-window](../archive/architecture/2026-11_lobby-character-window.md); [visual brief](../archive/plans/lobby-character-window-visual-brief.md); [rounds-lobby](../architecture/systems/rounds-lobby.md) | Make your character once and keep it: name, look, the jobs you want and whether you'll play an antagonist, then ready up or join a round already running |
 | M12 | Playtest readiness: in-round OOC column; pry open an unpowered airlock. Done when a player reads and writes OOC during a round without opening the Escape screen, and a crew member with a crowbar can get through a closed airlock whose APC is dead | pending — the OOC column has a plan with every todo pending (server side done); a closed airlock without power can't be opened at all today (`AirLockDoorInteraction.CanInteract`), and prying needs a design rule first | [ooc-column plan](../plans/ooc-column.plan.md); [comms.md](../design/comms.md) §7; [main-hud.md](../design/main-hud.md) §4; [furniture](../architecture/systems/furniture.md) (airlocks); [electricity](../architecture/systems/electricity.md) | Chat out of character during a round without leaving the game, and pry your way out when the power dies |
-| M6 | Playtest 1 | pending | depends M0–M5, M1m, M1c, M1s, M8, M9, M10, M11, M12; [test-server.md](test-server.md) T3, T8 | Finish line: eight players play Nuke Ops rounds together on the always-on server |
+| M13 | Dragging bodies and moving in zero-g. Done when a crew member drags a Downed body down a corridor and through an airlock, and drags a locker or crate; a player knocked off the floor in zero-g without magboots can push off a wall or grab a structure, reach the floor again, and can throw an item to change direction; a remote client sees both | pending — only the unbolted girder and the Syndicate bomb are draggable today (`Draggable`); off the floor without magboots a body ragdolls with no control. Zero-g movement is listed as out of scope in [armor.md](../design/armor.md) §8, so it needs owner-approved rules first (SS14's spacewalk rules are the default) | [expected-content](expected-content.md) U7, U31 (owner decision 2026-11-18); [health.md](../design/health.md) §4; [armor.md](../design/armor.md) §3; [atmospherics.md](../design/atmospherics.md) §2; [entities](../architecture/systems/entities.md); [furniture](../architecture/systems/furniture.md) | Drag a wounded friend to safety, and push yourself back to the floor when you float off into space |
+| M6 | Playtest 1 | pending | depends M0–M5, M1m, M1c, M1s, M8, M9, M10, M11, M12, M13; [test-server.md](test-server.md) T3, T8 | Finish line: eight players play Nuke Ops rounds together on the always-on server |
 
 ## Explicitly deferred
 
@@ -146,7 +150,7 @@ flowchart TB
 
 - Aim IK at close range and when aiming at the floor
 - Blood, knockdown and stagger clarity
-- Dragging bodies and disk carriers (health feel already shipped), and pulling heavy furniture with its own gait; clips and today's drag gaps are listed in [humanoid-animation-pass](../architecture/2026-11_humanoid-animation-pass.md#notes-for-the-drag-pass)
+- Pulling heavy furniture with its own gait (dragging bodies moved to M13 on 2026-11-18); clips and today's drag gaps are listed in [humanoid-animation-pass](../architecture/2026-11_humanoid-animation-pass.md#notes-for-the-drag-pass)
 - Air alarms that alarm, fire response (extinguishers)
 - Frag grenades; energy weapons and ranged stuns ([combat.md](../design/combat.md) §11)
 - Wall damage readable at range on authored prefabs

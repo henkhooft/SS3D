@@ -74,7 +74,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U4 | Throw an item | must | done | — | `Controls.xml` | Throw mode (R) |
 | U5 | Examine, including a body's wounds | must | done | — | `P/Entities/Mobs/base.yml` `Examiner` | |
 | U6 | Combat mode, melee, shoot | must | done | — | `P/Body/species_base.yml` `CombatMode` | Help/Harm intent (F) |
-| U7 | **Pull and drag a body or object** | must | missing | — | `species_base.yml` `Puller` | Only the unbolted girder and the Syndicate bomb are draggable. Blocks carrying the wounded to medbay and carrying off the disk holder. Owner decided 2026-11-18: `must` (Decision 1) |
+| U7 | **Pull and drag a body or object** | must | missing | — | `species_base.yml` `Puller` | Only the unbolted girder and the Syndicate bomb are draggable. Blocks carrying the wounded to medbay and carrying off the disk holder. Owner decided 2026-11-18: `must`, before Playtest 1 as MVP1 M13 (Decision 1) |
 | U8 | Strip: take from another body | must | done | — | `species_base.yml` `Stripping` | Search + Take |
 | U9 | Strip: put an item on another body | expected, after Playtest 1 | missing | — | `Controls.xml` (strip menu) | Dress, put on a mask, cuff. Lands with C7 (Decision 3) |
 | U10 | Open doors with ID access | must | done | in game | `G/Engineering/Airlocks.xml` | |
@@ -98,7 +98,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U28 | Observe as a ghost after death | expected | done | — | `P/Entities/Mobs/Player/observer.yml` | No follow-lock |
 | U29 | Crates: open, close, drag | expected | unverified | SS3D-Art `crates` | `Controls.xml` | No crate prefab found; dragging needs U7 |
 | U30 | Radial verb menu for extra actions | expected | done | — | `Controls.xml` (context menu) | SS3D's adaptation of right-click verbs |
-| U31 | **Move in zero-g: push off structures, drift, throw to propel** | must | missing | — | `Controls.xml` (spacewalks); jetpack in N16 | Without magboots, a body off the floor ragdolls with no control and no way back. Owner decided 2026-11-18: `must` (Decision 1) |
+| U31 | **Move in zero-g: push off structures, drift, throw to propel** | must | missing | — | `Controls.xml` (spacewalks); jetpack in N16 | Without magboots, a body off the floor ragdolls with no control and no way back. Owner decided 2026-11-18: `must`, before Playtest 1 as MVP1 M13 (Decision 1) |
 
 ## Later
 
@@ -108,7 +108,7 @@ Held back, so agents don't start them without the owner: door remote, Captain's 
 
 Each was a conflict between SS14 and a recorded SS3D decision. All seven were decided by the owner on 2026-11-18. New conflicts go here as open items; agents don't settle them.
 
-1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Still open: does it land before Playtest 1? That would pull it out of MVP1's feel-pass deferral.
+1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Both land before Playtest 1 as [MVP1 M13](mvp1-nuke-ops.md).
 2. ~~**Pinpointer (N3, C2).**~~ **Decided 2026-11-18: `must`; a HUD compass shown while the pinpointer is in hand.** That's the easiest form for now; an arrow on the held model can come later. `antagonist-content.md` §6 already lists the pinpointer in the first pass, so the code is behind the design. The Captain's pinpointer (C2) is the same item.
 3. ~~**Handcuffs (C7).**~~ **Decided 2026-11-18: `expected`, after Playtest 1, together with U9 (put an item on another body).** Until then, crew win only by killing the operatives, even though the §6 rule says "dead or restrained".
 4. ~~**Uplink (N12–N14).**~~ **Decided 2026-11-18: `must` for the gate after Playtest 1.** A standalone uplink item opens a machine-interface panel. This deviates from `antagonist-content.md` §4 (a PDA tab) until the PDA exists; the logged ledger and items that appear directly still apply. Content brief for Claude Design: [uplink-ui-design-prompt](../plans/uplink-ui-design-prompt.md).
