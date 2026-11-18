@@ -9,12 +9,13 @@ using SS3D.Systems.Interactions;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.StructuralDamage;
+using SS3D.Systems.Tile;
 using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace SS3D.Tests
 {
-    // Guards: interaction animations (humanoid animation pass Phase 4): a pickup lands in the hand at the floor bend's contact frame and faces the item, a knockdown before contact keeps the item on the floor, a busy upper body skips the clip, and a defuse kneels for its delay and stands on completion or when the body moves · Not cheaper because: the clip choice runs on the server's interaction dispatch, the RPC and the replicated kneel bit reach the live animator, and the defuse is a real delayed interaction
+    // Guards: interaction animations (humanoid animation pass Phase 4): a pickup lands in the hand at the floor bend's contact frame and faces the item, a knockdown before contact keeps the item on the floor, a busy upper body skips the clip, a defuse kneels for its delay and stands on completion or when the body moves, and every ItemRelease kind leaves the item on the tile map · Not cheaper because: the clip choice runs on the server's interaction dispatch, the RPC and the replicated kneel bit reach the live animator, the defuse is a real delayed interaction, and the container's SyncVar and the map tracking need a spawned item
     [Category(TestCategories.Scenarios)]
     [Category(TestCategories.Combat)]
     public class InteractionAnimationScenarios : ScenarioFixture
@@ -74,6 +75,44 @@ namespace SS3D.Tests
             Assert.Less(Vector3.Distance(wrench.transform.position, floor.point), 0.5f, "It lies where it was dropped");
             wrench.Delete();
         }
+
+        // Tech-debt P4.4: the drop key and dropping on collapse went through AttachedContainer.Dump, which never
+        // registered the item with the tile map, so a dropped item was missing from the map's item list (and from a
+        // save). Every way out of a hand now goes through ItemRelease, and each one leaves the item tracked.
+        [UnityTest]
+        public IEnumerator EveryReleaseKind_LeavesTheItemOnTheMap()
+        {
+            PlaceBody();
+            Hand hand = Body.GetComponent<Hands>().SelectedHand;
+            TileMap map = SubSystems.Get<TileSubSystem>().CurrentMap;
+            Assert.IsNotNull(map, "The scenario station has a tile map");
+            Item wrench = SubSystems.Get<ItemSubSystem>().SpawnItem(Wrench, Body.transform.position, Quaternion.identity);
+            Vector3 ahead = Body.transform.position + (Body.transform.forward * 0.6f);
+            ItemReleaseKind[] kinds = { ItemReleaseKind.Placed, ItemReleaseKind.Dropped, ItemReleaseKind.Thrown, ItemReleaseKind.Mounted };
+
+            try
+            {
+                foreach (ItemReleaseKind kind in kinds)
+                {
+                    Assert.IsTrue(hand.Container.AddItem(wrench), $"The wrench goes in the active hand ({kind})");
+                    yield return null;
+                    Assert.IsFalse(IsTracked(map, wrench), $"A held wrench is off the map ({kind})");
+
+                    Assert.IsTrue(ItemRelease.ServerReleaseToWorld(wrench, ahead, Quaternion.identity, kind), $"{kind} releases the wrench");
+                    yield return null;
+                    Assert.IsTrue(hand.IsEmpty(), $"{kind} empties the hand");
+                    Assert.IsNull(wrench.Container, $"{kind} leaves the wrench in no container");
+                    Assert.IsTrue(IsTracked(map, wrench), $"{kind} leaves the wrench on the map");
+                }
+            }
+            finally
+            {
+                wrench.Delete();
+            }
+        }
+
+        private static bool IsTracked(TileMap map, Item item) =>
+            item.TryGetComponent(out PlacedItemObject placed) && System.Linq.Enumerable.Contains(map.PlacedItems, placed);
 
         // Playtest bug "Item miniatures": the height morph scales the armature the hands sit under, and
         // each pickup and drop multiplied the item by that scale, so a short holder shrank it a bit more

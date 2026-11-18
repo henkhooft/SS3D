@@ -292,9 +292,8 @@ namespace SS3D.Systems.StructuralDamage
                 Item item = _charge.GetComponent<Item>();
                 Quaternion rotation = WallMountRotation(normal);
                 float thickness = item.GetComponent<BoxCollider>().size.y;
-                _charge.HeldHand(e).PlaceHeldItemOutOfHand(contact + normal * (thickness * 0.5f + 0.01f), rotation);
-                // ItemUtility.Place lifts floor drops; a wall charge needs the exact contact pose.
-                ItemUtility.SetWorldPose(item.transform, contact + normal * (thickness * 0.5f + 0.01f), rotation);
+                // Mounted keeps the exact contact pose; a floor release would lift the charge off the wall.
+                ItemRelease.ServerReleaseToWorld(item, contact + normal * (thickness * 0.5f + 0.01f), rotation, ItemReleaseKind.Mounted);
                 item.GetComponent<Rigidbody>().isKinematic = true;
                 _charge._attached = true;
                 _charge.Arm();

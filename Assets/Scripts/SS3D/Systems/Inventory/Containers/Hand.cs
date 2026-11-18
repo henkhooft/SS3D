@@ -236,36 +236,9 @@ namespace SS3D.Systems.Inventory.Containers
         [Server]
         private void DumpHeldItem()
         {
-			Container.Dump();
-            ItemInHand?.GiveOwnership(null);
+            ItemRelease.ServerReleaseToWorld(ItemInHand, default, default, ItemReleaseKind.Dropped);
         }
 
-
-        /// <summary>
-        /// Place item on the floor, or on any other surface, place it out of its container.
-        /// </summary>
-        [Server]
-        public void PlaceHeldItemOutOfHand(Vector3 position, Quaternion rotation)
-        {
-            if (IsEmpty())
-                return;
-            
-            ItemInHand.GiveOwnership(null);
-            Item item = ItemInHand;
-            item.Container.RemoveItem(item);
-            ItemUtility.Place(item, position, rotation);
-
-            ItemObjectSo itemObjectSo = SubSystems.Get<TileSubSystem>().GetAsset(item.Asset) as ItemObjectSo;
-            if (itemObjectSo != null)
-            {
-                // Pass the lifted pose from ItemUtility.Place; the raw surface point sinks the item.
-                SubSystems.Get<TileSubSystem>().Construction.TryPlaceItem(
-                    itemObjectSo,
-                    item.transform.position,
-                    item.transform.rotation,
-                    item.gameObject);
-            }
-        }
 
         /// <summary>
         /// Checks if the creature can interact with an object

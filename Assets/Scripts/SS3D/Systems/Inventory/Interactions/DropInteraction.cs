@@ -112,7 +112,7 @@ namespace SS3D.Systems.Inventory.Interactions
             Entity entity = interactionEvent.Source.GetComponentInParent<Entity>();
             Hand hand = interactionEvent.Source.GetRootSource() as Hand;
             Quaternion rotation = ItemPlacement.WorldRotation(hand.ItemInHand, entity.transform.eulerAngles.y);
-            hand.PlaceHeldItemOutOfHand(interactionEvent.Point, rotation);
+            ItemRelease.ServerReleaseToWorld(hand.ItemInHand, interactionEvent.Point, rotation, ItemReleaseKind.Placed);
 
             return false;
         }

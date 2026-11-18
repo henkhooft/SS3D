@@ -426,22 +426,7 @@ namespace SS3D.Systems.Inventory.Containers
             Hands hands = GetComponent<Hands>();
             Hand hand = hands != null ? hands.SelectedHand : null;
             Quaternion rotation = ItemPlacement.WorldRotation(item, transform.eulerAngles.y);
-            if (hand != null && hand.ItemInHand == item)
-            {
-                hand.PlaceHeldItemOutOfHand(point, rotation);
-                return;
-            }
-
-            AttachedContainer attachedTo = item.Container;
-            item.GiveOwnership(null);
-            attachedTo.RemoveItem(item);
-            ItemUtility.Place(item, point, rotation);
-
-            if (SubSystems.TryGet(out TileSubSystem tile)
-                && tile.GetAsset(item.Asset) is ItemObjectSo itemObjectSo)
-            {
-                tile.Construction.TryPlaceItem(itemObjectSo, item.transform.position, item.transform.rotation, item.gameObject);
-            }
+            ItemRelease.ServerReleaseToWorld(item, point, rotation, ItemReleaseKind.Placed);
         }
 
         /// <summary>

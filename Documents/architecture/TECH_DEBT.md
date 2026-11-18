@@ -401,14 +401,14 @@ upper-body model (M–L).
 
 Where an item is held and whether it renders is set by `AttachedContainer` (add/remove plus
 NetworkTransform toggles, `:338-432`), `ContainerItemDisplay` (`:105-122`, `:171-197`),
-`DisposalSubSystem` (`:199-352`) and `DisposalOutlet` (`:143-146`). Release-to-world exists three
-times: `Hand.PlaceHeldItemOutOfHand` (`:213-232`, registers TileMap tracking even for a throw),
-`HumanInventory.ServerPlaceItemInWorld` (`:429-438`), and `Hand.Dump` (`:193-199`, **skips** tracking).
+`DisposalSubSystem` (`:199-352`) and `DisposalOutlet` (`:143-146`). Release-to-world was three
+copies until 2026-11-18; `ItemRelease.ServerReleaseToWorld` is now the one path (tech-debt P4.4 step A), and the
+drop key and collapse dump, which skipped tile-map tracking and (drop key) kept the owner, now match the rest.
+Throws are still tracked, and saved, at their release point (`PlacedItemObject` stores the pose it was placed at).
 The henkhooft/SS3D#208 fix guards out-of-order network arrival with a per-peer `Item.LocalHolder`
 (`AttachedContainer.cs:368`) instead of one replicated holder.
 
-**Fix:** a replicated holder on `Item`, applied by one routine on every peer; one
-`ServerReleaseToWorld` for drop, place and throw (M–L).
+**Fix:** a replicated holder on `Item`, applied by one routine on every peer (M–L). The one release path is done.
 
 ### 1.22 Map Editor trusts the client's partial map and assumes every command succeeded
 

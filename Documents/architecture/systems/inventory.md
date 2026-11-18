@@ -47,6 +47,7 @@ Items, containers, hands, identification cards (`IDCard`, `PDA`), on-demand stor
 
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemSubSystem.cs` — item subsystem entry point
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/Item.cs` — serialized Rest and Icon poses (`WorldRestRotation`, `IconRotation`, `RestsUpright`); `GenerateIcon` renders `IconRotation` under a fixed camera (`RuntimePreviewGenerator.CameraRotation`)
+- `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemRelease.cs` — `ServerReleaseToWorld(item, pose, kind)`, the only server path from a container into the world (drop, place, throw, wall mount, the dump on collapse): owner, container, pose by `ItemReleaseKind`, tile-map tracking. Don't remove an item from a hand and pose it by hand
 - `Assets/Scripts/SS3D/Systems/Inventory/Items/ItemPlacement.cs` — `WorldRotation(item, yaw)` is the only floor-rotation helper (spawn, drop, place, throw, outlets, map editor, holograms); `YawAtRest` inverts it
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/ContainerItemDisplay.cs` / `GripSocket.cs` / `HeldItemGrip.cs` — held-item grip; a calibrated `GripSocket` on each display makes the grip hand-local and pose-independent ([archived item orientation plan](../../archive/plans/item-orientation.plan.md))
 - `Assets/Scripts/SS3D/Systems/Inventory/Containers/Editor/HandGripSocketCalibration.cs` — **SS3D → Inventory → Calibrate Hand Grip Sockets** (also in Run All Human Prefab Recipes)

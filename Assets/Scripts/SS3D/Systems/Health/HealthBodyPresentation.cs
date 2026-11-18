@@ -1,5 +1,6 @@
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Inventory.Containers;
+using SS3D.Systems.Inventory.Items;
 using UnityEngine;
 
 namespace SS3D.Systems.Health
@@ -101,8 +102,7 @@ namespace SS3D.Systems.Health
                     continue;
                 }
 
-                hand.ItemInHand.GiveOwnership(null);
-                hand.Container.Dump();
+                ItemRelease.ServerReleaseToWorld(hand.ItemInHand, default, default, ItemReleaseKind.Dropped);
             }
         }
     }
