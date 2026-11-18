@@ -144,6 +144,9 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-11_object-setup-persistence](2026-11_object-setup-persistence.md) | in-progress (both slices built; owner hand test pending) |
 | [2026-11_tech-debt-paydown](2026-11_tech-debt-paydown.md) | in-progress (Phases 0–3 shipped; Phase 6 under way: P6.1–P6.4 done) |
 | [2026-11_project-infrastructure](2026-11_project-infrastructure.md) | shipped (reference) |
+| [2026-11_autonomous-dev-loop](2026-11_autonomous-dev-loop.md) | in-progress |
+| [drag-and-zero-g.plan](../plans/drag-and-zero-g.plan.md) | planned |
+| [uplink-ui-design-prompt](../plans/uplink-ui-design-prompt.md) | Claude Design brief |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [eva-gear.plan](../plans/eva-gear.plan.md) | in-progress |
 | [ooc-column.plan](../plans/ooc-column.plan.md) | planned |
