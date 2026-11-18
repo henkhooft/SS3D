@@ -519,6 +519,11 @@ namespace SS3D.Systems.Testing
                         float.Parse(instruction.Args[1], System.Globalization.CultureInfo.InvariantCulture)));
                     break;
 
+                // M13 drag and zero-g remote proof (mppm:drag, mppm:float, the drag smoke line).
+                case var dragStep when DragAutomation.Handles(dragStep):
+                    yield return DragAutomation.Run(dragStep, _waitTimeoutSeconds);
+                    break;
+
                 // Server: shoots the first remote body Downed (mppm:downed); heal_clients undoes it.
                 case "down_client":
                     yield return DownedAutomation.DownRemoteBody(_waitTimeoutSeconds);

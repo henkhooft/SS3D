@@ -1,0 +1,17 @@
+# Guards: a remote client's Downed body is dragged through an airlock on its own client (the tether reaches its physics authority), and the drag carries on with the server moving the body once its owner disconnects (M13 Decisions 22, 29) · Not cheaper because: only a second process owns the dragged body and can drop its connection
+# Main editor (host) side. Player2 runs mppm/drag-client.txt. The dragger is a server-side combat dummy.
+wait_timeout 120
+wait_connected
+wait_clients 1
+ready
+start_round
+wait_round Ongoing
+embark
+assert_embarked
+wait_players 2
+wait_seconds 5
+down_client
+drag_client_through_airlock
+wait_seconds 2
+drag_client_until_disconnect
+wait_seconds 3

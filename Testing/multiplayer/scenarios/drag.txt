@@ -1,0 +1,13 @@
+# Guards: on the built UNITY_SERVER path, a separate client's Downed body is dragged through an airlock by the server (a combat dummy) and the client sees it, then the drag survives the owner disconnecting (M13 done-when "a remote client sees both") · Not cheaper because: needs a dedicated server build and a client process that owns the dragged body
+# Dedicated-server side of the drag scenario. The client readies, starts the round, embarks and stands by an airlock.
+wait_timeout 150
+wait_connected
+wait_round Ongoing
+wait_players 1
+wait_seconds 6
+down_client
+drag_client_through_airlock
+wait_seconds 2
+drag_client_until_disconnect
+wait_seconds 3
+disconnect

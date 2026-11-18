@@ -1,0 +1,14 @@
+# Guards: a remote client floats over open space from the server's Floating, and the server's wind carries it along without ever flooring it (M13 R3) · Not cheaper because: wind reaches a floating owner as a TargetRpc and moves it through its own coast
+# Main editor (host) side. Player2 runs mppm/float-client.txt.
+wait_timeout 120
+wait_connected
+wait_clients 1
+ready
+start_round
+wait_round Ongoing
+embark
+assert_embarked
+wait_players 2
+wait_seconds 8
+wind_on_clients 30 6
+wait_seconds 4

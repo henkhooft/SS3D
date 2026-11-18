@@ -167,6 +167,9 @@ namespace SS3D.Systems.Furniture
 
         public bool IsPowered => PowerGate.IsPowered(_powerConsumer, NullConsumerPolicy.Allow);
 
+        /// <summary>False for external airlocks, which open only when used (and so lead to space).</summary>
+        public bool OpensOnApproach => _opensOnApproach;
+
         /// <summary>True when this door still needs a proximity pass after players leave its HashGrid neighborhood.</summary>
         internal bool NeedsEmptyProximityPass =>
             _authorizedOccupants.Count > 0 || _deniedOccupants.Count > 0 || _closeHeldOccupants.Count > 0;

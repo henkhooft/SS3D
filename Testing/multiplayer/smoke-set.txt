@@ -10,3 +10,4 @@ sandbox-reset 1 nightly
 nukeops-round 1 nightly
 eva-internals 1 nightly
 eva-magboots 1 nightly
+drag 1 nightly

@@ -55,34 +55,44 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
                 return CommandResult.Error($"{target.DisplayName} can't be dragged");
             }
 
-            Hand hand = controller.GetComponentInChildren<Hands>()?.SelectedHand;
+            string refusal = TryStartDrag(controller, body);
+            return refusal == null
+                ? CommandResult.Success($"{dragger.DisplayName} drags {target.DisplayName}")
+                : CommandResult.Error($"{dragger.DisplayName}: {refusal}");
+        }
+
+        /// <summary>
+        /// Starts <paramref name="dragger"/> dragging <paramref name="body"/> with its selected hand through the Drag
+        /// interaction's checks (range and cone off) and server path. Null on success, else why not. Server only; also
+        /// used by the drag automation steps.
+        /// </summary>
+        public static string TryStartDrag(HumanoidLivingController dragger, BodyDraggable body)
+        {
+            Hand hand = dragger.GetComponentInChildren<Hands>()?.SelectedHand;
             if (hand == null)
             {
-                return CommandResult.Error($"{dragger.DisplayName} has no hand to drag with");
+                return "no hand to drag with";
             }
 
             if (!body.IsDraggableNow)
             {
-                return CommandResult.Error($"{target.DisplayName} isn't Downed, Critical or dead");
+                return $"{body.name} isn't Downed, Critical or dead";
             }
 
             if (!hand.IsEmpty())
             {
-                return CommandResult.Error($"{dragger.DisplayName}'s selected hand isn't empty");
+                return "the selected hand isn't empty";
             }
 
             DragInteraction drag = new() { RangeCheck = false, ConeCheck = false };
             InteractionEvent interactionEvent = new(hand, body, body.FootprintPosition, Vector3.up);
             if (!drag.CanInteract(interactionEvent))
             {
-                return CommandResult.Error(
-                    $"{dragger.DisplayName} can't drag {target.DisplayName} now (more than {Draggable.MaxDragStartDistance} m apart, already dragged, or not standing)");
+                return $"can't drag {body.name} now (more than {Draggable.MaxDragStartDistance} m apart, already dragged, or not standing)";
             }
 
             drag.Start(interactionEvent, null);
-            return body.Dragged
-                ? CommandResult.Success($"{dragger.DisplayName} drags {target.DisplayName}")
-                : CommandResult.Error($"{dragger.DisplayName} couldn't start dragging {target.DisplayName}");
+            return body.Dragged ? null : $"couldn't start dragging {body.name}";
         }
     }
 }

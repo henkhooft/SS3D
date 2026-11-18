@@ -1,0 +1,12 @@
+# Client side of mppm:float: drifts out over open space, floats, and feels the host's wind push it along.
+wait_timeout 60
+wait_connected
+wait_round Ongoing
+wait_seconds 1
+ready
+embark
+assert_embarked
+float_self
+assert_floating_wind
+wait_seconds 2
+disconnect

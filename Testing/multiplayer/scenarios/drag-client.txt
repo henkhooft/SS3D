@@ -1,0 +1,14 @@
+# Client side of the drag smoke scenario: stands by an airlock, is shot Downed by the server, sees its own body dragged
+# through the door, then drops its connection while a second drag holds it.
+wait_timeout 120
+wait_connected
+ready
+start_round
+wait_round Ongoing
+embark
+assert_embarked
+stand_by_airlock
+assert_downed
+assert_dragged
+wait_seconds 7
+disconnect

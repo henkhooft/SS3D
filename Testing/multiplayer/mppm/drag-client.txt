@@ -1,0 +1,14 @@
+# Client side of mppm:drag: stands by an airlock, is shot Downed, sees its own body dragged through, then drops its
+# connection while a second drag holds it.
+wait_timeout 90
+wait_connected
+wait_round Ongoing
+wait_seconds 1
+ready
+embark
+assert_embarked
+stand_by_airlock
+assert_downed
+assert_dragged
+wait_seconds 7
+disconnect

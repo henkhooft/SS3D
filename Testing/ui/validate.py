@@ -65,6 +65,8 @@ MPPM_SCENARIOS = {
     "action-line": ("action-line-host", ["action-line-client"]),
     "systems-view": ("systems-view-host", ["systems-view-client"]),
     "open-storage": ("open-storage-host", ["open-storage-client"]),
+    "drag": ("drag-host", ["drag-client"]),
+    "float": ("float-host", ["float-client"]),
 }
 # Scenario -> station fixture its host loads, copied in for the run: rounds read Data/StationTemplates.
 MPPM_STATIONS = {"breach-budget": "atmostest.json", "breach": "testroom.json"}
