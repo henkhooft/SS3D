@@ -22,6 +22,9 @@ namespace SS3D.Systems.Entities.Dragging
         /// </summary>
         public bool RangeCheck { get; set; } = true;
 
+        /// <summary>If the target must lie in the start cone in front of the dragger (the console turns this off).</summary>
+        public bool ConeCheck { get; set; } = true;
+
         public string GetName(InteractionEvent interactionEvent)
         {
             IDragTarget target = interactionEvent.Target.GetGameObject().GetComponent<IDragTarget>();
@@ -63,7 +66,7 @@ namespace SS3D.Systems.Entities.Dragging
                 return false;
             }
 
-            return hand.IsEmpty() && target.IsInStartCone(entity.transform) && target.CanBeDraggedBy(entity.transform);
+            return hand.IsEmpty() && (!ConeCheck || target.IsInStartCone(entity.transform)) && target.CanBeDraggedBy(entity.transform);
         }
 
         public bool Start(InteractionEvent interactionEvent, InteractionReference reference)

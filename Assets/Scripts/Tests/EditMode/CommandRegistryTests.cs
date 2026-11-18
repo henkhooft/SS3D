@@ -315,6 +315,21 @@ namespace EditorTests
             }
         }
 
+        // M13: scenarios, MPPM and the smoke line drag a body through the console; Down it with `hurt` first
+        [Test]
+        public void DragCommand_IsAnAdminServerCommand_TargetOptionalSoItCanLetGo()
+        {
+            CommandRegistry registry = new(CommandRegistry.DiscoverCommands());
+            Assert.IsTrue(registry.TryGet("drag", out Command drag), "drag is discovered");
+            Assert.AreEqual(CommandType.Server, drag.Type);
+            Assert.AreEqual(ServerRoleTypes.Administrator, drag.AccessLevel);
+
+            Assert.IsTrue(registry.TryBind(drag, new[] { "me", "nearest" }, Context(), Resolver, out _, out CommandArgs both, out string error), error);
+            Assert.IsTrue(both.Has("target"));
+            Assert.IsTrue(registry.TryBind(drag, new[] { "me" }, Context(), Resolver, out _, out CommandArgs release, out error), error);
+            Assert.IsFalse(release.Has("target"));
+        }
+
         [Test]
         public void RealCommands_HelpRendersForEveryCommand()
         {

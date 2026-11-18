@@ -31,7 +31,7 @@ todos:
     status: completed
   - id: drag-command
     content: "blind: console command `drag <dragger> <target>` running the interaction's server path, for scenarios, MPPM and the smoke line"
-    status: pending
+    status: completed
   - id: human-recipe
     content: "rig: tier-B PrefabUtility recipe adds the body-drag component to Human.prefab, registered on the domain Run All aggregator; never hand-edit the prefab"
     status: pending
@@ -162,6 +162,7 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 69 | The furniture sweep is an axis-aligned box cast of the union of its solid colliders' bounds, lifted 6 cm off the floor, on Default + Walls; bodies and items don't stop it; it stops 2 cm short | SS3D + taste | `Draggable.TrySweep` |
 | 70 | Furniture runs the body end rules minus "target stood": dragger down, snag (2.5 m for 1 s), despawn, either over open space | SS3D | Decision 13 |
 | 71 | The doorway check samples a dragged thing at its footprint (a ragdoll's hips at its root's height) plus the usual 0.5 m sample height | SS3D | `AirLockOpener.OccupantSampleHeight` |
+| 72 | `drag` runs `DragInteraction.CanInteract` + `Start` with range and the start cone off (`ConeCheck`), keeping eligibility, the 3 m start distance and the empty selected hand; `drag <dragger>` with no target lets go | SS3D | Decision 27 |
 
 ## Phases
 
