@@ -64,7 +64,7 @@ Written by the `autoplan` skill on 2026-11-18: four self-grill rounds with a bli
 
 ## Owner questions
 
-None of these block the build: it follows the recommendation, and each names the todos it touches.
+**The owner accepted every recommendation on 2026-11-18.** Questions 1–4 are settled as recommended; question 5 (promoting the design rules) is the owner's own follow-up.
 
 1. **Drag escape by an unresponsive or modified client.** The dragged body's own client moves it (server authority is kept by re-sending the target). A client that ignores the target drifts off and the snag rule ends the drag. **Recommend accepting this for Playtest 1** and revisiting with a swept server move if players abuse it. → `body-drag-core`
 2. **A stranded spacewalker.** A suited player who drifts off with nothing to throw stays stuck for the round. **Recommend accepting it** as a real SS13 death, since vacuum or air runs out eventually. → `coast-impulse`
@@ -119,7 +119,7 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 26 | The interaction is filtered out on standing bodies; 60° cone to the hips | taste | `DragInteraction.IsInFront` (20°) |
 | 27 | Console `drag <dragger> <target>`; Down a body with `hurt` | SS3D | `HurtCommand` |
 | 28 | Test tiers below | SS3D | testing philosophy D11 |
-| 29 | Drag escape by an unresponsive client accepted | low-confidence | owner question 1 |
+| 29 | Drag escape by an unresponsive client accepted for Playtest 1 | owner | owner question 1, 2026-11-18 |
 
 ## Phases
 
