@@ -24,6 +24,8 @@ namespace SS3D.Systems.Electricity
 
         public string GetGenericName() => "RemoveLightBulb";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) => InteractionIconLookup.Take;
 
         public bool CanInteract(InteractionEvent interactionEvent)

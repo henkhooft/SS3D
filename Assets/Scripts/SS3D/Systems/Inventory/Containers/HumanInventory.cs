@@ -347,7 +347,7 @@ namespace SS3D.Systems.Inventory.Containers
             }
 
             if (TryGetComponent(out InteractionController interactions) && !interactions.BeginOwnerHandAction(
-                    Entities.Humanoid.Body.InteractionAnimation.ChooseClip("Drop", point.y - transform.position.y), point))
+                    Entities.Humanoid.Body.InteractionAnimation.ChooseClip(SS3D.Interactions.InteractionAnimationHint.PutDown, point.y - transform.position.y), point))
             {
                 return;
             }
@@ -413,7 +413,7 @@ namespace SS3D.Systems.Inventory.Containers
                 return;
             }
 
-            int clip = Entities.Humanoid.Body.InteractionAnimation.ChooseClip("Drop", point.y - transform.position.y);
+            int clip = Entities.Humanoid.Body.InteractionAnimation.ChooseClip(SS3D.Interactions.InteractionAnimationHint.PutDown, point.y - transform.position.y);
             interactions.ServerRunHandAction(clip, point,
                 () => item != null && Hands != null && Hands.SelectedHand != null && Hands.SelectedHand.CanUseHand
                     && CanPlaceInventoryItemInWorld(item, point, surfaceNormal),

@@ -93,6 +93,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public string GetName(InteractionEvent e) => "Call down Syndicate bomb";
             public string GetGenericName() => "SyndicateBombBeacon";
+
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public bool CanInteract(InteractionEvent e) => _beacon != null && !_beacon._used && _beacon.HeldHand(e) != null;
             public bool Start(InteractionEvent e, InteractionReference reference)

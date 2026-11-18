@@ -1,3 +1,4 @@
+using SS3D.Interactions;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid.Body
@@ -29,12 +30,6 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public const int LightSwitch = 8;
         /// <summary>Standing work at a wall, held like <see cref="Kneel"/> for a construction step's whole timer.</summary>
         public const int WallWork = 9;
-
-        /// <summary>
-        /// <see cref="ChooseClip"/> name for a light switch's toggle. Its generic name is the shared "Toggle"
-        /// (boombox, valves), so the dispatch passes this when the target is a light switch.
-        /// </summary>
-        public const string LightSwitchName = "LightSwitch";
 
         /// <summary>Items and drop points lower than this above the feet use the floor clips.</summary>
         public const float FloorHeight = 0.5f;
@@ -218,53 +213,29 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public static float ContactSeconds(int index) => TryGetClip(index, out Clip clip) ? clip.ContactSeconds : 0f;
 
         /// <summary>
-        /// The clip for an interaction, by its generic name. <paramref name="heightAboveFeet"/> is the item's
-        /// (pickup) or drop point's (drop) height; <paramref name="closesLocker"/> is true when a locker door
+        /// The clip for an interaction's <see cref="InteractionAnimationHint"/>. <paramref name="heightAboveFeet"/> is the
+        /// item's (pickup) or drop point's (put down) height; <paramref name="closesLocker"/> is true when a locker door
         /// interaction shuts the door.
         /// </summary>
-        public static int ChooseClip(string genericName, float heightAboveFeet = 1f, bool closesLocker = false)
+        public static int ChooseClip(InteractionAnimationHint hint, float heightAboveFeet = 1f, bool closesLocker = false)
         {
-            switch (genericName)
+            switch (hint)
             {
-                case "Pickup":
+                case InteractionAnimationHint.Pickup:
                     return heightAboveFeet < FloorHeight ? FloorPickup : Reach;
-                case "Drop":
+                case InteractionAnimationHint.PutDown:
                     return heightAboveFeet < FloorHeight ? FloorPutDown : Reach;
-                case "OpenLocker":
+                case InteractionAnimationHint.LockerDoor:
                     return closesLocker ? LockerClose : LockerOpen;
-                case "LockLocker":
-                case "UnlockLocker":
+                case InteractionAnimationHint.LockerTap:
                     return LockerTap;
-                case LightSwitchName:
+                case InteractionAnimationHint.LightSwitch:
                     return LightSwitch;
-                case "OpenAirlock":
-                case "AttachCharge":
-                // The nuclear device: a reach to slot the disk or set the arming switches.
-                case "NukeLoadDisk":
-                case "NukeArm":
+                case InteractionAnimationHint.DoorReach:
                     return DoorReach;
-                case "DefuseC4":
-                case "Perform CPR":
-                // Construction floor work (ConstructionRecipes generic names): down on one knee for the step.
-                case "ConstructionPlacePlating":
-                case "ConstructionPlaceFloorTile":
-                case "ConstructionPryTile":
-                case "ConstructionRepairPlating":
-                case "ConstructionClearWreckage":
+                case InteractionAnimationHint.Kneel:
                     return Kneel;
-                // Construction wall work: both hands at the wall for the step's whole timer.
-                case "ConstructionRepairStructure":
-                case "ConstructionPlaceGirder":
-                case "ConstructionPlateGirder":
-                case "ConstructionWeldSeams":
-                case "ConstructionGlazeGirder":
-                case "ConstructionCutSeams":
-                case "ConstructionPullPlate":
-                case "ConstructionLiftPane":
-                case "ConstructionDismantleGirder":
-                // Nuke defuse: both hands in the device's panel for the step's whole timer.
-                case "NukeOpenPanel":
-                case "NukeCutWires":
+                case InteractionAnimationHint.WallWork:
                     return WallWork;
                 default:
                     return None;

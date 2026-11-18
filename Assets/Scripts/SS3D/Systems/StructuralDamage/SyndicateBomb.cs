@@ -323,6 +323,8 @@ namespace SS3D.Systems.StructuralDamage
                 return $"Set timer to {NukeDeviceState.FormatTime(next)}";
             }
             public string GetGenericName() => _steps > 0 ? "SyndicateBombTimerUp" : "SyndicateBombTimerDown";
+
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public Sprite GetIcon(InteractionEvent e) => BombIcon;
             public bool CanInteract(InteractionEvent e) => _bomb != null && e.Source is Hand
                 && (_steps > 0 ? _bomb.State.CanRaiseTimer : _bomb.State.CanLowerTimer) && InteractionExtensions.RangeCheck(e);
@@ -344,6 +346,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => $"Arm bomb ({NukeDeviceState.FormatTime(_bomb.State.TimerSeconds)})";
             public override string GetGenericName() => "SyndicateBombArm";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public override Sprite GetIcon(InteractionEvent e) => BombIcon;
             public override bool CanInteract(InteractionEvent e) => _bomb != null && e.Source is Hand
                 && _bomb.State.CanArm && InteractionExtensions.RangeCheck(e);
@@ -363,6 +367,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => _bomb.State.Anchored ? "Unbolt from floor" : "Bolt to floor";
             public override string GetGenericName() => "SyndicateBombWrench";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public override bool CanInteract(InteractionEvent e)
             {
@@ -392,6 +398,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => "Unscrew wiring panel";
             public override string GetGenericName() => "SyndicateBombOpenPanel";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Open;
             public override bool CanInteract(InteractionEvent e) => _bomb != null && IsTool(e, Items.ScrewdriverBlue)
                 && _bomb.State.CanOpenPanel(_bomb.Now) && InteractionExtensions.RangeCheck(e);
@@ -421,6 +429,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => "Cut the wires (defuse)";
             public override string GetGenericName() => "SyndicateBombCutWires";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public override bool CanInteract(InteractionEvent e) => _bomb != null && IsTool(e, Items.Wirecutters)
                 && _bomb.State.CanCutWires(_bomb.Now) && InteractionExtensions.RangeCheck(e);

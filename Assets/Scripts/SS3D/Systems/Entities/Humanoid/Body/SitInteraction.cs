@@ -12,6 +12,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
     {
         public string GetGenericName() => "Sit";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public string GetName(InteractionEvent interactionEvent) => "Sit";
 
         public Sprite GetIcon(InteractionEvent interactionEvent) => null;

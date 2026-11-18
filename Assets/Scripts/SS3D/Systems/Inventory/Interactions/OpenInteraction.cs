@@ -45,6 +45,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public string GetGenericName() => "Open";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Open);

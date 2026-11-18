@@ -81,6 +81,7 @@ Discover / `HasPoint` contract: [interactions-framework](interactions-framework.
 
 ## Pitfalls
 
+- **A new interaction must declare its body animation:** `IInteraction.AnimationHint` has no default (abstract on `DelayedInteraction` too), so a missing one is a compile error, not a silent `None`. Pick the closest `InteractionAnimationHint`; never key animation or effect timing on `GetGenericName()` strings again (tech-debt P4.3: a rename used to change when an effect landed). A `Requirement` wrapper forwards the guarded interaction's hint.
 - **Server refuses what the client offered (henkhooft/SS3D#192):** the server re-runs `CanInteract` against its own, lagging copy of the body with no margin. `CmdRunInteraction` logs a warning `Server refused <name> … : <reason>` (`InteractionPipeline.ExplainNotViable`: `NoSuchInteraction`, `CannotInteract`, `WrongIntent`, `SourceRefused`); for Drop it adds the LOS miss and the server/client eye delta. Read those numbers before tuning a margin (tech-debt P1.9, plan Decision 13). The client's eye in that RPC is for the log only.
 
 - **Armed CPR labels drift at scaled resolutions:** raw mouse pixels are not UI Toolkit units. Armed/radial surfaces fill the overlay layer and convert via `InputInterface.ScreenToPanel` then into surface-local coordinates. Position chips after layout from their measured size, and keep them inside panel bounds. The terminal font lacks em-dash/arrow glyphs; armed captions use an ASCII separator.

@@ -15,6 +15,8 @@ namespace SS3D.Systems.Substances
 
         public string GetGenericName() => "TransferSubstance";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Targeted;
 
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)

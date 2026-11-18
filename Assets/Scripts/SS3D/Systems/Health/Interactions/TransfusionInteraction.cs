@@ -18,6 +18,8 @@ namespace SS3D.Systems.Health.Interactions
 
         public string GetGenericName() => "Start transfusion";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Targeted;
 
         public Sprite GetIcon(InteractionEvent interactionEvent)

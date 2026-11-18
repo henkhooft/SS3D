@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using SS3D.Interactions;
 using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -53,29 +54,21 @@ namespace SS3D.Tests.EditMode
             Assert.AreEqual(0f, InteractionAnimation.ContactSeconds(InteractionAnimation.None));
         }
 
-        [TestCase("Pickup", 0.1f, false, InteractionAnimation.FloorPickup)]
-        [TestCase("Pickup", 0.85f, false, InteractionAnimation.Reach)]
-        [TestCase("Drop", 0.02f, false, InteractionAnimation.FloorPutDown)]
-        [TestCase("Drop", 0.9f, false, InteractionAnimation.Reach)]
-        [TestCase("OpenLocker", 1f, false, InteractionAnimation.LockerOpen)]
-        [TestCase("OpenLocker", 1f, true, InteractionAnimation.LockerClose)]
-        [TestCase("LockLocker", 1f, false, InteractionAnimation.LockerTap)]
-        [TestCase("UnlockLocker", 1f, false, InteractionAnimation.LockerTap)]
-        [TestCase("OpenAirlock", 1f, false, InteractionAnimation.DoorReach)]
-        [TestCase(InteractionAnimation.LightSwitchName, 1f, false, InteractionAnimation.LightSwitch)]
-        [TestCase("Toggle", 1f, false, InteractionAnimation.None)]
-        [TestCase("AttachCharge", 1f, false, InteractionAnimation.DoorReach)]
-        [TestCase("DefuseC4", 0f, false, InteractionAnimation.Kneel)]
-        [TestCase("NukeLoadDisk", 1f, false, InteractionAnimation.DoorReach)]
-        [TestCase("NukeArm", 1f, false, InteractionAnimation.DoorReach)]
-        [TestCase("NukeOpenPanel", 1f, false, InteractionAnimation.WallWork)]
-        [TestCase("NukeCutWires", 1f, false, InteractionAnimation.WallWork)]
-        [TestCase("Perform CPR", 0f, false, InteractionAnimation.Kneel)]
-        [TestCase("ArmC4", 1f, false, InteractionAnimation.None)]
-        [TestCase("Bandage", 1f, false, InteractionAnimation.None)]
-        public void ChooseClip_MatchesThePlaytestTier(string genericName, float height, bool closesLocker, int expected)
+        [TestCase(InteractionAnimationHint.Pickup, 0.1f, false, InteractionAnimation.FloorPickup)]
+        [TestCase(InteractionAnimationHint.Pickup, 0.85f, false, InteractionAnimation.Reach)]
+        [TestCase(InteractionAnimationHint.PutDown, 0.02f, false, InteractionAnimation.FloorPutDown)]
+        [TestCase(InteractionAnimationHint.PutDown, 0.9f, false, InteractionAnimation.Reach)]
+        [TestCase(InteractionAnimationHint.LockerDoor, 1f, false, InteractionAnimation.LockerOpen)]
+        [TestCase(InteractionAnimationHint.LockerDoor, 1f, true, InteractionAnimation.LockerClose)]
+        [TestCase(InteractionAnimationHint.LockerTap, 1f, false, InteractionAnimation.LockerTap)]
+        [TestCase(InteractionAnimationHint.LightSwitch, 1f, false, InteractionAnimation.LightSwitch)]
+        [TestCase(InteractionAnimationHint.DoorReach, 1f, false, InteractionAnimation.DoorReach)]
+        [TestCase(InteractionAnimationHint.Kneel, 0f, false, InteractionAnimation.Kneel)]
+        [TestCase(InteractionAnimationHint.WallWork, 1f, false, InteractionAnimation.WallWork)]
+        [TestCase(InteractionAnimationHint.None, 1f, false, InteractionAnimation.None)]
+        public void ChooseClip_MatchesThePlaytestTier(InteractionAnimationHint hint, float height, bool closesLocker, int expected)
         {
-            Assert.AreEqual(expected, InteractionAnimation.ChooseClip(genericName, height, closesLocker));
+            Assert.AreEqual(expected, InteractionAnimation.ChooseClip(hint, height, closesLocker));
         }
 
         [Test]

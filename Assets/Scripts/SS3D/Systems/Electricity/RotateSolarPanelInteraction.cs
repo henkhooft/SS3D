@@ -18,6 +18,8 @@ namespace SS3D.Systems.Electricity
 
         public string GetGenericName() => "RotateSolarPanel";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : InteractionIconLookup.Power;

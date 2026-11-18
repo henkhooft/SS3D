@@ -69,6 +69,8 @@ namespace SS3D.Interactions
 
         public abstract string GetGenericName();
 
+        public abstract InteractionAnimationHint AnimationHint { get; }
+
         public virtual Sprite GetIcon(InteractionEvent interactionEvent) => Icon;
 
         public abstract bool CanInteract(InteractionEvent interactionEvent);

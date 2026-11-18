@@ -241,6 +241,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => _charge._kind == ExplosiveKind.Minibomb ? 40 : 15;
             public string GetName(InteractionEvent e) => $"Arm {_charge.Label} ({_charge.FuseDuration:0} seconds)";
             public string GetGenericName() => "ArmC4";
+
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public bool CanInteract(InteractionEvent e) => _charge != null && !_charge._armed && !_charge._spent
                 && (_charge._kind != ExplosiveKind.X4 || _charge._attached)
@@ -277,6 +279,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public string GetName(InteractionEvent e) => $"Attach and arm {_charge.Label}";
             public string GetGenericName() => "AttachCharge";
+
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.DoorReach;
             public Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public bool CanInteract(InteractionEvent e) => _charge != null && !_charge._armed && !_charge._spent
                 && _charge.HeldHand(e) != null && AttachmentTarget(e) != null && InteractionExtensions.RangeCheck(e);
@@ -308,6 +312,8 @@ namespace SS3D.Systems.StructuralDamage
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => $"Defuse {_charge.Label} (wirecutters)";
             public override string GetGenericName() => "DefuseC4";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.Kneel;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public override bool CanInteract(InteractionEvent e) => _charge != null && _charge._kind != ExplosiveKind.Minibomb
                 && _charge._armed && !_charge._spent && _charge.Remaining > 0f && _charge.HasCutters(e)

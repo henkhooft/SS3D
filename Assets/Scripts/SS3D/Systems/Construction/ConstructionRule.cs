@@ -1,3 +1,4 @@
+using SS3D.Interactions;
 using SS3D.Systems.Tile;
 
 namespace SS3D.Systems.Construction
@@ -86,6 +87,16 @@ namespace SS3D.Systems.Construction
 
         /// <summary>The layer the target sits on and the result goes to.</summary>
         public TileLayer Layer { get; init; }
+
+        /// <summary>
+        /// Floor work (plenum, floor turf, bare plating, wreckage) kneels; wall work holds the wall-work loop. The same
+        /// split the generic-name table made for every rule (tech-debt P4.3).
+        /// </summary>
+        public InteractionAnimationHint AnimationHint =>
+            Layer == TileLayer.Plenum || Target is ConstructionTargetKind.FloorTurf
+                or ConstructionTargetKind.BarePlating or ConstructionTargetKind.Wreckage
+                ? InteractionAnimationHint.Kneel
+                : InteractionAnimationHint.WallWork;
 
         /// <summary>Units of a material spent at completion. Tools cost 0.</summary>
         public int Cost { get; init; }

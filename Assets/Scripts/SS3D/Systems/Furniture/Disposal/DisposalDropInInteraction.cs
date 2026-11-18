@@ -30,6 +30,8 @@ namespace SS3D.Systems.Furniture.Disposal
 
         public string GetGenericName() => "Dispose";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) =>
             Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Dispose);
 

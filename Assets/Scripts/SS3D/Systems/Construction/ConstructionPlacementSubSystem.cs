@@ -164,7 +164,7 @@ namespace SS3D.Systems.Construction
             }
 
             // Held loops (kneel, wall work) are the server's replicated body state; anything else plays here at once.
-            int clip = InteractionAnimation.ChooseClip(_ghostRule.GenericName);
+            int clip = InteractionAnimation.ChooseClip(_ghostRule.AnimationHint);
             InteractionController owner = InteractionController.Local;
             if (!InteractionAnimation.IsHold(clip) && owner != null)
             {
@@ -523,7 +523,7 @@ namespace SS3D.Systems.Construction
             action.Controller = hands.GetComponentInParent<InteractionController>();
             if (action.Controller != null)
             {
-                action.Controller.ServerBeginStepAnimation(rule.GenericName, grid);
+                action.Controller.ServerBeginStepAnimation(rule.AnimationHint, grid);
             }
             action.CueId = ServerBeginWorkCue(grid + Vector3.up * 0.1f, hands.transform.position, rule.Input, rule.Seconds);
             TargetCellActionStarted(conn, action.Id);

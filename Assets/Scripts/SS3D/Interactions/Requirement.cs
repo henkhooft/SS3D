@@ -31,6 +31,9 @@ namespace SS3D.Interactions
 
         public virtual string GetGenericName() => Interaction.GetGenericName();
 
+        /// <summary>A requirement plays what the interaction it guards plays.</summary>
+        public InteractionAnimationHint AnimationHint => Interaction.AnimationHint;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) => Interaction.GetIcon(interactionEvent);
 
         public bool CanInteract(InteractionEvent interactionEvent) => SatisfiesRequirement(interactionEvent) && Interaction.CanInteract(interactionEvent);

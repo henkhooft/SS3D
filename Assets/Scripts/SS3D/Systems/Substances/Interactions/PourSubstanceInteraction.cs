@@ -16,6 +16,8 @@ namespace SS3D.Systems.Substances
 
         public string GetGenericName() => "PourSubstance";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public int Priority => 35;
 
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Combine;

@@ -39,6 +39,8 @@ namespace SS3D.Systems.Construction
 
         public override string GetGenericName() => _rule.GenericName;
 
+        public override InteractionAnimationHint AnimationHint => _rule.AnimationHint;
+
         public override Sprite GetIcon(InteractionEvent interactionEvent) => InteractionIconLookup.Take;
 
         public override bool CanInteract(InteractionEvent interactionEvent) =>

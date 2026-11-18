@@ -28,6 +28,12 @@ namespace SS3D.Interactions.Interfaces
         string GetGenericName();
 
         /// <summary>
+        /// The body animation this interaction plays (tech-debt P4.3). Every interaction declares one, <see cref="InteractionAnimationHint.None"/>
+        /// included, so renaming <see cref="GetGenericName"/> can never change when its effect lands.
+        /// </summary>
+        InteractionAnimationHint AnimationHint { get; }
+
+        /// <summary>
         /// Gets the interaction icon
         /// </summary>
         Sprite GetIcon(InteractionEvent interactionEvent);

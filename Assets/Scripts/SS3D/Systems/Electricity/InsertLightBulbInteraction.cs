@@ -23,6 +23,8 @@ namespace SS3D.Systems.Electricity
 
         public string GetGenericName() => "InsertLightBulb";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) => InteractionIconLookup.Power;
 
         public bool CanInteract(InteractionEvent interactionEvent)

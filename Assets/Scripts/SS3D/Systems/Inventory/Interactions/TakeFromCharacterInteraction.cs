@@ -46,6 +46,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public override string GetGenericName() => "TakeFromCharacter";
 
+        public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public override bool CanInteract(InteractionEvent interactionEvent)
         {
             if (interactionEvent.Source is not Hand hand || !hand.IsEmpty())

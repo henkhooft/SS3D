@@ -34,6 +34,8 @@ namespace SS3D.Systems.Health.Interactions
 
         public override string GetGenericName() => "Help up";
 
+        public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public override bool CanInteract(InteractionEvent interactionEvent)
         {
             if (interactionEvent.Source is not Hand hand || !hand.IsEmpty())

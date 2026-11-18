@@ -445,6 +445,8 @@ namespace SS3D.Systems.Furniture
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => "Load disk";
             public override string GetGenericName() => "NukeLoadDisk";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.DoorReach;
             public override Sprite GetIcon(InteractionEvent e) => NukeIcon;
             public override bool CanInteract(InteractionEvent e) => _nuke != null && e.Source is NukeCard
                 && _nuke.State.CanLoadDisk && InteractionExtensions.RangeCheck(e);
@@ -465,6 +467,8 @@ namespace SS3D.Systems.Furniture
             public int Priority => 20;
             public string GetName(InteractionEvent e) => "Eject disk";
             public string GetGenericName() => "NukeEjectDisk";
+
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
             public Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Take;
             public bool CanInteract(InteractionEvent e) => _nuke != null && e.Source is Hand hand && hand.IsEmpty()
                 && _nuke.State.CanEjectDisk && InteractionExtensions.RangeCheck(e);
@@ -486,6 +490,8 @@ namespace SS3D.Systems.Furniture
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => $"Arm nuke ({NukeDeviceState.FormatTime(CountdownSeconds)})";
             public override string GetGenericName() => "NukeArm";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.DoorReach;
             public override Sprite GetIcon(InteractionEvent e) => NukeIcon;
             public override bool CanInteract(InteractionEvent e) => _nuke != null && e.Source is Hand
                 && _nuke.State.CanArm && InteractionExtensions.RangeCheck(e);
@@ -506,6 +512,8 @@ namespace SS3D.Systems.Furniture
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => "Unscrew wiring panel";
             public override string GetGenericName() => "NukeOpenPanel";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.WallWork;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Open;
             public override bool CanInteract(InteractionEvent e) => _nuke != null && IsTool(e, Items.ScrewdriverBlue)
                 && _nuke.State.CanOpenPanel(_nuke.Now) && InteractionExtensions.RangeCheck(e);
@@ -536,6 +544,8 @@ namespace SS3D.Systems.Furniture
             public int Priority => 40;
             public override string GetName(InteractionEvent e) => "Cut the wires (defuse)";
             public override string GetGenericName() => "NukeCutWires";
+
+            public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.WallWork;
             public override Sprite GetIcon(InteractionEvent e) => InteractionIconLookup.Power;
             public override bool CanInteract(InteractionEvent e) => _nuke != null && IsTool(e, Items.Wirecutters)
                 && _nuke.State.CanCutWires(_nuke.Now) && InteractionExtensions.RangeCheck(e);

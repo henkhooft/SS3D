@@ -19,6 +19,8 @@ namespace SS3D.Systems.Health.Interactions
 
         public string GetGenericName() => "Apply oxygen";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public InteractionTier GetTier(InteractionEvent interactionEvent) => InteractionTier.Targeted;
 
         public Sprite GetIcon(InteractionEvent interactionEvent)

@@ -1,4 +1,5 @@
 ﻿using SS3D.Interactions;
+using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using UnityEngine;
@@ -19,6 +20,8 @@ namespace SS3D.Systems.Audio
         }
 
         public string GetGenericName() => "ChangeMusic";
+
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
 
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {

@@ -23,6 +23,8 @@ namespace SS3D.Systems.Inventory.Items.Generic
 
         public string GetGenericName() => "Honk";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Honk);

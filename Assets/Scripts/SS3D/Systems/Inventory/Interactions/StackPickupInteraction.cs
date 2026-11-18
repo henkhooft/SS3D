@@ -22,6 +22,8 @@ namespace SS3D.Systems.Inventory.Interactions
         // Same generic name as Pickup, so it plays the same reach or floor pickup.
         public string GetGenericName() => "Pickup";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.Pickup;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) =>
             Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Take);
 

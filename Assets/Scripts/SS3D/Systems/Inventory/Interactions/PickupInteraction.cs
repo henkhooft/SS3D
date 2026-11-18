@@ -27,6 +27,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public string GetGenericName() => "Pickup";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.Pickup;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Take);

@@ -33,6 +33,8 @@ namespace SS3D.Systems.Furniture
 
         public string GetGenericName() => "OpenAirlock";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.DoorReach;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Open);

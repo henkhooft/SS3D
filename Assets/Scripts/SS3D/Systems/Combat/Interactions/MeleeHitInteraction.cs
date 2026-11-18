@@ -51,6 +51,8 @@ namespace SS3D.Systems.Combat.Interactions
 
         public override string GetGenericName() => "Hit";
 
+        public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         /// <summary>
         /// Radial/armed targeting still requires a living zone under the cursor.
         /// Primary Harm click bypasses discovery and always swings (see InteractionController).

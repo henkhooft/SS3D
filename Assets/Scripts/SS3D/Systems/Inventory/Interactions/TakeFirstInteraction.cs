@@ -32,6 +32,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public string GetGenericName() => "TakeFirst:" + _attachedContainer.ContainerName;
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Take);

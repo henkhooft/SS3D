@@ -33,6 +33,8 @@ namespace SS3D.Systems.Furniture.Disposal
 
         public string GetGenericName() => "TagDisposal";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent) => null;
 
         /// <summary>

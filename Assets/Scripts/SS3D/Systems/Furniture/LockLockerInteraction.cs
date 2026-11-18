@@ -35,6 +35,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public string GetGenericName() => "LockLocker";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.LockerTap;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Lock);

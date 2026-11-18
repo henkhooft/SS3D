@@ -32,7 +32,7 @@ Feedback: a UI Toolkit progress ring on every delayed interaction (`DelayedProgr
 
 ## Extension points
 
-- **New step:** add a `ConstructionRule` row and, if it needs a new target shape, a `ConstructionTargetKind` handled in `ConstructionObjectRules` / `ConstructionCellRules`. Map its generic name to a clip in `InteractionAnimation.ChooseClip` (floor work `Kneel`, wall work `WallWork`); `ConstructionRecipesTests.EveryRule_HasABodyAnimation` enforces it.
+- **New step:** add a `ConstructionRule` row and, if it needs a new target shape, a `ConstructionTargetKind` handled in `ConstructionObjectRules` / `ConstructionCellRules`. Its body animation follows from its layer and target (`ConstructionRule.AnimationHint`: floor work `Kneel`, wall work `WallWork`); `ConstructionRecipesTests.EveryRule_HasABodyAnimation` checks it.
 - **New floor tile:** add a `Kinds` row (and run the recipes menu to build the item) or a `NotPryable` row with a reason. **New wall tile:** a deconstruction rule, `TileObjectSo.reinforced`, or a `NotDeconstructible` row. `ConstructionCoverageTests` fails until one is done.
 - **New tool or material:** a `ConstructionInput` value plus the marker's kind; markers are added by `ConstructionItemRecipe`, never by hand on the prefab.
 - **Stage prefabs:** built by `GirderStageRecipe` from the girder, never edited as YAML.

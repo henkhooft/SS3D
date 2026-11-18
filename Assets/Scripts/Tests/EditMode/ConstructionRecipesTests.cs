@@ -94,7 +94,7 @@ namespace EditorTests
         {
             foreach (ConstructionRule rule in ConstructionRecipes.Rules)
             {
-                int clip = InteractionAnimation.ChooseClip(rule.GenericName);
+                int clip = InteractionAnimation.ChooseClip(rule.AnimationHint);
                 int expected = rule.Layer == TileLayer.Plenum || rule.Target is ConstructionTargetKind.FloorTurf
                     or ConstructionTargetKind.BarePlating or ConstructionTargetKind.Wreckage
                     ? InteractionAnimation.Kneel

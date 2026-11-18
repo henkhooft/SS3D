@@ -58,6 +58,8 @@ namespace SS3D.Systems.Inventory.Interactions
 
         public string GetGenericName() => "Drop";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.PutDown;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Icon ? Icon : Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Discard);

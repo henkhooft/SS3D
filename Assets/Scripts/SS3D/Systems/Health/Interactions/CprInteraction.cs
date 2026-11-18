@@ -33,6 +33,8 @@ namespace SS3D.Systems.Health.Interactions
 
         public override string GetGenericName() => "Perform CPR";
 
+        public override InteractionAnimationHint AnimationHint => InteractionAnimationHint.Kneel;
+
         public bool CanTarget(InteractionEvent originEvent, InteractionEvent targetEvent)
         {
             InteractionEvent combined = targetEvent.WithSource(originEvent.Source);

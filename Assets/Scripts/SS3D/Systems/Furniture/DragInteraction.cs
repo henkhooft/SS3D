@@ -34,6 +34,8 @@ namespace SS3D.Systems.Furniture
 
         public string GetGenericName() => "Drag";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Discard);

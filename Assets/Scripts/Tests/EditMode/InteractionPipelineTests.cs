@@ -310,6 +310,8 @@ namespace EditorTests
 
             public string GetGenericName() => GenericName;
 
+            public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
             public string GetName(InteractionEvent interactionEvent) => DisplayName ?? GenericName;
 
             public Sprite GetIcon(InteractionEvent interactionEvent) => null;

@@ -15,6 +15,8 @@ namespace SS3D.UI.MachineInterface
 
         public string GetGenericName() => "OpenMachineInterface";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public string GetName(InteractionEvent interactionEvent) => "Open interface";
 
         public Sprite GetIcon(InteractionEvent interactionEvent) => InteractionIconLookup.MachineInterface;

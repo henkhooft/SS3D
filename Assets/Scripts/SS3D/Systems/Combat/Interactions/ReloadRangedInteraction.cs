@@ -27,6 +27,8 @@ namespace SS3D.Systems.Combat.Interactions
 
         public string GetGenericName() => "Reload";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.None;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             return Assets.Get<Sprite>(AssetDatabases.InteractionIcons, InteractionIcons.Take);

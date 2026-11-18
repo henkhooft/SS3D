@@ -35,6 +35,8 @@ namespace SS3D.Systems.Furniture
 
         public string GetGenericName() => "OpenLocker";
 
+        public InteractionAnimationHint AnimationHint => InteractionAnimationHint.LockerDoor;
+
         public Sprite GetIcon(InteractionEvent interactionEvent)
         {
             if (Icon)

@@ -41,13 +41,7 @@ namespace SS3D.Systems.Interactions
         {
             targetPoint = ResolveTargetPoint(interaction, interactionEvent);
             bool closesLocker = interaction is LockerDoorInteraction locker && !locker.OpensDoor;
-            string name = interaction.GetGenericName();
-            if (name == "Toggle" && interactionEvent.Target is LightSwitchController)
-            {
-                name = InteractionAnimation.LightSwitchName;
-            }
-
-            return InteractionAnimation.ChooseClip(name, targetPoint.y - transform.position.y, closesLocker);
+            return InteractionAnimation.ChooseClip(interaction.AnimationHint, targetPoint.y - transform.position.y, closesLocker);
         }
 
         /// <summary>
@@ -199,7 +193,7 @@ namespace SS3D.Systems.Interactions
             // Only a delayed interaction replaces the tracked one, so only it changes the hold.
             if (interaction is IDelayedInteraction)
             {
-                int clip = InteractionAnimation.ChooseClip(interaction.GetGenericName());
+                int clip = InteractionAnimation.ChooseClip(interaction.AnimationHint);
                 SetServerHold(InteractionAnimation.IsHold(clip) ? clip : InteractionAnimation.None);
             }
         }
@@ -210,9 +204,9 @@ namespace SS3D.Systems.Interactions
         /// plays a oneshot itself through <see cref="BeginOwnerHandAction"/>.
         /// </summary>
         [Server]
-        public void ServerBeginStepAnimation(string genericName, Vector3 targetPoint)
+        public void ServerBeginStepAnimation(InteractionAnimationHint hint, Vector3 targetPoint)
         {
-            int clip = InteractionAnimation.ChooseClip(genericName);
+            int clip = InteractionAnimation.ChooseClip(hint);
             if (InteractionAnimation.IsHold(clip))
             {
                 SetServerHold(clip);
@@ -268,7 +262,7 @@ namespace SS3D.Systems.Interactions
         /// <summary>Where the hand goes: the drop point for a drop, else the target object, else the clicked point.</summary>
         private static Vector3 ResolveTargetPoint(IInteraction interaction, InteractionEvent interactionEvent)
         {
-            if (interaction.GetGenericName() != "Drop" && interactionEvent.Target is IGameObjectProvider provider
+            if (interaction.AnimationHint != InteractionAnimationHint.PutDown && interactionEvent.Target is IGameObjectProvider provider
                 && provider.GameObject != null)
             {
                 return provider.GameObject.transform.position;

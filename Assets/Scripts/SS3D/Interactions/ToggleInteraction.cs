@@ -57,6 +57,9 @@ namespace SS3D.Interactions
 
         public string GetGenericName() => "Toggle";
 
+        /// <summary>None for most toggles; a wall light switch sets <see cref="InteractionAnimationHint.LightSwitch"/>.</summary>
+        public InteractionAnimationHint AnimationHint { get; set; } = InteractionAnimationHint.None;
+
         /// <summary>
         /// World device toggles (generators, switches) sit above inventory fallbacks but below machine UI panels.
         /// </summary>
