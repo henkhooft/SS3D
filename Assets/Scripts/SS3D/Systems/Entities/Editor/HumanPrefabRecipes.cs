@@ -30,6 +30,7 @@ namespace SS3D.Systems.Entities.Editor
             bool handsRewired = HandsPrefabSetup.Wire();
             bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
             bool combatNetworkWired = CombatInteractionNetworkPrefabSetup.Wire();
+            bool bodyDragAdded = BodyDraggablePrefabSetup.Wire();
             bool substanceContainerStripped = SS3D.Systems.Substances.Editor.HumanSubstanceContainerStrip.Strip();
 
             // Recipes that remove a component directly on a nested body-part prefab (e.g. the strip
@@ -55,6 +56,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"Hands wiring: {(handsRewired ? "rewired" : "already correct")}.\n" +
                 $"LocalSpeechEmitter: {(speechEmitterAdded ? "added" : "already present")}.\n" +
                 $"CombatInteractionNetwork: {(combatNetworkWired ? "added/wired" : "already present")}.\n" +
+                $"BodyDraggable: {(bodyDragAdded ? "added" : "already present")}.\n" +
                 $"SubstanceContainer strip: {(substanceContainerStripped ? "stripped" : "already clean")}.\n" +
                 "Resynced Human.prefab against its body-part prefabs.\n" +
                 $"Hand grip sockets: {(gripsCalibrated ? "calibrated" : "FAILED, see Console")}.",
@@ -70,6 +72,7 @@ namespace SS3D.Systems.Entities.Editor
             bool handsRewired = HandsPrefabSetup.Wire();
             bool speechEmitterAdded = HumanPrefabHygiene.EnsureLocalSpeechEmitter();
             bool combatNetworkWired = CombatInteractionNetworkPrefabSetup.Wire();
+            bool bodyDragAdded = BodyDraggablePrefabSetup.Wire();
             bool substanceContainerStripped = SS3D.Systems.Substances.Editor.HumanSubstanceContainerStrip.Strip();
             ExoSuitPrefabSetup.Wire();
             SuitStoragePrefabSetup.Wire();
@@ -87,6 +90,7 @@ namespace SS3D.Systems.Entities.Editor
                 $"hands wiring {(handsRewired ? "rewired" : "already correct")}; " +
                 $"LocalSpeechEmitter {(speechEmitterAdded ? "added" : "already present")}; " +
                 $"CombatInteractionNetwork {(combatNetworkWired ? "added/wired" : "already present")}; " +
+                $"BodyDraggable {(bodyDragAdded ? "added" : "already present")}; " +
                 $"SubstanceContainer strip {(substanceContainerStripped ? "stripped" : "already clean")}; " +
                 "resynced Human.prefab against its body-part prefabs; " +
                 $"grip sockets {(gripsCalibrated ? "calibrated" : "FAILED")}.");

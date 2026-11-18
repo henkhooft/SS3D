@@ -34,7 +34,7 @@ todos:
     status: completed
   - id: human-recipe
     content: "rig: tier-B PrefabUtility recipe adds the body-drag component to Human.prefab, registered on the domain Run All aggregator; never hand-edit the prefab"
-    status: pending
+    status: completed
   - id: rig-proof
     content: "rig: PlayMode scenarios (extend EnvironmentScenarios): knockdown over space → Floating, wind push without knockdown, push-off back to plenum, throw while Floating gives Δv, wall/window/grille/airlock colliders on the reach layer; MPPM: remote drag through an airlock, remote float, owner disconnect mid-drag; run_smoketest.sh separate-client line for the remote drag"
     status: pending
@@ -163,6 +163,7 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 70 | Furniture runs the body end rules minus "target stood": dragger down, snag (2.5 m for 1 s), despawn, either over open space | SS3D | Decision 13 |
 | 71 | The doorway check samples a dragged thing at its footprint (a ragdoll's hips at its root's height) plus the usual 0.5 m sample height | SS3D | `AirLockOpener.OccupantSampleHeight` |
 | 72 | `drag` runs `DragInteraction.CanInteract` + `Start` with range and the start cone off (`ConeCheck`), keeping eligibility, the 3 m start distance and the empty selected hand; `drag <dragger>` with no target lets go | SS3D | Decision 27 |
+| 73 | `BodyDraggablePrefabSetup.Wire` was applied on its own through `execute_code`, not through Run All (which re-serialises other prefabs and opens a modal); it is registered on both Run All entry points | SS3D | entities map; tomnas recipe notes |
 
 ## Phases
 

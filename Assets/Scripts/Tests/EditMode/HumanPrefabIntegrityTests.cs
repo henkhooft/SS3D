@@ -95,5 +95,18 @@ namespace EditorTests
                 prefab.TryGetComponent(out SS3D.Systems.Combat.CombatInteractionNetwork _),
                 "Human.prefab must have CombatInteractionNetwork (Harm primary RPCs).");
         }
+
+        // M13: bodies are dragged through BodyDraggable on the root, added by BodyDraggablePrefabSetup (never a hand edit)
+        [Test]
+        public void HumanPrefab_CanBeDragged_AndItsNetworkObjectListsTheDrag()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HumanPrefabPath);
+            Assert.IsNotNull(prefab, $"Could not load prefab at {HumanPrefabPath}");
+
+            Assert.IsTrue(prefab.TryGetComponent(out SS3D.Systems.Entities.Humanoid.BodyDraggable drag),
+                "Human.prefab must have BodyDraggable on its root (Run All Human Prefab Recipes).");
+            FishNet.Object.NetworkObject root = prefab.GetComponent<FishNet.Object.NetworkObject>();
+            Assert.IsTrue(root.NetworkBehaviours.Contains(drag), "The root NetworkObject must list BodyDraggable.");
+        }
     }
 }
