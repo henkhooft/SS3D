@@ -48,7 +48,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | C4 | Captain: station announcement from a console | expected | missing | SS3D-Art `consolecmd`, `requestconsole` | `computers.yml` `ComputerComms` | Only server-side station cues exist |
 | C5 | Security: fire and reload | must | done | in game | `P/Entities/Objects/Weapons/Guns/Pistols/pistols.yml` | |
 | C6 | Security: spare magazine in kit | expected | missing | none | `P/Roles/Jobs/Security/security_officer.yml` | Same blocker as N2 |
-| C7 | Security: handcuff someone | must (SS14) | missing | SS3D-Art `handcuffs`, `cablerestraints` | `P/Entities/Objects/Misc/handcuffs.yml` | ⚑ MVP1 defers handcuffs to MVP2, but `antagonist-content.md` §6 gives crew the win when every operative is "dead or restrained" |
+| C7 | Security: handcuff someone | expected, after Playtest 1 | missing | SS3D-Art `handcuffs`, `cablerestraints` | `P/Entities/Objects/Misc/handcuffs.yml` | ⚑ MVP1 defers handcuffs to MVP2, but `antagonist-content.md` §6 gives crew the win when every operative is "dead or restrained". Owner decided 2026-11-18: after Playtest 1, with U9 (Decision 3) |
 | C8 | Security: stun baton knockdown | expected | partial | in game | `P/Entities/Objects/Weapons/security.yml` `Stunbaton` | Awaits the owner's hand test (M1c) |
 | C9 | Security: flash | expected | missing | SS3D-Art `flash` | `security.yml` `Flash` | |
 | C10 | Security: armory with lethal guns | expected | missing | in game (M4), SS3D-Art shotguns | `P/Catalog/Fills/Lockers/security.yml` | M1c open: the M4 in an armory |
@@ -76,7 +76,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U6 | Combat mode, melee, shoot | must | done | — | `P/Body/species_base.yml` `CombatMode` | Help/Harm intent (F) |
 | U7 | **Pull and drag a body or object** | must | missing | — | `species_base.yml` `Puller` | Only the unbolted girder and the Syndicate bomb are draggable. Blocks carrying the wounded to medbay and carrying off the disk holder. Owner decided 2026-11-18: `must` (Decision 1) |
 | U8 | Strip: take from another body | must | done | — | `species_base.yml` `Stripping` | Search + Take |
-| U9 | Strip: put an item on another body | expected | missing | — | `Controls.xml` (strip menu) | Dress, put on a mask, cuff (with C7) |
+| U9 | Strip: put an item on another body | expected, after Playtest 1 | missing | — | `Controls.xml` (strip menu) | Dress, put on a mask, cuff. Lands with C7 (Decision 3) |
 | U10 | Open doors with ID access | must | done | in game | `G/Engineering/Airlocks.xml` | |
 | U11 | Pry an unpowered airlock with a crowbar | expected | missing | — | `P/Entities/Objects/Tools/crowbars.yml` `Prying` | MVP1 M12 open; needs a design rule. SS14's rule: crowbar pries an unpowered door, bolted doors resist |
 | U12 | Open, close and lock lockers | expected | done | in game | `Controls.xml` | |
@@ -110,7 +110,7 @@ Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settl
 
 1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Still open: does it land before Playtest 1? That would pull it out of MVP1's feel-pass deferral.
 2. ~~**Pinpointer (N3, C2).**~~ **Decided 2026-11-18: `must`; a HUD compass shown while the pinpointer is in hand.** That's the easiest form for now; an arrow on the held model can come later. `antagonist-content.md` §6 already lists the pinpointer in the first pass, so the code is behind the design. The Captain's pinpointer (C2) is the same item.
-3. **Handcuffs (C7).** SS14 `must`; MVP1 defers it to MVP2; the §6 crew-win rule says "dead or restrained". Recommend `expected`, after Playtest 1, alongside U9 (put an item on another body).
+3. ~~**Handcuffs (C7).**~~ **Decided 2026-11-18: `expected`, after Playtest 1, together with U9 (put an item on another body).** Until then, crew win only by killing the operatives, even though the §6 rule says "dead or restrained".
 4. **Uplink (N12–N14).** SS14 `must`; the design calls it a later pass and MVP1 says no uplink. Recommend `must` for the gate after Playtest 1. It's the biggest operative-identity gap, and most of the stock already has SS3D-Art models. It needs a decision on where the uplink lives before the PDA exists (SS14 uses a radio).
 5. **Nuke code and anchoring (N10).** SS14 `must`; SS3D's design deliberately treats the device as a plain timed charge. Recommend keeping SS3D's rule and dropping the row.
 6. **Travel phase (N15, N13, N16).** SS14 `must`; needs shuttles (MVP2). Recommend `later` until shuttles exist. War declaration and the jetpack wait with it.
@@ -132,6 +132,8 @@ Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settl
 10. **N17** hardsuit helmet toggle.
 11. **N6 + N7** operative roles and the Corpsman kit.
 12. **C4** Captain's announcement console.
+
+After Playtest 1, not before: C7 + U9 (handcuffs and putting items on another body).
 
 Already in flight elsewhere, don't duplicate: N2/C6 and C10 (M1c), U11 (M12), C8 (hand test).
 
