@@ -232,6 +232,18 @@ namespace SS3D.Systems.Inventory.Containers
 
 		private readonly object _modificationLock = new();
 
+        /// <summary>Server: while true, the list callback leaves the content event to the add / remove that changed the list.</summary>
+        private bool _deferServerContentEvent;
+
+        /// <summary>Server: the callback skipped a content event that the add / remove must raise.</summary>
+        private bool _serverContentEventDeferred;
+
+        private void BeginServerListChange()
+        {
+            _deferServerContentEvent = true;
+            _serverContentEventDeferred = false;
+        }
+
 		public ContainerType ContainerType => _type;
 
 		protected override void OnAwake()
@@ -368,6 +380,18 @@ namespace SS3D.Systems.Inventory.Containers
 			if (changeType == ContainerChangeType.None) {
 				return;
 			}
+
+            // The server's own add and remove raise this after the item's holder is set (as the old callback did).
+            if (asServer && _deferServerContentEvent && changeType != ContainerChangeType.Move)
+            {
+                _serverContentEventDeferred = true;
+                return;
+            }
+
+            if (!asServer)
+            {
+                ItemPlacementApplier.ListCaughtUp(this, changeType == ContainerChangeType.Add ? newItem.Item : oldItem.Item);
+            }
 
             InvokeOnContentChanged(oldItem.Item, newItem.Item, changeType);
         }
@@ -518,8 +542,23 @@ namespace SS3D.Systems.Inventory.Containers
                 return false;
             }
 
-            _storedItems.Add(newItem);
+            BeginServerListChange();
+            try
+            {
+                _storedItems.Add(newItem);
+            }
+            finally
+            {
+                _deferServerContentEvent = false;
+            }
+
             newItem.Item.SetContainer(this);
+            if (_serverContentEventDeferred)
+            {
+                _serverContentEventDeferred = false;
+                InvokeOnContentChanged(null, newItem.Item, ContainerChangeType.Add);
+            }
+
             return true;
 		}
 
@@ -579,13 +618,28 @@ namespace SS3D.Systems.Inventory.Containers
 
             if (!ignoreConditions && !CanRemoveItem(storedItem.Item)) return false;
 
-            lock (_modificationLock)
+            BeginServerListChange();
+            try
             {
-                _storedItems.RemoveAt(index);
+                lock (_modificationLock)
+                {
+                    _storedItems.RemoveAt(index);
+                }
+            }
+            finally
+            {
+                _deferServerContentEvent = false;
             }
 
-            // After the list changed, as the old SyncList callback ran: detach listeners see the item gone.
+            // After the list changed, as the old SyncList callback ran: detach listeners see the item gone. Then the
+            // content event, which the old callback raised after placement too.
             storedItem.Item.SetContainer(null);
+            if (_serverContentEventDeferred)
+            {
+                _serverContentEventDeferred = false;
+                InvokeOnContentChanged(storedItem.Item, null, ContainerChangeType.Remove);
+            }
+
             return true;
            
         }
@@ -689,7 +743,8 @@ namespace SS3D.Systems.Inventory.Containers
 		{
 			foreach (StoredItem storedItem in _storedItems)
 			{
-				if (storedItem.Item.Equals(item))
+				// A client holds null for stored items it doesn't observe.
+				if (storedItem.Item != null && storedItem.Item == item)
 				{
 					return true;
 				}

@@ -165,7 +165,19 @@ namespace SS3D.Systems.Inventory.Items
                     item.transform.SetParent(null, true);
                 }
 
-                from.ProcessItemDetached(item);
+                if (ReferenceEquals(item.AttachEventPendingTo, from))
+                {
+                    // Its attach was never raised here, so there is nothing to detach from.
+                    item.AttachEventPendingTo = null;
+                }
+                else if (WaitsForList(item) && from.ContainsItem(item))
+                {
+                    item.DetachEventPendingFrom = from;
+                }
+                else
+                {
+                    from.ProcessItemDetached(item);
+                }
             }
 
             item.ApplyRestScale();
@@ -201,9 +213,46 @@ namespace SS3D.Systems.Inventory.Items
                     itemTransform.localPosition = target.AttachmentOffset;
                 }
 
-                target.ProcessItemAttached(item);
+                if (WaitsForList(item) && !target.ContainsItem(item))
+                {
+                    item.AttachEventPendingTo = target;
+                }
+                else
+                {
+                    target.ProcessItemAttached(item);
+                }
             }
         }
+
+        /// <summary>
+        /// Client, from a container's list callback: raises the attach / detach event the applier held back. FishNet
+        /// writes SyncVars before SyncObjects, so a client usually gets the item's holder before the container's list;
+        /// listeners such as <c>HumanoidBodyStateBridge</c> read <c>Hand.ItemInHand</c> from that list, so the event
+        /// waits until the list agrees (the order the old list callback gave them).
+        /// </summary>
+        public static void ListCaughtUp(AttachedContainer container, Item item)
+        {
+            if (item == null || container == null)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(item.DetachEventPendingFrom, container) && !container.ContainsItem(item))
+            {
+                item.DetachEventPendingFrom = null;
+                container.ProcessItemDetached(item);
+            }
+
+            if (ReferenceEquals(item.AttachEventPendingTo, container) && container.ContainsItem(item))
+            {
+                item.AttachEventPendingTo = null;
+                container.ProcessItemAttached(item);
+            }
+        }
+
+        /// <summary>Only a spawned client copy waits: the server changes the list first, and EditMode has no list callbacks.</summary>
+        private static bool WaitsForList(Item item) =>
+            !IsAuthority(item) && item.NetworkObject != null && item.NetworkObject.IsSpawned;
 
         private static void SetTransformSync(Item item, bool synchronize)
         {

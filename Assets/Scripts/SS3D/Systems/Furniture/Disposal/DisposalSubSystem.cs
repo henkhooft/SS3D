@@ -249,7 +249,12 @@ namespace SS3D.Systems.Furniture.Disposal
             }
 
             // Transit is part of the item's replicated holder: hidden and frozen on every peer, late joiners included.
-            item.ServerSetInTransit(true);
+            // Refused while the item is still in a container (its hand would not let go): nothing enters the pipes.
+            if (!item.ServerSetInTransit(true))
+            {
+                return false;
+            }
+
             if (_debugShowTransitItems)
             {
                 SetTransitVisibility(item, visible: true);

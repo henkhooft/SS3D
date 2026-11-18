@@ -191,11 +191,12 @@ namespace SS3D.Systems.Inventory.Items
         /// <summary>On this peer, the container <see cref="ItemPlacementApplier"/> last placed the item in.</summary>
         public AttachedContainer AppliedHolder { get; internal set; }
 
-        /// <summary>On this peer, whether the applier last hid and froze the item outside any container.</summary>
+        // ItemPlacementApplier's per-peer record: hidden outside any container; the unspawned container a client waits
+        // for; and the attach / detach events waiting for a container's list to catch up with the holder.
         internal bool AppliedHidden { get; set; }
-
-        /// <summary>The unspawned container this client is waiting for, if any.</summary>
         internal int? PendingContainerObjectId { get; set; }
+        internal AttachedContainer AttachEventPendingTo { get; set; }
+        internal AttachedContainer DetachEventPendingFrom { get; set; }
 
         private bool _initialised = false;
         
@@ -727,17 +728,19 @@ namespace SS3D.Systems.Inventory.Items
         /// Puts a loose item into the disposal pipes (hidden, frozen) or takes it out (loose again). An item in a
         /// container must leave it first.
         /// </summary>
+        /// <returns>False (and nothing changes) while the item is still in a container.</returns>
         [Server]
-        public void ServerSetInTransit(bool inTransit)
+        public bool ServerSetInTransit(bool inTransit)
         {
             if (_container != null)
             {
                 Log.Warning(this, "{item} is in {container}; take it out before it rides the pipes", Logs.Generic, name, _container.name);
-                return;
+                return false;
             }
 
             _holder = (inTransit ? ItemHolder.Transit : ItemHolder.None).Pack();
             ItemPlacementApplier.Refresh(this);
+            return true;
         }
 
         /// <summary>Client side: the container the holder resolved to (see <see cref="ItemPlacementApplier"/>).</summary>

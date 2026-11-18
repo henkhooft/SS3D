@@ -735,6 +735,8 @@ is one path, `ItemRelease.ServerReleaseToWorld`. Protocol 66.
 - **Validation still owed:** written without an Editor. Needs `compile,editmode`, `scenarios:Combat`, `scenarios:Explosives`,
   `mppm:late-join` (items in containers and in transit for a late joiner) and an owner hand check of pickup, drop,
   throw, lockers and disposal.
+- **Review fixes (2026-11-18):** a read-through found client attach / detach events firing before the container's list caught up (FishNet sends SyncVars first; the arm-hold pose and combat stance read the list), the server raising content events before attach / detach, and disposal entering the pipes with an item its hand refused to release. All three fixed; the first is client-only, so only `mppm` runs can see it.
+- **Known minor gaps:** `_debugShowTransitItems` is shown then hidden again on remote clients (its RPC beats the holder's tick); the applier's pending list is static and keyed by object id, harmless unless domain reload is off.
 - **Not in this close:** `ContainerItemDisplay` still parents held items onto its grip pivot, as the applier's attach
   step for custom displays. Throws are tracked, and saved, at their release point (`PlacedItemObject` stores the pose it
   was placed at). Anchoring (`Nuke`, `SyndicateBomb`) keeps its own `Freeze` / `Unfreeze`.
