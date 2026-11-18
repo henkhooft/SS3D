@@ -74,7 +74,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U4 | Throw an item | must | done | — | `Controls.xml` | Throw mode (R) |
 | U5 | Examine, including a body's wounds | must | done | — | `P/Entities/Mobs/base.yml` `Examiner` | |
 | U6 | Combat mode, melee, shoot | must | done | — | `P/Body/species_base.yml` `CombatMode` | Help/Harm intent (F) |
-| U7 | **Pull and drag a body or object** | must | missing | — | `species_base.yml` `Puller` | Only the unbolted girder and the Syndicate bomb are draggable. Blocks carrying the wounded to medbay and carrying off the disk holder. ⚑ MVP1 put dragging bodies in the post-playtest feel pass |
+| U7 | **Pull and drag a body or object** | must | missing | — | `species_base.yml` `Puller` | Only the unbolted girder and the Syndicate bomb are draggable. Blocks carrying the wounded to medbay and carrying off the disk holder. Owner decided 2026-11-18: `must` (Decision 1) |
 | U8 | Strip: take from another body | must | done | — | `species_base.yml` `Stripping` | Search + Take |
 | U9 | Strip: put an item on another body | expected | missing | — | `Controls.xml` (strip menu) | Dress, put on a mask, cuff (with C7) |
 | U10 | Open doors with ID access | must | done | in game | `G/Engineering/Airlocks.xml` | |
@@ -98,7 +98,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U28 | Observe as a ghost after death | expected | done | — | `P/Entities/Mobs/Player/observer.yml` | No follow-lock |
 | U29 | Crates: open, close, drag | expected | unverified | SS3D-Art `crates` | `Controls.xml` | No crate prefab found; dragging needs U7 |
 | U30 | Radial verb menu for extra actions | expected | done | — | `Controls.xml` (context menu) | SS3D's adaptation of right-click verbs |
-| U31 | Zero-g movement: push off, drift | later | missing | — | `Controls.xml` (spacewalks) | Magboots exist |
+| U31 | **Move in zero-g: push off structures, drift, throw to propel** | must | missing | — | `Controls.xml` (spacewalks); jetpack in N16 | Without magboots, a body off the floor ragdolls with no control and no way back. Owner decided 2026-11-18: `must` (Decision 1) |
 
 ## Later
 
@@ -108,7 +108,7 @@ Held back, so agents don't start them without the owner: door remote, Captain's 
 
 Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settle these.
 
-1. **Dragging bodies (U7).** SS14 makes pulling a core verb. MVP1 moved it to the post-playtest feel pass. Recommend `must`, ahead of Playtest 1 if possible: without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder.
+1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Still open: does it land before Playtest 1? That would pull it out of MVP1's feel-pass deferral.
 2. **Pinpointer (N3, C2).** `antagonist-content.md` §6 already lists it in the first pass, so the code is behind the design. Recommend `must`. You only need to choose the 3D form: a held item with an arrow (SS14), or a HUD compass while it's held.
 3. **Handcuffs (C7).** SS14 `must`; MVP1 defers it to MVP2; the §6 crew-win rule says "dead or restrained". Recommend `expected`, after Playtest 1, alongside U9 (put an item on another body).
 4. **Uplink (N12–N14).** SS14 `must`; the design calls it a later pass and MVP1 says no uplink. Recommend `must` for the gate after Playtest 1. It's the biggest operative-identity gap, and most of the stock already has SS3D-Art models. It needs a decision on where the uplink lives before the PDA exists (SS14 uses a radio).
@@ -118,18 +118,19 @@ Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settl
 
 ## Ready next
 
-`must` and `expected` rows that are missing or partial, need no owner decision, and have art or need none. Agents pick from the top:
+`must` and `expected` rows that are missing or partial, whose owner decision (if any) is made, and have art or need none. Agents pick from the top:
 
-1. **C16** health analyzer scan: the item already ships in the Doctor's belt.
-2. **U14 + N4** radio gating plus an operative team channel.
-3. **U15** player emote trigger.
-4. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
-5. **C9** flash (SS3D-Art model).
-6. **C20** emergency medipen.
-7. **U27** alert state on arm.
-8. **N17** hardsuit helmet toggle.
-9. **N6 + N7** operative roles and the Corpsman kit.
-10. **C4** Captain's announcement console.
+1. **U7** pull and drag bodies and objects, and **U31** zero-g movement (owner-decided `must`)
+2. **C16** health analyzer scan: the item already ships in the Doctor's belt.
+3. **U14 + N4** radio gating plus an operative team channel.
+4. **U15** player emote trigger.
+5. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
+6. **C9** flash (SS3D-Art model).
+7. **C20** emergency medipen.
+8. **U27** alert state on arm.
+9. **N17** hardsuit helmet toggle.
+10. **N6 + N7** operative roles and the Corpsman kit.
+11. **C4** Captain's announcement console.
 
 Already in flight elsewhere, don't duplicate: N2/C6 and C10 (M1c), U11 (M12), C8 (hand test).
 
