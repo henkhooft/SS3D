@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: coast-impulse
     content: "blind: HumanoidLivingController — AddCoastImpulse(Vector3) as the single writer into _coastVelocity, capped at run speed; Ragdoll.TickWind calls it instead of MoveUpright while Floating; WASD traction within reach (25% accel, walk cap) and 0.5 s braking on release, via an owner-side overlap on the tile-collider layer"
-    status: pending
+    status: completed
   - id: throw-propel
     content: "blind: CmdThrow resolves Δv for a Floating thrower and TargetRpcs it to the owner, which calls AddCoastImpulse"
     status: pending
@@ -132,6 +132,11 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 39 | A combat (untimed-by-wind) knockdown keeps its old recovery; only wind and blast knockdowns use the open-space rule, and only an Unknown map still holds them down | SS3D | `Ragdoll._windKnockdown` |
 | 40 | Blast knockdowns over open space are unchanged: R3 covers wind only | adaptation | `Ragdoll.ServerApplyBlast` |
 | 41 | `Ragdoll` was at its G3 class-size ratchet; its static floor probe moved to `HumanoidSpaceSupport.TryGetFloorBelow` instead of raising the entry | SS3D | `ClassSizeRatchetTests` |
+| 42 | Wind on a floating owner is air drag into the coast (`AtmosWind.DragAcceleration`), not a position nudge; unowned floating bodies keep the server's `MoveUpright` | adaptation | `Ragdoll.TickWind` |
+| 43 | Traction follows camera-relative input like walking; it doesn't turn the body | taste | `HumanoidController.InputToWorld` |
+| 44 | Braking applies whenever a floating body is in reach with no keys held, also for one that never pressed any (R4 read literally: not holding keys = holding on) | taste | R4 |
+| 45 | Getting up over open space keeps the ragdoll hips' velocity as the coast, so a blown-out body keeps drifting instead of stopping dead | adaptation | R2 "bodies drift" |
+| 46 | Reach probe: a 1.5 m overlap sphere at the body's centre on the Default and Walls layers; "tile object" = a `PlacedTileObject` in the collider's parents | SS3D | `TagManager` layers 0 and 8 |
 
 ## Phases
 

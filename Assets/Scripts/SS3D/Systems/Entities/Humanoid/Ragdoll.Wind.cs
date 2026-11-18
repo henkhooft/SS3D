@@ -89,6 +89,15 @@ namespace SS3D.Systems.Entities.Humanoid
             if (_currentState != RagdollState.Walking || !IsRagdollPhysicsAuthority() || _characterController == null)
                 return;
 
+            // A floating owner takes wind into its coast, so it keeps drifting when the gust has passed (M13 Decision 3).
+            if (IsOwner && _humanoidLivingController != null && TryGetComponent(out HumanoidBodyStateMachine body)
+                && body.Snapshot.IsFloating)
+            {
+                _humanoidLivingController.AddCoastImpulse(
+                    ZeroGravityRules.FloatingWindImpulse(_windFelt, _humanoidLivingController.CoastVelocity, seconds));
+                return;
+            }
+
             MoveUpright(_windFelt * seconds);
         }
 

@@ -283,17 +283,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 _camera = SubSystems.Get<CameraSubSystem>().PlayerCamera;
             }
 
-            Vector3 forwardBasis = _camera != null
-                ? Vector3.Cross(_camera.Right, Vector3.up).normalized
-                : Vector3.forward;
-            Vector3 rightBasis = _camera != null
-                ? Vector3.Cross(Vector3.up, _camera.Forward).normalized
-                : Vector3.right;
-
-            //makes the movement align to the camera view
-            Vector3 newTargetMovement =
-                movementInput.y * forwardBasis +
-                movementInput.x * rightBasis;
+            Vector3 newTargetMovement = InputToWorld(movementInput);
 
             bool slowing = newTargetMovement.sqrMagnitude < TargetMovement.sqrMagnitude;
             float rampTime = Mathf.Max(0.001f, slowing ? _decelerationTime : _accelerationTime);
@@ -302,6 +292,23 @@ namespace SS3D.Systems.Entities.Humanoid
 
             AbsoluteMovement = TargetMovement + Position;
             _movementTarget.position = AbsoluteMovement;
+        }
+
+        /// <summary>Camera-relative movement input as a planar world vector (same length as the input).</summary>
+        protected Vector3 InputToWorld(Vector2 movementInput)
+        {
+            if (_camera == null)
+            {
+                _camera = SubSystems.Get<CameraSubSystem>().PlayerCamera;
+            }
+
+            Vector3 forwardBasis = _camera != null
+                ? Vector3.Cross(_camera.Right, Vector3.up).normalized
+                : Vector3.forward;
+            Vector3 rightBasis = _camera != null
+                ? Vector3.Cross(Vector3.up, _camera.Forward).normalized
+                : Vector3.right;
+            return movementInput.y * forwardBasis + movementInput.x * rightBasis;
         }
 
         /// <summary>True while the owner is pressing a movement direction.</summary>

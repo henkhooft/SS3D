@@ -120,6 +120,13 @@ namespace SS3D.Systems.Entities.Humanoid
         public static bool WindKnocksDown(float windSpeed, bool knockedDown, bool floating) =>
             !knockedDown && !floating && windSpeed >= AtmosWind.KnockdownSpeed;
 
+        /// <summary>
+        /// Wind on a floating body adds to its coast as air drag (Decision 3): toward the wind's speed, never braking a
+        /// body that outruns the air (<see cref="AtmosWind.DragAcceleration"/>).
+        /// </summary>
+        public static Vector3 FloatingWindImpulse(Vector3 windFelt, Vector3 coast, float seconds) =>
+            AtmosWind.DragAcceleration(windFelt, coast) * seconds;
+
         private static bool IsFinite(Vector3 v) =>
             !float.IsNaN(v.x) && !float.IsNaN(v.y) && !float.IsNaN(v.z)
             && !float.IsInfinity(v.x) && !float.IsInfinity(v.y) && !float.IsInfinity(v.z);

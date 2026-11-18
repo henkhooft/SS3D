@@ -2,7 +2,9 @@ using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
+using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Stamina;
+using SS3D.Systems.Tile;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid
@@ -49,6 +51,62 @@ namespace SS3D.Systems.Entities.Humanoid
 
         /// <summary>Planar coast while unsupported (no plenum). Used when predicted movement is disabled.</summary>
         private Vector3 _coastVelocity;
+
+        /// <summary>Planar coast velocity while floating; read by wind (<see cref="ZeroGravityRules.FloatingWindImpulse"/>).</summary>
+        public Vector3 CoastVelocity => _coastVelocity;
+
+        /// <summary>Peaceful walk speed: the traction cap and the braking reference (Decision 4).</summary>
+        public float WalkSpeed => _movementSpeed * WalkAnimatorValue;
+
+        /// <summary>Peaceful run speed: no impulse pushes a coast past it (Decision 6).</summary>
+        public float RunSpeed => _movementSpeed * RunAnimatorValue * _peacefulRunSpeedFactor;
+
+        /// <summary>The locomotion ramp's acceleration; traction is a share of it (Decision 34).</summary>
+        public float WalkAcceleration => _movementSpeed * RunAnimatorValue / Mathf.Max(0.001f, _accelerationTime);
+
+        /// <summary>
+        /// The single writer of outside pushes into the coast (Decision 19): wind, a throw's recoil, a ragdoll's drift.
+        /// Owner-side, because living movement is owner-driven. Only lands while floating: on the deck the next
+        /// supported frame clears the coast.
+        /// </summary>
+        public void AddCoastImpulse(Vector3 impulse)
+        {
+            _coastVelocity = ZeroGravityRules.AddImpulse(_coastVelocity, impulse, RunSpeed);
+        }
+
+        private static readonly Collider[] ReachHits = new Collider[16];
+        private static int _reachMask = -1;
+
+        /// <summary>
+        /// Static station geometry within <see cref="ZeroGravityRules.ReachRadius"/> (R5): walls, windows, grilles,
+        /// airlocks, girders, lattices and the floor's edge. A pure client whose tiles haven't arrived finds no
+        /// colliders and so no reach, never a false one (Decision 21).
+        /// </summary>
+        private bool HasStructureInReach()
+        {
+            if (_reachMask == -1)
+            {
+                _reachMask = LayerMask.GetMask("Default", "Walls");
+            }
+
+            Vector3 centre = transform.position + Vector3.up * (_characterController != null ? _characterController.height * 0.5f : 0.9f);
+            int count = Physics.OverlapSphereNonAlloc(centre, ZeroGravityRules.ReachRadius, ReachHits, _reachMask,
+                QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider hit = ReachHits[i];
+                if (ZeroGravityRules.CountsAsReach(
+                        hit.GetComponentInParent<PlacedTileObject>() != null,
+                        hit.GetComponentInParent<Draggable>() != null,
+                        hit.GetComponentInParent<Item>() != null,
+                        hit.GetComponentInParent<Entity>() != null))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Last frame's planar locomotion velocity while standing on support. A pure client never
@@ -287,7 +345,9 @@ namespace SS3D.Systems.Entities.Humanoid
 
             if (!wasFloating)
             {
-                _coastVelocity = CaptureLivingCoastVelocity();
+                // A walk off the edge carries its speed; a body getting up over open space keeps the drift its
+                // ragdoll handed over through AddCoastImpulse.
+                _coastVelocity = ResolveCoastVelocity(CaptureLivingCoastVelocity(), _coastVelocity);
                 BodyStateMachine?.SetFloating(true);
             }
             else if (_coastVelocity.sqrMagnitude <= 0.0001f)
@@ -295,6 +355,14 @@ namespace SS3D.Systems.Entities.Humanoid
                 // The server already flipped Floating while this peer still reads Unknown: the
                 // local capture branch never ran. Coast with the last supported frame's velocity.
                 _coastVelocity = ResolveCoastVelocity(_coastVelocity, _lastGroundedVelocity);
+            }
+
+            // Grab on (R4): within reach, held keys push with low traction and no keys brake.
+            Vector3 push = Input.sqrMagnitude > 0.0001f ? InputToWorld(Input.normalized) : Vector3.zero;
+            if (push != Vector3.zero || _coastVelocity.sqrMagnitude > 0.0001f)
+            {
+                _coastVelocity = ZeroGravityRules.TractionStep(_coastVelocity, push, HasStructureInReach(), WalkSpeed,
+                    WalkAcceleration, Time.deltaTime);
             }
 
             if (_coastVelocity.sqrMagnitude > 0.0001f)

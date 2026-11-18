@@ -197,5 +197,22 @@ namespace EditorTests
             Assert.IsFalse(ZeroGravityRules.WindKnocksDown(AtmosWind.KnockdownSpeed - 0.1f, knockedDown: false, floating: false));
             Assert.IsFalse(ZeroGravityRules.WindKnocksDown(AtmosWind.MaxSpeed, knockedDown: true, floating: false));
         }
+
+        [Test]
+        public void FloatingWind_PushesAStillBodyAlongTheWind()
+        {
+            Vector3 impulse = ZeroGravityRules.FloatingWindImpulse(new Vector3(3f, 0f, 0f), Vector3.zero, 0.1f);
+
+            Assert.Greater(impulse.x, 0f);
+            Assert.AreEqual(0f, impulse.z, 1e-4f);
+        }
+
+        [Test]
+        public void FloatingWind_NeverBrakesABodyOutrunningTheAir()
+        {
+            Vector3 impulse = ZeroGravityRules.FloatingWindImpulse(new Vector3(1f, 0f, 0f), new Vector3(3f, 0f, 0f), 0.1f);
+
+            Assert.GreaterOrEqual(impulse.x, 0f);
+        }
     }
 }

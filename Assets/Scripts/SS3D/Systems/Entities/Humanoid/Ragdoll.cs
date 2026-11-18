@@ -84,6 +84,8 @@ namespace SS3D.Systems.Entities.Humanoid
         private GetUpAnimation.Clip _getUp = GetUpAnimation.FaceUp;
         /// <summary>Frame the stand-up state was played; its state info is stale until the Animator updates.</summary>
         private int _standUpPlayFrame;
+        /// <summary>The hips' velocity when a ragdoll over open space starts to get up; handed to the coast.</summary>
+        private Vector3 _recoveryDrift;
 
         [SerializeField]
         private byte _ragdollPartSyncInterval;
@@ -644,6 +646,8 @@ namespace SS3D.Systems.Entities.Humanoid
 
             _currentState = RagdollState.BonesReset;
             _blendIntoDowned = intoDowned;
+            Rigidbody hipsBody = _hips.GetComponent<Rigidbody>();
+            _recoveryDrift = hipsBody != null && !hipsBody.isKinematic && !HasFloorSupport() ? hipsBody.linearVelocity : Vector3.zero;
 
             ToggleSyncRagdoll(false);
             ToggleKinematic(true);
@@ -714,6 +718,9 @@ namespace SS3D.Systems.Entities.Humanoid
             _currentState = RagdollState.Walking;
             ToggleController(true);
             EnableAnimationDrivers();
+            // Getting up over open space: keep drifting the way the ragdoll was (M13 R2).
+            if (IsOwner && _humanoidLivingController != null) _humanoidLivingController.AddCoastImpulse(_recoveryDrift);
+            _recoveryDrift = Vector3.zero;
         }
 
         [Server]
