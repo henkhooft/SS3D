@@ -35,7 +35,7 @@ namespace SS3D.Tests
     /// </summary>
     [Category(TestCategories.Scenarios)]
     [Category(TestCategories.Environment)]
-    public class EnvironmentScenarios : ScenarioFixture
+    public partial class EnvironmentScenarios : ScenarioFixture
     {
         /// <summary>Plasma added at the body's tile. The main room holds about 2,600 mol of station air.</summary>
         private const int PlasmaMoles = 10000;

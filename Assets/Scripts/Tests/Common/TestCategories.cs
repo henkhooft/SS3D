@@ -48,5 +48,8 @@ namespace SS3D.Tests
 
         /// <summary>Repairing and rebuilding hull, floors and walls in the test room.</summary>
         public const string Construction = "Construction";
+
+        /// <summary>Dragging bodies and furniture in the test room: the rope, the hand, walls and airlocks (M13).</summary>
+        public const string Drag = "Drag";
     }
 }

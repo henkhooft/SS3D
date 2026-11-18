@@ -21,7 +21,7 @@ namespace SS3D.Systems.Entities.Humanoid
     /// The server re-sends the tether instead of teleporting the body, so a client that ignores it drifts off and snags
     /// (owner question 1).
     /// </summary>
-    public sealed class BodyDraggable : NetworkBehaviour, IDragTarget, IInteractionTarget
+    public sealed class BodyDraggable : NetworkBehaviour, IDragTarget, IInteractionTarget, IGameObjectProvider
     {
         /// <summary>The menu entry, built once: outline probes ask on every hover (interactions-framework Pitfalls).</summary>
         private IInteraction[] _dragInteractions;
@@ -69,6 +69,9 @@ namespace SS3D.Systems.Entities.Humanoid
         public NetworkObject DraggerObject => _draggerObject;
 
         public GameObject GetGameObject() => gameObject;
+
+        /// <summary>Interaction targets resolve their object through this (interactions-framework Pitfalls).</summary>
+        public GameObject GameObject => gameObject;
 
         /// <summary>Downed, Critical or dead right now (<see cref="DragRules.MayBeDragged"/>).</summary>
         public bool IsDraggableNow => Cache() && DragRules.MayBeDragged(_ragdoll.Presentation,
