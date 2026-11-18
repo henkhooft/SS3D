@@ -146,6 +146,7 @@ Only work that is in flight, planned, or kept as standing reference. Everything 
 | [2026-11_project-infrastructure](2026-11_project-infrastructure.md) | shipped (reference) |
 | [2026-11_autonomous-dev-loop](2026-11_autonomous-dev-loop.md) | in-progress |
 | [drag-and-zero-g.plan](../plans/drag-and-zero-g.plan.md) | planned |
+| [disk-pinpointer.plan](../plans/disk-pinpointer.plan.md) | planned |
 | [uplink-ui-design-prompt](../plans/uplink-ui-design-prompt.md) | Claude Design brief |
 | [agent_validation_loop.plan](../plans/agent_validation_loop.plan.md) | shipped (reference) |
 | [eva-gear.plan](../plans/eva-gear.plan.md) | in-progress |

@@ -29,7 +29,7 @@ The owner was the bottleneck at every step: deciding what to work on, specifying
 6. **Two lanes, split by what needs a running game.** Every todo is tagged `blind` or `rig`. Blind work comes first, so a build needs only one rig visit. A second machine with an editor makes a second rig.
 7. **CI is the blind lane's test run.** Compile and EditMode run in CI on push, so a cloud session doesn't need Unity. For PRs from a maintainer's fork this needs RE-SS3D/SS3D#1542, which dispatches EditMode for trusted authors. The rig re-runs EditMode itself after its own changes.
 8. **Landing beats starting.** A session asked what to do next first checks open PRs for failing checks or review comments. Parallel sessions that only start work grow the owner's queue faster than it drains.
-9. **Tokens are measured per stage.** The owner's budget is real, so every trial reports tokens per stage. First measurements: catalog extraction about 266k (two agents); M13 self-grill questioner about 117k over four rounds; independent review about 250k per PR.
+9. **Tokens are measured per stage.** The owner's budget is real, so every trial reports tokens per stage. First measurements: catalog extraction about 266k (two agents); M13 self-grill questioner about 117k over four rounds; pinpointer (M14) questioner about 91k over three rounds; independent review about 250k per PR.
 
 ## Open
 

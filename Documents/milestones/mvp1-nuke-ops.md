@@ -1,7 +1,7 @@
 > Goal: Playtest 1 — eight players play Nuclear Operatives rounds on the 24/7 server: ops spawn geared and breach for the disk, a five-job crew fights back, keeps the hull and power up and patches the wounded, and every round ends with a summary and restarts
 > Status: in-progress
 > Depends on: —
-> Current focus: close M0 (engineering closet), M1c (stun baton hand test, physical magazines, M4 in an armory) M12 (OOC column, prying unpowered airlocks) and M13 (dragging bodies, moving in zero-g), then M6 Playtest 1 — M1s, M3, M8, M9, M10 and M11 shipped 2026-11-16; session stability and smoke live on [test-server.md](test-server.md) T3
+> Current focus: close M0 (engineering closet), M1c (stun baton hand test, physical magazines, M4 in an armory) M12 (OOC column, prying unpowered airlocks) M13 (dragging bodies, moving in zero-g) and M14 (disk pinpointer), then M6 Playtest 1 — M1s, M3, M8, M9, M10 and M11 shipped 2026-11-16; session stability and smoke live on [test-server.md](test-server.md) T3
 > Roadmap: Nuclear Operatives round — Play a full Nuke Ops round from spawn to end screen
 > Pillars: 2, 4, 6 (1 thin) — [vision.md](../design/vision.md) §2
 
@@ -64,6 +64,7 @@ flowchart TB
   lobby[Lobby_character_window]
   ready[OOC_column_pry_airlocks]
   dragmove[Drag_bodies_zero_g_movement]
+  pinpointer[Disk_pinpointer]
 
   mvp1 --> map
   mvp1 --> roles
@@ -75,6 +76,7 @@ flowchart TB
   mvp1 --> lobby
   mvp1 --> ready
   mvp1 --> dragmove
+  nuke --> pinpointer
   ready --> power
   mvp1 --> vacuum
   mvp1 --> power
@@ -142,7 +144,8 @@ flowchart TB
 | M11 | Lobby and character window to the revised lobby design. Done when a new player connects to a random character, sets job priorities and antag opt-ins on it, readies up on the connected-count countdown and spawns in their job; Observe and joining late (direct pick beside the crew manifest) work; the screens match the recoloured canvas | shipped in [#282](https://github.com/henkhooft/SS3D/pull/282), owner hand-tested 2026-11-16 — all seven phases: characters with preferences, connected-count countdown, menu music into the lobby, UXML shell, character window, Join picker | [lobby.md](../design/lobby.md) §2–§8; [lobby-character-window](../archive/architecture/2026-11_lobby-character-window.md); [visual brief](../archive/plans/lobby-character-window-visual-brief.md); [rounds-lobby](../architecture/systems/rounds-lobby.md) | Make your character once and keep it: name, look, the jobs you want and whether you'll play an antagonist, then ready up or join a round already running |
 | M12 | Playtest readiness: in-round OOC column; pry open an unpowered airlock. Done when a player reads and writes OOC during a round without opening the Escape screen, and a crew member with a crowbar can get through a closed airlock whose APC is dead | pending — the OOC column has a plan with every todo pending (server side done); a closed airlock without power can't be opened at all today (`AirLockDoorInteraction.CanInteract`), and prying needs a design rule first | [ooc-column plan](../plans/ooc-column.plan.md); [comms.md](../design/comms.md) §7; [main-hud.md](../design/main-hud.md) §4; [furniture](../architecture/systems/furniture.md) (airlocks); [electricity](../architecture/systems/electricity.md) | Chat out of character during a round without leaving the game, and pry your way out when the power dies |
 | M13 | Dragging bodies and moving in zero-g. Done when a crew member drags a Downed body down a corridor and through an airlock, and drags a locker or crate; a player knocked off the floor in zero-g without magboots can push off a wall or grab a structure, reach the floor again, and can throw an item to change direction; a remote client sees both | pending — [plan](../plans/drag-and-zero-g.plan.md) written by `autoplan` 2026-11-18; owner questions open. Only furniture is draggable today (girder, Syndicate bomb, lockers); off the floor without magboots a body ragdolls with no control. Zero-g movement is listed as out of scope in [armor.md](../design/armor.md) §8, so it needs owner-approved rules first (SS14's spacewalk rules are the default) | [expected-content](expected-content.md) U7, U31 (owner decision 2026-11-18); [health.md](../design/health.md) §4; [armor.md](../design/armor.md) §3; [atmospherics.md](../design/atmospherics.md) §2; [entities](../architecture/systems/entities.md); [furniture](../architecture/systems/furniture.md) | Drag a wounded friend to safety, and push yourself back to the floor when you float off into space |
-| M6 | Playtest 1 | pending | depends M0–M5, M1m, M1c, M1s, M8, M9, M10, M11, M12, M13; [test-server.md](test-server.md) T3, T8 | Finish line: eight players play Nuke Ops rounds together on the always-on server |
+| M14 | Disk pinpointer (thin: an arrow and a band to the disk, nothing more). Done when every operative and the Captain spawn with a pinpointer, and holding it in either hand shows a chip above the hands with an arrow and a distance band (Close, Medium, Far, or Reached when the disk is within 1.5 m or carried by the holder), pointing at the disk wherever it is (pocket, nested bag, locker, loaded in the nuke) and turning with the camera; a remote client holding it sees the same | pending — [plan](../plans/disk-pinpointer.plan.md) written by `autoplan` 2026-11-18; no pinpointer exists yet; the Locator model is in SS3D-Art | [antagonist-content.md](../design/antagonist-content.md) §6; [expected-content](expected-content.md) N3, C2 (owner Decision 2); [gamemodes-roles-traits](../architecture/systems/gamemodes-roles-traits.md); [inventory](../architecture/systems/inventory.md) | Operatives and the Captain carry a pinpointer that shows which way the disk is and how close |
+| M6 | Playtest 1 | pending | depends M0–M5, M1m, M1c, M1s, M8, M9, M10, M11, M12, M13, M14; [test-server.md](test-server.md) T3, T8 | Finish line: eight players play Nuke Ops rounds together on the always-on server |
 
 ## Explicitly deferred
 
