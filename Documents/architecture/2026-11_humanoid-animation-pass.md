@@ -175,7 +175,7 @@ For whoever picks up dragging in the feel pass:
 
 - **Mixamo pull clips** (`Assets/Art/Animations/Pulling/`, and newer `(1)` exports in the owner's Downloads that differ byte-for-byte) show pulling something big and heavy, walking backwards. They fit furniture and machines, not bodies.
 - **Body dragging** has an older SS3D clip: `Assets/Art/Animations/Probably Not/HumanDragBodySet(1).fbx` (also on upstream's `nat-shitcode` branch). Takes `DragBodySS` (frames 1–31, the dragger) and `DragBodySS_Pose` (31–61, the dragged body). It uses the old SS3D rig (`hips`, `thigh_l`…), so it needs retargeting to the Humanoid avatar.
-- **Today's drag:** `SteelGirderUnbolted` is the only prefab with `Draggable`. `DragInteraction.Start` sets `HumanoidLivingController.IsDragging` on the server, while living movement belongs to the owner's client, so a remote client's controller probably never sees it. The animator declares `IsDragging` but nothing reads it.
+- **Today's drag:** `Draggable` is on the unbolted girder, the Syndicate bomb and the lockers. `HumanoidLivingController.IsDragging` reads the target's `Dragged` SyncVar, so remotes see it. The animator declares `IsDragging` but nothing reads it. Body dragging is planned in [drag-and-zero-g](../plans/drag-and-zero-g.plan.md), with no gait this pass.
 
 ## Open questions for the owner
 
