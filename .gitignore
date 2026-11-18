@@ -133,6 +133,9 @@ Tools/.ss3d-art-tree-cache.json
 # Multiplayer test harness per-run scratch (staged build copies, logs) - see Testing/multiplayer/
 Testing/multiplayer/.runs/
 
+# independent-review briefings (local pilot output)
+/review-out/
+
 # Local / CI Unity runner output (editmode, build logs)
 /artifacts/
 

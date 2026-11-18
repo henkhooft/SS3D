@@ -2,7 +2,7 @@
 > Touches systems: docs governance (`Documents/milestones/`, `.claude/skills/`), CI (`.github/workflows/`), the test harness (`Testing/ui/`)
 > Status: in-progress
 
-**Progress:** stages 1–2 built (catalog, `autoplan`). Stage 3 is on its first trial (M13 on a second editor machine). The CI step for fork PRs is in RE-SS3D/SS3D#1542. Stage 5's gate (`independent-review`) is a pilot with its go/no-go open.
+**Progress:** stages 1–2 built (catalog, `autoplan`). Stage 3 is on its first trial (M13 on a second editor machine). The CI step for fork PRs is in RE-SS3D/SS3D#1542. Stage 5's gate (`independent-review`) is a go (owner, 2026-11-18).
 
 # Autonomous development loop (Nov 2026)
 
@@ -29,12 +29,12 @@ The owner was the bottleneck at every step: deciding what to work on, specifying
 6. **Two lanes, split by what needs a running game.** Every todo is tagged `blind` or `rig`. Blind work comes first, so a build needs only one rig visit. A second machine with an editor makes a second rig.
 7. **CI is the blind lane's test run.** Compile and EditMode run in CI on push, so a cloud session doesn't need Unity. For PRs from a maintainer's fork this needs RE-SS3D/SS3D#1542, which dispatches EditMode for trusted authors. The rig re-runs EditMode itself after its own changes.
 8. **Landing beats starting.** A session asked what to do next first checks open PRs for failing checks or review comments. Parallel sessions that only start work grow the owner's queue faster than it drains.
-9. **Tokens are measured per stage.** The owner's budget is real, so every trial reports tokens per stage. First measurements: catalog extraction about 266k (two agents); M13 self-grill questioner about 117k over four rounds; pinpointer (M14) questioner about 91k over three rounds; independent review about 250k per PR.
+9. **`independent-review` is the stage-5 gate** (owner, 2026-11-18, after the pilot). Its branch is merged into this effort's; the CI phase still waits for Playtest 1.
+10. **Tokens are measured per stage.** The owner's budget is real, so every trial reports tokens per stage. First measurements: catalog extraction about 266k (two agents); M13 self-grill questioner about 117k over four rounds; pinpointer (M14) questioner about 91k over three rounds; independent review about 250k per PR.
 
 ## Open
 
 - **Merge on green.** Can work that passes its tests and doesn't touch feel or visuals merge without the owner's hand test? Until that's answered, the hand-test queue limits throughput.
-- **`independent-review` go/no-go.** The pilot is marked up and the decision is pending (`2026-11_independent-review.md`, still on `feature/youthful-newton-jsxgeb`).
 - **The first end-to-end trial.** M13 ([plan](../plans/drag-and-zero-g.plan.md)) is being built on a second editor machine. Its report gives the real per-stage token costs and shows where the blind/rig split leaks.
 - **Teleport or a local runner.** The rig visit is a manual hand-off today. A small runner that picks up branches marked ready for validation would remove the owner from it; build it only if the hand-off proves to be the bottleneck.
 
@@ -43,5 +43,5 @@ The owner was the bottleneck at every step: deciding what to work on, specifying
 - Catalog: [Documents/milestones/expected-content.md](../milestones/expected-content.md)
 - Planning skill: [.claude/skills/autoplan/](../../.claude/skills/autoplan/SKILL.md), with its questioner brief and plan template
 - First plan: [drag-and-zero-g.plan.md](../plans/drag-and-zero-g.plan.md)
-- Review gate: `independent-review` (`2026-11_independent-review.md` on `feature/youthful-newton-jsxgeb`)
+- Review gate: [.claude/skills/independent-review/](../../.claude/skills/independent-review/SKILL.md), [effort](2026-11_independent-review.md)
 - CI for fork PRs: RE-SS3D/SS3D#1542
