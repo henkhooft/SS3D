@@ -57,4 +57,5 @@ A sketch, so every gate above sits on a path to a recognizable SS13 shift. No do
 1. Open this hub for current focus.
 2. Open the active gate doc for the dependency tree and slice status.
 3. Follow leaf links into design §§, architecture efforts, or plans for HOW — do not restate them here.
-4. On ship, run `update-system-docs` so slice status and this hub’s current focus stay accurate.
+4. Picking work without an owner brief: take a row from [expected-content.md](expected-content.md) **Ready next**. That catalog lists the player interactions a Nuke Ops round should have, using SS14 as the default spec, and holds the conflicts the owner still has to decide.
+5. On ship, run `update-system-docs` so slice status and this hub’s current focus stay accurate.

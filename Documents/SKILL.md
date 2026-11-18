@@ -82,7 +82,7 @@ runbooks as `shipped (reference)` or `shipped (standing policy)`; trim their his
 
 Playable product gates and focus sequencing — not a substitute for design, architecture efforts, or plans. A milestone answers **what to work on next** and shows the **dependency tree** of features that unlock a playable goal (e.g. Nuke Ops → ranged combat → armor/health; nuke device → blast → station structural damage). Domain-level “what's designed / built” stays in the INDEX coverage table; structural risk stays in [TECH_DEBT.md](architecture/TECH_DEBT.md).
 
-Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates). One file per playable gate (e.g. `mvp1-nuke-ops.md`).
+Hub: [milestones/INDEX.md](milestones/INDEX.md) (current focus + list of gates). One file per playable gate (e.g. `mvp1-nuke-ops.md`). The exception is [milestones/expected-content.md](milestones/expected-content.md), the catalog of expected player interactions (SS14 as the default spec) that gates and agents draw work from. It is not a gate, isn't listed in the Gates table, and keeps its own header.
 
 **Rules:**
 
