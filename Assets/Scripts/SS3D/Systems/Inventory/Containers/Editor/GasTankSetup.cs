@@ -3,6 +3,7 @@ using System.Linq;
 using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Roles;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
@@ -75,7 +76,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 so.FindProperty("_contents.PlasmaMoles").floatValue = contents.PlasmaMoles;
                 so.ApplyModifiedPropertiesWithoutUndo();
 
-                StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<FishNet.Object.NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<FishNet.Object.NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }

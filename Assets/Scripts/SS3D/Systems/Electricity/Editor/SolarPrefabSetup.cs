@@ -4,9 +4,9 @@ using FishNet.Observing;
 using SS3D.Interactions;
 using SS3D.Systems.Electricity;
 using SS3D.Systems.Examine;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Tile.Connections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -99,7 +99,7 @@ namespace SS3D.Systems.Electricity.Editor
                     changed = true;
                 }
 
-                RebuildNetworkBehaviours(networkObject);
+                NetworkBehaviourListRebuild.ForPrefab(networkObject);
 
                 if (changed)
                 {
@@ -143,7 +143,7 @@ namespace SS3D.Systems.Electricity.Editor
 
                 if (changed)
                 {
-                    RebuildNetworkBehaviours(networkObject);
+                    NetworkBehaviourListRebuild.ForPrefab(networkObject);
                     PrefabUtility.SaveAsPrefabAsset(root, SolarTrackingBeaconPath);
                     Debug.Log($"[SolarPrefabSetup] SolarTrackingBeacon wired ({SolarTrackingBeaconPath})");
                 }
@@ -405,60 +405,6 @@ namespace SS3D.Systems.Electricity.Editor
 
             component = root.AddComponent<T>();
             return true;
-        }
-
-        private static void RebuildNetworkBehaviours(NetworkObject networkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(networkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(networkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                SerializedProperty added = behaviourSo.FindProperty("_addedNetworkObject");
-                SerializedProperty cache = behaviourSo.FindProperty("_networkObjectCache");
-                SerializedProperty index = behaviourSo.FindProperty("_componentIndexCache");
-                if (added != null)
-                {
-                    added.objectReferenceValue = networkObject;
-                }
-
-                if (cache != null)
-                {
-                    cache.objectReferenceValue = networkObject;
-                }
-
-                if (index != null)
-                {
-                    index.intValue = i;
-                }
-
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(networkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject _))
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
-            }
         }
     }
 }

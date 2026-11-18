@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
 using FishNet.Object;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -36,7 +36,7 @@ namespace SS3D.Systems.Construction.Editor
                 NetworkObject networkObject = root.GetComponent<NetworkObject>();
                 if (networkObject != null)
                 {
-                    RebuildNetworkBehaviours(networkObject);
+                    NetworkBehaviourListRebuild.ForPrefab(networkObject);
                 }
 
                 PrefabUtility.SaveAsPrefabAsset(root, HubPath);
@@ -45,46 +45,6 @@ namespace SS3D.Systems.Construction.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        /// <summary>Same rewrite as the hub rebuild and StorageContainerPrefabSetup (FishNet's UpdateNetworkBehaviours for assets).</summary>
-        internal static void RebuildNetworkBehaviours(NetworkObject networkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(networkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(networkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_addedNetworkObject").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_networkObjectCache").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(networkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject _))
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
             }
         }
     }

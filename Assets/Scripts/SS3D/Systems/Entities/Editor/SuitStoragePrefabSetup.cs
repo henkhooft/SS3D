@@ -5,6 +5,7 @@ using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Containers.Editor;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -54,7 +55,7 @@ namespace SS3D.Systems.Entities.Editor
                     root.AddComponent<EvaGearController>();
                 }
 
-                HumanPrefabHygiene.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForNestedPrefab(root.GetComponent<NetworkObject>(), writeNetworkObjectReferences: false);
                 PrefabUtility.SaveAsPrefabAsset(root, SyndicateHardsuitSetup.HumanPath);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }

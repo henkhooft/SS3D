@@ -1,6 +1,6 @@
 # Technical debt tracker
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-18
 
 Checked against `06316a98` (source inspection of the 54 commits / ~56k lines since `259787487`;
 §1.19–§1.30 are new from that audit). Runtime and CI-run results below are prior observations, not
@@ -507,11 +507,9 @@ See §6.
 
 - Related: [inventory.md](systems/inventory.md), [examine.md](systems/examine.md)
 
-### 1.32 Recipes copy FishNet's behaviour-list rebuild
+### 1.32 Recipes copy FishNet's behaviour-list rebuild — resolved 2026-11-18
 
-**Blast radius: low — trend: growing (one copy per recipe that adds a NetworkBehaviour)**
-
-`RebuildNetworkBehaviours` has eight copies: private in `GirderStageRecipe`, `SolarPrefabSetup`, `BodyPartContainerInteractiveStrip` and `SessionWorldLifecycleEditorMenus`; internal in `CombatInteractionNetworkPrefabSetup` (reused by `RangedPrefabSetup`) and `ConstructionHubRecipe` (reused by `ActionMessageHubRecipe`); public in `StorageContainerPrefabSetup` and `HumanPrefabHygiene`. Forgetting it is silent ([combat.md](systems/combat.md) Pitfalls). Fix: one shared editor helper (S).
+See §6.
 
 ## 2. Hot-path GC / performance debt (tracked, partially paid down)
 
@@ -716,3 +714,19 @@ contributor reads its own payload type. No schema change.
 - **Not in this close:** the Persistence↔Tile folder cycle: `PersistenceSubSystem` and the Tile contributors still
   use Tile types directly, and `TileSubSystem` still imports Persistence (P8.6).
 - Related: [persistence.md](systems/persistence.md)
+
+### 1.32 Recipes copy FishNet's behaviour-list rebuild — 2026-11-18
+
+One editor helper, `SS3D.Systems.PrefabRecipes.NetworkBehaviourListRebuild`, replaces the eight copies. The copies
+had drifted into two walks, both kept as named entry points so no prefab changes: `ForPrefab` (FishNet's rule: stop
+at any child `NetworkObject`; used by hubs, storage, girders, solar, lights, clothing, session lifecycle) and
+`ForNestedPrefab` (walk into `IsNested` body parts; Human, suits, body parts, guns, the napalm hub). `NetworkBehaviourListRebuildGuardTests`
+fails when any other source names FishNet's `_networkBehaviours` list.
+
+- **Closed by:** tech-debt Phase 4 prep (TECH_DEBT §1.32).
+- **Not in this close:** the nested copies disagreed on the back-references. `HumanPrefabHygiene` and
+  `BodyPartContainerInteractiveStrip` write only `_componentIndexCache`; `CombatInteractionNetworkPrefabSetup` (and
+  `RangedPrefabSetup`) also point `_addedNetworkObject` / `_networkObjectCache` at the root, which is what 89 of
+  Human.prefab's 97 body-part overrides hold. `ForNestedPrefab` keeps that as an explicit
+  `writeNetworkObjectReferences` argument; settling one rule needs an Editor run that compares a re-saved Human.prefab.
+- Related: [combat.md](systems/combat.md), [entities.md](systems/entities.md), [core-subsystems.md](systems/core-subsystems.md)

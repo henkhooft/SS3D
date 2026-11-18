@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FishNet.Object;
 using SS3D.Systems.Comms;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,11 +18,11 @@ namespace SS3D.Systems.Entities.Editor
     /// <c>Human.prefab</c>'s root <see cref="NetworkObject"/> flattens NetworkBehaviours across nested
     /// PrefabInstance boundaries (HumanTorso, HumanHead, each limb — every body part carries its own
     /// <see cref="NetworkObject"/> with <see cref="NetworkObject.IsNested"/> set, not a separate spawn root).
-    /// <see cref="StorageContainerPrefabSetup"/>'s collection helper stops at the first child with a
+    /// <see cref="NetworkBehaviourListRebuild.ForPrefab"/> stops at the first child with a
     /// <see cref="NetworkObject"/>, which is correct for flat prefabs (backpacks, lockers) but would silently
-    /// drop every nested body-part behaviour if reused here. <see cref="CollectNetworkBehaviours"/> below only
-    /// stops at a child Nob when it is <b>not</b> nested (a genuine separate spawn root) — see
-    /// entities.md § Pitfalls.
+    /// drop every nested body-part behaviour here. Recipes on Human therefore call
+    /// <see cref="NetworkBehaviourListRebuild.ForNestedPrefab"/>, which only stops at a child Nob when it is
+    /// <b>not</b> nested (a genuine separate spawn root) — see entities.md § Pitfalls.
     /// </remarks>
     public static class HumanPrefabHygiene
     {
@@ -72,7 +73,7 @@ namespace SS3D.Systems.Entities.Editor
 
                 if (hacks.Count > 0)
                 {
-                    RebuildNetworkBehaviours(rootNetworkObject);
+                    NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: false);
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
                 }
 
@@ -114,7 +115,7 @@ namespace SS3D.Systems.Entities.Editor
 
                 if (removed > 0)
                 {
-                    RebuildNetworkBehaviours(rootNetworkObject);
+                    NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: false);
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
                 }
 
@@ -157,7 +158,7 @@ namespace SS3D.Systems.Entities.Editor
                     return;
                 }
 
-                RebuildNetworkBehaviours(rootNetworkObject);
+                NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: false);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
             }
             finally
@@ -192,7 +193,7 @@ namespace SS3D.Systems.Entities.Editor
                 }
 
                 prefabRoot.AddComponent<LocalSpeechEmitter>();
-                RebuildNetworkBehaviours(rootNetworkObject);
+                NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: false);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, HumanPrefabPath);
                 UnityEngine.Debug.Log($"[HumanPrefabHygiene] Added LocalSpeechEmitter to {HumanPrefabPath}");
                 return true;
@@ -200,52 +201,6 @@ namespace SS3D.Systems.Entities.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(prefabRoot);
-            }
-        }
-
-        /// <summary>
-        /// Rewrites the root <see cref="NetworkObject"/>'s <c>_networkBehaviours</c> list and each
-        /// behaviour's <c>_componentIndexCache</c> after adding/removing a component, mirroring FishNet's
-        /// prefab-processing step. Unlike <c>StorageContainerPrefabSetup.RebuildNetworkBehaviours</c>, this
-        /// walk does not stop at a nested body-part's own <see cref="NetworkObject"/> — see class remarks.
-        /// </summary>
-        public static void RebuildNetworkBehaviours(NetworkObject rootNetworkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(rootNetworkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(rootNetworkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(rootNetworkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-
-                // Only a non-nested NetworkObject marks a genuine separate spawn root; every body-part
-                // Nob under Human.prefab is nested and must still be walked into.
-                if (child.TryGetComponent(out NetworkObject childNob) && !childNob.IsNested)
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
             }
         }
     }

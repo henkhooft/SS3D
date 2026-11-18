@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using FishNet.Object;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,7 +18,7 @@ namespace SS3D.Systems.Combat.Editor
                 if (root.GetComponent<NapalmSubSystem>() != null) return false;
                 root.AddComponent<NapalmSubSystem>();
                 NetworkObject networkObject = root.GetComponent<NetworkObject>();
-                CombatInteractionNetworkPrefabSetup.RebuildNetworkBehaviours(networkObject);
+                NetworkBehaviourListRebuild.ForNestedPrefab(networkObject, writeNetworkObjectReferences: true);
                 SerializedObject serialized = new(networkObject);
                 serialized.FindProperty("_scenePathHash").longValue = 0;
                 serialized.ApplyModifiedPropertiesWithoutUndo();

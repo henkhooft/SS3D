@@ -2,6 +2,7 @@ using FishNet.Object;
 using SS3D.Systems.Construction;
 using SS3D.Networking;
 using SS3D.Permissions;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Substances;
 using SS3D.Systems.Area;
 using SS3D.Systems.Atmospherics;
@@ -178,7 +179,7 @@ namespace SS3D.Editor.Bootstrap
                     }
                 }
 
-                RebuildNetworkBehaviours(nob);
+                NetworkBehaviourListRebuild.ForPrefab(nob);
 
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, HubResourcesPath);
                 Selection.activeObject = prefab;
@@ -269,45 +270,6 @@ namespace SS3D.Editor.Bootstrap
             }
 
             return removed;
-        }
-
-        private static void RebuildNetworkBehaviours(NetworkObject networkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(networkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(networkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_addedNetworkObject").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_networkObjectCache").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(networkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject _))
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
-            }
         }
     }
 }

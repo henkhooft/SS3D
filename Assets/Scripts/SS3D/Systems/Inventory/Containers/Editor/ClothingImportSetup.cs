@@ -6,6 +6,7 @@ using SS3D.Systems.Combat;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Roles;
 using UnityEditor;
 using UnityEngine;
@@ -467,7 +468,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             SetRestPose(root, garment);
             if (root.GetComponent<SimpleExaminable>() == null) root.AddComponent<SimpleExaminable>();
             Hardsuit.WireExamine(root, garment.Name, garment.Key);
-            StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<FishNet.Object.NetworkObject>());
+            NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<FishNet.Object.NetworkObject>());
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
     }

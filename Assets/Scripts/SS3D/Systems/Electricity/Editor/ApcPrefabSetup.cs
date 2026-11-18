@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
 using FishNet.Object;
-using SS3D.Systems.Inventory.Containers.Editor;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.StructuralDamage;
 using UnityEditor;
 using UnityEngine;
@@ -31,7 +31,7 @@ namespace SS3D.Systems.Electricity.Editor
                 // so rounds and swings never reached it. Fit it to the panel.
                 WallMountColliderSetup.FitToMesh(root);
 
-                StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, ApcPath);
             }
             finally

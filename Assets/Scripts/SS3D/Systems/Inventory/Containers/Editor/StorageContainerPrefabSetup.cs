@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
 using FishNet.Object;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -93,7 +93,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 {
                     ApplyStorageSettings(existing, target);
                     EnsureContainerInteractive(prefabRoot, existing);
-                    RebuildNetworkBehaviours(networkObject);
+                    NetworkBehaviourListRebuild.ForPrefab(networkObject);
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, target.PrefabPath);
                     Debug.Log($"[StorageContainerPrefabSetup] Updated existing storage on {target.PrefabPath}");
                     return true;
@@ -104,7 +104,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 AttachedContainer storage = storageGo.AddComponent<AttachedContainer>();
                 ApplyStorageSettings(storage, target);
                 EnsureContainerInteractive(prefabRoot, storage);
-                RebuildNetworkBehaviours(networkObject);
+                NetworkBehaviourListRebuild.ForPrefab(networkObject);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, target.PrefabPath);
                 Debug.Log($"[StorageContainerPrefabSetup] Added Storage child on {target.PrefabPath} ({target.Size.x}x{target.Size.y}, max {target.MaxSizeClass})");
                 return true;
@@ -179,49 +179,6 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             interactiveSo.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(interactive);
             EditorUtility.SetDirty(storage);
-        }
-
-        /// <summary>
-        /// Mirrors FishNet's UpdateNetworkBehaviours for prefab assets: collect NetworkBehaviours on
-        /// this object and descendants that do not have their own NetworkObject, then rewrite indices.
-        /// </summary>
-        public static void RebuildNetworkBehaviours(NetworkObject networkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(networkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(networkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_addedNetworkObject").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_networkObjectCache").objectReferenceValue = networkObject;
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(networkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject _))
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
-            }
         }
     }
 }

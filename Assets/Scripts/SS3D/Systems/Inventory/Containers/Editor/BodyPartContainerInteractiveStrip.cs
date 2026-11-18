@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
 using FishNet.Object;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -88,7 +88,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 }
 
                 Object.DestroyImmediate(rootInteractive, true);
-                RebuildNetworkBehaviours(rootNetworkObject);
+                NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: false);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
                 Debug.Log($"[BodyPartContainerInteractiveStrip] Stripped root ContainerInteractive from {prefabPath}");
                 return true;
@@ -96,48 +96,6 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(prefabRoot);
-            }
-        }
-
-        /// <summary>
-        /// Same nested-Nob-aware rebuild as <c>HumanPrefabHygiene</c> — HumanHead.prefab nests
-        /// HumanEarLeft/Right, each with its own <see cref="NetworkObject"/>, so the walk must not stop
-        /// at a nested (non-root) Nob or it silently drops the ears' behaviours. See entities.md § Pitfalls.
-        /// </summary>
-        private static void RebuildNetworkBehaviours(NetworkObject rootNetworkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(rootNetworkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(rootNetworkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(rootNetworkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject childNob) && !childNob.IsNested)
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
             }
         }
     }

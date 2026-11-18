@@ -6,6 +6,7 @@ using SS3D.Systems.Combat;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Roles;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
@@ -126,7 +127,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 so.ApplyModifiedPropertiesWithoutUndo();
                 if (root.GetComponent<SealedGearItemExtension>() == null) root.AddComponent<SealedGearItemExtension>();
                 WireExamine(root, name, type == ClothType.Head ? "syndicate_hardsuit_helmet" : "syndicate_hardsuit");
-                StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<FishNet.Object.NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<FishNet.Object.NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }

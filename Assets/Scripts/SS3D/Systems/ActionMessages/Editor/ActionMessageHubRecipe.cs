@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using FishNet.Object;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,7 +32,7 @@ namespace SS3D.Systems.ActionMessages.Editor
                 }
 
                 root.AddComponent<ActionMessageSubSystem>();
-                SS3D.Systems.Construction.Editor.ConstructionHubRecipe.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, HubPath);
                 return true;
             }

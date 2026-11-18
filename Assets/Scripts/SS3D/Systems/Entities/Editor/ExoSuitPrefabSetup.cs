@@ -3,6 +3,7 @@ using System.Linq;
 using FishNet.Object;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Inventory.Containers.Editor;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -48,7 +49,7 @@ namespace SS3D.Systems.Entities.Editor
                 ClothedBodyPart suitPart = root.GetComponentsInChildren<ClothedBodyPart>(true).First(c => c.Type == ClothType.ExoSuit);
                 // Clothing is addressed by ClothType; a new empty nested NetworkObject cannot resolve reliably.
                 if (suitPart.TryGetComponent(out NetworkObject suitNetworkObject)) Object.DestroyImmediate(suitNetworkObject);
-                HumanPrefabHygiene.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForNestedPrefab(root.GetComponent<NetworkObject>(), writeNetworkObjectReferences: false);
                 PrefabUtility.SaveAsPrefabAsset(root, SyndicateHardsuitSetup.HumanPath);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }

@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
 using FishNet.Object;
-using SS3D.Systems.Inventory.Containers.Editor;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -29,7 +29,7 @@ namespace SS3D.Systems.Electricity.Editor
                     FitToMesh(root);
                     // Loading re-adds components the scripts require but the prefab lacked (the air alarm's
                     // PlacedTileObject and AuthLogDeviceBehaviour), so the network list must cover them.
-                    StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                    NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<NetworkObject>());
                     PrefabUtility.SaveAsPrefabAsset(root, path);
                 }
                 finally

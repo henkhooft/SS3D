@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using SS3D.Systems.Combat;
 using SS3D.Systems.Combat.Interactions;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -77,7 +78,7 @@ namespace SS3D.Systems.Combat.Editor
             if (!root.TryGetComponent(out RangedWeaponRoundsReadout _))
             {
                 root.AddComponent<RangedWeaponRoundsReadout>();
-                CombatInteractionNetworkPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<FishNet.Object.NetworkObject>());
+                NetworkBehaviourListRebuild.ForNestedPrefab(root.GetComponent<FishNet.Object.NetworkObject>(), writeNetworkObjectReferences: true);
             }
 
             SerializedObject so = new(extension);

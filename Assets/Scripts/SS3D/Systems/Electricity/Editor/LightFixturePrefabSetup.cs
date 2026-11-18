@@ -6,6 +6,7 @@ using SS3D.Data.AssetDatabases;
 using SS3D.Systems.Examine;
 using SS3D.Systems.Inventory.Containers.Editor;
 using SS3D.Systems.Inventory.Items;
+using SS3D.Systems.PrefabRecipes;
 using SS3D.Systems.Selection;
 using SS3D.Systems.Tile;
 using UnityEditor;
@@ -120,7 +121,7 @@ namespace SS3D.Systems.Electricity.Editor
                 bulbSo.ApplyModifiedPropertiesWithoutUndo();
 
                 WireExamine(root, spec);
-                StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally
@@ -194,7 +195,7 @@ namespace SS3D.Systems.Electricity.Editor
                     examine.ApplyModifiedPropertiesWithoutUndo();
                 }
 
-                StorageContainerPrefabSetup.RebuildNetworkBehaviours(root.GetComponent<NetworkObject>());
+                NetworkBehaviourListRebuild.ForPrefab(root.GetComponent<NetworkObject>());
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally

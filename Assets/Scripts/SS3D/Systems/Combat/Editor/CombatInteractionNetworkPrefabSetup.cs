@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
-using System.Collections.Generic;
 using FishNet.Object;
 using SS3D.Systems.Interactions;
+using SS3D.Systems.PrefabRecipes;
 using UnityEditor;
 using UnityEngine;
 
@@ -105,7 +105,7 @@ namespace SS3D.Systems.Combat.Editor
                     return false;
                 }
 
-                RebuildNetworkBehaviours(rootNetworkObject);
+                NetworkBehaviourListRebuild.ForNestedPrefab(rootNetworkObject, writeNetworkObjectReferences: true);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
                 Debug.Log($"[CombatInteractionNetworkPrefabSetup] {(added ? "Added" : "Wired")} CombatInteractionNetwork on {prefabPath}");
                 return true;
@@ -113,49 +113,6 @@ namespace SS3D.Systems.Combat.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(prefabRoot);
-            }
-        }
-
-        /// <summary>
-        /// FishNet's UpdateNetworkBehaviours for a prefab asset: lists every NetworkBehaviour under the
-        /// root on its NetworkObject and points each back at it. Run after adding one in a recipe.
-        /// </summary>
-        internal static void RebuildNetworkBehaviours(NetworkObject rootNetworkObject)
-        {
-            List<NetworkBehaviour> behaviours = new();
-            CollectNetworkBehaviours(rootNetworkObject.transform, behaviours);
-
-            SerializedObject nobSo = new(rootNetworkObject);
-            SerializedProperty listProp = nobSo.FindProperty("_networkBehaviours");
-            listProp.arraySize = behaviours.Count;
-            for (int i = 0; i < behaviours.Count; i++)
-            {
-                listProp.GetArrayElementAtIndex(i).objectReferenceValue = behaviours[i];
-
-                SerializedObject behaviourSo = new(behaviours[i]);
-                behaviourSo.FindProperty("_addedNetworkObject").objectReferenceValue = rootNetworkObject;
-                behaviourSo.FindProperty("_networkObjectCache").objectReferenceValue = rootNetworkObject;
-                behaviourSo.FindProperty("_componentIndexCache").intValue = i;
-                behaviourSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(behaviours[i]);
-            }
-
-            nobSo.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(rootNetworkObject);
-        }
-
-        private static void CollectNetworkBehaviours(Transform transform, List<NetworkBehaviour> behaviours)
-        {
-            behaviours.AddRange(transform.GetComponents<NetworkBehaviour>());
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                Transform child = transform.GetChild(i);
-                if (child.TryGetComponent(out NetworkObject childNob) && !childNob.IsNested)
-                {
-                    continue;
-                }
-
-                CollectNetworkBehaviours(child, behaviours);
             }
         }
     }
