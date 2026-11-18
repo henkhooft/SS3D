@@ -20,6 +20,6 @@ Deliberately left out: `domain-modeling`, `grill-with-docs`, `setup-matt-pocock-
 uses `Documents/plans/` and `Documents/milestones/`); `teach` (writes workspace files);
 `prototype`, `codebase-design` and the TypeScript tooling skills.
 
-SS3D's own: `mixamo` (find, preview and download Mixamo clips via `Tools/mixamo/mixamo.py`).
+SS3D's own: `mixamo` (find, preview and download Mixamo clips via `Tools/mixamo/mixamo.py`); `autoplan` (pick the next work, self-grill it with a blind questioner sub-agent using SS14 as the oracle, and write a plan whose owner questions are only taste and low-confidence calls).
 
 Older SS3D skills (Unity perf, smoke harness) live in `.cursor/skills/`. `update-system-docs` lives there too; `.claude/skills/update-system-docs` is a thin pointer to it, so Claude Code can invoke it.

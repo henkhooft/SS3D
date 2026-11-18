@@ -18,4 +18,4 @@ Day-to-day dev runs through the Unity Editor. For a batchmode Linux client/serve
 
 ## Skills
 
-Project skills live in `.claude/skills/` (index: [.claude/skills/README.md](.claude/skills/README.md)). Run `update-system-docs` after feature work. Use `grilling` to stress-test a plan or design, `diagnosing-bugs` for hard bugs, and `spec-review` to review a branch against its plan. Unity perf, Frame Debugger and multiplayer-smoke skills live in `.cursor/skills/`. Read their `SKILL.md` directly when a task calls for them.
+Project skills live in `.claude/skills/` (index: [.claude/skills/README.md](.claude/skills/README.md)). Run `update-system-docs` after feature work. Use `autoplan` to pick and plan work without the owner in the loop, `grilling` to stress-test a plan or design with them, `diagnosing-bugs` for hard bugs, and `spec-review` to review a branch against its plan. Unity perf, Frame Debugger and multiplayer-smoke skills live in `.cursor/skills/`. Read their `SKILL.md` directly when a task calls for them.
