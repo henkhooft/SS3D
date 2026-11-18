@@ -41,6 +41,8 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
 
     public GameObject GetGameObject() => gameObject;
 
+    public Vector3 FootprintPosition => transform.position;
+
     private void OnDraggerObjectChanged(NetworkObject previous, NetworkObject next, bool asServer) =>
         DragRegistry.OnDraggerChanged(this, previous, next);
 

@@ -10,6 +10,7 @@ using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Audio;
 using SS3D.Systems.Electricity;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Inventory.Containers;
 using SS3D.Systems.Selection;
@@ -640,7 +641,8 @@ namespace SS3D.Systems.Furniture
         }
 
         /// <summary>
-        /// True while any player body, authorized or not, stands where the closed panels would be.
+        /// True while any player body, authorized or not, stands where the closed panels would be, or anything dragged
+        /// (furniture, a corpse) lies there: the dragger mustn't have the door shut on what they pull (M13 Decision 15).
         /// </summary>
         private bool IsDoorwayBlocked()
         {
@@ -656,6 +658,14 @@ namespace SS3D.Systems.Furniture
                 // Ghosts (dead players and observers) have no physical footprint (observer.md §3).
                 if (entity != null && !entity.TryGetComponent(out HumanoidGhostController _)
                     && IsInDoorway(entity.transform.position + Vector3.up * OccupantSampleHeight))
+                {
+                    return true;
+                }
+            }
+
+            foreach (object dragged in DragRegistry.Targets)
+            {
+                if (dragged is IDragTarget target && IsInDoorway(target.FootprintPosition + Vector3.up * OccupantSampleHeight))
                 {
                     return true;
                 }

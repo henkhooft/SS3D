@@ -359,6 +359,19 @@ namespace EditorTests
             Assert.AreEqual(0f, DragRules.SweptStep(new Vector3(0.5f, 0.3f, 0f), hit: false, hitDistance: 0f).y);
         }
 
+        [Test]
+        public void Registry_ListsWhatIsBeingDragged()
+        {
+            object dragger = new(), target = new();
+            DragRegistry.Clear();
+            DragRegistry.OnDraggerChanged(target, null, dragger);
+
+            CollectionAssert.AreEquivalent(new[] { target }, DragRegistry.Targets);
+
+            DragRegistry.OnDraggerChanged(target, dragger, null);
+            CollectionAssert.IsEmpty(DragRegistry.Targets);
+        }
+
         private static DragEndInputs Healthy() => new()
         {
             DraggerCanAct = true,

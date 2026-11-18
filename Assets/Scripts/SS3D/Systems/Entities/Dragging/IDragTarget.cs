@@ -21,6 +21,9 @@ namespace SS3D.Systems.Entities.Dragging
 
         GameObject GetGameObject();
 
+        /// <summary>Where it rests on the deck: the hips of a ragdoll at its root's height, else the root.</summary>
+        Vector3 FootprintPosition { get; }
+
         /// <summary>Whether <paramref name="dragger"/> may start dragging this now. Shared by the menu and the server.</summary>
         bool CanBeDraggedBy(Transform dragger);
 

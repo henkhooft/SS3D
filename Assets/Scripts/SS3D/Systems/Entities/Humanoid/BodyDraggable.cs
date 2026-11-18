@@ -77,6 +77,15 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>Where the body is: its hips while ragdolled (the root lags there), else its root.</summary>
         public Vector3 BodyPosition => Cache() && _ragdoll.IsKnockedDown && _hips != null ? _hips.position : transform.position;
 
+        public Vector3 FootprintPosition
+        {
+            get
+            {
+                Vector3 body = BodyPosition;
+                return new Vector3(body.x, transform.position.y, body.z);
+            }
+        }
+
         /// <summary>The hips, for the start cone (Decision 26).</summary>
         public Transform Hips => Cache() && _hips != null ? _hips : transform;
 

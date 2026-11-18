@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: airlock-hold
     content: "blind: AirLockOpener.IsDoorwayBlocked also counts dragged objects and dragged corpses, not only SpawnedPlayers"
-    status: pending
+    status: completed
   - id: drag-command
     content: "blind: console command `drag <dragger> <target>` running the interaction's server path, for scenarios, MPPM and the smoke line"
     status: pending
@@ -161,6 +161,7 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 68 | The facing lock while dragging is gone: the rope trails whatever way the dragger faces, so walking turns the body as usual | adaptation | Decision 12; the lock only served the old fixed offset |
 | 69 | The furniture sweep is an axis-aligned box cast of the union of its solid colliders' bounds, lifted 6 cm off the floor, on Default + Walls; bodies and items don't stop it; it stops 2 cm short | SS3D + taste | `Draggable.TrySweep` |
 | 70 | Furniture runs the body end rules minus "target stood": dragger down, snag (2.5 m for 1 s), despawn, either over open space | SS3D | Decision 13 |
+| 71 | The doorway check samples a dragged thing at its footprint (a ragdoll's hips at its root's height) plus the usual 0.5 m sample height | SS3D | `AirLockOpener.OccupantSampleHeight` |
 
 ## Phases
 

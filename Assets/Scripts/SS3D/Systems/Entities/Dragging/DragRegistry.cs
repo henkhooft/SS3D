@@ -30,6 +30,9 @@ namespace SS3D.Systems.Entities.Dragging
             Changed?.Invoke();
         }
 
+        /// <summary>Everything being dragged right now (airlocks hold open for them, Decision 15).</summary>
+        public static Dictionary<object, object>.ValueCollection Targets => TargetByDragger.Values;
+
         public static bool TryGetTarget(object dragger, out object target)
         {
             target = null;
