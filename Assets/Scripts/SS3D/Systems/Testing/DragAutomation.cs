@@ -122,10 +122,11 @@ namespace SS3D.Systems.Testing
                 }
 
                 Vector3 start = body.BodyPosition;
-                yield return WalkDragger(dragger, body, door.transform.position, () => door.ServerDebugHoldOpen(), timeoutSeconds);
+                // Back through the door: about two metres of rope for the server to pull the orphaned body along.
+                yield return WalkDragger(dragger, body, door.transform.position - axis * 1.5f, () => door.ServerDebugHoldOpen(), timeoutSeconds);
                 yield return HoldDown(body, 2f);
                 float moved = Planar(body.BodyPosition - start);
-                if (moved < 0.4f)
+                if (moved < 1f)
                 {
                     throw new InvalidOperationException($"drag_client_until_disconnect: the orphaned body moved only {moved:F2} m");
                 }

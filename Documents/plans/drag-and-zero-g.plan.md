@@ -164,6 +164,12 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 71 | The doorway check samples a dragged thing at its footprint (a ragdoll's hips at its root's height) plus the usual 0.5 m sample height | SS3D | `AirLockOpener.OccupantSampleHeight` |
 | 72 | `drag` runs `DragInteraction.CanInteract` + `Start` with range and the start cone off (`ConeCheck`), keeping eligibility, the 3 m start distance and the empty selected hand; `drag <dragger>` with no target lets go | SS3D | Decision 27 |
 | 73 | `BodyDraggablePrefabSetup.Wire` was applied on its own through `execute_code`, not through Run All (which re-serialises other prefabs and opens a modal); it is registered on both Run All entry points | SS3D | entities map; tomnas recipe notes |
+| 74 | No locker prefab carried `Draggable` (the Starting state was wrong): `LockerDragPrefabSetup` adds it to the three lockers, registered on the Inventory content recipes. A dragged locker keeps its tile registration, so a saved map puts it back where it was placed | SS3D | `SavedPlacedTileObject` stores name/origin/dir |
+| 75 | The zero-g scenarios extend `EnvironmentScenarios` as a partial (`EnvironmentScenarios.ZeroG.cs`); the drag ones are a new `DragScenarios` class under a new `Drag` category | SS3D | testing philosophy D11 |
+| 76 | SS3D has no grille tile, so the reach-layer scenario covers wall, window, girder, airlock, lattice and plenum, plus a locker, an item and a body as non-reach | SS3D | `Resources/Structures` |
+| 77 | The remote proof's dragger is a server-side combat dummy, so an MPPM host and a dedicated server run the same steps; the steps keep the body Downed with single rounds, because a body downed right at the line stands within ~7 s and that ends a drag by "target stood" | SS3D | `DragAutomation.KeepDown` |
+| 78 | The drag smoke line is `drag 1 nightly` in `smoke-set.txt`, so labelled-PR smoke runs don't grow | SS3D | testing philosophy D5 |
+| 79 | The zero-g scenarios suspend and restore the host's invincibility: a map-editor scenario earlier in the category leaves it on and a later one relies on it, and an invincible walker never floats | SS3D | `EntityInvincibility`; pre-existing test leak |
 
 ## Phases
 
