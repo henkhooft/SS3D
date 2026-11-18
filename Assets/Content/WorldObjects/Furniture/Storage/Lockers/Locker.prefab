@@ -201,6 +201,7 @@ GameObject:
   - component: {fileID: 237113999777549459}
   - component: {fileID: 4660035112739816562}
   - component: {fileID: 7184411639282871521}
+  - component: {fileID: 2889098966998896324}
   m_Layer: 0
   m_Name: Locker
   m_TagString: Untagged
@@ -324,6 +325,7 @@ MonoBehaviour:
   - {fileID: 2063239018469568408}
   - {fileID: 8800000000000000051}
   - {fileID: 237113999777549459}
+  - {fileID: 2889098966998896324}
   - {fileID: 8800000000000000034}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
@@ -484,7 +486,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8497fbc0a2e5407588e8b4f873285d28, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.StructuralDamage.StructuralIntegrityPresenter
   _crackedHiss: {fileID: 0}
   _hissVolume: 0.35
@@ -498,9 +500,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23a78eb0cc1c4b01ad68f5123895213c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.StructuralIntegrityExaminable
   key: {fileID: 11400000, guid: ee4264e6206f48b40bd5a390dc1ffe2e, type: 2}
+--- !u!114 &2889098966998896324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5533951594911835035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71c1b65aaa331f84aa6eff7abc1033dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::Draggable
+  _componentIndexCache: 4
+  _addedNetworkObject: {fileID: 3258417366846669140}
+  _networkObjectCache: {fileID: 3258417366846669140}
+  _dragger: {fileID: 0}
+  _draggerObject: {fileID: 0}
+  _draggerHand: 0
 --- !u!1 &8800000000000000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -543,9 +563,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 25696236470760b41b375e9b6939444c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  _componentIndexCache: 4
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 3258417366846669140}
   _networkObjectCache: {fileID: 3258417366846669140}
   _automaticContainerSetUp: 1

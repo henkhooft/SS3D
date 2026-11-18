@@ -202,6 +202,7 @@ GameObject:
   - component: {fileID: 5670429820520980400}
   - component: {fileID: 7459137538438935616}
   - component: {fileID: 942305068700949577}
+  - component: {fileID: 4434040259917822704}
   m_Layer: 0
   m_Name: LockerSecure
   m_TagString: Untagged
@@ -347,6 +348,7 @@ MonoBehaviour:
   - {fileID: 3298710121668139635}
   - {fileID: 8800000000000000051}
   - {fileID: 5670429820520980400}
+  - {fileID: 4434040259917822704}
   - {fileID: 8800000000000000034}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
@@ -484,7 +486,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8497fbc0a2e5407588e8b4f873285d28, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.StructuralDamage.StructuralIntegrityPresenter
   _crackedHiss: {fileID: 0}
   _hissVolume: 0.35
@@ -498,9 +500,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23a78eb0cc1c4b01ad68f5123895213c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: SS3D.Systems::SS3D.Systems.Examine.StructuralIntegrityExaminable
   key: {fileID: 11400000, guid: 2a5aba53a318c5a40a737397dd3d6530, type: 2}
+--- !u!114 &4434040259917822704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5533951594911835035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71c1b65aaa331f84aa6eff7abc1033dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SS3D.Systems::Draggable
+  _componentIndexCache: 4
+  _addedNetworkObject: {fileID: 3258417366846669140}
+  _networkObjectCache: {fileID: 3258417366846669140}
+  _dragger: {fileID: 0}
+  _draggerObject: {fileID: 0}
+  _draggerHand: 0
 --- !u!1 &8800000000000000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -543,9 +563,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 25696236470760b41b375e9b6939444c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  _componentIndexCache: 4
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 3258417366846669140}
   _networkObjectCache: {fileID: 3258417366846669140}
   _automaticContainerSetUp: 1
@@ -589,7 +609,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5650284824437553449, guid: cbd7fa314cb0c48449ca0ca2e215d733, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: c914c5a95648ac847a6a7655c4c2df2d, type: 2}
     - target: {fileID: 8166293055860096448, guid: cbd7fa314cb0c48449ca0ca2e215d733, type: 3}
       propertyPath: m_RootOrder

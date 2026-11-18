@@ -3,9 +3,7 @@ using SS3D.Core;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Health;
-using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Stamina;
-using SS3D.Systems.Tile;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid
@@ -83,39 +81,8 @@ namespace SS3D.Systems.Entities.Humanoid
             _coastVelocity = ZeroGravityRules.AddImpulse(_coastVelocity, impulse, RunSpeed);
         }
 
-        private static readonly Collider[] ReachHits = new Collider[16];
-        private static int _reachMask = -1;
-
-        /// <summary>
-        /// Static station geometry within <see cref="ZeroGravityRules.ReachRadius"/> (R5): walls, windows, grilles,
-        /// airlocks, girders, lattices and the floor's edge. A pure client whose tiles haven't arrived finds no
-        /// colliders and so no reach, never a false one (Decision 21).
-        /// </summary>
-        private bool HasStructureInReach()
-        {
-            if (_reachMask == -1)
-            {
-                _reachMask = LayerMask.GetMask("Default", "Walls");
-            }
-
-            Vector3 centre = transform.position + Vector3.up * (_characterController != null ? _characterController.height * 0.5f : 0.9f);
-            int count = Physics.OverlapSphereNonAlloc(centre, ZeroGravityRules.ReachRadius, ReachHits, _reachMask,
-                QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < count; i++)
-            {
-                Collider hit = ReachHits[i];
-                if (ZeroGravityRules.CountsAsReach(
-                        hit.GetComponentInParent<PlacedTileObject>() != null,
-                        hit.GetComponentInParent<Draggable>() != null,
-                        hit.GetComponentInParent<Item>() != null,
-                        hit.GetComponentInParent<Entity>() != null))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        private bool HasStructureInReach() => ZeroGravityReach.IsStructureInReach(
+            transform.position + Vector3.up * (_characterController != null ? _characterController.height * 0.5f : 0.9f));
 
         /// <summary>
         /// Last frame's planar locomotion velocity while standing on support. A pure client never

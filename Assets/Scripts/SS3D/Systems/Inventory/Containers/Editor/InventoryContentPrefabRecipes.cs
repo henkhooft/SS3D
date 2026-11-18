@@ -18,6 +18,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             clothing += SyndicateHardsuitSetup.SetupAll();
             clothing += GasTankSetup.SetupAll();
             int storage = StorageContainerPrefabSetup.HookUpAll();
+            int lockerDrag = LockerDragPrefabSetup.SetupAll();
             int sizeWeight = ItemSizeWeightRecipe.SetupAll();
             int restPose = ItemRestPoseRecipe.SetupAll();
 
@@ -25,6 +26,7 @@ namespace SS3D.Systems.Inventory.Containers.Editor
                 "Inventory Content Prefab Recipes",
                 $"Clothing presentation: updated {clothing} prefab(s).\n" +
                 $"Storage hook-up: updated {storage} prefab(s).\n" +
+                $"Locker drag: updated {lockerDrag} prefab(s).\n" +
                 $"Item size/weight: updated {sizeWeight} prefab(s).\n" +
                 $"Item rest pose: updated {restPose} prefab(s).",
                 "OK");
@@ -37,10 +39,11 @@ namespace SS3D.Systems.Inventory.Containers.Editor
             clothing += SyndicateHardsuitSetup.SetupAll();
             clothing += GasTankSetup.SetupAll();
             int storage = StorageContainerPrefabSetup.HookUpAll();
+            int lockerDrag = LockerDragPrefabSetup.SetupAll();
             int sizeWeight = ItemSizeWeightRecipe.SetupAll();
             int restPose = ItemRestPoseRecipe.SetupAll();
             Debug.Log(
-                $"[InventoryContentPrefabRecipes] Clothing {clothing}; Storage {storage}; SizeWeight {sizeWeight}; "
+                $"[InventoryContentPrefabRecipes] Clothing {clothing}; Storage {storage}; LockerDrag {lockerDrag}; SizeWeight {sizeWeight}; "
                 + $"RestPose {restPose}.");
 
             if (UnityEngine.Application.isBatchMode)
